@@ -43,6 +43,52 @@ namespace tests
         return 0;
     }
 
+    auto init_failure(daxa::Device & device) -> i32
+    {
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    DAXA_SAMPLE_PATH "/shaders",
+                    "tests/0_common/shaders",
+                },
+                .language = daxa::ShaderLanguage::GLSL,
+            },
+            .register_null_pipelines_when_first_compile_fails = true,
+            .name = APPNAME_PREFIX("pipeline_manager"),
+        });
+
+        auto compilation_result = pipeline_manager.add_compute_pipeline({
+            .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .name = APPNAME_PREFIX("compute_pipeline"),
+        });
+
+        if (compilation_result.is_err() || !compilation_result.value()->is_valid())
+        {
+            std::cerr << "Failed to compile the compute_pipeline!\n";
+            std::cerr << compilation_result.message() << std::endl;
+        }
+
+        if (!compilation_result.value()->is_valid())
+        {
+            while (true)
+            {
+                auto reload_result = pipeline_manager.reload_all();
+                if (auto * reload_err = std::get_if<daxa::PipelineReloadError>(&reload_result))
+                    std::cerr << reload_err->message << std::endl;
+                else if (auto * _ = std::get_if<daxa::PipelineReloadSuccess>(&reload_result))
+                    break;
+                using namespace std::literals;
+                std::this_thread::sleep_for(1ms);
+            }
+        }
+
+        std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
+
+        return 0;
+    }
+
     auto virtual_includes(daxa::Device & device) -> i32
     {
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({

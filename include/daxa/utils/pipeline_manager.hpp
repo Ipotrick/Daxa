@@ -83,6 +83,7 @@ namespace daxa
     {
         Device device;
         ShaderCompileOptions shader_compile_options = {};
+        bool register_null_pipelines_when_first_compile_fails = false;
         std::string name = {};
     };
 
