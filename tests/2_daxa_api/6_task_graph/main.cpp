@@ -68,7 +68,7 @@ namespace tests
         auto task_image = task_graph.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
         // WRITE IMAGE 1
         task_graph.add_task({
-            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_WRITE>{task_image}},
+            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY>{task_image}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image 1"),
         });
@@ -109,7 +109,7 @@ namespace tests
         });
         // READ_IMAGE 1
         task_graph.add_task({
-            .uses = {ImageComputeShaderRead<>{task_image.view({.base_array_layer = 1, .layer_count = 1})}},
+            .uses = {ImageComputeShaderSampled<>{task_image.view({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image array layer 1"),
         });
@@ -163,7 +163,7 @@ namespace tests
         auto image = app.device.create_image({
             .size = {1, 1, 1},
             .array_layer_count = 2,
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
             .name = APPNAME_PREFIX("tested image"),
         });
 
@@ -190,7 +190,7 @@ namespace tests
         // CREATE IMAGE
         task_graph.use_persistent_image(task_image);
         task_graph.add_task({
-            .uses = {ImageComputeShaderRead<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
+            .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read array layer 2"),
         });
@@ -219,7 +219,7 @@ namespace tests
         auto image = app.device.create_image({
             .size = {1, 1, 1},
             .array_layer_count = 4,
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
             .name = APPNAME_PREFIX("tested image"),
         });
 
@@ -250,7 +250,7 @@ namespace tests
         task_graph.use_persistent_image(task_image);
 
         task_graph.add_task({
-            .uses = {ImageComputeShaderRead<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
+            .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 2"),
         });
@@ -265,7 +265,7 @@ namespace tests
             .name = APPNAME_PREFIX("write image layer 1 - 4"),
         });
         task_graph.add_task({
-            .uses = {ImageComputeShaderRead<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
+            .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image layer 1 - 4"),
         });
@@ -286,13 +286,13 @@ namespace tests
         auto dummy = app.device.create_image({
             .size = {16, 16, 1},
             .array_layer_count = 1,
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .name = "dummy",
         });
         auto image = app.device.create_image({
             .size = {16, 16, 1},
             .array_layer_count = 1,
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .name = "underlying image",
         });
         auto task_image = daxa::TaskImage({
@@ -419,7 +419,7 @@ namespace tests
         auto image = device.create_image({
             .size = {1, 1, 1},
             .array_layer_count = 1,
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
             .name = "actual image",
         });
 
@@ -446,14 +446,14 @@ namespace tests
         task_graph.use_persistent_image(persistent_task_image);
         task_graph.use_persistent_buffer(persistent_task_buffer);
         task_graph.add_task({
-            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_WRITE>{persistent_task_image}},
+            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_STORAGE_WRITE_ONLY>{persistent_task_image}},
             .task = [&](daxa::TaskInterface const &) {},
             .name = "write persistent image",
         });
         task_graph.add_task({
             .uses = {
                 daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer},
-                daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_READ>{persistent_task_image},
+                daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_SAMPLED>{persistent_task_image},
             },
             .task = [&](daxa::TaskInterface const &) {},
             .name = "read persistent image, read persistent buffer",

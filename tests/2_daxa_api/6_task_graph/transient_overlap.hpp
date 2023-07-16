@@ -194,8 +194,8 @@ namespace tests
 
             task_graph.add_task({
                 .uses = {
-                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
-                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_B},
+                    ImageComputeShaderSampled<daxa::ImageViewType::REGULAR_3D>{image_A},
+                    ImageComputeShaderSampled<daxa::ImageViewType::REGULAR_3D>{image_B},
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
@@ -222,8 +222,8 @@ namespace tests
 
             task_graph.add_task({
                 .uses = {
-                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
-                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_C},
+                    ImageComputeShaderSampled<daxa::ImageViewType::REGULAR_3D>{image_A},
+                    ImageComputeShaderSampled<daxa::ImageViewType::REGULAR_3D>{image_C},
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
@@ -347,7 +347,7 @@ namespace tests
 
                     task_graph.add_task({
                         .uses = {
-                            ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_A},
+                            ImageComputeShaderSampled<daxa::ImageViewType::REGULAR_3D>{image_A},
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
@@ -379,7 +379,7 @@ namespace tests
 
                     task_graph.add_task({
                         .uses = {
-                            ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_B},
+                            ImageComputeShaderSampled<daxa::ImageViewType::REGULAR_3D>{image_B},
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
@@ -393,7 +393,7 @@ namespace tests
 
             task_graph.add_task({
                 .uses = {
-                    ImageComputeShaderRead<daxa::ImageViewType::REGULAR_3D>{image_base},
+                    ImageComputeShaderSampled<daxa::ImageViewType::REGULAR_3D>{image_base},
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
@@ -551,7 +551,7 @@ namespace tests
             });
 
             task_graph.add_task({
-                .uses = {daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ_WRITE>{short_life_image}},
+                .uses = {daxa::TaskImageUse<TIA::COMPUTE_SHADER_STORAGE_READ_WRITE>{short_life_image}},
                 .task = [=](daxa::TaskInterface) {},
                 .name = "dummy use short life image",
             });

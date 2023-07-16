@@ -182,7 +182,7 @@ auto main() -> int
     auto depth_image = device.create_image({
         .format = daxa::Format::D32_SFLOAT,
         .size = {app_info.width, app_info.height, 1},
-        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_SAMPLED,
         .name = "depth_image",
     });
 
@@ -193,7 +193,7 @@ auto main() -> int
         .size = {16, 16, 1},
         .mip_level_count = MIP_COUNT,
         .array_layer_count = static_cast<u32>(texture_names.size()),
-        .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+        .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "atlas_texture_array",
     });
 
