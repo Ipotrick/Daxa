@@ -113,7 +113,7 @@ namespace tests
             .dimensions = 2 + static_cast<u32>(SIZE_Z > 1),
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {SIZE_X, SIZE_Y, SIZE_Z},
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .name = "image_1",
         });
 
@@ -121,7 +121,7 @@ namespace tests
             .dimensions = 2 + static_cast<u32>(SIZE_Z > 1),
             .format = daxa::Format::R32G32B32A32_SFLOAT,
             .size = {SIZE_X, SIZE_Y, SIZE_Z},
-            .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .name = "image_2",
         });
 

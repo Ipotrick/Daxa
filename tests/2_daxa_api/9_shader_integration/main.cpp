@@ -264,7 +264,7 @@ namespace tests
             .uses = {
                 BufferComputeShaderRead{handles_buffer},
                 BufferComputeShaderRead{f32_buffer},
-                ImageComputeShaderRead<>{f32_image},
+                ImageComputeShaderSampled<>{f32_image},
             },
             .task = [&](daxa::TaskInterface const & ti)
             {

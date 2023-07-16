@@ -64,7 +64,7 @@ namespace tests
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {128, 128, 1},
                 .mip_level_count = 5,
-                .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+                .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .name = "render_image",
             });
 

@@ -853,7 +853,7 @@ namespace daxa
                 .mip_level_count = 1,
                 .array_layer_count = 1,
                 .sample_count = 1,
-                .usage = ImageUsageFlagBits::SHADER_READ_ONLY | ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::TRANSFER_DST,
+                .usage = ImageUsageFlagBits::SHADER_SAMPLED | ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::TRANSFER_DST,
                 .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
             };
             VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(image_info, &this->main_queue_family_index);
@@ -1616,7 +1616,7 @@ namespace daxa
     {
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
         ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
-        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::SHADER_READ_ONLY, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, id.index);
         vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
         image_slot = {};
         gpu_shader_resource_table.image_slots.return_slot(id);
