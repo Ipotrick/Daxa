@@ -508,7 +508,7 @@ namespace daxa
         usize const upload_size = static_cast<usize>(width) * static_cast<usize>(height) * 4 * sizeof(u8);
         font_sheet = this->info.device.create_image({
             .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
-            .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_READ_ONLY,
+            .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_SAMPLED,
             .name = "dear ImGui font sheet",
         });
 

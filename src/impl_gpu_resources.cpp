@@ -447,7 +447,7 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        if ((usage & ImageUsageFlagBits::SHADER_READ_WRITE) != ImageUsageFlagBits::NONE)
+        if ((usage & ImageUsageFlagBits::SHADER_STORAGE) != ImageUsageFlagBits::NONE)
         {
             descriptor_set_writes.at(descriptor_set_write_count++) = vk_write_descriptor_set;
         }
@@ -471,7 +471,7 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        if ((usage & ImageUsageFlagBits::SHADER_READ_ONLY) != ImageUsageFlagBits::NONE)
+        if ((usage & ImageUsageFlagBits::SHADER_SAMPLED) != ImageUsageFlagBits::NONE)
         {
             descriptor_set_writes.at(descriptor_set_write_count++) = vk_write_descriptor_set_sampled;
         }

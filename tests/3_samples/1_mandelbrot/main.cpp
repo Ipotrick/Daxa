@@ -57,7 +57,7 @@ struct App : BaseApp<App>
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
-        .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
     daxa::TaskImage task_render_image{{.initial_images={.images=std::array{render_image}}, .name = "render_image"}};
@@ -132,7 +132,7 @@ struct App : BaseApp<App>
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+                .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
             task_render_image.set_images({.images=std::array{render_image}});
             base_on_update();

@@ -196,28 +196,28 @@ auto main() -> int
         .format = daxa::Format::R16G16B16A16_SFLOAT,
         .aspect = daxa::ImageAspectFlagBits::COLOR,
         .size = {render_size.x, render_size.y, 1},
-        .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "color_image",
     });
     auto display_image = device.create_image({
         .format = daxa::Format::R16G16B16A16_SFLOAT,
         .aspect = daxa::ImageAspectFlagBits::COLOR,
         .size = {app_info.width, app_info.height, 1},
-        .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+        .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "display_image",
     });
     auto motion_vectors_image = device.create_image({
         .format = daxa::Format::R16G16_SFLOAT,
         .aspect = daxa::ImageAspectFlagBits::COLOR,
         .size = {render_size.x, render_size.y, 1},
-        .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::SHADER_READ_WRITE,
+        .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE,
         .name = "motion_vectors_image",
     });
     auto depth_image = device.create_image({
         .format = daxa::Format::D32_SFLOAT,
         .aspect = daxa::ImageAspectFlagBits::DEPTH,
         .size = {render_size.x, render_size.y, 1},
-        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_READ_ONLY,
+        .usage = daxa::ImageUsageFlagBits::DEPTH_STENCIL_ATTACHMENT | daxa::ImageUsageFlagBits::SHADER_SAMPLED,
         .name = "depth_image",
     });
 
@@ -228,7 +228,7 @@ auto main() -> int
         .size = {16, 16, 1},
         .mip_level_count = MIP_COUNT,
         .array_layer_count = static_cast<u32>(texture_names.size()),
-        .usage = daxa::ImageUsageFlagBits::SHADER_READ_ONLY | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
+        .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::TRANSFER_SRC | daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "atlas_texture_array",
     });
 

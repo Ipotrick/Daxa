@@ -519,14 +519,13 @@ namespace daxa
         static inline constexpr ImageUsageFlags NONE = {0x00000000};
         static inline constexpr ImageUsageFlags TRANSFER_SRC = {0x00000001};
         static inline constexpr ImageUsageFlags TRANSFER_DST = {0x00000002};
-        static inline constexpr ImageUsageFlags SHADER_READ_ONLY = {0x00000004};
-        static inline constexpr ImageUsageFlags SHADER_READ_WRITE = {0x00000008};
+        static inline constexpr ImageUsageFlags SHADER_SAMPLED = {0x00000004};
+        static inline constexpr ImageUsageFlags SHADER_STORAGE = {0x00000008};
         static inline constexpr ImageUsageFlags COLOR_ATTACHMENT = {0x00000010};
         static inline constexpr ImageUsageFlags DEPTH_STENCIL_ATTACHMENT = {0x00000020};
         static inline constexpr ImageUsageFlags TRANSIENT_ATTACHMENT = {0x00000040};
         static inline constexpr ImageUsageFlags FRAGMENT_DENSITY_MAP = {0x00000200};
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
-        static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
 
     auto to_string(ImageUsageFlags const &) -> std::string;

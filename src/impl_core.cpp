@@ -404,21 +404,21 @@ namespace daxa
             }
             ret += "TRANSFER_DST";
         }
-        if ((flags & ImageUsageFlagBits::SHADER_READ_ONLY) != ImageUsageFlagBits::NONE)
+        if ((flags & ImageUsageFlagBits::SHADER_SAMPLED) != ImageUsageFlagBits::NONE)
         {
             if (!ret.empty())
             {
                 ret += " | ";
             }
-            ret += "SHADER_READ_ONLY";
+            ret += "SHADER_SAMPLED";
         }
-        if ((flags & ImageUsageFlagBits::SHADER_READ_WRITE) != ImageUsageFlagBits::NONE)
+        if ((flags & ImageUsageFlagBits::SHADER_STORAGE) != ImageUsageFlagBits::NONE)
         {
             if (!ret.empty())
             {
                 ret += " | ";
             }
-            ret += "SHADER_READ_WRITE";
+            ret += "SHADER_STORAGE";
         }
         if ((flags & ImageUsageFlagBits::COLOR_ATTACHMENT) != ImageUsageFlagBits::NONE)
         {
