@@ -537,7 +537,7 @@ namespace tests
             task_graph.add_task({
                 .uses = {
                     daxa::TaskBufferUse<TBA::COMPUTE_SHADER_READ>{long_life_buffer},
-                    daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
+                    daxa::TaskImageUse<TIA::COMPUTE_SHADER_SAMPLED, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
                     daxa::TaskImageUse<TIA::TRANSFER_WRITE, daxa::ImageViewType::REGULAR_3D>{long_life_image},
                 },
                 .task = [=](daxa::TaskInterface tri)
@@ -559,7 +559,7 @@ namespace tests
             task_graph.add_task({
                 .uses = {
                     daxa::TaskBufferUse<TBA::COMPUTE_SHADER_READ_WRITE>{short_life_buffer},
-                    daxa::TaskImageUse<TIA::COMPUTE_SHADER_READ, daxa::ImageViewType::REGULAR_3D>{long_life_image},
+                    daxa::TaskImageUse<TIA::COMPUTE_SHADER_SAMPLED, daxa::ImageViewType::REGULAR_3D>{long_life_image},
                 },
                 .task = [=](daxa::TaskInterface tri)
                 {
