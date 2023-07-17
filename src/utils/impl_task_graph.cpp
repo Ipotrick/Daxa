@@ -44,7 +44,7 @@ namespace daxa
             // Final offset is equal to total size.
             return {ret, offset};
         }
-    }
+    } // namespace detail
 
     using namespace daxa::detail;
 
@@ -1393,8 +1393,6 @@ namespace daxa
                                 .image_id = {}, // {} signals that this is not an image barrier.
                                 .src_access = task_buffer.latest_access,
                                 .dst_access = current_buffer_access,
-                                .src_batch = task_buffer.latest_access_batch_index,
-                                .dst_batch = batch_index,
                             });
                             // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
                             batch.pipeline_barrier_indices.push_back(barrier_index);
@@ -1413,8 +1411,6 @@ namespace daxa
                                     .image_id = {}, // {} signals that this is not an image barrier.
                                     .src_access = task_buffer.latest_access,
                                     .dst_access = current_buffer_access,
-                                    .src_batch = task_buffer.latest_access_batch_index,
-                                    .dst_batch = batch_index,
                                 },
                                 /* .split_barrier_state = */ task_graph_impl.info.device.create_split_barrier({
                                     .name = std::string("TaskGraph \"") + task_graph_impl.info.name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
@@ -1609,8 +1605,6 @@ namespace daxa
                                     .layout_after = current_image_layout,
                                     .src_access = tracked_slice.state.latest_access,
                                     .dst_access = current_image_access,
-                                    .src_batch = tracked_slice.latest_access_batch_index,
-                                    .dst_batch = batch_index,
                                 });
                                 // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
                                 batch.pipeline_barrier_indices.push_back(barrier_index);
@@ -1632,8 +1626,6 @@ namespace daxa
                                         .layout_after = current_image_layout,
                                         .src_access = tracked_slice.state.latest_access,
                                         .dst_access = current_image_access,
-                                        .src_batch = tracked_slice.latest_access_batch_index,
-                                        .dst_batch = batch_index,
                                     },
                                     /* .split_barrier_state = */ task_graph_impl.info.device.create_split_barrier({
                                         .name = std::string("TaskGraph \"") + task_graph_impl.info.name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
@@ -1739,7 +1731,6 @@ namespace daxa
         usize const submit_scope_index = tracked_slice->latest_access_submit_scope_index;
         DAXA_DBG_ASSERT_TRUE_M(submit_scope_index < this->batch_submit_scopes.size() - 1, "the last swapchain image use MUST be before the last submit when presenting");
         TaskBatchSubmitScope & submit_scope = this->batch_submit_scopes[submit_scope_index];
-        usize const batch_index = tracked_slice->latest_access_batch_index;
         // We need to insert a pipeline barrier to transition the swapchain image layout to present src optimal.
         usize const barrier_index = this->barriers.size();
         this->barriers.push_back(TaskBarrier{
@@ -1749,8 +1740,6 @@ namespace daxa
             .layout_after = ImageLayout::PRESENT_SRC,
             .src_access = tracked_slice->state.latest_access,
             .dst_access = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE},
-            .src_batch = batch_index,
-            .dst_batch = batch_index + 1,
         });
         submit_scope.last_minute_barrier_indices.push_back(barrier_index);
         // Now we need to insert the binary semaphore between submit and present.
@@ -1977,7 +1966,7 @@ namespace daxa
             };
             std::set<Allocation, AllocCompare> allocations = {};
             // Figure out where to allocate each resource
-            u32 no_alias_back_offset = {};
+            usize no_alias_back_offset = {};
             for (auto const & resource_lifetime : lifetime_length_sorted_resources)
             {
                 MemoryRequirements mem_requirements;
@@ -2074,7 +2063,7 @@ namespace daxa
         {
             impl.create_transient_runtime_buffers(permutation);
             impl.create_transient_runtime_images(permutation);
-            auto & first_batch = permutation.batch_submit_scopes[0].task_batches[0];
+
             // Insert static initialization barriers for non persistent resources:
             // Buffers never need layout initialization, only images.
             for (u32 task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
@@ -2095,10 +2084,29 @@ namespace daxa
                             .layout_after = first_access.state.latest_layout,
                             .src_access = {},
                             .dst_access = first_access.state.latest_access,
-                            .src_batch = {},
-                            .dst_batch = first_access.latest_access_batch_index,
                         });
-                        first_batch.pipeline_barrier_indices.push_back(new_barrier_index);
+                        // Because resources may be aliased we need to insert the barrier into the batch in which the resource is first used
+                        // If we just inserted all transitions into the first batch an error as follows might occur:
+                        //      Image A lives in batch 1, Image B lives in batch 2
+                        //      Image A and B are aliased (share the same/part-of memory)
+                        //      Image A is transitioned from UNDEFINED -> TRANSFER_DST in batch 0 BUT
+                        //      Image B is also transitioned from UNDEFINED -> TRANSFER_SRT in batch 0
+                        // This is an erroneous state - tasklist assumes they are separate images and thus,
+                        // for example uses Image A thinking it's in TRANSFER_DST which it is not
+                        if (impl.info.alias_transients)
+                        {
+                            // TODO(msakmary) This is only needed when we actually alias two images - should be possible to detect this
+                            // and only defer the initialization barrier for these aliased ones instead of all of them
+                            auto const submit_scope_index = first_access.latest_access_submit_scope_index;
+                            auto const batch_index = first_access.latest_access_batch_index;
+                            auto & first_used_batch = permutation.batch_submit_scopes[submit_scope_index].task_batches[batch_index];
+                            first_used_batch.pipeline_barrier_indices.push_back(new_barrier_index);
+                        }
+                        else
+                        {
+                            auto & first_used_batch = permutation.batch_submit_scopes[0].task_batches[0];
+                            first_used_batch.pipeline_barrier_indices.push_back(new_barrier_index);
+                        }
                     }
                 }
             }
@@ -2637,7 +2645,7 @@ namespace daxa
                     submit_info.signal_timeline_semaphores.push_back({impl.staging_memory->get_timeline_semaphore(), impl.staging_memory->timeline_value()});
                 }
                 impl.info.device.submit_commands(submit_info);
- 
+
                 if (submit_scope.present_info.has_value())
                 {
                     ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
