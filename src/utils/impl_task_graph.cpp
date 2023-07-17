@@ -58,7 +58,7 @@ namespace daxa
         case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED: [[fallthrough]];
         case TaskImageAccess::GEOMETRY_SHADER_SAMPLED: [[fallthrough]];
         case TaskImageAccess::FRAGMENT_SHADER_SAMPLED: [[fallthrough]];
-        case TaskImageAccess::COMPUTE_SHADER_READ:
+        case TaskImageAccess::COMPUTE_SHADER_SAMPLED:
             return ImageUsageFlagBits::SHADER_SAMPLED;
         case TaskImageAccess::SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
@@ -109,7 +109,7 @@ namespace daxa
         case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}};
         case TaskImageAccess::GEOMETRY_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}};
         case TaskImageAccess::FRAGMENT_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::COMPUTE_SHADER_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::COMPUTE_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
         case TaskImageAccess::SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS | PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
         case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}};
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}};
@@ -237,7 +237,7 @@ namespace daxa
         case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED: return std::string_view{"TESSELLATION_EVALUATION_SHADER_READ"};
         case TaskImageAccess::GEOMETRY_SHADER_SAMPLED: return std::string_view{"GEOMETRY_SHADER_READ"};
         case TaskImageAccess::FRAGMENT_SHADER_SAMPLED: return std::string_view{"FRAGMENT_SHADER_READ"};
-        case TaskImageAccess::COMPUTE_SHADER_READ: return std::string_view{"COMPUTE_SHADER_READ"};
+        case TaskImageAccess::COMPUTE_SHADER_SAMPLED: return std::string_view{"COMPUTE_SHADER_READ"};
         case TaskImageAccess::SHADER_STORAGE_WRITE_ONLY: return std::string_view{"SHADER_WRITE"};
         case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"VERTEX_SHADER_WRITE"};
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"TESSELLATION_CONTROL_SHADER_WRITE"};
