@@ -1873,6 +1873,7 @@ namespace daxa
                 if (perm_task_image.lifetime.first_use.submit_scope_index == std::numeric_limits<u32>::max() ||
                     perm_task_image.lifetime.last_use.submit_scope_index == std::numeric_limits<u32>::max())
                 {
+                    // TODO(msakmary) Transient image created but not used - should we somehow warn the user about this?
                     permutation.image_infos.at(perm_image_idx).valid = false;
                     continue;
                 }
@@ -1899,14 +1900,20 @@ namespace daxa
                 }
 
                 auto const & perm_task_buffer = permutation.buffer_infos.at(perm_buffer_idx);
+
+                if (perm_task_buffer.lifetime.first_use.submit_scope_index == std::numeric_limits<u32>::max() ||
+                    perm_task_buffer.lifetime.last_use.submit_scope_index == std::numeric_limits<u32>::max())
+                {
+                    // TODO(msakmary) Transient buffer created but not used - should we somehow warn the user about this?
+                    permutation.buffer_infos.at(perm_buffer_idx).valid = false;
+                    continue;
+                }
+
                 usize start_idx = submit_batch_offsets.at(perm_task_buffer.lifetime.first_use.submit_scope_index) +
                                   perm_task_buffer.lifetime.first_use.task_batch_index;
                 usize end_idx = submit_batch_offsets.at(perm_task_buffer.lifetime.last_use.submit_scope_index) +
                                 perm_task_buffer.lifetime.last_use.task_batch_index;
 
-                DAXA_DBG_ASSERT_TRUE_M(start_idx != std::numeric_limits<u32>::max() ||
-                                           end_idx != std::numeric_limits<u32>::max(),
-                                       "Detected transient resource created but never used");
                 lifetime_length_sorted_resources.emplace_back(LifetimeLengthResource{
                     .start_batch = start_idx,
                     .end_batch = end_idx,
@@ -2916,7 +2923,7 @@ namespace daxa
         }
         for (u32 perm_buffer_idx = 0; perm_buffer_idx < permutation.buffer_infos.size(); perm_buffer_idx++)
         {
-            if (global_buffer_infos.at(perm_buffer_idx).is_persistent())
+            if (global_buffer_infos.at(perm_buffer_idx).is_persistent() || !permutation.buffer_infos.at(perm_buffer_idx).valid)
             {
                 continue;
             }
