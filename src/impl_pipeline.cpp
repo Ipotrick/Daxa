@@ -107,7 +107,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .depthClampEnable = {},
+            .depthClampEnable = info.raster.depth_clamp_enable,
             .rasterizerDiscardEnable = info.fragment_shader_info.has_value() ? VK_FALSE : VK_TRUE,
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
