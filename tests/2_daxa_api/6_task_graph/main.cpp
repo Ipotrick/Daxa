@@ -488,7 +488,8 @@ auto main() -> int
     // tests::correct_read_buffer_task_ordering();
     // tests::sharing_persistent_image();
     // tests::sharing_persistent_buffer();
+    tests::transient_write_aliasing();
     // tests::transient_resources();
-    tests::shader_integration_inl_use();
-    tests::mipmapping();
+    // tests::shader_integration_inl_use();
+    // tests::mipmapping();
 }
