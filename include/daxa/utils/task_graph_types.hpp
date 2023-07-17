@@ -58,7 +58,7 @@ namespace daxa
         TESSELLATION_EVALUATION_SHADER_SAMPLED,
         GEOMETRY_SHADER_SAMPLED,
         FRAGMENT_SHADER_SAMPLED,
-        COMPUTE_SHADER_READ,
+        COMPUTE_SHADER_SAMPLED,
         SHADER_STORAGE_WRITE_ONLY,
         VERTEX_SHADER_STORAGE_WRITE_ONLY,
         TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY,
@@ -620,7 +620,7 @@ namespace daxa
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageFragmentShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageComputeShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ, T_VIEW_TYPE>;
+        using ImageComputeShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageShaderWrite = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
