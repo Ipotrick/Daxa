@@ -148,6 +148,7 @@ namespace tests
 
             auto task_graph = daxa::TaskGraph({
                 .device = device,
+                .alias_transients = true,
                 .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
                 .name = "task_graph",

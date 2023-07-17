@@ -90,8 +90,6 @@ namespace daxa
         ImageLayout layout_after = {};
         Access src_access = {};
         Access dst_access = {};
-        usize src_batch = {};
-        usize dst_batch = {};
     };
 
     struct TaskSplitBarrier : TaskBarrier
