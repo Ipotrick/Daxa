@@ -1795,6 +1795,7 @@ namespace daxa
                                            std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
                 auto const & transient_image_info = std::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
                 perm_image.actual_image = info.device.create_image(ImageInfo{
+                    .flags = daxa::ImageCreateFlagBits::ALLOW_ALIAS,
                     .dimensions = transient_image_info.dimensions,
                     .format = transient_image_info.format,
                     .size = transient_image_info.size,
