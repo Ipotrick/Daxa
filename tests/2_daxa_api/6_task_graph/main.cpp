@@ -74,7 +74,7 @@ namespace tests
         });
         // READ_IMAGE 1
         task_graph.add_task({
-            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_READ>{task_image}},
+            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED>{task_image}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("read image 1"),
         });
