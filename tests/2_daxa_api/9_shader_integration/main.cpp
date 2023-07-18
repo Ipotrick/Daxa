@@ -242,7 +242,7 @@ namespace tests
             .uses = {
                 BufferComputeShaderWrite{handles_buffer},
                 BufferComputeShaderWrite{f32_buffer},
-                ImageComputeShaderWrite<>{f32_image},
+                ImageComputeShaderStorageWriteOnly<>{f32_image},
             },
             .task = [&](daxa::TaskInterface ti)
             {

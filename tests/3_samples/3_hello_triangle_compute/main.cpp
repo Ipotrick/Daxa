@@ -89,7 +89,7 @@ struct App : BaseApp<App>
 
         new_task_graph.add_task({
             .uses = {
-                ImageComputeShaderWrite<>{task_render_image},
+                ImageComputeShaderStorageWriteOnly<>{task_render_image},
             },
             .task = [this](daxa::TaskInterface ti)
             {
