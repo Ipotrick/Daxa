@@ -103,7 +103,7 @@ namespace tests
             .name = "task graph tested image",
         });
         task_graph.add_task({
-            .uses = {ImageComputeShaderWrite<>{task_image.view({.base_array_layer = 0, .layer_count = 1})}},
+            .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view({.base_array_layer = 0, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image array layer 1"),
         });
@@ -163,7 +163,7 @@ namespace tests
         auto image = app.device.create_image({
             .size = {1, 1, 1},
             .array_layer_count = 2,
-            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::SHADER_SAMPLED,
             .name = APPNAME_PREFIX("tested image"),
         });
 
@@ -195,7 +195,7 @@ namespace tests
             .name = APPNAME_PREFIX("read array layer 2"),
         });
         task_graph.add_task({
-            .uses = {ImageComputeShaderWrite<>{task_image.view().view({.base_array_layer = 0, .layer_count = 1})}},
+            .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 0, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write array layer 1"),
         });
@@ -219,7 +219,7 @@ namespace tests
         auto image = app.device.create_image({
             .size = {1, 1, 1},
             .array_layer_count = 4,
-            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::SHADER_SAMPLED,
             .name = APPNAME_PREFIX("tested image"),
         });
 
@@ -255,12 +255,12 @@ namespace tests
             .name = APPNAME_PREFIX("read image layer 2"),
         });
         task_graph.add_task({
-            .uses = {ImageComputeShaderWrite<>{task_image.view().view({.base_array_layer = 3, .layer_count = 1})}},
+            .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 3, .layer_count = 1})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 4"),
         });
         task_graph.add_task({
-            .uses = {ImageComputeShaderWrite<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
+            .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
             .task = [](daxa::TaskInterface const &) {},
             .name = APPNAME_PREFIX("write image layer 1 - 4"),
         });
@@ -419,7 +419,7 @@ namespace tests
         auto image = device.create_image({
             .size = {1, 1, 1},
             .array_layer_count = 1,
-            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::SHADER_SAMPLED,
             .name = "actual image",
         });
 
@@ -478,18 +478,18 @@ namespace tests
 
 auto main() -> int
 {
-    // tests::simplest();
-    // tests::execution();
-    // tests::write_read_image();
-    // tests::write_read_image_layer();
-    // tests::create_transfer_read_buffer();
-    // tests::initial_layout_access();
-    // tests::tracked_slice_barrier_collapsing();
-    // tests::correct_read_buffer_task_ordering();
-    // tests::sharing_persistent_image();
-    // tests::sharing_persistent_buffer();
+    tests::simplest();
+    tests::execution();
+    tests::write_read_image();
+    tests::write_read_image_layer();
+    tests::create_transfer_read_buffer();
+    tests::initial_layout_access();
+    tests::tracked_slice_barrier_collapsing();
+    tests::correct_read_buffer_task_ordering();
+    tests::sharing_persistent_image();
+    tests::sharing_persistent_buffer();
     tests::transient_write_aliasing();
-    // tests::transient_resources();
-    // tests::shader_integration_inl_use();
-    // tests::mipmapping();
+    tests::transient_resources();
+    tests::shader_integration_inl_use();
+    tests::mipmapping();
 }
