@@ -506,7 +506,7 @@ namespace daxa
             .logicOp = VK_FALSE,
             .multiDrawIndirect = VK_TRUE, // Very useful for gpu driven rendering
             .drawIndirectFirstInstance = VK_FALSE,
-            .depthClamp = VK_FALSE,
+            .depthClamp = VK_TRUE, // NOTE(msakmary) need this for bikeshed if breaks ping me
             .depthBiasClamp = VK_FALSE,
             .fillModeNonSolid = VK_TRUE,
             .depthBounds = VK_FALSE,
