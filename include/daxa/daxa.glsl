@@ -113,7 +113,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 ///         The buffer reference block contains a single member called value of the given type.
 ///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
-#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) daxa_CoherentRWBufferPtr$$STRUCT_TYPE
+#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) daxa_CoherentRWBufferPtr##STRUCT_TYPE
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
 #define deref(BUFFER_PTR) BUFFER_PTR.value
 
