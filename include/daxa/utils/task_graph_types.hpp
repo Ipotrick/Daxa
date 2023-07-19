@@ -143,6 +143,8 @@ namespace daxa
             ret.slice = new_slice;
             return ret;
         }
+        auto operator<=>(TaskGPUResourceView const & other) const = delete;
+        auto operator<=>(TaskImageView const & other) const = default;
     };
 
     struct ImageSliceState
