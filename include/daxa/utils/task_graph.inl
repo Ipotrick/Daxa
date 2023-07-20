@@ -30,3 +30,11 @@
     ;
 
 #endif
+
+#if __cplusplus
+#define DAXA_USE_TASK_HEADER(x)                                          \
+    static constexpr isize CONSANT_BUFFER_SLOT = x::CONSANT_BUFFER_SLOT; \
+    static constexpr std::string_view NAME = x::NAME;                    \
+    std::string name = std::string(x::NAME);                             \
+    x::Uses uses = {};
+#endif
