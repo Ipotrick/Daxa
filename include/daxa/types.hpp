@@ -46,6 +46,8 @@ namespace daxa
             std::array<T, N> array;
             constexpr T & operator[](usize i) noexcept { return array[i]; }
             constexpr T const & operator[](usize i) const noexcept { return array[i]; }
+            auto operator==(GenericVector<T,N> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,N> const & other) const -> bool = default;
         };
 
         template <typename T>
@@ -68,6 +70,8 @@ namespace daxa
                 default: return x;
                 }
             }
+            auto operator==(GenericVector<T,2> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,2> const & other) const -> bool = default;
         };
         template <typename T>
         struct GenericVector<T, 3>
@@ -91,6 +95,8 @@ namespace daxa
                 default: return x;
                 }
             }
+            auto operator==(GenericVector<T,3> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,3> const & other) const -> bool = default;
         };
         template <typename T>
         struct GenericVector<T, 4>
@@ -116,6 +122,8 @@ namespace daxa
                 default: return x;
                 }
             }
+            auto operator==(GenericVector<T,4> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,4> const & other) const -> bool = default;
         };
 
         template <typename T, usize M, usize N>
