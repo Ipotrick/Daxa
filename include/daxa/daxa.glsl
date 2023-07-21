@@ -99,21 +99,22 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     return daxa_buffer_device_address_buffer.addresses[daxa_buffer_id_to_index(buffer_id)];
 }
 
+#define _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(DAXA_TYPE, STRUCT_TYPE) daxa_##DAXA_TYPE##STRUCT_TYPE
 /// @brief  Pointer like syntax for a read write buffer device address blocks containing the given struct
 ///         The buffer reference block contains a single member called value of the given type.
 ///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
-#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
+#define daxa_RWBufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(RWBufferPtr, STRUCT_TYPE)
 /// @brief  Pointer like syntax for a read only buffer device address blocks containing the given struct
 ///         The buffer reference block contains a single member called value of the given type.
 ///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
-#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
+#define daxa_BufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(BufferPtr, STRUCT_TYPE)
 /// @brief  Pointer like syntax for a read write COHERENT buffer device address blocks containing the given struct
 ///         The buffer reference block contains a single member called value of the given type.
 ///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
-#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) daxa_CoherentRWBufferPtr##STRUCT_TYPE
+#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(CoherentRWBufferPtr, STRUCT_TYPE)
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
 #define deref(BUFFER_PTR) BUFFER_PTR.value
 
@@ -141,7 +142,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 ///         daxa_BufferPtr(T) t_ptr0 = ...;
 ///         daxa_BufferPtrT   t_ptr1 = ...;
 ///     }
-#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)                                              \
+#define _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)                                      \
     DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE                  \
     {                                                                                  \
         STRUCT_TYPE value;                                                             \
@@ -154,23 +155,25 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     {                                                                                  \
         STRUCT_TYPE value;                                                             \
     };
+#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)
 
-#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)    \
-    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                     \
-    buffer daxa_RWBufferPtr##STRUCT_TYPE                  \
-    {                                                     \
-        STRUCT_TYPE value;                                \
-    };                                                    \
-    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                     \
-    readonly buffer daxa_BufferPtr##STRUCT_TYPE           \
-    {                                                     \
-        STRUCT_TYPE value;                                \
-    };                                                    \
-    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                     \
-    coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE \
-    {                                                     \
-        STRUCT_TYPE value;                                \
+#define _DAXA_DECL_BUFFER_PTR_ALIGN_HELPER(STRUCT_TYPE, ALIGN) \
+    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                          \
+    buffer daxa_RWBufferPtr##STRUCT_TYPE                       \
+    {                                                          \
+        STRUCT_TYPE value;                                     \
+    };                                                         \
+    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                          \
+    readonly buffer daxa_BufferPtr##STRUCT_TYPE                \
+    {                                                          \
+        STRUCT_TYPE value;                                     \
+    };                                                         \
+    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                          \
+    coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE      \
+    {                                                          \
+        STRUCT_TYPE value;                                     \
     };
+#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) _DAXA_DECL_BUFFER_PTR_ALIGN_HELPER(STRUCT_TYPE, ALIGN)
 
 /// @brief Defines a push constant using daxa's predefined push constant layout.
 /// @param STRUCT Struct type the push constant contains.
@@ -439,12 +442,12 @@ _DAXA_DECL_IMAGE(2DMSArray)
 #define daxa_usampler2DMSArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMSArray, image_id, sampler_id)
 
 DAXA_DECL_BUFFER_PTR(daxa_b32)
-DAXA_DECL_BUFFER_PTR(daxa_b32vec1)
+// DAXA_DECL_BUFFER_PTR(daxa_b32vec1) // covered by daxa_b32
 DAXA_DECL_BUFFER_PTR(daxa_b32vec2)
 DAXA_DECL_BUFFER_PTR(daxa_b32vec3)
 DAXA_DECL_BUFFER_PTR(daxa_b32vec4)
 DAXA_DECL_BUFFER_PTR(daxa_f32)
-DAXA_DECL_BUFFER_PTR(daxa_f32vec1)
+// DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32
 DAXA_DECL_BUFFER_PTR(daxa_f32vec2)
 DAXA_DECL_BUFFER_PTR(daxa_f32mat2x2)
 DAXA_DECL_BUFFER_PTR(daxa_f32mat2x3)
@@ -458,22 +461,22 @@ DAXA_DECL_BUFFER_PTR(daxa_f32mat4x2)
 DAXA_DECL_BUFFER_PTR(daxa_f32mat4x3)
 DAXA_DECL_BUFFER_PTR(daxa_f32mat4x4)
 DAXA_DECL_BUFFER_PTR(daxa_i32)
-DAXA_DECL_BUFFER_PTR(daxa_i32vec1)
+// DAXA_DECL_BUFFER_PTR(daxa_i32vec1) // covered by daxa_i32
 DAXA_DECL_BUFFER_PTR(daxa_i32vec2)
 DAXA_DECL_BUFFER_PTR(daxa_i32vec3)
 DAXA_DECL_BUFFER_PTR(daxa_i32vec4)
 DAXA_DECL_BUFFER_PTR(daxa_u32)
-DAXA_DECL_BUFFER_PTR(daxa_u32vec1)
+// DAXA_DECL_BUFFER_PTR(daxa_u32vec1) // covered by daxa_u32
 DAXA_DECL_BUFFER_PTR(daxa_u32vec2)
 DAXA_DECL_BUFFER_PTR(daxa_u32vec3)
 DAXA_DECL_BUFFER_PTR(daxa_u32vec4)
 DAXA_DECL_BUFFER_PTR(daxa_i64)
-DAXA_DECL_BUFFER_PTR(daxa_i64vec1)
+// DAXA_DECL_BUFFER_PTR(daxa_i64vec1) // covered by daxa_i64
 DAXA_DECL_BUFFER_PTR(daxa_i64vec2)
 DAXA_DECL_BUFFER_PTR(daxa_i64vec3)
 DAXA_DECL_BUFFER_PTR(daxa_i64vec4)
 DAXA_DECL_BUFFER_PTR(daxa_u64)
-DAXA_DECL_BUFFER_PTR(daxa_u64vec1)
+// DAXA_DECL_BUFFER_PTR(daxa_u64vec1) // covered by daxa_u64
 DAXA_DECL_BUFFER_PTR(daxa_u64vec2)
 DAXA_DECL_BUFFER_PTR(daxa_u64vec3)
 
