@@ -113,6 +113,24 @@ namespace daxa
         usize offset = {};
     };
 
+    struct DrawMeshTasksIndirectInfo
+    {
+        BufferId indirect_buffer = {};
+        usize offset = {};
+        u32 draw_count = 1;
+        u32 stride = 12;
+    };
+
+    struct DrawMeshTasksIndirectCountInfo
+    {
+        BufferId indirect_buffer = {};
+        usize offset = {};
+        BufferId count_buffer = {};
+        usize count_offset = {};
+        u32 max_count = {};
+        u32 stride = 12;
+    };
+
     struct DrawInfo
     {
         u32 vertex_count = {};
@@ -283,6 +301,9 @@ namespace daxa
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
         void draw_indirect_count(DrawIndirectCountInfo const & info);
+        void draw_mesh_tasks(u32 x, u32 y, u32 z);
+        void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
+        void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);
