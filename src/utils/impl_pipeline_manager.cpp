@@ -3,6 +3,8 @@
 #include "../impl_core.hpp"
 #include "impl_pipeline_manager.hpp"
 
+#include <tuple>
+
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
 static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
     .maxLights = 32,
@@ -532,18 +534,20 @@ namespace daxa
     auto ImplPipelineManager::create_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<RasterPipelineState>
     {
         auto modified_info = a_info;
-        modified_info.vertex_shader_info.compile_options.inherit(this->info.shader_compile_options);
-        if (modified_info.fragment_shader_info.has_value())
+        auto const modified_shader_compile_infos = std::array<std::optional<ShaderCompileInfo> *, 6>{
+            &modified_info.vertex_shader_info,
+            &modified_info.tesselation_control_shader_info,
+            &modified_info.tesselation_evaluation_shader_info,
+            &modified_info.fragment_shader_info,
+            &modified_info.mesh_shader_info,
+            &modified_info.task_shader_info,
+        };
+        for (auto * shader_compile_info : modified_shader_compile_infos)
         {
-            modified_info.fragment_shader_info.value().compile_options.inherit(this->info.shader_compile_options);
-        }
-        if (modified_info.tesselation_control_shader_info.has_value())
-        {
-            modified_info.tesselation_control_shader_info.value().compile_options.inherit(this->info.shader_compile_options);
-        }
-        if (modified_info.tesselation_evaluation_shader_info.has_value())
-        {
-            modified_info.tesselation_evaluation_shader_info.value().compile_options.inherit(this->info.shader_compile_options);
+            if (shader_compile_info->has_value())
+            {
+                shader_compile_info->value().compile_options.inherit(this->info.shader_compile_options);
+            }
         }
         if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -560,26 +564,7 @@ namespace daxa
             .observed_hotload_files = {},
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
-        auto vert_spirv_result = get_spirv(pipe_result.info.vertex_shader_info, pipe_result.info.name, ShaderStage::VERT);
-        if (vert_spirv_result.is_err())
-        {
-            if (this->info.register_null_pipelines_when_first_compile_fails)
-            {
-                auto result = Result<RasterPipelineState>(pipe_result);
-                result.m = std::move(vert_spirv_result.message());
-                return result;
-            }
-            else
-            {
-                return Result<RasterPipelineState>(vert_spirv_result.message());
-            }
-        }
         auto raster_pipeline_info = RasterPipelineInfo{
-            .vertex_shader_info = daxa::ShaderInfo{
-                .byte_code = vert_spirv_result.value(),
-                .entry_point = a_info.vertex_shader_info.compile_options.entry_point,
-            },
-            .fragment_shader_info = {},
             .color_attachments = modified_info.color_attachments,
             .depth_test = modified_info.depth_test,
             .raster = modified_info.raster,
@@ -587,71 +572,44 @@ namespace daxa
             .push_constant_size = modified_info.push_constant_size,
             .name = modified_info.name,
         };
-        auto frag_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        if (pipe_result.info.fragment_shader_info.has_value())
+        auto vertex_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto fragment_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto tesselation_control_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto tesselation_evaluation_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto task_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto mesh_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        using ElemT = std::tuple<std::optional<ShaderCompileInfo> *, std::optional<ShaderInfo> *, daxa::Result<std::vector<unsigned int>> *, ShaderStage>;
+        auto const result_shader_compile_infos = std::array<ElemT, 6>{
+            ElemT{&pipe_result.info.vertex_shader_info, &raster_pipeline_info.vertex_shader_info, &vertex_spirv_result, ShaderStage::VERT},
+            ElemT{&pipe_result.info.fragment_shader_info, &raster_pipeline_info.fragment_shader_info, &fragment_spirv_result, ShaderStage::FRAG},
+            ElemT{&pipe_result.info.tesselation_control_shader_info, &raster_pipeline_info.tesselation_control_shader_info, &tesselation_control_spirv_result, ShaderStage::TESS_CONTROL},
+            ElemT{&pipe_result.info.tesselation_evaluation_shader_info, &raster_pipeline_info.tesselation_evaluation_shader_info, &tesselation_evaluation_spirv_result, ShaderStage::TESS_EVAL},
+            ElemT{&pipe_result.info.task_shader_info, &raster_pipeline_info.task_shader_info, &task_spirv_result, ShaderStage::TASK},
+            ElemT{&pipe_result.info.mesh_shader_info, &raster_pipeline_info.mesh_shader_info, &mesh_spirv_result, ShaderStage::MESH},
+        };
+        for (auto [pipe_result_shader_info, final_shader_info, spv_result, stage] : result_shader_compile_infos)
         {
-            frag_spirv_result = get_spirv(pipe_result.info.fragment_shader_info.value(), pipe_result.info.name, ShaderStage::FRAG);
-            if (frag_spirv_result.is_err())
+            if (pipe_result_shader_info->has_value())
             {
-                if (this->info.register_null_pipelines_when_first_compile_fails)
+                *spv_result = get_spirv(pipe_result_shader_info->value(), pipe_result.info.name, stage);
+                if (spv_result->is_err())
                 {
-                    auto result = Result<RasterPipelineState>(pipe_result);
-                    result.m = std::move(frag_spirv_result.message());
-                    return result;
+                    if (this->info.register_null_pipelines_when_first_compile_fails)
+                    {
+                        auto result = Result<RasterPipelineState>(pipe_result);
+                        result.m = std::move(spv_result->message());
+                        return result;
+                    }
+                    else
+                    {
+                        return Result<RasterPipelineState>(spv_result->message());
+                    }
                 }
-                else
-                {
-                    return Result<RasterPipelineState>(frag_spirv_result.message());
-                }
+                *final_shader_info = daxa::ShaderInfo{
+                    .byte_code = spv_result->value(),
+                    .entry_point = pipe_result_shader_info->value().compile_options.entry_point,
+                };
             }
-            raster_pipeline_info.fragment_shader_info = daxa::ShaderInfo{
-                .byte_code = frag_spirv_result.value(),
-                .entry_point = a_info.fragment_shader_info.value().compile_options.entry_point,
-            };
-        }
-        auto tess_control_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        if (pipe_result.info.tesselation_control_shader_info.has_value())
-        {
-            tess_control_spirv_result = get_spirv(pipe_result.info.tesselation_control_shader_info.value(), pipe_result.info.name, ShaderStage::TESS_CONTROL);
-            if (tess_control_spirv_result.is_err())
-            {
-                if (this->info.register_null_pipelines_when_first_compile_fails)
-                {
-                    auto result = Result<RasterPipelineState>(pipe_result);
-                    result.m = std::move(tess_control_spirv_result.message());
-                    return result;
-                }
-                else
-                {
-                    return Result<RasterPipelineState>(tess_control_spirv_result.message());
-                }
-            }
-            raster_pipeline_info.tesselation_control_shader_info = daxa::ShaderInfo{
-                .byte_code = tess_control_spirv_result.value(),
-                .entry_point = a_info.tesselation_control_shader_info.value().compile_options.entry_point,
-            };
-        }
-        auto tess_eval_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        if (pipe_result.info.tesselation_evaluation_shader_info.has_value())
-        {
-            tess_eval_spirv_result = get_spirv(pipe_result.info.tesselation_evaluation_shader_info.value(), pipe_result.info.name, ShaderStage::TESS_EVAL);
-            if (tess_eval_spirv_result.is_err())
-            {
-                if (this->info.register_null_pipelines_when_first_compile_fails)
-                {
-                    auto result = Result<RasterPipelineState>(pipe_result);
-                    result.m = std::move(tess_eval_spirv_result.message());
-                    return result;
-                }
-                else
-                {
-                    return Result<RasterPipelineState>(tess_eval_spirv_result.message());
-                }
-            }
-            raster_pipeline_info.tesselation_evaluation_shader_info = daxa::ShaderInfo{
-                .byte_code = tess_eval_spirv_result.value(),
-                .entry_point = a_info.tesselation_evaluation_shader_info.value().compile_options.entry_point,
-            };
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
         return Result<RasterPipelineState>(std::move(pipe_result));
@@ -1059,6 +1017,8 @@ namespace daxa
         preamble += "#define DAXA_SHADER_STAGE_TESSELATION_CONTROL 2\n";
         preamble += "#define DAXA_SHADER_STAGE_TESSELATION_EVALUATION 3\n";
         preamble += "#define DAXA_SHADER_STAGE_FRAGMENT 4\n";
+        preamble += "#define DAXA_SHADER_STAGE_TASK 5\n";
+        preamble += "#define DAXA_SHADER_STAGE_MESH 6\n";
 
         switch (shader_stage)
         {
@@ -1067,6 +1027,8 @@ namespace daxa
         case ShaderStage::TESS_CONTROL: preamble += "#define DAXA_SHADER_STAGE 2\n"; break;
         case ShaderStage::TESS_EVAL: preamble += "#define DAXA_SHADER_STAGE 3\n"; break;
         case ShaderStage::FRAG: preamble += "#define DAXA_SHADER_STAGE 4\n"; break;
+        case ShaderStage::TASK: preamble += "#define DAXA_SHADER_STAGE 5\n"; break;
+        case ShaderStage::MESH: preamble += "#define DAXA_SHADER_STAGE 6\n"; break;
         }
 
         preamble += "#define DAXA_SHADER 1\n";
@@ -1224,6 +1186,8 @@ namespace daxa
         args.push_back(L"-DDAXA_SHADER_STAGE_TESS_CONTROL=2");
         args.push_back(L"-DDAXA_SHADER_STAGE_TESS_EVAL=3");
         args.push_back(L"-DDAXA_SHADER_STAGE_FRAGMENT=4");
+        args.push_back(L"-DDAXA_SHADER_STAGE_TASK=5");
+        args.push_back(L"-DDAXA_SHADER_STAGE_MESH=6");
 
         switch (shader_stage)
         {
@@ -1232,6 +1196,8 @@ namespace daxa
         case ShaderStage::TESS_CONTROL: args.push_back(L"-DDAXA_SHADER_STAGE=2"); break;
         case ShaderStage::TESS_EVAL: args.push_back(L"-DDAXA_SHADER_STAGE=3"); break;
         case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=4"); break;
+        case ShaderStage::TASK: args.push_back(L"-DDAXA_SHADER_STAGE=5"); break;
+        case ShaderStage::MESH: args.push_back(L"-DDAXA_SHADER_STAGE=6"); break;
         }
 
         for (auto const & root : shader_info.compile_options.root_paths)
@@ -1270,6 +1236,8 @@ namespace daxa
         case ShaderStage::TESS_CONTROL: profile[0] = L'h'; break;
         case ShaderStage::TESS_EVAL: profile[0] = L'd'; break;
         case ShaderStage::FRAG: profile[0] = L'p'; break;
+        case ShaderStage::TASK: profile[0] = L't'; break;
+        case ShaderStage::MESH: profile[0] = L'm'; break;
         default: break;
         }
         args.push_back(profile.c_str());

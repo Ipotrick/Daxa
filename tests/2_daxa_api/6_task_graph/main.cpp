@@ -446,20 +446,20 @@ namespace tests
         task_graph.use_persistent_image(persistent_task_image);
         task_graph.use_persistent_buffer(persistent_task_buffer);
         task_graph.add_task({
-            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_STORAGE_WRITE_ONLY>{persistent_task_image}},
+            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY>{persistent_task_image}},
             .task = [&](daxa::TaskInterface const &) {},
             .name = "write persistent image",
         });
         task_graph.add_task({
             .uses = {
-                daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer},
-                daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_SAMPLED>{persistent_task_image},
+                daxa::TaskBufferUse<daxa::TaskBufferAccess::GRAPHICS_SHADER_READ>{persistent_task_buffer},
+                daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_SAMPLED>{persistent_task_image},
             },
             .task = [&](daxa::TaskInterface const &) {},
             .name = "read persistent image, read persistent buffer",
         });
         task_graph.add_task({
-            .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>{persistent_task_buffer}},
+            .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::GRAPHICS_SHADER_READ>{persistent_task_buffer}},
             .task = [&](daxa::TaskInterface const &) {},
             .name = "read persistent buffer",
         });
