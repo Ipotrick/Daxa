@@ -49,8 +49,10 @@ namespace daxa
             };
             vk_pipeline_shader_stage_create_infos.push_back(vk_pipeline_shader_stage_create_info);
         };
-
-        create_shader_module(this->info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+        if (this->info.vertex_shader_info.has_value())
+        {
+            create_shader_module(this->info.vertex_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+        }
         if (this->info.tesselation_control_shader_info.has_value())
         {
             create_shader_module(this->info.tesselation_control_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
@@ -62,6 +64,14 @@ namespace daxa
         if (this->info.fragment_shader_info.has_value())
         {
             create_shader_module(this->info.fragment_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+        }
+        if (this->info.task_shader_info.has_value())
+        {
+            create_shader_module(this->info.task_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_EXT);
+        }
+        if (this->info.mesh_shader_info.has_value())
+        {
+            create_shader_module(this->info.mesh_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_EXT);
         }
 
         this->vk_pipeline_layout = this->impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);

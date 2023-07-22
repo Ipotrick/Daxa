@@ -17,27 +17,33 @@ namespace daxa
     enum struct TaskBufferAccess
     {
         NONE,
-        SHADER_READ,
-        VERTEX_SHADER_READ,
-        TESSELLATION_CONTROL_SHADER_READ,
-        TESSELLATION_EVALUATION_SHADER_READ,
-        GEOMETRY_SHADER_READ,
-        FRAGMENT_SHADER_READ,
+        GRAPHICS_SHADER_READ,
+        GRAPHICS_SHADER_WRITE,
+        GRAPHICS_SHADER_READ_WRITE,
         COMPUTE_SHADER_READ,
-        SHADER_WRITE,
-        VERTEX_SHADER_WRITE,
-        TESSELLATION_CONTROL_SHADER_WRITE,
-        TESSELLATION_EVALUATION_SHADER_WRITE,
-        GEOMETRY_SHADER_WRITE,
-        FRAGMENT_SHADER_WRITE,
         COMPUTE_SHADER_WRITE,
-        SHADER_READ_WRITE,
-        VERTEX_SHADER_READ_WRITE,
-        TESSELLATION_CONTROL_SHADER_READ_WRITE,
-        TESSELLATION_EVALUATION_SHADER_READ_WRITE,
-        GEOMETRY_SHADER_READ_WRITE,
-        FRAGMENT_SHADER_READ_WRITE,
         COMPUTE_SHADER_READ_WRITE,
+        TASK_SHADER_READ,
+        TASK_SHADER_WRITE,
+        TASK_SHADER_READ_WRITE,
+        MESH_SHADER_READ,
+        MESH_SHADER_WRITE,
+        MESH_SHADER_READ_WRITE,
+        VERTEX_SHADER_READ,
+        VERTEX_SHADER_WRITE,
+        VERTEX_SHADER_READ_WRITE,
+        TESSELLATION_CONTROL_SHADER_READ,
+        TESSELLATION_CONTROL_SHADER_WRITE,
+        TESSELLATION_CONTROL_SHADER_READ_WRITE,
+        TESSELLATION_EVALUATION_SHADER_READ,
+        TESSELLATION_EVALUATION_SHADER_WRITE,
+        TESSELLATION_EVALUATION_SHADER_READ_WRITE,
+        GEOMETRY_SHADER_READ,
+        GEOMETRY_SHADER_WRITE,
+        GEOMETRY_SHADER_READ_WRITE,
+        FRAGMENT_SHADER_READ,
+        FRAGMENT_SHADER_WRITE,
+        FRAGMENT_SHADER_READ_WRITE,
         INDEX_READ,
         DRAW_INDIRECT_INFO_READ,
         TRANSFER_READ,
@@ -52,34 +58,42 @@ namespace daxa
     enum struct TaskImageAccess
     {
         NONE,
-        SHADER_SAMPLED,
-        VERTEX_SHADER_SAMPLED,
-        TESSELLATION_CONTROL_SHADER_SAMPLED,
-        TESSELLATION_EVALUATION_SHADER_SAMPLED,
-        GEOMETRY_SHADER_SAMPLED,
-        FRAGMENT_SHADER_SAMPLED,
+        GRAPHICS_SHADER_SAMPLED,
+        GRAPHICS_SHADER_STORAGE_READ_WRITE,
+        GRAPHICS_SHADER_STORAGE_WRITE_ONLY,
+        GRAPHICS_SHADER_STORAGE_READ_ONLY,
         COMPUTE_SHADER_SAMPLED,
-        SHADER_STORAGE_WRITE_ONLY,
-        SHADER_STORAGE_READ_ONLY,
-        VERTEX_SHADER_STORAGE_WRITE_ONLY,
-        VERTEX_SHADER_STORAGE_READ_ONLY,
-        TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY,
-        TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY,
-        TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY,
-        TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY,
-        GEOMETRY_SHADER_STORAGE_WRITE_ONLY,
-        GEOMETRY_SHADER_STORAGE_READ_ONLY,
-        FRAGMENT_SHADER_STORAGE_WRITE_ONLY,
-        FRAGMENT_SHADER_STORAGE_READ_ONLY,
         COMPUTE_SHADER_STORAGE_WRITE_ONLY,
         COMPUTE_SHADER_STORAGE_READ_ONLY,
-        SHADER_STORAGE_READ_WRITE,
-        VERTEX_SHADER_STORAGE_READ_WRITE,
-        TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE,
-        TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE,
-        GEOMETRY_SHADER_STORAGE_READ_WRITE,
-        FRAGMENT_SHADER_STORAGE_READ_WRITE,
         COMPUTE_SHADER_STORAGE_READ_WRITE,
+        TASK_SHADER_SAMPLED,
+        TASK_SHADER_STORAGE_WRITE_ONLY,
+        TASK_SHADER_STORAGE_READ_ONLY,
+        TASK_SHADER_STORAGE_READ_WRITE,
+        MESH_SHADER_SAMPLED,
+        MESH_SHADER_STORAGE_WRITE_ONLY,
+        MESH_SHADER_STORAGE_READ_ONLY,
+        MESH_SHADER_STORAGE_READ_WRITE,
+        VERTEX_SHADER_SAMPLED,
+        VERTEX_SHADER_STORAGE_WRITE_ONLY,
+        VERTEX_SHADER_STORAGE_READ_ONLY,
+        VERTEX_SHADER_STORAGE_READ_WRITE,
+        TESSELLATION_CONTROL_SHADER_SAMPLED,
+        TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY,
+        TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY,
+        TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE,
+        TESSELLATION_EVALUATION_SHADER_SAMPLED,
+        TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY,
+        TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY,
+        TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE,
+        GEOMETRY_SHADER_SAMPLED,
+        GEOMETRY_SHADER_STORAGE_WRITE_ONLY,
+        GEOMETRY_SHADER_STORAGE_READ_ONLY,
+        GEOMETRY_SHADER_STORAGE_READ_WRITE,
+        FRAGMENT_SHADER_SAMPLED,
+        FRAGMENT_SHADER_STORAGE_WRITE_ONLY,
+        FRAGMENT_SHADER_STORAGE_READ_ONLY,
+        FRAGMENT_SHADER_STORAGE_READ_WRITE,
         TRANSFER_READ,
         TRANSFER_WRITE,
         COLOR_ATTACHMENT,
@@ -588,27 +602,33 @@ namespace daxa
 
     inline namespace task_resource_uses
     {
-        using BufferShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ>;
-        using BufferVertexShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_READ>;
-        using BufferTessellationControlShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ>;
-        using BufferTessellationEvaluationShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ>;
-        using BufferGeometryShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_READ>;
-        using BufferFragmentShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_READ>;
+        using BufferGraphicsShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::GRAPHICS_SHADER_READ>;
+        using BufferGraphicsShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GRAPHICS_SHADER_WRITE>;
+        using BufferGraphicsShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE>;
         using BufferComputeShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ>;
-        using BufferShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_WRITE>;
-        using BufferVertexShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_WRITE>;
-        using BufferTessellationControlShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE>;
-        using BufferTessellationEvaluationShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE>;
-        using BufferGeometryShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_WRITE>;
-        using BufferFragmentShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_WRITE>;
         using BufferComputeShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE>;
-        using BufferShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::SHADER_READ_WRITE>;
-        using BufferVertexShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_READ_WRITE>;
-        using BufferTessellationControlShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE>;
-        using BufferTessellationEvaluationShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE>;
-        using BufferGeometryShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE>;
-        using BufferFragmentShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE>;
         using BufferComputeShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE>;
+        using BufferVertexShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_READ>;
+        using BufferVertexShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_WRITE>;
+        using BufferVertexShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::VERTEX_SHADER_READ_WRITE>;
+        using BufferTaskShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_SHADER_READ>;
+        using BufferTaskShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_SHADER_WRITE>;
+        using BufferTaskShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_SHADER_READ_WRITE>;
+        using BufferMeshShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::MESH_SHADER_READ>;
+        using BufferMeshShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::MESH_SHADER_WRITE>;
+        using BufferMeshShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::MESH_SHADER_READ_WRITE>;
+        using BufferTessellationControlShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ>;
+        using BufferTessellationControlShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE>;
+        using BufferTessellationControlShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE>;
+        using BufferTessellationEvaluationShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ>;
+        using BufferTessellationEvaluationShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE>;
+        using BufferTessellationEvaluationShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE>;
+        using BufferGeometryShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_READ>;
+        using BufferGeometryShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_WRITE>;
+        using BufferGeometryShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE>;
+        using BufferFragmentShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_READ>;
+        using BufferFragmentShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_WRITE>;
+        using BufferFragmentShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE>;
         using BufferIndexRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::INDEX_READ>;
         using BufferDrawIndirectInfoRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::DRAW_INDIRECT_INFO_READ>;
         using BufferTransferRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::TRANSFER_READ>;
@@ -617,61 +637,77 @@ namespace daxa
         using BufferHostTransferWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::HOST_TRANSFER_WRITE>;
 
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_SAMPLED, T_VIEW_TYPE>;
+        using ImageGraphicsShaderRead = daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_SAMPLED, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageVertexShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_SAMPLED, T_VIEW_TYPE>;
+        using ImageGraphicsShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageTessellationControlShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_SAMPLED, T_VIEW_TYPE>;
+        using ImageGraphicsShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageTessellationEvaluationShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageGeometryShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_SAMPLED, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageFragmentShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, T_VIEW_TYPE>;
+        using ImageGraphicsShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageComputeShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageVertexShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageVertexShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageTessellationControlShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageTessellationControlShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageTessellationEvaluationShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageTessellationEvaluationShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageGeometryShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageGeometryShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageFragmentShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
-        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageFragmentShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageComputeShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageComputeShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
+        using ImageComputeShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageVertexShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
+        using ImageTessellationControlShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTessellationControlShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTessellationControlShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageTessellationControlShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTessellationEvaluationShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTessellationEvaluationShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTessellationEvaluationShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageTessellationEvaluationShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageGeometryShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageGeometryShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageGeometryShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageGeometryShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageFragmentShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageFragmentShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageFragmentShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageFragmentShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
-        using ImageComputeShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
+        using ImageVertexShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageVertexShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageVertexShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageVertexShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTaskShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::TASK_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTaskShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTaskShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageTaskShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageMeshShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::MESH_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageMeshShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::MESH_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageMeshShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::MESH_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageMeshShaderReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageTransferRead = daxa::TaskImageUse<daxa::TaskImageAccess::TRANSFER_READ, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>

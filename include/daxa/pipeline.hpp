@@ -78,10 +78,12 @@ namespace daxa
 
     struct RasterPipelineInfo
     {
-        ShaderInfo vertex_shader_info = {};
+        std::optional<ShaderInfo> mesh_shader_info = {};
+        std::optional<ShaderInfo> vertex_shader_info = {};
         std::optional<ShaderInfo> tesselation_control_shader_info = {};
         std::optional<ShaderInfo> tesselation_evaluation_shader_info = {};
         std::optional<ShaderInfo> fragment_shader_info = {};
+        std::optional<ShaderInfo> task_shader_info = {};
         std::vector<RenderAttachment> color_attachments = {};
         DepthTestInfo depth_test = {};
         RasterizerInfo raster = {};

@@ -771,6 +771,22 @@ namespace daxa
             }
             ret += "VERTEX_SHADER";
         }
+        if ((flags & PipelineStageFlagBits::TASK_SHADER) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "TASK_SHADER";
+        }
+        if ((flags & PipelineStageFlagBits::MESH_SHADER) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "MESH_SHADER";
+        }
         if ((flags & PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (!ret.empty())
