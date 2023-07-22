@@ -717,6 +717,40 @@ namespace daxa
         }
     }
 
+    void CommandList::draw_mesh_tasks(u32 x, u32 y, u32 z)
+    {
+        auto & impl = *as<ImplCommandList>();
+        auto & device = *impl.impl_device.as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
+        DAXA_DBG_ASSERT_TRUE_M(device.info.enable_mesh_shader, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
+        device.vkCmdDrawMeshTasksEXT(impl.vk_cmd_buffer, x, y, z);
+    }
+
+    void CommandList::draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        auto & device = *impl.impl_device.as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
+        DAXA_DBG_ASSERT_TRUE_M(device.info.enable_mesh_shader, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
+        device.vkCmdDrawMeshTasksIndirectEXT(impl.vk_cmd_buffer, device.slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
+    }
+
+    void CommandList::draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info)
+    {
+        auto & impl = *as<ImplCommandList>();
+        auto & device = *impl.impl_device.as<ImplDevice>();
+        DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
+        DAXA_DBG_ASSERT_TRUE_M(device.info.enable_mesh_shader, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
+        device.vkCmdDrawMeshTasksIndirectCountEXT(
+            impl.vk_cmd_buffer, 
+            device.slot(info.indirect_buffer).vk_buffer, 
+            info.offset, 
+            device.slot(info.count_buffer).vk_buffer, 
+            info.count_offset, 
+            info.max_count, 
+            info.stride);
+    }
+
     void CommandList::write_timestamp(WriteTimestampInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();

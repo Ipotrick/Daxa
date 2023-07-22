@@ -144,6 +144,37 @@ namespace daxa
         DeviceLimits limits = {};
     };
 
+    struct MeshShaderDeviceProperties {
+        u32 max_task_work_group_total_count = {};
+        u32 max_task_work_group_count[3] = {};
+        u32 max_task_work_group_invocations = {};
+        u32 max_task_work_group_size[3] = {};
+        u32 max_task_payload_size = {};
+        u32 max_task_shared_memory_size = {};
+        u32 max_task_payload_and_shared_memory_size = {};
+        u32 max_mesh_work_group_total_count = {};
+        u32 max_mesh_work_group_count[3] = {};
+        u32 max_mesh_work_group_invocations = {};
+        u32 max_mesh_work_group_size[3] = {};
+        u32 max_mesh_shared_memory_size = {};
+        u32 max_mesh_payload_and_shared_memory_size = {};
+        u32 max_mesh_output_memory_size = {};
+        u32 max_mesh_payload_and_output_memory_size = {};
+        u32 max_mesh_output_components = {};
+        u32 max_mesh_output_vertices = {};
+        u32 max_mesh_output_primitives = {};
+        u32 max_mesh_output_layers = {};
+        u32 max_mesh_multiview_view_count = {};
+        u32 mesh_output_per_vertex_granularity = {};
+        u32 mesh_output_per_primitive_granularity = {};
+        u32 max_preferred_task_work_group_invocations = {};
+        u32 max_preferred_mesh_work_group_invocations = {};
+        u32 prefers_local_invocation_vertex_output = {};
+        u32 prefers_local_invocation_primitive_output = {};
+        u32 prefers_compact_vertex_output = {};
+        u32 prefers_compact_primitive_output = {};
+    };
+
     static inline auto default_device_score(DeviceProperties const & device_props) -> i32
     {
         i32 score = 0;
@@ -164,6 +195,7 @@ namespace daxa
         // TODO(grundlett): Remove these in favor of a more general solution
         bool enable_buffer_device_address_capture_replay = true;
         bool enable_conservative_rasterization = false;
+        bool enable_mesh_shader = false;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
@@ -235,6 +267,7 @@ namespace daxa
 
         auto info() const -> DeviceInfo const &;
         auto properties() const -> DeviceProperties const &;
+        auto mesh_shader_properties() const -> MeshShaderDeviceProperties const &;
         void wait_idle();
 
         void submit_commands(CommandSubmitInfo const & submit_info);

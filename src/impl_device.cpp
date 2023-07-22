@@ -143,6 +143,12 @@ namespace daxa
         return impl.vk_info;
     }
 
+    auto Device::mesh_shader_properties() const -> MeshShaderDeviceProperties const &
+    {
+        auto const & impl = *as<ImplDevice>();
+        return impl.mesh_shader_properties;
+    }
+
     void Device::wait_idle()
     {
         auto & impl = *as<ImplDevice>();
@@ -454,9 +460,13 @@ namespace daxa
           info{std::move(a_info)},
           main_queue_family_index(std::numeric_limits<u32>::max())
     {
-        VkPhysicalDeviceProperties vk_device_properties;
-        vkGetPhysicalDeviceProperties(vk_physical_device, &vk_device_properties);
-        vk_info = *reinterpret_cast<DeviceProperties *>(&vk_device_properties);
+        VkPhysicalDeviceProperties2 vk_physical_device_properties2 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+            .pNext = {},
+            .properties = {},
+        };
+        vkGetPhysicalDeviceProperties2(vk_physical_device, &vk_physical_device_properties2);
+        vk_info = *reinterpret_cast<DeviceProperties *>(&vk_physical_device_properties2.properties);
 
         // SELECT QUEUE
 
@@ -655,7 +665,22 @@ namespace daxa
         if (this->info.enable_conservative_rasterization)
         {
             extension_names.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
-            // extension_names.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        }
+
+        // Mesh shading
+        VkPhysicalDeviceMeshShaderFeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_MESH_SHADER{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            .taskShader = VK_TRUE,
+            .meshShader = VK_TRUE,
+            .multiviewMeshShader = VK_FALSE,
+            .primitiveFragmentShadingRateMeshShader = VK_FALSE,
+            .meshShaderQueries = VK_FALSE,
+        };
+        if (this->info.enable_mesh_shader)
+        {
+            extension_names.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+            REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_MESH_SHADER);
         }
 
         VkPhysicalDeviceFeatures2 physical_device_features_2{
@@ -683,6 +708,23 @@ namespace daxa
         this->vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
         this->vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
         this->vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(this->vk_device, "vkCmdPushDescriptorSetKHR"));
+
+        if (this->info.enable_mesh_shader)
+        {
+            this->vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdDrawMeshTasksEXT"));
+            this->vkCmdDrawMeshTasksIndirectEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
+            this->vkCmdDrawMeshTasksIndirectCountEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
+            auto pnext_ptr = vk_physical_device_properties2.pNext;
+            while (pnext_ptr != 0)
+            {
+                if (*reinterpret_cast<VkStructureType*>(pnext_ptr) == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT)
+                {
+                    VkPhysicalDeviceMeshShaderPropertiesEXT* prop_ptr = reinterpret_cast<VkPhysicalDeviceMeshShaderPropertiesEXT*>(pnext_ptr);
+                    this->mesh_shader_properties = *reinterpret_cast<MeshShaderDeviceProperties*>(reinterpret_cast<u64*>(prop_ptr) + 2/* skip sType and pNext ptrs*/);
+                }
+                pnext_ptr = reinterpret_cast<void*>(reinterpret_cast<u64*>(pnext_ptr)[1]);
+            }
+        }
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
