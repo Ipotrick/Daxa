@@ -545,14 +545,15 @@ namespace tests
                     },
                     .name = "clear swapchain",
                 });
+                auto render_img_view = task_render_image.view().view({.level_count = 5});
                 new_task_graph.add_task({
                     .uses = {
-                        ImageTransferRead<>{task_render_image.view().view({.level_count = 5})},
+                        ImageTransferRead<>{render_img_view},
                         ImageTransferWrite<>{task_swapchain_image},
                     },
-                    .task = [this](daxa::TaskInterface const & ti)
+                    .task = [=](daxa::TaskInterface const & ti)
                     {
-                        daxa::ImageId render_img = ti.uses[task_render_image].image();
+                        daxa::ImageId render_img = ti.uses[render_img_view].image();
                         daxa::ImageId swapchain_img = ti.uses[task_swapchain_image].image();
 
                         auto cmd_list = ti.get_command_list();

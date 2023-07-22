@@ -28,6 +28,12 @@ namespace daxa
         PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
         PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
 
+        // Mesh shader:
+        PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT = {};
+        PFN_vkCmdDrawMeshTasksIndirectEXT vkCmdDrawMeshTasksIndirectEXT = {};
+        PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT = {};
+        MeshShaderDeviceProperties mesh_shader_properties = {};
+
         VmaAllocator vma_allocator = {};
         DeviceProperties vk_info = {};
         DeviceInfo info = {};
