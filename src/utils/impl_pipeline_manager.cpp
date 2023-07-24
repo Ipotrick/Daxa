@@ -1003,6 +1003,22 @@ namespace daxa
                 return EShLanguage::EShLangCount;
             }
         };
+        auto shader_stage_string = [](ShaderStage stage) -> std::string_view
+        {
+            switch (stage)
+            {
+            case ShaderStage::COMP: return "comp";
+            case ShaderStage::VERT: return "vert";
+            case ShaderStage::FRAG: return "frag";
+            case ShaderStage::TESS_CONTROL: return "tess_ctrl";
+            case ShaderStage::TESS_EVAL: return "tess_eval";
+            case ShaderStage::TASK: return "task";
+            case ShaderStage::MESH: return "mesh";
+            default:
+                DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
+                return "bruh";
+            }
+        };
 
         std::string preamble;
 
@@ -1106,7 +1122,7 @@ namespace daxa
             std::replace(name.begin(), name.end(), '/', '_');
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
-            std::string const file_name = std::string("preprocessed_") + name + ".glsl";
+            std::string const file_name = std::string("preprocessed_") + name + "." + std::string(shader_stage_string(shader_stage));
             auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / file_name;
             std::string preprocessed_result = {};
             shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, SHADER_VERSION, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
