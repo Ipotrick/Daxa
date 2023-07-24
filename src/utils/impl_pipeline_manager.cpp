@@ -1101,6 +1101,20 @@ namespace daxa
 
         static constexpr int SHADER_VERSION = 450;
 
+        if (shader_info.compile_options.write_out_preprocessed_code.has_value())
+        {
+            std::replace(name.begin(), name.end(), '/', '_');
+            std::replace(name.begin(), name.end(), '\\', '_');
+            std::replace(name.begin(), name.end(), ':', '_');
+            std::string const file_name = std::string("preprocessed_") + name + ".glsl";
+            auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / file_name;
+            std::string preprocessed_result = {};
+            shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, SHADER_VERSION, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
+            auto ofs = std::ofstream{filepath, std::ios_base::trunc};
+            ofs.write(preprocessed_result.data(), static_cast<std::streamsize>(preprocessed_result.size()));
+            ofs.close();
+        }
+
         if (!shader.parse(&resource, SHADER_VERSION, false, messages, includer))
         {
             return Result<std::vector<u32>>(std::string("GLSLANG: ") + shader.getInfoLog() + shader.getInfoDebugLog());
@@ -1129,20 +1143,6 @@ namespace daxa
         spv_options.stripDebugInfo = !use_debug_info;
         std::vector<u32> spv;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
-
-        if (shader_info.compile_options.write_out_preprocessed_code.has_value())
-        {
-            std::replace(name.begin(), name.end(), '/', '_');
-            std::replace(name.begin(), name.end(), '\\', '_');
-            std::replace(name.begin(), name.end(), ':', '_');
-            std::string const file_name = std::string("preprocessed_") + name + ".glsl";
-            auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / file_name;
-            std::string preprocessed_result = {};
-            shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, SHADER_VERSION, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
-            auto ofs = std::ofstream{filepath, std::ios_base::trunc};
-            ofs.write(preprocessed_result.data(), static_cast<std::streamsize>(preprocessed_result.size()));
-            ofs.close();
-        }
         return Result<std::vector<u32>>(spv);
 #else
         return Result<std::vector<u32>>("Asked for glslang compilation without enabling glslang");
