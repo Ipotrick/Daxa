@@ -996,6 +996,8 @@ namespace daxa
             case ShaderStage::FRAG: return EShLanguage::EShLangFragment;
             case ShaderStage::TESS_CONTROL: return EShLanguage::EShLangTessControl;
             case ShaderStage::TESS_EVAL: return EShLanguage::EShLangTessEvaluation;
+            case ShaderStage::TASK: return EShLanguage::EShLangTask;
+            case ShaderStage::MESH: return EShLanguage::EShLangMesh;
             default:
                 DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
                 return EShLanguage::EShLangCount;
