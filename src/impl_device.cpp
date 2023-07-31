@@ -564,6 +564,15 @@ namespace daxa
 
         void * REQUIRED_DEVICE_FEATURE_P_CHAIN = nullptr;
 
+        VkPhysicalDeviceVulkanMemoryModelFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_VULKAN_MEMORY_MODEL{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            .vulkanMemoryModel = VK_TRUE,
+            .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low support.
+            .vulkanMemoryModelDeviceScope = VK_TRUE,
+        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_VULKAN_MEMORY_MODEL);
+
         VkPhysicalDeviceBufferDeviceAddressFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
