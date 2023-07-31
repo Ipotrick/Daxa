@@ -1,5 +1,32 @@
 #pragma once
 
+#extension GL_EXT_nonuniform_qualifier : enable
+#extension GL_EXT_buffer_reference : enable
+#extension GL_EXT_buffer_reference2 : enable
+#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable
+#extension GL_KHR_shader_subgroup_basic : enable
+#extension GL_KHR_shader_subgroup_vote : enable
+#extension GL_KHR_shader_subgroup_arithmetic : enable
+#extension GL_KHR_shader_subgroup_ballot : enable
+#extension GL_KHR_shader_subgroup_shuffle : enable
+#extension GL_KHR_shader_subgroup_shuffle_relative : enable
+#extension GL_KHR_shader_subgroup_clustered : enable
+#extension GL_KHR_shader_subgroup_quad : enable
+#extension GL_EXT_scalar_block_layout : require
+#extension GL_EXT_shader_image_load_formatted : require
+#extension GL_EXT_control_flow_attributes : require
+#extension GL_EXT_shader_image_int64 : require
+#extension GL_EXT_samplerless_texture_functions : require
+#extension GL_KHR_memory_scope_semantics : require
+
+#define DAXA_SHADER_STAGE_COMPUTE 0
+#define DAXA_SHADER_STAGE_VERTEX 1
+#define DAXA_SHADER_STAGE_TESSELATION_CONTROL 2
+#define DAXA_SHADER_STAGE_TESSELATION_EVALUATION 3
+#define DAXA_SHADER_STAGE_FRAGMENT 4
+#define DAXA_SHADER_STAGE_TASK 5
+#define DAXA_SHADER_STAGE_MESH 6
+
 // Daxa inl file type definitions:
 #define daxa_b32 bool
 #define daxa_b32vec1 daxa_b32
@@ -110,11 +137,6 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 ///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
 #define daxa_BufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(BufferPtr, STRUCT_TYPE)
-/// @brief  Pointer like syntax for a read write COHERENT buffer device address blocks containing the given struct
-///         The buffer reference block contains a single member called value of the given type.
-///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
-/// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
-#define daxa_CoherentRWBufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(CoherentRWBufferPtr, STRUCT_TYPE)
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
 #define deref(BUFFER_PTR) BUFFER_PTR.value
 
@@ -128,9 +150,9 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @brief Defines the sampler layout used in all buffer references in daxa glsl.
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 
-/// @brief  Defines three buffer reference using daxa's buffer reference layout.
-///         The three blocks are 1. read write, 2. read only, 3. read write coherent.
-///         The name of the buffer reference blocks are daxa_RWBufferPtr##STRUCT_TYPE daxa_BufferPtr##STRUCT_TYPE daxa_CoherentRWBufferPtr##STRUCT_TYPE.
+/// @brief  Defines two buffer reference using daxa's buffer reference layout.
+///         The two blocks are 1. read write, 2. read only
+///         The name of the buffer reference blocks are daxa_RWBufferPtr##STRUCT_TYPE daxa_BufferPtr##STRUCT_TYPE.
 ///         The buffer reference block contains a single field called value with the given struct type.
 /// @param STRUCT_TYPE Struct type of the value field in the buffer reference block.
 /// Usage example:
@@ -150,10 +172,6 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE           \
     {                                                                                  \
         STRUCT_TYPE value;                                                             \
-    };                                                                                 \
-    DAXA_BUFFER_REFERENCE_LAYOUT coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE \
-    {                                                                                  \
-        STRUCT_TYPE value;                                                             \
     };
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)
 
@@ -165,11 +183,6 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     };                                                         \
     DAXA_DECL_BUFFER_REFERENCE(ALIGN)                          \
     readonly buffer daxa_BufferPtr##STRUCT_TYPE                \
-    {                                                          \
-        STRUCT_TYPE value;                                     \
-    };                                                         \
-    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                          \
-    coherent buffer daxa_CoherentRWBufferPtr##STRUCT_TYPE      \
     {                                                          \
         STRUCT_TYPE value;                                     \
     };
@@ -210,11 +223,6 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define _DAXA_GET_UIMAGE(DIMENSION, image_id) daxa_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
 #define _DAXA_GET_I64IMAGE(DIMENSION, image_id) daxa_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
 #define _DAXA_GET_U64IMAGE(DIMENSION, image_id) daxa_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_IMAGE(DIMENSION, image_id) daxa_coherent_image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_IIMAGE(DIMENSION, image_id) daxa_coherent_iimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_UIMAGE(DIMENSION, image_id) daxa_coherent_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_I64IMAGE(DIMENSION, image_id) daxa_coherent_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_COHERENT_U64IMAGE(DIMENSION, image_id) daxa_coherent_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_GET_TEXTURE(DIMENSION, image_id) daxa_texture##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
@@ -231,11 +239,6 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_DECL_IMAGE(DIMENSION)                                                                            \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform coherent image##DIMENSION daxa_coherent_image##DIMENSION##Table[];       \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform coherent iimage##DIMENSION daxa_coherent_iimage##DIMENSION##Table[];     \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform coherent uimage##DIMENSION daxa_coherent_uimage##DIMENSION##Table[];     \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform coherent i64image##DIMENSION daxa_coherent_i64image##DIMENSION##Table[]; \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform coherent u64image##DIMENSION daxa_coherent_u64image##DIMENSION##Table[]; \
     DAXA_STORAGE_IMAGE_LAYOUT uniform image##DIMENSION daxa_image##DIMENSION##Table[];                         \
     DAXA_STORAGE_IMAGE_LAYOUT uniform iimage##DIMENSION daxa_iimage##DIMENSION##Table[];                       \
     DAXA_STORAGE_IMAGE_LAYOUT uniform uimage##DIMENSION daxa_uimage##DIMENSION##Table[];                       \
@@ -253,11 +256,6 @@ DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_samplerShadowTable[];
 #define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)]
 
 _DAXA_DECL_IMAGE(1D)
-#define daxa_coherent_image1D(image_id) _DAXA_GET_COHERENT_IMAGE(1D, image_id)
-#define daxa_coherent_iimage1D(image_id) _DAXA_GET_COHERENT_IIMAGE(1D, image_id)
-#define daxa_coherent_uimage1D(image_id) _DAXA_GET_COHERENT_UIMAGE(1D, image_id)
-#define daxa_coherent_i64image1D(image_id) _DAXA_GET_COHERENT_I64IMAGE(1D, image_id)
-#define daxa_coherent_u64image1D(image_id) _DAXA_GET_COHERENT_U64IMAGE(1D, image_id)
 #define daxa_image1D(image_id) _DAXA_GET_IMAGE(1D, image_id)
 #define daxa_iimage1D(image_id) _DAXA_GET_IIMAGE(1D, image_id)
 #define daxa_uimage1D(image_id) _DAXA_GET_UIMAGE(1D, image_id)
@@ -274,11 +272,6 @@ _DAXA_DECL_IMAGE(1D)
 #define daxa_usamplerShadow1D(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1D, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2D)
-#define daxa_coherent_image2D(image_id) _DAXA_GET_COHERENT_IMAGE(2D, image_id)
-#define daxa_coherent_iimage2D(image_id) _DAXA_GET_COHERENT_IIMAGE(2D, image_id)
-#define daxa_coherent_uimage2D(image_id) _DAXA_GET_COHERENT_UIMAGE(2D, image_id)
-#define daxa_coherent_i64image2D(image_id) _DAXA_GET_COHERENT_I64IMAGE(2D, image_id)
-#define daxa_coherent_u64image2D(image_id) _DAXA_GET_COHERENT_U64IMAGE(2D, image_id)
 #define daxa_image2D(image_id) _DAXA_GET_IMAGE(2D, image_id)
 #define daxa_iimage2D(image_id) _DAXA_GET_IIMAGE(2D, image_id)
 #define daxa_uimage2D(image_id) _DAXA_GET_UIMAGE(2D, image_id)
@@ -295,11 +288,6 @@ _DAXA_DECL_IMAGE(2D)
 #define daxa_usampler2DShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2D, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(3D)
-#define daxa_coherent_image3D(image_id) _DAXA_GET_COHERENT_IMAGE(3D, image_id)
-#define daxa_coherent_iimage3D(image_id) _DAXA_GET_COHERENT_IIMAGE(3D, image_id)
-#define daxa_coherent_uimage3D(image_id) _DAXA_GET_COHERENT_UIMAGE(3D, image_id)
-#define daxa_coherent_i64image3D(image_id) _DAXA_GET_COHERENT_I64IMAGE(3D, image_id)
-#define daxa_coherent_u64image3D(image_id) _DAXA_GET_COHERENT_U64IMAGE(3D, image_id)
 #define daxa_image3D(image_id) _DAXA_GET_IMAGE(3D, image_id)
 #define daxa_iimage3D(image_id) _DAXA_GET_IIMAGE(3D, image_id)
 #define daxa_uimage3D(image_id) _DAXA_GET_UIMAGE(3D, image_id)
@@ -316,11 +304,6 @@ _DAXA_DECL_IMAGE(3D)
 #define daxa_usampler3DShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(3D, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(Cube)
-#define daxa_coherent_imageCube(image_id) _DAXA_GET_COHERENT_IMAGE(Cube, image_id)
-#define daxa_coherent_iimageCube(image_id) _DAXA_GET_COHERENT_IIMAGE(Cube, image_id)
-#define daxa_coherent_uimageCube(image_id) _DAXA_GET_COHERENT_UIMAGE(Cube, image_id)
-#define daxa_coherent_i64imageCube(image_id) _DAXA_GET_COHERENT_I64IMAGE(Cube, image_id)
-#define daxa_coherent_u64imageCube(image_id) _DAXA_GET_COHERENT_U64IMAGE(Cube, image_id)
 #define daxa_imageCube(image_id) _DAXA_GET_IMAGE(Cube, image_id)
 #define daxa_iimageCube(image_id) _DAXA_GET_IIMAGE(Cube, image_id)
 #define daxa_uimageCube(image_id) _DAXA_GET_UIMAGE(Cube, image_id)
@@ -337,11 +320,6 @@ _DAXA_DECL_IMAGE(Cube)
 #define daxa_usamplerCubeShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(Cube, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(CubeArray)
-#define daxa_coherent_imageCubeArray(image_id) _DAXA_GET_COHERENT_IMAGE(CubeArray, image_id)
-#define daxa_coherent_iimageCubeArray(image_id) _DAXA_GET_COHERENT_IIMAGE(CubeArray, image_id)
-#define daxa_coherent_uimageCubeArray(image_id) _DAXA_GET_COHERENT_UIMAGE(CubeArray, image_id)
-#define daxa_coherent_i64imageCubeArray(image_id) _DAXA_GET_COHERENT_I64IMAGE(CubeArray, image_id)
-#define daxa_coherent_u64imageCubeArray(image_id) _DAXA_GET_COHERENT_U64IMAGE(CubeArray, image_id)
 #define daxa_imageCubeArray(image_id) _DAXA_GET_IMAGE(CubeArray, image_id)
 #define daxa_iimageCubeArray(image_id) _DAXA_GET_IIMAGE(CubeArray, image_id)
 #define daxa_uimageCubeArray(image_id) _DAXA_GET_UIMAGE(CubeArray, image_id)
@@ -358,11 +336,6 @@ _DAXA_DECL_IMAGE(CubeArray)
 #define daxa_usamplerCubeArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(CubeArray, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(1DArray)
-#define daxa_coherent_image1DArray(image_id) _DAXA_GET_COHERENT_IMAGE(1DArray, image_id)
-#define daxa_coherent_iimage1DArray(image_id) _DAXA_GET_COHERENT_IIMAGE(1DArray, image_id)
-#define daxa_coherent_uimage1DArray(image_id) _DAXA_GET_COHERENT_UIMAGE(1DArray, image_id)
-#define daxa_coherent_i64image1DArray(image_id) _DAXA_GET_COHERENT_I64IMAGE(1DArray, image_id)
-#define daxa_coherent_u64image1DArray(image_id) _DAXA_GET_COHERENT_U64IMAGE(1DArray, image_id)
 #define daxa_image1DArray(image_id) _DAXA_GET_IMAGE(1DArray, image_id)
 #define daxa_iimage1DArray(image_id) _DAXA_GET_IIMAGE(1DArray, image_id)
 #define daxa_uimage1DArray(image_id) _DAXA_GET_UIMAGE(1DArray, image_id)
@@ -379,11 +352,6 @@ _DAXA_DECL_IMAGE(1DArray)
 #define daxa_usampler1DArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1DArray, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2DArray)
-#define daxa_coherent_image2DArray(image_id) _DAXA_GET_COHERENT_IMAGE(2DArray, image_id)
-#define daxa_coherent_iimage2DArray(image_id) _DAXA_GET_COHERENT_IIMAGE(2DArray, image_id)
-#define daxa_coherent_uimage2DArray(image_id) _DAXA_GET_COHERENT_UIMAGE(2DArray, image_id)
-#define daxa_coherent_i64image2DArray(image_id) _DAXA_GET_COHERENT_I64IMAGE(2DArray, image_id)
-#define daxa_coherent_u64image2DArray(image_id) _DAXA_GET_COHERENT_U64IMAGE(2DArray, image_id)
 #define daxa_image2DArray(image_id) _DAXA_GET_IMAGE(2DArray, image_id)
 #define daxa_iimage2DArray(image_id) _DAXA_GET_IIMAGE(2DArray, image_id)
 #define daxa_uimage2DArray(image_id) _DAXA_GET_UIMAGE(2DArray, image_id)
@@ -400,11 +368,6 @@ _DAXA_DECL_IMAGE(2DArray)
 #define daxa_usampler2DArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DArray, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2DMS)
-#define daxa_coherent_image2DMS(image_id) _DAXA_GET_COHERENT_IMAGE(2DMS, image_id)
-#define daxa_coherent_iimage2DMS(image_id) _DAXA_GET_COHERENT_IIMAGE(2DMS, image_id)
-#define daxa_coherent_uimage2DMS(image_id) _DAXA_GET_COHERENT_UIMAGE(2DMS, image_id)
-#define daxa_coherent_i64image2DMS(image_id) _DAXA_GET_COHERENT_I64IMAGE(2DMS, image_id)
-#define daxa_coherent_u64image2DMS(image_id) _DAXA_GET_COHERENT_U64IMAGE(2DMS, image_id)
 #define daxa_image2DMS(image_id) _DAXA_GET_IMAGE(2DMS, image_id)
 #define daxa_iimage2DMS(image_id) _DAXA_GET_IIMAGE(2DMS, image_id)
 #define daxa_uimage2DMS(image_id) _DAXA_GET_UIMAGE(2DMS, image_id)
@@ -421,11 +384,6 @@ _DAXA_DECL_IMAGE(2DMS)
 #define daxa_usampler2DMSShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMS, image_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2DMSArray)
-#define daxa_coherent_image2DMSArray(image_id) _DAXA_GET_COHERENT_IMAGE(2DMSArray, image_id)
-#define daxa_coherent_iimage2DMSArray(image_id) _DAXA_GET_COHERENT_IIMAGE(2DMSArray, image_id)
-#define daxa_coherent_uimage2DMSArray(image_id) _DAXA_GET_COHERENT_UIMAGE(2DMSArray, image_id)
-#define daxa_coherent_i64image2DMSArray(image_id) _DAXA_GET_COHERENT_I64IMAGE(2DMSArray, image_id)
-#define daxa_coherent_u64image2DMSArray(image_id) _DAXA_GET_COHERENT_U64IMAGE(2DMSArray, image_id)
 #define daxa_image2DMSArray(image_id) _DAXA_GET_IMAGE(2DMSArray, image_id)
 #define daxa_iimage2DMSArray(image_id) _DAXA_GET_IIMAGE(2DMSArray, image_id)
 #define daxa_uimage2DMSArray(image_id) _DAXA_GET_UIMAGE(2DMSArray, image_id)
@@ -497,7 +455,6 @@ DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
 
 #define RWBufferPtr(STRUCT) daxa_RWBufferPtr##STRUCT
 #define BufferPtr(STRUCT) daxa_BufferPtr##STRUCT
-#define CoherentRWBufferPtr(STRUCT) daxa_CoherentRWBufferPtr##STRUCT
 
 #define id_to_address daxa_id_to_address
 #define buffer_id_to_index daxa_buffer_id_to_index
