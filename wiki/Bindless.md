@@ -59,6 +59,8 @@ uvec2 size = textureSize(daxa_texture1DArray(img));
 ...
 ```
 
+> Daxa default enables the glsl extension [GL_EXT_samplerless_texture_functions](https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GL_EXT_samplerless_texture_functions.txt). This ext defines overloads for all texture access functions that do not require a sampler to only take in a textureDIMENSION instead.
+
 For each image access, the image view ID must be cast to the corresponding GLSL type with Daxa's macros. Daxa defines macros for all normal image/texture/sampler types and even for some commonly used extensions like 64-bit images.
 
 You do NOT need to interact with any binding logic. No descriptor sets, descriptor layouts, pipeline layouts binding, set numbers, or shader reflection. Daxa Ddes all the descriptor management behind the scenes.
@@ -126,10 +128,8 @@ These macros generate buffer references under the following names:
 * `daxa_BufferPtrMyStruct`
 * `daxa_RWBufferPtr(MyStruct)`
 * `daxa_RWBufferPtrMyStruct`
-* `daxa_CoherentRWBufferPtr(MyStruct)`
-* `daxa_CoherentRWBufferPtrMyStruct`
 
-The RW variants are declared to be read and writable, the non-rw variants are READ ONLY. The coherent variants declare coherent memory access.
+> Note there are no coherent buffer references in daxa. This is because daxa uses the vulkan memory model (vmm). The vmm deprecates buffer and image coherent annotations and replaces them with fine atomic and memory barrier calls, see [the glsl extension](https://github.com/KhronosGroup/GLSL/blob/master/extensions/khr/GL_KHR_memory_scope_semantics.txt).
 
 The Daxa buffer ptr types are simply a buffer reference containing one field named `value` of the given struct type.
 Daxa also provides the `deref(BUFFER_PTR)` macro, which simply translates to `BUFFER_PTR.value`. This is some optional syntax sugar for those who prefer to be clear and want to avoid using the name `value` here.
