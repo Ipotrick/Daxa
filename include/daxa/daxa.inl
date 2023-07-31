@@ -19,8 +19,13 @@
 #define DAXA_SHADER_DEBUG_BUFFER_BINDING 5
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
 #define DAXA_ID_VERSION_SHIFT (24)
+#if defined(__cplusplus)
+#define DAXA_SHADER 0
+#else
+#define DAXA_SHADER 1
+#endif
 
-#if defined(DAXA_SHADER)
+#if DAXA_SHADER
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_HLSL 2
 
@@ -40,7 +45,7 @@
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
 #include <daxa/daxa.hlsl>
 #endif
-#elif defined(__cplusplus)
+#else
 #include <daxa/daxa.hpp>
 
 #if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)

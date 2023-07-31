@@ -1014,14 +1014,6 @@ namespace daxa
         // the latest version.
         // preamble += "#version 450\n";
 
-        preamble += "#define DAXA_SHADER_STAGE_COMPUTE 0\n";
-        preamble += "#define DAXA_SHADER_STAGE_VERTEX 1\n";
-        preamble += "#define DAXA_SHADER_STAGE_TESSELATION_CONTROL 2\n";
-        preamble += "#define DAXA_SHADER_STAGE_TESSELATION_EVALUATION 3\n";
-        preamble += "#define DAXA_SHADER_STAGE_FRAGMENT 4\n";
-        preamble += "#define DAXA_SHADER_STAGE_TASK 5\n";
-        preamble += "#define DAXA_SHADER_STAGE_MESH 6\n";
-
         switch (shader_stage)
         {
         case ShaderStage::COMP: preamble += "#define DAXA_SHADER_STAGE 0\n"; break;
@@ -1033,28 +1025,8 @@ namespace daxa
         case ShaderStage::MESH: preamble += "#define DAXA_SHADER_STAGE 6\n"; break;
         }
 
-        preamble += "#define DAXA_SHADER 1\n";
         preamble += "#define DAXA_SHADERLANG 1\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
-        preamble += "#extension GL_EXT_nonuniform_qualifier : enable\n";
-        preamble += "#extension GL_EXT_buffer_reference : enable\n";
-        preamble += "#extension GL_EXT_buffer_reference2 : enable\n";
-        preamble += "#extension GL_EXT_shader_explicit_arithmetic_types_int64 : enable\n";
-
-        // TODO(grundlett): Probably expose this as a compile option!
-        preamble += "#extension GL_KHR_shader_subgroup_basic : enable\n";
-        preamble += "#extension GL_KHR_shader_subgroup_vote : enable\n";
-        preamble += "#extension GL_KHR_shader_subgroup_arithmetic : enable\n";
-        preamble += "#extension GL_KHR_shader_subgroup_ballot : enable\n";
-        preamble += "#extension GL_KHR_shader_subgroup_shuffle : enable\n";
-        preamble += "#extension GL_KHR_shader_subgroup_shuffle_relative : enable\n";
-        preamble += "#extension GL_KHR_shader_subgroup_clustered : enable\n";
-        preamble += "#extension GL_KHR_shader_subgroup_quad : enable\n";
-        preamble += "#extension GL_EXT_scalar_block_layout : require\n";
-        preamble += "#extension GL_EXT_shader_image_load_formatted : require\n";
-        preamble += "#extension GL_EXT_control_flow_attributes : require\n";
-        preamble += "#extension GL_EXT_shader_image_int64 : require\n";
-        preamble += "#extension GL_EXT_samplerless_texture_functions : require\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (!shader_define.value.empty())
