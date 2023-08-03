@@ -3,10 +3,13 @@
 
 DAXA_DECL_PUSH_CONSTANT(BindlessTestPush, push)
 
+// tests custom image accessor declarations
+DAXA_DECL_IMAGE_ACCESSOR(image2D, restrict writeonly subgroupcoherent, WORestrCoher)
+
 void pass_by_value(daxa_RWBufferPtr(SomeStruct) b, daxa_ImageViewId i, daxa_SamplerId s)
 {
     // Any image id can be cast to a glsl resource, by naming the glsl resource with the daxa_ prefix.
-    ivec2 size = imageSize(daxa_image2D(i));
+    ivec2 size = imageSize(daxa_access(WORestrCoher, i));
     imageStore(daxa_image2D(i), ivec2(0,0), vec4(1234,0,0,0));
     deref(b).value = 1234;
 }
