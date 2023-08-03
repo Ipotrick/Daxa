@@ -61,8 +61,6 @@
 #define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
-/// @brief Buffer ptr types map to the buffer device address type in daxa.
-#define daxa_CoherentRWBufferPtr(X) daxa::types::BufferDeviceAddress
 
 #define daxa_b32 daxa::types::b32
 #define daxa_i32 daxa::types::i32

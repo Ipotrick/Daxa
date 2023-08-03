@@ -112,7 +112,7 @@ daxa_u32 daxa_sampler_id_to_index(daxa_SamplerId id)
 }
 
 // Daxa implementation detail begin
-layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
+layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) restrict readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
 daxa_buffer_device_address_buffer;
 layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
 layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_SamplerShadowTable[];
@@ -150,8 +150,8 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @brief Defines the sampler layout used in all buffer references in daxa glsl.
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 
-/// @brief  Defines two buffer reference using daxa's buffer reference layout.
-///         The two blocks are 1. read write, 2. read only
+/// @brief  Defines three buffer reference using daxa's buffer reference layout.
+///         The three blocks are 1. read write, 2. read only, 3. read write coherent.
 ///         The name of the buffer reference blocks are daxa_RWBufferPtr##STRUCT_TYPE daxa_BufferPtr##STRUCT_TYPE.
 ///         The buffer reference block contains a single field called value with the given struct type.
 /// @param STRUCT_TYPE Struct type of the value field in the buffer reference block.
@@ -215,27 +215,48 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 ///         daxa_u32 v = value; // value is globaly available in the shader.
 ///     }
 ///
-#define DAXA_DECL_UNIFORM_BUFFER(SLOT) layout(set = DAXA_DECL_UNIFORM_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = 4, scalar) uniform
+#define DAXA_DECL_UNIFORM_BUFFER_ALIGN(SLOT, ALIGNMENT) layout(set = DAXA_DECL_UNIFORM_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = ALIGNMENT, scalar) uniform
+#define DAXA_DECL_UNIFORM_BUFFER(SLOT) DAXA_DECL_UNIFORM_BUFFER_ALIGN(SLOT, 4)
+
+/// @brief  Can be used to define a specialized way to access image views.
+///         Daxa only provides default accessors with no annotations, meaning that there is no way to get the glsl functionality of restrict, readonly, etc..
+//          As the permutation count is gigantic, daxa does not predefine all possible accessors, instead the user can declare more specialized accessors themselfes.
+///         DAXA_DECL_IMAGE_ACCESSOR declares a new accessor that can be used with daxa_access(ACCESSOR_NAME, image_view_id).
+///         This can only be used for storage images.
+/// @param TYPE image type, example image2D. Only storage image types allowed, for example texture2D would not be allowed.
+/// @param ANNOTATIONS list of access specializations, example coherent.
+/// @param ACCESSOR_NAME name of newly declared accessor, this name is used by daxa_access(ACCESSOR_NAME, image_view_id).
+/// Usage example:
+///     DAXA_DECL_IMAGE_ACCESSOR(image2D, coherent restrict, RWCoherRestr)
+///     DAXA_DECL_IMAGE_ACCESSOR(iimage2DArray, writeonly restrict, WORestr)
+///     ...
+///     void main() {
+///         vec4 v = imageLoad(daxa_access(RWCoherRestr, img0), ivec2(0,0));
+///         imageStore(daxa_access(WORestr, img1), ivec2(0,0), 0, ivec4(v));
+///     }
+///
+#define DAXA_DECL_IMAGE_ACCESSOR(TYPE, ANNOTATIONS, ACCESSOR_NAME) DAXA_STORAGE_IMAGE_LAYOUT uniform ANNOTATIONS TYPE daxa_access_##ACCESSOR_NAME##Table[];
+#define daxa_access(ACCESSOR_NAME, image_view_id) daxa_access_##ACCESSOR_NAME##Table[daxa_image_view_id_to_index(image_view_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_IMAGE(DIMENSION, image_id) daxa_image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_IIMAGE(DIMENSION, image_id) daxa_iimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_UIMAGE(DIMENSION, image_id) daxa_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_I64IMAGE(DIMENSION, image_id) daxa_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_U64IMAGE(DIMENSION, image_id) daxa_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_IMAGE(DIMENSION, image_view_id) daxa_image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+#define _DAXA_GET_IIMAGE(DIMENSION, image_view_id) daxa_iimage##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+#define _DAXA_GET_UIMAGE(DIMENSION, image_view_id) daxa_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+#define _DAXA_GET_I64IMAGE(DIMENSION, image_view_id) daxa_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+#define _DAXA_GET_U64IMAGE(DIMENSION, image_view_id) daxa_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_TEXTURE(DIMENSION, image_id) daxa_texture##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_ITEXTURE(DIMENSION, image_id) daxa_itexture##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
-#define _DAXA_GET_UTEXTURE(DIMENSION, image_id) daxa_utexture##DIMENSION##Table[daxa_image_view_id_to_index(image_id)]
+#define _DAXA_GET_TEXTURE(DIMENSION, image_view_id) daxa_texture##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+#define _DAXA_GET_ITEXTURE(DIMENSION, image_view_id) daxa_itexture##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+#define _DAXA_GET_UTEXTURE(DIMENSION, image_view_id) daxa_utexture##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_GET_SAMPLER(DIMENSION, image_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
-#define _DAXA_GET_ISAMPLER(DIMENSION, image_id, sampler_id) isampler##DIMENSION(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
-#define _DAXA_GET_USAMPLER(DIMENSION, image_id, sampler_id) usampler##DIMENSION(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
-#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_TEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
-#define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
-#define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_SAMPLER(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_view_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_ISAMPLER(DIMENSION, image_view_id, sampler_id) isampler##DIMENSION(_DAXA_GET_ITEXTURE(DIMENSION, image_view_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_USAMPLER(DIMENSION, image_view_id, sampler_id) usampler##DIMENSION(_DAXA_GET_UTEXTURE(DIMENSION, image_view_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_TEXTURE(DIMENSION, image_view_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_view_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
+#define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_view_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_DECL_IMAGE(DIMENSION)                                                                            \
@@ -256,148 +277,148 @@ DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_samplerShadowTable[];
 #define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)]
 
 _DAXA_DECL_IMAGE(1D)
-#define daxa_image1D(image_id) _DAXA_GET_IMAGE(1D, image_id)
-#define daxa_iimage1D(image_id) _DAXA_GET_IIMAGE(1D, image_id)
-#define daxa_uimage1D(image_id) _DAXA_GET_UIMAGE(1D, image_id)
-#define daxa_i64image1D(image_id) _DAXA_GET_I64IMAGE(1D, image_id)
-#define daxa_u64image1D(image_id) _DAXA_GET_U64IMAGE(1D, image_id)
-#define daxa_texture1D(image_id) _DAXA_GET_TEXTURE(1D, image_id)
-#define daxa_itexture1D(image_id) _DAXA_GET_ITEXTURE(1D, image_id)
-#define daxa_utexture1D(image_id) _DAXA_GET_UTEXTURE(1D, image_id)
-#define daxa_sampler1D(image_id, sampler_id) _DAXA_GET_SAMPLER(1D, image_id, sampler_id)
-#define daxa_isampler1D(image_id, sampler_id) _DAXA_GET_ISAMPLER(1D, image_id, sampler_id)
-#define daxa_usampler1D(image_id, sampler_id) _DAXA_GET_USAMPLER(1D, image_id, sampler_id)
-#define daxa_samplerShadow1D(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1D, image_id, sampler_id)
-#define daxa_isamplerShadow1D(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1D, image_id, sampler_id)
-#define daxa_usamplerShadow1D(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1D, image_id, sampler_id)
+#define daxa_image1D(image_view_id) _DAXA_GET_IMAGE(1D, image_view_id)
+#define daxa_iimage1D(image_view_id) _DAXA_GET_IIMAGE(1D, image_view_id)
+#define daxa_uimage1D(image_view_id) _DAXA_GET_UIMAGE(1D, image_view_id)
+#define daxa_i64image1D(image_view_id) _DAXA_GET_I64IMAGE(1D, image_view_id)
+#define daxa_u64image1D(image_view_id) _DAXA_GET_U64IMAGE(1D, image_view_id)
+#define daxa_texture1D(image_view_id) _DAXA_GET_TEXTURE(1D, image_view_id)
+#define daxa_itexture1D(image_view_id) _DAXA_GET_ITEXTURE(1D, image_view_id)
+#define daxa_utexture1D(image_view_id) _DAXA_GET_UTEXTURE(1D, image_view_id)
+#define daxa_sampler1D(image_view_id, sampler_id) _DAXA_GET_SAMPLER(1D, image_view_id, sampler_id)
+#define daxa_isampler1D(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(1D, image_view_id, sampler_id)
+#define daxa_usampler1D(image_view_id, sampler_id) _DAXA_GET_USAMPLER(1D, image_view_id, sampler_id)
+#define daxa_samplerShadow1D(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1D, image_view_id, sampler_id)
+#define daxa_isamplerShadow1D(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1D, image_view_id, sampler_id)
+#define daxa_usamplerShadow1D(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1D, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2D)
-#define daxa_image2D(image_id) _DAXA_GET_IMAGE(2D, image_id)
-#define daxa_iimage2D(image_id) _DAXA_GET_IIMAGE(2D, image_id)
-#define daxa_uimage2D(image_id) _DAXA_GET_UIMAGE(2D, image_id)
-#define daxa_i64image2D(image_id) _DAXA_GET_I64IMAGE(2D, image_id)
-#define daxa_u64image2D(image_id) _DAXA_GET_U64IMAGE(2D, image_id)
-#define daxa_texture2D(image_id) _DAXA_GET_TEXTURE(2D, image_id)
-#define daxa_itexture2D(image_id) _DAXA_GET_ITEXTURE(2D, image_id)
-#define daxa_utexture2D(image_id) _DAXA_GET_UTEXTURE(2D, image_id)
-#define daxa_sampler2D(image_id, sampler_id) _DAXA_GET_SAMPLER(2D, image_id, sampler_id)
-#define daxa_isampler2D(image_id, sampler_id) _DAXA_GET_ISAMPLER(2D, image_id, sampler_id)
-#define daxa_usampler2D(image_id, sampler_id) _DAXA_GET_USAMPLER(2D, image_id, sampler_id)
-#define daxa_sampler2DShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2D, image_id, sampler_id)
-#define daxa_isampler2DShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2D, image_id, sampler_id)
-#define daxa_usampler2DShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2D, image_id, sampler_id)
+#define daxa_image2D(image_view_id) _DAXA_GET_IMAGE(2D, image_view_id)
+#define daxa_iimage2D(image_view_id) _DAXA_GET_IIMAGE(2D, image_view_id)
+#define daxa_uimage2D(image_view_id) _DAXA_GET_UIMAGE(2D, image_view_id)
+#define daxa_i64image2D(image_view_id) _DAXA_GET_I64IMAGE(2D, image_view_id)
+#define daxa_u64image2D(image_view_id) _DAXA_GET_U64IMAGE(2D, image_view_id)
+#define daxa_texture2D(image_view_id) _DAXA_GET_TEXTURE(2D, image_view_id)
+#define daxa_itexture2D(image_view_id) _DAXA_GET_ITEXTURE(2D, image_view_id)
+#define daxa_utexture2D(image_view_id) _DAXA_GET_UTEXTURE(2D, image_view_id)
+#define daxa_sampler2D(image_view_id, sampler_id) _DAXA_GET_SAMPLER(2D, image_view_id, sampler_id)
+#define daxa_isampler2D(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(2D, image_view_id, sampler_id)
+#define daxa_usampler2D(image_view_id, sampler_id) _DAXA_GET_USAMPLER(2D, image_view_id, sampler_id)
+#define daxa_sampler2DShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2D, image_view_id, sampler_id)
+#define daxa_isampler2DShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2D, image_view_id, sampler_id)
+#define daxa_usampler2DShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2D, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(3D)
-#define daxa_image3D(image_id) _DAXA_GET_IMAGE(3D, image_id)
-#define daxa_iimage3D(image_id) _DAXA_GET_IIMAGE(3D, image_id)
-#define daxa_uimage3D(image_id) _DAXA_GET_UIMAGE(3D, image_id)
-#define daxa_i64image3D(image_id) _DAXA_GET_I64IMAGE(3D, image_id)
-#define daxa_u64image3D(image_id) _DAXA_GET_U64IMAGE(3D, image_id)
-#define daxa_texture3D(image_id) _DAXA_GET_TEXTURE(3D, image_id)
-#define daxa_itexture3D(image_id) _DAXA_GET_ITEXTURE(3D, image_id)
-#define daxa_utexture3D(image_id) _DAXA_GET_UTEXTURE(3D, image_id)
-#define daxa_sampler3D(image_id, sampler_id) _DAXA_GET_SAMPLER(3D, image_id, sampler_id)
-#define daxa_isampler3D(image_id, sampler_id) _DAXA_GET_ISAMPLER(3D, image_id, sampler_id)
-#define daxa_usampler3D(image_id, sampler_id) _DAXA_GET_USAMPLER(3D, image_id, sampler_id)
-#define daxa_sampler3DShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(3D, image_id, sampler_id)
-#define daxa_isampler3DShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(3D, image_id, sampler_id)
-#define daxa_usampler3DShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(3D, image_id, sampler_id)
+#define daxa_image3D(image_view_id) _DAXA_GET_IMAGE(3D, image_view_id)
+#define daxa_iimage3D(image_view_id) _DAXA_GET_IIMAGE(3D, image_view_id)
+#define daxa_uimage3D(image_view_id) _DAXA_GET_UIMAGE(3D, image_view_id)
+#define daxa_i64image3D(image_view_id) _DAXA_GET_I64IMAGE(3D, image_view_id)
+#define daxa_u64image3D(image_view_id) _DAXA_GET_U64IMAGE(3D, image_view_id)
+#define daxa_texture3D(image_view_id) _DAXA_GET_TEXTURE(3D, image_view_id)
+#define daxa_itexture3D(image_view_id) _DAXA_GET_ITEXTURE(3D, image_view_id)
+#define daxa_utexture3D(image_view_id) _DAXA_GET_UTEXTURE(3D, image_view_id)
+#define daxa_sampler3D(image_view_id, sampler_id) _DAXA_GET_SAMPLER(3D, image_view_id, sampler_id)
+#define daxa_isampler3D(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(3D, image_view_id, sampler_id)
+#define daxa_usampler3D(image_view_id, sampler_id) _DAXA_GET_USAMPLER(3D, image_view_id, sampler_id)
+#define daxa_sampler3DShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(3D, image_view_id, sampler_id)
+#define daxa_isampler3DShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(3D, image_view_id, sampler_id)
+#define daxa_usampler3DShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(3D, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(Cube)
-#define daxa_imageCube(image_id) _DAXA_GET_IMAGE(Cube, image_id)
-#define daxa_iimageCube(image_id) _DAXA_GET_IIMAGE(Cube, image_id)
-#define daxa_uimageCube(image_id) _DAXA_GET_UIMAGE(Cube, image_id)
-#define daxa_i64imageCube(image_id) _DAXA_GET_I64IMAGE(Cube, image_id)
-#define daxa_u64imageCube(image_id) _DAXA_GET_U64IMAGE(Cube, image_id)
-#define daxa_textureCube(image_id) _DAXA_GET_TEXTURE(Cube, image_id)
-#define daxa_itextureCube(image_id) _DAXA_GET_ITEXTURE(Cube, image_id)
-#define daxa_utextureCube(image_id) _DAXA_GET_UTEXTURE(Cube, image_id)
-#define daxa_samplerCube(image_id, sampler_id) _DAXA_GET_SAMPLER(Cube, image_id, sampler_id)
-#define daxa_isamplerCube(image_id, sampler_id) _DAXA_GET_ISAMPLER(Cube, image_id, sampler_id)
-#define daxa_usamplerCube(image_id, sampler_id) _DAXA_GET_USAMPLER(Cube, image_id, sampler_id)
-#define daxa_samplerCubeShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(Cube, image_id, sampler_id)
-#define daxa_isamplerCubeShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(Cube, image_id, sampler_id)
-#define daxa_usamplerCubeShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(Cube, image_id, sampler_id)
+#define daxa_imageCube(image_view_id) _DAXA_GET_IMAGE(Cube, image_view_id)
+#define daxa_iimageCube(image_view_id) _DAXA_GET_IIMAGE(Cube, image_view_id)
+#define daxa_uimageCube(image_view_id) _DAXA_GET_UIMAGE(Cube, image_view_id)
+#define daxa_i64imageCube(image_view_id) _DAXA_GET_I64IMAGE(Cube, image_view_id)
+#define daxa_u64imageCube(image_view_id) _DAXA_GET_U64IMAGE(Cube, image_view_id)
+#define daxa_textureCube(image_view_id) _DAXA_GET_TEXTURE(Cube, image_view_id)
+#define daxa_itextureCube(image_view_id) _DAXA_GET_ITEXTURE(Cube, image_view_id)
+#define daxa_utextureCube(image_view_id) _DAXA_GET_UTEXTURE(Cube, image_view_id)
+#define daxa_samplerCube(image_view_id, sampler_id) _DAXA_GET_SAMPLER(Cube, image_view_id, sampler_id)
+#define daxa_isamplerCube(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(Cube, image_view_id, sampler_id)
+#define daxa_usamplerCube(image_view_id, sampler_id) _DAXA_GET_USAMPLER(Cube, image_view_id, sampler_id)
+#define daxa_samplerCubeShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(Cube, image_view_id, sampler_id)
+#define daxa_isamplerCubeShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(Cube, image_view_id, sampler_id)
+#define daxa_usamplerCubeShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(Cube, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(CubeArray)
-#define daxa_imageCubeArray(image_id) _DAXA_GET_IMAGE(CubeArray, image_id)
-#define daxa_iimageCubeArray(image_id) _DAXA_GET_IIMAGE(CubeArray, image_id)
-#define daxa_uimageCubeArray(image_id) _DAXA_GET_UIMAGE(CubeArray, image_id)
-#define daxa_i64imageCubeArray(image_id) _DAXA_GET_I64IMAGE(CubeArray, image_id)
-#define daxa_u64imageCubeArray(image_id) _DAXA_GET_U64IMAGE(CubeArray, image_id)
-#define daxa_textureCubeArray(image_id) _DAXA_GET_TEXTURE(CubeArray, image_id)
-#define daxa_itextureCubeArray(image_id) _DAXA_GET_ITEXTURE(CubeArray, image_id)
-#define daxa_utextureCubeArray(image_id) _DAXA_GET_UTEXTURE(CubeArray, image_id)
-#define daxa_samplerCubeArray(image_id, sampler_id) _DAXA_GET_SAMPLER(CubeArray, image_id, sampler_id)
-#define daxa_isamplerCubeArray(image_id, sampler_id) _DAXA_GET_ISAMPLER(CubeArray, image_id, sampler_id)
-#define daxa_usamplerCubeArray(image_id, sampler_id) _DAXA_GET_USAMPLER(CubeArray, image_id, sampler_id)
-#define daxa_samplerCubeArrayShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(CubeArray, image_id, sampler_id)
-#define daxa_isamplerCubeArrayShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(CubeArray, image_id, sampler_id)
-#define daxa_usamplerCubeArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(CubeArray, image_id, sampler_id)
+#define daxa_imageCubeArray(image_view_id) _DAXA_GET_IMAGE(CubeArray, image_view_id)
+#define daxa_iimageCubeArray(image_view_id) _DAXA_GET_IIMAGE(CubeArray, image_view_id)
+#define daxa_uimageCubeArray(image_view_id) _DAXA_GET_UIMAGE(CubeArray, image_view_id)
+#define daxa_i64imageCubeArray(image_view_id) _DAXA_GET_I64IMAGE(CubeArray, image_view_id)
+#define daxa_u64imageCubeArray(image_view_id) _DAXA_GET_U64IMAGE(CubeArray, image_view_id)
+#define daxa_textureCubeArray(image_view_id) _DAXA_GET_TEXTURE(CubeArray, image_view_id)
+#define daxa_itextureCubeArray(image_view_id) _DAXA_GET_ITEXTURE(CubeArray, image_view_id)
+#define daxa_utextureCubeArray(image_view_id) _DAXA_GET_UTEXTURE(CubeArray, image_view_id)
+#define daxa_samplerCubeArray(image_view_id, sampler_id) _DAXA_GET_SAMPLER(CubeArray, image_view_id, sampler_id)
+#define daxa_isamplerCubeArray(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(CubeArray, image_view_id, sampler_id)
+#define daxa_usamplerCubeArray(image_view_id, sampler_id) _DAXA_GET_USAMPLER(CubeArray, image_view_id, sampler_id)
+#define daxa_samplerCubeArrayShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(CubeArray, image_view_id, sampler_id)
+#define daxa_isamplerCubeArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(CubeArray, image_view_id, sampler_id)
+#define daxa_usamplerCubeArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(CubeArray, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(1DArray)
-#define daxa_image1DArray(image_id) _DAXA_GET_IMAGE(1DArray, image_id)
-#define daxa_iimage1DArray(image_id) _DAXA_GET_IIMAGE(1DArray, image_id)
-#define daxa_uimage1DArray(image_id) _DAXA_GET_UIMAGE(1DArray, image_id)
-#define daxa_i64image1DArray(image_id) _DAXA_GET_I64IMAGE(1DArray, image_id)
-#define daxa_u64image1DArray(image_id) _DAXA_GET_U64IMAGE(1DArray, image_id)
-#define daxa_texture1DArray(image_id) _DAXA_GET_TEXTURE(1DArray, image_id)
-#define daxa_itexture1DArray(image_id) _DAXA_GET_ITEXTURE(1DArray, image_id)
-#define daxa_utexture1DArray(image_id) _DAXA_GET_UTEXTURE(1DArray, image_id)
-#define daxa_sampler1DArray(image_id, sampler_id) _DAXA_GET_SAMPLER(1DArray, image_id, sampler_id)
-#define daxa_isampler1DArray(image_id, sampler_id) _DAXA_GET_ISAMPLER(1DArray, image_id, sampler_id)
-#define daxa_usampler1DArray(image_id, sampler_id) _DAXA_GET_USAMPLER(1DArray, image_id, sampler_id)
-#define daxa_sampler1DArrayShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1DArray, image_id, sampler_id)
-#define daxa_isampler1DArrayShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1DArray, image_id, sampler_id)
-#define daxa_usampler1DArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1DArray, image_id, sampler_id)
+#define daxa_image1DArray(image_view_id) _DAXA_GET_IMAGE(1DArray, image_view_id)
+#define daxa_iimage1DArray(image_view_id) _DAXA_GET_IIMAGE(1DArray, image_view_id)
+#define daxa_uimage1DArray(image_view_id) _DAXA_GET_UIMAGE(1DArray, image_view_id)
+#define daxa_i64image1DArray(image_view_id) _DAXA_GET_I64IMAGE(1DArray, image_view_id)
+#define daxa_u64image1DArray(image_view_id) _DAXA_GET_U64IMAGE(1DArray, image_view_id)
+#define daxa_texture1DArray(image_view_id) _DAXA_GET_TEXTURE(1DArray, image_view_id)
+#define daxa_itexture1DArray(image_view_id) _DAXA_GET_ITEXTURE(1DArray, image_view_id)
+#define daxa_utexture1DArray(image_view_id) _DAXA_GET_UTEXTURE(1DArray, image_view_id)
+#define daxa_sampler1DArray(image_view_id, sampler_id) _DAXA_GET_SAMPLER(1DArray, image_view_id, sampler_id)
+#define daxa_isampler1DArray(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(1DArray, image_view_id, sampler_id)
+#define daxa_usampler1DArray(image_view_id, sampler_id) _DAXA_GET_USAMPLER(1DArray, image_view_id, sampler_id)
+#define daxa_sampler1DArrayShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1DArray, image_view_id, sampler_id)
+#define daxa_isampler1DArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1DArray, image_view_id, sampler_id)
+#define daxa_usampler1DArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1DArray, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2DArray)
-#define daxa_image2DArray(image_id) _DAXA_GET_IMAGE(2DArray, image_id)
-#define daxa_iimage2DArray(image_id) _DAXA_GET_IIMAGE(2DArray, image_id)
-#define daxa_uimage2DArray(image_id) _DAXA_GET_UIMAGE(2DArray, image_id)
-#define daxa_i64image2DArray(image_id) _DAXA_GET_I64IMAGE(2DArray, image_id)
-#define daxa_u64image2DArray(image_id) _DAXA_GET_U64IMAGE(2DArray, image_id)
-#define daxa_texture2DArray(image_id) _DAXA_GET_TEXTURE(2DArray, image_id)
-#define daxa_itexture2DArray(image_id) _DAXA_GET_ITEXTURE(2DArray, image_id)
-#define daxa_utexture2DArray(image_id) _DAXA_GET_UTEXTURE(2DArray, image_id)
-#define daxa_sampler2DArray(image_id, sampler_id) _DAXA_GET_SAMPLER(2DArray, image_id, sampler_id)
-#define daxa_isampler2DArray(image_id, sampler_id) _DAXA_GET_ISAMPLER(2DArray, image_id, sampler_id)
-#define daxa_usampler2DArray(image_id, sampler_id) _DAXA_GET_USAMPLER(2DArray, image_id, sampler_id)
-#define daxa_sampler2DArrayShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DArray, image_id, sampler_id)
-#define daxa_isampler2DArrayShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DArray, image_id, sampler_id)
-#define daxa_usampler2DArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DArray, image_id, sampler_id)
+#define daxa_image2DArray(image_view_id) _DAXA_GET_IMAGE(2DArray, image_view_id)
+#define daxa_iimage2DArray(image_view_id) _DAXA_GET_IIMAGE(2DArray, image_view_id)
+#define daxa_uimage2DArray(image_view_id) _DAXA_GET_UIMAGE(2DArray, image_view_id)
+#define daxa_i64image2DArray(image_view_id) _DAXA_GET_I64IMAGE(2DArray, image_view_id)
+#define daxa_u64image2DArray(image_view_id) _DAXA_GET_U64IMAGE(2DArray, image_view_id)
+#define daxa_texture2DArray(image_view_id) _DAXA_GET_TEXTURE(2DArray, image_view_id)
+#define daxa_itexture2DArray(image_view_id) _DAXA_GET_ITEXTURE(2DArray, image_view_id)
+#define daxa_utexture2DArray(image_view_id) _DAXA_GET_UTEXTURE(2DArray, image_view_id)
+#define daxa_sampler2DArray(image_view_id, sampler_id) _DAXA_GET_SAMPLER(2DArray, image_view_id, sampler_id)
+#define daxa_isampler2DArray(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(2DArray, image_view_id, sampler_id)
+#define daxa_usampler2DArray(image_view_id, sampler_id) _DAXA_GET_USAMPLER(2DArray, image_view_id, sampler_id)
+#define daxa_sampler2DArrayShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DArray, image_view_id, sampler_id)
+#define daxa_isampler2DArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DArray, image_view_id, sampler_id)
+#define daxa_usampler2DArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DArray, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2DMS)
-#define daxa_image2DMS(image_id) _DAXA_GET_IMAGE(2DMS, image_id)
-#define daxa_iimage2DMS(image_id) _DAXA_GET_IIMAGE(2DMS, image_id)
-#define daxa_uimage2DMS(image_id) _DAXA_GET_UIMAGE(2DMS, image_id)
-#define daxa_i64image2DMS(image_id) _DAXA_GET_I64IMAGE(2DMS, image_id)
-#define daxa_u64image2DMS(image_id) _DAXA_GET_U64IMAGE(2DMS, image_id)
-#define daxa_texture2DMS(image_id) _DAXA_GET_TEXTURE(2DMS, image_id)
-#define daxa_itexture2DMS(image_id) _DAXA_GET_ITEXTURE(2DMS, image_id)
-#define daxa_utexture2DMS(image_id) _DAXA_GET_UTEXTURE(2DMS, image_id)
-#define daxa_sampler2DMS(image_id, sampler_id) _DAXA_GET_SAMPLER(2DMS, image_id, sampler_id)
-#define daxa_isampler2DMS(image_id, sampler_id) _DAXA_GET_ISAMPLER(2DMS, image_id, sampler_id)
-#define daxa_usampler2DMS(image_id, sampler_id) _DAXA_GET_USAMPLER(2DMS, image_id, sampler_id)
-#define daxa_sampler2DMSShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DMS, image_id, sampler_id)
-#define daxa_isampler2DMSShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMS, image_id, sampler_id)
-#define daxa_usampler2DMSShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMS, image_id, sampler_id)
+#define daxa_image2DMS(image_view_id) _DAXA_GET_IMAGE(2DMS, image_view_id)
+#define daxa_iimage2DMS(image_view_id) _DAXA_GET_IIMAGE(2DMS, image_view_id)
+#define daxa_uimage2DMS(image_view_id) _DAXA_GET_UIMAGE(2DMS, image_view_id)
+#define daxa_i64image2DMS(image_view_id) _DAXA_GET_I64IMAGE(2DMS, image_view_id)
+#define daxa_u64image2DMS(image_view_id) _DAXA_GET_U64IMAGE(2DMS, image_view_id)
+#define daxa_texture2DMS(image_view_id) _DAXA_GET_TEXTURE(2DMS, image_view_id)
+#define daxa_itexture2DMS(image_view_id) _DAXA_GET_ITEXTURE(2DMS, image_view_id)
+#define daxa_utexture2DMS(image_view_id) _DAXA_GET_UTEXTURE(2DMS, image_view_id)
+#define daxa_sampler2DMS(image_view_id, sampler_id) _DAXA_GET_SAMPLER(2DMS, image_view_id, sampler_id)
+#define daxa_isampler2DMS(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(2DMS, image_view_id, sampler_id)
+#define daxa_usampler2DMS(image_view_id, sampler_id) _DAXA_GET_USAMPLER(2DMS, image_view_id, sampler_id)
+#define daxa_sampler2DMSShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DMS, image_view_id, sampler_id)
+#define daxa_isampler2DMSShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMS, image_view_id, sampler_id)
+#define daxa_usampler2DMSShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMS, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2DMSArray)
-#define daxa_image2DMSArray(image_id) _DAXA_GET_IMAGE(2DMSArray, image_id)
-#define daxa_iimage2DMSArray(image_id) _DAXA_GET_IIMAGE(2DMSArray, image_id)
-#define daxa_uimage2DMSArray(image_id) _DAXA_GET_UIMAGE(2DMSArray, image_id)
-#define daxa_i64image2DMSArray(image_id) _DAXA_GET_I64IMAGE(2DMSArray, image_id)
-#define daxa_u64image2DMSArray(image_id) _DAXA_GET_U64IMAGE(2DMSArray, image_id)
-#define daxa_texture2DMSArray(image_id) _DAXA_GET_TEXTURE(2DMSArray, image_id)
-#define daxa_itexture2DMSArray(image_id) _DAXA_GET_ITEXTURE(2DMSArray, image_id)
-#define daxa_utexture2DMSArray(image_id) _DAXA_GET_UTEXTURE(2DMSArray, image_id)
-#define daxa_sampler2DMSArray(image_id, sampler_id) _DAXA_GET_SAMPLER(2DMSArray, image_id, sampler_id)
-#define daxa_isampler2DMSArray(image_id, sampler_id) _DAXA_GET_ISAMPLER(2DMSArray, image_id, sampler_id)
-#define daxa_usampler2DMSArray(image_id, sampler_id) _DAXA_GET_USAMPLER(2DMSArray, image_id, sampler_id)
-#define daxa_sampler2DMSArrayShadow(image_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DMSArray, image_id, sampler_id)
-#define daxa_isampler2DMSArrayShadow(image_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMSArray, image_id, sampler_id)
-#define daxa_usampler2DMSArrayShadow(image_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMSArray, image_id, sampler_id)
+#define daxa_image2DMSArray(image_view_id) _DAXA_GET_IMAGE(2DMSArray, image_view_id)
+#define daxa_iimage2DMSArray(image_view_id) _DAXA_GET_IIMAGE(2DMSArray, image_view_id)
+#define daxa_uimage2DMSArray(image_view_id) _DAXA_GET_UIMAGE(2DMSArray, image_view_id)
+#define daxa_i64image2DMSArray(image_view_id) _DAXA_GET_I64IMAGE(2DMSArray, image_view_id)
+#define daxa_u64image2DMSArray(image_view_id) _DAXA_GET_U64IMAGE(2DMSArray, image_view_id)
+#define daxa_texture2DMSArray(image_view_id) _DAXA_GET_TEXTURE(2DMSArray, image_view_id)
+#define daxa_itexture2DMSArray(image_view_id) _DAXA_GET_ITEXTURE(2DMSArray, image_view_id)
+#define daxa_utexture2DMSArray(image_view_id) _DAXA_GET_UTEXTURE(2DMSArray, image_view_id)
+#define daxa_sampler2DMSArray(image_view_id, sampler_id) _DAXA_GET_SAMPLER(2DMSArray, image_view_id, sampler_id)
+#define daxa_isampler2DMSArray(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(2DMSArray, image_view_id, sampler_id)
+#define daxa_usampler2DMSArray(image_view_id, sampler_id) _DAXA_GET_USAMPLER(2DMSArray, image_view_id, sampler_id)
+#define daxa_sampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
+#define daxa_isampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
+#define daxa_usampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 
 DAXA_DECL_BUFFER_PTR(daxa_b32)
 // DAXA_DECL_BUFFER_PTR(daxa_b32vec1) // covered by daxa_b32
