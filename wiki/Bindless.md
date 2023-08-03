@@ -67,7 +67,7 @@ You do NOT need to interact with any binding logic. No descriptor sets, descript
 
 When an image or image view is created, the image views are immediately added to the bindless table. When an image (-view) gets destroyed it is removed from the table. Note that resource destruction is deferred to the end of all currently running GPU work, so you do not need to write a zombie queue or similar in most cases.
 
-### GLSL Annocations For Images
+### GLSL Annotations For Images
 
 In glsl, it is possible to annotate image variables with custom [qualifiers](https://www.khronos.org/opengl/wiki/Type_Qualifier_(GLSL)). Such annotations can be for example: coherent or readonly.
 These are really useful and can provide better performance and more possibilities in some cases. 
@@ -77,7 +77,7 @@ To provide the image accessor makros, daxa predefines image tables without any a
 Predefining all possible permutations of qualifiers for all image types would be thousands of loc, destroying compile time perf. Because of this daxa only predeclares the tables used in the makros without qualifiers.
 
 To still give a nice way to gain access to daxa image views with the benefits of the annotations, daxa goes the middleground and allows the declaration of new accessors for images with annotations.
-These custom accessors declare a new table with these annotations. 
+These custom accessors declare a new table with these annotations. Each user defined accessor has a unique name `ACCESSOR_NAME`. This name is used to identify the accessor when using it with `daxa_access(ACCESSOR_NAME, image_view_id)`.
 
 ```glsl
 DAXA_DECL_IMAGE_ACCESSOR(TYPE, ANNOTATIONS, ACCESSOR_NAME) // Declares new accessor.
