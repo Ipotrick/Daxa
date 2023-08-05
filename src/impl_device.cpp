@@ -568,8 +568,8 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
             .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .vulkanMemoryModel = VK_TRUE,
-            .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low support.
             .vulkanMemoryModelDeviceScope = VK_TRUE,
+            .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low support.
         };
         REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_VULKAN_MEMORY_MODEL);
 
