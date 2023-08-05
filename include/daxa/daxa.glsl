@@ -140,9 +140,10 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
 #define deref(BUFFER_PTR) BUFFER_PTR.value
 
-/// @brief Defines the buffer reference layout used in all buffer references in daxa glsl.
-#define DAXA_BUFFER_REFERENCE_LAYOUT layout(buffer_reference, scalar, buffer_reference_align = 4)
-#define DAXA_DECL_BUFFER_REFERENCE(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN)
+/// @brief Defines the buffer reference used in all buffer references in daxa glsl. Can also be used to declare new buffer references.
+#define DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN) buffer
+#define DAXA_DECL_BUFFER_REFERENCE DAXA_DECL_BUFFER_REFERENCE_ALIGN(4)
+
 /// @brief Defines the storage image layout used in all buffer references in daxa glsl.
 #define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
 /// @brief Defines the sampled image layout used in all buffer references in daxa glsl.
@@ -164,27 +165,27 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 ///         daxa_BufferPtr(T) t_ptr0 = ...;
 ///         daxa_BufferPtrT   t_ptr1 = ...;
 ///     }
-#define _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)                                      \
-    DAXA_BUFFER_REFERENCE_LAYOUT buffer daxa_RWBufferPtr##STRUCT_TYPE                  \
-    {                                                                                  \
-        STRUCT_TYPE value;                                                             \
-    };                                                                                 \
-    DAXA_BUFFER_REFERENCE_LAYOUT readonly buffer daxa_BufferPtr##STRUCT_TYPE           \
-    {                                                                                  \
-        STRUCT_TYPE value;                                                             \
+#define _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)            \
+    DAXA_DECL_BUFFER_REFERENCE daxa_RWBufferPtr##STRUCT_TYPE \
+    {                                                        \
+        STRUCT_TYPE value;                                   \
+    };                                                       \
+    DAXA_DECL_BUFFER_REFERENCE daxa_BufferPtr##STRUCT_TYPE   \
+    {                                                        \
+        readonly STRUCT_TYPE value;                          \
     };
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)
 
 #define _DAXA_DECL_BUFFER_PTR_ALIGN_HELPER(STRUCT_TYPE, ALIGN) \
-    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                          \
-    buffer daxa_RWBufferPtr##STRUCT_TYPE                       \
+    DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN)                    \
+    daxa_RWBufferPtr##STRUCT_TYPE                              \
     {                                                          \
         STRUCT_TYPE value;                                     \
     };                                                         \
-    DAXA_DECL_BUFFER_REFERENCE(ALIGN)                          \
-    readonly buffer daxa_BufferPtr##STRUCT_TYPE                \
+    DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN)                    \
+    daxa_BufferPtr##STRUCT_TYPE                                \
     {                                                          \
-        STRUCT_TYPE value;                                     \
+        readonly STRUCT_TYPE value;                            \
     };
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) _DAXA_DECL_BUFFER_PTR_ALIGN_HELPER(STRUCT_TYPE, ALIGN)
 
@@ -259,14 +260,14 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_view_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
 
 /// ONLY USED BY IMPLEMENTATION!
-#define _DAXA_DECL_IMAGE(DIMENSION)                                                                            \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform image##DIMENSION daxa_image##DIMENSION##Table[];                         \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform iimage##DIMENSION daxa_iimage##DIMENSION##Table[];                       \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform uimage##DIMENSION daxa_uimage##DIMENSION##Table[];                       \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform i64image##DIMENSION daxa_i64image##DIMENSION##Table[];                   \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform u64image##DIMENSION daxa_u64image##DIMENSION##Table[];                   \
-    DAXA_SAMPLED_IMAGE_LAYOUT uniform texture##DIMENSION daxa_texture##DIMENSION##Table[];                     \
-    DAXA_SAMPLED_IMAGE_LAYOUT uniform itexture##DIMENSION daxa_itexture##DIMENSION##Table[];                   \
+#define _DAXA_DECL_IMAGE(DIMENSION)                                                          \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform image##DIMENSION daxa_image##DIMENSION##Table[];       \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform iimage##DIMENSION daxa_iimage##DIMENSION##Table[];     \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform uimage##DIMENSION daxa_uimage##DIMENSION##Table[];     \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform i64image##DIMENSION daxa_i64image##DIMENSION##Table[]; \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform u64image##DIMENSION daxa_u64image##DIMENSION##Table[]; \
+    DAXA_SAMPLED_IMAGE_LAYOUT uniform texture##DIMENSION daxa_texture##DIMENSION##Table[];   \
+    DAXA_SAMPLED_IMAGE_LAYOUT uniform itexture##DIMENSION daxa_itexture##DIMENSION##Table[]; \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform utexture##DIMENSION daxa_utexture##DIMENSION##Table[];
 
 /// ONLY USED BY IMPLEMENTATION!
@@ -465,7 +466,8 @@ DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
 
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE
 
-#define BUFFER_REFERENCE_LAYOUT DAXA_BUFFER_REFERENCE_LAYOUT
+#define DECL_BUFFER_REFERENCE DAXA_DECL_BUFFER_REFERENCE
+#define DECL_BUFFER_REFERENCE_ALIGN DAXA_DECL_BUFFER_REFERENCE_ALIGN
 #define STORAGE_IMAGE_LAYOUT DAXA_STORAGE_IMAGE_LAYOUT
 #define SAMPLED_IMAGE_LAYOUT DAXA_SAMPLED_IMAGE_LAYOUT
 #define SAMPLER_LAYOUT DAXA_SAMPLER_LAYOUT
