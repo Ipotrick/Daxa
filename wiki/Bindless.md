@@ -112,76 +112,50 @@ void* host_ptr                              = device.get_buffer_host_address(buf
 daxa::types::BufferDeviceAddress device_ptr = device.get_buffer_device_address(buffer_id);
 ```
 
-## Buffer Shader Access
+## Buffer References and Buffer Pointers
 
-Daxa only allows buffers to be accessed either as fixed bind-point bound uniform buffers or via buffer device address.
+The general way to access buffers in daxa is via buffer device address and glsl's [buffer reference](https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GLSL_EXT_buffer_reference.txt).
 
-Binding a buffer to a uniform buffer slot:
-```c++
-command_list.set_uniform_buffer({.slot = 0, .buffer=buffer_id});
-```
+> As daxa requires very specific glsl layout specifiers for its buffer references in order for other features to work properly, its very important to use Daxa's makros to declare new buffer references!
 
-Uniform buffers are globally declared in shaders with a specific binding slot with the macro `DAXA_DECL_UNIFORM_BUFFER(SLOT)`:
+Daxa provides 4 ways to declare a new buffer reference: 
+- `DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGNMENT)`: declares head for new buffer reference block with given alignment
+- `DAXA_DECL_BUFFER_REFERENCE`: declares head for new buffer reference block with default alignment (4)
+- `DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT, ALIGNMENT)`: decalres readonly and readwrite buffer pointers to given struct type with given alignment
+- `DAXA_DECL_BUFFER_PTR(STRUCT)`: decalres readonly and readwrite buffer pointers to given struct type with default alignment (4)
+
+Usage examples:
+
 ```glsl
-DAXA_DECL_UNIFORM_BUFFER(0) UniformBufferBlock
+DAXA_DECL_BUFFER_REFERENCE MyBufferReference
 {
     uint field;
 };
-```
 
-Very importantly, I note here that these bindings are updated and get visible on the GPU **ONLY** when a new pipeline is bound. So you can NOT change them between draw calls or similar. This is intentional as binding is slow and against Daxa's bindless philosophy. Yet some hardware really benefits from direct uniform buffer bindings like NVIDIA. In Daxa, uniform buffers are meant to be used **ONLY** for larger uniformly accessed data across all invocations in the shader. For any changes between dispatches and draws, use push constants!
-
-## Buffer References In Shaders
-
-Daxa required Buffer References to be declared in a very specific way. You must use the Daxa provided macro (`DAXA_DECL_BUFFER_REFERENCE(ALIGNMENT)`) to set the layout of the reference:
-
-```glsl
-DAXA_DECL_BUFFER_REFERENCE(4) BufferReferenceBlock
-{
-    uint field;
-};
-```
-
-Alternatively, Daxa provides a macro (`DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT, ALIGNMENT)` and `DAXA_DECL_BUFFER_PTR(STRUCT)`) to declare a set of buffer references from a struct. This is very helpful for shader integration and code sharing, as you can declare the shared struct and then simply apply the macro to generate a set of buffer references to that struct automatically. Used in a shared file, a `daxa_BufferPtr(STRUCT)` macro will be translated to `daxa::types::BufferDeviceAddress` in C++ code, making code sharing easy.
-
-Example:
-```glsl
-struct MyStruct
-{
-    daxa_u32 field;
-};
-DAXA_DECL_BUFFER_PTR(MyStruct)
-```
-
-These macros generate buffer references under the following names:
-* `daxa_BufferPtr(MyStruct)`
-* `daxa_BufferPtrMyStruct`
-* `daxa_RWBufferPtr(MyStruct)`
-* `daxa_RWBufferPtrMyStruct`
-
-> Note there are no coherent buffer references in daxa. This is because daxa uses the vulkan memory model (vmm). The vmm deprecates buffer and image coherent annotations and replaces them with fine atomic and memory barrier calls, see [the glsl extension](https://github.com/KhronosGroup/GLSL/blob/master/extensions/khr/GL_KHR_memory_scope_semantics.txt).
-
-The Daxa buffer ptr types are simply a buffer reference containing one field named `value` of the given struct type.
-Daxa also provides the `deref(BUFFER_PTR)` macro, which simply translates to `BUFFER_PTR.value`. This is some optional syntax sugar for those who prefer to be clear and want to avoid using the name `value` here.
-
-```c
-struct MyStruct
-{
-    daxa_u32 field;
-};
+struct MyStruct { uint i; };
 DAXA_DECL_BUFFER_PTR(MyStruct)
 
 ...
-
-daxa_BufferPtr(MyStruct) ptr = ...;
-MyStruct strct = ptr.value;
-// alternatively:
-MyStruct strct = deref(ptr);
-// As this is just a buffer reference, you can also just access the fields directly:
-uint i = ptr.value.field;
-// alternatively:
-uint i = deref(ptr).field;
+void main()
+{
+    daxa_u64 address = ...;
+    MyBufferReference my_ref = MyBufferReference(address);
+    my_ref.field = 1;
+    daxa_BufferPtr(MyStruct) my_readonly_ptr = daxa_BufferPtr(MyStruct)(address);
+    int read_value = deref(my_readonly_ptr).i;
+    daxa_RWBufferPtr(MyStruct) my_readwrite_ptr = daxa_RWBufferPtr(MyStruct)(address);
+    deref(my_readwrite_ptr).i = 1;
+}
 ```
+
+In c++ the `daxa_BufferPtr(x)` and `daxa_RWBufferPtr` makros simply become `daxa::types::BufferDeviceAddress`, so you can put them into structs, push constants and or buffer blocks. `DAXA_DECL_BUFFER_PTR_ALIGN` and `DAXA_DECL_BUFFER_PTR` become a blank line in c++. This makes them usable in shared files. 
+
+So generally it is recommended to declare structs in shared files and then declare buffer pointers to the structs. Using structs and buffer pointers reduces redundancy and is less error prone. The pointer like syntax with structs is also quite convenient in general, as you gain value semantics to the pointee with the `deref(ptr)` makro.
+
+Sometimes it is nessecary to use glsl annotations/ qualifiers for fields within buffer blocks or to use glsl features that are not available in c++. For example the coherent annotation or unbound arrays are not valid in c++ or in glsl/c++ structs, meaning in order to use those features, one must use a buffer reference instead of a buffer pointer.
+
+> The Daxa buffer ptr types are simply buffer references containing one field named `value` of the given struct type.
+For the `BufferPtr` makro, the field is annotated with `readonly`, while it is not with `RWBufferPtr`.
 
 # Host-Device resource transport
 
