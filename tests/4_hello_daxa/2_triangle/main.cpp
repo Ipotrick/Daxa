@@ -262,9 +262,9 @@ auto main() -> int
     // We do something a little special here, which is that we set the initial access
     // of the buffer to be vertex shader read, and that's because we'll create a task
     // list which will upload the buffer
-    auto task_buffer = daxa::TaskBuffer({
+    auto task_vertex_buffer = daxa::TaskBuffer({
         .initial_buffers = {.buffers = std::span{&buffer_id, 1}},
-        .name = "my task buffer",
+        .name = "task vertex buffer",
     });
 
     // TaskGraph can have permutations, which allow for runtime conditions
@@ -282,60 +282,19 @@ auto main() -> int
     auto loop_task_graph = daxa::TaskGraph({
         .device = device,
         .swapchain = swapchain,
-        // Instead of using a conditional for uploading, we should just use a separate
-        // TaskGraph. This is because this operation is infrequent, and so it reduces
-        // the number of permutations necessary when compiling the TaskGraph (at a tiny
-        // cost of performance)
-        // .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
-        .name = "my task graph",
-    });
-
-    // This secondary TaskGraph has no swapchain, because it doesn't need to present!
-    auto upload_task_graph = daxa::TaskGraph({
-        .device = device,
-        .name = "my task graph",
+        .name = "loop",
     });
 
     // We need to explicitly declare all uses of persistent task resources!
-    loop_task_graph.use_persistent_buffer(task_buffer);
+    // This not a technical limitation but an intentional choice.
+    // Manually marking used resources makes it possible to detect errors in your graph recording.
+    loop_task_graph.use_persistent_buffer(task_vertex_buffer);
     loop_task_graph.use_persistent_image(task_swapchain_image);
-
-    upload_task_graph.use_persistent_buffer(task_buffer);
-
-    // Now we can record our tasks!
-
-    // First thing we'll do is record the upload task. This could be a conditional,
-    // which is shown below, but instead, we'll just execute this task list when we
-    // want to change the vertex data.
-    upload_task_graph.add_task(UploadVertexDataTask{
-        .uses = {
-            .vertex_buffer = task_buffer.view(),
-        },
-    });
-
-    // If we wanted to use a conditional for the upload process, this is what we'd do.
-    // We'll first make a task to update the buffer. This doesn't need to be done
-    // every frame, so we'll put it inside a task conditional!
-    // loop_task_graph.conditional({
-    //     .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
-    //     .when_true = [&]()
-    //     {
-    //         // We conditionally execute the upload vertex data task.
-    //         loop_task_graph.add_task(UploadVertexDataTask{
-    //             .uses = {
-    //                 .vertex_buffer = task_buffer.view(),
-    //             },
-    //         });
-    //     },
-    // });
-    // Note: the function put into when_true will immediately be called in the conditional
-    // function and is not stored anywhere. This makes it safe to have reference capture
-    // in that lambda in any case.
 
     // And a task to draw to the screen
     loop_task_graph.add_task(DrawToSwapchainTask{
         .uses = {
-            .vertex_buffer = task_buffer.view(),
+            .vertex_buffer = task_vertex_buffer.view(),
             .color_target = task_swapchain_image.view(),
         },
         .pipeline = pipeline.get(),
@@ -354,16 +313,31 @@ auto main() -> int
     // dependency graph between tasks, and inserts the most optimal synchronization!
     loop_task_graph.complete({});
 
-    // Same of course for the upload task list.
-    upload_task_graph.submit({});
-    upload_task_graph.complete({});
+    {
+        // Now we record a secondary task graph, that is only executed once.
+        // This task graph uploads the vertex buffer.
+        // Task Graph resources automatically link between graphcs at runtime, 
+        // so you dont need to be concerned about sync of the vertex buffer between the two graphs.
+        auto upload_task_graph = daxa::TaskGraph({
+            .device = device,
+            .name = "upload",
+        });
 
-    // We'd set our task condition states to make sure we use the permutation
-    // where we upload the vertex data to the GPU. This will get set to false
-    // when the task is run, so it will only upload the data once!
-    // task_condition_states[static_cast<daxa::usize>(TaskCondition::VERTICES_UPLOAD)] = true;
+        upload_task_graph.use_persistent_buffer(task_vertex_buffer);
 
-    upload_task_graph.execute({});
+        // Now we can record our tasks!
+
+        // First thing we'll do is record the upload task. 
+        upload_task_graph.add_task(UploadVertexDataTask{
+            .uses = {
+                .vertex_buffer = task_vertex_buffer.view(),
+            },
+        });
+
+        upload_task_graph.submit({});
+        upload_task_graph.complete({});
+        upload_task_graph.execute({});
+    }
 
     while (true)
     {
@@ -381,18 +355,15 @@ auto main() -> int
 
         // acquire the next image as usual,
         auto swapchain_image = swapchain.acquire_next_image();
-        // We update the image id of the task swapchain image.
-        task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
         if (swapchain_image.is_empty())
         {
             continue;
         }
+        // We update the image id of the task swapchain image.
+        task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
 
         // So, now all we need to do is execute our task graph!
         loop_task_graph.execute({});
-        // If using conditional, here is where we tell the task graph which
-        // permutation to use by just giving it a list of bools.
-        // loop_task_graph.execute({.permutation_condition_values = task_condition_states});
     }
 
     device.wait_idle();
