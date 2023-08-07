@@ -331,7 +331,7 @@ void main()
 
 To access any of Daxa's functionality in shaders, one must include the daxa.inl. This header is used for shaders and shared files (those will be discussed later).
 
-In Daxa all resource access in shader is bindless. To read a buffer, one must enable buffer pointers for their type with DAXA_ENABLE_BUFFER_PTR, then pass the buffer device address in a push constant, to then access it with the deref operator in the shader. In this particular case, we also use the [] operator to perform pointer arithmetic, adding the vertex offset onto the base pointer. `BufferPtr`s act like normal pointers in that case, the syntax is just a bit different.
+In Daxa all resource access in shader is bindless. To read a buffer, one must enable buffer pointers for their type with `DAXA_DECL_BUFFER_PTR`, then pass the buffer device address in a push constant, to then access it with the deref operator in the shader. In this particular case, we also use the [] operator to perform pointer arithmetic, adding the vertex offset onto the base pointer. `BufferPtr`s act like normal pointers in that case, the syntax is just a bit different.
 
 Now we go over the shared file.
 
@@ -610,11 +610,11 @@ our "game loop" consists of the same stuff as the pink screen tutorial's, but in
 
 ```cpp
 auto swapchain_image = swapchain.acquire_next_image();
-task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
 if (swapchain_image.is_empty())
 {
     continue;
 }
+task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
 
 loop_task_graph.execute({});
 ```

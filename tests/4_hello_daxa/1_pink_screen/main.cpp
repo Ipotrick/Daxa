@@ -136,6 +136,9 @@ auto main() -> int
         // Directly after, we define an image slice. As images can be made up of multiple
         // layers, memory planes, and mip levels, Daxa takes slices in many calls to
         // specify a slice of an image that should be operated upon.
+        // Technically the default value for slice in barriers is simply a 2d image. 
+        // So in this case we would not need to mention it in the barriers at all! 
+        // But for demonstration we show how to get the full slice and pass it to the barriers here.
         daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
 
         daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
