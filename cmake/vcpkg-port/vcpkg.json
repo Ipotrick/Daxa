@@ -16,17 +16,6 @@
     "utils-task-graph"
   ],
   "features": {
-    "utils-fsr2": {
-      "description": "The FSR2 Daxa utility",
-      "dependencies": [
-        {
-          "name": "fsr2",
-          "features": [
-            "vulkan"
-          ]
-        }
-      ]
-    },
     "utils-imgui": {
       "description": "The ImGUI Daxa utility",
       "dependencies": [
