@@ -120,6 +120,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS,
             .pNext = {},
             .pCreateInfo = &vk_image_create_info,
+            .planeAspect = static_cast<VkImageAspectFlagBits>(infer_aspect_from_format(info.format)),
         };
         VkMemoryRequirements2 mem_requirements{
             .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
@@ -865,7 +866,7 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = {},
-                .size = static_cast<VkDeviceSize>(sizeof(u8) * 4),
+                .size = sizeof(u8) * 4,
                 .usage = BUFFER_USE_FLAGS,
                 .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
                 .queueFamilyIndexCount = 1,
