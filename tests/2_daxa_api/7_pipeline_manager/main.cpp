@@ -77,7 +77,7 @@ namespace tests
                 auto reload_result = pipeline_manager.reload_all();
                 if (auto * reload_err = std::get_if<daxa::PipelineReloadError>(&reload_result))
                     std::cerr << reload_err->message << std::endl;
-                else if (auto * _ = std::get_if<daxa::PipelineReloadSuccess>(&reload_result))
+                else if (std::get_if<daxa::PipelineReloadSuccess>(&reload_result))
                     break;
                 using namespace std::literals;
                 std::this_thread::sleep_for(1ms);
@@ -176,17 +176,17 @@ namespace tests
 
     auto multi_thread(daxa::Device & device) -> i32
     {
-        auto test_wrapper_0 = [](daxa::Device & device, i32 & ret)
+        auto test_wrapper_0 = [](daxa::Device & a_device, i32 & ret)
         {
-            ret = tests::simplest(device);
+            ret = tests::simplest(a_device);
         };
-        auto test_wrapper_1 = [](daxa::Device & device, i32 & ret)
+        auto test_wrapper_1 = [](daxa::Device & a_device, i32 & ret)
         {
-            ret = tests::virtual_includes(device);
+            ret = tests::virtual_includes(a_device);
         };
-        auto test_wrapper_2 = [](daxa::Device & device, i32 & ret)
+        auto test_wrapper_2 = [](daxa::Device & a_device, i32 & ret)
         {
-            ret = tests::tesselation_shaders(device);
+            ret = tests::tesselation_shaders(a_device);
         };
 
         std::array<int, 9> ret_vals;
