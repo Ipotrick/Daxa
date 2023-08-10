@@ -54,7 +54,7 @@ namespace tests
         auto size,
         f32 value)
     {
-        u32 const image_size = sizeof(f32) * size.x * size.y * size.z;
+        u32 const image_size = static_cast<u32>(sizeof(f32) * size.x * size.y * size.z);
         auto staging = ti.get_allocator().allocate(image_size).value();
         for (u32 x = 0; x < size.x; ++x)
         {

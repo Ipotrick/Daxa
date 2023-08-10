@@ -44,13 +44,13 @@ auto main() -> int
     glfwSetWindowUserPointer(glfw_window_ptr, &window_info);
     glfwSetWindowSizeCallback(
         glfw_window_ptr,
-        [](GLFWwindow * glfw_window_ptr, int width, int height)
+        [](GLFWwindow * glfw_window, int width, int height)
         {
-            auto & window_info = *reinterpret_cast<WindowInfo *>(glfwGetWindowUserPointer(glfw_window_ptr));
+            auto & info = *reinterpret_cast<WindowInfo *>(glfwGetWindowUserPointer(glfw_window));
             // We set this bool because it lets us know we need to resize the swapchain later!
-            window_info.swapchain_out_of_date = true;
-            window_info.width = static_cast<daxa::u32>(width);
-            window_info.height = static_cast<daxa::u32>(height);
+            info.swapchain_out_of_date = true;
+            info.width = static_cast<daxa::u32>(width);
+            info.height = static_cast<daxa::u32>(height);
         });
     auto *native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);

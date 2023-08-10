@@ -54,15 +54,15 @@ namespace tests
                         u8 const g = static_cast<u8>(in_data[zi][yi][xi][1] * 255.0f);
                         u8 const b = static_cast<u8>(in_data[zi][yi][xi][2] * 255.0f);
                         auto next_pixel = pixel;
-                        next_pixel[7 + 0 * 4 + 0] = '0' + (r / 100);
-                        next_pixel[7 + 0 * 4 + 1] = '0' + (r % 100) / 10;
-                        next_pixel[7 + 0 * 4 + 2] = '0' + (r % 10);
-                        next_pixel[7 + 1 * 4 + 0] = '0' + (g / 100);
-                        next_pixel[7 + 1 * 4 + 1] = '0' + (g % 100) / 10;
-                        next_pixel[7 + 1 * 4 + 2] = '0' + (g % 10);
-                        next_pixel[7 + 2 * 4 + 0] = '0' + (b / 100);
-                        next_pixel[7 + 2 * 4 + 1] = '0' + (b % 100) / 10;
-                        next_pixel[7 + 2 * 4 + 2] = '0' + (b % 10);
+                        next_pixel[7 + 0 * 4 + 0] = static_cast<char>(static_cast<u8>('0') + (r / 100));
+                        next_pixel[7 + 0 * 4 + 1] = static_cast<char>(static_cast<u8>('0') + (r % 100) / 10);
+                        next_pixel[7 + 0 * 4 + 2] = static_cast<char>(static_cast<u8>('0') + (r % 10));
+                        next_pixel[7 + 1 * 4 + 0] = static_cast<char>(static_cast<u8>('0') + (g / 100));
+                        next_pixel[7 + 1 * 4 + 1] = static_cast<char>(static_cast<u8>('0') + (g % 100) / 10);
+                        next_pixel[7 + 1 * 4 + 2] = static_cast<char>(static_cast<u8>('0') + (g % 10));
+                        next_pixel[7 + 2 * 4 + 0] = static_cast<char>(static_cast<u8>('0') + (b / 100));
+                        next_pixel[7 + 2 * 4 + 1] = static_cast<char>(static_cast<u8>('0') + (b % 100) / 10);
+                        next_pixel[7 + 2 * 4 + 2] = static_cast<char>(static_cast<u8>('0') + (b % 10));
                         std::copy(next_pixel.begin(), next_pixel.end() - 1, data.data() + output_index);
                         output_index += pixel.size() - 1;
                     }
