@@ -2205,6 +2205,12 @@ namespace daxa
         return ret;
     }
 
+    auto TaskGraph::get_transient_memory_size() -> daxa::usize
+    {
+        auto & impl = *as<ImplTaskGraph>();
+        return impl.memory_block_size;
+    }
+
     thread_local std::vector<SplitBarrierWaitInfo> tl_split_barrier_wait_infos = {};
     thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};

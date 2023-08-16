@@ -9,9 +9,7 @@ namespace tests
         using namespace daxa::task_resource_uses;
         struct App : AppWindow<App>
         {
-            daxa::Instance daxa_ctx = daxa::create_instance({
-                .enable_validation = false,
-            });
+            daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
                 .name = "device (mipmapping)",
             });
