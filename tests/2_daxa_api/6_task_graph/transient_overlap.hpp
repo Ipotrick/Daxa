@@ -111,7 +111,7 @@ namespace tests
         // Expected:
         //      Images B and C are aliased and the content is correct after execution of each of the tasks
 
-        daxa::Instance daxa_ctx = daxa::create_instance({ .enable_validation = false, });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
@@ -260,7 +260,7 @@ namespace tests
         // Expected:
         //      Images A and B are aliased - they both start at the same offset
 
-        daxa::Instance daxa_ctx = daxa::create_instance({ .enable_validation = false, });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
@@ -422,9 +422,7 @@ namespace tests
         // 2. Initialize them.
         // 3. Test if their content stays intact over multiple aliased operations.
 
-        daxa::Instance daxa_ctx = daxa::create_instance({
-            .enable_validation = false,
-        });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({
             .name = "device",
         });

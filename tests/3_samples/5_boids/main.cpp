@@ -21,9 +21,7 @@ namespace daxa
 
 struct App : AppWindow<App>
 {
-    daxa::Instance daxa_ctx = daxa::create_instance({
-        .enable_validation = false,
-    });
+    daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
         .name = APPNAME_PREFIX("device"),
     });
@@ -45,6 +43,7 @@ struct App : AppWindow<App>
                 "tests/3_samples/5_boids",
             },
             .language = daxa::ShaderLanguage::GLSL,
+            .enable_debug_info = true,
         },
         .name = APPNAME_PREFIX("pipeline_manager"),
     });

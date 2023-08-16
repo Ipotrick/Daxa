@@ -81,8 +81,8 @@ add_library(daxa::daxa ALIAS daxa)
 
 target_compile_features(daxa PUBLIC cxx_std_20)
 
-find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
 include(GNUInstallDirs)
@@ -168,7 +168,7 @@ endif()
 
 target_link_libraries(daxa
     PUBLIC
-    unofficial::vulkan-memory-allocator::vulkan-memory-allocator
+    GPUOpen::VulkanMemoryAllocator
     Vulkan::Vulkan
     fmt::fmt
 )
@@ -223,8 +223,8 @@ set_target_properties(daxa::daxa PROPERTIES
   INTERFACE_COMPILE_DEFINITIONS "${DAXA_PREV_DEFINITIONS};DAXA_SHADER_INCLUDE_DIR=\"${PACKAGE_PREFIX_DIR}/include\""
 )
 
-find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 ]=])
 

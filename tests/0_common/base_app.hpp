@@ -29,9 +29,7 @@ using Clock = std::chrono::high_resolution_clock;
 template <typename T>
 struct BaseApp : AppWindow<T>
 {
-    daxa::Instance daxa_ctx = daxa::create_instance({
-        .enable_validation = false,
-    });
+    daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
         .selector = [](daxa::DeviceProperties const & device_props) -> i32
         {
@@ -88,7 +86,7 @@ struct BaseApp : AppWindow<T>
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
 
-    daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name="swapchain_image"}};
+    daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
