@@ -19,7 +19,7 @@ namespace daxa
 
     auto to_string(ImageViewType const & type) -> std::string_view
     {
-        switch(type)
+        switch (type)
         {
         case ImageViewType::REGULAR_1D: return "REGULAR_1D";
         case ImageViewType::REGULAR_2D: return "REGULAR_2D";
@@ -202,8 +202,7 @@ namespace daxa
         std::array<VkDescriptorSetLayoutBinding, CONSTANT_BUFFER_BINDING_COUNT> constant_buffer_layout_bindings = {};
         for (u32 binding = 0; binding < CONSTANT_BUFFER_BINDING_COUNT; ++binding)
         {
-            constant_buffer_layout_bindings[binding] = VkDescriptorSetLayoutBinding
-            {
+            constant_buffer_layout_bindings[binding] = VkDescriptorSetLayoutBinding{
                 .binding = binding,
                 .descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .descriptorCount = 1,
@@ -230,8 +229,7 @@ namespace daxa
             .pBindingFlags = constant_buffer_set_binding_flags.data(),
         };
 
-        VkDescriptorSetLayoutCreateInfo constant_buffer_bindings_set_layout_create_info
-        {
+        VkDescriptorSetLayoutCreateInfo constant_buffer_bindings_set_layout_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext = &constant_buffer_set_binding_flags_info,
             .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
@@ -253,7 +251,7 @@ namespace daxa
             vkSetDebugUtilsObjectNameEXT(device, &name_info);
         }
 
-        std::array<VkDescriptorSetLayout, 2> vk_descriptor_set_layouts = { this->vk_descriptor_set_layout, this->uniform_buffer_descriptor_set_layout };
+        std::array<VkDescriptorSetLayout, 2> vk_descriptor_set_layouts = {this->vk_descriptor_set_layout, this->uniform_buffer_descriptor_set_layout};
         VkPipelineLayoutCreateInfo vk_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .pNext = nullptr,
