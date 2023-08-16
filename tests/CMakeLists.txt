@@ -26,15 +26,6 @@ function(DAXA_CREATE_TEST)
 endfunction()
 
 find_package(glfw3 CONFIG REQUIRED)
-find_package(glm CONFIG REQUIRED)
-find_path(STB_INCLUDE_DIRS "stb_image.h" REQUIRED)
-find_path(CGLTF_INCLUDE_DIRS "cgltf.h" REQUIRED)
-
-add_library(stb_interface INTERFACE)
-target_include_directories(stb_interface INTERFACE ${STB_INCLUDE_DIRS})
-add_library(cgltf_interface STATIC "0_common/cgltf_impl.cpp")
-target_include_directories(cgltf_interface PUBLIC ${CGLTF_INCLUDE_DIRS})
-target_compile_definitions(cgltf_interface PUBLIC _CRT_SECURE_NO_WARNINGS=1)
 
 DAXA_CREATE_TEST(
     FOLDER 1_setup 1_window
@@ -87,36 +78,20 @@ DAXA_CREATE_TEST(
     LIBS glfw
 )
 DAXA_CREATE_TEST(
-    FOLDER 3_samples 2_short_code_triangle
-    LIBS glfw
-)
-DAXA_CREATE_TEST(
     FOLDER 3_samples 3_hello_triangle_compute
     LIBS glfw
 )
-#DAXA_CREATE_TEST(
-#    FOLDER 3_samples 4_raster
-#    LIBS glfw stb_interface
-#)
 DAXA_CREATE_TEST(
     FOLDER 3_samples 5_boids
     LIBS glfw
 )
-# DAXA_CREATE_TEST(
-#     FOLDER 3_samples 6_sponza
-#     LIBS glfw cgltf_interface
-# )
-#DAXA_CREATE_TEST(
-#    FOLDER 3_samples 7_FSR2
-#    LIBS glfw stb_interface
-#)
 
 DAXA_CREATE_TEST(
     FOLDER 4_hello_daxa 1_pink_screen
-    LIBS glfw stb_interface
+    LIBS glfw
 )
 
 DAXA_CREATE_TEST(
     FOLDER 4_hello_daxa 2_triangle
-    LIBS glfw stb_interface
+    LIBS glfw
 )

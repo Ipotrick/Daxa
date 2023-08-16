@@ -214,6 +214,7 @@ namespace daxa
         auto get_command_lists() -> std::vector<CommandList>;
 
         auto get_debug_string() -> std::string;
+        auto get_transient_memory_size() -> daxa::usize;
 
       private:
         void add_task(std::unique_ptr<detail::BaseTask> && base_task);
