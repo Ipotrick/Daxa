@@ -7,18 +7,6 @@
 
 namespace daxa
 {
-    VKAPI_ATTR auto VKAPI_CALL debug_utils_messenger_callback(
-        VkDebugUtilsMessageSeverityFlagBitsEXT msg_severity,
-        VkDebugUtilsMessageTypeFlagsEXT msg_type,
-        VkDebugUtilsMessengerCallbackDataEXT const * p_callback_data,
-        void * p_user_data) -> VkBool32
-    {
-        InstanceInfo const & info = *reinterpret_cast<InstanceInfo const *>(p_user_data);
-        std::string_view const msg = p_callback_data->pMessage;
-        info.validation_callback(static_cast<MsgSeverity>(msg_severity), static_cast<MsgType>(msg_type), msg);
-        return VK_TRUE;
-    }
-
     auto create_instance(InstanceInfo const & info) -> Instance
     {
         return Instance{ManagedPtr{new ImplInstance(info)}};
@@ -68,12 +56,7 @@ namespace daxa
     {
         std::vector<char const *> enabled_layers{};
         std::vector<char const *> extension_names{};
-        this->info.enable_validation = false;
         {
-            if (this->info.enable_validation)
-            {
-                enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
-            }
             extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
             extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
@@ -135,34 +118,10 @@ namespace daxa
             };
             vkCreateInstance(&instance_ci, nullptr, &vk_instance);
         }
-
-        if (this->info.enable_validation)
-        {
-            VkDebugUtilsMessengerCreateInfoEXT const dbg_utils_messenger_ci = {
-                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
-                .pNext = {},
-                .flags = {},
-                .messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT,
-                .messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT,
-                .pfnUserCallback = debug_utils_messenger_callback,
-                .pUserData = &this->info,
-            };
-
-            auto func = reinterpret_cast<PFN_vkCreateDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(vk_instance, "vkCreateDebugUtilsMessengerEXT"));
-            DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to set up debug messenger!");
-            func(vk_instance, &dbg_utils_messenger_ci, nullptr, &vk_debug_utils_messenger);
-        }
     }
 
     ImplInstance::~ImplInstance() // NOLINT(bugprone-exception-escape)
     {
-        if (this->info.enable_validation)
-        {
-            auto func = reinterpret_cast<PFN_vkDestroyDebugUtilsMessengerEXT>(vkGetInstanceProcAddr(vk_instance, "vkDestroyDebugUtilsMessengerEXT"));
-            DAXA_DBG_ASSERT_TRUE_M(func != nullptr, "failed to destroy debug messenger!");
-            func(vk_instance, vk_debug_utils_messenger, nullptr);
-        }
-
         vkDestroyInstance(vk_instance, nullptr);
     }
 } // namespace daxa
