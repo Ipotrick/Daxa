@@ -1066,6 +1066,7 @@ namespace daxa
 
         preamble += "#define DAXA_SHADERLANG 1\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
+        preamble += "#extension GL_KHR_memory_scope_semantics : enable\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
         {
             if (!shader_define.value.empty())

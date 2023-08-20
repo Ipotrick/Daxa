@@ -651,6 +651,7 @@ namespace daxa
             .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .synchronization2 = VK_TRUE,
         };
+        
         REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
 
         VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{

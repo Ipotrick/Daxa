@@ -204,6 +204,8 @@ namespace daxa
             add_task(std::move(base_task));
         }
 
+        void add_preamble(TaskCallback callback);
+
         void conditional(TaskGraphConditionalInfo const & conditional_info);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
