@@ -688,7 +688,9 @@ namespace daxa
         this->raster_pipelines.erase(pipeline_iter);
     }
 
-    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files, VirtualFileSet & virtual_files) -> bool
+    using FileWriteTimeLookupTable = std::unordered_map<std::string, std::filesystem::file_time_type>;
+
+    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files, VirtualFileSet & virtual_files, FileWriteTimeLookupTable & lookup_table) -> bool
     {
         using namespace std::chrono_literals;
         static constexpr auto HOTRELOAD_MIN_TIME = 250ms;
@@ -701,6 +703,23 @@ namespace daxa
         }
         last_hotload_time = now;
         bool reload = false;
+
+        auto get_last_file_write_time = [&](std::filesystem::path const & path)
+        {
+            auto full_path_str = std::filesystem::absolute(path).string();
+            auto iter = lookup_table.find(full_path_str);
+            if (iter != lookup_table.end())
+            {
+                return iter->second;
+            }
+            else
+            {
+                auto latest_write_time = std::filesystem::last_write_time(path);
+                lookup_table[full_path_str] = latest_write_time;
+                return latest_write_time;
+            }
+        };
+
         for (auto & [path, recorded_write_time] : observed_hotload_files)
         {
             auto path_str = path.string();
@@ -714,7 +733,7 @@ namespace daxa
             }
             else if (std::ifstream(path).good())
             {
-                auto latest_write_time = std::filesystem::last_write_time(path);
+                auto latest_write_time = get_last_file_write_time(path);
                 if (latest_write_time > recorded_write_time)
                 {
                     reload = true;
@@ -732,7 +751,7 @@ namespace daxa
                 }
                 else if (std::ifstream(pair.first).good())
                 {
-                    pair.second = std::filesystem::last_write_time(pair.first);
+                    pair.second = get_last_file_write_time(pair.first);
                 }
             }
         }
@@ -753,9 +772,13 @@ namespace daxa
     {
         bool reloaded = false;
 
+        // Optimization for caching the write times so that multiple pipelines don't check the
+        // filesystem for the same file's write-time. Filesystem checks are really slow...
+        auto lookup_table = FileWriteTimeLookupTable{};
+
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->compute_pipelines)
         {
-            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files))
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files, lookup_table))
             {
                 reloaded = true;
                 auto new_pipeline = create_compute_pipeline(compile_info);
@@ -781,7 +804,7 @@ namespace daxa
 
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->raster_pipelines)
         {
-            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files))
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files, lookup_table))
             {
                 reloaded = true;
                 auto new_pipeline = create_raster_pipeline(compile_info);
@@ -1104,9 +1127,11 @@ namespace daxa
             ofs.close();
         }
 
+        auto error_message_prefix = std::string("GLSLANG [") + name + "]";
+
         if (!shader.parse(&resource, SHADER_VERSION, false, messages, includer))
         {
-            return Result<std::vector<u32>>(std::string("GLSLANG: ") + shader.getInfoLog() + shader.getInfoDebugLog());
+            return Result<std::vector<u32>>(error_message_prefix + shader.getInfoLog() + shader.getInfoDebugLog());
         }
 
         glslang::TProgram program;
@@ -1114,13 +1139,13 @@ namespace daxa
 
         if (!program.link(messages))
         {
-            return Result<std::vector<u32>>(std::string("GLSLANG: ") + shader.getInfoLog() + shader.getInfoDebugLog());
+            return Result<std::vector<u32>>(error_message_prefix + shader.getInfoLog() + shader.getInfoDebugLog());
         }
 
         auto * intermediary = program.getIntermediate(spirv_stage);
         if (intermediary == nullptr)
         {
-            return Result<std::vector<u32>>(std::string("GLSLANG: Failed to get shader stage intermediary"));
+            return Result<std::vector<u32>>(error_message_prefix + std::string("Failed to get shader stage intermediary"));
         }
 
         spv::SpvBuildLogger logger;

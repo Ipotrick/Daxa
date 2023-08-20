@@ -10,9 +10,7 @@ namespace tests
     {
         struct App : AppWindow<App>
         {
-            daxa::Instance daxa_ctx = daxa::create_instance({
-                .enable_validation = true,
-            });
+            daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
                 .name = APPNAME_PREFIX("device (simple_creation)"),
             });
@@ -39,9 +37,7 @@ namespace tests
     {
         struct App : AppWindow<App>
         {
-            daxa::Instance daxa_ctx = daxa::create_instance({
-                .enable_validation = true,
-            });
+            daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
                 .name = APPNAME_PREFIX("device (clearcolor)"),
             });

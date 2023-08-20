@@ -6,7 +6,6 @@ set(SOURCE_PATH "${CMAKE_CURRENT_LIST_DIR}/../../")
 
 vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     FEATURES
-    utils-fsr2 WITH_UTILS_FSR2
     utils-imgui WITH_UTILS_IMGUI
     utils-mem WITH_UTILS_MEM
     utils-pipeline-manager-glslang WITH_UTILS_PIPELINE_MANAGER_GLSLANG
@@ -16,9 +15,6 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
 )
 set(DAXA_DEFINES)
 
-if(WITH_UTILS_FSR2)
-    list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_FSR2=true")
-endif()
 if(WITH_UTILS_IMGUI)
     list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_IMGUI=true")
 endif()
