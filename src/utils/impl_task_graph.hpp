@@ -307,6 +307,7 @@ namespace daxa
         static inline std::atomic_uint32_t exec_unique_next_index = 1;
         u32 unique_index = {};
 
+        TaskCallback preamble = {};
         TaskGraphInfo info;
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};

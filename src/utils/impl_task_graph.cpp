@@ -965,6 +965,13 @@ namespace daxa
         impl_runtime.command_lists.back().end_label();
     }
 
+    void TaskGraph::add_preamble(TaskCallback callback)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
+        impl.preamble = callback;
+    }
+
     void TaskGraph::conditional(TaskGraphConditionalInfo const & conditional_info)
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
@@ -2471,6 +2478,10 @@ namespace daxa
         impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
 
         validate_runtime_resources(impl, permutation);
+        if( impl.preamble )
+        {
+            impl.preamble(TaskInterface{&impl_runtime});
+        }
         // Generate and insert synchronization for persistent resources:
         generate_persistent_resource_synch(impl, permutation, impl_runtime.command_lists.back());
 
