@@ -54,7 +54,7 @@ namespace tests
         auto size,
         f32 value)
     {
-        u32 const image_size = sizeof(f32) * size.x * size.y * size.z;
+        u32 const image_size = static_cast<u32>(sizeof(f32) * size.x * size.y * size.z);
         auto staging = ti.get_allocator().allocate(image_size).value();
         for (u32 x = 0; x < size.x; ++x)
         {
@@ -111,7 +111,7 @@ namespace tests
         // Expected:
         //      Images B and C are aliased and the content is correct after execution of each of the tasks
 
-        daxa::Instance daxa_ctx = daxa::create_instance({ .enable_validation = false, });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
@@ -260,7 +260,7 @@ namespace tests
         // Expected:
         //      Images A and B are aliased - they both start at the same offset
 
-        daxa::Instance daxa_ctx = daxa::create_instance({ .enable_validation = false, });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({ .name = "device", });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
@@ -422,9 +422,7 @@ namespace tests
         // 2. Initialize them.
         // 3. Test if their content stays intact over multiple aliased operations.
 
-        daxa::Instance daxa_ctx = daxa::create_instance({
-            .enable_validation = false,
-        });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({
             .name = "device",
         });

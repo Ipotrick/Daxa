@@ -120,6 +120,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS,
             .pNext = {},
             .pCreateInfo = &vk_image_create_info,
+            .planeAspect = static_cast<VkImageAspectFlagBits>(infer_aspect_from_format(info.format)),
         };
         VkMemoryRequirements2 mem_requirements{
             .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
@@ -663,10 +664,6 @@ namespace daxa
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
 
-        if (impl_ctx.as<ImplInstance>()->info.enable_validation)
-        {
-            enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
-        }
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME); // might be a problem, intel does not support it at all.
@@ -727,12 +724,12 @@ namespace daxa
             auto pnext_ptr = vk_physical_device_properties2.pNext;
             while (pnext_ptr != 0)
             {
-                if (*reinterpret_cast<VkStructureType*>(pnext_ptr) == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT)
+                if (*reinterpret_cast<VkStructureType *>(pnext_ptr) == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT)
                 {
-                    VkPhysicalDeviceMeshShaderPropertiesEXT* prop_ptr = reinterpret_cast<VkPhysicalDeviceMeshShaderPropertiesEXT*>(pnext_ptr);
-                    this->mesh_shader_properties = *reinterpret_cast<MeshShaderDeviceProperties*>(reinterpret_cast<u64*>(prop_ptr) + 2/* skip sType and pNext ptrs*/);
+                    VkPhysicalDeviceMeshShaderPropertiesEXT * prop_ptr = reinterpret_cast<VkPhysicalDeviceMeshShaderPropertiesEXT *>(pnext_ptr);
+                    this->mesh_shader_properties = *reinterpret_cast<MeshShaderDeviceProperties *>(reinterpret_cast<u64 *>(prop_ptr) + 2 /* skip sType and pNext ptrs*/);
                 }
-                pnext_ptr = reinterpret_cast<void*>(reinterpret_cast<u64*>(pnext_ptr)[1]);
+                pnext_ptr = reinterpret_cast<void *>(reinterpret_cast<u64 *>(pnext_ptr)[1]);
             }
         }
 
@@ -866,7 +863,7 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = {},
-                .size = static_cast<VkDeviceSize>(sizeof(u8) * 4),
+                .size = sizeof(u8) * 4,
                 .usage = BUFFER_USE_FLAGS,
                 .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
                 .queueFamilyIndexCount = 1,
@@ -1549,7 +1546,7 @@ namespace daxa
                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
-            .subresourceRange = make_subressource_range(slice,parent_image_slot.aspect_flags),
+            .subresourceRange = make_subressource_range(slice, parent_image_slot.aspect_flags),
         };
         [[maybe_unused]] VkResult const result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");
