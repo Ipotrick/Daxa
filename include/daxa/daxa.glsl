@@ -17,7 +17,6 @@
 #extension GL_EXT_control_flow_attributes : require
 #extension GL_EXT_shader_image_int64 : require
 #extension GL_EXT_samplerless_texture_functions : require
-#extension GL_KHR_memory_scope_semantics : require
 
 #define DAXA_SHADER_STAGE_COMPUTE 0
 #define DAXA_SHADER_STAGE_VERTEX 1
