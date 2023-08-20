@@ -419,8 +419,8 @@ namespace daxa
         : ManagedPtr{new ImplPersistentTaskBuffer(info)}
     {
     }
-    ImplPersistentTaskBuffer::ImplPersistentTaskBuffer(TaskBufferInfo const & info)
-        : info{info},
+    ImplPersistentTaskBuffer::ImplPersistentTaskBuffer(TaskBufferInfo const & a_info)
+        : info{a_info},
           actual_buffers{info.initial_buffers.buffers.begin(), info.initial_buffers.buffers.end()},
           latest_access{info.initial_buffers.latest_access},
           unique_index{ImplPersistentTaskBuffer::exec_unique_next_index++}
@@ -2210,6 +2210,12 @@ namespace daxa
         std::string ret = impl.debug_string_stream.str();
         impl.debug_string_stream.str("");
         return ret;
+    }
+
+    auto TaskGraph::get_transient_memory_size() -> daxa::usize
+    {
+        auto & impl = *as<ImplTaskGraph>();
+        return impl.memory_block_size;
     }
 
     thread_local std::vector<SplitBarrierWaitInfo> tl_split_barrier_wait_infos = {};

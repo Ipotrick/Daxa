@@ -1,13 +1,16 @@
 #pragma once
 
 // Disable msvc warning on alignment padding.
+#if defined(_MSC_VER)
 #pragma warning(disable : 4324)
+#endif
 
 #if !DAXA_BUILT_WITH_UTILS_TASK_GRAPH
 #error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled, or request the utils-task-graph feature in vcpkg"
 #endif
 
 #include <span>
+#include <cstring>
 
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
@@ -181,9 +184,9 @@ namespace daxa
 
     struct GenericTaskResourceUse
     {
-        TaskResourceUseType type = TaskResourceUseType::NONE;
+        TaskResourceUseType type;
         // This is necessary for c++ to properly generate copy and move operators.
-        [[maybe_unused]] u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType)] = {};
+        u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType)];
     };
 
     struct TrackedBuffers
@@ -484,7 +487,7 @@ namespace daxa
 
         template <typename T>
         concept UserUses =
-            (sizeof(T) > 0 and sizeof(T) % TASK_INPUT_FIELD_SIZE == 0);
+            (sizeof(T) > 0) and ((sizeof(T) % TASK_INPUT_FIELD_SIZE) == 0) and std::is_trivially_copyable_v<T>;
 
         template <typename T>
         concept UserTask =
