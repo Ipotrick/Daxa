@@ -9,9 +9,7 @@ namespace tests
         using namespace daxa::task_resource_uses;
         struct App : AppWindow<App>
         {
-            daxa::Instance daxa_ctx = daxa::create_instance({
-                .enable_validation = false,
-            });
+            daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
                 .name = "device (mipmapping)",
             });
@@ -534,7 +532,7 @@ namespace tests
                 });
                 new_task_graph.add_task({
                     .uses = {ImageTransferWrite<>{task_swapchain_image}},
-                    .task = [=](daxa::TaskInterface const & ti)
+                    .task = [=, this](daxa::TaskInterface const & ti)
                     {
                         auto cmd_list = ti.get_command_list();
                         cmd_list.clear_image({
@@ -551,7 +549,7 @@ namespace tests
                         ImageTransferRead<>{render_img_view},
                         ImageTransferWrite<>{task_swapchain_image},
                     },
-                    .task = [=](daxa::TaskInterface const & ti)
+                    .task = [=, this](daxa::TaskInterface const & ti)
                     {
                         daxa::ImageId render_img = ti.uses[render_img_view].image();
                         daxa::ImageId swapchain_img = ti.uses[task_swapchain_image].image();
