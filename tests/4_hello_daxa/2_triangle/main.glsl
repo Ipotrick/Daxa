@@ -1,5 +1,7 @@
 #include <daxa/daxa.inl>
 
+#extension GL_EXT_debug_printf : enable
+
 #include <shared.inl>
 
 DAXA_DECL_PUSH_CONSTANT(MyPushConstant, push)
@@ -21,6 +23,7 @@ layout(location = 0) out daxa_f32vec4 color;
 void main()
 {
     color = daxa_f32vec4(v_col, 1);
+    debugPrintfEXT("test\n");
 }
 
 #endif
