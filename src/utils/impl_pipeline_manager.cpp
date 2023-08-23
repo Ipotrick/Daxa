@@ -1235,6 +1235,8 @@ namespace daxa
         auto entry_point_wstr = u8_ascii_to_wstring(shader_info.compile_options.entry_point.value_or("main").c_str());
         args.push_back(entry_point_wstr.c_str());
         args.push_back(L"-fvk-use-scalar-layout");
+        // args.push_back(L"-fvk-allow-rwstructuredbuffer-arrays");
+        // args.push_back(L"-fspv-flatten-resource-arrays");
         if (shader_info.compile_options.enable_debug_info.value_or(false))
         {
             // insert debug info

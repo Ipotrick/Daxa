@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
 #define APPNAME "Daxa Sample: Mandelbrot"
 #include <0_common/base_app.hpp>
 
@@ -190,11 +190,7 @@ struct App : BaseApp<App>
                 cmd_list.set_pipeline(*compute_pipeline);
                 cmd_list.push_constant(ComputePush {
                     .image_id = render_image.default_view(),
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-                    .gpu_input = this->device.get_device_address(gpu_input_buffer),
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
                     .input_buffer_id = gpu_input_buffer,
-#endif
                     .frame_dim = {size_x, size_y},
                 });
                 cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
