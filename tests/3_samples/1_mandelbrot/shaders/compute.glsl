@@ -19,8 +19,8 @@ f32vec3 mandelbrot_colored(f32vec2 pixel_p)
 {
     f32vec2 uv = pixel_p / f32vec2(p.frame_dim.xy);
     uv = (uv - 0.5) * f32vec2(f32(p.frame_dim.x) / f32(p.frame_dim.y), 1);
-
-    f32 time = deref(p.gpu_input).time;
+    daxa_BufferPtr(GpuInput) gpu_input_ptr = daxa_BufferPtr(GpuInput)(daxa_id_to_address(p.gpu_input));
+    f32 time = deref(gpu_input_ptr).time;
     f32 scale = 12.0 / (exp(time) + 0.0001);
     f32vec2 z = uv * scale * 2 + CENTER;
     f32vec2 c = z;
