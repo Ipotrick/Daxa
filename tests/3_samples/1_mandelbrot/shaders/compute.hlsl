@@ -1,5 +1,5 @@
 #define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
-#include <daxa/daxa.hlsl>
+#include <daxa/daxa.inl>
 #include <shared.inl>
 
 #include "custom file!!"
