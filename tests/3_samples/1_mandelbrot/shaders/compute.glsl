@@ -56,9 +56,9 @@ void main()
         return;
 
     f32vec3 col = f32vec3(0, 0, 0);
-    for (u32 yi = 0; yi < SUBSAMPLES; ++yi)
+    for (i32 yi = 0; yi < SUBSAMPLES; ++yi)
     {
-        for (u32 xi = 0; xi < SUBSAMPLES; ++xi)
+        for (i32 xi = 0; xi < SUBSAMPLES; ++xi)
         {
             f32vec2 offset = f32vec2(xi, yi) / f32(SUBSAMPLES);
             col += mandelbrot_colored(f32vec2(pixel_i.xy) + offset);
@@ -66,8 +66,5 @@ void main()
     }
     col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
 
-    imageStore(
-        daxa_image2D(p.image_id),
-        i32vec2(pixel_i.xy),
-        f32vec4(col, 1));
+    imageStore( daxa_image2D(p.image_id), i32vec2(pixel_i.xy), f32vec4(col, 1) );
 }

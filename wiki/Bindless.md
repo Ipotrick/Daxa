@@ -41,7 +41,14 @@ Now comes the magical part. All the created image, image view, and sampler IDs c
 You never need to bind any resources, they are simply always available and accessible in shaders.
 > Keep in mind that you still need to make sure you have the correct image layout and sync for each resource!
 
-The shader access works by transforming a `daxa_ImageViewId` with or without a `daxa_SamplerId` into a GLSL `texture`, `image`, or `sampler` locally.
+You do NOT need to interact with any binding logic. No descriptor sets, descriptor layouts, pipeline layouts binding, set numbers, or shader reflection. Daxa Ddes all the descriptor management behind the scenes.
+
+When an image or image view is created, the image views are immediately added to the bindless table. When an image (-view) gets destroyed it is removed from the table. Note that resource destruction is deferred to the end of all currently running GPU work, so you do not need to write a zombie queue or similar in most cases.
+
+### GLSL
+
+The shader access works by transforming a `daxa_ImageViewId` with or without a `daxa_SamplerId` into a GLSL `texture`, `image`, or `sampler` locally. 
+> Note that they can not be treated as local variables and can only be used IN PLACE of the usage like shown below.
 
 Example:
 
@@ -62,10 +69,6 @@ uvec2 size = textureSize(daxa_texture1DArray(img));
 > Daxa default enables the glsl extension [GL_EXT_samplerless_texture_functions](https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GL_EXT_samplerless_texture_functions.txt). This ext defines overloads for all texture access functions that do not require a sampler to only take in a textureDIMENSION instead.
 
 For each image access, the image view ID must be cast to the corresponding GLSL type with Daxa's macros. Daxa defines macros for all normal image/texture/sampler types and even for some commonly used extensions like 64-bit images.
-
-You do NOT need to interact with any binding logic. No descriptor sets, descriptor layouts, pipeline layouts binding, set numbers, or shader reflection. Daxa Ddes all the descriptor management behind the scenes.
-
-When an image or image view is created, the image views are immediately added to the bindless table. When an image (-view) gets destroyed it is removed from the table. Note that resource destruction is deferred to the end of all currently running GPU work, so you do not need to write a zombie queue or similar in most cases.
 
 ### GLSL Annotations For Images
 
@@ -97,6 +100,37 @@ void main() {
 }
 ```
 
+### HLSL
+
+To get access to images in hlsl, you simply create a local hlsl texture object in the shader from the image id.
+
+Constructing a texture handle in hlsl is done with makro constructors similarly to glsl. These constructors look like this: `daxa_##HLSL_TEXTURE_TYPE(TEX_RET_TYPE, IMAGE_VIEW_ID)`.
+
+> Note: In contrast to glsl you can treat the returned hlsl texture handles as local variables.
+
+> Note: Currently only 4 component return types for texture functions are implemented, this is done to reduce the header bloat.
+
+Example:
+
+```glsl
+...
+daxa::ImageViewId img = ...;
+daxa::SamplerId smp = ...;
+// Alternative one: using a makro to locally construct a texture handle. Used in place.
+int4 v = daxa_Texture3D(int4, img).Sample(smp, float3(...));
+int4 v = t.Sample(smp, float3(...));
+...
+daxa::ImageViewId img = ...;
+daxa_RWTexture2D(float4, img)[int2(...)] = float4(...);
+...
+daxa::ImageViewId img = ...;
+// As you can treat them as local variables in hlsl, such things are also possible:
+Texture1DArray<float4> t = daxa_Texture1DArray(float4, img);
+uint mips; uint width; uint elements; uint levels;
+t.GetDimensions(mips, width, elements, levels);
+...
+```
+
 ## Buffers In Daxa
 
 Buffers are created similarly to images:
@@ -112,7 +146,7 @@ void* host_ptr                              = device.get_buffer_host_address(buf
 daxa::types::BufferDeviceAddress device_ptr = device.get_buffer_device_address(buffer_id);
 ```
 
-## Buffer References and Buffer Pointers
+## Buffer References and Buffer Pointers GLSL
 
 The general way to access buffers in daxa is via buffer device address and glsl's [buffer reference](https://github.com/KhronosGroup/GLSL/blob/master/extensions/ext/GLSL_EXT_buffer_reference.txt).
 
@@ -138,11 +172,12 @@ DAXA_DECL_BUFFER_PTR(MyStruct)
 ...
 void main()
 {
+    // You can also get the address of a buffer id inside all shaders: daxa_u64 daxa_id_to_address(BUFFER_ID)
     daxa_u64 address = ...;
     MyBufferReference my_ref = MyBufferReference(address);
     my_ref.field = 1;
     daxa_BufferPtr(MyStruct) my_readonly_ptr = daxa_BufferPtr(MyStruct)(address);
-    int read_value = deref(my_readonly_ptr).i;
+    uint read_value = deref(my_readonly_ptr).i;
     daxa_RWBufferPtr(MyStruct) my_readwrite_ptr = daxa_RWBufferPtr(MyStruct)(address);
     deref(my_readwrite_ptr).i = 1;
 }
@@ -156,6 +191,36 @@ Sometimes it is nessecary to use glsl annotations/ qualifiers for fields within 
 
 > The Daxa buffer ptr types are simply buffer references containing one field named `value` of the given struct type.
 For the `BufferPtr` makro, the field is annotated with `readonly`, while it is not with `RWBufferPtr`.
+
+# Buffer Access in HLSL
+
+As Hlsl has poor BufferReference support, daxa relies on StructuredBuffer and ByteAddressBuffer for buffers in Hlsl.
+
+These are constructed similarly to texture handles in hlsl with a construction makro: `daxa_ByteAddressBuffer(BUFFER_ID)`, `daxa_RWByteAddressBuffer(BUFFER_ID)`, `daxa_StructuredBuffer(STRUCT_TYPE, BUFFER_ID)`.
+
+Note that in order to use StructuredBuffer for a given struct type you must use the `DAXA_DECL_BUFFER_PTR` makro for that struct. This is due to limitations of hlsl and backwards compatibility reasons with glsl.
+
+Example:
+```hlsl
+struct MyStruct
+{
+    uint field;
+};
+DAXA_DECL_BUFFER_PTR(MyStruct)
+
+...
+void main()
+{
+    daxa::BufferId buffer_id = ...;
+    ByteAddressBuffer b = daxa_ByteAddressBuffer(buffer_id);
+    b.Store(0, 1);
+    uint read_value0 = b.Load<MyStruct>(0).field;
+    StructuredBuffer<MyStruct> my_readonly_buffer = daxa_StructuredBuffer(MyStruct, buffer_id);
+    uint read_value1 = my_readonly_buffer[0].field;
+}
+```
+
+> Note: Hlsl provides atomic ops for ByteAddressBuffer as well as a sizeof operator for structs.
 
 # Host-Device resource transport
 

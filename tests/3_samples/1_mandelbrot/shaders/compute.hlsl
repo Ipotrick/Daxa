@@ -20,8 +20,7 @@ f32vec3 mandelbrot_colored(f32vec2 pixel_p)
 {
     f32vec2 uv = pixel_p / f32vec2(p.frame_dim.xy);
     uv = (uv - 0.5) * f32vec2(f32(p.frame_dim.x) / f32(p.frame_dim.y), 1);
-    StructuredBuffer<GpuInput> input = p.input_buffer_id.get<StructuredBuffer<GpuInput> >();
-    f32 time = input[0].time;
+    f32 time = daxa_StructuredBuffer(GpuInput, p.input_buffer_id)[0].time;
     f32 scale = 12.0 / (exp(time) + 0.0001);
     f32vec2 z = uv * scale * 2 + CENTER;
     f32vec2 c = z;
@@ -54,10 +53,9 @@ f32vec3 mandelbrot_colored(f32vec2 pixel_p)
 void main(u32vec3 pixel_i : SV_DispatchThreadID)
 // clang-format on
 {
-    //RWTexture2D<f32vec4> render_image = daxa::get_RWTexture2D<f32vec4>(p.image_id); // old
-    RWTexture2D<float4> render_image = p.image_id.get<RWTexture2D<float4> >();
     if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
         return;
+
     f32vec3 col = 0;
     for (i32 yi = 0; yi < SUBSAMPLES; ++yi)
     {
@@ -68,5 +66,5 @@ void main(u32vec3 pixel_i : SV_DispatchThreadID)
         }
     }
     col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
-    render_image[pixel_i.xy] = f32vec4(col, 1);
+    daxa_RWTexture2D(float4, p.image_id)[pixel_i.xy] = f32vec4(col, 1);
 }
