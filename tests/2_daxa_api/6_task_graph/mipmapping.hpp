@@ -500,7 +500,7 @@ namespace tests
                         new_task_graph.add_task({
                             .uses = {
                                 BufferComputeShaderRead{task_mipmapping_gpu_input_buffer},
-                                ImageComputeShaderReadWrite<>{task_render_image},
+                                ImageComputeShaderStorageReadWrite<>{task_render_image},
                             },
                             .task = [=, this](daxa::TaskInterface const & ti)
                             {

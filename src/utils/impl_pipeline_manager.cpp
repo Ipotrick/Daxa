@@ -1293,10 +1293,13 @@ namespace daxa
 
         std::vector<u32> spv;
         spv.resize(shader_obj->GetBufferSize() / sizeof(u32));
-        for (usize i = 0; i < spv.size(); i++)
-        {
-            spv[i] = static_cast<u32 *>(shader_obj->GetBufferPointer())[i];
-        }
+        auto dxc_spv_ptr = static_cast<u32 *>(shader_obj->GetBufferPointer());
+        std::copy(dxc_spv_ptr, dxc_spv_ptr + spv.size(), spv.begin());
+
+        // DXC often generates bad or invalid SPIR-V. Some say that running spirv-tools' optimizer on the resulting SPIR-V will rectify this.
+        // On the contrary, the DXC docs suggest that this legalization step is done automatically via SPIR-V tools:
+        //   - https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst#legalization-optimization-validation
+
         return Result<std::vector<u32>>(spv);
 #else
         return Result<std::vector<u32>>("Asked for Dxc compilation without enabling Dxc");

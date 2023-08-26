@@ -89,7 +89,44 @@ namespace tests
         return 0;
     }
 
-    auto virtual_includes(daxa::Device & device) -> i32
+    auto perf(daxa::Device & device) -> i32
+    {
+        daxa::PipelineManager pipeline_manager_ = daxa::PipelineManager({.device = device});
+
+        for (u32 i = 0; i < 1000; ++i)
+        {
+            daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+                .device = device,
+                .shader_compile_options = {
+                    .root_paths = {
+                        DAXA_SHADER_INCLUDE_DIR,
+                        DAXA_SAMPLE_PATH "/shaders",
+                        "tests/0_common/shaders",
+                    },
+                    .language = daxa::ShaderLanguage::GLSL,
+                },
+                .name = APPNAME_PREFIX("pipeline_manager"),
+            });
+
+            auto compilation_result = pipeline_manager.add_compute_pipeline({
+                .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+                .name = APPNAME_PREFIX("compute_pipeline"),
+            });
+
+            if (compilation_result.is_err())
+            {
+                std::cerr << "Failed to compile the compute_pipeline!\n";
+                std::cerr << compilation_result.message() << std::endl;
+                return -1;
+            }
+
+            std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
+        }
+
+        return 0;
+    }
+
+    auto virtual_files(daxa::Device & device) -> i32
     {
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
@@ -182,7 +219,7 @@ namespace tests
         };
         auto test_wrapper_1 = [](daxa::Device & a_device, i32 & ret)
         {
-            ret = tests::virtual_includes(a_device);
+            ret = tests::virtual_files(a_device);
         };
         auto test_wrapper_2 = [](daxa::Device & a_device, i32 & ret)
         {
@@ -232,11 +269,15 @@ auto main() -> int
     {
         return ret;
     }
-    if (ret = tests::virtual_includes(device); ret != 0)
+    if (ret = tests::virtual_files(device); ret != 0)
     {
         return ret;
     }
     if (ret = tests::tesselation_shaders(device); ret != 0)
+    {
+        return ret;
+    }
+    if (ret = tests::perf(device); ret != 0)
     {
         return ret;
     }
