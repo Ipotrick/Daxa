@@ -138,9 +138,9 @@ I recommend using VSCode with the official Microsoft C++ extension pack
 
 Daxa comes with a launch script for launching samples with the VSCode debugger. First you need to select a build configuration. There should be the option of debug/release. To just build it without launching, you can press F7. This will make vcpkg pull in all the dependencies (build them if not already installed), build Daxa itself, and will build all the samples. To run a sample, you select which one from the bottom, and press F5. If the code hasn’t already been built, this will also trigger a build step identical to pressing F7.
 
-## Custom Validation (Only really applicable to Daxa developers):
+## Custom Validation (Not necessary and only applicable to Daxa maintainers):
 
-```git clone https://github.com/GabeRundlett/Vulkan-ValidationLayers```
+```git clone https://github.com/KhronosGroup/Vulkan-ValidationLayers```
 You must build this repo (Debug is fine, you get symbols)
 
 Open up Vulkan Configurator and add a new layer profile
