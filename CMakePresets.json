@@ -14,6 +14,7 @@
             "generator": "Ninja Multi-Config",
             "cacheVariables": {
                 "CMAKE_MODULE_PATH": "${sourceDir}/cmake/modules",
+                "DAXA_USE_VCPKG": true,
                 "DAXA_ENABLE_UTILS_FSR2": false,
                 "DAXA_ENABLE_UTILS_IMGUI": true,
                 "DAXA_ENABLE_UTILS_MEM": true,
@@ -58,9 +59,7 @@
             "inherits": [
                 "defaults-windows"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake"
         },
         {
             "name": "cl-x86_64-windows-msvc",
@@ -68,9 +67,7 @@
             "inherits": [
                 "defaults-windows"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/cl-x86_64-windows-msvc.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/cl-x86_64-windows-msvc.cmake"
         },
         {
             "name": "gcc-x86_64-linux-gnu",
@@ -78,9 +75,7 @@
             "inherits": [
                 "defaults-linux"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
         },
         {
             "name": "clang-x86_64-linux-gnu",
@@ -88,9 +83,7 @@
             "inherits": [
                 "defaults-linux"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-linux-gnu.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/clang-x86_64-linux-gnu.cmake"
         }
     ],
     "buildPresets": [
