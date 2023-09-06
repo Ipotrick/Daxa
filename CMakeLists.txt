@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.21)
 
 include(cmake/warnings.cmake)
+if(DAXA_USE_VCPKG)
+    include(cmake/vcpkg.cmake)
+endif()
 
 if(DAXA_ENABLE_UTILS_TASK_GRAPH)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-graph")
