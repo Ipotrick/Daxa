@@ -6,6 +6,7 @@
   "homepage": "https://github.com/Ipotrick/Daxa",
   "dependencies": [
     "vulkan-memory-allocator",
+    "vulkan-headers",
     "vulkan",
     "fmt"
   ],

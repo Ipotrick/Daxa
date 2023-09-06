@@ -457,5 +457,6 @@ FodyWeavers.xsd
 _out
 .vscode/launch.json
 preprocessed_*
+vcpkg/
 
 .idea
