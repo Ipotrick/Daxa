@@ -1091,7 +1091,7 @@ namespace daxa
             this->info.max_allowed_samplers,
             vk_device,
             buffer_device_address_buffer,
-            vkSetDebugUtilsObjectNameEXT);
+            this->impl_ctx.as<ImplInstance>()->vkSetDebugUtilsObjectNameEXT);
 
         vkEndCommandBuffer(init_cmd_buffer);
         // Submit initial commands to set up the daxa device.
