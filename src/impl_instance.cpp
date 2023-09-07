@@ -59,8 +59,9 @@ namespace daxa
         {
             extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-            if (enable_debug_names)
+            if (enable_debug_names) {
                 extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            }
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
             extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
