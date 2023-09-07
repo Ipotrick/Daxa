@@ -57,7 +57,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<u64>(this->vk_semaphore),
                 .pObjectName = binary_semaphore_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &name_info);
+            this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
     }
 
@@ -137,7 +137,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_semaphore),
                 .pObjectName = timeline_semaphore_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &name_info);
+            this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &name_info);
         }
     }
 

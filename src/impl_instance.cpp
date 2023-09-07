@@ -58,14 +58,18 @@ namespace daxa
         std::vector<char const *> extension_names{};
         {
             extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-            extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
-#if defined(WIN32)
+            if (enable_debug_names)
+                extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
             extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(__linux__)
+#elif defined(VK_USE_PLATFORM_XLIB_KHR)
             extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
+            // no surface extension
 #else
-// no surface extension
+            // no surface extension
 #endif
         }
 
@@ -117,6 +121,12 @@ namespace daxa
                 .ppEnabledExtensionNames = extension_names.data(),
             };
             vkCreateInstance(&instance_ci, nullptr, &vk_instance);
+        }
+
+        if (enable_debug_names) {
+            this->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetInstanceProcAddr(vk_instance, "vkSetDebugUtilsObjectNameEXT"));
+            this->vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetInstanceProcAddr(vk_instance, "vkCmdBeginDebugUtilsLabelEXT"));
+            this->vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetInstanceProcAddr(vk_instance, "vkCmdEndDebugUtilsLabelEXT"));
         }
     }
 

@@ -784,7 +784,7 @@ namespace daxa
                 info.label_color[2],
                 info.label_color[3]},
         };
-        impl.impl_device.as<ImplDevice>()->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
+        impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
     }
 
     void CommandList::end_label()
@@ -792,7 +792,7 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         impl.flush_barriers();
-        impl.impl_device.as<ImplDevice>()->vkCmdEndDebugUtilsLabelEXT(impl.vk_cmd_buffer);
+        impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkCmdEndDebugUtilsLabelEXT(impl.vk_cmd_buffer);
     }
 
     auto CommandBufferPoolPool::get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>
@@ -942,7 +942,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer),
                 .pObjectName = cmd_buffer_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
+            this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
 
             auto cmd_pool_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const cmd_pool_name_info{
@@ -952,7 +952,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool),
                 .pObjectName = cmd_pool_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
+            this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
         }
     }
 
