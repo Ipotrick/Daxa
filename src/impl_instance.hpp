@@ -13,9 +13,9 @@ namespace daxa
         VkDebugUtilsMessengerEXT vk_debug_utils_messenger = {};
 
 #if defined(DEBUG)
-        const bool enable_debug_names = true;
+        bool enable_debug_names = true;
 #else
-        const bool enable_debug_names = false;
+        bool enable_debug_names = false;
 #endif
 
         PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};

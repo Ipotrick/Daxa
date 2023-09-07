@@ -59,8 +59,23 @@ namespace daxa
         {
             extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 
-            if (enable_debug_names) {
-                extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            if (!enable_debug_names) {
+                enable_debug_names = false;
+                uint32_t count = 0;
+                vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+
+                const std::vector<VkExtensionProperties> extensionProperties(count);
+                vkEnumerateInstanceExtensionProperties(nullptr, &count, nullptr);
+
+                for (const auto& extensionProperty : extensionProperties) {
+                    const std::string_view extensionNameView(reinterpret_cast<const char*>(extensionProperty.extensionName));
+                    if (extensionNameView == VK_EXT_DEBUG_UTILS_EXTENSION_NAME) {
+                        extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+                        enable_debug_names = true;
+                        break;
+                    }
+                }
+
             }
 
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
