@@ -60,7 +60,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(vk_timeline_query_pool),
                 .pObjectName = info.name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &query_pool_name_info);
+            this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &query_pool_name_info);
         }
     }
 

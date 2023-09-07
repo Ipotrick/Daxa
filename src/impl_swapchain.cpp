@@ -324,7 +324,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_swapchain),
                 .pObjectName = swapchain_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &swapchain_name_info);
+            this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &swapchain_name_info);
         }
     }
 

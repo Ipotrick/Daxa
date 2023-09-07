@@ -23,9 +23,6 @@ namespace daxa
         VkPhysicalDevice vk_physical_device = {};
         VkDevice vk_device = {};
 
-        PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
-        PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
-        PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
         PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
 
         // Mesh shader:
