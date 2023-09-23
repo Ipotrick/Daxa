@@ -227,6 +227,11 @@ namespace tests
             .size = {1, 1, 1},
             .name = "f32 image",
         });
+        auto u32_image = task_graph.create_transient_image({
+            .format = daxa::Format::R32_UINT,
+            .size = {1, 1, 1},
+            .name = "u32 image",
+        });
         auto f32_buffer = task_graph.create_transient_buffer({
             .size = sizeof(f32),
             .name = "f32 buffer",
@@ -239,6 +244,7 @@ namespace tests
                 BufferComputeShaderWrite{handles_buffer},
                 BufferComputeShaderWrite{f32_buffer},
                 ImageComputeShaderStorageWriteOnly<>{f32_image},
+                ImageComputeShaderStorageReadWrite<>{u32_image},
             },
             .task = [&](daxa::TaskInterface ti)
             {
@@ -247,7 +253,8 @@ namespace tests
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
                         .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()),
-                        .my_image = {ti.uses[f32_image].image()},
+                        .my_float_image = {ti.uses[f32_image].image()},
+                        .my_uint_image = {ti.uses[u32_image].image()},
                         .my_sampler = sampler,
                     },
                     .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),

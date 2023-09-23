@@ -72,8 +72,8 @@ For each image access, the image view ID must be cast to the corresponding GLSL 
 
 ### GLSL Annotations For Images
 
-In glsl, it is possible to annotate image variables with custom [qualifiers](https://www.khronos.org/opengl/wiki/Type_Qualifier_(GLSL)). Such annotations can be for example: coherent or readonly.
-These are really useful and can provide better performance and more possibilities in some cases. 
+In glsl, it is possible to annotate image variables with custom [qualifiers](https://www.khronos.org/opengl/wiki/Type_Qualifier_(GLSL)) and [image formats](https://www.khronos.org/opengl/wiki/Layout_Qualifier_(GLSL)). Such annotations can be for example: coherent or readonly and r32ui or rgba16f.
+Custom qualifiers are really useful and can provide better performance and more possibilities in some cases. Image formats on the other hand are sometimes required by some glsl functions (imageAtomicOr for example).
 
 To provide the image accessor makros, daxa predefines image tables without any annotations. These make the access makros such as `daxa_image2D` possible to use.
 
@@ -84,6 +84,7 @@ These custom accessors declare a new table with these annotations. Each user def
 
 ```glsl
 DAXA_DECL_IMAGE_ACCESSOR(TYPE, ANNOTATIONS, ACCESSOR_NAME) // Declares new accessor.
+DAXA_DECL_IMAGE_ACCESSOR_WITH_FORMAT(TYPE, FORMAT, ANNOTATIONS, ACCESSOR_NAME) // Declares new accessor with format
 daxa_access(ACCESSOR_NAME, image_view_id) // Uses the accessor by name to convert an image view id to the given glsl type.
 ```
 
@@ -92,11 +93,13 @@ Example:
 ```glsl
 DAXA_DECL_IMAGE_ACCESSOR(image2D, coherent restrict, RWCoherRestr)
 DAXA_DECL_IMAGE_ACCESSOR(iimage2DArray, writeonly restrict, WORestr)
+DAXA_DECL_IMAGE_ACCESSOR_WITH_FORMAT(uimage2D, r32ui, , r32uiImage)
 ...
 void main() {
-    daxa_ImageViewId im0, img1 = ...;
-    vec4 v = imageLoad(daxa_access(RWCoherRestr, img0), ivec2(0,0));
+    daxa_ImageViewId img0, img1, img2 = ...;
+    vec4 v = imageLoad(daxa_access(3WCoherRestr, img0), ivec2(0,0));
     imageStore(daxa_access(WORestr, img1), ivec2(0,0), 0, ivec4(v));
+    imageAtomicOr(daxa_access(r32uiImage, img2), ivec2(0,0), 1 << 31);
 }
 ```
 

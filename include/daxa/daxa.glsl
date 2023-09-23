@@ -143,6 +143,9 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN) buffer
 #define DAXA_DECL_BUFFER_REFERENCE DAXA_DECL_BUFFER_REFERENCE_ALIGN(4)
 
+/// @brief Defines the storage image layout used in all buffer references in daxa glsl with format specification.
+#define DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(FORMAT) layout(FORMAT, binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
+
 /// @brief Defines the storage image layout used in all buffer references in daxa glsl.
 #define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
 /// @brief Defines the sampled image layout used in all buffer references in daxa glsl.
@@ -235,6 +238,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 ///         imageStore(daxa_access(WORestr, img1), ivec2(0,0), 0, ivec4(v));
 ///     }
 ///
+#define DAXA_DECL_IMAGE_ACCESSOR_WITH_FORMAT(TYPE, FORMAT, ANNOTATIONS, ACCESSOR_NAME) DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(FORMAT) uniform ANNOTATIONS TYPE daxa_access_##ACCESSOR_NAME##Table[];
 #define DAXA_DECL_IMAGE_ACCESSOR(TYPE, ANNOTATIONS, ACCESSOR_NAME) DAXA_STORAGE_IMAGE_LAYOUT uniform ANNOTATIONS TYPE daxa_access_##ACCESSOR_NAME##Table[];
 #define daxa_access(ACCESSOR_NAME, image_view_id) daxa_access_##ACCESSOR_NAME##Table[daxa_image_view_id_to_index(image_view_id)]
 
