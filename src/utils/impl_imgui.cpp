@@ -310,6 +310,14 @@ namespace daxa
         impl.record_commands(draw_data, cmd_list, target_image, size_x, size_y);
     }
 
+    auto ImGuiRenderer::create_image_context(ImGuiImageContext const & context) -> ImTextureID
+    {
+        DAXA_DBG_ASSERT_TRUE_M(
+            sizeof(ImGuiImageContext) <= sizeof(ImTextureID), 
+            "Size of context exceeded size of ImTextureID, unable to pack");
+        return std::bit_cast<ImTextureID>(context);
+    }
+
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
     void ImGuiRenderer::record_task(ImDrawData * /* draw_data */, TaskGraph & /* task_graph */, TaskImageView /* task_swapchain_image */, u32 /* size_x */, u32 /* size_y */)
     {
@@ -416,7 +424,6 @@ namespace daxa
             i32 global_idx_offset = 0;
             push.vbuffer_id = vbuffer;
             push.ibuffer_id = ibuffer;
-            push.sampler0_id = sampler;
 
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
@@ -446,7 +453,9 @@ namespace daxa
                     cmd_list.set_scissor(scissor);
 
                     // Draw
-                    push.texture0_id = *reinterpret_cast<daxa::ImageViewId const *>(&pcmd->TextureId);
+                    auto const image_context = std::bit_cast<ImGuiImageContext>(pcmd->TextureId);
+                    push.texture0_id = image_context.image_view_id;
+                    push.sampler0_id = image_context.sampler_id;
 
                     push.vbuffer_offset = pcmd->VtxOffset + static_cast<u32>(global_vtx_offset);
                     push.ibuffer_offset = pcmd->IdxOffset + static_cast<u32>(global_idx_offset);
@@ -498,7 +507,6 @@ namespace daxa
         }
         recreate_vbuffer(4096);
         recreate_ibuffer(4096);
-        sampler = this->info.device.create_sampler({.name = "dear ImGui sampler"});
 
         ImGuiIO & io = ImGui::GetIO();
         u8 * pixels = nullptr;
@@ -572,7 +580,6 @@ namespace daxa
     {
         this->info.device.destroy_buffer(vbuffer);
         this->info.device.destroy_buffer(ibuffer);
-        this->info.device.destroy_sampler(sampler);
         this->info.device.destroy_image(font_sheet);
     }
 } // namespace daxa

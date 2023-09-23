@@ -61,6 +61,7 @@ struct App : BaseApp<App>
         .name = "render_image",
     });
     daxa::TaskImage task_render_image{{.initial_images={.images=std::array{render_image}}, .name = "render_image"}};
+    daxa::SamplerId sampler = device.create_sampler({.name = "sampler"});
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
         .query_count = 2,
@@ -82,6 +83,15 @@ struct App : BaseApp<App>
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
         ImGui::Begin("Settings");
+
+        ImGui::Image(
+            daxa::ImGuiRenderer::create_image_context({
+                .image_view_id = render_image.default_view(),
+                .sampler_id = sampler
+            }),
+            ImVec2(200, 200)
+        );
+
         if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
         {
             update_virtual_shader();

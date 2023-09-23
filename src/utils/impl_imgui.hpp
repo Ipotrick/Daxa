@@ -11,7 +11,6 @@ namespace daxa
         RasterPipeline raster_pipeline;
         BufferId vbuffer{};
         BufferId ibuffer{};
-        SamplerId sampler{};
         ImageId font_sheet{};
         usize frame_count = {};
 
