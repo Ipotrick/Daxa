@@ -74,7 +74,7 @@
       ]
     }
   },
-  "builtin-baseline": "0fa8459cf3a7caca7adc58f992bc32ff13630684",
+  "builtin-baseline": "c9f906558f9bb12ee9811d6edc98ec9255c6cda5",
   "vcpkg-configuration": {
     "overlay-ports": [
       "./cmake/vcpkg-overlay-ports/dxc",
