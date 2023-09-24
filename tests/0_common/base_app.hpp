@@ -87,6 +87,7 @@ struct BaseApp : AppWindow<T>
     f32 time = 0.0f, delta_time = 1.0f;
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
+    std::vector<daxa::GenericTaskResourceUse> imgui_task_uses{};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -137,12 +138,12 @@ struct BaseApp : AppWindow<T>
         });
         new_task_graph.use_persistent_image(task_swapchain_image);
 
+        using namespace daxa::task_resource_uses;
+        imgui_task_uses.push_back(ImageColorAttachment<>{task_swapchain_image});
         reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
         new_task_graph.add_task({
-            .uses = {
-                ImageColorAttachment<>{task_swapchain_image},
-            },
+            .uses = imgui_task_uses,
             .task = [this](daxa::TaskInterface ti)
             {
                 auto cmd_list = ti.get_command_list();

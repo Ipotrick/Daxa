@@ -57,7 +57,7 @@ struct App : BaseApp<App>
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
-        .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
     daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
@@ -153,6 +153,9 @@ struct App : BaseApp<App>
 
         new_task_graph.use_persistent_image(task_render_image);
         new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
+
+        using namespace daxa::task_resource_uses;
+        imgui_task_uses.push_back(ImageFragmentShaderSampled<>{task_render_image});
 
         new_task_graph.add_task({
             .uses = {
