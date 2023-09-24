@@ -596,36 +596,33 @@ namespace daxa
 
 namespace
 {
-    void func()
-    {
-        // clang-format off
-        std::shared_ptr<daxa::RasterPipeline> imgui_pipeline = pipeline_manager.add_raster_pipeline({
-            .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}, .compile_options = {.language = daxa::ShaderLanguage::GLSL, .enable_debug_info = false, .write_out_shader_binary = "./include"}},
-            .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}, .compile_options = {.language = daxa::ShaderLanguage::GLSL, .enable_debug_info = false, .write_out_shader_binary = "./"}},
-            .color_attachments = {{.format = swapchain.get_format()}},
-            .raster = {},
-            .push_constant_size = sizeof(Push),
-            .name = "my pipeline",
-        }).value();
-        // clang-format off
-
-        auto infile = std::ifstream{"include/src_utils_impl_imgui.cpp.spv"};
-        std::vector<u32> binary = {};
-
-        infile.seekg(0, std::ios::end);
-        auto length = infile.tellg();
-        infile.seekg(0, std::ios::beg);
-
-        binary.resize(length / 4);
-        infile.read(reinterpret_cast<char *>(binary.data()), length);
-        std::cout << std::hex;
-        for (auto const & i : binary)
-        {
-            std::cout << "0x" << std::setw(8) << std::setfill('0') << i << ", ";
-        }
-        std::cout << std::endl
-                  << std::endl;
-    }
+    // void func()
+    // {
+    //     // clang-format off
+    //     std::shared_ptr<daxa::RasterPipeline> imgui_pipeline = pipeline_manager.add_raster_pipeline({
+    //         .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}, .compile_options = {.language = daxa::ShaderLanguage::GLSL, .enable_debug_info = false, .write_out_shader_binary = "./include"}},
+    //         .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}, .compile_options = {.language = daxa::ShaderLanguage::GLSL, .enable_debug_info = false, .write_out_shader_binary = "./"}},
+    //         .color_attachments = {{.format = swapchain.get_format()}},
+    //         .raster = {},
+    //         .push_constant_size = sizeof(Push),
+    //         .name = "my pipeline",
+    //     }).value();
+    //     // clang-format off
+    //     auto infile = std::ifstream{"include/src_utils_impl_imgui.cpp.spv"};
+    //     std::vector<u32> binary = {};
+    //     infile.seekg(0, std::ios::end);
+    //     auto length = infile.tellg();
+    //     infile.seekg(0, std::ios::beg);
+    //     binary.resize(length / 4);
+    //     infile.read(reinterpret_cast<char *>(binary.data()), length);
+    //     std::cout << std::hex;
+    //     for (auto const & i : binary)
+    //     {
+    //         std::cout << "0x" << std::setw(8) << std::setfill('0') << i << ", ";
+    //     }
+    //     std::cout << std::endl
+    //               << std::endl;
+    // }
 }
 
 #elif defined(DAXA_SHADER)
