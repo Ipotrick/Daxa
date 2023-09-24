@@ -1,3 +1,26 @@
+#include <daxa/daxa.inl>
+
+struct ImGuiVertex
+{
+    daxa_f32vec2 pos;
+    daxa_f32vec2 uv;
+    daxa_f32vec4 color;
+};
+
+DAXA_DECL_BUFFER_PTR(ImGuiVertex)
+
+struct Push
+{
+    daxa_f32vec2 scale;
+    daxa_f32vec2 translate;
+    daxa_u32 vbuffer_offset;
+    daxa_u32 ibuffer_offset;
+    daxa_BufferPtr(ImGuiVertex) vbuffer_ptr;
+    daxa_BufferPtr(daxa_u32) ibuffer_ptr;
+    daxa_ImageViewId texture0_id;
+    daxa_SamplerId sampler0_id;
+};
+
 #if DAXA_BUILT_WITH_UTILS_IMGUI
 
 #include "impl_imgui.hpp"
@@ -88,19 +111,6 @@ void set_imgui_style()
     style.TabRounding                       = 4;
     // clang-format on
 }
-
-struct Push
-{
-    daxa::f32vec2 scale;
-    daxa::f32vec2 translate;
-    daxa::u32 vbuffer_offset;
-    daxa::u32 ibuffer_offset;
-    daxa::BufferId vbuffer_id;
-    daxa::BufferId ibuffer_id;
-    daxa::ImageViewId texture0_id;
-    daxa::SamplerId sampler0_id;
-};
-
 static constexpr auto imgui_vert_spv = std::array<daxa::u32, 772>{
     // clang-format off
     0x07230203u, 0x00010300u, 0x000e0000u, 0x00000070u, 0x00000000u, 0x00020011u, 0x00000001u, 0x00020011u,
@@ -313,7 +323,7 @@ namespace daxa
     auto ImGuiRenderer::create_image_context(ImGuiImageContext const & context) -> ImTextureID
     {
         DAXA_DBG_ASSERT_TRUE_M(
-            sizeof(ImGuiImageContext) <= sizeof(ImTextureID), 
+            sizeof(ImGuiImageContext) <= sizeof(ImTextureID),
             "Size of context exceeded size of ImTextureID, unable to pack");
         return std::bit_cast<ImTextureID>(context);
     }
@@ -422,8 +432,8 @@ namespace daxa
             ImVec2 const clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
             i32 global_vtx_offset = 0;
             i32 global_idx_offset = 0;
-            push.vbuffer_id = vbuffer;
-            push.ibuffer_id = ibuffer;
+            push.vbuffer_ptr = this->info.device.get_device_address(vbuffer);
+            push.ibuffer_ptr = this->info.device.get_device_address(ibuffer);
 
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
@@ -481,8 +491,8 @@ namespace daxa
               [this]()
               {
                   auto create_info = daxa::RasterPipelineInfo{};
-                  create_info.vertex_shader_info = daxa::ShaderInfo{.byte_code = ShaderByteCode(imgui_vert_spv.begin(), imgui_vert_spv.end()), .entry_point = "vs_main"};
-                  create_info.fragment_shader_info = daxa::ShaderInfo{.byte_code = ShaderByteCode(imgui_frag_spv.begin(), imgui_frag_spv.end()), .entry_point = "fs_main"};
+                  create_info.vertex_shader_info = daxa::ShaderInfo{.byte_code = ShaderByteCode(imgui_vert_spv.begin(), imgui_vert_spv.end())};
+                  create_info.fragment_shader_info = daxa::ShaderInfo{.byte_code = ShaderByteCode(imgui_frag_spv.begin(), imgui_frag_spv.end())};
                   create_info.color_attachments = {
                       {
                           .format = info.format,
@@ -584,4 +594,79 @@ namespace daxa
     }
 } // namespace daxa
 
+namespace
+{
+    void func()
+    {
+        // clang-format off
+        std::shared_ptr<daxa::RasterPipeline> imgui_pipeline = pipeline_manager.add_raster_pipeline({
+            .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}, .compile_options = {.language = daxa::ShaderLanguage::GLSL, .enable_debug_info = false, .write_out_shader_binary = "./include"}},
+            .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}, .compile_options = {.language = daxa::ShaderLanguage::GLSL, .enable_debug_info = false, .write_out_shader_binary = "./"}},
+            .color_attachments = {{.format = swapchain.get_format()}},
+            .raster = {},
+            .push_constant_size = sizeof(Push),
+            .name = "my pipeline",
+        }).value();
+        // clang-format off
+
+        auto infile = std::ifstream{"include/src_utils_impl_imgui.cpp.spv"};
+        std::vector<u32> binary = {};
+
+        infile.seekg(0, std::ios::end);
+        auto length = infile.tellg();
+        infile.seekg(0, std::ios::beg);
+
+        binary.resize(length / 4);
+        infile.read(reinterpret_cast<char *>(binary.data()), length);
+        std::cout << std::hex;
+        for (auto const & i : binary)
+        {
+            std::cout << "0x" << std::setw(8) << std::setfill('0') << i << ", ";
+        }
+        std::cout << std::endl
+                  << std::endl;
+    }
+}
+
+#elif defined(DAXA_SHADER)
+
+DAXA_DECL_PUSH_CONSTANT(Push, push)
+
+#if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
+
+layout(location = 0) out struct
+{
+    vec4 Color;
+    vec2 UV;
+} Out;
+
+void main()
+{
+    uint vert_index = deref(push.ibuffer_ptr[gl_VertexIndex + push.ibuffer_offset]);
+    ImGuiVertex vert = deref(push.vbuffer_ptr[vert_index + push.vbuffer_offset]);
+
+    vec2 aPos = vert.pos;
+    vec2 aUV = vert.uv;
+    vec4 aColor = vert.color;
+
+    Out.Color = aColor;
+    Out.UV = aUV;
+    gl_Position = vec4(aPos * push.scale + push.translate, 0, 1);
+}
+
+#elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_FRAGMENT
+
+layout(location = 0) out vec4 fColor;
+layout(location = 0) in struct
+{
+    vec4 Color;
+    vec2 UV;
+} In;
+
+void main()
+{
+    fColor = In.Color * texture(daxa_sampler2D(push.texture0_id, push.sampler0_id), In.UV.st);
+}
+
+#endif
 #endif

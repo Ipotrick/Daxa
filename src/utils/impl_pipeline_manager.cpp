@@ -920,6 +920,20 @@ namespace daxa
             std::ofstream ofs(shader_info.compile_options.write_out_shader_binary.value() / name, std::ios_base::trunc | std::ios_base::binary);
             ofs.write(reinterpret_cast<char const *>(spirv.data()), static_cast<std::streamsize>(spirv.size() * 4));
             ofs.close();
+
+            // std::cout << std::hex;
+            // uint32_t codepoint = 0;
+            // for (auto const & i : spirv)
+            // {
+            //     std::cout << "0x" << std::setw(8) << std::setfill('0') << i << ", ";
+            //     ++codepoint;
+            //     if ((codepoint & 0x7) == 0)
+            //     {
+            //         std::cout << "\n";
+            //     }
+            // }
+            // std::cout << std::endl
+            //           << std::endl;
         }
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION

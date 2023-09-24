@@ -52,7 +52,7 @@ struct App : BaseApp<App>
         .name = "gpu_input_buffer",
     });
     GpuInput gpu_input = {};
-    daxa::TaskBuffer task_gpu_input_buffer{{.initial_buffers={.buffers=std::array{gpu_input_buffer}}, .name = "input_buffer"}};
+    daxa::TaskBuffer task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
@@ -60,7 +60,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::TaskImage task_render_image{{.initial_images={.images=std::array{render_image}}, .name = "render_image"}};
+    daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
     daxa::SamplerId sampler = device.create_sampler({.name = "sampler"});
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
@@ -74,6 +74,7 @@ struct App : BaseApp<App>
     {
         device.wait_idle();
         device.collect_garbage();
+        device.destroy_sampler(sampler);
         device.destroy_buffer(gpu_input_buffer);
         device.destroy_image(render_image);
     }
@@ -85,12 +86,9 @@ struct App : BaseApp<App>
         ImGui::Begin("Settings");
 
         ImGui::Image(
-            daxa::ImGuiRenderer::create_image_context({
-                .image_view_id = render_image.default_view(),
-                .sampler_id = sampler
-            }),
-            ImVec2(200, 200)
-        );
+            daxa::ImGuiRenderer::create_image_context({.image_view_id = render_image.default_view(),
+                                                       .sampler_id = sampler}),
+            ImVec2(200, 200));
 
         if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
         {
@@ -113,7 +111,7 @@ struct App : BaseApp<App>
         ui_update();
 
         auto swapchain_image = swapchain.acquire_next_image();
-        task_swapchain_image.set_images({.images=std::array{swapchain_image}});
+        task_swapchain_image.set_images({.images = std::array{swapchain_image}});
         if (swapchain_image.is_empty())
         {
             return;
@@ -144,7 +142,7 @@ struct App : BaseApp<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            task_render_image.set_images({.images=std::array{render_image}});
+            task_render_image.set_images({.images = std::array{render_image}});
             base_on_update();
         }
     }
@@ -198,7 +196,7 @@ struct App : BaseApp<App>
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(*compute_pipeline);
-                cmd_list.push_constant(ComputePush {
+                cmd_list.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
                     .frame_dim = {size_x, size_y},
