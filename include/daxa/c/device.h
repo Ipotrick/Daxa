@@ -123,22 +123,21 @@ daxa_dvc_create_raster_pipeline(daxa_RasterPipelineInfo const * info, daxa_Raste
 daxa_Result
 daxa_dvc_create_compute_pipeline(daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline);
 
-void
+daxa_Result
 daxa_dvc_create_swapchain(daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
-void
+daxa_Result
 daxa_dvc_create_command_list(daxa_CommandListInfoInfo const * info, daxa_CommandListInfo * out_command_list);
-void
+daxa_Result
 daxa_dvc_create_binary_semaphore(daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore);
-void
+daxa_Result
 daxa_dvc_create_timeline_semaphore(daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_timeline_semaphore);
-void
+daxa_Result
 daxa_dvc_create_event(daxa_EventInfo const * info, daxa_Event * out_event);
-void
+daxa_Result
 daxa_dvc_create_timeline_query_pool(daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool);
 
 daxa_DeviceInfo const *
 daxa_dvc_info(daxa_Device device);
-
 VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 
