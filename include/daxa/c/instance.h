@@ -15,7 +15,10 @@ typedef struct
 daxa_Instance
 daxa_create_instance(daxa_InstanceInfo const * info);
 
-daxa_Device
-daxa_create_device(daxa_Instance instance, daxa_DeviceInfo const *);
+daxa_Result
+daxa_create_device(daxa_Instance instance, daxa_DeviceInfo const * info, daxa_Device * out_device);
+
+daxa_Result
+daxa_destroy_device(daxa_Instance instance, daxa_Device device);
 
 #endif // #ifndef __DAXA_INSTANCE_H__

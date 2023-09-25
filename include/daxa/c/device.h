@@ -105,36 +105,52 @@ daxa_Result
 daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId id, daxa_SamplerInfo * out_info);
 
 DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_BufferId id);
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId id);
 DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_ImageId id);
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageId id);
 DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_ImageViewId id);
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageViewId id);
 DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_SamplerId id);
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_SamplerId id);
 
 daxa_Result
-daxa_dvc_buffer_device_address(daxa_BufferId id, daxa_BufferDeviceAddress * out_bda);
+daxa_dvc_buffer_device_address(daxa_Device device, daxa_BufferId id, daxa_BufferDeviceAddress * out_bda);
 daxa_Result
-daxa_dvc_buffer_host_address(daxa_BufferId id, void** out_ptr);
+daxa_dvc_buffer_host_address(daxa_Device device, daxa_BufferId id, void** out_ptr);
 
 daxa_Result
-daxa_dvc_create_raster_pipeline(daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline);
+daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline);
 daxa_Result
-daxa_dvc_create_compute_pipeline(daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline);
+daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline);
+daxa_Result
+daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
+daxa_Result
+daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfoInfo const * info, daxa_CommandListInfo * out_command_list);
+daxa_Result
+daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore);
+daxa_Result
+daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_timeline_semaphore);
+daxa_Result
+daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa_Event * out_event);
+daxa_Result
+daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool);
 
 daxa_Result
-daxa_dvc_create_swapchain(daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
+daxa_dvc_destroy_raster_pipeline(daxa_Device device, daxa_RasterPipeline pipeline);
 daxa_Result
-daxa_dvc_create_command_list(daxa_CommandListInfoInfo const * info, daxa_CommandListInfo * out_command_list);
+daxa_dvc_destroy_compute_pipeline(daxa_Device device, daxa_ComputePipeline pipeline);
 daxa_Result
-daxa_dvc_create_binary_semaphore(daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore);
+daxa_dvc_destroy_swapchain(daxa_Device device, daxa_Swapchain swapchain);
 daxa_Result
-daxa_dvc_create_timeline_semaphore(daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_timeline_semaphore);
+daxa_dvc_destroy_command_list(daxa_Device device, daxa_CommandListInfo command_list);
 daxa_Result
-daxa_dvc_create_event(daxa_EventInfo const * info, daxa_Event * out_event);
+daxa_dvc_destroy_binary_semaphore(daxa_Device device, daxa_BinarySemaphore binary_semaphore);
 daxa_Result
-daxa_dvc_create_timeline_query_pool(daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool);
+daxa_dvc_destroy_timeline_semaphore(daxa_Device device, daxa_TimelineSemaphore timeline_semaphore);
+daxa_Result
+daxa_dvc_destroy_event(daxa_Device device, daxa_Event event);
+daxa_Result
+daxa_dvc_destroy_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPool timeline_query_pool);
 
 daxa_DeviceInfo const *
 daxa_dvc_info(daxa_Device device);
