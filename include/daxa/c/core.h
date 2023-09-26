@@ -1,8 +1,7 @@
 #ifndef __DAXA_CORE_H__
 #define __DAXA_CORE_H__
 
-#include "vulkan.h"
-#include "stdint.h"
+#include "types.h"
 
 typedef enum
 {

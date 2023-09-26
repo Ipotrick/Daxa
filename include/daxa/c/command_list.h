@@ -224,18 +224,18 @@ struct daxa_ImplCommandList;
 typedef daxa_ImplCommandList * daxa_CommandList;
 
 void 
-daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, BufferCopyInfo const * info);
+daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
 void 
-daxa_cmd_copy_buffer_to_image(daxa_CommandList cmd_list, BufferImageCopyInfo const * info);
+daxa_cmd_copy_buffer_to_image(daxa_CommandList cmd_list, daxa_BufferImageCopyInfo const * info);
 void 
-daxa_cmd_copy_image_to_buffer(daxa_CommandList cmd_list, ImageBufferCopyInfo const * info);
+daxa_cmd_copy_image_to_buffer(daxa_CommandList cmd_list, daxa_ImageBufferCopyInfo const * info);
 void 
-daxa_cmd_copy_image_to_image(daxa_CommandList cmd_list, ImageCopyInfo const * info);
+daxa_cmd_copy_image_to_image(daxa_CommandList cmd_list, daxa_ImageCopyInfo const * info);
 void 
-daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, ImageBlitInfo const * info);
+daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const * info);
 
 void 
-daxa_cmd_clear_buffer(daxa_CommandList cmd_list, BufferClearInfo const * info);
+daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
 void 
 daxa_cmd_clear_image(daxa_CommandList cmd_list, VkImageClearInfo const * info);
 
@@ -250,7 +250,7 @@ daxa_cmd_pipeline_barrier(daxa_CommandList cmd_list, daxa_MemoryBarrierInfo cons
 void 
 daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageBarrierInfo const * info);
 void 
-daxa_cmd_signal_event(daxa_CommandList cmd_list, EventSignalInfo const * info);
+daxa_cmd_signal_event(daxa_CommandList cmd_list, daxa_EventSignalInfo const * info);
 void 
 daxa_cmd_wait_events(daxa_CommandList cmd_list, daxa_EventWaitInfo const * infos, size_t info_count);
 void 
