@@ -92,7 +92,7 @@ namespace daxa
 
     struct RenderAttachmentInfo
     {
-        ImageViewId image_view{};
+        ImageViewId image_view = {};
         ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
@@ -170,13 +170,13 @@ namespace daxa
 
     struct ResetSplitBarriersInfo
     {
-        SplitBarrierState & split_barrier;
-        PipelineStageFlags stage = {};
+        VkEvent split_barrier;
+        VkPipelineStageFlags stage;
     };
 
     struct WaitSplitBarriersInfo
     {
-        std::span<SplitBarrierState> split_barriers = {};
+        std::span<VkEvent> split_barriers = {};
     };
 
     struct WriteTimestampInfo
@@ -195,13 +195,13 @@ namespace daxa
 
     struct CommandLabelInfo
     {
-        std::string label_name = {};
         std::array<f32, 4> label_color = {0.463f, 0.333f, 0.671f, 1.0f};
+        std::string name = {};
     };
 
     struct ResetSplitBarrierInfo
     {
-        SplitBarrierState & barrier;
+        VkEvent & barrier;
         PipelineStageFlags stage_masks = {};
     };
 
