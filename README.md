@@ -13,7 +13,9 @@ Daxa's interface is quite close to Vulkan, but much simpler. Some central abstra
 The feature that sets Daxa apart from other abstractions is its fully bindless shader resources. At this point in time, in my opinion, it is clear that bindless is the future and binding-based models will only be used to support low-end mobile GPUs going forward. Bindless is simpler, easier, more powerful, and sometimes much more performant than conventional approaches like the "normal" descriptor set workflow in Vulkan or other abstractions like WebGPU.
 
 Daxa’s goal is to be as convenient to use as OpenGL while being very modern. Daxa gives access to the latest features and trends, while not being held down by years of tech debt.
-I am happy to say that for me (and others) it achieves that goal.
+I am happy to say that for me (and others) it achieves that goal. 
+
+> Daxa focuses on desktop gpus. Mobile (and to some extent intergrated) gpu concerns are usually neglected for a simpler interface with less compromise.
 
 ## Biggest features and abstractions:
 - [x] Greatly simplified API surface compared to Vulkan. Daxa is only surfacing those concepts that are crucial for good control and performance. [No more 1k LOC files to get a triangle](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md)
