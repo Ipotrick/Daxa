@@ -19,7 +19,7 @@ namespace daxa
 
     auto to_string(ImageViewType const & type) -> std::string_view
     {
-        switch(type)
+        switch (type)
         {
         case ImageViewType::REGULAR_1D: return "REGULAR_1D";
         case ImageViewType::REGULAR_2D: return "REGULAR_2D";
@@ -77,6 +77,18 @@ namespace daxa
         };
 
         vkCreateDescriptorPool(device, &vk_descriptor_pool_create_info, nullptr, &this->vk_descriptor_pool);
+        if (vkSetDebugUtilsObjectNameEXT != nullptr)
+        {
+            auto descriptor_pool_name = "mega descriptor pool";
+            VkDebugUtilsObjectNameInfoEXT descriptor_pool_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL,
+                .objectHandle = reinterpret_cast<uint64_t>(vk_descriptor_pool),
+                .pObjectName = descriptor_pool_name,
+            };
+            vkSetDebugUtilsObjectNameEXT(device, &descriptor_pool_name_info);
+        }
 
         VkDescriptorSetLayoutBinding const buffer_descriptor_set_layout_binding{
             .binding = BUFFER_BINDING,
@@ -127,11 +139,11 @@ namespace daxa
         };
 
         std::array<VkDescriptorBindingFlags, 5> const vk_descriptor_binding_flags = {
-            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
-            VK_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING_BIT | VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
+            VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT,
 
         };
         VkDescriptorSetLayoutBindingFlagsCreateInfo vk_descriptor_set_layout_binding_flags_create_info{
@@ -150,6 +162,18 @@ namespace daxa
         };
 
         vkCreateDescriptorSetLayout(device, &vk_descriptor_set_layout_create_info, nullptr, &this->vk_descriptor_set_layout);
+        if (vkSetDebugUtilsObjectNameEXT != nullptr)
+        {
+            auto name = "mega descriptor set layout";
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+                .objectHandle = reinterpret_cast<uint64_t>(vk_descriptor_set_layout),
+                .pObjectName = name,
+            };
+            vkSetDebugUtilsObjectNameEXT(device, &name_info);
+        }
 
         VkDescriptorSetAllocateInfo const vk_descriptor_set_allocate_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -160,14 +184,25 @@ namespace daxa
         };
 
         vkAllocateDescriptorSets(device, &vk_descriptor_set_allocate_info, &this->vk_descriptor_set);
+        if (vkSetDebugUtilsObjectNameEXT != nullptr)
+        {
+            auto name = "mega descriptor set";
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET,
+                .objectHandle = reinterpret_cast<uint64_t>(vk_descriptor_set),
+                .pObjectName = name,
+            };
+            vkSetDebugUtilsObjectNameEXT(device, &name_info);
+        }
 
         // Constant buffer set:
 
         std::array<VkDescriptorSetLayoutBinding, CONSTANT_BUFFER_BINDING_COUNT> constant_buffer_layout_bindings = {};
         for (u32 binding = 0; binding < CONSTANT_BUFFER_BINDING_COUNT; ++binding)
         {
-            constant_buffer_layout_bindings[binding] = VkDescriptorSetLayoutBinding
-            {
+            constant_buffer_layout_bindings[binding] = VkDescriptorSetLayoutBinding{
                 .binding = binding,
                 .descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
                 .descriptorCount = 1,
@@ -194,8 +229,7 @@ namespace daxa
             .pBindingFlags = constant_buffer_set_binding_flags.data(),
         };
 
-        VkDescriptorSetLayoutCreateInfo constant_buffer_bindings_set_layout_create_info
-        {
+        VkDescriptorSetLayoutCreateInfo constant_buffer_bindings_set_layout_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO,
             .pNext = &constant_buffer_set_binding_flags_info,
             .flags = VK_DESCRIPTOR_SET_LAYOUT_CREATE_PUSH_DESCRIPTOR_BIT_KHR,
@@ -203,19 +237,21 @@ namespace daxa
             .pBindings = constant_buffer_layout_bindings.data(),
         };
 
-        vkCreateDescriptorSetLayout(device, &constant_buffer_bindings_set_layout_create_info, nullptr, &this->constant_buffer_binding_set_layout);
+        vkCreateDescriptorSetLayout(device, &constant_buffer_bindings_set_layout_create_info, nullptr, &this->uniform_buffer_descriptor_set_layout);
+        if (vkSetDebugUtilsObjectNameEXT != nullptr)
+        {
+            auto name = "uniform buffer set layout";
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
+                .objectHandle = reinterpret_cast<uint64_t>(uniform_buffer_descriptor_set_layout),
+                .pObjectName = name,
+            };
+            vkSetDebugUtilsObjectNameEXT(device, &name_info);
+        }
 
-        auto constant_buffer_set_layout_name = std::string("constant buffer descriptor set");
-        VkDebugUtilsObjectNameInfoEXT constant_buffer_set_layout_name_info{
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            .pNext = nullptr,
-            .objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
-            .objectHandle = reinterpret_cast<uint64_t>(constant_buffer_binding_set_layout),
-            .pObjectName = constant_buffer_set_layout_name.c_str(),
-        };
-        vkSetDebugUtilsObjectNameEXT(device, &constant_buffer_set_layout_name_info);
-
-        std::array<VkDescriptorSetLayout, 2> vk_descriptor_set_layouts = { this->vk_descriptor_set_layout, this->constant_buffer_binding_set_layout };
+        std::array<VkDescriptorSetLayout, 2> vk_descriptor_set_layouts = {this->vk_descriptor_set_layout, this->uniform_buffer_descriptor_set_layout};
         VkPipelineLayoutCreateInfo vk_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
             .pNext = nullptr,
@@ -227,16 +263,18 @@ namespace daxa
         };
 
         vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, pipeline_layouts.data());
-
-        auto pipeline_layout_name = std::string("push constant size 0 bytes");
-        VkDebugUtilsObjectNameInfoEXT pipeline_layout_name_info{
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            .pNext = nullptr,
-            .objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
-            .objectHandle = reinterpret_cast<uint64_t>(pipeline_layouts.at(0)),
-            .pObjectName = pipeline_layout_name.c_str(),
-        };
-        vkSetDebugUtilsObjectNameEXT(device, &pipeline_layout_name_info);
+        if (vkSetDebugUtilsObjectNameEXT != nullptr)
+        {
+            auto name = "pipeline layout (push constant size 0)";
+            VkDebugUtilsObjectNameInfoEXT name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+                .objectHandle = reinterpret_cast<uint64_t>(*pipeline_layouts.data()),
+                .pObjectName = name,
+            };
+            vkSetDebugUtilsObjectNameEXT(device, &name_info);
+        }
 
         for (usize i = 1; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
@@ -248,11 +286,18 @@ namespace daxa
             vk_pipeline_create_info.pushConstantRangeCount = 1;
             vk_pipeline_create_info.pPushConstantRanges = &vk_push_constant_range;
             vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts.at(i));
-
-            pipeline_layout_name_info.objectHandle = reinterpret_cast<uint64_t>(pipeline_layouts.at(i));
-            pipeline_layout_name = std::string("push constant size ") + std::to_string(i * 4) + std::string(" bytes");
-            pipeline_layout_name_info.pObjectName = pipeline_layout_name.c_str();
-            vkSetDebugUtilsObjectNameEXT(device, &pipeline_layout_name_info);
+            if (vkSetDebugUtilsObjectNameEXT != nullptr)
+            {
+                auto name = fmt::format("pipeline layout (push constant size {})", i * 4);
+                VkDebugUtilsObjectNameInfoEXT name_info{
+                    .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                    .pNext = nullptr,
+                    .objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
+                    .objectHandle = reinterpret_cast<uint64_t>(pipeline_layouts.at(i)),
+                    .pObjectName = name.c_str(),
+                };
+                vkSetDebugUtilsObjectNameEXT(device, &name_info);
+            }
         }
 
         VkDescriptorBufferInfo const write_buffer{
@@ -323,7 +368,7 @@ namespace daxa
             vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);
         }
         vkDestroyDescriptorSetLayout(device, this->vk_descriptor_set_layout, nullptr);
-        vkDestroyDescriptorSetLayout(device, this->constant_buffer_binding_set_layout, nullptr);
+        vkDestroyDescriptorSetLayout(device, this->uniform_buffer_descriptor_set_layout, nullptr);
         vkResetDescriptorPool(device, this->vk_descriptor_pool, {});
         vkDestroyDescriptorPool(device, this->vk_descriptor_pool, nullptr);
     }
@@ -400,7 +445,7 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        if ((usage & ImageUsageFlagBits::SHADER_READ_WRITE) != ImageUsageFlagBits::NONE)
+        if ((usage & ImageUsageFlagBits::SHADER_STORAGE) != ImageUsageFlagBits::NONE)
         {
             descriptor_set_writes.at(descriptor_set_write_count++) = vk_write_descriptor_set;
         }
@@ -424,7 +469,7 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        if ((usage & ImageUsageFlagBits::SHADER_READ_ONLY) != ImageUsageFlagBits::NONE)
+        if ((usage & ImageUsageFlagBits::SHADER_SAMPLED) != ImageUsageFlagBits::NONE)
         {
             descriptor_set_writes.at(descriptor_set_write_count++) = vk_write_descriptor_set_sampled;
         }

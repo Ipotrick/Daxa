@@ -1,7 +1,14 @@
 cmake_minimum_required(VERSION 3.21)
 
 include(cmake/warnings.cmake)
+if(DAXA_USE_VCPKG)
+    include(cmake/vcpkg.cmake)
+endif()
 
+if(DAXA_ENABLE_UTILS_TASK_GRAPH)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-graph")
+    set(DAXA_ENABLE_UTILS_MEM true)
+endif()
 if(DAXA_ENABLE_UTILS_FSR2)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-fsr2")
 endif()
@@ -20,14 +27,11 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
 endif()
-if(DAXA_ENABLE_UTILS_TASK_LIST)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-list")
-endif()
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
 
-project(daxa VERSION 1.0.0)
+project(daxa VERSION 2.0.0)
 
 if(DAXA_ENABLE_STATIC_ANALYSIS)
     set(CPPCHECK_TEMPLATE "gcc")
@@ -58,7 +62,7 @@ endif()
 
 add_library(daxa STATIC
     "src/impl_device.cpp"
-    "src/impl_context.cpp"
+    "src/impl_instance.cpp"
     "src/impl_core.cpp"
     "src/impl_pipeline.cpp"
     "src/impl_swapchain.cpp"
@@ -70,7 +74,7 @@ add_library(daxa STATIC
     "src/impl_timeline_query.cpp"
     "src/impl_memory_block.cpp"
 
-    "src/utils/impl_task_list.cpp"
+    "src/utils/impl_task_graph.cpp"
     "src/utils/impl_imgui.cpp"
     "src/utils/impl_fsr2.cpp"
     "src/utils/impl_mem.cpp"
@@ -81,10 +85,10 @@ add_library(daxa::daxa ALIAS daxa)
 
 target_compile_features(daxa PUBLIC cxx_std_20)
 
-find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 find_package(glfw3 CONFIG REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -160,16 +164,16 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
         SPIRV-Tools-static
     )
 endif()
-if(DAXA_ENABLE_UTILS_TASK_LIST)
+if(DAXA_ENABLE_UTILS_TASK_GRAPH)
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_UTILS_TASK_LIST=true
+        DAXA_BUILT_WITH_UTILS_TASK_GRAPH=true
     )
 endif()
 
 target_link_libraries(daxa
     PUBLIC
-    unofficial::vulkan-memory-allocator::vulkan-memory-allocator
+    GPUOpen::VulkanMemoryAllocator
     Vulkan::Vulkan
     fmt::fmt
     glfw
@@ -225,8 +229,9 @@ set_target_properties(daxa::daxa PROPERTIES
   INTERFACE_COMPILE_DEFINITIONS "${DAXA_PREV_DEFINITIONS};DAXA_SHADER_INCLUDE_DIR=\"${PACKAGE_PREFIX_DIR}/include\""
 )
 
-find_package(unofficial-vulkan-memory-allocator CONFIG REQUIRED)
 find_package(Vulkan REQUIRED)
+find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 ]=])
 
 if(DAXA_ENABLE_UTILS_FSR2)
@@ -258,7 +263,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
 find_package(SPIRV-Tools CONFIG REQUIRED)
 ]=])
 endif()
-if(DAXA_ENABLE_UTILS_TASK_LIST)
+if(DAXA_ENABLE_UTILS_TASK_GRAPH)
 # No package management work to do
 endif()
 

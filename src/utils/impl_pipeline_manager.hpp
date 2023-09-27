@@ -49,7 +49,9 @@ namespace daxa
             VERT,
             FRAG,
             TESS_CONTROL,
-            TESS_EVAL
+            TESS_EVAL,
+            TASK,
+            MESH,
         };
 
         PipelineManagerInfo info = {};
@@ -110,8 +112,8 @@ namespace daxa
         auto add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
-        void add_virtual_include_file(VirtualIncludeInfo const & virtual_info);
-        auto reload_all() -> std::optional<Result<void>>;
+        void add_virtual_file(VirtualFileInfo const & virtual_info);
+        auto reload_all() -> PipelineReloadResult;
 
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;

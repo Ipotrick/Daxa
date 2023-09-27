@@ -35,9 +35,9 @@
 # vcpkg_fail_port_install(MESSAGE "dxc currently only supports Linux and Windows platforms" ON_TARGET "Windows")
 if(VCPKG_TARGET_IS_WINDOWS)
     vcpkg_download_distfile(ARCHIVE
-        URLS "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.6.2112/dxc_2021_12_08.zip"
-        FILENAME "dxc_2021_12_08.zip"
-        SHA512 e9b36e896c1d47b39b648adbecf44da7f8543216fd1df539760f0c591907aea081ea6bfc59eb927073aaa1451110c5dc63003546509ff84c9e4445488df97c27
+        URLS "https://github.com/microsoft/DirectXShaderCompiler/releases/download/v1.7.2308/dxc_2023_08_14.zip"
+        FILENAME "dxc_2023_08_14.zip"
+        SHA512 3bc49f77b55f58de88002a75b38e5acdb8600b0b73729320a25a27af08f1f21d0b4aec92ee9d736eb30bae42f4e0f2f32d25d6635fa71aedcaf82440e6d2433e
     )
     vcpkg_extract_source_archive_ex(
         OUT_SOURCE_PATH SOURCE_PATH
@@ -63,7 +63,7 @@ if(VCPKG_TARGET_IS_WINDOWS)
     # )
     file(WRITE ${SOURCE_PATH}/CMakeLists.txt [==[
     cmake_minimum_required(VERSION 3.12)
-    project(dxc VERSION 0.1.2)
+    project(dxc VERSION 1.7.2308)
     include(CMakePackageConfigHelpers)
     include(GNUInstallDirs)
     file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/dxc-config.cmake [=[
@@ -94,7 +94,7 @@ elseif(VCPKG_TARGET_IS_LINUX)
     set(SOURCE_PATH ${CURRENT_BUILDTREES_DIR})
     file(WRITE ${SOURCE_PATH}/CMakeLists.txt [==[
     cmake_minimum_required(VERSION 3.12)
-    project(dxc VERSION 0.1.2)
+    project(dxc VERSION 0.1.7.2308)
     include(CMakePackageConfigHelpers)
     include(GNUInstallDirs)
     if("$ENV{VULKAN_SDK}" STREQUAL "")

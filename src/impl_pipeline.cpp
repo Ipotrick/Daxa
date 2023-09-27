@@ -49,8 +49,10 @@ namespace daxa
             };
             vk_pipeline_shader_stage_create_infos.push_back(vk_pipeline_shader_stage_create_info);
         };
-
-        create_shader_module(this->info.vertex_shader_info, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+        if (this->info.vertex_shader_info.has_value())
+        {
+            create_shader_module(this->info.vertex_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+        }
         if (this->info.tesselation_control_shader_info.has_value())
         {
             create_shader_module(this->info.tesselation_control_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT);
@@ -62,6 +64,14 @@ namespace daxa
         if (this->info.fragment_shader_info.has_value())
         {
             create_shader_module(this->info.fragment_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+        }
+        if (this->info.task_shader_info.has_value())
+        {
+            create_shader_module(this->info.task_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_TASK_BIT_EXT);
+        }
+        if (this->info.mesh_shader_info.has_value())
+        {
+            create_shader_module(this->info.mesh_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_EXT);
         }
 
         this->vk_pipeline_layout = this->impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);
@@ -107,7 +117,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .depthClampEnable = {},
+            .depthClampEnable = info.raster.depth_clamp_enable,
             .rasterizerDiscardEnable = info.fragment_shader_info.has_value() ? VK_FALSE : VK_TRUE,
             .polygonMode = *reinterpret_cast<VkPolygonMode const *>(&info.raster.polygon_mode),
             .cullMode = *reinterpret_cast<VkCullModeFlags const *>(&info.raster.face_culling),
@@ -129,7 +139,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(this->impl_device.as<ImplDevice>()->info.enable_conservative_rasterization, "You must enable conservative rasterization in the device to use this feature");
             // TODO(grundlett): Ask Patrick why this doesn't work
-            // auto vk_instance = this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->vk_instance;
+            // auto vk_instance = this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance;
             // PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR =
             //     reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceProperties2KHR"));
             // DAXA_DBG_ASSERT_TRUE_M(vkGetPhysicalDeviceProperties2KHR != nullptr, "Failed to load this extension function function");
@@ -245,7 +255,7 @@ namespace daxa
         {
             vkDestroyShaderModule(this->impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
         }
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->info.name.empty())
         {
             auto raster_pipeline_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
@@ -298,7 +308,7 @@ namespace daxa
             &this->vk_pipeline);
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create compute pipeline");
         vkDestroyShaderModule(this->impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !info.name.empty())
         {
             auto raster_pipeline_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{

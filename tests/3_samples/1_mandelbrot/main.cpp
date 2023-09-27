@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
 #define APPNAME "Daxa Sample: Mandelbrot"
 #include <0_common/base_app.hpp>
 
@@ -12,7 +12,7 @@ struct App : BaseApp<App>
     {
         if (my_toggle)
         {
-            pipeline_manager.add_virtual_include_file({
+            pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
                 .contents = R"(
                     #pragma once
@@ -22,7 +22,7 @@ struct App : BaseApp<App>
         }
         else
         {
-            pipeline_manager.add_virtual_include_file({
+            pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
                 .contents = R"(
                     #pragma once
@@ -52,27 +52,29 @@ struct App : BaseApp<App>
         .name = "gpu_input_buffer",
     });
     GpuInput gpu_input = {};
-    daxa::TaskBuffer task_gpu_input_buffer{{.initial_buffers={.buffers=std::array{gpu_input_buffer}}, .name = "input_buffer"}};
+    daxa::TaskBuffer task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
-        .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::TaskImage task_render_image{{.initial_images={.images=std::array{render_image}}, .name = "render_image"}};
+    daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
+    daxa::SamplerId sampler = device.create_sampler({.name = "sampler"});
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
         .query_count = 2,
         .name = "timeline_query",
     });
 
-    daxa::TaskList loop_task_list = record_loop_task_list();
+    daxa::TaskGraph loop_task_graph = record_loop_task_graph();
 
     ~App()
     {
         device.wait_idle();
         device.collect_garbage();
+        device.destroy_sampler(sampler);
         device.destroy_buffer(gpu_input_buffer);
         device.destroy_image(render_image);
     }
@@ -82,6 +84,12 @@ struct App : BaseApp<App>
         // ImGui_ImplGlfw_NewFrame();
         // ImGui::NewFrame();
         // ImGui::Begin("Settings");
+
+        // ImGui::Image(
+        //     daxa::ImGuiRenderer::create_image_context({.image_view_id = render_image.default_view(),
+        //                                                .sampler_id = sampler}),
+        //     ImVec2(200, 200));
+
         // if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
         // {
         //     update_virtual_shader();
@@ -95,20 +103,20 @@ struct App : BaseApp<App>
         gpu_input.delta_time = delta_time;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.has_value())
-        {
-            std::cout << reloaded_result.value().to_string() << std::endl;
-        }
+        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            std::cout << "Failed to reload " << reload_err->message << '\n';
+        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            std::cout << "Successfully reloaded!\n";
 
         ui_update();
 
         auto swapchain_image = swapchain.acquire_next_image();
-        task_swapchain_image.set_images({.images=std::array{swapchain_image}});
+        task_swapchain_image.set_images({.images = std::array{swapchain_image}});
         if (swapchain_image.is_empty())
         {
             return;
         }
-        loop_task_list.execute({});
+        loop_task_graph.execute({});
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
         if ((query_results[1] != 0u) && (query_results[3] != 0u))
@@ -132,21 +140,24 @@ struct App : BaseApp<App>
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+                .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            task_render_image.set_images({.images=std::array{render_image}});
+            task_render_image.set_images({.images = std::array{render_image}});
             base_on_update();
         }
     }
 
-    void record_tasks(daxa::TaskList & new_task_list)
+    void record_tasks(daxa::TaskGraph & new_task_graph)
     {
         using namespace daxa::task_resource_uses;
 
-        new_task_list.use_persistent_image(task_render_image);
-        new_task_list.use_persistent_buffer(task_gpu_input_buffer);
+        new_task_graph.use_persistent_image(task_render_image);
+        new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
 
-        new_task_list.add_task({
+        using namespace daxa::task_resource_uses;
+        imgui_task_uses.push_back(ImageFragmentShaderSampled<>{task_render_image});
+
+        new_task_graph.add_task({
             .uses = {
                 BufferHostTransferWrite{task_gpu_input_buffer},
             },
@@ -179,29 +190,25 @@ struct App : BaseApp<App>
             },
             .name = APPNAME_PREFIX("Upload Input"),
         });
-        new_task_list.add_task({
+        new_task_graph.add_task({
             .uses = {
                 BufferComputeShaderRead{task_gpu_input_buffer},
-                ImageComputeShaderWrite<>{task_render_image},
+                ImageComputeShaderStorageWriteOnly<>{task_render_image},
             },
             .task = [this](daxa::TaskInterface runtime)
             {
                 auto cmd_list = runtime.get_command_list();
                 cmd_list.set_pipeline(*compute_pipeline);
-                cmd_list.push_constant(ComputePush {
+                cmd_list.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-                    .gpu_input = this->device.get_device_address(gpu_input_buffer),
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
                     .input_buffer_id = gpu_input_buffer,
-#endif
                     .frame_dim = {size_x, size_y},
                 });
                 cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
             },
             .name = APPNAME_PREFIX("Draw (Compute)"),
         });
-        new_task_list.add_task({
+        new_task_graph.add_task({
             .uses = {
                 ImageTransferRead<>{task_render_image},
                 ImageTransferWrite<>{task_swapchain_image},
@@ -214,9 +221,7 @@ struct App : BaseApp<App>
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.uses[task_swapchain_image].image(),
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-                    .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
 

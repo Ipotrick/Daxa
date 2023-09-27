@@ -55,29 +55,29 @@ auto main() -> int
     glfwSetWindowUserPointer(glfw_window_ptr, &window_info);
     glfwSetWindowSizeCallback(
         glfw_window_ptr,
-        [](GLFWwindow * glfw_window_ptr, int width, int height)
+        [](GLFWwindow * glfw_window, int width, int height)
         {
-            auto & window_info = *reinterpret_cast<WindowInfo *>(glfwGetWindowUserPointer(glfw_window_ptr));
+            auto & info = *reinterpret_cast<WindowInfo *>(glfwGetWindowUserPointer(glfw_window));
             // We set this bool because it lets us know we need to resize the swapchain later!
-            window_info.swapchain_out_of_date = true;
-            window_info.width = static_cast<daxa::u32>(width);
-            window_info.height = static_cast<daxa::u32>(height);
+            info.swapchain_out_of_date = true;
+            info.width = static_cast<daxa::u32>(width);
+            info.height = static_cast<daxa::u32>(height);
         });
     auto *native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
-    // First thing we do is create a Daxa context. This essentially exists
-    // to initialize the Vulkan context, and allows for the creation of multiple
+    // First thing we do is create a Daxa instance. This essentially exists
+    // to initialize the Vulkan instance, and allows for the creation of multiple
     // devices.
-    daxa::Context context = daxa::create_context({});
+    daxa::Instance instance = daxa::create_instance({});
 
-    // We then just create a Daxa device by using the context, and providing
+    // We then just create a Daxa device by using the instance, and providing
     // the necessary parameters. This is where you'd select different features
     // and extensions that aren't necessarily present on all GPU's drivers.
     // A user's computer may have multiple devices, so you can provide a selector
     // function which just returns to daxa the rating level of each device listed,
     // ultimately returning a handle to the device which was scored highest!
-    daxa::Device device = context.create_device({
+    daxa::Device device = instance.create_device({
         .selector = [](daxa::DeviceProperties const & device_props) -> daxa::i32
         {
             daxa::i32 score = 0;
@@ -147,6 +147,9 @@ auto main() -> int
         // Directly after, we define an image slice. As images can be made up of multiple
         // layers, memory planes, and mip levels, Daxa takes slices in many calls to
         // specify a slice of an image that should be operated upon.
+        // Technically the default value for slice in barriers is simply a 2d image. 
+        // So in this case we would not need to mention it in the barriers at all! 
+        // But for demonstration we show how to get the full slice and pass it to the barriers here.
         daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
 
         daxa::CommandList command_list = device.create_command_list({.name = "my command list"});

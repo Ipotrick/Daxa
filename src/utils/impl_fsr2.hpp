@@ -13,7 +13,7 @@ namespace daxa
 {
     struct ImplFsr2Context final : ManagedSharedState
     {
-        UpscaleContextInfo info;
+        UpscaleInstanceInfo info;
 
         FfxFsr2Context fsr2_context = {};
         FfxFsr2ContextDescription fsr2_context_description = {};
@@ -27,7 +27,7 @@ namespace daxa
         void create_resizable_resources();
         void destroy_resizable_resources();
 
-        ImplFsr2Context(UpscaleContextInfo a_info);
+        ImplFsr2Context(UpscaleInstanceInfo a_info);
         virtual ~ImplFsr2Context() override final;
     };
 } // namespace daxa

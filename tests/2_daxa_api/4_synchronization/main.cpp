@@ -2,9 +2,7 @@
 
 struct App
 {
-    daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = true,
-    });
+    daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({});
 };
 

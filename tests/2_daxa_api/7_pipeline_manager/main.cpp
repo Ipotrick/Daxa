@@ -43,7 +43,90 @@ namespace tests
         return 0;
     }
 
-    auto virtual_includes(daxa::Device & device) -> i32
+    auto init_failure(daxa::Device & device) -> i32
+    {
+        daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+            .device = device,
+            .shader_compile_options = {
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    DAXA_SAMPLE_PATH "/shaders",
+                    "tests/0_common/shaders",
+                },
+                .language = daxa::ShaderLanguage::GLSL,
+            },
+            .register_null_pipelines_when_first_compile_fails = true,
+            .name = APPNAME_PREFIX("pipeline_manager"),
+        });
+
+        auto compilation_result = pipeline_manager.add_compute_pipeline({
+            .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            .name = APPNAME_PREFIX("compute_pipeline"),
+        });
+
+        if (compilation_result.is_err() || !compilation_result.value()->is_valid())
+        {
+            std::cerr << "Failed to compile the compute_pipeline!\n";
+            std::cerr << compilation_result.message() << std::endl;
+        }
+
+        if (!compilation_result.value()->is_valid())
+        {
+            while (true)
+            {
+                auto reload_result = pipeline_manager.reload_all();
+                if (auto * reload_err = std::get_if<daxa::PipelineReloadError>(&reload_result))
+                    std::cerr << reload_err->message << std::endl;
+                else if (std::get_if<daxa::PipelineReloadSuccess>(&reload_result))
+                    break;
+                using namespace std::literals;
+                std::this_thread::sleep_for(1ms);
+            }
+        }
+
+        std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
+
+        return 0;
+    }
+
+    auto perf(daxa::Device & device) -> i32
+    {
+        daxa::PipelineManager pipeline_manager_ = daxa::PipelineManager({.device = device});
+
+        for (u32 i = 0; i < 1000; ++i)
+        {
+            daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+                .device = device,
+                .shader_compile_options = {
+                    .root_paths = {
+                        DAXA_SHADER_INCLUDE_DIR,
+                        DAXA_SAMPLE_PATH "/shaders",
+                        "tests/0_common/shaders",
+                    },
+                    .language = daxa::ShaderLanguage::GLSL,
+                },
+                .name = APPNAME_PREFIX("pipeline_manager"),
+            });
+
+            auto compilation_result = pipeline_manager.add_compute_pipeline({
+                .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+                .name = APPNAME_PREFIX("compute_pipeline"),
+            });
+
+            if (compilation_result.is_err())
+            {
+                std::cerr << "Failed to compile the compute_pipeline!\n";
+                std::cerr << compilation_result.message() << std::endl;
+                return -1;
+            }
+
+            std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
+        }
+
+        return 0;
+    }
+
+    auto virtual_files(daxa::Device & device) -> i32
     {
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
@@ -53,7 +136,7 @@ namespace tests
             .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
-        pipeline_manager.add_virtual_include_file({
+        pipeline_manager.add_virtual_file({
             .name = "my_include",
             .contents = R"glsl(
                 #pragma once
@@ -61,8 +144,9 @@ namespace tests
             )glsl",
         });
 
-        auto compilation_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {.source = daxa::ShaderCode{R"glsl(
+        pipeline_manager.add_virtual_file({
+            .name = "my_file",
+            .contents = R"glsl(
                 #include <my_include>
 
                 #ifndef MY_INCLUDE_DEFINE
@@ -72,7 +156,11 @@ namespace tests
                 layout(local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
                 void main() {
                 }
-            )glsl"}},
+            )glsl",
+        });
+
+        auto compilation_result = pipeline_manager.add_compute_pipeline({
+            .shader_info = {.source = daxa::ShaderFile{"my_file"}},
             .name = APPNAME_PREFIX("compute_pipeline"),
         });
 
@@ -125,17 +213,17 @@ namespace tests
 
     auto multi_thread(daxa::Device & device) -> i32
     {
-        auto test_wrapper_0 = [](daxa::Device & device, i32 & ret)
+        auto test_wrapper_0 = [](daxa::Device & a_device, i32 & ret)
         {
-            ret = tests::simplest(device);
+            ret = tests::simplest(a_device);
         };
-        auto test_wrapper_1 = [](daxa::Device & device, i32 & ret)
+        auto test_wrapper_1 = [](daxa::Device & a_device, i32 & ret)
         {
-            ret = tests::virtual_includes(device);
+            ret = tests::virtual_files(a_device);
         };
-        auto test_wrapper_2 = [](daxa::Device & device, i32 & ret)
+        auto test_wrapper_2 = [](daxa::Device & a_device, i32 & ret)
         {
-            ret = tests::tesselation_shaders(device);
+            ret = tests::tesselation_shaders(a_device);
         };
 
         std::array<int, 9> ret_vals;
@@ -170,9 +258,7 @@ namespace tests
 
 auto main() -> int
 {
-    daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = false,
-    });
+    daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
         .name = APPNAME_PREFIX("device"),
     });
@@ -183,11 +269,15 @@ auto main() -> int
     {
         return ret;
     }
-    if (ret = tests::virtual_includes(device); ret != 0)
+    if (ret = tests::virtual_files(device); ret != 0)
     {
         return ret;
     }
     if (ret = tests::tesselation_shaders(device); ret != 0)
+    {
+        return ret;
+    }
+    if (ret = tests::perf(device); ret != 0)
     {
         return ret;
     }

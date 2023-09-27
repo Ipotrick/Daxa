@@ -1,6 +1,6 @@
 #pragma once
 
-// Includes the daxa api to the shader
+// Includes the Daxa API to the shader
 #include <daxa/daxa.inl>
 
 struct MyVertex

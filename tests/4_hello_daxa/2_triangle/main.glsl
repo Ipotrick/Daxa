@@ -1,5 +1,7 @@
 #include <daxa/daxa.inl>
 
+#extension GL_EXT_debug_printf : enable
+
 #include <shared.inl>
 
 DAXA_DECL_PUSH_CONSTANT(MyPushConstant, push)
@@ -9,7 +11,6 @@ DAXA_DECL_PUSH_CONSTANT(MyPushConstant, push)
 layout(location = 0) out daxa_f32vec3 v_col;
 void main()
 {
-    daxa_u64 stride = daxa_u64(push.my_vertex_ptr + 1) - daxa_u64(push.my_vertex_ptr);
     MyVertex vert = deref(push.my_vertex_ptr[gl_VertexIndex]);
     gl_Position = daxa_f32vec4(vert.position, 1);
     v_col = vert.color;
@@ -22,6 +23,7 @@ layout(location = 0) out daxa_f32vec4 color;
 void main()
 {
     color = daxa_f32vec4(v_col, 1);
+    debugPrintfEXT("test\n");
 }
 
 #endif

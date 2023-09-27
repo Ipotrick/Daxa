@@ -29,9 +29,7 @@ using Clock = std::chrono::high_resolution_clock;
 template <typename T>
 struct BaseApp : AppWindow<T>
 {
-    daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = false,
-    });
+    daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
         .selector = [](daxa::DeviceProperties const & device_props) -> i32
         {
@@ -88,7 +86,8 @@ struct BaseApp : AppWindow<T>
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
 
-    daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name="swapchain_image"}};
+    daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
+    std::vector<daxa::GenericTaskResourceUse> imgui_task_uses{};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -128,23 +127,23 @@ struct BaseApp : AppWindow<T>
         return false;
     }
 
-    auto record_loop_task_list() -> daxa::TaskList
+    auto record_loop_task_graph() -> daxa::TaskGraph
     {
         using namespace daxa::task_resource_uses;
-        daxa::TaskList new_task_list = daxa::TaskList({
+        daxa::TaskGraph new_task_graph = daxa::TaskGraph({
             .device = device,
             .swapchain = swapchain,
             .use_split_barriers = false,
-            .name = "main_task_list",
+            .name = "main_task_graph",
         });
-        new_task_list.use_persistent_image(task_swapchain_image);
+        new_task_graph.use_persistent_image(task_swapchain_image);
 
-        reinterpret_cast<T *>(this)->record_tasks(new_task_list);
+        using namespace daxa::task_resource_uses;
+        imgui_task_uses.push_back(ImageColorAttachment<>{task_swapchain_image});
+        reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
-        // new_task_list.add_task({
-        //     .uses = {
-        //         ImageColorAttachment<>{task_swapchain_image},
-        //     },
+        // new_task_graph.add_task({
+        //     .uses = imgui_task_uses,
         //     .task = [this](daxa::TaskInterface ti)
         //     {
         //         auto cmd_list = ti.get_command_list();
@@ -153,12 +152,12 @@ struct BaseApp : AppWindow<T>
         //     .name = "ImGui Task",
         // });
 
-        new_task_list.submit({});
-        new_task_list.present({});
-        new_task_list.complete({});
+        new_task_graph.submit({});
+        new_task_graph.present({});
+        new_task_graph.complete({});
 
-        // new_task_list.output_graphviz();
+        // new_task_graph.output_graphviz();
 
-        return new_task_list;
+        return new_task_graph;
     }
 };

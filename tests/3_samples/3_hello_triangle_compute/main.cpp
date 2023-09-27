@@ -22,12 +22,12 @@ struct App : BaseApp<App>
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
         .size = {size_x, size_y, 1},
-        .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
     daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "task_render_image"}};
 
-    daxa::TaskList loop_task_list = record_loop_task_list();
+    daxa::TaskGraph loop_task_graph = record_loop_task_graph();
 
     ~App()
     {
@@ -45,10 +45,10 @@ struct App : BaseApp<App>
     void on_update()
     {
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.has_value())
-        {
-            std::cout << reloaded_result.value().to_string() << std::endl;
-        }
+        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            std::cout << "Failed to reload " << reload_err->message << '\n';
+        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            std::cout << "Successfully reloaded!\n";
         ui_update();
 
         auto swapchain_image = swapchain.acquire_next_image();
@@ -57,7 +57,7 @@ struct App : BaseApp<App>
         {
             return;
         }
-        loop_task_list.execute({});
+        loop_task_graph.execute({});
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
@@ -75,21 +75,21 @@ struct App : BaseApp<App>
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::SHADER_READ_WRITE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+                .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
             task_render_image.set_images({.images = std::array{render_image}});
             base_on_update();
         }
     }
 
-    void record_tasks(daxa::TaskList & new_task_list)
+    void record_tasks(daxa::TaskGraph & new_task_graph)
     {
         using namespace daxa::task_resource_uses;
-        new_task_list.use_persistent_image(task_render_image);
+        new_task_graph.use_persistent_image(task_render_image);
 
-        new_task_list.add_task({
+        new_task_graph.add_task({
             .uses = {
-                ImageComputeShaderWrite<>{task_render_image},
+                ImageComputeShaderStorageWriteOnly<>{task_render_image},
             },
             .task = [this](daxa::TaskInterface ti)
             {
@@ -103,7 +103,7 @@ struct App : BaseApp<App>
             },
             .name = APPNAME_PREFIX("Draw (Compute)"),
         });
-        new_task_list.add_task({
+        new_task_graph.add_task({
             .uses = {
                 ImageTransferRead<>{task_render_image},
                 ImageTransferWrite<>{task_swapchain_image},
@@ -116,9 +116,7 @@ struct App : BaseApp<App>
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.uses[task_swapchain_image].image(),
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .src_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
-                    .dst_slice = {.image_aspect = daxa::ImageAspectFlagBits::COLOR},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
             },

@@ -1,24 +1,24 @@
-This page will explain how to create a basic app in daxa.
+This page will explain how to create a basic app in Daxa.
 
-The daxa repo provides several samples that show daxa use and also serve as tests. This wiki page is meant as a tutorial to those who are already familiar with apis like vulkan or dx12 and want to see how to write an app with daxa. This tutorial will go into specific detail on daxa's special features and design decisions.
+The Daxa repo provides several samples that show Daxa use and also serve as tests. This wiki page is meant as a tutorial to those who are already familiar with APIs like Vulkan or D3D12 and want to see how to write an app with Daxa. This tutorial will go into specific detail on Daxa's special features and design decisions.
 
 # 1. Setup
 
 ![image](images/pink-screen.png)
 
-In the fist part of this tutorial you will see how to setup daxa. 
+In the fist part of this tutorial you will see how to setup Daxa.
 
-This part will introduce the most basic parts of the api up to the point of having a loop and clearing the window to a certain color.  
-## Creating a daxa::Context
+This part will introduce the most basic parts of the API, up to the point of having a loop and clearing the window to a certain color.
+## Creating a daxa::Instance
 
-To do any Daxa API calls, one needs to create a `daxa::Context`.
+To do any Daxa API calls, one needs to create a `daxa::Instance`.
 
 ```cpp
 #include <daxa/daxa.hpp>
 
 int main()
 {
-    daxa::Context context = daxa::create_context({});
+    daxa::Instance instance = daxa::create_instance({});
 }
 ```
 
@@ -37,7 +37,7 @@ As it is possible to have multiple GPUs in a system, one can create multiple `da
 To choose a device from the available devices, one can optionally provide Daxa with a callback rating a device's suitability.
 
 ```cpp
-daxa::Device device = context.create_device({
+daxa::Device device = instance.create_device({
     .selector = [](daxa::DeviceProperties const & device_props) -> daxa::i32
     {
         daxa::i32 score = 0;
@@ -51,11 +51,11 @@ daxa::Device device = context.create_device({
         score += static_cast<daxa::i32>(device_props.limits.max_memory_allocation_count / 100000);
         return score;
     },
-    .debug_name = "my device",
+    .name = "my device",
 });
 ```
 
-A notable thing here is that Daxa defines integer types to its own naming convention. What these types represent is very straightforward, the first letter is the datatype and the number is the bit width, so i32 is an integer with 32 bits, and f64 would be a floating point value with 64 bit width. These are identical to the primitive types in languages such as Rust. You can make them globally accessible without the namespace by `using namespace daxa::types;`
+A notable thing here is that Daxa defines integer types to its own naming convention. What these types represent is very straightforward, the first letter is the data-type, and the number is the bit width. So, i32 is an integer with 32 bits, and f64 would be a floating point value with 64 bit width. These are identical to the primitive types in languages such as Rust. You can make them globally accessible without the namespace by `using namespace daxa::types;`
 
 ## Creating a daxa::Swapchain
 
@@ -72,6 +72,10 @@ daxa::Swapchain swapchain = device.create_swapchain({
     // The platform would also be retrieved from the windowing API,
     // or by hard-coding it depending on the OS.
     .native_window_platform = native_window_platform,
+    // Here we can supply a user-defined surface format selection
+    // function, to rate formats. If you don't care what format the
+    // swapchain images are in, then you can just omit this argument
+    // because it defaults to `daxa::default_format_score(...)`
     .surface_format_selector = [](daxa::Format format)
     {
         switch (format)
@@ -82,7 +86,7 @@ daxa::Swapchain swapchain = device.create_swapchain({
     },
     .present_mode = daxa::PresentMode::MAILBOX,
     .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-    .debug_name = "my swapchain",
+    .name = "my swapchain",
 });
 ```
 
@@ -92,17 +96,17 @@ Now with the swapchain, the user can request a swapchain image to render to:
 daxa::ImageId swapchain_image = swapchain.acquire_next_image();
 ```
 
-If all swapchain images are used in queued submissions to the GPU, the present call will block. `daxa::Swapchain::acquire_next_image()` will always immediately return The Swapchain will also control frames in flight. It controls the acquire, present and frames in flight semaphores. Each of those can be queried with a function from the swapchain.
+If all swapchain images are used in queued submissions to the GPU, the present call will block. `daxa::Swapchain::acquire_next_image()` will always immediately return. The Swapchain will also control frames in flight. It controls the acquire, present and frames in flight semaphores. Each of those can be queried with a function from the swapchain.
 
 ## Creating a daxa::CommandList
 
 To execute commands on the GPU, one needs to record them into a daxa::CommandList and submit them to the GPU.
 
 ```cpp
-daxa::CommandList command_list = device.create_command_list({.debug_name = "my command list"});
+daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
 ```
 
-## Sending commands to the gpu
+## Sending commands to the GPU
 
 The first thing we will do on the GPU using Daxa is simply set all pixels of the window to a pink color.
 
@@ -127,7 +131,7 @@ Directly after, we define an image slice. As images can be made up of multiple l
 In Daxa, an image view of any image's full range can be retrieved with the `daxa::ImageId::default_view()` member function. From an image view, we can query the slice it represents. In the case of the default view, its slice is the whole image, which is what we want.
 
 ```cpp
-daxa::CommandList command_list = device.create_command_list({.debug_name = "my command list"});
+daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
 ```
 
 We then use the command list to record our commands. 
@@ -142,12 +146,11 @@ command_list.pipeline_barrier_image_transition({
 });
 ```
 
-We insert a pipeline barrier that also performs an image layout transition. Pipeline barriers are nearly identical to vulkan pipeline barriers. The image layouts also correspond closely to vulkan image barriers. The Access and stage are merged into daxa::Access. This is don't to simplify synchronization. Each Stage has a write, a read and a read write access.
+We insert a pipeline barrier that also performs an image layout transition. Pipeline barriers are nearly identical to Vulkan pipeline barriers. The image layouts also correspond closely to Vulkan image barriers. The Access and stage are merged into daxa::Access. This is don't to simplify synchronization. Each Stage has a write, a read and a read write access.
 
-Also do not be concerned that barriers must be issued with multiple function calls. Daxa will queue all back to back pipeline barrier calls and do a single vulkan pipeline barrier command. The idea here is that its simpler for the user to not group up barriers manually and submit them once, but that daxa does that automatically for the user.
+Also do not be concerned that barriers must be issued with multiple function calls. Daxa will queue all back to back pipeline barrier calls and do a single Vulkan pipeline barrier command. The idea here is that its simpler for the user to not group barriers manually and submit them once. Instead, Daxa does that automatically!
 
 ```cpp
-
 command_list.clear_image({
     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
     .clear_value = std::array<daxa::f32, 4>{1.0f, 0.0f, 1.0f, 1.0f},
@@ -166,7 +169,7 @@ command_list.pipeline_barrier_image_transition({
 command_list.complete();
 ```
 
-We then issue a image clear. It is possible to also set the image layout in this command, but there is a default image layout, which is `TRANSFER_DST_OPTIMAL`, the one we transition the layout to earlier.
+We then issue an image clear. It is possible to also set the image layout in this command, but there is a default image layout, which is `TRANSFER_DST_OPTIMAL`, the one we transition the layout to earlier.
 After that, we transition the image layout to present optimal, as we will present the image after these commands are done.
 In the end we complete the command list. After this the command list is considered constant and no more commands can be recorded into that list. It is required that all submitted command lists are completed before submission.
 
@@ -188,19 +191,21 @@ device.present_frame({
 });
 ```
 
-In daxa, the swapchain handles the number of frames in flight and related frame to frame image acquisition and present synchronization.
+In Daxa, the swapchain handles the number of frames in flight and related frame to frame image acquisition and present synchronization.
 
-The after each frame the swapchain provides an acquire semaphore, a present semaphore, a gpu timeline semaphore and a cpu timeline value.
+The after each frame the swapchain provides an acquire semaphore, a present semaphore, a GPU timeline semaphore and a CPU timeline value.
 
 The first submit in a frame, that uses the swapchain image MUST wait on the acquire semaphore signaling, as the swapchain image is only valid after this semaphore is signaled.
 
-The last submit in a frame that uses the swapchain image MUST signal the present semaphore, as the gpu must know when the last access happens until it can present the image.
+The last submit in a frame that uses the swapchain image MUST signal the present semaphore, as the GPU must know when the last access happens until it can present the image.
 
-The cpu and gpu timeline values are used internally to limit the frames in flight. the gpu timeline value must be signaled with the last submission with the current cpu timeline value.
+The CPU and GPU timeline values are used internally to limit the frames in flight. the GPU timeline value must be signaled with the last submission with the current CPU timeline value.
 
 Note that the acquire and present semaphores can change every frame, so do NOT store them once and reuse. You must call the get functions after each image acquisition.
 
-To see a full implementation go ahead to the daxa samples and look into the 4_hello_daxa folder. For every chapter in this tutorial there is a fully working encapsulated program with all the necessary code. This code is also fully commented out, so it can be used as an alternative to this tutorial entirely if preferred.
+To see a full implementation go ahead to the Daxa samples and look into the 4_hello_Daxa folder. For every chapter in this tutorial there is a fully working encapsulated program with all the necessary code. This code is also fully commented out, so it can be used as an alternative to this tutorial entirely if preferred.
+
+See [the full code here](https://github.com/Ipotrick/Daxa/tree/master/tests/4_hello_daxa/1_pink_screen/main.cpp)
 
 # 2. Triangle
 
@@ -208,7 +213,7 @@ To see a full implementation go ahead to the daxa samples and look into the 4_he
 
 In the next step we will render a triangle.
 
-We will also introduce a few utils: the PipelineManager and the TaskList.
+We will also introduce a few utils: the PipelineManager and the TaskGraph.
 
 ## Pipelines
 
@@ -228,7 +233,7 @@ daxa::RasterPipeline pipeline = device.create_raster_pipeline(daxa::RasterPipeli
     .depth_test = {...},
     .raster = {...},
     .push_constant_size = {...},
-    .debug_name = {...},
+    .name = {...},
 });
 ```
 
@@ -251,11 +256,11 @@ auto pipeline_manager = daxa::PipelineManager({
         .language = daxa::ShaderLanguage::GLSL,
         .enable_debug_info = true,
     },
-    .debug_name = "my pipeline manager",
+    .name = "my pipeline manager",
 });
 ```
 
-`DAXA_SHADER_INCLUDE_DIR` is a macro provided by Daxa when the target is linked to with CMake. This macro is automatically the value of the path to the daxa shader headers.
+`DAXA_SHADER_INCLUDE_DIR` is a macro provided by Daxa when the target is linked to with CMake. This macro is automatically the value of the path to the Daxa shader headers.
 
 ```cpp
 auto result = pipeline_manager.add_raster_pipeline({
@@ -265,7 +270,7 @@ auto result = pipeline_manager.add_raster_pipeline({
     .depth_test = {},
     .raster = {},
     .push_constant_size = sizeof(MyPushConstant),
-    .debug_name = "my pipeline",
+    .name = "my pipeline",
 });
 ```
 
@@ -278,7 +283,7 @@ auto result = pipeline_manager.add_raster_pipeline({
 
 if (result.is_err())
 {
-    std::cout << result << std::endl;
+    std::cerr << result << std::endl;
     std::terminate();
 }
 
@@ -293,21 +298,21 @@ This section will only be a brief overview of what is needed to be able to compl
 ```glsl
 // draw.glsl:
 
-// Includes the daxa api to the shader
+// Includes the Daxa API to the shader
 #include <daxa/daxa.inl>
 
 #include <shared.inl>
 
 // The first argument mentions the struct you want as your push constant,
 // the second argument will be the name of it.
-DAXA_USE_PUSH_CONSTANT(MyPushConstant, p)
+DAXA_DECL_PUSH_CONSTANT(MyPushConstant, push)
 
 #if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
 
 layout(location = 0) out daxa_f32vec3 v_col;
 void main()
 {
-    MyVertex vert = deref(p.my_vertex_ptr[gl_VertexIndex]);
+    MyVertex vert = deref(push.my_vertex_ptr[gl_VertexIndex]);
     gl_Position = daxa_f32vec4(vert.position, 1);
     v_col = vert.color;
 }
@@ -326,7 +331,7 @@ void main()
 
 To access any of Daxa's functionality in shaders, one must include the daxa.inl. This header is used for shaders and shared files (those will be discussed later).
 
-In daxa all resource access in shader is bindless. To read a buffer, one must enable buffer pointers for their type with DAXA_ENABLE_BUFFER_PTR, then pass the buffer device address in a push constant, to then access it with the deref operator in the shader. In this particular case, we also use the [] operator to perform pointer arithmetic, adding the vertex offset onto the base pointer. `BufferPtr`s act like normal pointers in that case, the syntax is just a bit different.
+In Daxa all resource access in shader is bindless. To read a buffer, one must enable buffer pointers for their type with `DAXA_DECL_BUFFER_PTR`, then pass the buffer device address in a push constant, to then access it with the deref operator in the shader. In this particular case, we also use the [] operator to perform pointer arithmetic, adding the vertex offset onto the base pointer. `BufferPtr`s act like normal pointers in that case, the syntax is just a bit different.
 
 Now we go over the shared file.
 
@@ -334,7 +339,7 @@ Now we go over the shared file.
 // shared.inl:
 #pragma once
 
-// Includes the daxa api to the shader
+// Includes the Daxa API to the shader
 #include <daxa/daxa.inl>
 
 struct MyVertex
@@ -344,7 +349,7 @@ struct MyVertex
 };
 
 // Allows the shader to use pointers to MyVertex
-DAXA_ENABLE_BUFFER_PTR(MyVertex)
+DAXA_DECL_BUFFER_PTR(MyVertex)
 
 struct MyPushConstant
 {
@@ -357,55 +362,109 @@ This allows for code sharing between C++ and GLSL, as many things like `struct`s
 
 In this instance the shared file allows us to define the vertex and push constants `struct`s once and then use them in our shader AND C++ code.
 
-In the shared file we declare the MyVertex struct and enable buffer pointers to it via `DAXA_ENABLE_BUFFER_PTR`. We also use the daxa provided type `daxa_f32vec4` here which will translate to a `vec4` in GLSL and `daxa::f32vec4` in C++.
+In the shared file we declare the MyVertex struct and enable buffer pointers to it via `DAXA_DECL_BUFFER_PTR`. We also use the Daxa provided type `daxa_f32vec4` here which will translate to a `vec4` in GLSL and `daxa::f32vec4` in C++.
 
 Then lastly we declare a strut for the push constant. This struct contains a buffer pointer. This buffer pointer will become a `daxa::BufferDeviceAddress` in C++.
 
-To learn more about this i again refer to the shader integration wiki page.
+To learn more about this, I again refer to the shader integration wiki page.
 
 ## Renderpass
 
-To use a raster pipeline we need a renderpass. Within a renderpass the user can bind pipelines and issue draw calls.
+To use a raster pipeline, we need a renderpass. Within a renderpass, the user can bind pipelines and issue draw calls.
 
-Setting up a renderpass in daxa is very simple, there is a command to begin a renderpass and one command to end it.
+Setting up a renderpass in Daxa is very simple. There is a command to begin a renderpass and one command to end it.
 
 Renderpasses can clear the screen as a load operation, this means we do not need the manual clear anymore.
 
 ```cpp
+// get a command list
 cmd_list.begin_renderpass({
     .color_attachments = {
-        daxa::RenderAttachmentInfo{
-            .image_view = swapchain_image.default_view(), 
-            .load_op = daxa::AttachmentLoadOp::CLEAR, 
-            .clear_value = std::array<f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
+        {
+            .image_view = /* assign in the image view */,
+            .load_op = daxa::AttachmentLoadOp::CLEAR,
+            .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
         },
     },
     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
 });
-cmd_list.set_pipeline(*raster_pipeline);
-cmd_list.push_constant(MyPushConstant {
-    .vertex_buffer_ptr = device.get_device_address(vertex_buffer),
+cmd_list.set_pipeline(*pipeline);
+cmd_list.push_constant(MyPushConstant{
+    .my_vertex_ptr = /* and finally a GPU pointer to the vertex buffer */,
 });
 cmd_list.draw({.vertex_count = 3});
-cnd_list.end_renderpass();
+cmd_list.end_renderpass();
 ```
 
 We begin a renderpass which clears the screen as a load op. We then set the pipeline to the raster pipeline we created earlier. Setting the push-constant uses the struct from the shared file. Finally we issue a draw-call and end the renderpass.
 
+This is the code that will go inside our task callback. Instead of declaring the task in-line, we can pre-declare it like so:
+
+```cpp
+struct DrawToSwapchainTask
+{
+    struct Uses
+    {
+        // ...
+    } uses = {};
+
+    void callback(daxa::TaskInterface ti)
+    {
+        // put the code above into here!
+    }
+};
+```
+
+The task callback takes in a `daxa::TaskInterface` which provides access to all needed resources like the device, command buffers etc.
+
+We just need to fill the parts of this declaration with the relevant code! The uses will of course be the resources we use within the task, as well as how we use them. So we can say that we have a `vertex_buffer` which is `BufferVertexShaderRead` because it's read in the vertex shader. We also use `color_target` as an `ImageColorAttachment`, because the fragment shader writes to a color attachment.
+
+```cpp
+struct Uses
+{
+    daxa::BufferVertexShaderRead vertex_buffer{};
+    daxa::ImageColorAttachment<> color_target{};
+} uses = {};
+```
+These declarations make it so that the resources assigned into them within the task declaration will be properly synchronized.
+
+Finally, in our task callback, we had some unfinished areas. We can get a command list from the Task interface. The resources are accessible from the uses struct, like so:
+```cpp
+// Command list
+auto cmd_list = ti.get_command_list();
+
+// Image view
+.image_view = uses.color_target.view(),
+
+// GPU pointer to vertex buffer
+ti.get_device().get_device_address(
+    uses.vertex_buffer.buffer()
+),
+```
+We also use the task interface `ti` to get a reference to the device, in order to retrieve a GPU pointer to the buffer!
+
 ## Buffer upload
 
-We also need to upload the vertex buffer to the gpu. We could just hardcode the vertex positions and colors in the shader but for demonstration we will upload the vertex buffer.
+We also need to upload the vertex buffer to the GPU. We could just hardcode the vertex positions and colors in the shader, but for demonstration we will upload the vertex buffer.
 
 The command list has functionality to make this easy.
 
-Let's start by creating a function which will upload the vertex data to a buffer:
+Let's start by creating another pre-declared task which will upload the vertex data to a buffer:
 ```cpp
-void upload_vertex_data_task(
-    daxa::Device & device,
-    daxa::CommandList & cmd_list,
-    daxa::BufferId buffer_id);
+struct UploadVertexDataTask
+{
+    struct Uses
+    {
+        daxa::BufferTransferWrite vertex_buffer{};
+    } uses = {};
+
+    void callback(daxa::TaskInterface ti)
+    {
+        // ...
+    }
+};
 ```
-We'll give it three parameters, the device, a command list, and the buffer to upload to. Inside this function, we'll create an array of data to send to the GPU. This array consists of just 3 elements of `MyVertex`, which is a struct defined in our `shared.inl` file.
+Inside the callback, we'll create an array of data to send to the GPU. This array consists of just 3 elements of `MyVertex`, which is a struct defined in our `shared.inl` file.
 ```cpp
 auto data = std::array{
     MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
@@ -416,10 +475,10 @@ auto data = std::array{
 
 In order to send the data to the GPU, we can create a staging buffer, which has host access, so that we can then issue a command to copy from this buffer to the dedicated GPU memory.
 ```cpp
-auto staging_buffer_id = device.create_buffer({
-    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+auto staging_buffer_id = ti.get_device().create_buffer({
     .size = sizeof(data),
-    .debug_name = "my staging buffer",
+    .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+    .name = "my staging buffer",
 });
 ```
 We can also ask the command list to destroy this temporary buffer, since we don't care about it living, but we DO need it to survive through its usage on the GPU (which won't happen until after these commands are submitted), so we tell the command list to destroy it in a deferred fashion.
@@ -431,7 +490,7 @@ cmd_list.destroy_buffer_deferred(staging_buffer_id);
 
 We then get the memory mapped pointer of the staging buffer, and write the data directly to it.
 ```cpp
-auto * buffer_ptr = device.get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id);
+auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id);
 *buffer_ptr = data;
 ```
 
@@ -439,132 +498,125 @@ And finally, we can just copy the data from the staging buffer to the actual buf
 ```cpp
 cmd_list.copy_buffer_to_buffer({
     .src_buffer = staging_buffer_id,
-    .dst_buffer = buffer_id,
+    .dst_buffer = uses.vertex_buffer.buffer(),
     .size = sizeof(data),
 });
 ```
 
-## TaskList
+## TaskGraph
 
-Manual synchronization is very error prone and difficult to optimize and maintain. Writing some automatic synchronization abstraction is mandatory for any complex program using vulkan.
+Manual synchronization is very error prone and difficult to optimize and maintain. Writing some automatic synchronization abstraction is mandatory for any complex program using Vulkan.
 
-Daxa provides a util called TaskList. TaskList allows us to compile a list of GPU tasks and their dependencies into a synchronized set of commands.
+Daxa provides a util called TaskGraph. TaskGraph allows us to compile a list of GPU tasks and their dependencies into a synchronized set of commands.
 This simplifies your code by making different tasks completely self-contained, while also reordering and generating optimized synchronization for the given tasks automatically.
-TaskList is a simple auto-synch abstraction that can be used "as is" or as a reference to design your own auto-synch on top of daxa.
+TaskGraph is a simple auto-synch abstraction that can be used "as is" or as a reference to design your own auto-synch on top of daxa.
 
-We are going to use TaskList here, as a showcase of how it is used and to keep this tutorial shorter.
+We are going to use TaskGraph here, as a showcase of how it is used and to keep this tutorial shorter.
 
 ```cpp
-enum class TaskCondition
-{
-    VERTICES_UPLOAD,
-    COUNT,
-};
-
-std::array<bool, static_cast<daxa::usize>(TaskCondition::COUNT)> task_condition_states{};
-
-auto loop_task_list = daxa::TaskList({
+auto loop_task_graph = daxa::TaskGraph({
     .device = device,
     .swapchain = swapchain,
-    .permutation_condition_count = static_cast<daxa::usize>(TaskCondition::COUNT),
-    .debug_name = "my task list",
+    .name = "my loop task graph",
 });
 ```
 
-TaskList works by recording tasks, completing the list and then repeatedly using this completed list over multiple frames.
-Alternatively the user can re record the task list every frame when the rendering changes. Re recording takes time, so it is better to record once and reuse TaskLists as much as possible.
+TaskGraph works by recording tasks, completing the list and then repeatedly using this completed list over multiple frames.
+Alternatively the user can re record the task graph every frame when the rendering changes. Re-recording takes time, so it is better to record once and reuse TaskGraphs as much as possible.
 
-Because reuse is desired, a single TaskList can have permutations. 
+Because reuse is desired, a single TaskGraph can have permutations. 
 Permutations allow for runtime conditions to trigger different outcomes. Permutations are generated for a set of conditionals, that can be set at runtime between executions. 
 
-For our example we only have one condition, which is whether or not its the first frame or not. In the first frame we want to do some initialization, which we do not want to do every frame.
+For our example we won't use conditionals, but if you want to see how it's done, check out [the full example in the test folder](https://github.com/Ipotrick/Daxa/tree/master/tests/4_hello_daxa/2_triangle/main.cpp), since it's in there but commented out!
+
+Instead of using a conditional, we'll use a second TaskGraph to do the upload, which needs no swapchain.
 
 ```cpp
-auto task_swapchain_image = loop_task_list.create_task_image({.swapchain_image = true, .debug_name = "my task swapchain image"});
-auto swapchain_image = daxa::ImageId{};
-loop_task_list.add_runtime_image(task_swapchain_image, swapchain_image);
-
-auto task_buffer_id = loop_task_list.create_task_buffer({.initial_access = daxa::AccessConsts::VERTEX_SHADER_READ, .debug_name = "my task buffer"});
-loop_task_list.add_runtime_buffer(task_buffer_id, buffer_id);
+auto upload_task_graph = daxa::TaskGraph({
+    .device = device,
+    .name = "my upload task graph",
+});
 ```
 
-In TaskList we need "virtual" resources at record time, they are called TaskBufferId and TaskImageId. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task list, task list will take TaskResources instead which are backed by runtime resources on execution.
-
-Here we create a `task_swapchain_image` to represent the swapchain image. We also create a TaskBuffer that represents our vertex buffer.
-
-TaskList only needs to have virtual handles for resources involved in any synchronization. This means when you are sure that you only ever read from a resource in tasks, you will not need to mention them to task list. A common example of this would be to have a separated texture system that does its own synchronization and provides constant images that don't change. As these images never change they will never require any synchronization, they do not need to be mentioned in the main task list. 
-
-We also bind a "read" Buffer and Image Id to the task `resources with add_runtime_buffer` and `add_runtime_image`. All task resources must have at least one runtime buffer/image on execution, but they may be changed between executions.
+In TaskGraph we need "virtual" resources at record time, they are called TaskBufferView and TaskImage. The reason for this is, that between executions the images and buffers might get recreated or reassigned. To avoid having to rerecord the whole task graph, task graph will take TaskResources instead which are backed by runtime resources on execution.
 
 ```cpp
-loop_task_list.conditional({
-    .condition_index = static_cast<daxa::u32>(TaskCondition::VERTICES_UPLOAD),
-    .when_true = [&loop_task_list, &task_buffer_id, &task_condition_states]()
-    {
-        loop_task_list.add_task({
-            .used_buffers = {
-                {task_buffer_id, daxa::TaskBufferAccess::TRANSFER_WRITE},
-            },
-            .task = [&task_buffer_id, &task_condition_states](daxa::TaskRuntimeInterface task_runtime)
-            {
-                auto cmd_list = task_runtime.get_command_list();
-                upload_vertex_data_task(task_runtime.get_device(), cmd_list, task_runtime.get_buffers(task_buffer_id)[0]);
-                task_condition_states[static_cast<daxa::usize>(TaskCondition::VERTICES_UPLOAD)] = false;
-            },
-            .debug_name = "my upload task",
-        });
+auto task_swapchain_image = daxa::TaskImage{{.swapchain_image = true, .name = "swapchain image"}};
+auto task_buffer = daxa::TaskBuffer({
+    .initial_buffers = {.buffers = std::span{&buffer_id, 1}},
+    .name = "my task buffer",
+});
+```
+
+Here we create a `task_swapchain_image` to represent the swapchain image. We also create a TaskBufferView `task_buffer` that represents our vertex buffer. We have to register these resources with the TaskGraphs we have, so that they track and modify their state.
+
+```cpp
+loop_task_graph.use_persistent_buffer(task_buffer);
+loop_task_graph.use_persistent_image(task_swapchain_image);
+
+upload_task_graph.use_persistent_buffer(task_buffer);
+```
+
+TaskGraph only needs to have virtual handles for resources involved in any synchronization. This means when you are sure that you only ever read from a resource in tasks, you will not need to mention them to task graph. A common example of this would be to have a separated texture system that does its own synchronization and provides constant images that don't change. As these images never change they will never require any synchronization, they do not need to be mentioned in the main task graph.
+
+```cpp
+upload_task_graph.add_task(UploadVertexDataTask{
+    .uses = {
+        .vertex_buffer = task_buffer.view(),
     },
 });
 ```
 
-> Note: the function put into when_true will immediately be called in the conditional function and is not stored anywhere. This makes it safe to have reference capture in that lambda in any case.
+We see the first task here. Each task has a list of used task resources, in this case it is only the vertex buffer. It is important to mention the correct access to that resource within the task. We did this in the pre-declaration of the task.
 
-As mentioned earlier we have a conditional for the first frame initialization. In this conditional, we upload the vertex buffer to the gpu.
-
-We also see the first task here. Each task has a list of used task resources, in this case it is only the vertex buffer. It is important to mention the correct access to that resource within the task. 
-
-Each resource can only have ONE use withing a task! If you need multiple different `TaskAccess`s to the same resource, you must split these accesses into multiple tasks!
+Each resource can only have ONE use within a task! If you need multiple different `TaskAccess`s to the same resource, you must split these accesses into multiple tasks!
 
 This also applies to ImageSlices. There can never be overlap in the image slices in the accesses to an image.
 
-Other then the list of used resources a task has a task callback which will be called at execution time and a debug name.
-
-The task callback takes in a `daxa::TaskRuntimeInterface` which provides access to all needed resources like the device, command buffers etc.
-
-The runtime can also provide the runtime resource of the virtual task resource ids at runtime with `daxa::TaskRuntimeInterface::get_buffers` and `daxa::TaskRuntimeInterface::get_images`, as seen above.
+Other then the list of used resources a task has a task callback which will be called at execution time and a debug name. With our pre-declared task, this is part of the struct.
 
 ```cpp
-loop_task_list.add_task({
-	.used_buffers = {
-		{task_buffer_id, daxa::TaskBufferAccess::VERTEX_SHADER_READ_ONLY},
-	},
-	.used_images = {
-		{task_swapchain_image, daxa::TaskImageAccess::COLOR_ATTACHMENT, daxa::ImageMipArraySlice{}},
-	},
-	.task = [task_swapchain_image, task_buffer_id, &pipeline, &window_info](daxa::TaskRuntimeInterface task_runtime)
-	{
-		auto cmd_list = task_runtime.get_command_list();
-		// Here we can just get the buffer and image IDs from the runtime
-		// and just pass them directly.
-		draw_to_swapchain_task(
-			task_runtime.get_device(), cmd_list, pipeline,
-			task_runtime.get_images(task_swapchain_image)[0],
-			task_runtime.get_buffers(task_buffer_id)[0],
-			window_info.width, window_info.height);
-	},
-	.debug_name = "my draw task",
+loop_task_graph.add_task(DrawToSwapchainTask{
+    .uses = {
+        .vertex_buffer = task_buffer.view(),
+        .color_target = task_swapchain_image.view(),
+    },
+    .pipeline = pipeline.get(),
 });
 ```
 
 We then unconditionally record a task to draw to the screen. The used resources here are the vertex buffer and the swapchain.
-For used images you also need to provide the accessed image slice. Having this granularity allows daxa to understand subresource access synchronization for things like mip map generation or down-sampling.
+For used images you also need to provide the accessed image slice. Having this granularity allows Daxa to understand subresource access synchronization for things like mip map generation or down-sampling.
 
 ```cpp
-loop_task_list.submit({});
-loop_task_list.present({});
-loop_task_list.complete({});
+loop_task_graph.submit({});
+loop_task_graph.present({});
+loop_task_graph.complete({});
+
+upload_task_graph.submit({});
+upload_task_graph.complete({});
 ```
 
-Now we record submit, present and complete the list. As task list handles all synchronization, we DO NOT have to specify any semaphores here, not even for the swapchain!
+Now we record submit, present and complete the list. As task graph handles all synchronization, we DO NOT have to specify any semaphores here, not even for the swapchain!
 
 > Note: If you want to inject your own semaphores or other synch in these commands, you can by providing pointers to vectors for the relevant primitives in the info `struct`s of these functions.
+
+Before we run the `loop_task_graph`, we intend to use within the "game loop", we will execute the upload task graph.
+```cpp
+upload_task_graph.execute({});
+```
+
+our "game loop" consists of the same stuff as the pink screen tutorial's, but instead of using a command list, we'll just execute our task graph - not forgetting to update the task swapchain image with the new swapchain that we acquired from the swapchain!
+
+```cpp
+auto swapchain_image = swapchain.acquire_next_image();
+if (swapchain_image.is_empty())
+{
+    continue;
+}
+task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
+
+loop_task_graph.execute({});
+```
+
+See [the full code here](https://github.com/Ipotrick/Daxa/tree/master/tests/4_hello_daxa/2_triangle/main.cpp)

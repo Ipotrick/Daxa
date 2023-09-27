@@ -113,6 +113,24 @@ namespace daxa
         usize offset = {};
     };
 
+    struct DrawMeshTasksIndirectInfo
+    {
+        BufferId indirect_buffer = {};
+        usize offset = {};
+        u32 draw_count = 1;
+        u32 stride = 12;
+    };
+
+    struct DrawMeshTasksIndirectCountInfo
+    {
+        BufferId indirect_buffer = {};
+        usize offset = {};
+        BufferId count_buffer = {};
+        usize count_offset = {};
+        u32 max_count = {};
+        u32 stride = 12;
+    };
+
     struct DrawInfo
     {
         u32 vertex_count = {};
@@ -216,7 +234,13 @@ namespace daxa
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
+        /// @brief  Successive pipeline barrier calls are combined.
+        ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
+        /// @param info parameters.
         void pipeline_barrier(MemoryBarrierInfo const & info);
+        /// @brief  Successive pipeline barrier calls are combined.
+        ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
+        /// @param info parameters.
         void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
         void signal_split_barrier(SplitBarrierSignalInfo const & info);
         void wait_split_barriers(std::span<SplitBarrierWaitInfo const> const & infos);
@@ -230,9 +254,11 @@ namespace daxa
             push_constant_vptr(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
         }
         /// @brief  Binds a buffer region to the uniform buffer slot.
-        ///         There are uniform buffer slots 0-7.
-        ///         The buffer range is user managed, The buffer MUST not die while in use on the gpu!
+        ///         There are 8 uniform buffer slots (indices range from 0 to 7).
+        ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
         ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
+        ///         This is in stark contrast to OpenGl like bindings wich are visible immediately to all commands after binding.
+        ///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
         ///         Set uniform buffer slots are cleared after a pipeline is bound. 
         ///         Before setting another pipeline, they need to be set again.
         /// @param info parameters.
@@ -242,12 +268,29 @@ namespace daxa
         void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);
         void dispatch_indirect(DispatchIndirectInfo const & info);
 
+        /// @brief  Destroyes the buffer AFTER the gpu is finished executing the command list.
+        ///         Useful for large uploads exceeding staging memory pools.
+        /// @param id buffer to be destroyed after command list finishes.
         void destroy_buffer_deferred(BufferId id);
+        /// @brief  Destroyes the image AFTER the gpu is finished executing the command list.
+        ///         Useful for large uploads exceeding staging memory pools.
+        /// @param id image to be destroyed after command list finishes.
         void destroy_image_deferred(ImageId id);
+        /// @brief  Destroyes the image view AFTER the gpu is finished executing the command list.
+        ///         Useful for large uploads exceeding staging memory pools.
+        /// @param id image view to be destroyed after command list finishes.
         void destroy_image_view_deferred(ImageViewId id);
+        /// @brief  Destroyes the sampler AFTER the gpu is finished executing the command list.
+        ///         Useful for large uploads exceeding staging memory pools.
+        /// @param id image sampler be destroyed after command list finishes.
         void destroy_sampler_deferred(SamplerId id);
 
+        /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
+        ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
+        /// @param info parameters.
         void begin_renderpass(RenderPassBeginInfo const & info);
+        /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
+        ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
         void end_renderpass();
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
@@ -258,6 +301,9 @@ namespace daxa
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
         void draw_indirect_count(DrawIndirectCountInfo const & info);
+        void draw_mesh_tasks(u32 x, u32 y, u32 z);
+        void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
+        void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);

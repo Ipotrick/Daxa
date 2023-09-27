@@ -6,26 +6,17 @@
   "homepage": "https://github.com/Ipotrick/Daxa",
   "dependencies": [
     "vulkan-memory-allocator",
-    "vulkan"
+    "vulkan-headers",
+    "vulkan",
+    "fmt"
   ],
   "default-features": [
     "utils-imgui",
     "utils-mem",
     "utils-pipeline-manager-glslang",
-    "utils-task-list"
+    "utils-task-graph"
   ],
   "features": {
-    "utils-fsr2": {
-      "description": "The FSR2 Daxa utility",
-      "dependencies": [
-        {
-          "name": "fsr2",
-          "features": [
-            "vulkan"
-          ]
-        }
-      ]
-    },
     "utils-imgui": {
       "description": "The ImGUI Daxa utility",
       "dependencies": [
@@ -53,8 +44,8 @@
         "spirv-tools"
       ]
     },
-    "utils-task-list": {
-      "description": "The Task-List Daxa utility"
+    "utils-task-graph": {
+      "description": "The Task-Graph Daxa utility"
     }
   }
 }

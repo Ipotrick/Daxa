@@ -1,10 +1,11 @@
 {
   "name": "daxa",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "Daxa C++ Vulkan Abstraction",
   "homepage": "https://github.com/Ipotrick/Daxa",
   "dependencies": [
     "vulkan-memory-allocator",
+    "vulkan-headers",
     "vulkan",
     "fmt",
     {
@@ -22,20 +23,9 @@
     "utils-imgui",
     "utils-mem",
     "utils-pipeline-manager-glslang",
-    "utils-task-list"
+    "utils-task-graph"
   ],
   "features": {
-    "utils-fsr2": {
-      "description": "The FSR2 Daxa utility",
-      "dependencies": [
-        {
-          "name": "fsr2",
-          "features": [
-            "vulkan"
-          ]
-        }
-      ]
-    },
     "utils-imgui": {
       "description": "The ImGUI Daxa utility",
       "dependencies": [
@@ -63,8 +53,8 @@
         "spirv-tools"
       ]
     },
-    "utils-task-list": {
-      "description": "The Task-List Daxa utility"
+    "utils-task-graph": {
+      "description": "The Task-Graph Daxa utility"
     },
     "tests": {
       "description": "Build Tests",
@@ -89,7 +79,7 @@
       ]
     }
   },
-  "builtin-baseline": "739824a6d3179d85820eedc0637e81c0c68b874c",
+  "builtin-baseline": "78ba9711d30c64a6b40462c72f356c681e2255f3",
   "vcpkg-configuration": {
     "overlay-ports": [
       "./cmake/vcpkg-overlay-ports/dxc",

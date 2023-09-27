@@ -27,9 +27,7 @@ enum
 
 struct App : AppWindow<App>
 {
-    daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = true,
-    });
+    daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
         .name = APPNAME_PREFIX("device"),
     });
@@ -92,14 +90,12 @@ struct App : AppWindow<App>
     u32 vert_n = 0;
 
     daxa::ImageMipArraySlice s0 = {
-        .image_aspect = daxa::ImageAspectFlagBits::COLOR | daxa::ImageAspectFlagBits::DEPTH,
         .base_mip_level = 3,
         .level_count = 5,
         .base_array_layer = 2,
         .layer_count = 4,
     };
     daxa::ImageMipArraySlice s1 = {
-        .image_aspect = daxa::ImageAspectFlagBits::COLOR,
         .base_mip_level = 5,
         .level_count = 2,
         .base_array_layer = 3,
@@ -232,10 +228,10 @@ struct App : AppWindow<App>
         ui_update();
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.has_value())
-        {
-            std::cout << reloaded_result.value().to_string() << std::endl;
-        }
+        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            std::cout << "Failed to reload " << reload_err->message << '\n';
+        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();
 

@@ -45,8 +45,7 @@ namespace daxa
         return b_mip_p0 >= a_mip_p0 &&
                b_mip_p1 <= a_mip_p1 &&
                b_arr_p0 >= a_arr_p0 &&
-               b_arr_p1 <= a_arr_p1 &&
-               this->image_aspect == slice.image_aspect;
+               b_arr_p1 <= a_arr_p1;
     }
     auto ImageMipArraySlice::intersects(ImageMipArraySlice const & slice) const -> bool
     {
@@ -62,9 +61,8 @@ namespace daxa
 
         bool const mip_disjoint = (a_mip_p1 < b_mip_p0) || (b_mip_p1 < a_mip_p0);
         bool const arr_disjoint = (a_arr_p1 < b_arr_p0) || (b_arr_p1 < a_arr_p0);
-        bool const aspect_disjoint = !((this->image_aspect & slice.image_aspect) != ImageAspectFlagBits::NONE);
 
-        return !mip_disjoint && !arr_disjoint && !aspect_disjoint;
+        return !mip_disjoint && !arr_disjoint;
     }
     auto ImageMipArraySlice::intersect(ImageMipArraySlice const & slice) const -> ImageMipArraySlice
     {
@@ -90,7 +88,6 @@ namespace daxa
         u32 const arr_n = (min_arr_p1 + 1 - max_arr_p0) * static_cast<u32>(max_arr_p0 <= min_arr_p1);
 
         return ImageMipArraySlice{
-            .image_aspect = this->image_aspect & slice.image_aspect,
             .base_mip_level = max_mip_p0,
             .level_count = mip_n,
             .base_array_layer = max_arr_p0,
@@ -118,11 +115,6 @@ namespace daxa
             auto & [result_rects, result_n] = result;
             result_n = 1;
             result_rects[0] = *this;
-
-            // TODO(grundlett): [aspect] If we want to do aspect cutting, we can
-            // but we would need to look into it more.
-            // result_rects[0].image_aspect &= ~slice.image_aspect;
-
             return result;
         }
 
@@ -197,9 +189,7 @@ namespace daxa
         };
 
         usize const result_index = mip_case + arr_case * 4;
-        // TODO(grundlett): [aspect] listed above
-        // usize const aspect_mask = ((this->image_aspect & ~slice.image_aspect) != 0);
-        usize const result_rect_n = rect_n.at(result_index); // * aspect_mask
+        usize const result_rect_n = rect_n.at(result_index);
         auto const & bc = bc_indices.at(result_index);
         std::get<1>(result) = result_rect_n;
 
@@ -207,11 +197,7 @@ namespace daxa
         {
             auto & rect_i = std::get<0>(result)[i];
             auto const & bc_i = bc.at(i);
-
             rect_i = *this;
-            // TODO(grundlett): [aspect] listed above
-            // rect_i.image_aspect &= ~slice.image_aspect;
-
             rect_i.base_mip_level = mip_bc.at(bc_i.mip_i).base;
             rect_i.level_count = mip_bc.at(bc_i.mip_i).count;
             rect_i.base_array_layer = arr_bc.at(bc_i.arr_i).base;
@@ -226,7 +212,6 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(mip_level >= mip_array_slice.base_mip_level && mip_level < (mip_array_slice.base_mip_level + mip_array_slice.level_count), "slices mip level must be contained in initial slice");
 
         return ImageArraySlice{
-            .image_aspect = mip_array_slice.image_aspect,
             .mip_level = mip_level,
             .base_array_layer = mip_array_slice.base_array_layer,
             .layer_count = mip_array_slice.layer_count,
@@ -238,8 +223,7 @@ namespace daxa
         return this->mip_level >= slice.base_mip_level &&
                this->mip_level < (slice.base_mip_level + slice.level_count) &&
                this->base_array_layer >= slice.base_array_layer &&
-               (this->base_array_layer + this->layer_count) <= (slice.base_array_layer + slice.layer_count) &&
-               this->image_aspect == slice.image_aspect;
+               (this->base_array_layer + this->layer_count) <= (slice.base_array_layer + slice.layer_count);
     }
 
     auto slice(ImageArraySlice const & mip_array_slice, u32 array_layer) -> ImageSlice
@@ -247,7 +231,6 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(array_layer >= mip_array_slice.base_array_layer && array_layer < (mip_array_slice.base_array_layer + mip_array_slice.layer_count), "slices array layer must be contained in initial slice");
 
         return ImageSlice{
-            .image_aspect = mip_array_slice.image_aspect,
             .mip_level = mip_array_slice.mip_level,
             .array_layer = array_layer,
         };
@@ -258,16 +241,14 @@ namespace daxa
         return this->mip_level >= slice.base_mip_level &&
                this->mip_level < (slice.base_mip_level + slice.level_count) &&
                this->array_layer >= slice.base_array_layer &&
-               array_layer < (slice.base_array_layer + slice.layer_count) &&
-               this->image_aspect == slice.image_aspect;
+               array_layer < (slice.base_array_layer + slice.layer_count);
     }
 
     auto ImageSlice::contained_in(ImageArraySlice const & slice) const -> bool
     {
         return this->mip_level == slice.mip_level &&
                this->array_layer >= slice.base_array_layer &&
-               array_layer < (slice.base_array_layer + slice.layer_count) &&
-               this->image_aspect == slice.image_aspect;
+               array_layer < (slice.base_array_layer + slice.layer_count);
     }
 
     void ManagedPtr::cleanup()
@@ -423,21 +404,21 @@ namespace daxa
             }
             ret += "TRANSFER_DST";
         }
-        if ((flags & ImageUsageFlagBits::SHADER_READ_ONLY) != ImageUsageFlagBits::NONE)
+        if ((flags & ImageUsageFlagBits::SHADER_SAMPLED) != ImageUsageFlagBits::NONE)
         {
             if (!ret.empty())
             {
                 ret += " | ";
             }
-            ret += "SHADER_READ_ONLY";
+            ret += "SHADER_SAMPLED";
         }
-        if ((flags & ImageUsageFlagBits::SHADER_READ_WRITE) != ImageUsageFlagBits::NONE)
+        if ((flags & ImageUsageFlagBits::SHADER_STORAGE) != ImageUsageFlagBits::NONE)
         {
             if (!ret.empty())
             {
                 ret += " | ";
             }
-            ret += "SHADER_READ_WRITE";
+            ret += "SHADER_STORAGE";
         }
         if ((flags & ImageUsageFlagBits::COLOR_ATTACHMENT) != ImageUsageFlagBits::NONE)
         {
@@ -733,91 +714,22 @@ namespace daxa
         case Format::PVRTC1_4BPP_SRGB_BLOCK_IMG: return "PVRTC1_4BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_2BPP_SRGB_BLOCK_IMG: return "PVRTC2_2BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_4BPP_SRGB_BLOCK_IMG: return "PVRTC2_4BPP_SRGB_BLOCK_IMG";
+        default: return "unknown";
         }
-    }
-
-    auto to_string(ImageAspectFlags aspect_flags) -> std::string
-    {
-        if (aspect_flags == ImageAspectFlagBits::NONE)
-        {
-            return "NONE ";
-        }
-
-        std::string ret = {};
-
-        if ((aspect_flags & ImageAspectFlagBits::COLOR) != ImageAspectFlagBits::NONE)
-        {
-            // if (ret.size() != 0)
-            // {
-            //     ret += " | ";
-            // }
-            ret += "COLOR";
-        }
-        if ((aspect_flags & ImageAspectFlagBits::DEPTH) != ImageAspectFlagBits::NONE)
-        {
-            if (!ret.empty())
-            {
-                ret += " | ";
-            }
-            ret += "DEPTH";
-        }
-        if ((aspect_flags & ImageAspectFlagBits::STENCIL) != ImageAspectFlagBits::NONE)
-        {
-            if (!ret.empty())
-            {
-                ret += " | ";
-            }
-            ret += "STENCIL";
-        }
-        if ((aspect_flags & ImageAspectFlagBits::METADATA) != ImageAspectFlagBits::NONE)
-        {
-            if (!ret.empty())
-            {
-                ret += " | ";
-            }
-            ret += "METADATA";
-        }
-        if ((aspect_flags & ImageAspectFlagBits::PLANE_0) != ImageAspectFlagBits::NONE)
-        {
-            if (!ret.empty())
-            {
-                ret += " | ";
-            }
-            ret += "PLANE_0";
-        }
-        if ((aspect_flags & ImageAspectFlagBits::PLANE_1) != ImageAspectFlagBits::NONE)
-        {
-            if (!ret.empty())
-            {
-                ret += " | ";
-            }
-            ret += "PLANE_1";
-        }
-        if ((aspect_flags & ImageAspectFlagBits::PLANE_2) != ImageAspectFlagBits::NONE)
-        {
-            if (!ret.empty())
-            {
-                ret += " | ";
-            }
-            ret += "PLANE_2";
-        }
-        return ret;
     }
 
     auto to_string(ImageMipArraySlice slice) -> std::string
     {
-        return fmt::format("aspect: {}, mips: {}-{}, layers: {}-{}",
-                           to_string(slice.image_aspect),
-                           static_cast<u32>(slice.base_mip_level),
-                           static_cast<u32>(slice.base_mip_level + slice.level_count - 1),
-                           static_cast<u32>(slice.base_array_layer),
-                           static_cast<u32>(slice.base_array_layer + slice.layer_count - 1));
+        return fmt::format("mips: {}-{}, layers: {}-{}",
+                           slice.base_mip_level,
+                           slice.base_mip_level + slice.level_count - 1,
+                           slice.base_array_layer,
+                           slice.base_array_layer + slice.layer_count - 1);
     }
 
     auto to_string(ImageArraySlice slice) -> std::string
     {
-        return fmt::format("aspect: {}, mip: {}, layers: {}-{}",
-                           to_string(slice.image_aspect),
+        return fmt::format("mip: {}, layers: {}-{}",
                            slice.mip_level,
                            slice.base_array_layer,
                            slice.base_array_layer + slice.layer_count - 1);
@@ -825,8 +737,7 @@ namespace daxa
 
     auto to_string(ImageSlice slice) -> std::string
     {
-        return fmt::format("aspect: {}, mip: {}, layer: {}",
-                           to_string(slice.image_aspect),
+        return fmt::format(" mip: {}, layer: {}",
                            slice.mip_level,
                            slice.array_layer);
     }
@@ -859,6 +770,22 @@ namespace daxa
                 ret += " | ";
             }
             ret += "VERTEX_SHADER";
+        }
+        if ((flags & PipelineStageFlagBits::TASK_SHADER) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "TASK_SHADER";
+        }
+        if ((flags & PipelineStageFlagBits::MESH_SHADER) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "MESH_SHADER";
         }
         if ((flags & PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER) != PipelineStageFlagBits::NONE)
         {
@@ -1018,5 +945,63 @@ namespace daxa
     auto to_string(Access access) -> std::string
     {
         return fmt::format("stages: {}, type: {}", to_string(access.stages), to_string(access.type));
+    }
+
+    auto is_depth_format(Format format) -> bool
+    {
+        switch (format)
+        {
+        case Format::D16_UNORM: return true;
+        case Format::X8_D24_UNORM_PACK32: return true;
+        case Format::D32_SFLOAT: return true;
+        case Format::S8_UINT: return true;
+        case Format::D16_UNORM_S8_UINT: return true;
+        case Format::D24_UNORM_S8_UINT: return true;
+        case Format::D32_SFLOAT_S8_UINT: return true;
+        default: return false;
+        }
+    }
+
+    auto is_stencil_format(Format format) -> bool
+    {
+        switch (format)
+        {
+        case Format::S8_UINT: return true;
+        case Format::D16_UNORM_S8_UINT: return true;
+        case Format::D24_UNORM_S8_UINT: return true;
+        case Format::D32_SFLOAT_S8_UINT: return true;
+        default: return false;
+        }
+    }
+
+    auto infer_aspect_from_format(Format format) -> VkImageAspectFlags
+    {
+        if (is_depth_format(format) || is_stencil_format(format))
+        {
+            return (is_depth_format(format) ? VK_IMAGE_ASPECT_DEPTH_BIT : 0) | (is_stencil_format(format) ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+        }
+        return VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+
+    auto make_subressource_range(ImageMipArraySlice const& slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
+    {
+        return VkImageSubresourceRange
+        {
+            .aspectMask = aspect,
+            .baseMipLevel = slice.base_mip_level,
+            .levelCount = slice.level_count,
+            .baseArrayLayer = slice.base_array_layer,
+            .layerCount = slice.layer_count,
+        };
+    }
+
+    auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers
+    {
+        return VkImageSubresourceLayers{
+            .aspectMask = aspect,
+            .mipLevel = slice.mip_level,
+            .baseArrayLayer = slice.base_array_layer,
+            .layerCount = slice.layer_count,
+        };
     }
 } // namespace daxa

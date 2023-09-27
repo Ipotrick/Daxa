@@ -37,21 +37,7 @@ namespace daxa
 
         auto const vk_image_type = static_cast<VkImageType>(image_info.dimensions - 1);
 
-        VkImageCreateFlags vk_image_create_flags = {};
-
-        constexpr auto CUBE_FACE_N = 6u;
-        if (image_info.dimensions == 2 && image_info.size.x == image_info.size.y && image_info.array_layer_count % CUBE_FACE_N == 0)
-        {
-            vk_image_create_flags |= VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT;
-        }
-        if (image_info.dimensions == 3)
-        {
-            // TODO(grundlett): Figure out if there are cases where a 3D image CAN'T be used
-            // as a 2D array image view.
-#if !defined(__APPLE__)
-            vk_image_create_flags |= VK_IMAGE_CREATE_2D_ARRAY_COMPATIBLE_BIT;
-#endif
-        }
+        VkImageCreateFlags vk_image_create_flags = static_cast<VkImageCreateFlags>(image_info.flags.data);
 
         VkImageCreateInfo const vk_image_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -134,6 +120,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS,
             .pNext = {},
             .pCreateInfo = &vk_image_create_info,
+            .planeAspect = static_cast<VkImageAspectFlagBits>(infer_aspect_from_format(info.format)),
         };
         VkMemoryRequirements2 mem_requirements{
             .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
@@ -155,6 +142,12 @@ namespace daxa
     {
         auto const & impl = *as<ImplDevice>();
         return impl.vk_info;
+    }
+
+    auto Device::mesh_shader_properties() const -> MeshShaderDeviceProperties const &
+    {
+        auto const & impl = *as<ImplDevice>();
+        return impl.mesh_shader_properties;
     }
 
     void Device::wait_idle()
@@ -468,9 +461,13 @@ namespace daxa
           info{std::move(a_info)},
           main_queue_family_index(std::numeric_limits<u32>::max())
     {
-        VkPhysicalDeviceProperties vk_device_properties;
-        vkGetPhysicalDeviceProperties(vk_physical_device, &vk_device_properties);
-        vk_info = *reinterpret_cast<DeviceProperties *>(&vk_device_properties);
+        VkPhysicalDeviceProperties2 vk_physical_device_properties2 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+            .pNext = {},
+            .properties = {},
+        };
+        vkGetPhysicalDeviceProperties2(vk_physical_device, &vk_physical_device_properties2);
+        vk_info = *reinterpret_cast<DeviceProperties *>(&vk_physical_device_properties2.properties);
 
         // SELECT QUEUE
 
@@ -520,7 +517,7 @@ namespace daxa
             .logicOp = VK_FALSE,
             .multiDrawIndirect = VK_TRUE, // Very useful for gpu driven rendering
             .drawIndirectFirstInstance = VK_FALSE,
-            .depthClamp = VK_FALSE,
+            .depthClamp = VK_TRUE, // NOTE(msakmary) need this for bikeshed if breaks ping me
             .depthBiasClamp = VK_FALSE,
             .fillModeNonSolid = VK_TRUE,
             .depthBounds = VK_FALSE,
@@ -568,8 +565,17 @@ namespace daxa
 
         void * REQUIRED_DEVICE_FEATURE_P_CHAIN = nullptr;
 
-        VkPhysicalDeviceBufferDeviceAddressFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS
-        {
+        VkPhysicalDeviceVulkanMemoryModelFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_VULKAN_MEMORY_MODEL{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            // TODO: NOT SUPPORTED ON MACOS??
+            // .vulkanMemoryModel = VK_TRUE,
+            // .vulkanMemoryModelDeviceScope = VK_TRUE,
+            // .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low support.
+        };
+        REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_VULKAN_MEMORY_MODEL);
+
+        VkPhysicalDeviceBufferDeviceAddressFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_BUFFER_DEVICE_ADDRESS{
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .bufferDeviceAddress = VK_TRUE,
@@ -677,6 +683,7 @@ namespace daxa
             .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
             .synchronization2 = VK_TRUE,
         };
+        
         REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_SYNCHRONIZATION_2);
 
         VkPhysicalDeviceScalarBlockLayoutFeatures REQUIRED_PHYSICAL_DEVICE_FEATURES_SCALAR_LAYOUT{
@@ -689,10 +696,6 @@ namespace daxa
         std::vector<char const *> extension_names;
         std::vector<char const *> enabled_layers;
 
-        if (impl_ctx.as<ImplContext>()->info.enable_validation)
-        {
-            enabled_layers.push_back("VK_LAYER_KHRONOS_validation");
-        }
         extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         extension_names.push_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
         extension_names.push_back(VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME);
@@ -701,6 +704,22 @@ namespace daxa
         if (this->info.enable_conservative_rasterization)
         {
             extension_names.push_back(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME);
+        }
+
+        // Mesh shading
+        VkPhysicalDeviceMeshShaderFeaturesEXT REQUIRED_PHYSICAL_DEVICE_FEATURES_MESH_SHADER{
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
+            .pNext = REQUIRED_DEVICE_FEATURE_P_CHAIN,
+            .taskShader = VK_TRUE,
+            .meshShader = VK_TRUE,
+            .multiviewMeshShader = VK_FALSE,
+            .primitiveFragmentShadingRateMeshShader = VK_FALSE,
+            .meshShaderQueries = VK_FALSE,
+        };
+        if (this->info.enable_mesh_shader)
+        {
+            extension_names.push_back(VK_EXT_MESH_SHADER_EXTENSION_NAME);
+            REQUIRED_DEVICE_FEATURE_P_CHAIN = reinterpret_cast<void *>(&REQUIRED_PHYSICAL_DEVICE_FEATURES_MESH_SHADER);
         }
 
         if (this->info.enable_shader_atomic_int64)
@@ -734,10 +753,30 @@ namespace daxa
         };
         vkCreateDevice(a_physical_device, &device_ci, nullptr, &this->vk_device);
 
-        this->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(this->vk_device, "vkSetDebugUtilsObjectNameEXT"));
-        this->vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
-        this->vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
+        if (this->impl_ctx.as<ImplInstance>()->info.enable_debug_utils)
+        {
+            this->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(this->vk_device, "vkSetDebugUtilsObjectNameEXT"));
+            this->vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
+            this->vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
+        }
         this->vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(this->vk_device, "vkCmdPushDescriptorSetKHR"));
+
+        if (this->info.enable_mesh_shader)
+        {
+            this->vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdDrawMeshTasksEXT"));
+            this->vkCmdDrawMeshTasksIndirectEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
+            this->vkCmdDrawMeshTasksIndirectCountEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(this->vk_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
+            auto pnext_ptr = vk_physical_device_properties2.pNext;
+            while (pnext_ptr != 0)
+            {
+                if (*reinterpret_cast<VkStructureType *>(pnext_ptr) == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT)
+                {
+                    VkPhysicalDeviceMeshShaderPropertiesEXT * prop_ptr = reinterpret_cast<VkPhysicalDeviceMeshShaderPropertiesEXT *>(pnext_ptr);
+                    this->mesh_shader_properties = *reinterpret_cast<MeshShaderDeviceProperties *>(reinterpret_cast<u64 *>(prop_ptr) + 2 /* skip sType and pNext ptrs*/);
+                }
+                pnext_ptr = reinterpret_cast<void *>(reinterpret_cast<u64 *>(pnext_ptr)[1]);
+            }
+        }
 
         vkGetDeviceQueue(this->vk_device, this->main_queue_family_index, 0, &this->main_queue_vk_queue);
 
@@ -855,7 +894,7 @@ namespace daxa
             .pDeviceMemoryCallbacks = nullptr,
             .pHeapSizeLimit = nullptr,
             .pVulkanFunctions = &vma_vulkan_functions,
-            .instance = this->impl_ctx.as<ImplContext>()->vk_instance,
+            .instance = this->impl_ctx.as<ImplInstance>()->vk_instance,
             .vulkanApiVersion = VK_API_VERSION_1_3,
             .pTypeExternalMemoryHandleTypes = {},
         };
@@ -869,7 +908,7 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = {},
-                .size = static_cast<VkDeviceSize>(sizeof(u8) * 4),
+                .size = sizeof(u8) * 4,
                 .usage = BUFFER_USE_FLAGS,
                 .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
                 .queueFamilyIndexCount = 1,
@@ -904,12 +943,11 @@ namespace daxa
             auto image_info = ImageInfo{
                 .dimensions = 2,
                 .format = Format::R8G8B8A8_UNORM,
-                .aspect = ImageAspectFlagBits::COLOR,
                 .size = {1, 1, 1},
                 .mip_level_count = 1,
                 .array_layer_count = 1,
                 .sample_count = 1,
-                .usage = ImageUsageFlagBits::SHADER_READ_ONLY | ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::TRANSFER_DST,
+                .usage = ImageUsageFlagBits::SHADER_SAMPLED | ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::TRANSFER_DST,
                 .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
             };
             VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(image_info, &this->main_queue_family_index);
@@ -942,7 +980,7 @@ namespace daxa
                     .a = VK_COMPONENT_SWIZZLE_IDENTITY,
                 },
                 .subresourceRange = {
-                    .aspectMask = static_cast<VkImageAspectFlags>(image_info.aspect.data),
+                    .aspectMask = VK_IMAGE_ASPECT_COLOR_BIT,
                     .baseMipLevel = 0,
                     .levelCount = image_info.mip_level_count,
                     .baseArrayLayer = 0,
@@ -1052,7 +1090,7 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create buffer");
         }
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !this->info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->info.name.empty())
         {
             auto const device_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const device_name_info{
@@ -1226,7 +1264,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
-            .size = static_cast<VkDeviceSize>(buffer_info.size) + 4 /* Workaround for gpuav bugs related to bda oob access. */, // TODO: Remove this 'workaround'. It's fixed in the newest SDK
+            .size = static_cast<VkDeviceSize>(buffer_info.size),
             .usage = BUFFER_USE_FLAGS,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
@@ -1290,7 +1328,7 @@ namespace daxa
 
         this->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !buffer_info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !buffer_info.name.empty())
         {
             auto const buffer_name = buffer_info.name;
             VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
@@ -1314,7 +1352,6 @@ namespace daxa
         {
             auto & image_info = this->slot(id).info;
             return ImageMipArraySlice{
-                .image_aspect = image_info.aspect,
                 .base_mip_level = 0,
                 .level_count = image_info.mip_level_count,
                 .base_array_layer = 0,
@@ -1350,7 +1387,6 @@ namespace daxa
             .format = image_info.format,
             .image = {id},
             .slice = ImageMipArraySlice{
-                .image_aspect = image_info.aspect,
                 .base_mip_level = 0,
                 .level_count = image_info.mip_level_count,
                 .base_array_layer = 0,
@@ -1358,6 +1394,7 @@ namespace daxa
             },
             .name = image_info.name,
         };
+        ret.aspect_flags = infer_aspect_from_format(image_info.format);
 
         VkImageViewCreateInfo const view_ci{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1384,7 +1421,7 @@ namespace daxa
         ret.info = image_info;
         vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !image_info.name.empty())
         {
             auto swapchain_image_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
@@ -1417,9 +1454,7 @@ namespace daxa
     auto ImplDevice::new_image(ImageInfo const & image_info) -> ImageId
     {
         auto [id, image_slot_variant] = gpu_shader_resource_table.image_slots.new_slot();
-
         DAXA_DBG_ASSERT_TRUE_M(image_info.dimensions >= 1 && image_info.dimensions <= 3, "image dimensions must be a value between 1 to 3(inclusive)");
-
         ImplImageSlot ret = {};
         ret.zombie = false;
         ret.info = image_info;
@@ -1428,7 +1463,6 @@ namespace daxa
             .format = image_info.format,
             .image = {id},
             .slice = ImageMipArraySlice{
-                .image_aspect = image_info.aspect,
                 .base_mip_level = 0,
                 .level_count = image_info.mip_level_count,
                 .base_array_layer = 0,
@@ -1436,17 +1470,8 @@ namespace daxa
             },
             .name = image_info.name,
         };
-
-        DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
-        DAXA_DBG_ASSERT_TRUE_M(
-            image_info.size.x > 0 &&
-                image_info.size.y > 0 &&
-                image_info.size.z > 0,
-            "image (x,y,z) dimensions must be greater then 0");
-        DAXA_DBG_ASSERT_TRUE_M(image_info.array_layer_count > 0, "image array layer count must be greater then 0");
-        DAXA_DBG_ASSERT_TRUE_M(image_info.mip_level_count > 0, "image mip level count must be greater then 0");
+        ret.aspect_flags = infer_aspect_from_format(image_info.format);
         VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(image_info, &this->main_queue_family_index);
-
         if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&image_info.allocate_info))
         {
             VmaAllocationCreateInfo const vma_allocation_create_info{
@@ -1503,7 +1528,7 @@ namespace daxa
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
             .subresourceRange = {
-                .aspectMask = static_cast<VkImageAspectFlags>(image_info.aspect.data),
+                .aspectMask = ret.aspect_flags,
                 .baseMipLevel = 0,
                 .levelCount = image_info.mip_level_count,
                 .baseArrayLayer = 0,
@@ -1514,7 +1539,7 @@ namespace daxa
         [[maybe_unused]] VkResult const vk_create_image_view_result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_image_view_result == VK_SUCCESS, "failed to create image view");
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !info.name.empty())
         {
             auto image_name = image_info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
@@ -1547,17 +1572,12 @@ namespace daxa
     auto ImplDevice::new_image_view(ImageViewInfo const & image_view_info) -> ImageViewId
     {
         auto [id, image_slot] = gpu_shader_resource_table.image_slots.new_slot();
-
         image_slot = {};
-
         ImplImageSlot const & parent_image_slot = slot(image_view_info.image);
-
         ImplImageViewSlot ret = {};
         ret.info = image_view_info;
-
         ImageMipArraySlice slice = this->validate_image_slice(image_view_info.slice, image_view_info.image);
         ret.info.slice = slice;
-
         VkImageViewCreateInfo const vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
             .pNext = nullptr,
@@ -1571,13 +1591,11 @@ namespace daxa
                 .b = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .a = VK_COMPONENT_SWIZZLE_IDENTITY,
             },
-            .subresourceRange = *reinterpret_cast<VkImageSubresourceRange const *>(&slice),
+            .subresourceRange = make_subressource_range(slice, parent_image_slot.aspect_flags),
         };
-
         [[maybe_unused]] VkResult const result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");
-
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !image_view_info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !image_view_info.name.empty())
         {
             auto image_view_name = image_view_info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
@@ -1589,11 +1607,8 @@ namespace daxa
             };
             this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &name_info);
         }
-
         write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
-
         image_slot.view_slot = ret;
-
         return ImageViewId{id};
     }
 
@@ -1636,7 +1651,7 @@ namespace daxa
         [[maybe_unused]] VkResult const result = vkCreateSampler(this->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
         DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create sampler");
 
-        if (this->impl_ctx.as<ImplContext>()->enable_debug_names && !info.name.empty())
+        if (this->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !info.name.empty())
         {
             auto sampler_name = info.name;
             VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
@@ -1695,7 +1710,7 @@ namespace daxa
     {
         DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(id).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
         ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(id).view_slot;
-        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_READ_WRITE | ImageUsageFlagBits::SHADER_READ_ONLY, id.index);
+        write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, id.index);
         vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
         image_slot = {};
         gpu_shader_resource_table.image_slots.return_slot(id);

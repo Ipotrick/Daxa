@@ -14,13 +14,14 @@
             "generator": "Ninja Multi-Config",
             "cacheVariables": {
                 "CMAKE_MODULE_PATH": "${sourceDir}/cmake/modules",
+                "DAXA_USE_VCPKG": true,
                 "DAXA_ENABLE_UTILS_FSR2": false,
                 "DAXA_ENABLE_UTILS_IMGUI": true,
                 "DAXA_ENABLE_UTILS_MEM": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC": false,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION": true,
-                "DAXA_ENABLE_UTILS_TASK_LIST": true,
+                "DAXA_ENABLE_UTILS_TASK_GRAPH": true,
                 "DAXA_ENABLE_TESTS": true,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false
             }
@@ -70,9 +71,7 @@
             "inherits": [
                 "defaults-windows"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/clang-x86_64-windows-msvc.cmake"
         },
         {
             "name": "cl-x86_64-windows-msvc",
@@ -80,9 +79,7 @@
             "inherits": [
                 "defaults-windows"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/cl-x86_64-windows-msvc.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/cl-x86_64-windows-msvc.cmake"
         },
         {
             "name": "gcc-x86_64-linux-gnu",
@@ -90,9 +87,7 @@
             "inherits": [
                 "defaults-linux"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/gcc-x86_64-linux-gnu.cmake"
         },
         {
             "name": "clang-x86_64-linux-gnu",
@@ -100,9 +95,7 @@
             "inherits": [
                 "defaults-linux"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-x86_64-linux-gnu.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/clang-x86_64-linux-gnu.cmake"
         },
         {
             "name": "clang-aarch64-macos-gnu",
@@ -110,9 +103,7 @@
             "inherits": [
                 "defaults-macos"
             ],
-            "cacheVariables": {
-                "VCPKG_CHAINLOAD_TOOLCHAIN_FILE": "${sourceDir}/cmake/toolchains/clang-aarch64-macos-gnu.cmake"
-            }
+            "toolchainFile": "${sourceDir}/cmake/toolchains/clang-aarch64-macos-gnu.cmake"
         }
     ],
     "buildPresets": [

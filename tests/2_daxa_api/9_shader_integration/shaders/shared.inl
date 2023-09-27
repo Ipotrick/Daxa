@@ -1,5 +1,5 @@
 #include <daxa/daxa.inl>
-#include <daxa/utils/task_list.inl>
+#include <daxa/utils/task_graph.inl>
 
 struct TestU64Alignment
 {
@@ -34,7 +34,8 @@ DAXA_DECL_BUFFER_PTR(SomeStruct)
 struct RWHandles
 {
     daxa_RWBufferPtr(SomeStruct) my_buffer;
-    daxa_ImageViewId my_image;
+    daxa_ImageViewId my_float_image;
+    daxa_ImageViewId my_uint_image;
     daxa_SamplerId my_sampler;
 };
 DAXA_DECL_BUFFER_PTR(RWHandles)

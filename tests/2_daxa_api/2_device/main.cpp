@@ -5,11 +5,11 @@ namespace tests
 {
     using namespace daxa::types;
 
-    void simplest(daxa::Context & daxa_ctx)
+    void simplest(daxa::Instance & daxa_ctx)
     {
         auto device = daxa_ctx.create_device({});
     }
-    void device_selection(daxa::Context & daxa_ctx)
+    void device_selection(daxa::Instance & daxa_ctx)
     {
         // To select a device, you look at its properties and return a score.
         // Daxa will choose the device you scored as the highest.
@@ -38,9 +38,7 @@ namespace tests
 
 auto main() -> int
 {
-    auto daxa_ctx = daxa::create_context({
-        .enable_validation = true,
-    });
+    auto daxa_ctx = daxa::create_instance({});
 
     tests::simplest(daxa_ctx);
     tests::device_selection(daxa_ctx);

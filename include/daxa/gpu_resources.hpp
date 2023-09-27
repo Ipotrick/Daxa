@@ -49,7 +49,7 @@ namespace daxa
         {
         };
 
-        template<ImageViewType VIEW_TYPE>
+        template <ImageViewType VIEW_TYPE>
         struct TypedImageViewId : public ImageViewId
         {
             static constexpr inline auto view_type() -> ImageViewType { return VIEW_TYPE; }
@@ -74,11 +74,25 @@ namespace daxa
         std::string name = {};
     };
 
+    struct ImageCreateFlagsProperties
+    {
+        using Data = u32;
+    };
+    using ImageCreateFlags = Flags<ImageCreateFlagsProperties>;
+    struct ImageCreateFlagBits
+    {
+        static inline constexpr ImageCreateFlags NONE = {0x00000000};
+        static inline constexpr ImageCreateFlags ALLOW_MUTABLE_FORMAT = {0x00000008};
+        static inline constexpr ImageCreateFlags COMPATIBLE_CUBE = {0x00000010};
+        static inline constexpr ImageCreateFlags COMPATIBLE_2D_ARRAY = {0x00000020};
+        static inline constexpr ImageCreateFlags ALLOW_ALIAS = {0x00000400};
+    };
+
     struct ImageInfo
     {
+        ImageCreateFlags flags = ImageCreateFlagBits::NONE;
         u32 dimensions = 2;
         Format format = Format::R8G8B8A8_UNORM;
-        ImageAspectFlags aspect = ImageAspectFlagBits::COLOR;
         Extent3D size = {0, 0, 0};
         u32 mip_level_count = 1;
         u32 array_layer_count = 1;
@@ -112,7 +126,7 @@ namespace daxa
         bool enable_compare = false;
         CompareOp compare_op = CompareOp::ALWAYS;
         f32 min_lod = 0.0f;
-        f32 max_lod = 1.0f;
+        f32 max_lod = 1000.0f; // This value is the "VK_LOD_CLAMP_MODE_NONE" value
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
         std::string name = {};

@@ -4,7 +4,7 @@
 #include <daxa/device.hpp>
 
 #include "impl_core.hpp"
-#include "impl_context.hpp"
+#include "impl_instance.hpp"
 
 #include "impl_pipeline.hpp"
 #include "impl_command_list.hpp"
@@ -27,6 +27,12 @@ namespace daxa
         PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
         PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
         PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
+
+        // Mesh shader:
+        PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT = {};
+        PFN_vkCmdDrawMeshTasksIndirectEXT vkCmdDrawMeshTasksIndirectEXT = {};
+        PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT = {};
+        MeshShaderDeviceProperties mesh_shader_properties = {};
 
         VmaAllocator vma_allocator = {};
         DeviceProperties vk_info = {};

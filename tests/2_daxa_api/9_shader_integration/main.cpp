@@ -2,7 +2,7 @@
 
 #include <daxa/daxa.hpp>
 #include <daxa/utils/pipeline_manager.hpp>
-#include <daxa/utils/task_list.hpp>
+#include <daxa/utils/task_graph.hpp>
 
 #include <0_common/window.hpp>
 
@@ -63,9 +63,7 @@ namespace tests
         //  1) Create resources
         //  2) Use Compute dispatch read and write
         //  4) readback and validate
-        daxa::Context daxa_ctx = daxa::create_context({
-            .enable_validation = false,
-        });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({
             .name = "device",
         });
@@ -114,7 +112,7 @@ namespace tests
         });
         auto compute_pipeline = compile_result.value();
 
-        auto task_list = daxa::TaskList({
+        auto task_graph = daxa::TaskGraph({
             .device = device,
             .record_debug_information = true,
             .name = "shader integration test - alignment",
@@ -124,19 +122,19 @@ namespace tests
             .initial_buffers = {.buffers = {&src_buffer, 1}},
             .name = "align_test_src",
         }};
-        task_list.use_persistent_buffer(src);
+        task_graph.use_persistent_buffer(src);
         auto dst = daxa::TaskBuffer{{
             .initial_buffers = {.buffers = {&dst_buffer, 1}},
             .name = "align_test_dst",
         }};
-        task_list.use_persistent_buffer(dst);
+        task_graph.use_persistent_buffer(dst);
         TestShaderUses::Uses uses
         {
             .align_test_src = { src },
             .align_test_dst = { dst },
         };
-        task_list.add_task({
-            .uses = daxa::to_generic_uses(uses),
+        task_graph.add_task({
+            .uses = daxa::detail::to_generic_uses(uses),
             .task = [&](daxa::TaskInterface const & ti)
             {
                 auto cmd = ti.get_command_list();
@@ -147,10 +145,10 @@ namespace tests
             .constant_buffer_slot = TestShaderUses::CONSANT_BUFFER_SLOT,
             .name = "test alignment",
         });
-        task_list.submit({});
-        task_list.complete({});
+        task_graph.submit({});
+        task_graph.complete({});
 
-        task_list.execute({});
+        task_graph.execute({});
 
         device.wait_idle();
 
@@ -174,9 +172,7 @@ namespace tests
         //  3) perform showcase of bindless handle use in the shader.
         //  4) write handles to buffer.
         //  5) read and use handles in following compute shader.
-        daxa::Context daxa_ctx = daxa::create_context({
-            .enable_validation = false,
-        });
+        daxa::Instance daxa_ctx = daxa::create_instance({});
         daxa::Device device = daxa_ctx.create_device({
             .name = "device",
         });
@@ -216,33 +212,39 @@ namespace tests
         });
         auto bindless_access_followup = compile_result1.value();
 
-        auto task_list = daxa::TaskList({
+        auto task_graph = daxa::TaskGraph({
             .device = device,
             .record_debug_information = true,
             .name = "shader integration test - alignment",
         });
 
-        auto handles_buffer = task_list.create_transient_buffer({
+        auto handles_buffer = task_graph.create_transient_buffer({
             .size = sizeof(Handles),
             .name = "handles buffer",
         });
-        auto f32_image = task_list.create_transient_image({
+        auto f32_image = task_graph.create_transient_image({
             .format = daxa::Format::R32_SFLOAT,
             .size = {1, 1, 1},
             .name = "f32 image",
         });
-        auto f32_buffer = task_list.create_transient_buffer({
+        auto u32_image = task_graph.create_transient_image({
+            .format = daxa::Format::R32_UINT,
+            .size = {1, 1, 1},
+            .name = "u32 image",
+        });
+        auto f32_buffer = task_graph.create_transient_buffer({
             .size = sizeof(f32),
             .name = "f32 buffer",
         });
 
         using namespace daxa::task_resource_uses;
 
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {
                 BufferComputeShaderWrite{handles_buffer},
                 BufferComputeShaderWrite{f32_buffer},
-                ImageComputeShaderWrite<>{f32_image},
+                ImageComputeShaderStorageWriteOnly<>{f32_image},
+                ImageComputeShaderStorageReadWrite<>{u32_image},
             },
             .task = [&](daxa::TaskInterface ti)
             {
@@ -251,7 +253,8 @@ namespace tests
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
                         .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()),
-                        .my_image = {ti.uses[f32_image].image()},
+                        .my_float_image = {ti.uses[f32_image].image()},
+                        .my_uint_image = {ti.uses[u32_image].image()},
                         .my_sampler = sampler,
                     },
                     .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),
@@ -260,11 +263,11 @@ namespace tests
             },
             .name = "bindless access",
         });
-        task_list.add_task({
+        task_graph.add_task({
             .uses = {
                 BufferComputeShaderRead{handles_buffer},
                 BufferComputeShaderRead{f32_buffer},
-                ImageComputeShaderRead<>{f32_image},
+                ImageComputeShaderSampled<>{f32_image},
             },
             .task = [&](daxa::TaskInterface const & ti)
             {
@@ -277,9 +280,9 @@ namespace tests
             },
             .name = "bindless access",
         });
-        task_list.submit({});
-        task_list.complete({});
-        task_list.execute({});
+        task_graph.submit({});
+        task_graph.complete({});
+        task_graph.execute({});
         device.destroy_sampler(sampler);
     }
 } // namespace tests

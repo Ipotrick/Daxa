@@ -81,7 +81,7 @@ namespace daxa
         vkCreateEvent(impl_device->vk_device, &vk_event_create_info, nullptr, &event);
         this->data = reinterpret_cast<u64>(event);
 
-        if (impl_device->impl_ctx.as<ImplContext>()->enable_debug_names && !this->create_info.name.empty())
+        if (impl_device->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->create_info.name.empty())
         {
             auto name = this->create_info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{

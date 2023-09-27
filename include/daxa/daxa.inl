@@ -19,20 +19,25 @@
 #define DAXA_SHADER_DEBUG_BUFFER_BINDING 5
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
 #define DAXA_ID_VERSION_SHIFT (24)
+#if defined(__cplusplus)
+#define DAXA_SHADER 0
+#else
+#define DAXA_SHADER 1
+#endif
 
-#if defined(DAXA_SHADER)
+#if DAXA_SHADER
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_HLSL 2
 
 #if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
 #define DAXA_ENABLE_SHADER_NO_NAMESPACE 0
 #else
-#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES)
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES 1
+#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #endif
 #endif
-#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES)
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES 0
+#if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
+#define DAXA_ENABLE_SHADER_NO_NAMESPACE 0
 #endif
 
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
@@ -40,7 +45,7 @@
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
 #include <daxa/daxa.hlsl>
 #endif
-#elif defined(__cplusplus)
+#else
 #include <daxa/daxa.hpp>
 
 #if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
@@ -56,8 +61,6 @@
 #define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
-/// @brief Buffer ptr types map to the buffer device address type in daxa.
-#define daxa_CoherentRWBufferPtr(X) daxa::types::BufferDeviceAddress
 
 #define daxa_b32 daxa::types::b32
 #define daxa_i32 daxa::types::i32
@@ -93,8 +96,22 @@
 #define daxa_ImageViewId daxa::types::ImageViewId
 #define daxa_SamplerId daxa::types::SamplerId
 
-#if DAXA_ENABLE_SHADER_NO_NAMESPACE_PRIMITIVES
+#if DAXA_ENABLE_SHADER_NO_NAMESPACE
 using namespace daxa::types;
 #endif
+
+// for daxa.hlsl
+
+#define DAXA_DEFINE_GET_RWSTRUCTURED_BUFFER(Type)
+#define DAXA_DEFINE_GET_STRUCTURED_BUFFER(Type)
+#define DAXA_DEFINE_GET_BUFFER(Type)
+#define DAXA_DEFINE_GET_TEXTURE1D(Type)
+#define DAXA_DEFINE_GET_TEXTURE2D(Type)
+#define DAXA_DEFINE_GET_TEXTURE3D(Type)
+#define DAXA_DEFINE_GET_TEXTURE1DARRAY(Type)
+#define DAXA_DEFINE_GET_TEXTURE2DARRAY(Type)
+#define DAXA_DEFINE_GET_RWTEXTURE1D(Type)
+#define DAXA_DEFINE_GET_RWTEXTURE2D(Type)
+#define DAXA_DEFINE_GET_RWTEXTURE3D(Type)
 
 #endif

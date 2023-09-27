@@ -7,12 +7,20 @@
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
 
-#include <daxa/utils/task_list.hpp>
+#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+#include <daxa/utils/task_graph.hpp>
+#endif
 
 #include <imgui.h>
 
 namespace daxa
 {
+    struct ImGuiImageContext
+    {
+        ImageViewId image_view_id;
+        SamplerId sampler_id;
+    };
+
     struct ImGuiRendererInfo
     {
         Device device;
@@ -30,7 +38,11 @@ namespace daxa
         ImGuiRenderer(ImGuiRendererInfo const & info);
         ~ImGuiRenderer();
 
+        static auto create_image_context(ImGuiImageContext const & context) -> ImTextureID;
+
         void record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y);
-        void record_task(ImDrawData * draw_data, TaskList & task_list, TaskImageHandle task_swapchain_image, u32 size_x, u32 size_y);
+#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+        void record_task(ImDrawData * draw_data, TaskGraph & task_graph, TaskImageView task_swapchain_image, u32 size_x, u32 size_y);
+#endif
     };
 } // namespace daxa

@@ -46,6 +46,8 @@ namespace daxa
             std::array<T, N> array;
             constexpr T & operator[](usize i) noexcept { return array[i]; }
             constexpr T const & operator[](usize i) const noexcept { return array[i]; }
+            auto operator==(GenericVector<T,N> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,N> const & other) const -> bool = default;
         };
 
         template <typename T>
@@ -68,6 +70,8 @@ namespace daxa
                 default: return x;
                 }
             }
+            auto operator==(GenericVector<T,2> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,2> const & other) const -> bool = default;
         };
         template <typename T>
         struct GenericVector<T, 3>
@@ -91,6 +95,8 @@ namespace daxa
                 default: return x;
                 }
             }
+            auto operator==(GenericVector<T,3> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,3> const & other) const -> bool = default;
         };
         template <typename T>
         struct GenericVector<T, 4>
@@ -116,6 +122,8 @@ namespace daxa
                 default: return x;
                 }
             }
+            auto operator==(GenericVector<T,4> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T,4> const & other) const -> bool = default;
         };
 
         template <typename T, usize M, usize N>
@@ -519,14 +527,13 @@ namespace daxa
         static inline constexpr ImageUsageFlags NONE = {0x00000000};
         static inline constexpr ImageUsageFlags TRANSFER_SRC = {0x00000001};
         static inline constexpr ImageUsageFlags TRANSFER_DST = {0x00000002};
-        static inline constexpr ImageUsageFlags SHADER_READ_ONLY = {0x00000004};
-        static inline constexpr ImageUsageFlags SHADER_READ_WRITE = {0x00000008};
+        static inline constexpr ImageUsageFlags SHADER_SAMPLED = {0x00000004};
+        static inline constexpr ImageUsageFlags SHADER_STORAGE = {0x00000008};
         static inline constexpr ImageUsageFlags COLOR_ATTACHMENT = {0x00000010};
         static inline constexpr ImageUsageFlags DEPTH_STENCIL_ATTACHMENT = {0x00000020};
         static inline constexpr ImageUsageFlags TRANSIENT_ATTACHMENT = {0x00000040};
         static inline constexpr ImageUsageFlags FRAGMENT_DENSITY_MAP = {0x00000200};
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
-        static inline constexpr ImageUsageFlags SHADING_RATE_IMAGE = FRAGMENT_SHADING_RATE_ATTACHMENT;
     };
 
     auto to_string(ImageUsageFlags const &) -> std::string;
@@ -570,25 +577,6 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    struct ImageAspectFlagsProperties
-    {
-        using Data = u32;
-    };
-    using ImageAspectFlags = Flags<ImageAspectFlagsProperties>;
-    struct ImageAspectFlagBits
-    {
-        static inline constexpr ImageAspectFlags NONE = {};
-        static inline constexpr ImageAspectFlags COLOR = {0x00000001};
-        static inline constexpr ImageAspectFlags DEPTH = {0x00000002};
-        static inline constexpr ImageAspectFlags STENCIL = {0x00000004};
-        static inline constexpr ImageAspectFlags METADATA = {0x00000008};
-        static inline constexpr ImageAspectFlags PLANE_0 = {0x00000010};
-        static inline constexpr ImageAspectFlags PLANE_1 = {0x00000020};
-        static inline constexpr ImageAspectFlags PLANE_2 = {0x00000040};
-    };
-
-    auto to_string(ImageAspectFlags aspect_flags) -> std::string;
-
     enum struct ImageLayout
     {
         UNDEFINED = 0,
@@ -605,7 +593,6 @@ namespace daxa
 
     struct ImageMipArraySlice
     {
-        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 base_mip_level = 0;
         u32 level_count = 1;
         u32 base_array_layer = 0;
@@ -623,7 +610,6 @@ namespace daxa
 
     struct ImageArraySlice
     {
-        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 mip_level = 0;
         u32 base_array_layer = 0;
         u32 layer_count = 1;
@@ -639,7 +625,6 @@ namespace daxa
 
     struct ImageSlice
     {
-        ImageAspectFlags image_aspect = ImageAspectFlagBits::COLOR;
         u32 mip_level = 0;
         u32 array_layer = 0;
 
@@ -751,6 +736,8 @@ namespace daxa
         static inline constexpr PipelineStageFlags CLEAR = {0x800000000ull};
         static inline constexpr PipelineStageFlags INDEX_INPUT = {0x1000000000ull};
         static inline constexpr PipelineStageFlags PRE_RASTERIZATION_SHADERS = {0x4000000000ull};
+        static inline constexpr PipelineStageFlags TASK_SHADER = {0x00080000ull};
+        static inline constexpr PipelineStageFlags MESH_SHADER = {0x00100000ull};
     };
 
     auto to_string(PipelineStageFlags flags) -> std::string;
@@ -794,6 +781,8 @@ namespace daxa
         static inline constexpr Access CLEAR_READ = {.stages = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access INDEX_INPUT_READ = {.stages = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access TASK_SHADER_READ = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access MESH_SHADER_READ = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ};
 
         static inline constexpr Access TOP_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access DRAW_INDIRECT_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::WRITE};
@@ -817,6 +806,8 @@ namespace daxa
         static inline constexpr Access CLEAR_WRITE = {.stages = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access INDEX_INPUT_WRITE = {.stages = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_WRITE = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access TASK_SHADER_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access MESH_SHADER_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::WRITE};
 
         static inline constexpr Access TOP_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access DRAW_INDIRECT_READ_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ_WRITE};
@@ -840,6 +831,8 @@ namespace daxa
         static inline constexpr Access CLEAR_READ_WRITE = {.stages = PipelineStageFlagBits::CLEAR, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access INDEX_INPUT_READ_WRITE = {.stages = PipelineStageFlagBits::INDEX_INPUT, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ_WRITE = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access TASK_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access MESH_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
     } // namespace AccessConsts
 
     enum struct SamplerAddressMode
@@ -1028,59 +1021,5 @@ namespace daxa
         i32 y = {};
         u32 width = {};
         u32 height = {};
-    };
-
-    namespace deail
-    {
-        u32 constexpr const_hash( char const *input )
-        {
-            if (*input == '\0')
-            {
-                return 5381;
-            }
-            return static_cast<unsigned int>(*input) + 33 * const_hash( input + 1 );
-        }
-    }
-
-    auto constexpr compt_hash( char const* str ) -> u32
-    {
-        if (str == nullptr)
-        {
-            return 0;
-        }
-        return deail::const_hash( str );
-    }
-
-    template<usize N>
-    struct StringLiteralAdapter {
-        char value[N];
-
-        constexpr StringLiteralAdapter(const char (&str)[N]) {
-            std::copy_n(str, N, value);
-        }
-
-        template<usize INDEX>
-        constexpr auto is_same_at(StringLiteralAdapter<N> const & other) const
-        {
-            return this->value[INDEX] == other.value[INDEX] && is_same_at<INDEX+1>(other);
-        }
-
-        template<>
-        constexpr auto is_same_at<N>(StringLiteralAdapter<N> const &) const
-        {
-            return true;
-        }
-
-        template<usize N2>
-        constexpr auto is_same(StringLiteralAdapter<N2> const &) const
-        {
-            return false;
-        }
-
-        template<>
-        constexpr auto is_same(StringLiteralAdapter<N> const & other) const
-        {
-            return is_same_at<0>(other);
-        }
     };
 } // namespace daxa

@@ -2,8 +2,8 @@
 
 * supports windows 10 and up
 * supports most major linux versions (x11 and wayland)
-* supports nvidia gpus from pascal up
-* supports all amd gpus from RDNA-1 up
+* supports nvidia GPUs from pascal up
+* supports all amd GPUs from RDNA-1 up
 
 # List of bugs that can be encountered with daxa:
 ## NVIDIA DRIVER BUG: WINDOWS10 + BAR MEMORY + BDA + BDA CAPTURE DEBUG PLAYBACK + PASCAL AND LOWER ARCHITECTURES

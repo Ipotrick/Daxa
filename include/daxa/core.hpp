@@ -58,7 +58,12 @@
 
 namespace daxa
 {
+    /// @brief  A platform-dependent window resource.
+    ///         On Windows, this is an `HWND`
+    ///         On Linux X11, this is a `Window`
+    ///         On Linux Wayland, this is a `wl_surface *`
     using NativeWindowHandle = void *;
+
     enum struct NativeWindowPlatform
     {
         UNKNOWN,

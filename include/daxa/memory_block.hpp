@@ -24,7 +24,7 @@ namespace daxa
       private:
         friend struct ImplDevice;
         friend struct Device;
-        MemoryBlock(ManagedPtr);
+        MemoryBlock(ManagedPtr impl);
     };
 
     using AutoAllocInfo = MemoryFlags;

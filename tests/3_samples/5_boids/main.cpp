@@ -4,7 +4,7 @@
 #include <cmath>
 
 #include <daxa/utils/pipeline_manager.hpp>
-#include <daxa/utils/task_list.hpp>
+#include <daxa/utils/task_graph.hpp>
 
 #define APPNAME "Daxa Sample: Boids"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
@@ -21,9 +21,7 @@ namespace daxa
 
 struct App : AppWindow<App>
 {
-    daxa::Context daxa_ctx = daxa::create_context({
-        .enable_validation = false,
-    });
+    daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
         .name = APPNAME_PREFIX("device"),
     });
@@ -45,6 +43,7 @@ struct App : AppWindow<App>
                 "tests/3_samples/5_boids",
             },
             .language = daxa::ShaderLanguage::GLSL,
+            .enable_debug_info = true,
         },
         .name = APPNAME_PREFIX("pipeline_manager"),
     });
@@ -88,7 +87,7 @@ struct App : AppWindow<App>
 
     daxa::CommandSubmitInfo submit_info;
 
-    daxa::TaskList task_list = record_tasks();
+    daxa::TaskGraph task_graph = record_tasks();
 
     App() : AppWindow<App>(APPNAME)
     {
@@ -237,14 +236,14 @@ struct App : AppWindow<App>
         }
     };
 
-    auto record_tasks() -> daxa::TaskList
+    auto record_tasks() -> daxa::TaskGraph
     {
-        daxa::TaskList new_task_list = daxa::TaskList({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task list")});
-        new_task_list.use_persistent_image(task_swapchain_image);
-        new_task_list.use_persistent_buffer(task_boids_current);
-        new_task_list.use_persistent_buffer(task_boids_old);
+        daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task graph")});
+        new_task_graph.use_persistent_image(task_swapchain_image);
+        new_task_graph.use_persistent_buffer(task_boids_current);
+        new_task_graph.use_persistent_buffer(task_boids_old);
 
-        new_task_list.add_task(UpdateBoidsTask{
+        new_task_graph.add_task(UpdateBoidsTask{
             .uses = {
                 .current = {task_boids_current},
                 .previous = {task_boids_old},
@@ -252,7 +251,7 @@ struct App : AppWindow<App>
             .update_boids_pipeline = update_boids_pipeline,
         });
 
-        new_task_list.add_task(DrawBoidsTask{
+        new_task_graph.add_task(DrawBoidsTask{
             .uses = {
                 .boids = {task_boids_current},
                 .render_image = {task_swapchain_image},
@@ -262,11 +261,11 @@ struct App : AppWindow<App>
             .size_y = &size_y,
         });
 
-        new_task_list.submit({});
-        new_task_list.present({});
-        new_task_list.complete({});
+        new_task_graph.submit({});
+        new_task_graph.present({});
+        new_task_graph.complete({});
 
-        return new_task_list;
+        return new_task_graph;
     }
 
     void draw()
@@ -275,10 +274,10 @@ struct App : AppWindow<App>
         prev_time = now;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (reloaded_result.has_value())
-        {
-            std::cout << reloaded_result.value().to_string() << std::endl;
-        }
+        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            std::cout << "Failed to reload " << reload_err->message << '\n';
+        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();
         task_swapchain_image.set_images({.images = {&swapchain_image, 1}});
@@ -286,7 +285,7 @@ struct App : AppWindow<App>
         {
             return;
         }
-        task_list.execute({});
+        task_graph.execute({});
         // Switch boids front and back buffers.
         task_boids_current.swap_buffers(task_boids_old);
     }

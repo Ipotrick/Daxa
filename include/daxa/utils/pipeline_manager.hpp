@@ -67,10 +67,12 @@ namespace daxa
 
     struct RasterPipelineCompileInfo
     {
-        ShaderCompileInfo vertex_shader_info = {};
+        std::optional<ShaderCompileInfo> mesh_shader_info = {};
+        std::optional<ShaderCompileInfo> vertex_shader_info = {};
         std::optional<ShaderCompileInfo> tesselation_control_shader_info = {};
         std::optional<ShaderCompileInfo> tesselation_evaluation_shader_info = {};
         std::optional<ShaderCompileInfo> fragment_shader_info = {};
+        std::optional<ShaderCompileInfo> task_shader_info = {};
         std::vector<RenderAttachment> color_attachments = {};
         DepthTestInfo depth_test = {};
         RasterizerInfo raster = {};
@@ -83,14 +85,26 @@ namespace daxa
     {
         Device device;
         ShaderCompileOptions shader_compile_options = {};
+        bool register_null_pipelines_when_first_compile_fails = false;
         std::string name = {};
     };
 
-    struct VirtualIncludeInfo
+    struct VirtualFileInfo
     {
         std::string name = {};
         std::string contents = {};
     };
+
+    struct PipelineReloadSuccess
+    {
+    };
+    struct PipelineReloadError
+    {
+        std::string message;
+    };
+    using NoPipelineChanged = std::monostate;
+
+    using PipelineReloadResult = std::variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
     struct PipelineManager : ManagedPtr
     {
@@ -102,7 +116,7 @@ namespace daxa
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
-        void add_virtual_include_file(VirtualIncludeInfo const & info);
-        auto reload_all() -> std::optional<Result<void>>;
+        void add_virtual_file(VirtualFileInfo const & info);
+        auto reload_all() -> PipelineReloadResult;
     };
 } // namespace daxa

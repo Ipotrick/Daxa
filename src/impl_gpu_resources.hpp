@@ -37,6 +37,7 @@ namespace daxa
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
+        VkImageAspectFlags aspect_flags = {}; // Inferred from format.
         bool zombie = {};
     };
 
@@ -202,7 +203,7 @@ namespace daxa
         GpuShaderResourcePool<ImplSamplerSlot> sampler_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
-        VkDescriptorSetLayout constant_buffer_binding_set_layout = {};
+        VkDescriptorSetLayout uniform_buffer_descriptor_set_layout = {};
         VkDescriptorSet vk_descriptor_set = {};
         VkDescriptorPool vk_descriptor_pool = {};
 
