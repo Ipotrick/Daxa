@@ -70,8 +70,6 @@ _DAXA_DECL_VEC2_TYPE(uint32_t)
 daxa_u32vec2;
 _DAXA_DECL_VEC2_TYPE(int32_t)
 daxa_i32vec2;
-_DAXA_DECL_VEC2_TYPE(unsigned char)
-daxa_b32vec2;
 
 #define _DAXA_DECL_VEC3_TYPE(SCALAR_TYPE) \
     typedef union                         \
@@ -93,8 +91,6 @@ _DAXA_DECL_VEC3_TYPE(uint32_t)
 daxa_u32vec3;
 _DAXA_DECL_VEC3_TYPE(int32_t)
 daxa_i32vec3;
-_DAXA_DECL_VEC3_TYPE(unsigned char)
-daxa_b32vec3;
 
 #define _DAXA_DECL_VEC4_TYPE(SCALAR_TYPE) \
     typedef union                         \
@@ -117,153 +113,78 @@ _DAXA_DECL_VEC4_TYPE(uint32_t)
 daxa_u32vec4;
 _DAXA_DECL_VEC4_TYPE(int32_t)
 daxa_i32vec4;
-_DAXA_DECL_VEC4_TYPE(unsigned char)
-daxa_b32vec4;
-
-typedef struct
-{
-    daxa_f32vec2 data[2]
-} daxa_f32mat2x2;
-typedef struct
-{
-    daxa_f32vec2 data[3]
-} daxa_f32mat2x3;
-typedef struct
-{
-    daxa_f32vec2 data[4]
-} daxa_f32mat2x4;
-typedef struct
-{
-    daxa_f64vec2 data[2]
-} daxa_f64mat2x2;
-typedef struct
-{
-    daxa_f64vec2 data[3]
-} daxa_f64mat2x3;
-typedef struct
-{
-    daxa_f64vec2 data[4]
-} daxa_f64mat2x4;
-typedef struct
-{
-    daxa_f32vec3 data[2]
-} daxa_f32mat3x2;
-typedef struct
-{
-    daxa_f32vec3 data[3]
-} daxa_f32mat3x3;
-typedef struct
-{
-    daxa_f32vec3 data[4]
-} daxa_f32mat3x4;
-typedef struct
-{
-    daxa_f64vec3 data[2]
-} daxa_f64mat3x2;
-typedef struct
-{
-    daxa_f64vec3 data[3]
-} daxa_f64mat3x3;
-typedef struct
-{
-    daxa_f64vec3 data[4]
-} daxa_f64mat3x4;
-typedef struct
-{
-    daxa_f32vec4 data[2]
-} daxa_f32mat4x2;
-typedef struct
-{
-    daxa_f32vec4 data[3]
-} daxa_f32mat4x3;
-typedef struct
-{
-    daxa_f32vec4 data[4]
-} daxa_f32mat4x4;
-typedef struct
-{
-    daxa_f64vec4 data[2]
-} daxa_f64mat4x2;
-typedef struct
-{
-    daxa_f64vec4 data[3]
-} daxa_f64mat4x3;
-typedef struct
-{
-    daxa_f64vec4 data[4]
-} daxa_f64mat4x4;
-typedef struct
-{
-    daxa_i32vec2 data[2]
-} daxa_i32mat2x2;
-typedef struct
-{
-    daxa_i32vec2 data[3]
-} daxa_i32mat2x3;
-typedef struct
-{
-    daxa_i32vec2 data[4]
-} daxa_i32mat2x4;
-typedef struct
-{
-    daxa_u32vec2 data[2]
-} daxa_u32mat2x2;
-typedef struct
-{
-    daxa_u32vec2 data[3]
-} daxa_u32mat2x3;
-typedef struct
-{
-    daxa_u32vec2 data[4]
-} daxa_u32mat2x4;
-typedef struct
-{
-    daxa_i32vec3 data[2]
-} daxa_i32mat3x2;
-typedef struct
-{
-    daxa_i32vec3 data[3]
-} daxa_i32mat3x3;
-typedef struct
-{
-    daxa_i32vec3 data[4]
-} daxa_i32mat3x4;
-typedef struct
-{
-    daxa_u32vec3 data[2]
-} daxa_u32mat3x2;
-typedef struct
-{
-    daxa_u32vec3 data[3]
-} daxa_u32mat3x3;
-typedef struct
-{
-    daxa_u32vec3 data[4]
-} daxa_u32mat3x4;
-typedef struct
-{
-    daxa_i32vec4 data[2]
-} daxa_i32mat4x2;
-typedef struct
-{
-    daxa_i32vec4 data[3]
-} daxa_i32mat4x3;
-typedef struct
-{
-    daxa_i32vec4 data[4]
-} daxa_i32mat4x4;
-typedef struct
-{
-    daxa_u32vec4 data[2]
-} daxa_u32mat4x2;
-typedef struct
-{
-    daxa_u32vec4 data[3]
-} daxa_u32mat4x3;
-typedef struct
-{
-    daxa_u32vec4 data[4]
-} daxa_u32mat4x4;
+_DAXA_DECL_VEC2_TYPE(daxa_f32vec2)
+daxa_f32mat2x2;
+_DAXA_DECL_VEC3_TYPE(daxa_f32vec2)
+daxa_f32mat2x3;
+_DAXA_DECL_VEC4_TYPE(daxa_f32vec2)
+daxa_f32mat2x4;
+_DAXA_DECL_VEC2_TYPE(daxa_f64vec2)
+daxa_f64mat2x2;
+_DAXA_DECL_VEC3_TYPE(daxa_f64vec2)
+daxa_f64mat2x3;
+_DAXA_DECL_VEC4_TYPE(daxa_f64vec2)
+daxa_f64mat2x4;
+_DAXA_DECL_VEC2_TYPE(daxa_f32vec3)
+daxa_f32mat3x2;
+_DAXA_DECL_VEC3_TYPE(daxa_f32vec3)
+daxa_f32mat3x3;
+_DAXA_DECL_VEC4_TYPE(daxa_f32vec3)
+daxa_f32mat3x4;
+_DAXA_DECL_VEC2_TYPE(daxa_f64vec3)
+daxa_f64mat3x2;
+_DAXA_DECL_VEC3_TYPE(daxa_f64vec3)
+daxa_f64mat3x3;
+_DAXA_DECL_VEC4_TYPE(daxa_f64vec3)
+daxa_f64mat3x4;
+_DAXA_DECL_VEC2_TYPE(daxa_f32vec4)
+daxa_f32mat4x2;
+_DAXA_DECL_VEC3_TYPE(daxa_f32vec4)
+daxa_f32mat4x3;
+_DAXA_DECL_VEC4_TYPE(daxa_f32vec4)
+daxa_f32mat4x4;
+_DAXA_DECL_VEC2_TYPE(daxa_f64vec4)
+daxa_f64mat4x2;
+_DAXA_DECL_VEC3_TYPE(daxa_f64vec4)
+daxa_f64mat4x3;
+_DAXA_DECL_VEC4_TYPE(daxa_f64vec4)
+daxa_f64mat4x4;
+_DAXA_DECL_VEC2_TYPE(daxa_i32vec2)
+daxa_i32mat2x2;
+_DAXA_DECL_VEC3_TYPE(daxa_i32vec2)
+daxa_i32mat2x3;
+_DAXA_DECL_VEC4_TYPE(daxa_i32vec2)
+daxa_i32mat2x4;
+_DAXA_DECL_VEC2_TYPE(daxa_u32vec2)
+daxa_u32mat2x2;
+_DAXA_DECL_VEC3_TYPE(daxa_u32vec2)
+daxa_u32mat2x3;
+_DAXA_DECL_VEC4_TYPE(daxa_u32vec2)
+daxa_u32mat2x4;
+_DAXA_DECL_VEC2_TYPE(daxa_i32vec3)
+daxa_i32mat3x2;
+_DAXA_DECL_VEC3_TYPE(daxa_i32vec3)
+daxa_i32mat3x3;
+_DAXA_DECL_VEC4_TYPE(daxa_i32vec3)
+daxa_i32mat3x4;
+_DAXA_DECL_VEC2_TYPE(daxa_u32vec3)
+daxa_u32mat3x2;
+_DAXA_DECL_VEC3_TYPE(daxa_u32vec3)
+daxa_u32mat3x3;
+_DAXA_DECL_VEC4_TYPE(daxa_u32vec3)
+daxa_u32mat3x4;
+_DAXA_DECL_VEC2_TYPE(daxa_i32vec4)
+daxa_i32mat4x2;
+_DAXA_DECL_VEC3_TYPE(daxa_i32vec4)
+daxa_i32mat4x3;
+_DAXA_DECL_VEC4_TYPE(daxa_i32vec4)
+daxa_i32mat4x4;
+_DAXA_DECL_VEC2_TYPE(daxa_u32vec4)
+daxa_u32mat4x2;
+_DAXA_DECL_VEC3_TYPE(daxa_u32vec4)
+daxa_u32mat4x3;
+_DAXA_DECL_VEC4_TYPE(daxa_u32vec4)
+daxa_u32mat4x4;
 
 typedef struct
 {

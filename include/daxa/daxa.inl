@@ -62,13 +62,9 @@
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
 
-#define daxa_b32 daxa::types::b32
 #define daxa_i32 daxa::types::i32
 #define daxa_u32 daxa::types::u32
 #define daxa_f32 daxa::types::f32
-#define daxa_b32vec2 daxa::types::b32vec2
-#define daxa_b32vec3 daxa::types::b32vec3
-#define daxa_b32vec4 daxa::types::b32vec4
 #define daxa_f32 daxa::types::f32
 #define daxa_f32vec2 daxa::types::f32vec2
 #define daxa_f32mat2x2 daxa::types::f32mat2x2
