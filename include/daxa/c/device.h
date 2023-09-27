@@ -81,36 +81,47 @@ daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
 
 daxa_Result 
-daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId id);
+daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
 daxa_Result 
-daxa_dvc_destroy_image(daxa_Device device, daxa_ImageId id);
+daxa_dvc_destroy_image(daxa_Device device, daxa_ImageId image);
 daxa_Result 
 daxa_dvc_destroy_image_view(daxa_Device device, daxa_ImageViewId id);
 daxa_Result 
-daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId id);
+daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 
 daxa_Result
-daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId id, daxa_BufferInfo * out_info);
+daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
 daxa_Result
-daxa_dvc_info_image(daxa_Device device, daxa_ImageId id, daxa_ImageInfo * out_info);
+daxa_dvc_info_image(daxa_Device device, daxa_ImageId image, daxa_ImageInfo * out_info);
 daxa_Result
 daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageViewInfo * out_info);
 daxa_Result
-daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId id, daxa_SamplerInfo * out_info);
+daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerInfo * out_info);
 
-DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId id);
-DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageId id);
-DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageViewId id);
-DAXA_BOOL
-daxa_dvc_is_buffer_valid(daxa_Device device, daxa_SamplerId id);
+VkBool
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);
+VkBool
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageId image);
+VkBool
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageViewId image_view);
+VkBool
+daxa_dvc_is_buffer_valid(daxa_Device device, daxa_SamplerId sampler);
 
 daxa_Result
-daxa_dvc_buffer_device_address(daxa_Device device, daxa_BufferId id, daxa_BufferDeviceAddress * out_bda);
+daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer, VkBuffer * out_vk_buffer);
 daxa_Result
-daxa_dvc_buffer_host_address(daxa_Device device, daxa_BufferId id, void** out_ptr);
+daxa_dvc_get_vk_image(daxa_Device device, daxa_ImageId image, VkImage * out_vk_image);
+daxa_Result
+daxa_dvc_get_default_vk_image_view(daxa_Device device, daxa_ImageId image, VkImageView * out_vk_image_view);
+daxa_Result
+daxa_dvc_get_vk_image_view(daxa_Device device, daxa_ImageViewId image_view, VkImageView * out_vk_image_view);
+daxa_Result
+daxa_dvc_get_vk_sampler(daxa_Device device, daxa_SamplerId sampler, VkSampler * out_vk_sampler);
+
+daxa_Result
+daxa_dvc_buffer_device_address(daxa_Device device, daxa_BufferId buffer, daxa_BufferDeviceAddress * out_bda);
+daxa_Result
+daxa_dvc_buffer_host_address(daxa_Device device, daxa_BufferId buffer, void** out_ptr);
 
 daxa_Result
 daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline);

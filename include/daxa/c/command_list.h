@@ -1,13 +1,11 @@
 #ifndef __DAXA_COMMAND_LIST_H__
 #define __DAXA_COMMAND_LIST_H__
 
-#include "daxa/c/types.h"
-#include "daxa/c/sync.h"
-#include "daxa/c/gpu_resources.h"
-#include "daxa/c/pipeline.h"
-#include "daxa/c/timeline_query.h"
-
-#define CONSTANT_BUFFER_BINDINGS_COUNT 8
+#include "types.h"
+#include "sync.h"
+#include "gpu_resources.h"
+#include "pipeline.h"
+#include "timeline_query.h"
 
 typedef struct
 {
@@ -152,7 +150,7 @@ typedef struct
     size_t draw_command_buffer_read_offset;
     uint32_t draw_count;
     uint32_t draw_command_stride;
-    DAXA_BOOL is_indexed;
+    VkBool is_indexed;
 } daxa_DrawIndirectInfo;
 
 typedef struct
@@ -163,7 +161,7 @@ typedef struct
     size_t draw_count_buffer_read_offset;
     uint32_t max_draw_count;
     uint32_t draw_command_stride;
-    DAXA_BOOL is_indexed;
+    VkBool is_indexed;
 } daxa_DrawIndirectCountInfo;
 
 typedef struct
@@ -346,7 +344,7 @@ daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 
 void 
 daxa_cmd_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
-DAXA_BOOL
+VkBool
 daxa_cmd_is_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 daxa_CommandListInfo const *
 daxa_cmd_info(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);

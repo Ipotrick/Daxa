@@ -1,7 +1,6 @@
 #ifndef __DAXA_INSTANCE_H__
 #define __DAXA_INSTANCE_H__
 
-#include <daxa/c/types.h>
 #include <daxa/c/device.h>
 
 struct daxa_ImplInstance;

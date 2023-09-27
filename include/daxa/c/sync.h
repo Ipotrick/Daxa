@@ -113,6 +113,9 @@ typedef struct
 daxa_BinarySemaphoreInfo const *
 daxa_binary_semaphore_info(daxa_BinarySemaphore binary_semaphore);
 
+VkSemaphore
+daxa_binary_semaphore_get_vk_semaphore(daxa_BinarySemaphore binary_semaphore);
+
 struct daxa_ImplTimelineSemaphore;
 typedef struct daxa_ImplTimelineSemaphore * daxa_TimelineSemaphore;
 
@@ -133,6 +136,9 @@ daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore timeline_semaphore, uin
 
 daxa_Result
 daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value, uint64_t timeout);
+
+VkSemaphore
+daxa_timeline_semaphore_get_vk_semaphore(daxa_TimelineSemaphore timeline_semaphore);
 
 struct daxa_ImplEvent;
 typedef struct daxa_ImplEvent * daxa_Event;

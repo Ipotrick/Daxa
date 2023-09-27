@@ -1,15 +1,13 @@
 #ifndef __DAXA_TYPES_H__
 #define __DAXA_TYPES_H__
 
-#include "vulkan.h"
-#include "stdint.h"
-
-#define DAXA_BOOL uint32_t
+#include <vulkan.h>
+#include <stdint.h>
 
 typedef enum
 {
     DAXA_RESULT_UNKNOWN = 0,
-    DAXA_RESULT_OUT_OF_MEMORY = 1,
+    DAXA_RESULT_OUT_OF_DEVICE_MEMORY = 1,
     DAXA_RESULT_MAX_ENUM = 0xFFFFFFFF,
 } daxa_Result;
 
@@ -25,40 +23,6 @@ typedef enum
     DAXA_IMAGE_LAYOUT_PRESENT_SRC = 1000001002,
     DAXA_IMAGE_LAYOUT_MAX_ENUM = 0x7fffffff,
 } daxa_ImageLayout;
-
-typedef struct
-{
-    uint32_t value;
-} daxa_BufferId;
-
-typedef struct
-{
-    uint32_t value;
-} daxa_ImageId;
-
-typedef struct
-{
-    uint32_t value;
-} daxa_ImageViewId;
-
-typedef struct
-{
-    uint32_t value;
-} daxa_SamplerId;
-
-daxa_ImageViewId
-daxa_default_view(daxa_ImageId image);
-
-uint32_t
-daxa_index_of(uint32_t value);
-
-uint32_t
-daxa_version_of(uint32_t value);
-
-typedef struct
-{
-    uint64_t address;
-} daxa_BufferDeviceAddress;
 
 #define _DAXA_DECL_VEC2_TYPE(SCALAR_TYPE) \
     typedef union                         \
@@ -216,6 +180,42 @@ typedef struct
     uint32_t array_layer;
 } daxa_ImageSlice;
 
-#endif // #ifndef __DAXA_TYPES_H__
+typedef enum
+{
+    DAXA_MEMORY_FLAG_NONE = 0x00000000,
+    DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001,
+    DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200,
+    DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400,
+    DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800,
+    DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000,
+    DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000,
+} daxa_MemoryFlagBits;
+
+typedef uint64_t daxa_MemoryFlags;
+
+typedef struct 
+{
+    VkMemoryRequirements requirements;
+    daxa_MemoryFlagBits flags;
+} daxa_MemoryBlockInfo;
+
+struct daxa_ImplMemoryBlock;
+typedef struct daxa_ImplMemoryBlock * daxa_MemoryBlock;
+
+struct ManualAllocInfo
+{
+    daxa_MemoryBlock memory_block;
+    size_t offset;
+};
+
+typedef struct
+{
+    uint64_t index;
+    union
+    {
+        daxa_MemoryFlags auto_alloc_info;
+        daxa_ManualAllocInfo manual_alloc_info;
+    };
+} daxa_AllocateInfo;
 
 #endif // #ifndef __DAXA_TYPES_H__
