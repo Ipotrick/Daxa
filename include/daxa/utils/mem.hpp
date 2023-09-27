@@ -41,9 +41,9 @@ namespace daxa
         auto timeline_value() const -> usize;
         // Returns timeline semaphore that needs to be signaled with the latest timeline value,
         // on a queue that uses memory from this pool.
-        auto get_timeline_semaphore() -> TimelineSemaphore;
-        auto get_info() const -> TransferMemoryPoolInfo const &;
-        auto get_buffer() const -> daxa::BufferId;
+        auto timeline_semaphore() -> TimelineSemaphore;
+        auto buffer() const -> daxa::BufferId;
+        auto info() const -> TransferMemoryPoolInfo const &;
 
       private:
         // Reclaim expired memory allocations.

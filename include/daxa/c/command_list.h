@@ -1,10 +1,10 @@
 #ifndef __DAXA_COMMAND_LIST_H__
 #define __DAXA_COMMAND_LIST_H__
 
-#include "daxa/c/core.h"
+#include "daxa/c/types.h"
+#include "daxa/c/sync.h"
 #include "daxa/c/gpu_resources.h"
 #include "daxa/c/pipeline.h"
-#include "daxa/c/event.h"
 #include "daxa/c/timeline_query.h"
 
 #define CONSTANT_BUFFER_BINDINGS_COUNT 8
@@ -194,7 +194,7 @@ typedef struct
 
 typedef struct
 {
-    float label_color[4];
+    daxa_f32vec4 label_color;
     char const * name;
 } daxa_CommandLabelInfo;
 
@@ -350,5 +350,9 @@ DAXA_BOOL
 daxa_cmd_is_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 daxa_CommandListInfo const *
 daxa_cmd_info(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
+VkCommandBuffer
+daxa_cmd_get_vk_command_buffer(daxa_CommandList cmd_list);
+VkCommandPool
+daxa_cmd_get_vk_command_pool(daxa_CommandList cmd_list);
 
 #endif // #ifndef __DAXA_COMMAND_LIST_H__

@@ -4,17 +4,26 @@
 #include "vulkan.h"
 #include "stdint.h"
 
+#define DAXA_BOOL uint32_t
+
+typedef enum
+{
+    DAXA_RESULT_UNKNOWN = 0,
+    DAXA_RESULT_OUT_OF_MEMORY = 1,
+    DAXA_RESULT_MAX_ENUM = 0xFFFFFFFF,
+} daxa_Result;
+
 // ImageLayout matchs vulkans image layouts
 typedef enum
 {
-    UNDEFINED = 0,
-    GENERAL = 1,
-    TRANSFER_SRC_OPTIMAL = 6,
-    TRANSFER_DST_OPTIMAL = 7,
-    READ_ONLY_OPTIMAL = 1000314000,
-    ATTACHMENT_OPTIMAL = 1000314001,
-    PRESENT_SRC = 1000001002,
-    MAX_ENUM = 0x7fffffff,
+    DAXA_IMAGE_LAYOUT_UNDEFINED = 0,
+    DAXA_IMAGE_LAYOUT_GENERAL = 1,
+    DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL = 6,
+    DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL = 7,
+    DAXA_IMAGE_LAYOUT_READ_ONLY_OPTIMAL = 1000314000,
+    DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL = 1000314001,
+    DAXA_IMAGE_LAYOUT_PRESENT_SRC = 1000001002,
+    DAXA_IMAGE_LAYOUT_MAX_ENUM = 0x7fffffff,
 } daxa_ImageLayout;
 
 typedef struct
@@ -208,11 +217,5 @@ typedef struct
 } daxa_ImageSlice;
 
 #endif // #ifndef __DAXA_TYPES_H__
-
-typedef struct
-{
-    VkPipelineStageFlags stages;
-    VkAccessFlags access_type;
-} daxa_Access;
 
 #endif // #ifndef __DAXA_TYPES_H__

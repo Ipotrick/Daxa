@@ -1,15 +1,11 @@
 #ifndef __DAXA_DEVICE_H__
 #define __DAXA_DEVICE_H__
 
-#include <daxa/c/core.h>
-#include <daxa/c/gpu_resources.h>
-#include <daxa/c/pipeline.h>
-#include <daxa/c/swapchain.h>
-#include <daxa/c/command_list.h>
-#include <daxa/c/semaphore.h>
-#include <daxa/c/split_barrier.h>
-#include <daxa/c/timeline_query.h>
-#include <daxa/c/memory_block.h>
+#include "daxa/c/types.h"
+#include "daxa/c/sync.h"
+#include "daxa/c/gpu_resources.h"
+#include "daxa/c/pipeline.h"
+#include "daxa/c/command_list.h"
 
 typedef enum
 {
@@ -22,18 +18,16 @@ typedef enum
 } daxa_DeviceType;
 
 int32_t
-daxa_default_device_score(VkPhysicalDeviceProperties const * properties, VkPhysicalDeviceLimits const * limits)
+daxa_default_device_score(VkPhysicalDeviceProperties const * properties, VkPhysicalDeviceLimits const * limits);
+
+typedef enum
 {
-    int32_t score = 1;
-    switch (properties->deviceType)
-    {
-    case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU : score += 10000; break;
-    case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU : score += 1000; break;
-    case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU : score += 100; break;
-    default: break;
-    }
-    return score;
-}
+    DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = 0x1,
+    DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION = 0x2,
+    DAXA_DEVICE_FLAG_MESH_SHADER_BIT = 0x4,
+} daxa_DeviceFlagBits;
+
+typedef uint64_t daxa_DeviceFlags;
 
 typedef struct
 {
