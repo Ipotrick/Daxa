@@ -27,11 +27,6 @@
 #define DAXA_SHADER_STAGE_MESH 6
 
 // Daxa inl file type definitions:
-#define daxa_b32 bool
-#define daxa_b32vec1 daxa_b32
-#define daxa_b32vec2 bvec2
-#define daxa_b32vec3 bvec3
-#define daxa_b32vec4 bvec4
 #define daxa_f32 float
 #define daxa_f32vec1 daxa_f32
 #define daxa_f32vec2 vec2
@@ -424,11 +419,6 @@ _DAXA_DECL_IMAGE(2DMSArray)
 #define daxa_isampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 #define daxa_usampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 
-DAXA_DECL_BUFFER_PTR(daxa_b32)
-// DAXA_DECL_BUFFER_PTR(daxa_b32vec1) // covered by daxa_b32
-DAXA_DECL_BUFFER_PTR(daxa_b32vec2)
-DAXA_DECL_BUFFER_PTR(daxa_b32vec3)
-DAXA_DECL_BUFFER_PTR(daxa_b32vec4)
 DAXA_DECL_BUFFER_PTR(daxa_f32)
 // DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32
 DAXA_DECL_BUFFER_PTR(daxa_f32vec2)
@@ -487,11 +477,6 @@ DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
 #define image_view_id_to_index daxa_image_view_id_to_index
 #define sampler_id_to_index daxa_sampler_id_to_index
 
-#define b32 daxa_b32
-#define b32vec1 daxa_b32vec1
-#define b32vec2 daxa_b32vec2
-#define b32vec3 daxa_b32vec3
-#define b32vec4 daxa_b32vec4
 #define f32 daxa_f32
 #define f32vec1 daxa_f32vec1
 #define f32vec2 daxa_f32vec2

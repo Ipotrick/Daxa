@@ -10,14 +10,9 @@
 #endif
 
 typedef uint daxa_u32;
-typedef bool daxa_b32;
 typedef int daxa_i32;
 typedef float daxa_f32;
 typedef double daxa_f64;
-typedef bool daxa_b32;
-typedef bool2 daxa_b32vec2;
-typedef bool3 daxa_b32vec3;
-typedef bool4 daxa_b32vec4;
 typedef float daxa_f32;
 typedef double daxa_f64;
 typedef float2 daxa_f32vec2;
@@ -181,10 +176,6 @@ namespace daxa
 #define daxa_TextureCubeArray(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCubeArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
 
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE
-#define b32vec1 daxa_b32vec1
-#define b32vec2 daxa_b32vec2
-#define b32vec3 daxa_b32vec3
-#define b32vec4 daxa_b32vec4
 #define f32 daxa_f32
 #define f32vec1 daxa_f32vec1
 #define f32vec2 daxa_f32vec2
