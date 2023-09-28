@@ -6,6 +6,8 @@
 #include "daxa/c/gpu_resources.h"
 #include "daxa/c/pipeline.h"
 #include "daxa/c/command_list.h"
+#include "daxa/c/swapchain.h"
+#include "daxa/c/sync.h"
 
 typedef enum
 {
@@ -54,8 +56,6 @@ typedef struct
     uint64_t signal_timeline_semaphoreCount;
 } daxa_CommandSubmitInfo;
 
-typedef struct daxa_ImplSwapchain * daxa_Swapchain;
-
 typedef struct
 {
     daxa_BinarySemaphore const * wait_binary_semaphores;
@@ -102,11 +102,11 @@ daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerIn
 VkBool32
 daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);
 VkBool32
-daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageId image);
+daxa_dvc_is_image_valid(daxa_Device device, daxa_ImageId image);
 VkBool32
-daxa_dvc_is_buffer_valid(daxa_Device device, daxa_ImageViewId image_view);
+daxa_dvc_is_image_view_valid(daxa_Device device, daxa_ImageViewId image_view);
 VkBool32
-daxa_dvc_is_buffer_valid(daxa_Device device, daxa_SamplerId sampler);
+daxa_dvc_is_sampler_valid(daxa_Device device, daxa_SamplerId sampler);
 
 daxa_Result
 daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer, VkBuffer * out_vk_buffer);
@@ -131,7 +131,7 @@ daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo co
 daxa_Result
 daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
 daxa_Result
-daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfoInfo const * info, daxa_CommandListInfo * out_command_list);
+daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const * info, daxa_CommandList * out_command_list);
 daxa_Result
 daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore);
 daxa_Result

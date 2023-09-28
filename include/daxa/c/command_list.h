@@ -235,7 +235,7 @@ void daxa_cmd_pipeline_barrier(daxa_CommandList cmd_list, daxa_MemoryBarrierInfo
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-void daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageBarrierInfo const * info);
+void daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageMemoryBarrierInfo const * info);
 void daxa_cmd_signal_event(daxa_CommandList cmd_list, daxa_EventSignalInfo const * info);
 void daxa_cmd_wait_events(daxa_CommandList cmd_list, daxa_EventWaitInfo const * infos, size_t info_count);
 void daxa_cmd_wait_event(daxa_CommandList cmd_list, daxa_EventWaitInfo const * info);
@@ -252,8 +252,8 @@ void daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32
 ///         Before setting another pipeline, they need to be set again.
 /// @param info parameters.
 void daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetConstantBufferInfo const * info);
-void daxa_cmd_set_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
-void daxa_cmd_set_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
+void daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
+void daxa_cmd_set_raster_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
 void daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
 void daxa_cmd_dispatch_indirect(daxa_CommandList cmd_list, daxa_DispatchIndirectInfo const * info);
 
@@ -281,7 +281,7 @@ void daxa_cmd_begin_renderpass(daxa_CommandList cmd_list, daxa_RenderPassBeginIn
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
 void daxa_cmd_end_renderpass(daxa_CommandList cmd_list);
-void daxa_cmd_set_viewport(daxa_CommandList cmd_list, VkViewportInfo const * info);
+void daxa_cmd_set_viewport(daxa_CommandList cmd_list, VkViewport const * info);
 void daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
 void daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
 void daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, size_t index_type_byte_size);
