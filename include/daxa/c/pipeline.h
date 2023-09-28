@@ -1,7 +1,7 @@
 #ifndef __DAXA_PIPELINE_H__
 #define __DAXA_PIPELINE_H__
 
-#include "types.h"
+#include <daxa/c/types.h>
 
 typedef struct
 {
@@ -24,7 +24,7 @@ typedef struct
 
 typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
 
-daxa_ComputePipelineInfo const *
+DAXA_EXPORT daxa_ComputePipelineInfo const *
 daxa_compute_pipeline_info(daxa_ComputePipeline compute_pipeline);
 
 typedef struct
@@ -97,7 +97,7 @@ typedef struct
     VkBlendFactor src_alpha_blend_factor;
     VkBlendFactor dst_alpha_blend_factor;
     VkBlendOp alpha_blend_op;
-    VkColorComponentFlags color_write_mask
+    VkColorComponentFlags color_write_mask;
 } daxa_BlendInfo;
 
 static const daxa_BlendInfo DAXA_DEFAULT_BLEND_INFO = {
@@ -124,7 +124,7 @@ typedef struct
 } daxa_TesselationInfo;
 
 // NODE(pahrens): This is an arbitrary number, bump it if you need more.
-static const uint32_t DAXA_MAXIMUM_COLOR_ATTACHMENT_COUNT = 8;
+#define DAXA_MAXIMUM_COLOR_ATTACHMENT_COUNT 8
 
 typedef struct
 {
@@ -146,7 +146,7 @@ typedef struct
 
 typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
 
-daxa_RasterPipelineInfo const *
+DAXA_EXPORT daxa_RasterPipelineInfo const *
 daxa_raster_pipeline_info(daxa_RasterPipeline raster_pipeline);
 
 #endif // #ifndef __DAXA_PIPELINE_H__

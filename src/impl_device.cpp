@@ -852,7 +852,7 @@ namespace daxa
             .pDeviceMemoryCallbacks = nullptr,
             .pHeapSizeLimit = nullptr,
             .pVulkanFunctions = &vma_vulkan_functions,
-            .instance = this->impl_ctx.as<ImplInstance>()->vk_instance,
+            .instance = daxa_instance_get_vk_instance(this->impl_ctx.as<ImplInstance>()->instance),
             .vulkanApiVersion = VK_API_VERSION_1_3,
             .pTypeExternalMemoryHandleTypes = {},
         };

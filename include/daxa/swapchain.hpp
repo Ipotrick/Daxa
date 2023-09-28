@@ -58,7 +58,6 @@ namespace daxa
         /// @brief The last submission that uses the swapchain image needs to signal the timeline with the cpu value.
         /// @return The cpu frame timeline value.
         auto get_cpu_timeline_value() const -> usize;
-        void change_present_mode(PresentMode new_present_mode);
 
       private:
         friend struct Device;

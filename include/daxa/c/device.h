@@ -1,13 +1,13 @@
 #ifndef __DAXA_DEVICE_H__
 #define __DAXA_DEVICE_H__
 
-#include "daxa/c/types.h"
-#include "daxa/c/sync.h"
-#include "daxa/c/gpu_resources.h"
-#include "daxa/c/pipeline.h"
-#include "daxa/c/command_list.h"
-#include "daxa/c/swapchain.h"
-#include "daxa/c/sync.h"
+#include <daxa/c/types.h>
+#include <daxa/c/sync.h>
+#include <daxa/c/gpu_resources.h>
+#include <daxa/c/pipeline.h>
+#include <daxa/c/command_list.h>
+#include <daxa/c/swapchain.h>
+#include <daxa/c/sync.h>
 
 typedef enum
 {
@@ -19,8 +19,8 @@ typedef enum
     DAXA_DEVICE_TYPE_MAX_ENUM = 0x7fffffff,
 } daxa_DeviceType;
 
-int32_t
-daxa_default_device_score(VkPhysicalDeviceProperties const * properties, VkPhysicalDeviceLimits const * limits);
+DAXA_EXPORT int32_t
+daxa_default_device_score(VkPhysicalDeviceProperties const * properties);
 
 typedef enum
 {
@@ -33,7 +33,7 @@ typedef uint64_t daxa_DeviceFlags;
 
 typedef struct
 {
-    int32_t (*selector)(VkPhysicalDeviceProperties const * properties, VkPhysicalDeviceLimits const * limits);
+    int32_t (*selector)(VkPhysicalDeviceProperties const * properties);
     daxa_DeviceFlags flags;
     uint32_t max_allowed_images;
     uint32_t max_allowed_buffers;
@@ -65,107 +65,107 @@ typedef struct
 
 typedef struct daxa_ImplDevice * daxa_Device;
 
-VkMemoryRequirements
+DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);
-VkMemoryRequirements
+DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_image_memory_requirements(daxa_Device device, daxa_ImageInfo const * info);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_memory(daxa_Device device, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);
 
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_buffer(daxa_Device device, daxa_BufferInfo const * info, daxa_BufferId * out_id);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_image(daxa_Device device, daxa_ImageInfo const * info, daxa_ImageId * out_id);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_image_view(daxa_Device device, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
 
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_image(daxa_Device device, daxa_ImageId image);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_image_view(daxa_Device device, daxa_ImageViewId id);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_info_image(daxa_Device device, daxa_ImageId image, daxa_ImageInfo * out_info);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageViewInfo * out_info);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerInfo * out_info);
 
-VkBool32
+DAXA_EXPORT VkBool32
 daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);
-VkBool32
+DAXA_EXPORT VkBool32
 daxa_dvc_is_image_valid(daxa_Device device, daxa_ImageId image);
-VkBool32
+DAXA_EXPORT VkBool32
 daxa_dvc_is_image_view_valid(daxa_Device device, daxa_ImageViewId image_view);
-VkBool32
+DAXA_EXPORT VkBool32
 daxa_dvc_is_sampler_valid(daxa_Device device, daxa_SamplerId sampler);
 
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer, VkBuffer * out_vk_buffer);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_get_vk_image(daxa_Device device, daxa_ImageId image, VkImage * out_vk_image);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_get_default_vk_image_view(daxa_Device device, daxa_ImageId image, VkImageView * out_vk_image_view);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_get_vk_image_view(daxa_Device device, daxa_ImageViewId image_view, VkImageView * out_vk_image_view);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_get_vk_sampler(daxa_Device device, daxa_SamplerId sampler, VkSampler * out_vk_sampler);
 
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_buffer_device_address(daxa_Device device, daxa_BufferId buffer, daxa_BufferDeviceAddress * out_bda);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_buffer_host_address(daxa_Device device, daxa_BufferId buffer, void ** out_ptr);
 
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const * info, daxa_CommandList * out_command_list);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_timeline_semaphore);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa_Event * out_event);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool);
 
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_raster_pipeline(daxa_Device device, daxa_RasterPipeline pipeline);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_compute_pipeline(daxa_Device device, daxa_ComputePipeline pipeline);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_swapchain(daxa_Device device, daxa_Swapchain swapchain);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_command_list(daxa_Device device, daxa_CommandListInfo command_list);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_binary_semaphore(daxa_Device device, daxa_BinarySemaphore binary_semaphore);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_timeline_semaphore(daxa_Device device, daxa_TimelineSemaphore timeline_semaphore);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_event(daxa_Device device, daxa_Event event);
-daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPool timeline_query_pool);
 
-daxa_DeviceInfo const *
+DAXA_EXPORT daxa_DeviceInfo const *
 daxa_dvc_info(daxa_Device device);
-VkDevice
+DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 
-void daxa_dvc_submit(daxa_Device device, daxa_CommandSubmitInfo const * info);
-void daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
-void daxa_dvc_wait_idle(daxa_Device device);
-void daxa_dvc_collect_garbage(daxa_Device device);
+DAXA_EXPORT void daxa_dvc_submit(daxa_Device device, daxa_CommandSubmitInfo const * info);
+DAXA_EXPORT void daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
+DAXA_EXPORT void daxa_dvc_wait_idle(daxa_Device device);
+DAXA_EXPORT void daxa_dvc_collect_garbage(daxa_Device device);
 
 #endif // #ifndef __DAXA_DEVICE_H__

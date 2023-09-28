@@ -4,6 +4,12 @@
 #include <vulkan/vulkan.h>
 #include <stdint.h>
 
+#if defined(__cplusplus)
+#define DAXA_EXPORT extern "C"
+#else
+#define DAXA_EXPORT
+#endif
+
 typedef uint64_t daxa_Flags;
 
 typedef char daxa_Bool8;
@@ -11,10 +17,11 @@ typedef char daxa_Bool8;
 typedef enum
 {
     DAXA_RESULT_UNKNOWN = 0,
+    DAXA_RESULT_SUCCESS = 1,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
-// ImageLayout matchs vulkans image layouts
+// ImageLayout matches vulkan's image layouts
 typedef enum
 {
     DAXA_IMAGE_LAYOUT_UNDEFINED = 0,
@@ -225,9 +232,9 @@ typedef struct
 
 typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
 
-daxa_TimelineQueryPoolInfo const *
+DAXA_EXPORT daxa_TimelineQueryPoolInfo const *
 daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
 
-void daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
+DAXA_EXPORT void daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
 
 #endif // #ifndef __DAXA_TYPES_H__

@@ -3,7 +3,7 @@
 
 #include <vk_mem_alloc.h>
 
-#include "types.h"
+#include <daxa/c/types.h>
 
 typedef struct
 {
@@ -25,13 +25,13 @@ typedef struct
     uint32_t value;
 } daxa_SamplerId;
 
-daxa_ImageViewId
+DAXA_EXPORT daxa_ImageViewId
 daxa_default_view(daxa_ImageId image);
 
-uint32_t
+DAXA_EXPORT uint32_t
 daxa_index_of(uint32_t value);
 
-uint32_t
+DAXA_EXPORT uint32_t
 daxa_version_of(uint32_t value);
 
 typedef struct
@@ -111,19 +111,19 @@ typedef struct
 
 static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
     .size = 0,
-    .allocate_info = (daxa_AllocateInfo){.index = 0, .auto_alloc_info = 0},
+    .allocate_info = {.index = 0, .auto_alloc_info = 0},
     .name = 0,
 };
 static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
     .flags = DAXA_IMAGE_FLAG_NONE,
     .dimensions = 2,
     .format = VK_FORMAT_R8G8B8A8_SRGB,
-    .size = (VkExtent3D){0, 0, 0},
+    .size = {0, 0, 0},
     .mip_level_count = 1,
     .array_layer_count = 1,
     .sample_count = 1,
     .usage = 0,
-    .allocate_info = (daxa_AllocateInfo){.index = 0, .auto_alloc_info = 0},
+    .allocate_info = {.index = 0, .auto_alloc_info = 0},
     .name = 0,
 };
 static const daxa_ImageViewInfo DAXA_DEFAULT_IMAGE_VIEW_INFO = {
@@ -151,7 +151,7 @@ static const daxa_SamplerInfo DAXA_DEFAULT_SAMPLER_INFO = {
     .name = 0,
 };
 
-VmaAllocation
+DAXA_EXPORT VmaAllocation
 daxa_memory_block_get_vma_allocation(daxa_MemoryBlock memory_block);
 
 #endif // #ifndef __DAXA_GPU_RESOURCES_H__

@@ -4,7 +4,6 @@
 #include <daxa/device.hpp>
 
 #include "impl_core.hpp"
-#include "impl_instance.hpp"
 
 #include "impl_pipeline.hpp"
 #include "impl_command_list.hpp"
@@ -14,6 +13,8 @@
 #include "impl_split_barrier.hpp"
 #include "impl_timeline_query.hpp"
 #include "impl_memory_block.hpp"
+
+#include "cpp_wrapper.hpp"
 
 namespace daxa
 {
