@@ -784,7 +784,11 @@ namespace daxa
                 info.label_color[2],
                 info.label_color[3]},
         };
-        impl.impl_device.as<ImplDevice>()->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
+        
+        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils)
+        {
+            impl.impl_device.as<ImplDevice>()->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
+        }
     }
 
     void CommandList::end_label()
@@ -792,7 +796,10 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         impl.flush_barriers();
-        impl.impl_device.as<ImplDevice>()->vkCmdEndDebugUtilsLabelEXT(impl.vk_cmd_buffer);
+        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils)
+        {
+            impl.impl_device.as<ImplDevice>()->vkCmdEndDebugUtilsLabelEXT(impl.vk_cmd_buffer);
+        }
     }
 
     auto CommandBufferPoolPool::get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>
@@ -932,7 +939,7 @@ namespace daxa
 
         vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->enable_debug_names && this->info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->info.name.empty())
         {
             auto cmd_buffer_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const cmd_buffer_name_info{

@@ -54,70 +54,59 @@ namespace daxa
     ImplInstance::ImplInstance(InstanceInfo a_info)
         : info{std::move(a_info)}
     {
-        std::vector<char const *> enabled_layers{};
-        std::vector<char const *> extension_names{};
+        std::vector<char const *> required_extensions{};
+        required_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+        if (info.enable_debug_utils)
         {
-            extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-            extension_names.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+            required_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        }
 
 #if defined(WIN32)
-            extension_names.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+        required_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__linux__)
-            extension_names.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+        required_extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #else
 // no surface extension
 #endif
-        }
-
+        // Check existence of extensions:
+        std::vector<VkExtensionProperties> instance_extensions = {};
+        u32 instance_extension_count = {};
+        vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, nullptr);
+        instance_extensions.resize(instance_extension_count);
+        vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.data());
+        for (auto req_ext : required_extensions)
         {
-            auto check_layers = [](auto && required_names, auto && layer_props) -> bool
+            bool found = false;
+            for (u32 i = 0; i < instance_extensions.size(); ++i)
             {
-                for (auto & required_layer_name : required_names)
+                if (std::strcmp(req_ext, instance_extensions[i].extensionName) == 0)
                 {
-                    [[maybe_unused]] bool found = false;
-                    for (auto & existing_layer_prop : layer_props)
-                    {
-                        if (!strcmp(required_layer_name, existing_layer_prop.layerName))
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-                    DAXA_DBG_ASSERT_TRUE_M(found, std::string{"Cannot find layer"} + required_layer_name);
+                    found = true;
+                    break;
                 }
-                return true;
-            };
-
-            std::vector<VkLayerProperties> instance_layers = {};
-            u32 instance_layer_count = {};
-            vkEnumerateInstanceLayerProperties(&instance_layer_count, nullptr);
-            instance_layers.resize(instance_layer_count);
-            vkEnumerateInstanceLayerProperties(&instance_layer_count, instance_layers.data());
-            check_layers(enabled_layers, instance_layers);
+            }
+            DAXA_DBG_ASSERT_TRUE_M(found, "Not all required instance extensions are available, extension missing: " + std::string(req_ext));
         }
-
-        {
-            const VkApplicationInfo app_info = {
-                .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-                .pNext = nullptr,
-                .pApplicationName = "Daxa Vulkan App",
-                .applicationVersion = 0,
-                .pEngineName = "daxa",
-                .engineVersion = 1,
-                .apiVersion = VK_API_VERSION_1_3,
-            };
-            VkInstanceCreateInfo const instance_ci = {
-                .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-                .pNext = nullptr,
-                .flags = {},
-                .pApplicationInfo = &app_info,
-                .enabledLayerCount = static_cast<u32>(enabled_layers.size()),
-                .ppEnabledLayerNames = enabled_layers.data(),
-                .enabledExtensionCount = static_cast<u32>(extension_names.size()),
-                .ppEnabledExtensionNames = extension_names.data(),
-            };
-            vkCreateInstance(&instance_ci, nullptr, &vk_instance);
-        }
+        const VkApplicationInfo app_info = {
+            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+            .pNext = nullptr,
+            .pApplicationName = "Daxa Vulkan App",
+            .applicationVersion = 0,
+            .pEngineName = "daxa",
+            .engineVersion = 1,
+            .apiVersion = VK_API_VERSION_1_3,
+        };
+        VkInstanceCreateInfo const instance_ci = {
+            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+            .pNext = nullptr,
+            .flags = {},
+            .pApplicationInfo = &app_info,
+            .enabledLayerCount = 0u,
+            .ppEnabledLayerNames = nullptr,
+            .enabledExtensionCount = static_cast<u32>(required_extensions.size()),
+            .ppEnabledExtensionNames = required_extensions.data(),
+        };
+        vkCreateInstance(&instance_ci, nullptr, &vk_instance);
     }
 
     ImplInstance::~ImplInstance() // NOLINT(bugprone-exception-escape)

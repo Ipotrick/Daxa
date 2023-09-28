@@ -7,6 +7,7 @@ namespace daxa
 {
     struct InstanceInfo
     {
+        bool enable_debug_utils = true;
     };
 
     struct Instance : ManagedPtr

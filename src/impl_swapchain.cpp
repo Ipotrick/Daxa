@@ -314,7 +314,7 @@ namespace daxa
                 swapchain_images[i], vk_surface_format.format, i, usage, image_info);
         }
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->enable_debug_names && !this->info.name.empty())
+        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->info.name.empty())
         {
             auto swapchain_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
