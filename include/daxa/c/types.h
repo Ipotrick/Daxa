@@ -195,7 +195,7 @@ static const daxa_MemoryFlags DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
 typedef struct
 {
     VkMemoryRequirements requirements;
-    daxa_MemoryFlagBits flags;
+    daxa_MemoryFlags flags;
 } daxa_MemoryBlockInfo;
 
 struct daxa_ImplMemoryBlock;
@@ -217,18 +217,17 @@ typedef struct
     };
 } daxa_AllocateInfo;
 
-typedef struct 
+typedef struct
 {
     uint32_t query_count;
     char const * name;
 } daxa_TimelineQueryPoolInfo;
 
-typedef struct daxa_ImplTimelineQueryPool daxa_TimelineQueryPool;
+typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
 
 daxa_TimelineQueryPoolInfo const *
 daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
 
-void
-daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
+void daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
 
 #endif // #ifndef __DAXA_TYPES_H__

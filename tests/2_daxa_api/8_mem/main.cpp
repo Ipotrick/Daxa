@@ -43,13 +43,13 @@ auto main() -> int
         for (u32 i = 0; i < ELEMENT_COUNT; ++i)
         {
             // The Allocation provides a host pointer to the memory.
-            reinterpret_cast<u32*>(alloc.host_address)[i] = iteration * 100 + i;
+            reinterpret_cast<u32 *>(alloc.host_address)[i] = iteration * 100 + i;
         }
         // ALl the allocations are from a single internal buffer.
         // The allocation contains an integer offset into that buffer.
         // It also contains a device address that can be passed to a shader directly.
         cmd.copy_buffer_to_buffer({
-            .src_buffer = tmem.get_buffer(),
+            .src_buffer = tmem.buffer(),
             .src_offset = alloc.buffer_offset,
             .dst_buffer = result_buffer,
             .dst_offset = sizeof(u32) * ELEMENT_COUNT * iteration,
@@ -63,7 +63,7 @@ auto main() -> int
             .command_lists{std::move(cmd)},
             .signal_timeline_semaphores = {
                 {gpu_timeline, cpu_timeline},
-                {tmem.get_timeline_semaphore(), tmem.timeline_value()},
+                {tmem.timeline_semaphore(), tmem.timeline_value()},
             },
         });
         cpu_timeline += 1;
@@ -82,7 +82,7 @@ auto main() -> int
 
     device.wait_idle();
 
-    u32 const* elements = device.get_host_address_as<u32>(result_buffer);
+    u32 const * elements = device.get_host_address_as<u32>(result_buffer);
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
         for (u32 element = 0; element < ELEMENT_COUNT; ++element)

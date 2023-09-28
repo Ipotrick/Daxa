@@ -23,7 +23,7 @@ namespace tests
             reinterpret_cast<u32 *>(staging.host_address)[x] = value;
         }
         cmd.copy_buffer_to_buffer({
-            .src_buffer = ti.get_allocator().get_buffer(),
+            .src_buffer = ti.get_allocator().buffer(),
             .src_offset = staging.buffer_offset,
             .dst_buffer = ti.uses[buffer].buffer(),
             .size = size * sizeof(u32),
@@ -68,7 +68,7 @@ namespace tests
             }
         }
         cmd.copy_buffer_to_image({
-            .buffer = ti.get_allocator().get_buffer(),
+            .buffer = ti.get_allocator().buffer(),
             .buffer_offset = staging.buffer_offset,
             .image = ti.uses[image].image(),
             .image_extent = {size.x, size.y, size.z},
@@ -104,15 +104,17 @@ namespace tests
         // Tasks:
         //      Task 1 - writes into image A and B
         //      Task 2 - validate image A and B
-        //      Task 3 - writes into image A and C 
-        //          - Note(msakmary) both tasks writing image A creates a dependency between task 1 so that 
+        //      Task 3 - writes into image A and C
+        //          - Note(msakmary) both tasks writing image A creates a dependency between task 1 so that
         //            they are not inserted into the same batch and we can actually test if aliasing occurs
         //      Task 4 - validate image A and C
         // Expected:
         //      Images B and C are aliased and the content is correct after execution of each of the tasks
 
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device({ .name = "device", });
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
             .device = device,
@@ -155,26 +157,20 @@ namespace tests
             });
 
             // ========================================== Create resources ====================================================
-            auto image_A = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
-                .name = "Image A"
-            });
+            auto image_A = task_graph.create_transient_image({.dimensions = 3,
+                                                              .format = daxa::Format::R32_SFLOAT,
+                                                              .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
+                                                              .name = "Image A"});
 
-            auto image_B = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
-                .name = "Image B"
-            });
+            auto image_B = task_graph.create_transient_image({.dimensions = 3,
+                                                              .format = daxa::Format::R32_SFLOAT,
+                                                              .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
+                                                              .name = "Image B"});
 
-            auto image_C = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_C_SIZE.x, IMAGE_C_SIZE.y, IMAGE_C_SIZE.z},
-                .name = "Image C"
-            });
+            auto image_C = task_graph.create_transient_image({.dimensions = 3,
+                                                              .format = daxa::Format::R32_SFLOAT,
+                                                              .size = {IMAGE_C_SIZE.x, IMAGE_C_SIZE.y, IMAGE_C_SIZE.z},
+                                                              .name = "Image C"});
 
             // ========================================== Record tasks =======================================================
             using namespace daxa::task_resource_uses;
@@ -240,7 +236,6 @@ namespace tests
 
             std::cout << task_graph.get_debug_string() << std::endl;
         }
-
     }
 
     void permutation_aliasing()
@@ -261,7 +256,9 @@ namespace tests
         //      Images A and B are aliased - they both start at the same offset
 
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device({ .name = "device", });
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
             .device = device,
@@ -303,15 +300,12 @@ namespace tests
                 .name = "task_graph",
             });
 
-
             // ========================================== Record tasks =======================================================
             using namespace daxa::task_resource_uses;
-            auto image_base = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_BASE_SIZE.x, IMAGE_BASE_SIZE.y, IMAGE_BASE_SIZE.z},
-                .name = "Image Base"
-            });
+            auto image_base = task_graph.create_transient_image({.dimensions = 3,
+                                                                 .format = daxa::Format::R32_SFLOAT,
+                                                                 .size = {IMAGE_BASE_SIZE.x, IMAGE_BASE_SIZE.y, IMAGE_BASE_SIZE.z},
+                                                                 .name = "Image Base"});
 
             task_graph.add_task({
                 .uses = {
@@ -325,9 +319,9 @@ namespace tests
                 .name = "Task 0 - write base image value",
             });
 
-            task_graph.conditional({
-                .condition_index = 0,
-                .when_true = [&](){
+            task_graph.conditional({.condition_index = 0,
+                                    .when_true = [&]()
+                                    {
                     auto image_A = task_graph.create_transient_image({
                         .dimensions = 3,
                         .format = daxa::Format::R32_SFLOAT,
@@ -356,9 +350,9 @@ namespace tests
                             validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
                         },
                         .name = "Perm True - Task 2 - check image A",
-                    });
-                },
-                .when_false = [&](){
+                    }); },
+                                    .when_false = [&]()
+                                    {
                     auto image_B = task_graph.create_transient_image({
                         .dimensions = 3,
                         .format = daxa::Format::R32_SFLOAT,
@@ -388,9 +382,7 @@ namespace tests
                             validate_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
                         },
                         .name = "Perm False - Task 2 - check image B",
-                    });
-                }
-            });
+                    }); }});
 
             task_graph.add_task({
                 .uses = {

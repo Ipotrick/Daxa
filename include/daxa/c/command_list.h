@@ -76,13 +76,13 @@ typedef struct
     daxa_ImageMipArraySlice dst_slice;
 } daxa_ImageClearInfo;
 
-struct BufferClearInfo
+typedef struct
 {
     daxa_BufferId buffer;
     size_t offset;
     size_t size;
     uint32_t clear_value;
-};
+} daxa_BufferClearInfo;
 
 typedef struct
 {
@@ -217,16 +217,6 @@ typedef struct
     float slope_factor;
 } daxa_DepthBiasInfo;
 
-typedef struct
-{
-
-} daxa_BufferClearInfo;
-
-typedef struct
-{
-
-} daxa_ImageClearInfo;
-
 typedef struct daxa_ImplCommandList * daxa_CommandList;
 
 void daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
@@ -236,7 +226,7 @@ void daxa_cmd_copy_image_to_image(daxa_CommandList cmd_list, daxa_ImageCopyInfo 
 void daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const * info);
 
 void daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
-void daxa_cmd_clear_image(daxa_CommandList cmd_list, VkImageClearInfo const * info);
+void daxa_cmd_clear_image(daxa_CommandList cmd_list, daxa_ImageClearInfo const * info);
 
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.

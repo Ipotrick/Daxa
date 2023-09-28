@@ -54,12 +54,14 @@ typedef struct
     uint64_t signal_timeline_semaphoreCount;
 } daxa_CommandSubmitInfo;
 
+typedef struct daxa_ImplSwapchain * daxa_Swapchain;
+
 typedef struct
 {
     daxa_BinarySemaphore const * wait_binary_semaphores;
     uint64_t wait_binary_semaphore_count;
     daxa_Swapchain swapchain;
-} PresentInfo;
+} daxa_PresentInfo;
 
 typedef struct daxa_ImplDevice * daxa_Device;
 

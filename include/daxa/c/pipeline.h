@@ -48,11 +48,11 @@ static const daxa_DepthTestInfo DAXA_DEFAULT_DEPTH_TEST_INFO = {
 
 typedef struct
 {
-    VkConservativeRasterizationMode mode;
+    VkConservativeRasterizationModeEXT mode;
     float size;
 } daxa_ConservativeRasterInfo;
 
-typedef struct 
+typedef struct
 {
     VkPrimitiveTopology primitive_topology;
     daxa_Bool8 primitive_restart_enable;
@@ -84,7 +84,7 @@ static const daxa_RasterizerInfo DAXA_DEFAULT_RASTERIZATION_INFO = {
     .depth_bias_slope_factor = 0.0f,
     .line_width = 1.0f,
     .enable_conservative_rasterization = 0,
-    .conservative_raster_info,
+    .conservative_raster_info = {.mode = VK_CONSERVATIVE_RASTERIZATION_MODE_DISABLED_EXT, .size = 0.0f},
 };
 
 // should be moved in c++ from types to pipeline.hpp.
@@ -101,14 +101,14 @@ typedef struct
 } daxa_BlendInfo;
 
 static const daxa_BlendInfo DAXA_DEFAULT_BLEND_INFO = {
-    .blend_enable = 0;
-    .src_color_blend_factor = VK_BLEND_FACTOR_ONE;
-    .dst_color_blend_factor = VK_BLEND_FACTOR_ZERO;
-    .color_blend_op = VK_BLEND_OP_ADD;
-    .src_alpha_blend_factor = VK_BLEND_FACTOR_ONE;
-    .dst_alpha_blend_factor = VK_BLEND_FACTOR_ZERO;
-    .alpha_blend_op = VK_BLEND_OP_ADD;
-    .color_write_mask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT  | VK_COLOR_COMPONENT_A_BIT;
+    .blend_enable = 0,
+    .src_color_blend_factor = VK_BLEND_FACTOR_ONE,
+    .dst_color_blend_factor = VK_BLEND_FACTOR_ZERO,
+    .color_blend_op = VK_BLEND_OP_ADD,
+    .src_alpha_blend_factor = VK_BLEND_FACTOR_ONE,
+    .dst_alpha_blend_factor = VK_BLEND_FACTOR_ZERO,
+    .alpha_blend_op = VK_BLEND_OP_ADD,
+    .color_write_mask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT,
 };
 
 typedef struct
@@ -117,16 +117,16 @@ typedef struct
     daxa_BlendInfo blend;
 } daxa_RenderAttachment;
 
-typedef struct 
+typedef struct
 {
     uint32_t control_points;
-    VkTesselationDomainOrigin origin;
+    VkTessellationDomainOrigin origin;
 } daxa_TesselationInfo;
 
 // NODE(pahrens): This is an arbitrary number, bump it if you need more.
 static const uint32_t DAXA_MAXIMUM_COLOR_ATTACHMENT_COUNT = 8;
 
-struct RasterPipelineInfo
+typedef struct
 {
     VkShaderStageFlags enabled_stages;
     daxa_ShaderInfo mesh_shader_info;
@@ -137,14 +137,14 @@ struct RasterPipelineInfo
     daxa_ShaderInfo task_shader_info;
     daxa_RenderAttachment color_attachments[DAXA_MAXIMUM_COLOR_ATTACHMENT_COUNT];
     uint32_t color_attachment_count;
-    daxa_DepthTestInfo depth_test = {};
-    daxa_RasterizerInfo raster = {};
-    daxa_TesselationInfo tesselation = {};
-    uint32_t push_constant_size = {};
-    char const * name = {};
-};
+    daxa_DepthTestInfo depth_test;
+    daxa_RasterizerInfo raster;
+    daxa_TesselationInfo tesselation;
+    uint32_t push_constant_size;
+    char const * name;
+} daxa_RasterPipelineInfo;
 
-struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
+typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
 
 daxa_RasterPipelineInfo const *
 daxa_raster_pipeline_info(daxa_RasterPipeline raster_pipeline);

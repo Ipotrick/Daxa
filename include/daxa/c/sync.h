@@ -1,7 +1,7 @@
 #ifndef __DAXA_SYNC_H__
 #define __DAXA_SYNC_H__
 
-#include "types.h"
+#include "gpu_resources.h"
 
 typedef struct
 {
