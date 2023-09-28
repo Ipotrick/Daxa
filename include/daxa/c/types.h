@@ -6,6 +6,8 @@
 
 typedef uint64_t daxa_Flags;
 
+typedef char daxa_Bool8;
+
 typedef enum
 {
     DAXA_RESULT_UNKNOWN = 0,
@@ -214,5 +216,19 @@ typedef struct
         daxa_ManualAllocInfo manual_alloc_info;
     };
 } daxa_AllocateInfo;
+
+typedef struct 
+{
+    uint32_t query_count;
+    char const * name;
+} daxa_TimelineQueryPoolInfo;
+
+typedef struct daxa_ImplTimelineQueryPool daxa_TimelineQueryPool;
+
+daxa_TimelineQueryPoolInfo const *
+daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
+
+void
+daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
 
 #endif // #ifndef __DAXA_TYPES_H__

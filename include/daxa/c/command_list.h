@@ -4,8 +4,7 @@
 #include "types.h"
 #include "sync.h"
 #include "gpu_resources.h"
-// #include "pipeline.h"
-// #include "timeline_query.h"
+#include "pipeline.h"
 
 typedef struct
 {
@@ -217,6 +216,16 @@ typedef struct
     float clamp;
     float slope_factor;
 } daxa_DepthBiasInfo;
+
+typedef struct
+{
+
+} daxa_BufferClearInfo;
+
+typedef struct
+{
+
+} daxa_ImageClearInfo;
 
 typedef struct daxa_ImplCommandList * daxa_CommandList;
 

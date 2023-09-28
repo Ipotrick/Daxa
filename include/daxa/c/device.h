@@ -4,7 +4,7 @@
 #include "daxa/c/types.h"
 #include "daxa/c/sync.h"
 #include "daxa/c/gpu_resources.h"
-// #include "daxa/c/pipeline.h"
+#include "daxa/c/pipeline.h"
 #include "daxa/c/command_list.h"
 
 typedef enum
