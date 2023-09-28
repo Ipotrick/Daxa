@@ -1,14 +1,15 @@
 #ifndef __DAXA_TYPES_H__
 #define __DAXA_TYPES_H__
 
-#include <vulkan.h>
+#include <vulkan/vulkan.h>
 #include <stdint.h>
+
+typedef uint64_t daxa_Flags;
 
 typedef enum
 {
     DAXA_RESULT_UNKNOWN = 0,
-    DAXA_RESULT_OUT_OF_DEVICE_MEMORY = 1,
-    DAXA_RESULT_MAX_ENUM = 0xFFFFFFFF,
+    DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
 // ImageLayout matchs vulkans image layouts
@@ -21,7 +22,7 @@ typedef enum
     DAXA_IMAGE_LAYOUT_READ_ONLY_OPTIMAL = 1000314000,
     DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL = 1000314001,
     DAXA_IMAGE_LAYOUT_PRESENT_SRC = 1000001002,
-    DAXA_IMAGE_LAYOUT_MAX_ENUM = 0x7fffffff,
+    DAXA_IMAGE_LAYOUT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_ImageLayout;
 
 #define _DAXA_DECL_VEC2_TYPE(SCALAR_TYPE) \
@@ -180,20 +181,16 @@ typedef struct
     uint32_t array_layer;
 } daxa_ImageSlice;
 
-typedef enum
-{
-    DAXA_MEMORY_FLAG_NONE = 0x00000000,
-    DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001,
-    DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200,
-    DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400,
-    DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800,
-    DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000,
-    DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000,
-} daxa_MemoryFlagBits;
+typedef uint32_t daxa_MemoryFlags;
+static const daxa_MemoryFlags DAXA_MEMORY_FLAG_NONE = 0x00000000;
+static const daxa_MemoryFlags DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
+static const daxa_MemoryFlags DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
+static const daxa_MemoryFlags DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
+static const daxa_MemoryFlags DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800;
+static const daxa_MemoryFlags DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
+static const daxa_MemoryFlags DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
 
-typedef uint64_t daxa_MemoryFlags;
-
-typedef struct 
+typedef struct
 {
     VkMemoryRequirements requirements;
     daxa_MemoryFlagBits flags;
@@ -202,11 +199,11 @@ typedef struct
 struct daxa_ImplMemoryBlock;
 typedef struct daxa_ImplMemoryBlock * daxa_MemoryBlock;
 
-struct ManualAllocInfo
+typedef struct
 {
     daxa_MemoryBlock memory_block;
     size_t offset;
-};
+} daxa_ManualAllocInfo;
 
 typedef struct
 {

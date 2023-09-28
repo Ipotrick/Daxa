@@ -4,8 +4,8 @@
 #include "types.h"
 #include "sync.h"
 #include "gpu_resources.h"
-#include "pipeline.h"
-#include "timeline_query.h"
+// #include "pipeline.h"
+// #include "timeline_query.h"
 
 typedef struct
 {
@@ -25,57 +25,57 @@ typedef struct
     VkFilter filter;
 } daxa_ImageBlitInfo;
 
-typedef struct BufferCopyInfo
+typedef struct
 {
     daxa_BufferId src_buffer;
     size_t src_offset;
     daxa_BufferId dst_buffer;
     size_t dst_offset;
     size_t size;
-};
+} daxa_BufferCopyInfo;
 
-typedef struct BufferImageCopyInfo
+typedef struct
 {
     daxa_BufferId buffer;
     size_t buffer_offset;
     daxa_ImageId image;
     VkImageLayout image_layout;
-    ImageArraySlice image_slice;
-    Offset3D image_offset;
-    Extent3D image_extent;
-};
+    daxa_ImageArraySlice image_slice;
+    VkOffset3D image_offset;
+    VkExtent3D image_extent;
+} daxa_BufferImageCopyInfo;
 
-typedef struct ImageBufferCopyInfo
+typedef struct
 {
     daxa_ImageId image;
     VkImageLayout image_layout;
-    ImageArraySlice image_slice;
-    Offset3D image_offset;
-    Extent3D image_extent;
+    daxa_ImageArraySlice image_slice;
+    VkOffset3D image_offset;
+    VkExtent3D image_extent;
     daxa_BufferId buffer;
     size_t buffer_offset;
-};
+} daxa_ImageBufferCopyInfo;
 
-typedef struct ImageCopyInfo
+typedef struct
 {
     daxa_ImageId src_image;
     VkImageLayout src_image_layout;
     daxa_ImageId dst_image;
     VkImageLayout dst_image_layout;
-    ImageArraySlice src_slice;
-    Offset3D src_offset;
-    ImageArraySlice dst_slice;
-    Offset3D dst_offset;
-    Extent3D extent;
-};
+    daxa_ImageArraySlice src_slice;
+    VkOffset3D src_offset;
+    daxa_ImageArraySlice dst_slice;
+    VkOffset3D dst_offset;
+    VkExtent3D extent;
+} daxa_ImageCopyInfo;
 
-typedef struct daxa_ImageClearInfo
+typedef struct
 {
     VkImageLayout dst_image_layout;
     VkClearValue clear_value;
     daxa_ImageId dst_image;
-    ImageMipArraySlice dst_slice;
-};
+    daxa_ImageMipArraySlice dst_slice;
+} daxa_ImageClearInfo;
 
 struct BufferClearInfo
 {
@@ -150,7 +150,7 @@ typedef struct
     size_t draw_command_buffer_read_offset;
     uint32_t draw_count;
     uint32_t draw_command_stride;
-    VkBool is_indexed;
+    VkBool32 is_indexed;
 } daxa_DrawIndirectInfo;
 
 typedef struct
@@ -161,7 +161,7 @@ typedef struct
     size_t draw_count_buffer_read_offset;
     uint32_t max_draw_count;
     uint32_t draw_command_stride;
-    VkBool is_indexed;
+    VkBool32 is_indexed;
 } daxa_DrawIndirectCountInfo;
 
 typedef struct
@@ -218,46 +218,31 @@ typedef struct
     float slope_factor;
 } daxa_DepthBiasInfo;
 
-struct daxa_ImplCommandList;
-typedef daxa_ImplCommandList * daxa_CommandList;
+typedef struct daxa_ImplCommandList * daxa_CommandList;
 
-void 
-daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
-void 
-daxa_cmd_copy_buffer_to_image(daxa_CommandList cmd_list, daxa_BufferImageCopyInfo const * info);
-void 
-daxa_cmd_copy_image_to_buffer(daxa_CommandList cmd_list, daxa_ImageBufferCopyInfo const * info);
-void 
-daxa_cmd_copy_image_to_image(daxa_CommandList cmd_list, daxa_ImageCopyInfo const * info);
-void 
-daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const * info);
+void daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
+void daxa_cmd_copy_buffer_to_image(daxa_CommandList cmd_list, daxa_BufferImageCopyInfo const * info);
+void daxa_cmd_copy_image_to_buffer(daxa_CommandList cmd_list, daxa_ImageBufferCopyInfo const * info);
+void daxa_cmd_copy_image_to_image(daxa_CommandList cmd_list, daxa_ImageCopyInfo const * info);
+void daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const * info);
 
-void 
-daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
-void 
-daxa_cmd_clear_image(daxa_CommandList cmd_list, VkImageClearInfo const * info);
+void daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
+void daxa_cmd_clear_image(daxa_CommandList cmd_list, VkImageClearInfo const * info);
 
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-void 
-daxa_cmd_pipeline_barrier(daxa_CommandList cmd_list, daxa_MemoryBarrierInfo const * info);
+void daxa_cmd_pipeline_barrier(daxa_CommandList cmd_list, daxa_MemoryBarrierInfo const * info);
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-void 
-daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageBarrierInfo const * info);
-void 
-daxa_cmd_signal_event(daxa_CommandList cmd_list, daxa_EventSignalInfo const * info);
-void 
-daxa_cmd_wait_events(daxa_CommandList cmd_list, daxa_EventWaitInfo const * infos, size_t info_count);
-void 
-daxa_cmd_wait_event(daxa_CommandList cmd_list, daxa_EventWaitInfo const * info);
-void 
-daxa_cmd_reset_event(daxa_CommandList cmd_list, daxa_ResetEventInfo const * info);
+void daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageBarrierInfo const * info);
+void daxa_cmd_signal_event(daxa_CommandList cmd_list, daxa_EventSignalInfo const * info);
+void daxa_cmd_wait_events(daxa_CommandList cmd_list, daxa_EventWaitInfo const * infos, size_t info_count);
+void daxa_cmd_wait_event(daxa_CommandList cmd_list, daxa_EventWaitInfo const * info);
+void daxa_cmd_reset_event(daxa_CommandList cmd_list, daxa_ResetEventInfo const * info);
 
-void 
-daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t size, uint32_t offset);
+void daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t size, uint32_t offset);
 /// @brief  Binds a buffer region to the uniform buffer slot.
 ///         There are 8 uniform buffer slots (indices range from 0 to 7).
 ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
@@ -267,84 +252,57 @@ daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t si
 ///         Set uniform buffer slots are cleared after a pipeline is bound.
 ///         Before setting another pipeline, they need to be set again.
 /// @param info parameters.
-void 
-daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetConstantBufferInfo const * info);
-void 
-daxa_cmd_set_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
-void 
-daxa_cmd_set_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
-void 
-daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
-void 
-daxa_cmd_dispatch_indirect(daxa_CommandList cmd_list, daxa_DispatchIndirectInfo const * info);
+void daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetConstantBufferInfo const * info);
+void daxa_cmd_set_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
+void daxa_cmd_set_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
+void daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
+void daxa_cmd_dispatch_indirect(daxa_CommandList cmd_list, daxa_DispatchIndirectInfo const * info);
 
 /// @brief  Destroyes the buffer AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id buffer to be destroyed after command list finishes.
-void 
-daxa_cmd_destroy_buffer_deferred(daxa_CommandList cmd_list, daxa_BufferId id);
+void daxa_cmd_destroy_buffer_deferred(daxa_CommandList cmd_list, daxa_BufferId id);
 /// @brief  Destroyes the image AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image to be destroyed after command list finishes.
-void 
-daxa_cmd_destroy_image_deferred(daxa_CommandList cmd_list, daxa_ImageId id);
+void daxa_cmd_destroy_image_deferred(daxa_CommandList cmd_list, daxa_ImageId id);
 /// @brief  Destroyes the image view AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image view to be destroyed after command list finishes.
-void 
-daxa_cmd_destroy_image_view_deferred(daxa_CommandList cmd_list, daxa_ImageViewId id);
+void daxa_cmd_destroy_image_view_deferred(daxa_CommandList cmd_list, daxa_ImageViewId id);
 /// @brief  Destroyes the sampler AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image sampler be destroyed after command list finishes.
-void 
-daxa_cmd_destroy_sampler_deferred(daxa_CommandList cmd_list, daxa_SamplerId id);
+void daxa_cmd_destroy_sampler_deferred(daxa_CommandList cmd_list, daxa_SamplerId id);
 
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
 /// @param info parameters.
-void 
-daxa_cmd_begin_renderpass(daxa_CommandList cmd_list, daxa_RenderPassBeginInfo const * info);
+void daxa_cmd_begin_renderpass(daxa_CommandList cmd_list, daxa_RenderPassBeginInfo const * info);
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
-void 
-daxa_cmd_end_renderpass(daxa_CommandList cmd_list);
-void 
-daxa_cmd_set_viewport(daxa_CommandList cmd_list, VkViewportInfo const * info);
-void 
-daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
-void 
-daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
-void 
-daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, size_t index_type_byte_size);
+void daxa_cmd_end_renderpass(daxa_CommandList cmd_list);
+void daxa_cmd_set_viewport(daxa_CommandList cmd_list, VkViewportInfo const * info);
+void daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
+void daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
+void daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, size_t index_type_byte_size);
 
-void 
-daxa_cmd_draw(daxa_CommandList cmd_list, daxa_DrawInfo const * info);
-void 
-daxa_cmd_draw_indexed(daxa_CommandList cmd_list, daxa_DrawIndexedInfo const * info);
-void 
-daxa_cmd_draw_indirect(daxa_CommandList cmd_list, daxa_DrawIndirectInfo const * info);
-void 
-daxa_cmd_draw_indirect_count(daxa_CommandList cmd_list, daxa_DrawIndirectCountInfo const * info);
-void 
-daxa_cmd_draw_mesh_tasks(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
-void 
-daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectInfo const * info);
-void 
-daxa_cmd_draw_mesh_tasks_indirect_count(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectCountInfo const * info);
+void daxa_cmd_draw(daxa_CommandList cmd_list, daxa_DrawInfo const * info);
+void daxa_cmd_draw_indexed(daxa_CommandList cmd_list, daxa_DrawIndexedInfo const * info);
+void daxa_cmd_draw_indirect(daxa_CommandList cmd_list, daxa_DrawIndirectInfo const * info);
+void daxa_cmd_draw_indirect_count(daxa_CommandList cmd_list, daxa_DrawIndirectCountInfo const * info);
+void daxa_cmd_draw_mesh_tasks(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
+void daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectInfo const * info);
+void daxa_cmd_draw_mesh_tasks_indirect_count(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectCountInfo const * info);
 
-void 
-daxa_cmd_write_timestamp(daxa_CommandList cmd_list, daxa_WriteTimestampInfo const * info);
-void 
-daxa_cmd_reset_timestamps(daxa_CommandList cmd_list, daxa_ResetTimestampsInfo const * info);
+void daxa_cmd_write_timestamp(daxa_CommandList cmd_list, daxa_WriteTimestampInfo const * info);
+void daxa_cmd_reset_timestamps(daxa_CommandList cmd_list, daxa_ResetTimestampsInfo const * info);
 
-void 
-daxa_cmd_begin_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo const * info);
-void 
-daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
+void daxa_cmd_begin_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo const * info);
+void daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 
-void 
-daxa_cmd_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
-VkBool
+void daxa_cmd_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
+VkBool32
 daxa_cmd_is_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 daxa_CommandListInfo const *
 daxa_cmd_info(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);

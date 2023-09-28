@@ -170,13 +170,13 @@ namespace daxa
 
     struct ResetSplitBarriersInfo
     {
-        VkEvent split_barrier;
-        VkPipelineStageFlags stage;
+        SplitBarrierState & split_barrier;
+        PipelineStageFlags stage;
     };
 
     struct WaitSplitBarriersInfo
     {
-        std::span<VkEvent> split_barriers = {};
+        std::span<SplitBarrierState> split_barriers = {};
     };
 
     struct WriteTimestampInfo
@@ -201,7 +201,7 @@ namespace daxa
 
     struct ResetSplitBarrierInfo
     {
-        VkEvent & barrier;
+        SplitBarrierState & barrier;
         PipelineStageFlags stage_masks = {};
     };
 
@@ -259,7 +259,7 @@ namespace daxa
         ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
         ///         This is in stark contrast to OpenGl like bindings wich are visible immediately to all commands after binding.
         ///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
-        ///         Set uniform buffer slots are cleared after a pipeline is bound. 
+        ///         Set uniform buffer slots are cleared after a pipeline is bound.
         ///         Before setting another pipeline, they need to be set again.
         /// @param info parameters.
         void set_uniform_buffer(SetConstantBufferInfo const & info);

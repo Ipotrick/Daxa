@@ -4,7 +4,7 @@
 #include <daxa/c/device.h>
 
 struct daxa_ImplInstance;
-typedef struct daxa_ImplInstance* daxa_Instance;
+typedef struct daxa_ImplInstance * daxa_Instance;
 
 typedef enum
 {

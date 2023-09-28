@@ -777,7 +777,7 @@ namespace daxa
         VkDebugUtilsLabelEXT const vk_debug_label_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT,
             .pNext = {},
-            .pLabelName = info.label_name.c_str(),
+            .pLabelName = info.name.c_str(),
             .color = {
                 info.label_color[0],
                 info.label_color[1],

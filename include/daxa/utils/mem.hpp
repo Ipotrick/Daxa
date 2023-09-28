@@ -55,13 +55,13 @@ namespace daxa
             u32 size = {};
         };
 
-        TransferMemoryPoolInfo info = {};
+        TransferMemoryPoolInfo m_info = {};
         TimelineSemaphore gpu_timeline = {};
 
       private:
         u64 current_timeline_value = {};
         std::deque<TrackedAllocation> live_allocations = {};
-        BufferId buffer = {};
+        BufferId m_buffer = {};
         daxa::BufferDeviceAddress buffer_device_address = {};
         void * buffer_host_address = {};
         u32 claimed_start = {};

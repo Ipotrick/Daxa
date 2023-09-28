@@ -951,15 +951,15 @@ namespace daxa
             impl_runtime.device_address = constant_buffer_alloc.device_address;
             impl_runtime.set_uniform_buffer_info = SetConstantBufferInfo{
                 .slot = static_cast<u32>(task.base_task->get_uses_constant_buffer_slot()),
-                .buffer = staging_memory->get_buffer(),
+                .buffer = staging_memory->buffer(),
                 .size = constant_buffer_alloc.size,
                 .offset = constant_buffer_alloc.buffer_offset,
             };
         }
         impl_runtime.current_task = &task;
         impl_runtime.command_lists.back().begin_label({
-            .label_name = std::string("task ") + std::to_string(in_batch_task_index) + std::string(" \"") + task.base_task->get_name() + std::string("\""),
             .label_color = info.task_label_color,
+            .name = std::string("task ") + std::to_string(in_batch_task_index) + std::string(" \"") + task.base_task->get_name() + std::string("\""),
         });
         task.base_task->callback(TaskInterface{&impl_runtime});
         impl_runtime.command_lists.back().end_label();
@@ -2497,8 +2497,8 @@ namespace daxa
             if (impl.info.enable_command_labels)
             {
                 impl_runtime.command_lists.back().begin_label({
-                    .label_name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index),
                     .label_color = impl.info.task_graph_label_color,
+                    .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index),
                 });
             }
             usize batch_index = 0;
@@ -2507,8 +2507,8 @@ namespace daxa
                 if (impl.info.enable_command_labels)
                 {
                     impl_runtime.command_lists.back().begin_label({
-                        .label_name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index) + std::string(", batch ") + std::to_string(batch_index),
                         .label_color = impl.info.task_batch_label_color,
+                        .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index) + std::string(", batch ") + std::to_string(batch_index),
                     });
                 }
                 batch_index += 1;
@@ -2729,7 +2729,7 @@ namespace daxa
                 }
                 if (impl.staging_memory.has_value() && impl.staging_memory->timeline_value() > impl.last_execution_staging_timeline_value)
                 {
-                    submit_info.signal_timeline_semaphores.push_back({impl.staging_memory->get_timeline_semaphore(), impl.staging_memory->timeline_value()});
+                    submit_info.signal_timeline_semaphores.push_back({impl.staging_memory->timeline_semaphore(), impl.staging_memory->timeline_value()});
                 }
                 impl.info.device.submit_commands(submit_info);
 

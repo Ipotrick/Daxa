@@ -86,13 +86,13 @@ extern const daxa_Access DAXA_ACCESS_PRE_RASTERIZATION_SHADERS_READ_WRITE;
 extern const daxa_Access DAXA_ACCESS_TASK_SHADER_READ_WRITE;
 extern const daxa_Access DAXA_ACCESS_MESH_SHADER_READ_WRITE;
 
-typedef struct 
+typedef struct
 {
     daxa_Access src_access;
     daxa_Access dst_access;
 } daxa_MemoryBarrierInfo;
 
-typedef struct 
+typedef struct
 {
     daxa_Access src_access;
     daxa_Access dst_access;
@@ -131,8 +131,7 @@ daxa_timeline_semaphore_info(daxa_TimelineSemaphore timeline_semaphore);
 uint64_t
 daxa_timeline_semaphore_get_value(daxa_TimelineSemaphore timeline_semaphore);
 
-void
-daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value);
+void daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value);
 
 daxa_Result
 daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value, uint64_t timeout);
