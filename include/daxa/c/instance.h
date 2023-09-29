@@ -6,12 +6,8 @@
 struct daxa_ImplInstance;
 typedef struct daxa_ImplInstance * daxa_Instance;
 
-typedef enum
-{
-    DAXA_INSTANCE_FLAG_DEBUG_UTIL = 0x1,
-    DAXA_INSTANCE_FLAG_MAX_ENUM = 0x7FFFFFFF,
-} daxa_InstanceFlagBits;
-typedef uint64_t daxa_InstanceFlags;
+typedef daxa_Flags daxa_InstanceFlags;
+static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_DEBUG_UTIL = 0x1;
 
 typedef struct
 {
