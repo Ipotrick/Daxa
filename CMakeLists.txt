@@ -100,6 +100,10 @@ target_compile_definitions(daxa
     DAXA_SHADERLANG_HLSL=2
 )
 
+if(DAXA_USE_STATIC_CRT AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 if(DAXA_ENABLE_UTILS_FSR2)
     target_compile_definitions(daxa
         PUBLIC

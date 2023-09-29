@@ -1456,7 +1456,7 @@ namespace
     // }
 }
 
-#elif defined(DAXA_SHADER)
+#elif DAXA_SHADER
 
 DAXA_DECL_PUSH_CONSTANT(Push, push)
 
