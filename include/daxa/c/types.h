@@ -18,6 +18,7 @@ typedef enum
 {
     DAXA_RESULT_UNKNOWN = 0,
     DAXA_RESULT_SUCCESS = 1,
+    DAXA_RESULT_MISSING_EXTENSION = 2,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
