@@ -4,6 +4,8 @@
 
 #include <daxa/gpu_resources.hpp>
 
+#include <daxa/c/device.h>
+
 namespace daxa
 {
     struct Device;
@@ -32,8 +34,6 @@ namespace daxa
         std::string name = {};
     };
 
-    struct Device;
-
     struct SplitBarrierState
     {
         SplitBarrierState() = default;
@@ -45,12 +45,11 @@ namespace daxa
         auto info() const -> SplitBarrierInfo const &;
 
       private:
-        friend struct Device;
         friend struct CommandList;
-        SplitBarrierState(ManagedWeakPtr a_impl_device, SplitBarrierInfo a_info);
+        SplitBarrierState(daxa_Device a_device, SplitBarrierInfo a_info);
         void cleanup();
 
-        ManagedWeakPtr device = {};
+        daxa_Device device = {};
         SplitBarrierInfo create_info = {};
         u64 data = {};
     };

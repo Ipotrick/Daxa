@@ -2,8 +2,6 @@
 
 #include <utility>
 
-#include "impl_device.hpp"
-
 namespace daxa
 {
     Swapchain::Swapchain(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
@@ -46,7 +44,7 @@ namespace daxa
         impl.acquire_semaphore_index = (impl.cpu_frame_timeline + 1) % impl.info.max_allowed_frames_in_flight;
         BinarySemaphore & acquire_semaphore = impl.acquire_semaphores[impl.acquire_semaphore_index];
         VkResult const err = vkAcquireNextImageKHR(
-            impl.impl_device.as<ImplDevice>()->vk_device,
+            impl.device->vk_device,
             impl.vk_swapchain, UINT64_MAX,
             acquire_semaphore.as<ImplBinarySemaphore>()->vk_semaphore,
             nullptr,
@@ -98,7 +96,7 @@ namespace daxa
     {
         if (this->vk_surface != nullptr)
         {
-            vkDestroySurfaceKHR(daxa_instance_get_vk_instance(this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->instance), this->vk_surface, nullptr);
+            vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
         }
 #if defined(_WIN32)
         VkWin32SurfaceCreateInfoKHR const surface_ci{
@@ -109,8 +107,8 @@ namespace daxa
             .hwnd = static_cast<HWND>(info.native_window),
         };
         {
-            auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(daxa_instance_get_vk_instance(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->instance), "vkCreateWin32SurfaceKHR"));
-            func(daxa_instance_get_vk_instance(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->instance), &surface_ci, nullptr, &this->vk_surface);
+            auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(this->device->instance->vk_instance, "vkCreateWin32SurfaceKHR"));
+            func(this->device->instance->vk_instance, &surface_ci, nullptr, &this->vk_surface);
         }
 #elif defined(__linux__)
         switch (this->info.native_window_platform)
@@ -168,16 +166,16 @@ namespace daxa
         return std::numeric_limits<usize>::max();
     }
 
-    ImplSwapchain::ImplSwapchain(ManagedWeakPtr a_impl_device, SwapchainInfo a_info)
-        : impl_device{std::move(a_impl_device)},
+    ImplSwapchain::ImplSwapchain(daxa_Device a_device, SwapchainInfo a_info)
+        : device{a_device},
           info{std::move(a_info)},
-          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{impl_device, TimelineSemaphoreInfo{.initial_value = 0, .name = this->info.name + " gpu timeline"}})}}
+          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{this->device, TimelineSemaphoreInfo{.initial_value = 0, .name = this->info.name + " gpu timeline"}})}}
     {
         recreate_surface();
 
         u32 format_count = 0;
 
-        ImplDevice const & device_impl = *this->impl_device.as<ImplDevice>();
+        auto const & device_impl = *this->device;
 
         vkGetPhysicalDeviceSurfaceFormatsKHR(device_impl.vk_physical_device, this->vk_surface, &format_count, nullptr);
         std::vector<VkSurfaceFormatKHR> surface_formats;
@@ -201,7 +199,7 @@ namespace daxa
         {
             acquire_semaphores.push_back(BinarySemaphore{
                 ManagedPtr(new ImplBinarySemaphore{
-                    this->impl_device,
+                    this->device,
                     BinarySemaphoreInfo{
                         .name = this->info.name + ", image " + std::to_string(i) + " acquire semaphore",
                     },
@@ -213,7 +211,7 @@ namespace daxa
         {
             present_semaphores.push_back(BinarySemaphore{
                 ManagedPtr(new ImplBinarySemaphore{
-                    this->impl_device,
+                    this->device,
                     BinarySemaphoreInfo{
                         .name = this->info.name + ", image " + std::to_string(i) + " present semaphore",
                     },
@@ -226,8 +224,8 @@ namespace daxa
     {
         cleanup();
 
-        vkDestroySwapchainKHR(this->impl_device.as<ImplDevice>()->vk_device, this->vk_swapchain, nullptr);
-        vkDestroySurfaceKHR(daxa_instance_get_vk_instance(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->instance), this->vk_surface, nullptr);
+        vkDestroySwapchainKHR(this->device->vk_device, this->vk_swapchain, nullptr);
+        vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
     }
 
     void ImplSwapchain::recreate()
@@ -236,7 +234,7 @@ namespace daxa
         // we need to pass in the old swapchain handle to create a new one
 
         VkSurfaceCapabilitiesKHR surface_capabilities;
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->impl_device.as<ImplDevice>()->vk_physical_device, this->vk_surface, &surface_capabilities);
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(this->device->vk_physical_device, this->vk_surface, &surface_capabilities);
         if (surface_extent.x == surface_capabilities.currentExtent.width &&
             surface_extent.y == surface_capabilities.currentExtent.height &&
             this->vk_swapchain != VK_NULL_HANDLE)
@@ -258,7 +256,7 @@ namespace daxa
 
         // NOTE: this is a hack that allows us to ignore issues caused
         // by things that are just underspecified in the Vulkan spec.
-        this->impl_device.as<ImplDevice>()->wait_idle();
+        daxa_dvc_wait_idle(this->device);
 
         cleanup();
 
@@ -277,7 +275,7 @@ namespace daxa
             .imageUsage = usage.data,
             .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &this->impl_device.as<ImplDevice>()->main_queue_family_index,
+            .pQueueFamilyIndices = &this->device->main_queue_family_index,
             .preTransform = static_cast<VkSurfaceTransformFlagBitsKHR>(info.present_operation),
             .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
             .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),
@@ -286,21 +284,21 @@ namespace daxa
         };
 
         vkCreateSwapchainKHR(
-            this->impl_device.as<ImplDevice>()->vk_device,
+            this->device->vk_device,
             &swapchain_create_info,
             nullptr,
             &this->vk_swapchain);
 
         if (old_swapchain != VK_NULL_HANDLE)
         {
-            vkDestroySwapchainKHR(impl_device.as<ImplDevice>()->vk_device, old_swapchain, nullptr);
+            vkDestroySwapchainKHR(this->device->vk_device, old_swapchain, nullptr);
         }
 
         u32 image_count = 0;
         std::vector<VkImage> swapchain_images;
-        vkGetSwapchainImagesKHR(impl_device.as<ImplDevice>()->vk_device, vk_swapchain, &image_count, nullptr);
+        vkGetSwapchainImagesKHR(this->device->vk_device, vk_swapchain, &image_count, nullptr);
         swapchain_images.resize(image_count);
-        vkGetSwapchainImagesKHR(impl_device.as<ImplDevice>()->vk_device, vk_swapchain, &image_count, swapchain_images.data());
+        vkGetSwapchainImagesKHR(this->device->vk_device, vk_swapchain, &image_count, swapchain_images.data());
         this->images.resize(image_count);
         for (u32 i = 0; i < images.size(); i++)
         {
@@ -310,11 +308,11 @@ namespace daxa
                 .usage = usage,
                 .name = this->info.name + " Image #" + std::to_string(i),
             };
-            this->images[i] = this->impl_device.as<ImplDevice>()->new_swapchain_image(
+            this->images[i] = this->device->new_swapchain_image(
                 swapchain_images[i], vk_surface_format.format, i, usage, image_info);
         }
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->info.name.empty())
+        if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !this->info.name.empty())
         {
             auto swapchain_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
@@ -324,7 +322,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_swapchain),
                 .pObjectName = swapchain_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &swapchain_name_info);
+            this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &swapchain_name_info);
         }
     }
 
@@ -332,7 +330,7 @@ namespace daxa
     {
         for (auto & image : images)
         {
-            this->impl_device.as<ImplDevice>()->zombify_image(image);
+            this->device->zombify_image(image);
         }
         images.clear();
     }

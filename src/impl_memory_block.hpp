@@ -8,10 +8,10 @@ namespace daxa
 {
     struct ImplMemoryBlock : ManagedSharedState
     {
-        ImplMemoryBlock(ManagedWeakPtr device, MemoryBlockInfo const & info, VmaAllocation allocation, VmaAllocationInfo alloc_info);
+        ImplMemoryBlock(daxa_Device a_device, MemoryBlockInfo const & info, VmaAllocation allocation, VmaAllocationInfo alloc_info);
         ~ImplMemoryBlock();
 
-        ManagedWeakPtr impl_device = {};
+        daxa_Device device = {};
         MemoryBlockInfo info = {};
         VmaAllocation allocation = {};
         VmaAllocationInfo alloc_info = {};

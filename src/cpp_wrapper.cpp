@@ -22,8 +22,11 @@ namespace daxa
     Instance::Instance(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
     auto Instance::create_device(DeviceInfo const & device_info) -> Device
     {
-        DAXA_DBG_ASSERT_TRUE_M(false, "Needs device to be implemented in C first!");
         auto & impl = *as<ImplInstance>();
+        auto c_info = daxa_DeviceInfo{};
+        auto c_device = daxa_Device{};
+        auto res = daxa_instance_create_device(impl.instance, &c_info, &c_device);
+        DAXA_DBG_ASSERT_TRUE_M(res == DAXA_RESULT_SUCCESS, "Failed to create device");
         return {};
     }
 

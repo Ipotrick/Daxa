@@ -17,9 +17,9 @@ namespace daxa
 
     struct ImplPipeline : ManagedSharedState
     {
-        explicit ImplPipeline(ManagedWeakPtr a_impl_device);
+        explicit ImplPipeline(daxa_Device a_device);
 
-        ManagedWeakPtr impl_device;
+        daxa_Device device = {};
         VkPipeline vk_pipeline = {};
         VkPipelineLayout vk_pipeline_layout = {};
 
@@ -30,13 +30,13 @@ namespace daxa
     {
         RasterPipelineInfo info;
 
-        ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo a_info);
+        ImplRasterPipeline(daxa_Device a_device, RasterPipelineInfo a_info);
     };
 
     struct ImplComputePipeline final : ImplPipeline
     {
         ComputePipelineInfo info;
 
-        ImplComputePipeline(ManagedWeakPtr a_impl_device, ComputePipelineInfo a_info);
+        ImplComputePipeline(daxa_Device a_device, ComputePipelineInfo a_info);
     };
 } // namespace daxa

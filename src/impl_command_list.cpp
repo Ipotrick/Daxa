@@ -6,7 +6,7 @@
 #include "impl_device.hpp"
 
 namespace daxa
-{    
+{
     auto get_vk_image_memory_barrier(ImageBarrierInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
     {
         return VkImageMemoryBarrier2{
@@ -70,8 +70,8 @@ namespace daxa
 
         vkCmdCopyBuffer(
             impl.vk_cmd_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.src_buffer).vk_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.dst_buffer).vk_buffer,
+            impl.device->slot(info.src_buffer).vk_buffer,
+            impl.device->slot(info.dst_buffer).vk_buffer,
             1,
             &vk_buffer_copy);
     }
@@ -81,7 +81,7 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
-        auto const & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.image);
+        auto const & img_slot = impl.device->slot(info.image);
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
             .bufferRowLength = 0u,   // info.image_extent.x,
@@ -92,7 +92,7 @@ namespace daxa
         };
         vkCmdCopyBufferToImage(
             impl.vk_cmd_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
+            impl.device->slot(info.buffer).vk_buffer,
             img_slot.vk_image,
             static_cast<VkImageLayout>(info.image_layout),
             1,
@@ -104,7 +104,7 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
-        auto const & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.image);
+        auto const & img_slot = impl.device->slot(info.image);
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = info.buffer_offset,
             .bufferRowLength = 0u,   // info.image_extent.x,
@@ -117,7 +117,7 @@ namespace daxa
             impl.vk_cmd_buffer,
             img_slot.vk_image,
             static_cast<VkImageLayout>(info.image_layout),
-            impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
+            impl.device->slot(info.buffer).vk_buffer,
             1,
             &vk_buffer_image_copy);
     }
@@ -127,8 +127,8 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
-        auto const & src_slot = impl.impl_device.as<ImplDevice>()->slot(info.src_image);
-        auto const & dst_slot = impl.impl_device.as<ImplDevice>()->slot(info.dst_image);
+        auto const & src_slot = impl.device->slot(info.src_image);
+        auto const & dst_slot = impl.device->slot(info.dst_image);
         VkImageBlit const vk_blit{
             .srcSubresource = make_subresource_layers(info.src_slice, src_slot.aspect_flags),
             .srcOffsets = {*reinterpret_cast<VkOffset3D const *>(info.src_offsets.data()), *reinterpret_cast<VkOffset3D const *>(&info.src_offsets[1])},
@@ -151,8 +151,8 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
-        auto const & src_slot = impl.impl_device.as<ImplDevice>()->slot(info.src_image);
-        auto const & dst_slot = impl.impl_device.as<ImplDevice>()->slot(info.dst_image);
+        auto const & src_slot = impl.device->slot(info.src_image);
+        auto const & dst_slot = impl.device->slot(info.dst_image);
         VkImageCopy const vk_image_copy{
             .srcSubresource = make_subresource_layers(info.src_slice, src_slot.aspect_flags),
             .srcOffset = {*reinterpret_cast<VkOffset3D const *>(&info.src_offset)},
@@ -174,7 +174,7 @@ namespace daxa
     void CommandList::clear_image(ImageClearInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        auto & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.dst_image);
+        auto & img_slot = impl.device->slot(info.dst_image);
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
         if (is_depth_format(img_slot.info.format) || is_stencil_format(img_slot.info.format))
@@ -191,7 +191,7 @@ namespace daxa
             VkImageSubresourceRange sub_range = make_subressource_range(info.dst_slice, img_slot.aspect_flags);
             vkCmdClearDepthStencilImage(
                 impl.vk_cmd_buffer,
-                impl.impl_device.as<ImplDevice>()->slot(info.dst_image).vk_image,
+                impl.device->slot(info.dst_image).vk_image,
                 static_cast<VkImageLayout>(info.dst_image_layout),
                 &color,
                 1,
@@ -241,7 +241,7 @@ namespace daxa
 
         vkCmdFillBuffer(
             impl.vk_cmd_buffer,
-            impl.impl_device.as<ImplDevice>()->slot(info.buffer).vk_buffer,
+            impl.device->slot(info.buffer).vk_buffer,
             static_cast<VkDeviceSize>(info.offset),
             static_cast<VkDeviceSize>(info.size),
             info.clear_value);
@@ -268,7 +268,7 @@ namespace daxa
 
         impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout);
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
     }
@@ -276,12 +276,11 @@ namespace daxa
     void CommandList::set_uniform_buffer(SetConstantBufferInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        auto & impl_device = *impl.impl_device.as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         DAXA_DBG_ASSERT_TRUE_M(info.size > 0, "the set constant buffer range must be greater then 0");
-        DAXA_DBG_ASSERT_TRUE_M(info.offset % impl_device.vk_info.limits.min_uniform_buffer_offset_alignment == 0, "must respect the alignment requirements of uniform buffer bindings for constant buffer offsets!");
-        const usize buffer_size = impl_device.slot(info.buffer).info.size;
-        [[maybe_unused]] const bool binding_in_range = info.size + info.offset <= buffer_size;
+        DAXA_DBG_ASSERT_TRUE_M(info.offset % impl.device->vk_physical_device_properties2.properties.limits.minUniformBufferOffsetAlignment == 0, "must respect the alignment requirements of uniform buffer bindings for constant buffer offsets!");
+        const usize buffer_size = impl.device->slot(info.buffer).info.size;
+        [[maybe_unused]] bool const binding_in_range = info.size + info.offset <= buffer_size;
         DAXA_DBG_ASSERT_TRUE_M(binding_in_range, "The given offset and size of the buffer binding is outside of the bounds of the given buffer");
         DAXA_DBG_ASSERT_TRUE_M(info.slot < CONSTANT_BUFFER_BINDINGS_COUNT, "there are only 8 binding slots available for constant buffers");
         impl.current_constant_buffer_bindings[info.slot] = info;
@@ -295,7 +294,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
         impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout);
 
@@ -317,7 +316,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        vkCmdDispatchIndirect(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(info.indirect_buffer).vk_buffer, info.offset);
+        vkCmdDispatchIndirect(impl.vk_cmd_buffer, impl.device->slot(info.indirect_buffer).vk_buffer, info.offset);
     }
 
     void defer_destruction_helper(void * impl_void, GPUResourceId id, u8 index)
@@ -404,7 +403,7 @@ namespace daxa
     void CommandList::wait_split_barriers(std::span<SplitBarrierWaitInfo const> const & infos)
     {
         auto & impl = *this->as<ImplCommandList>();
-        auto & device = *impl.impl_device.as<ImplDevice>();
+        auto & device = *impl.device;
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
         for (auto const & end_info : infos)
@@ -444,7 +443,7 @@ namespace daxa
     void CommandList::signal_split_barrier(SplitBarrierSignalInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        auto & device = *impl.impl_device.as<ImplDevice>();
+        auto & device = *impl.device;
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can not record commands to completed command list");
         impl.flush_barriers();
 
@@ -454,8 +453,7 @@ namespace daxa
         for (auto & image_barrier : info.image_barriers)
         {
             dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
-                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image, device.slot(image_barrier.image_id).aspect_flags)
-            );
+                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image, device.slot(image_barrier.image_id).aspect_flags));
         }
         for (auto & memory_barrier : info.memory_barriers)
         {
@@ -490,7 +488,7 @@ namespace daxa
         {
             impl.flush_barriers();
         }
-        auto const & img_slot = impl.impl_device.as<ImplDevice>()->slot(info.image_id);
+        auto const & img_slot = impl.device->slot(info.image_id);
         impl.image_barrier_batch.at(impl.image_barrier_batch_count++) = {
             .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
             .pNext = nullptr,
@@ -544,7 +542,7 @@ namespace daxa
             out = VkRenderingAttachmentInfo{
                 .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
                 .pNext = nullptr,
-                .imageView = impl.impl_device.as<ImplDevice>()->slot(in.image_view).vk_image_view,
+                .imageView = impl.device->slot(in.image_view).vk_image_view,
                 .imageLayout = *reinterpret_cast<VkImageLayout const *>(&in.layout),
                 .resolveMode = VkResolveModeFlagBits::VK_RESOLVE_MODE_NONE,
                 .resolveImageView = VK_NULL_HANDLE,
@@ -648,7 +646,7 @@ namespace daxa
         case 4: vk_index_type = VK_INDEX_TYPE_UINT32; break;
         default: DAXA_DBG_ASSERT_TRUE_M(false, "only index byte sizes 2 and 4 are supported");
         }
-        vkCmdBindIndexBuffer(impl.vk_cmd_buffer, impl.impl_device.as<ImplDevice>()->slot(id).vk_buffer, offset, vk_index_type);
+        vkCmdBindIndexBuffer(impl.vk_cmd_buffer, impl.device->slot(id).vk_buffer, offset, vk_index_type);
     }
 
     void CommandList::draw(DrawInfo const & info)
@@ -673,7 +671,7 @@ namespace daxa
         {
             vkCmdDrawIndexedIndirect(
                 impl.vk_cmd_buffer,
-                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                impl.device->slot(info.draw_command_buffer).vk_buffer,
                 info.draw_command_buffer_read_offset,
                 info.draw_count,
                 info.draw_command_stride);
@@ -682,7 +680,7 @@ namespace daxa
         {
             vkCmdDrawIndirect(
                 impl.vk_cmd_buffer,
-                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                impl.device->slot(info.draw_command_buffer).vk_buffer,
                 info.draw_command_buffer_read_offset,
                 info.draw_count,
                 info.draw_command_stride);
@@ -697,9 +695,9 @@ namespace daxa
         {
             vkCmdDrawIndexedIndirectCount(
                 impl.vk_cmd_buffer,
-                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                impl.device->slot(info.draw_command_buffer).vk_buffer,
                 info.draw_command_buffer_read_offset,
-                impl.impl_device.as<ImplDevice>()->slot(info.draw_count_buffer).vk_buffer,
+                impl.device->slot(info.draw_count_buffer).vk_buffer,
                 info.draw_count_buffer_read_offset,
                 info.max_draw_count,
                 info.draw_command_stride);
@@ -708,9 +706,9 @@ namespace daxa
         {
             vkCmdDrawIndirectCount(
                 impl.vk_cmd_buffer,
-                impl.impl_device.as<ImplDevice>()->slot(info.draw_command_buffer).vk_buffer,
+                impl.device->slot(info.draw_command_buffer).vk_buffer,
                 info.draw_command_buffer_read_offset,
-                impl.impl_device.as<ImplDevice>()->slot(info.draw_count_buffer).vk_buffer,
+                impl.device->slot(info.draw_count_buffer).vk_buffer,
                 info.draw_count_buffer_read_offset,
                 info.max_draw_count,
                 info.draw_command_stride);
@@ -720,34 +718,31 @@ namespace daxa
     void CommandList::draw_mesh_tasks(u32 x, u32 y, u32 z)
     {
         auto & impl = *as<ImplCommandList>();
-        auto & device = *impl.impl_device.as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
-        DAXA_DBG_ASSERT_TRUE_M(device.info.enable_mesh_shader, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
-        device.vkCmdDrawMeshTasksEXT(impl.vk_cmd_buffer, x, y, z);
+        DAXA_DBG_ASSERT_TRUE_M((impl.device->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
+        impl.device->vkCmdDrawMeshTasksEXT(impl.vk_cmd_buffer, x, y, z);
     }
 
     void CommandList::draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        auto & device = *impl.impl_device.as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
-        DAXA_DBG_ASSERT_TRUE_M(device.info.enable_mesh_shader, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
-        device.vkCmdDrawMeshTasksIndirectEXT(impl.vk_cmd_buffer, device.slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
+        DAXA_DBG_ASSERT_TRUE_M((impl.device->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
+        impl.device->vkCmdDrawMeshTasksIndirectEXT(impl.vk_cmd_buffer, impl.device->slot(info.indirect_buffer).vk_buffer, info.offset, info.draw_count, info.stride);
     }
 
     void CommandList::draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info)
     {
         auto & impl = *as<ImplCommandList>();
-        auto & device = *impl.impl_device.as<ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
-        DAXA_DBG_ASSERT_TRUE_M(device.info.enable_mesh_shader, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
-        device.vkCmdDrawMeshTasksIndirectCountEXT(
-            impl.vk_cmd_buffer, 
-            device.slot(info.indirect_buffer).vk_buffer, 
-            info.offset, 
-            device.slot(info.count_buffer).vk_buffer, 
-            info.count_offset, 
-            info.max_count, 
+        DAXA_DBG_ASSERT_TRUE_M((impl.device->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0, "must enable mesh shading in device creation in order to use draw mesh tasks draw calls");
+        impl.device->vkCmdDrawMeshTasksIndirectCountEXT(
+            impl.vk_cmd_buffer,
+            impl.device->slot(info.indirect_buffer).vk_buffer,
+            info.offset,
+            impl.device->slot(info.count_buffer).vk_buffer,
+            info.count_offset,
+            info.max_count,
             info.stride);
     }
 
@@ -784,10 +779,10 @@ namespace daxa
                 info.label_color[2],
                 info.label_color[3]},
         };
-        
-        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils)
+
+        if ((impl.device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0)
         {
-            impl.impl_device.as<ImplDevice>()->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
+            impl.device->vkCmdBeginDebugUtilsLabelEXT(impl.vk_cmd_buffer, &vk_debug_label_info);
         }
     }
 
@@ -796,13 +791,13 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only record to uncompleted command list");
         impl.flush_barriers();
-        if (impl.impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils)
+        if ((impl.device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0)
         {
-            impl.impl_device.as<ImplDevice>()->vkCmdEndDebugUtilsLabelEXT(impl.vk_cmd_buffer);
+            impl.device->vkCmdEndDebugUtilsLabelEXT(impl.vk_cmd_buffer);
         }
     }
 
-    auto CommandBufferPoolPool::get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>
+    auto CommandBufferPoolPool::get(daxa_Device device) -> std::pair<VkCommandPool, VkCommandBuffer>
     {
         std::pair<VkCommandPool, VkCommandBuffer> pair = {};
         if (pools_and_buffers.empty())
@@ -842,7 +837,7 @@ namespace daxa
         pools_and_buffers.push_back(pool_and_buffer);
     }
 
-    void CommandBufferPoolPool::cleanup(ImplDevice * device)
+    void CommandBufferPoolPool::cleanup(daxa_Device device)
     {
         for (auto [pool, buffer] : pools_and_buffers)
         {
@@ -876,7 +871,7 @@ namespace daxa
 
     void ImplCommandList::flush_constant_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
     {
-        auto & device = *this->impl_device.as<ImplDevice>();
+        auto & device = *this->device;
         std::array<VkDescriptorBufferInfo, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
         std::array<VkWriteDescriptorSet, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_writes = {};
         for (u32 index = 0; index < CONSTANT_BUFFER_BINDINGS_COUNT; ++index)
@@ -918,12 +913,12 @@ namespace daxa
         }
     }
 
-    ImplCommandList::ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info)
-        : impl_device{std::move(device_impl)},
+    ImplCommandList::ImplCommandList(daxa_Device a_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info)
+        : device{a_device},
           info{std::move(a_info)},
           vk_cmd_buffer{buffer},
           vk_cmd_pool{pool},
-          pipeline_layouts{&(impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts)}
+          pipeline_layouts{&(this->device->gpu_shader_resource_table.pipeline_layouts)}
     {
         initialize();
     }
@@ -939,7 +934,7 @@ namespace daxa
 
         vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->info.name.empty())
+        if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !this->info.name.empty())
         {
             auto cmd_buffer_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const cmd_buffer_name_info{
@@ -949,7 +944,7 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer),
                 .pObjectName = cmd_buffer_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_buffer_name_info);
+            this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &cmd_buffer_name_info);
 
             auto cmd_pool_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const cmd_pool_name_info{
@@ -959,20 +954,18 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool),
                 .pObjectName = cmd_pool_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &cmd_pool_name_info);
+            this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &cmd_pool_name_info);
         }
     }
 
     ImplCommandList::~ImplCommandList() // NOLINT(bugprone-exception-escape)
     {
-        auto & device = *this->impl_device.as<ImplDevice>();
+        vkResetCommandPool(device->vk_device, this->vk_cmd_pool, {});
 
-        vkResetCommandPool(device.vk_device, this->vk_cmd_pool, {});
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
+        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
 
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device.main_queue_zombies_mtx});
-        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device.main_queue_cpu_timeline);
-
-        device.main_queue_command_list_zombies.push_front({
+        device->main_queue_command_list_zombies.push_front({
             main_queue_cpu_timeline,
             CommandListZombie{
                 .vk_cmd_buffer = vk_cmd_buffer,

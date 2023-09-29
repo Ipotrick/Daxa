@@ -23,11 +23,11 @@ namespace daxa
 
     struct CommandBufferPoolPool
     {
-        auto get(ImplDevice * device) -> std::pair<VkCommandPool, VkCommandBuffer>;
+        auto get(daxa_Device device) -> std::pair<VkCommandPool, VkCommandBuffer>;
 
         void put_back(std::pair<VkCommandPool, VkCommandBuffer> pool_and_buffer);
 
-        void cleanup(ImplDevice * device);
+        void cleanup(daxa_Device device);
 
         std::vector<std::pair<VkCommandPool, VkCommandBuffer>> pools_and_buffers = {};
     };
@@ -42,7 +42,7 @@ namespace daxa
     {
         using InfoT = CommandListInfo;
 
-        ManagedWeakPtr impl_device = {};
+        daxa_Device device = {};
         CommandListInfo info = {};
         VkCommandBuffer vk_cmd_buffer = {};
         VkCommandPool vk_cmd_pool = {};
@@ -59,7 +59,7 @@ namespace daxa
         void flush_barriers();
         void flush_constant_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
 
-        ImplCommandList(ManagedWeakPtr device_impl, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
+        ImplCommandList(daxa_Device a_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
         virtual ~ImplCommandList() override final;
 
         void initialize();

@@ -4,6 +4,8 @@
 
 #include "impl_core.hpp"
 
+#include <daxa/c/device.h>
+
 namespace daxa
 {
     struct ImplDevice;
@@ -34,7 +36,7 @@ namespace daxa
     /// To limit the frames in flight we employ a timeline semaphore that must be signaled in a submission that uses or after one that uses the swapchain image.
     struct ImplSwapchain final : ManagedSharedState
     {
-        ManagedWeakPtr impl_device = {};
+        daxa_Device device = {};
         SwapchainInfo info = {};
         VkSwapchainKHR vk_swapchain = VK_NULL_HANDLE;
         VkSurfaceKHR vk_surface = {};
@@ -56,7 +58,7 @@ namespace daxa
 
         auto get_index_of_image(ImageId image) const -> usize;
 
-        ImplSwapchain(ManagedWeakPtr a_device_impl, SwapchainInfo a_info);
+        ImplSwapchain(daxa_Device a_device, SwapchainInfo a_info);
         ~ImplSwapchain();
 
         void recreate();

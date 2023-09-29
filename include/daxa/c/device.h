@@ -24,9 +24,12 @@ daxa_default_device_score(VkPhysicalDeviceProperties const * properties);
 
 typedef enum
 {
-    DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = 0x1,
-    DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION = 0x2,
-    DAXA_DEVICE_FLAG_MESH_SHADER_BIT = 0x4,
+    DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = 0x1 << 0,
+    DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION = 0x1 << 1,
+    DAXA_DEVICE_FLAG_MESH_SHADER_BIT = 0x1 << 2,
+    DAXA_DEVICE_FLAG_SHADER_ATOMIC64 = 0x1 << 3,
+    DAXA_DEVICE_FLAG_IMAGE_ATOMIC64 = 0x1 << 4,
+    DAXA_DEVICE_FLAG_VK_MEMORY_MODEL = 0x1 << 5,
 } daxa_DeviceFlagBits;
 
 typedef uint64_t daxa_DeviceFlags;
@@ -64,6 +67,9 @@ typedef struct
 } daxa_PresentInfo;
 
 typedef struct daxa_ImplDevice * daxa_Device;
+
+DAXA_EXPORT daxa_Result
+daxa_destroy_device(daxa_Device device);
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);
@@ -163,9 +169,13 @@ daxa_dvc_info(daxa_Device device);
 DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 
-DAXA_EXPORT void daxa_dvc_submit(daxa_Device device, daxa_CommandSubmitInfo const * info);
-DAXA_EXPORT void daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
-DAXA_EXPORT void daxa_dvc_wait_idle(daxa_Device device);
-DAXA_EXPORT void daxa_dvc_collect_garbage(daxa_Device device);
+DAXA_EXPORT void 
+daxa_dvc_submit(daxa_Device device, daxa_CommandSubmitInfo const * info);
+DAXA_EXPORT void 
+daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
+DAXA_EXPORT void 
+daxa_dvc_wait_idle(daxa_Device device);
+DAXA_EXPORT void 
+daxa_dvc_collect_garbage(daxa_Device device);
 
 #endif // #ifndef __DAXA_DEVICE_H__

@@ -22,7 +22,7 @@ namespace daxa
 
         std::vector<u64> results(static_cast<u64>(count) * 2);
         vkGetQueryPoolResults(
-            impl.impl_device.as<ImplDevice>()->vk_device,
+            impl.device->vk_device,
             impl.vk_timeline_query_pool,
             start_index,
             count,
@@ -34,8 +34,8 @@ namespace daxa
         return results;
     }
 
-    ImplTimelineQueryPool::ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo a_info)
-        : info{std::move(a_info)}, impl_device{std::move(a_impl_device)}
+    ImplTimelineQueryPool::ImplTimelineQueryPool(daxa_Device a_device, TimelineQueryPoolInfo a_info)
+        : info{std::move(a_info)}, device{a_device}
     {
         // TODO(msakmary) Should Add a check for support of timeline queries
         //                here or earlier (during device creation/section) I'm not sure...
@@ -48,10 +48,10 @@ namespace daxa
             .pipelineStatistics = {},
         };
 
-        vkCreateQueryPool(impl_device.as<ImplDevice>()->vk_device, &vk_query_pool_create_info, nullptr, &vk_timeline_query_pool);
-        vkResetQueryPool(impl_device.as<ImplDevice>()->vk_device, vk_timeline_query_pool, 0, info.query_count);
+        vkCreateQueryPool(this->device->vk_device, &vk_query_pool_create_info, nullptr, &vk_timeline_query_pool);
+        vkResetQueryPool(this->device->vk_device, vk_timeline_query_pool, 0, info.query_count);
 
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !info.name.empty())
+        if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !info.name.empty())
         {
             VkDebugUtilsObjectNameInfoEXT const query_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -60,13 +60,12 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(vk_timeline_query_pool),
                 .pObjectName = info.name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(impl_device.as<ImplDevice>()->vk_device, &query_pool_name_info);
+            this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &query_pool_name_info);
         }
     }
 
     ImplTimelineQueryPool::~ImplTimelineQueryPool() // NOLINT(bugprone-exception-escape)
     {
-        auto * device = this->impl_device.as<ImplDevice>();
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
 

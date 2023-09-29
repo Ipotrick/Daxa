@@ -6,8 +6,8 @@ namespace daxa
 {
     struct MemoryRequirements
     {
-        usize size = {};
-        usize alignment = {};
+        u64 size = {};
+        u64 alignment = {};
         u32 memory_type_bits = {};
     };
 

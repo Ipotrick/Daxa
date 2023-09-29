@@ -1,14 +1,6 @@
-#include <daxa/c/instance.h>
+#include "impl_instance.hpp"
+
 #include <vector>
-
-// TODO...
-#include <daxa/core.hpp>
-
-struct daxa_ImplInstance
-{
-    daxa_InstanceInfo info = {};
-    VkInstance vk_instance = {};
-};
 
 auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_instance) -> daxa_Result
 {
@@ -122,6 +114,7 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
 void daxa_destroy_instance(daxa_Instance self)
 {
     vkDestroyInstance(self->vk_instance, nullptr);
+    delete self;
 }
 
 auto daxa_instance_info(daxa_Instance self) -> daxa_InstanceInfo const *

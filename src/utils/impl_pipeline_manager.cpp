@@ -922,7 +922,7 @@ namespace daxa
             ofs.close();
 
             // std::cout << std::hex;
-            // uint32_t codepoint = 0;
+            // u32 codepoint = 0;
             // for (auto const & i : spirv)
             // {
             //     std::cout << "0x" << std::setw(8) << std::setfill('0') << i << ", ";

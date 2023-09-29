@@ -20,11 +20,11 @@ namespace daxa
         TimelineQueryPoolInfo info = {};
         VkQueryPool vk_timeline_query_pool = {};
 
-        ImplTimelineQueryPool(ManagedWeakPtr a_impl_device, TimelineQueryPoolInfo a_info);
+        ImplTimelineQueryPool(daxa_Device a_device, TimelineQueryPoolInfo a_info);
         ~ImplTimelineQueryPool();
 
       private:
         friend struct TimelineQueryPool;
-        ManagedWeakPtr impl_device = {};
+        daxa_Device device = {};
     };
 } // namespace daxa

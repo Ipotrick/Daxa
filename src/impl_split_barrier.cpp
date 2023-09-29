@@ -2,8 +2,6 @@
 
 #include <utility>
 
-#include "impl_device.hpp"
-
 namespace daxa
 {
     auto to_string(MemoryBarrierInfo const & info) -> std::string
@@ -55,11 +53,10 @@ namespace daxa
     {
         if (this->data != 0u)
         {
-            auto * device_impl = this->device.as<ImplDevice>();
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device_impl->main_queue_zombies_mtx});
-            u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device_impl->main_queue_cpu_timeline);
+            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->device->main_queue_zombies_mtx});
+            u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(this->device->main_queue_cpu_timeline);
 
-            device_impl->main_queue_split_barrier_zombies.emplace_back(
+            this->device->main_queue_split_barrier_zombies.emplace_back(
                 main_queue_cpu_timeline,
                 SplitBarrierZombie{
                     .vk_event = reinterpret_cast<VkEvent>(this->data),
@@ -68,20 +65,19 @@ namespace daxa
         }
     }
 
-    SplitBarrierState::SplitBarrierState(ManagedWeakPtr a_impl_device, SplitBarrierInfo a_info)
-        : device{std::move(a_impl_device)}, create_info{std::move(a_info)}
+    SplitBarrierState::SplitBarrierState(daxa_Device a_device, SplitBarrierInfo a_info)
+        : device{a_device}, create_info{std::move(a_info)}
     {
-        auto * impl_device = this->device.as<ImplDevice>();
         VkEventCreateInfo const vk_event_create_info{
             .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
             .pNext = nullptr,
             .flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT,
         };
         VkEvent event = {};
-        vkCreateEvent(impl_device->vk_device, &vk_event_create_info, nullptr, &event);
+        vkCreateEvent(device->vk_device, &vk_event_create_info, nullptr, &event);
         this->data = reinterpret_cast<u64>(event);
 
-        if (impl_device->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->create_info.name.empty())
+        if ((device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !this->create_info.name.empty())
         {
             auto name = this->create_info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
@@ -91,7 +87,7 @@ namespace daxa
                 .objectHandle = this->data,
                 .pObjectName = name.c_str(),
             };
-            impl_device->vkSetDebugUtilsObjectNameEXT(impl_device->vk_device, &name_info);
+            device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
         }
     }
 } // namespace daxa

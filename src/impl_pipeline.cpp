@@ -1,6 +1,5 @@
 #include "impl_pipeline.hpp"
 #include "impl_swapchain.hpp"
-#include "impl_device.hpp"
 
 namespace daxa
 {
@@ -20,8 +19,8 @@ namespace daxa
         return impl.info;
     }
 
-    ImplRasterPipeline::ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo a_info)
-        : ImplPipeline(std::move(a_impl_device)), info{std::move(a_info)}
+    ImplRasterPipeline::ImplRasterPipeline(daxa_Device a_device, RasterPipelineInfo a_info)
+        : ImplPipeline(a_device), info{std::move(a_info)}
     {
         std::vector<VkShaderModule> vk_shader_modules{};
         std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos{};
@@ -36,7 +35,7 @@ namespace daxa
                 .codeSize = static_cast<u32>(shader_info.byte_code.size() * sizeof(u32)),
                 .pCode = shader_info.byte_code.data(),
             };
-            vkCreateShaderModule(this->impl_device.as<ImplDevice>()->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
+            vkCreateShaderModule(this->device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
             vk_shader_modules.push_back(vk_shader_module);
             VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
                 .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
@@ -74,7 +73,7 @@ namespace daxa
             create_shader_module(this->info.mesh_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_MESH_BIT_EXT);
         }
 
-        this->vk_pipeline_layout = this->impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);
+        this->vk_pipeline_layout = this->device->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);
         constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
             .pNext = nullptr,
@@ -137,9 +136,9 @@ namespace daxa
         };
         if (this->info.raster.conservative_raster_info.has_value())
         {
-            DAXA_DBG_ASSERT_TRUE_M(this->impl_device.as<ImplDevice>()->info.enable_conservative_rasterization, "You must enable conservative rasterization in the device to use this feature");
+            DAXA_DBG_ASSERT_TRUE_M((this->device->info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION) != 0, "You must enable conservative rasterization in the device to use this feature");
             // TODO(grundlett): Ask Patrick why this doesn't work
-            // auto vk_instance = this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance;
+            // auto vk_instance = this->device->instance->vk_instance;
             // PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR =
             //     reinterpret_cast<PFN_vkGetPhysicalDeviceProperties2KHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceProperties2KHR"));
             // DAXA_DBG_ASSERT_TRUE_M(vkGetPhysicalDeviceProperties2KHR != nullptr, "Failed to load this extension function function");
@@ -148,7 +147,7 @@ namespace daxa
             // conservative_raster_props.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_CONSERVATIVE_RASTERIZATION_PROPERTIES_EXT;
             // device_props2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2_KHR;
             // device_props2.pNext = &conservative_raster_props;
-            // vkGetPhysicalDeviceProperties2KHR(this->impl_device.as<ImplDevice>()->vk_physical_device, &device_props2);
+            // vkGetPhysicalDeviceProperties2KHR(this->device->vk_physical_device, &device_props2);
             auto const & conservative_raster_info = this->info.raster.conservative_raster_info.value();
             vk_conservative_raster_state.conservativeRasterizationMode = static_cast<VkConservativeRasterizationModeEXT>(conservative_raster_info.mode);
             vk_conservative_raster_state.extraPrimitiveOverestimationSize = conservative_raster_info.size;
@@ -243,7 +242,7 @@ namespace daxa
             .basePipelineIndex = 0,
         };
         [[maybe_unused]] auto pipeline_result = vkCreateGraphicsPipelines(
-            this->impl_device.as<ImplDevice>()->vk_device,
+            this->device->vk_device,
             VK_NULL_HANDLE,
             1u,
             &vk_graphics_pipeline_create_info,
@@ -253,9 +252,9 @@ namespace daxa
 
         for (auto & vk_shader_module : vk_shader_modules)
         {
-            vkDestroyShaderModule(this->impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
+            vkDestroyShaderModule(this->device->vk_device, vk_shader_module, nullptr);
         }
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !this->info.name.empty())
+        if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !this->info.name.empty())
         {
             auto raster_pipeline_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
@@ -265,12 +264,12 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &name_info);
+            this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &name_info);
         }
     }
 
-    ImplComputePipeline::ImplComputePipeline(ManagedWeakPtr a_impl_device, ComputePipelineInfo a_info)
-        : ImplPipeline(std::move(a_impl_device)), info{std::move(a_info)}
+    ImplComputePipeline::ImplComputePipeline(daxa_Device a_device, ComputePipelineInfo a_info)
+        : ImplPipeline(a_device), info{std::move(a_info)}
     {
         VkShaderModule vk_shader_module = {};
         VkShaderModuleCreateInfo const shader_module_ci{
@@ -280,8 +279,8 @@ namespace daxa
             .codeSize = static_cast<u32>(this->info.shader_info.byte_code.size() * sizeof(u32)),
             .pCode = this->info.shader_info.byte_code.data(),
         };
-        vkCreateShaderModule(this->impl_device.as<ImplDevice>()->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
-        this->vk_pipeline_layout = this->impl_device.as<ImplDevice>()->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);
+        vkCreateShaderModule(this->device->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
+        this->vk_pipeline_layout = this->device->gpu_shader_resource_table.pipeline_layouts.at((this->info.push_constant_size + 3) / 4);
         VkComputePipelineCreateInfo const vk_compute_pipeline_create_info{
             .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
             .pNext = nullptr,
@@ -300,15 +299,15 @@ namespace daxa
             .basePipelineIndex = 0,
         };
         [[maybe_unused]] auto pipeline_result = vkCreateComputePipelines(
-            this->impl_device.as<ImplDevice>()->vk_device,
+            this->device->vk_device,
             VK_NULL_HANDLE,
             1u,
             &vk_compute_pipeline_create_info,
             nullptr,
             &this->vk_pipeline);
         DAXA_DBG_ASSERT_TRUE_M(pipeline_result == VK_SUCCESS, "failed to create compute pipeline");
-        vkDestroyShaderModule(this->impl_device.as<ImplDevice>()->vk_device, vk_shader_module, nullptr);
-        if (this->impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->info.enable_debug_utils && !info.name.empty())
+        vkDestroyShaderModule(this->device->vk_device, vk_shader_module, nullptr);
+        if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !info.name.empty())
         {
             auto raster_pipeline_name = this->info.name;
             VkDebugUtilsObjectNameInfoEXT const name_info{
@@ -318,18 +317,17 @@ namespace daxa
                 .objectHandle = reinterpret_cast<uint64_t>(this->vk_pipeline),
                 .pObjectName = raster_pipeline_name.c_str(),
             };
-            this->impl_device.as<ImplDevice>()->vkSetDebugUtilsObjectNameEXT(this->impl_device.as<ImplDevice>()->vk_device, &name_info);
+            this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &name_info);
         }
     }
 
-    ImplPipeline::ImplPipeline(ManagedWeakPtr a_impl_device)
-        : impl_device{std::move(a_impl_device)}
+    ImplPipeline::ImplPipeline(daxa_Device a_device)
+        : device{a_device}
     {
     }
 
     ImplPipeline::~ImplPipeline() // NOLINT(bugprone-exception-escape)
     {
-        auto * device = this->impl_device.as<ImplDevice>();
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
         device->main_queue_pipeline_zombies.push_front({

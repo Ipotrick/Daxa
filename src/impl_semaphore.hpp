@@ -3,6 +3,7 @@
 #include <daxa/semaphore.hpp>
 
 #include "impl_core.hpp"
+#include <daxa/c/device.h>
 
 namespace daxa
 {
@@ -17,11 +18,11 @@ namespace daxa
     {
         using InfoT = BinarySemaphoreInfo;
 
-        ManagedWeakPtr impl_device = {};
+        daxa_Device device = {};
         VkSemaphore vk_semaphore = {};
         BinarySemaphoreInfo info = {};
 
-        ImplBinarySemaphore(ManagedWeakPtr a_impl_device, BinarySemaphoreInfo const & a_info);
+        ImplBinarySemaphore(daxa_Device a_device, BinarySemaphoreInfo const & a_info);
         ~ImplBinarySemaphore();
 
         void initialize(BinarySemaphoreInfo const & a_info);
@@ -30,11 +31,11 @@ namespace daxa
 
     struct ImplTimelineSemaphore final : ManagedSharedState
     {
-        ManagedWeakPtr impl_device = {};
+        daxa_Device device = {};
         VkSemaphore vk_semaphore = {};
         TimelineSemaphoreInfo info = {};
 
-        ImplTimelineSemaphore(ManagedWeakPtr a_impl_device, TimelineSemaphoreInfo a_info);
+        ImplTimelineSemaphore(daxa_Device a_device, TimelineSemaphoreInfo a_info);
         ~ImplTimelineSemaphore();
     };
 } // namespace daxa
