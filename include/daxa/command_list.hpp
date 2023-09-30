@@ -13,7 +13,7 @@ namespace daxa
 
     struct CommandListInfo
     {
-        char const * name = {};
+        std::string_view name = {};
     };
 
     struct ImageBlitInfo
@@ -100,7 +100,7 @@ namespace daxa
 
     struct RenderPassBeginInfo
     {
-        FixedList<RenderAttachmentInfo> color_attachments = {};
+        FixedList<RenderAttachmentInfo, 8> color_attachments = {};
         Optional<RenderAttachmentInfo> depth_attachment = {};
         Optional<RenderAttachmentInfo> stencil_attachment = {};
         Rect2D render_area = {};
@@ -195,13 +195,7 @@ namespace daxa
     struct CommandLabelInfo
     {
         std::array<f32, 4> label_color = {0.463f, 0.333f, 0.671f, 1.0f};
-        char const * name = {};
-    };
-
-    struct ResetEventInfo
-    {
-        Event & barrier;
-        PipelineStageFlags stage_masks = {};
+        std::string_view name = {};
     };
 
     struct SetUniformBufferInfo

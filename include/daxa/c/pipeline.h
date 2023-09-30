@@ -7,7 +7,7 @@ typedef struct
 {
     uint32_t const * byte_code;
     size_t byte_code_size;
-    char const * entry_point;
+    daxa_StringView entry_point;
 } daxa_ShaderInfo;
 _DAXA_DECL_OPTIONAL(daxa_ShaderInfo)
 
@@ -15,7 +15,7 @@ typedef struct
 {
     daxa_ShaderInfo shader_info;
     uint32_t push_constant_size;
-    char const * name;
+    daxa_StringView name;
 } daxa_ComputePipelineInfo;
 
 typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
@@ -78,8 +78,7 @@ static const daxa_RasterizerInfo DAXA_DEFAULT_RASTERIZATION_INFO = {
     .depth_bias_clamp = 0.0f,
     .depth_bias_slope_factor = 0.0f,
     .line_width = 1.0f,
-    .enable_conservative_rasterization = 0,
-    .conservative_raster_info = {.mode = VK_CONSERVATIVE_RASTERIZATION_MODE_DISABLED_EXT, .size = 0.0f},
+    .conservative_raster_info = {.has_value = 0},
 };
 
 // should be moved in c++ from types to pipeline.hpp.
@@ -97,7 +96,6 @@ _DAXA_DECL_OPTIONAL(daxa_BlendInfo)
 
 
 static const daxa_BlendInfo DAXA_DEFAULT_BLEND_INFO = {
-    .blend_enable = 0,
     .src_color_blend_factor = VK_BLEND_FACTOR_ONE,
     .dst_color_blend_factor = VK_BLEND_FACTOR_ZERO,
     .color_blend_op = VK_BLEND_OP_ADD,
@@ -135,7 +133,7 @@ typedef struct
     daxa_Optional(daxa_TesselationInfo) tesselation;
     daxa_RasterizerInfo raster;
     uint32_t push_constant_size;
-    char const * name;
+    daxa_StringView name;
 } daxa_RasterPipelineInfo;
 
 typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;

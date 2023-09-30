@@ -14,6 +14,12 @@ typedef uint64_t daxa_Flags;
 
 typedef char daxa_Bool8;
 
+typedef struct
+{
+    char const * data;
+    size_t size;
+} daxa_StringView;
+
 typedef enum
 {
     DAXA_RESULT_UNKNOWN = 0,
@@ -88,7 +94,6 @@ daxa_i32vec3;
         };                                \
         SCALAR_TYPE data[4];              \
     }
-
 _DAXA_DECL_VEC4_TYPE(float)
 daxa_f32vec4;
 _DAXA_DECL_VEC4_TYPE(double)
@@ -228,7 +233,7 @@ typedef struct
 typedef struct
 {
     uint32_t query_count;
-    char const * name;
+    daxa_StringView name;
 } daxa_TimelineQueryPoolInfo;
 
 typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
@@ -252,8 +257,8 @@ DAXA_EXPORT void daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool t
     {                                      \
         T data[CAPACITY];                  \
         size_t size;                       \
-    } daxa_FixedList##CAPACITY##T;
+    } daxa_FixedList##T##CAPACITY;
 
-#define daxa_FixedList(T, CAPACITY) daxa_FixedList##CAPACITY##T
+#define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
 
 #endif // #ifndef __DAXA_TYPES_H__

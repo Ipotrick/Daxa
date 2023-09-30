@@ -12,52 +12,29 @@
 #include <cstdint>
 #include <cstddef>
 #include <array>
+#include <atomic>
 #include <concepts>
 #include <span>
+#include <bit>
+
+#if DAXA_THREADSAFETY
+#define DAXA_ONLY_IF_THREADSAFETY(x) x
+#define DAXA_ATOMIC_U64 std::atomic_uint64_t
+#define DAXA_ATOMIC_FETCH_INC(x) x.fetch_add(1)
+#define DAXA_ATOMIC_ADD_FETCH(x, v) x.fetch_add(v)
+#define DAXA_ATOMIC_FETCH_DEC(x) x.fetch_sub(1)
+#define DAXA_ATOMIC_FETCH(x) x.load()
+#else
+#define DAXA_ONLY_IF_THREADSAFETY(x)
+#define DAXA_ATOMIC_U64 uint64_t
+#define DAXA_ATOMIC_FETCH_INC(x) (x++)
+#define DAXA_ATOMIC_FETCH_DEC(x) (x--)
+#define DAXA_ATOMIC_ADD_FETCH(x, v) (x += v)
+#define DAXA_ATOMIC_FETCH(x) (x)
+#endif
 
 namespace daxa
 {
-    template <typename T>
-    struct Optional
-    {
-        T m_value = {};
-        bool m_has_value = {};
-
-        Optional() : m_value{}, m_has_value{false} {}
-        Optional(Optional<T> const &) = default;
-        Optional(T const & v) : m_value{v}, m_has_value{true} {}
-        Optional<T> & operator=(Optional<T> const &) = default;
-        Optional<T> & operator=(T const & v)
-        {
-            this->m_has_value = v;
-            this->has_value = true;
-        }
-
-        auto has_value() const -> bool
-        {
-            return this->m_has_value;
-        }
-
-        auto value() -> T &
-        {
-            return this->m_value;
-        }
-
-        auto value() const -> T const &
-        {
-            return this->m_value;
-        }
-    };
-
-    template <typename T, usize CAPACITY>
-    struct FixedList
-    {
-        std::array<T, CAPACITY> m_data = {};
-        usize m_size = {};
-
-        // TODO: Implement iterator and missing member functions!
-    };
-
     inline namespace types
     {
         using u8 = std::uint8_t;
@@ -228,6 +205,143 @@ namespace daxa
         using u32mat4x3 = detail::GenericMatrix<u32, 4, 3>;
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
     } // namespace types
+
+    struct ManagedSharedState
+    {
+        DAXA_ATOMIC_U64 strong_count = {};
+        DAXA_ATOMIC_U64 weak_count = {};
+    };
+
+    struct ManagedWeakPtr
+    {
+        ManagedSharedState * object = {};
+
+        template <typename T>
+        auto as() -> T *
+        {
+#if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
+            auto ret = dynamic_cast<T *>(object);
+            u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
+            DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
+#else
+            return reinterpret_cast<T *>(object);
+#endif
+        }
+        template <typename T>
+        auto as() const -> T const *
+        {
+#if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
+            auto ret = dynamic_cast<T const *>(object);
+            u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
+            DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
+#else
+            return reinterpret_cast<T const *>(object);
+#endif
+        }
+
+        ManagedWeakPtr() = default;
+        explicit ManagedWeakPtr(ManagedSharedState * ptr);
+        ~ManagedWeakPtr();
+
+        ManagedWeakPtr(ManagedWeakPtr const &);
+        ManagedWeakPtr(ManagedWeakPtr &&) noexcept;
+        ManagedWeakPtr & operator=(ManagedWeakPtr const &);
+        ManagedWeakPtr & operator=(ManagedWeakPtr &&) noexcept;
+    };
+
+    struct ManagedPtr
+    {
+        ManagedSharedState * object = {};
+        std::function<void(ManagedSharedState *)> deletor = {};
+
+        template <typename T>
+        auto as() -> T *
+        {
+#if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
+            auto ret = dynamic_cast<T *>(object);
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
+#else
+            return reinterpret_cast<T *>(object);
+#endif
+        }
+        template <typename T>
+        auto as() const -> T *
+        {
+#if DAXA_VALIDATION
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
+            auto ret = dynamic_cast<T const *>(object);
+            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            return ret;
+#else
+            return reinterpret_cast<T *>(object);
+#endif
+        }
+
+        ManagedPtr() = default;
+        explicit ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deletor);
+        ~ManagedPtr();
+
+        ManagedPtr(ManagedPtr const &);
+        ManagedPtr(ManagedPtr &&) noexcept;
+        ManagedPtr & operator=(ManagedPtr const &);
+        ManagedPtr & operator=(ManagedPtr &&) noexcept;
+
+        ManagedWeakPtr make_weak() const;
+
+        auto is_valid() const -> bool;
+        operator bool() const;
+
+      private:
+        void cleanup();
+    };
+    template <typename T>
+    struct Optional
+    {
+        T m_value = {};
+        bool m_has_value = {};
+
+        Optional() : m_value{}, m_has_value{false} {}
+        Optional(Optional<T> const &) = default;
+        Optional(T const & v) : m_value{v}, m_has_value{true} {}
+        Optional<T> & operator=(Optional<T> const &) = default;
+        Optional<T> & operator=(T const & v)
+        {
+            this->m_has_value = v;
+            this->has_value = true;
+        }
+
+        auto has_value() const -> bool
+        {
+            return this->m_has_value;
+        }
+
+        auto value() -> T &
+        {
+            return this->m_value;
+        }
+
+        auto value() const -> T const &
+        {
+            return this->m_value;
+        }
+    };
+
+    template <typename T, usize CAPACITY>
+    struct FixedList
+    {
+        std::array<T, CAPACITY> m_data = {};
+        usize m_size = {};
+
+        // TODO: Implement iterator and missing member functions!
+    };
 
     enum struct Format
     {

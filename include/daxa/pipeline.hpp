@@ -8,14 +8,14 @@ namespace daxa
     {
         u32 const * byte_code;
         usize byte_code_size;
-        char const * entry_point = {};
+        daxa_StringView entry_point = {};
     };
 
     struct ComputePipelineInfo
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        char const * name = {};
+        daxa_StringView name = {};
     };
 
     struct ComputePipeline : ManagedPtr
@@ -87,7 +87,7 @@ namespace daxa
         Optional<TesselationInfo> tesselation = {};
         RasterizerInfo raster = {};
         u32 push_constant_size = {};
-        char const * name = {};
+        std::string_view name = {};
     };
 
     struct RasterPipeline : ManagedPtr

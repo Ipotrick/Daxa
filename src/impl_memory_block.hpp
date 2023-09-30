@@ -1,6 +1,6 @@
 #pragma once
 
-#include <daxa/memory_block.hpp>
+#include <daxa/types.hpp>
 
 #include "impl_core.hpp"
 

@@ -2,7 +2,7 @@
 
 #include <queue>
 
-#include <daxa/timeline_query.hpp>
+#include <daxa/sync.hpp>
 
 #include "impl_core.hpp"
 

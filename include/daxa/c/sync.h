@@ -107,7 +107,7 @@ typedef struct daxa_ImplBinarySemaphore * daxa_BinarySemaphore;
 
 typedef struct
 {
-    char const * name;
+    daxa_StringView name;
 } daxa_BinarySemaphoreInfo;
 
 DAXA_EXPORT daxa_BinarySemaphoreInfo const *
@@ -116,22 +116,26 @@ daxa_binary_semaphore_info(daxa_BinarySemaphore binary_semaphore);
 DAXA_EXPORT VkSemaphore
 daxa_binary_semaphore_get_vk_semaphore(daxa_BinarySemaphore binary_semaphore);
 
+DAXA_EXPORT void
+daxa_binary_semaphore_destroy(daxa_BinarySemaphore binary_semaphore);
+
 struct daxa_ImplTimelineSemaphore;
 typedef struct daxa_ImplTimelineSemaphore * daxa_TimelineSemaphore;
 
 typedef struct
 {
     uint64_t initial_value;
-    char const * name;
+    daxa_StringView name;
 } daxa_TimelineSemaphoreInfo;
 
 DAXA_EXPORT daxa_TimelineSemaphoreInfo const *
 daxa_timeline_semaphore_info(daxa_TimelineSemaphore timeline_semaphore);
 
-DAXA_EXPORT uint64_t
-daxa_timeline_semaphore_get_value(daxa_TimelineSemaphore timeline_semaphore);
+DAXA_EXPORT daxa_Result
+daxa_timeline_semaphore_get_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t * out_value);
 
-DAXA_EXPORT void daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value);
+DAXA_EXPORT daxa_Result 
+daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value);
 
 DAXA_EXPORT daxa_Result
 daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value, uint64_t timeout);
@@ -139,12 +143,15 @@ daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore timeline_semaphore
 DAXA_EXPORT VkSemaphore
 daxa_timeline_semaphore_get_vk_semaphore(daxa_TimelineSemaphore timeline_semaphore);
 
+DAXA_EXPORT void
+daxa_timeline_semaphore_destroy(daxa_TimelineSemaphore timeline_semaphore);
+
 struct daxa_ImplEvent;
 typedef struct daxa_ImplEvent * daxa_Event;
 
 typedef struct
 {
-    char const * name;
+    daxa_StringView name;
 } daxa_EventInfo;
 
 typedef struct
@@ -158,7 +165,10 @@ typedef struct
 
 typedef daxa_EventSignalInfo daxa_EventWaitInfo;
 
-DAXA_EXPORT daxa_Event const *
+DAXA_EXPORT daxa_EventInfo const *
 daxa_event_info(daxa_Event event);
+
+DAXA_EXPORT void
+daxa_event_destroy(daxa_Event event);
 
 #endif // #if __DAXA_SYNC_H__

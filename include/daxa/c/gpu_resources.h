@@ -43,7 +43,7 @@ typedef struct
 {
     size_t size;
     daxa_AllocateInfo allocate_info;
-    char const * name;
+    daxa_StringView name;
 } daxa_BufferInfo;
 
 typedef uint32_t daxa_ImageFlags;
@@ -76,7 +76,7 @@ typedef struct
     uint32_t sample_count;
     daxa_ImageUsageFlags usage;
     daxa_AllocateInfo allocate_info;
-    char const * name;
+    daxa_StringView name;
 } daxa_ImageInfo;
 
 typedef struct
@@ -85,7 +85,7 @@ typedef struct
     VkFormat format;
     daxa_ImageId image;
     daxa_ImageMipArraySlice slice;
-    char const * name;
+    daxa_StringView name;
 } daxa_ImageViewInfo;
 
 typedef struct
@@ -106,7 +106,7 @@ typedef struct
     float max_lod;
     VkBorderColor border_color;
     VkBool32 enable_unnormalized_coordinates;
-    char const * name;
+    daxa_StringView name;
 } daxa_SamplerInfo;
 
 static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
@@ -115,7 +115,7 @@ static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
     .name = 0,
 };
 static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
-    .flags = DAXA_IMAGE_FLAG_NONE,
+    .flags = {},
     .dimensions = 2,
     .format = VK_FORMAT_R8G8B8A8_SRGB,
     .size = {0, 0, 0},

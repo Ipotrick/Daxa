@@ -5,24 +5,6 @@
 
 namespace
 {
-    VkBufferUsageFlags const BUFFER_USE_FLAGS =
-        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-        VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT |
-        VK_BUFFER_USAGE_STORAGE_TEXEL_BUFFER_BIT |
-        VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT |
-        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-        VK_BUFFER_USAGE_VERTEX_BUFFER_BIT |
-        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
-        VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_BUFFER_BIT_EXT |
-        VK_BUFFER_USAGE_TRANSFORM_FEEDBACK_COUNTER_BUFFER_BIT_EXT |
-        VK_BUFFER_USAGE_CONDITIONAL_RENDERING_BIT_EXT |
-        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
-        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
-        VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
-
     auto initialize_image_create_info_from_image_info(daxa::ImageInfo const & image_info, u32 const * queue_family_index_ptr) -> VkImageCreateInfo
     {
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
@@ -457,7 +439,7 @@ auto daxa_dvc_is_sampler_valid(daxa_Device self, daxa_SamplerId sampler) -> VkBo
 }
 #endif
 
-auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo info, VkPhysicalDevice physical_device) -> daxa_ImplDevice
+auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Result>
 {
     auto * self = new daxa_ImplDevice;
     self->vk_physical_device = physical_device;
@@ -940,6 +922,8 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo info, VkPhy
     // Wait for commands in from the init cmd list to complete.
     vkDeviceWaitIdle(self->vk_device);
     vkDestroyCommandPool(self->vk_device, init_cmd_pool, {});
+
+    return {daxa_Result::DAXA_RESULT_SUCCESS, self};
 }
 
 void daxa_ImplDevice::main_queue_collect_garbage()

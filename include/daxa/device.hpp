@@ -197,7 +197,7 @@ namespace daxa
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 1'000;
-        std::string name = {};
+        std::string_view name = {};
     };
 
     struct CommandSubmitInfo
@@ -259,7 +259,7 @@ namespace daxa
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
-        auto create_split_barrier(SplitBarrierInfo const & info) -> Event;
+        auto create_event(EventInfo const & info) -> Event;
         auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         auto info() const -> DeviceInfo const &;

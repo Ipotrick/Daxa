@@ -8,7 +8,7 @@
 
 typedef struct
 {
-    char const * name;
+    daxa_StringView name;
 } daxa_CommandListInfo;
 
 typedef struct
@@ -52,7 +52,7 @@ typedef struct
     daxa_BufferId buffer;
     size_t buffer_offset;
     daxa_ImageId image;
-    VkImageLayout image_layout;
+    daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
@@ -66,12 +66,12 @@ static const daxa_BufferImageCopyInfo DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
     .image_slice = {},
     .image_offset = {},
     .image_extent = {},
-}
+};
 
 typedef struct
 {
     daxa_ImageId image;
-    VkImageLayout image_layout;
+    daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
@@ -92,9 +92,9 @@ static const daxa_ImageBufferCopyInfo DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
 typedef struct
 {
     daxa_ImageId src_image;
-    VkImageLayout src_image_layout;
+    daxa_ImageLayout src_image_layout;
     daxa_ImageId dst_image;
-    VkImageLayout dst_image_layout;
+    daxa_ImageLayout dst_image_layout;
     daxa_ImageArraySlice src_slice;
     VkOffset3D src_offset;
     daxa_ImageArraySlice dst_slice;
@@ -114,15 +114,16 @@ static const daxa_ImageCopyInfo DAXA_DEFAULT_IMAGE_COPY_INFO = {
     .extent = {},
 };
 
+// TODO: ABI compatibility!
 typedef struct 
 {
-    usize index;
+    size_t index;
     VkClearValue value;
 } daxa_ClearValue;
 
 typedef struct
 {
-    VkImageLayout dst_image_layout;
+    daxa_ImageLayout dst_image_layout;
     daxa_ClearValue clear_value;
     daxa_ImageId dst_image;
     daxa_ImageMipArraySlice dst_slice;
@@ -148,7 +149,7 @@ static const daxa_BufferClearInfo DAXA_DEFAULT_BUFFER_CLEAR_INFO = {};
 typedef struct
 {
     daxa_ImageViewId image_view;
-    VkImageLayout layout;
+    daxa_ImageLayout layout;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
     daxa_ClearValue clear_value;
@@ -195,7 +196,7 @@ static const daxa_DrawMeshTasksIndirectInfo DAXA_DEFAULT_DRAW_MESH_TASKS_INDIREC
     .offset = {},
     .draw_count = 1,
     .stride = 12,
-}
+};
 
 typedef struct
 {
@@ -229,7 +230,7 @@ static const daxa_DrawInfo DAXA_DEFAULT_DRAW_INFO = {
     .instance_count = 1,
     .first_vertex = {},
     .first_instance = {},
-}
+};
 
 typedef struct
 {
@@ -246,7 +247,7 @@ static const daxa_DrawIndexedInfo DAXA_DEFAULT_DRAW_INDEXED_INFO = {
     .first_index = {},
     .vertex_offset = {},
     .first_instance = {},
-} 
+} ;
 
 typedef struct
 {
@@ -315,7 +316,7 @@ typedef struct
 typedef struct
 {
     daxa_f32vec4 label_color;
-    char const * name;
+    daxa_StringView name;
 } daxa_CommandLabelInfo;
 
 typedef struct

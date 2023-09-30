@@ -3,7 +3,7 @@
 #include <daxa/core.hpp>
 
 #include <daxa/gpu_resources.hpp>
-#include <daxa/semaphore.hpp>
+#include <daxa/sync.hpp>
 
 namespace daxa
 {
@@ -28,7 +28,7 @@ namespace daxa
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
         usize max_allowed_frames_in_flight = 2;
-        std::string name = {};
+        std::string_view name = {};
     };
 
     struct Swapchain : ManagedPtr

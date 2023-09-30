@@ -1,4 +1,5 @@
 #include "impl_instance.hpp"
+#include "impl_device.hpp"
 
 #include <vector>
 
@@ -107,8 +108,9 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
     // TODO: Needs C impl of device
     *out_device = nullptr;
 
-    // return Device{ManagedPtr{new ImplDevice(device_info, this->make_weak(), physical_device)}};
-    return DAXA_RESULT_UNKNOWN;
+    auto [result, device] = daxa_Device::create(self, info, physical_device);
+    *out_device = device;
+    return result;
 }
 
 void daxa_destroy_instance(daxa_Instance self)

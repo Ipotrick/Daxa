@@ -31,7 +31,7 @@ typedef struct
     VkSurfaceTransformFlagBitsKHR present_operation;
     daxa_ImageUsageFlags image_usage;
     size_t max_allowed_frames_in_flight;
-    char const * name;
+    daxa_StringView name;
 } daxa_SwapchainInfo;
 
 typedef struct daxa_ImplSwapchain * daxa_Swapchain;

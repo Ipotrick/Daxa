@@ -41,7 +41,7 @@ typedef struct
     uint32_t max_allowed_images;
     uint32_t max_allowed_buffers;
     uint32_t max_allowed_samplers;
-    char const * name;
+    daxa_StringView name;
 } daxa_DeviceInfo;
 
 static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {

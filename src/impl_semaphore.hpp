@@ -1,6 +1,6 @@
 #pragma once
 
-#include <daxa/semaphore.hpp>
+#include <daxa/sync.hpp>
 
 #include "impl_core.hpp"
 #include <daxa/c/device.h>

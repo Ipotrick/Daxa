@@ -4,22 +4,6 @@
 
 namespace daxa
 {
-    auto to_string(MemoryBarrierInfo const & info) -> std::string
-    {
-        return fmt::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
-    }
-
-    auto to_string(ImageBarrierInfo const & info) -> std::string
-    {
-        return fmt::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}", 
-        to_string(info.src_access), 
-        to_string(info.dst_access),
-        to_string(info.src_layout),
-        to_string(info.dst_layout),
-        to_string(info.image_slice),
-        to_string(info.image_id)
-        );
-    }
 
     Event::Event(Event && other) noexcept
         : device{other.device}, create_info{other.create_info}, data{other.data}

@@ -1,6 +1,6 @@
 #pragma once
 
-#include <daxa/split_barrier.hpp>
+#include <daxa/sync.hpp>
 
 #include "impl_core.hpp"
 

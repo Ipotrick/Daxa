@@ -5,46 +5,8 @@
 
 namespace daxa
 {
-    struct BinarySemaphoreInfo
-    {
-        std::string name = {};
-    };
-
-    struct BinarySemaphore : ManagedPtr
-    {
-        BinarySemaphore() = default;
-
-        auto info() const -> BinarySemaphoreInfo const &;
-
-      private:
-        friend struct Device;
-        friend struct ImplSwapchain;
-        explicit BinarySemaphore(ManagedPtr impl);
-    };
-
-    struct TimelineSemaphoreInfo
-    {
-        u64 initial_value = {};
-        std::string name = {};
-    };
-
-    struct TimelineSemaphore : ManagedPtr
-    {
-        TimelineSemaphore() = default;
-
-        auto info() const -> TimelineSemaphoreInfo const &;
-
-        auto value() const -> u64;
-        void set_value(u64 value);
-        auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
-
-      private:
-        friend struct Device;
-        friend struct ImplSwapchain;
-        explicit TimelineSemaphore(ManagedPtr impl);
-    };
-
-        struct Device;
+    struct Device;
+    
     struct MemoryBarrierInfo
     {
         Access src_access = AccessConsts::NONE;
@@ -65,9 +27,48 @@ namespace daxa
 
     auto to_string(ImageBarrierInfo const & info) -> std::string;
 
-    struct SplitBarrierInfo
+    struct BinarySemaphoreInfo
     {
-        std::string name = {};
+        std::string_view name = {};
+    };
+
+    struct BinarySemaphore : ManagedPtr
+    {
+        BinarySemaphore() = default;
+
+        auto info() const -> BinarySemaphoreInfo const &;
+
+      private:
+        friend struct Device;
+        friend struct ImplSwapchain;
+        explicit BinarySemaphore(ManagedPtr impl);
+    };
+
+    struct TimelineSemaphoreInfo
+    {
+        u64 initial_value = {};
+        std::string_view name = {};
+    };
+
+    struct TimelineSemaphore : ManagedPtr
+    {
+        TimelineSemaphore() = default;
+
+        auto info() const -> TimelineSemaphoreInfo const &;
+
+        auto value() const -> u64;
+        void set_value(u64 value);
+        auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
+
+      private:
+        friend struct Device;
+        friend struct ImplSwapchain;
+        explicit TimelineSemaphore(ManagedPtr impl);
+    };
+
+    struct EventInfo
+    {
+        std::string_view name = {};
     };
 
     struct Event
@@ -78,24 +79,24 @@ namespace daxa
         auto operator=(Event && other) noexcept -> Event &;
         ~Event();
 
-        auto info() const -> SplitBarrierInfo const &;
+        auto info() const -> EventInfo const &;
 
       private:
         friend struct CommandList;
-        Event(daxa_Device a_device, SplitBarrierInfo a_info);
+        Event(daxa_Device a_device, EventInfo a_info);
         void cleanup();
 
         daxa_Device device = {};
-        SplitBarrierInfo create_info = {};
+        EventInfo create_info = {};
         u64 data = {};
     };
 
-    struct SplitBarrierSignalInfo
+    struct EventSignalInfo
     {
         std::span<MemoryBarrierInfo> memory_barriers = {};
         std::span<ImageBarrierInfo> image_barriers = {};
         Event & split_barrier;
     };
 
-    using SplitBarrierWaitInfo = SplitBarrierSignalInfo;
-}
+    using EventWaitInfo = EventSignalInfo;
+} // namespace daxa
