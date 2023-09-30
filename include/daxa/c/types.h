@@ -238,4 +238,11 @@ daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
 
 DAXA_EXPORT void daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
 
+#define _DAXA_DECL_OPTIONAL(T) \
+    typedef struct             \
+    {                          \
+        T value;               \
+        daxa_Bool8 has_value;  \
+    } daxa_Optional##T;
+
 #endif // #ifndef __DAXA_TYPES_H__
