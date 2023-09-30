@@ -1,5 +1,7 @@
 #include "cpp_wrapper.hpp"
 
+#include <daxa/c/types.h>
+#include <daxa/types.hpp>
 #include <daxa/c/instance.h>
 #include <daxa/instance.hpp>
 #include <daxa/c/sync.h>
@@ -8,6 +10,7 @@
 #include <chrono>
 #include <utility>
 #include <fmt/format.h>
+#include <bit>
 
 namespace daxa
 {
@@ -92,7 +95,228 @@ namespace daxa
 
     /// --- Begin Device ---
 
+    void memory_deletor(daxa::ManagedSharedState * v)
+    {
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_memory_destroy(reinterpret_cast<daxa_MemoryBlock>(v)) == daxa_Result::DAXA_RESULT_SUCCESS,
+            "failed to destroy memory");
+    }
+
+    auto Device::create_memory(MemoryBlockInfo const & info) -> MemoryBlock
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_info = reinterpret_cast<daxa_MemoryBlockInfo const *>(&info);
+        daxa_MemoryBlock c_memory_block;
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_create_memory(self, c_info, &c_memory_block) == daxa_Result::DAXA_RESULT_SUCCESS,
+            "failed to create memory");
+        return MemoryBlock{ManagedPtr{reinterpret_cast<ManagedSharedState *>(c_memory_block), memory_deletor}};
+    }
+
+    auto Device::get_memory_requirements(BufferInfo const & info) -> MemoryRequirements
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_info = reinterpret_cast<daxa_BufferInfo const *>(&info);
+        return std::bit_cast<MemoryRequirements>(daxa_dvc_buffer_memory_requirements(self, c_info));
+    }
+
+    auto Device::get_memory_requirements(ImageInfo const & info) -> MemoryRequirements
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_info = reinterpret_cast<daxa_ImageInfo const *>(&info);
+        return std::bit_cast<MemoryRequirements>(daxa_dvc_image_memory_requirements(self, c_info));
+    }
+
+
+    auto Device::create_buffer(BufferInfo const & info) -> BufferId
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_info = reinterpret_cast<daxa_BufferInfo const *>(&info);
+        daxa_BufferId c_buffer_id = {};
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_create_buffer(self, c_info, &c_buffer_id),
+            "failed to create buffer",
+        );
+        return std::bit_cast<BufferId>(c_buffer_id);
+    }
+
+    auto Device::create_image(ImageInfo const & info) -> ImageId
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_info = reinterpret_cast<daxa_ImageInfo const *>(&info);
+        daxa_ImageId c_image_id = {};
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_create_image(self, c_info, &c_image_id),
+            "failed to create image",
+        );
+        return std::bit_cast<ImageId>(c_image_id);
+    }
+
+    auto Device::create_image_view(ImageViewInfo const & info) -> ImageViewId
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_info = reinterpret_cast<daxa_ImageViewInfo const *>(&info);
+        daxa_ImageViewId c_image_view_id = {};
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_create_image_view(self, c_info, &c_image_view_id),
+            "failed to create image_view",
+        );
+        return std::bit_cast<ImageViewId>(c_image_view_id);
+    }
+
+    auto Device::create_sampler(SamplerInfo const & info) -> SamplerId
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_info = reinterpret_cast<daxa_SamplerInfo const *>(&info);
+        daxa_SamplerId c_sampler_id = {};
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_create_sampler(self, c_info, &c_sampler_id),
+            "failed to create sampler",
+        );
+        return std::bit_cast<SamplerId>(c_sampler_id);
+    }
+
+    void Device::destroy_buffer(BufferId id)
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_BufferId>(id);
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_destroy_buffer(self, c_id),
+            "failed to destroy buffer",
+        );
+    }
+
+    void Device::destroy_image(ImageId id)
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_ImageId>(id);
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_destroy_image(self, c_id),
+            "failed to destroy image",
+        );
+    }
+
+    void Device::destroy_image_view(ImageViewId id)
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_ImageViewId>(id);
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_destroy_image_view(self, c_id),
+            "failed to destroy image_view",
+        );
+    }
+
+    void Device::destroy_sampler(SamplerId id)
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_SamplerId>(id);
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_destroy_sampler(self, c_id),
+            "failed to destroy sampler",
+        );
+    }
+        
+    auto Device::info_buffer(BufferId id) const -> BufferInfo const &
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_BufferId>(id);
+        daxa_BufferInfo* c_info = {}; 
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_info_buffer(self, c_id, &c_info),
+            "failed to get info of buffer",
+        );
+        return *reinterpret_cast<BufferInfo const *>(c_info);
+    }
+
+    auto Device::info_image(ImageId id) const -> ImageInfo const &
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_ImageId>(id);
+        daxa_ImageInfo* c_info = {}; 
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_info_image(self, c_id, &c_info),
+            "failed to get info of image",
+        );
+        return *reinterpret_cast<ImageInfo const *>(c_info);
+    }
+
+    auto Device::info_image_view(ImageViewId id) const -> ImageViewInfo const &
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_ImageViewId>(id);
+        daxa_ImageViewInfo* c_info = {}; 
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_info_image_view(self, c_id, &c_info),
+            "failed to get info of image_view",
+        );
+        return *reinterpret_cast<ImageViewInfo const *>(c_info);
+    }
+
+    auto Device::info_sampler(SamplerId id) const -> SamplerInfo const &
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_SamplerId>(id);
+        daxa_SamplerInfo* c_info = {}; 
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_info_sampler(self, c_id, &c_info),
+            "failed to get info of sampler",
+        );
+        return *reinterpret_cast<SamplerInfo const *>(c_info);
+    }
+
+
+    auto Device::is_id_valid(ImageId id) const -> bool
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_BufferId>(id);
+        return daxa_dvc_is_buffer_valid(self, c_id);
+    }
+
+    auto Device::is_id_valid(ImageViewId id) const -> bool
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_ImageId>(id);
+        return daxa_dvc_is_image_valid(self, c_id);
+    }
+
+    auto Device::is_id_valid(BufferId id) const -> bool
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_ImageViewId>(id);
+        return daxa_dvc_is_image_view_valid(self, c_id);
+    }
+
+    auto Device::is_id_valid(SamplerId id) const -> bool
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_SamplerId>(id);
+        return daxa_dvc_is_sampler_valid(self, c_id);
+    }
+
+
+    auto Device::get_device_address(BufferId id) const -> BufferDeviceAddress
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_BufferId>(id);
+        daxa_BufferDeviceAddress c_bda = {};
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_buffer_device_address(self, c_id, &c_bda),
+            "failed to get buffer device address",
+        );
+        return std::bit_cast<daxa::BufferDeviceAddress>(c_bda);
+    }
     
+    auto Device::get_host_address(BufferId id) const -> void *
+    {
+        auto self = this->as<daxa_ImplDevice>();
+        auto c_id = std::bit_cast<daxa_BufferId>(id);
+        void* c_ptr = {};
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_buffer_host_address(self, c_id, &c_ptr),
+            "failed to get buffer device address",
+        );
+        return c_ptr;
+    }
 
     /// --- End Device ---
 

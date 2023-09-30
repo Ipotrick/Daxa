@@ -234,10 +234,10 @@ namespace daxa
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
         
-        auto info_buffer(BufferId id) const -> BufferInfo;
-        auto info_image(ImageId id) const -> ImageInfo;
-        auto info_image_view(ImageViewId id) const -> ImageViewInfo;
-        auto info_sampler(SamplerId id) const -> SamplerInfo;
+        auto info_buffer(BufferId id) const -> BufferInfo const &;
+        auto info_image(ImageId id) const -> ImageInfo const &;
+        auto info_image_view(ImageViewId id) const -> ImageViewInfo const &;
+        auto info_sampler(SamplerId id) const -> SamplerInfo const &;
 
         auto is_id_valid(ImageId id) const -> bool;
         auto is_id_valid(ImageViewId id) const -> bool;

@@ -214,6 +214,9 @@ typedef struct
 struct daxa_ImplMemoryBlock;
 typedef struct daxa_ImplMemoryBlock * daxa_MemoryBlock;
 
+DAXA_EXPORT daxa_Result
+daxa_memory_destroy(daxa_MemoryBlock memory_block);
+
 typedef struct
 {
     daxa_MemoryBlock memory_block;

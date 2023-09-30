@@ -110,21 +110,21 @@ DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 
 DAXA_EXPORT daxa_Result
-daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
+daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo const ** out_info);
 DAXA_EXPORT daxa_Result
-daxa_dvc_info_image(daxa_Device device, daxa_ImageId image, daxa_ImageInfo * out_info);
+daxa_dvc_info_image(daxa_Device device, daxa_ImageId image, daxa_ImageInfo const ** out_info);
 DAXA_EXPORT daxa_Result
-daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageViewInfo * out_info);
+daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageViewInfo const ** out_info);
 DAXA_EXPORT daxa_Result
-daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerInfo * out_info);
+daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerInfo const ** out_info);
 
-DAXA_EXPORT VkBool32
+DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);
-DAXA_EXPORT VkBool32
+DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_image_valid(daxa_Device device, daxa_ImageId image);
-DAXA_EXPORT VkBool32
+DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_image_view_valid(daxa_Device device, daxa_ImageViewId image_view);
-DAXA_EXPORT VkBool32
+DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_sampler_valid(daxa_Device device, daxa_SamplerId sampler);
 
 DAXA_EXPORT daxa_Result
@@ -182,13 +182,13 @@ daxa_dvc_info(daxa_Device device);
 DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 
-DAXA_EXPORT void 
+DAXA_EXPORT void
 daxa_dvc_submit(daxa_Device device, daxa_CommandSubmitInfo const * info);
-DAXA_EXPORT void 
+DAXA_EXPORT void
 daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
-DAXA_EXPORT void 
+DAXA_EXPORT void
 daxa_dvc_wait_idle(daxa_Device device);
-DAXA_EXPORT void 
+DAXA_EXPORT void
 daxa_dvc_collect_garbage(daxa_Device device);
 
 #endif // #ifndef __DAXA_DEVICE_H__

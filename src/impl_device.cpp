@@ -417,22 +417,22 @@ auto daxa_dvc_info_sampler(daxa_Device self, daxa_SamplerId sampler, daxa_Sample
     return impl.slot(id).info;
 }
 
-auto daxa_dvc_is_image_valid(daxa_Device self, daxa_ImageId image) -> VkBool32
+auto daxa_dvc_is_image_valid(daxa_Device self, daxa_ImageId image) -> daxa_Bool8
 {
     auto const & impl = *as<ImplDevice>();
     return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
 }
-auto daxa_dvc_is_image_view_valid(daxa_Device self, daxa_ImageViewId image_view) -> VkBool32
+auto daxa_dvc_is_image_view_valid(daxa_Device self, daxa_ImageViewId image_view) -> daxa_Bool8
 {
     auto const & impl = *as<ImplDevice>();
     return !id.is_empty() && impl.gpu_shader_resource_table.image_slots.is_id_valid(id);
 }
-auto daxa_dvc_is_buffer_valid(daxa_Device self, daxa_BufferId buffer) -> VkBool32
+auto daxa_dvc_is_buffer_valid(daxa_Device self, daxa_BufferId buffer) -> daxa_Bool8
 {
     auto const & impl = *as<ImplDevice>();
     return !id.is_empty() && impl.gpu_shader_resource_table.buffer_slots.is_id_valid(id);
 }
-auto daxa_dvc_is_sampler_valid(daxa_Device self, daxa_SamplerId sampler) -> VkBool32
+auto daxa_dvc_is_sampler_valid(daxa_Device self, daxa_SamplerId sampler) -> daxa_Bool8
 {
     auto const & impl = *as<ImplDevice>();
     return !id.is_empty() && impl.gpu_shader_resource_table.sampler_slots.is_id_valid(id);
