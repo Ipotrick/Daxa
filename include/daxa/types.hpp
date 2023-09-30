@@ -17,6 +17,47 @@
 
 namespace daxa
 {
+    template <typename T>
+    struct Optional
+    {
+        T m_value = {};
+        bool m_has_value = {};
+
+        Optional() : m_value{}, m_has_value{false} {}
+        Optional(Optional<T> const &) = default;
+        Optional(T const & v) : m_value{v}, m_has_value{true} {}
+        Optional<T> & operator=(Optional<T> const &) = default;
+        Optional<T> & operator=(T const & v)
+        {
+            this->m_has_value = v;
+            this->has_value = true;
+        }
+
+        auto has_value() const -> bool
+        {
+            return this->m_has_value;
+        }
+
+        auto value() -> T &
+        {
+            return this->m_value;
+        }
+
+        auto value() const -> T const &
+        {
+            return this->m_value;
+        }
+    };
+
+    template <typename T, usize CAPACITY>
+    struct FixedList
+    {
+        std::array<T, CAPACITY> m_data = {};
+        usize m_size = {};
+
+        // TODO: Implement iterator and missing member functions!
+    };
+
     inline namespace types
     {
         using u8 = std::uint8_t;
@@ -36,7 +77,7 @@ namespace daxa
         using f64 = double;
 
         using BufferDeviceAddress = u64;
-    }
+    } // namespace types
 
     namespace detail
     {
@@ -46,8 +87,8 @@ namespace daxa
             std::array<T, N> array;
             constexpr T & operator[](usize i) noexcept { return array[i]; }
             constexpr T const & operator[](usize i) const noexcept { return array[i]; }
-            auto operator==(GenericVector<T,N> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,N> const & other) const -> bool = default;
+            auto operator==(GenericVector<T, N> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T, N> const & other) const -> bool = default;
         };
 
         template <typename T>
@@ -70,8 +111,8 @@ namespace daxa
                 default: return x;
                 }
             }
-            auto operator==(GenericVector<T,2> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,2> const & other) const -> bool = default;
+            auto operator==(GenericVector<T, 2> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T, 2> const & other) const -> bool = default;
         };
         template <typename T>
         struct GenericVector<T, 3>
@@ -95,8 +136,8 @@ namespace daxa
                 default: return x;
                 }
             }
-            auto operator==(GenericVector<T,3> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,3> const & other) const -> bool = default;
+            auto operator==(GenericVector<T, 3> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T, 3> const & other) const -> bool = default;
         };
         template <typename T>
         struct GenericVector<T, 4>
@@ -122,15 +163,18 @@ namespace daxa
                 default: return x;
                 }
             }
-            auto operator==(GenericVector<T,4> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,4> const & other) const -> bool = default;
+            auto operator==(GenericVector<T, 4> const & other) const -> bool = default;
+            auto operator!=(GenericVector<T, 4> const & other) const -> bool = default;
         };
 
         template <typename T, usize M, usize N>
-        struct GenericMatrix : GenericVector<GenericVector<T, N>, M> {};
+        struct GenericMatrix : GenericVector<GenericVector<T, N>, M>
+        {
+        };
     } // namespace detail
 
-    inline namespace types {
+    inline namespace types
+    {
 
         using b32vec2 = detail::GenericVector<b32, 2>;
         using b32vec3 = detail::GenericVector<b32, 3>;
@@ -1021,5 +1065,56 @@ namespace daxa
         i32 y = {};
         u32 width = {};
         u32 height = {};
+    };
+    struct MemoryRequirements
+    {
+        u64 size = {};
+        u64 alignment = {};
+        u32 memory_type_bits = {};
+    };
+
+    struct MemoryBlockInfo
+    {
+        MemoryRequirements requirements = {};
+        MemoryFlags flags = {};
+    };
+
+    struct MemoryBlock : ManagedPtr
+    {
+        MemoryBlock() = default;
+
+      private:
+        friend struct ImplDevice;
+        friend struct Device;
+        MemoryBlock(ManagedPtr impl);
+    };
+
+    using AutoAllocInfo = MemoryFlags;
+
+    struct ManualAllocInfo
+    {
+        MemoryBlock memory_block = {};
+        usize offset = {};
+    };
+
+    using AllocateInfo = std::variant<AutoAllocInfo, ManualAllocInfo>;
+
+    struct TimelineQueryPoolInfo
+    {
+        u32 query_count = {};
+        std::string name = {};
+    };
+
+    struct TimelineQueryPool : ManagedPtr
+    {
+        TimelineQueryPool() = default;
+
+        auto info() const -> TimelineQueryPoolInfo const &;
+
+        auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;
+
+      private:
+        friend struct Device;
+        explicit TimelineQueryPool(ManagedPtr impl);
     };
 } // namespace daxa

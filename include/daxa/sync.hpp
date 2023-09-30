@@ -1,14 +1,50 @@
 #pragma once
 
 #include <daxa/core.hpp>
-
 #include <daxa/gpu_resources.hpp>
-
-#include <daxa/c/device.h>
 
 namespace daxa
 {
-    struct Device;
+    struct BinarySemaphoreInfo
+    {
+        std::string name = {};
+    };
+
+    struct BinarySemaphore : ManagedPtr
+    {
+        BinarySemaphore() = default;
+
+        auto info() const -> BinarySemaphoreInfo const &;
+
+      private:
+        friend struct Device;
+        friend struct ImplSwapchain;
+        explicit BinarySemaphore(ManagedPtr impl);
+    };
+
+    struct TimelineSemaphoreInfo
+    {
+        u64 initial_value = {};
+        std::string name = {};
+    };
+
+    struct TimelineSemaphore : ManagedPtr
+    {
+        TimelineSemaphore() = default;
+
+        auto info() const -> TimelineSemaphoreInfo const &;
+
+        auto value() const -> u64;
+        void set_value(u64 value);
+        auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
+
+      private:
+        friend struct Device;
+        friend struct ImplSwapchain;
+        explicit TimelineSemaphore(ManagedPtr impl);
+    };
+
+        struct Device;
     struct MemoryBarrierInfo
     {
         Access src_access = AccessConsts::NONE;
@@ -34,19 +70,19 @@ namespace daxa
         std::string name = {};
     };
 
-    struct SplitBarrierState
+    struct Event
     {
-        SplitBarrierState() = default;
+        Event() = default;
 
-        SplitBarrierState(SplitBarrierState && other) noexcept;
-        auto operator=(SplitBarrierState && other) noexcept -> SplitBarrierState &;
-        ~SplitBarrierState();
+        Event(Event && other) noexcept;
+        auto operator=(Event && other) noexcept -> Event &;
+        ~Event();
 
         auto info() const -> SplitBarrierInfo const &;
 
       private:
         friend struct CommandList;
-        SplitBarrierState(daxa_Device a_device, SplitBarrierInfo a_info);
+        Event(daxa_Device a_device, SplitBarrierInfo a_info);
         void cleanup();
 
         daxa_Device device = {};
@@ -58,8 +94,8 @@ namespace daxa
     {
         std::span<MemoryBarrierInfo> memory_barriers = {};
         std::span<ImageBarrierInfo> image_barriers = {};
-        SplitBarrierState & split_barrier;
+        Event & split_barrier;
     };
 
     using SplitBarrierWaitInfo = SplitBarrierSignalInfo;
-} // namespace daxa
+}

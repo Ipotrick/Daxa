@@ -5,15 +5,11 @@
 
 typedef struct
 {
-    uint32_t const * data;
-    size_t size;
-} daxa_ShaderByteCode;
-
-typedef struct
-{
-    daxa_ShaderByteCode byte_code;
+    uint32_t const * byte_code;
+    size_t byte_code_size;
     char const * entry_point;
 } daxa_ShaderInfo;
+_DAXA_DECL_OPTIONAL(daxa_ShaderInfo)
 
 typedef struct
 {
@@ -30,16 +26,15 @@ daxa_compute_pipeline_info(daxa_ComputePipeline compute_pipeline);
 typedef struct
 {
     VkFormat depth_attachment_format;
-    VkBool32 enable_depth_test;
-    VkBool32 enable_depth_write;
+    daxa_Bool8 enable_depth_write;
     VkCompareOp depth_test_compare_op;
     float min_depth_bounds;
     float max_depth_bounds;
 } daxa_DepthTestInfo;
+_DAXA_DECL_OPTIONAL(daxa_DepthTestInfo)
 
 static const daxa_DepthTestInfo DAXA_DEFAULT_DEPTH_TEST_INFO = {
     .depth_attachment_format = VK_FORMAT_UNDEFINED,
-    .enable_depth_test = 0,
     .enable_depth_write = 0,
     .depth_test_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL,
     .min_depth_bounds = 0.0f,
@@ -51,6 +46,7 @@ typedef struct
     VkConservativeRasterizationModeEXT mode;
     float size;
 } daxa_ConservativeRasterInfo;
+_DAXA_DECL_OPTIONAL(daxa_ConservativeRasterInfo)
 
 typedef struct
 {
@@ -66,8 +62,7 @@ typedef struct
     float depth_bias_clamp;
     float depth_bias_slope_factor;
     float line_width;
-    daxa_Bool8 enable_conservative_rasterization;
-    daxa_ConservativeRasterInfo conservative_raster_info;
+    daxa_Optional(daxa_ConservativeRasterInfo) conservative_raster_info;
 } daxa_RasterizerInfo;
 
 static const daxa_RasterizerInfo DAXA_DEFAULT_RASTERIZATION_INFO = {
@@ -90,7 +85,6 @@ static const daxa_RasterizerInfo DAXA_DEFAULT_RASTERIZATION_INFO = {
 // should be moved in c++ from types to pipeline.hpp.
 typedef struct
 {
-    daxa_Bool8 blend_enable;
     VkBlendFactor src_color_blend_factor;
     VkBlendFactor dst_color_blend_factor;
     VkBlendOp color_blend_op;
@@ -99,6 +93,8 @@ typedef struct
     VkBlendOp alpha_blend_op;
     VkColorComponentFlags color_write_mask;
 } daxa_BlendInfo;
+_DAXA_DECL_OPTIONAL(daxa_BlendInfo)
+
 
 static const daxa_BlendInfo DAXA_DEFAULT_BLEND_INFO = {
     .blend_enable = 0,
@@ -114,32 +110,30 @@ static const daxa_BlendInfo DAXA_DEFAULT_BLEND_INFO = {
 typedef struct
 {
     VkFormat format;
-    daxa_BlendInfo blend;
+    daxa_Optional(daxa_BlendInfo) blend;
 } daxa_RenderAttachment;
+_DAXA_DECL_FIXED_LIST(daxa_RenderAttachment, 8)
 
 typedef struct
 {
     uint32_t control_points;
     VkTessellationDomainOrigin origin;
 } daxa_TesselationInfo;
+_DAXA_DECL_OPTIONAL(daxa_TesselationInfo)
 
-// NODE(pahrens): This is an arbitrary number, bump it if you need more.
-#define DAXA_MAXIMUM_COLOR_ATTACHMENT_COUNT 8
 
 typedef struct
 {
-    VkShaderStageFlags enabled_stages;
-    daxa_ShaderInfo mesh_shader_info;
-    daxa_ShaderInfo vertex_shader_info;
-    daxa_ShaderInfo tesselation_control_shader_info;
-    daxa_ShaderInfo tesselation_evaluation_shader_info;
-    daxa_ShaderInfo fragment_shader_info;
-    daxa_ShaderInfo task_shader_info;
-    daxa_RenderAttachment color_attachments[DAXA_MAXIMUM_COLOR_ATTACHMENT_COUNT];
-    uint32_t color_attachment_count;
-    daxa_DepthTestInfo depth_test;
+    daxa_Optional(daxa_ShaderInfo) mesh_shader_info;
+    daxa_Optional(daxa_ShaderInfo) vertex_shader_info;
+    daxa_Optional(daxa_ShaderInfo) tesselation_control_shader_info;
+    daxa_Optional(daxa_ShaderInfo) tesselation_evaluation_shader_info;
+    daxa_Optional(daxa_ShaderInfo) fragment_shader_info;
+    daxa_Optional(daxa_ShaderInfo) task_shader_info;
+    daxa_FixedList(daxa_RenderAttachment, 8) color_attachments;
+    daxa_Optional(daxa_DepthTestInfo) depth_test;
+    daxa_Optional(daxa_TesselationInfo) tesselation;
     daxa_RasterizerInfo raster;
-    daxa_TesselationInfo tesselation;
     uint32_t push_constant_size;
     char const * name;
 } daxa_RasterPipelineInfo;

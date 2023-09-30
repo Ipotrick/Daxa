@@ -94,7 +94,7 @@ namespace daxa
 
     struct TaskSplitBarrier : TaskBarrier
     {
-        SplitBarrierState split_barrier_state;
+        Event split_barrier_state;
     };
 
     struct ImplTask

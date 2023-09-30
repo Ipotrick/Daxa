@@ -245,4 +245,15 @@ DAXA_EXPORT void daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool t
         daxa_Bool8 has_value;  \
     } daxa_Optional##T;
 
+#define daxa_Optional(T) daxa_Optional##T
+
+#define _DAXA_DECL_FIXED_LIST(T, CAPACITY) \
+    typedef struct                         \
+    {                                      \
+        T data[CAPACITY];                  \
+        size_t size;                       \
+    } daxa_FixedList##CAPACITY##T;
+
+#define daxa_FixedList(T, CAPACITY) daxa_FixedList##CAPACITY##T
+
 #endif // #ifndef __DAXA_TYPES_H__

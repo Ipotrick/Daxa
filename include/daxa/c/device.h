@@ -44,6 +44,15 @@ typedef struct
     char const * name;
 } daxa_DeviceInfo;
 
+static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
+    .selector = &daxa_default_device_score,
+    .flags = DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT,
+    .max_allowed_images = 10000,
+    .max_allowed_buffers = 10000,
+    .max_allowed_samplers = 10000,
+    .name = {},
+};
+
 typedef struct
 {
     VkPipelineStageFlags wait_stages;
@@ -59,12 +68,16 @@ typedef struct
     uint64_t signal_timeline_semaphoreCount;
 } daxa_CommandSubmitInfo;
 
+static const daxa_CommandSubmitInfo DAXA_DEFAULT_COMMAND_SUBMIT_INFO = {};
+
 typedef struct
 {
     daxa_BinarySemaphore const * wait_binary_semaphores;
     uint64_t wait_binary_semaphore_count;
     daxa_Swapchain swapchain;
 } daxa_PresentInfo;
+
+static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = {};
 
 typedef struct daxa_ImplDevice * daxa_Device;
 

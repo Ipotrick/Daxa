@@ -24,6 +24,18 @@ typedef struct
     VkFilter filter;
 } daxa_ImageBlitInfo;
 
+static const daxa_ImageBlitInfo DAXA_DEFAULT_IMAGE_BLIT_INFO = {
+    .src_image = {},
+    .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    .dst_image = {},
+    .dst_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .src_slice = {},
+    .src_offsets = {},
+    .dst_slice = {},
+    .dst_offsets = {},
+    .filter = {},
+};
+
 typedef struct
 {
     daxa_BufferId src_buffer;
@@ -32,6 +44,8 @@ typedef struct
     size_t dst_offset;
     size_t size;
 } daxa_BufferCopyInfo;
+
+static const daxa_BufferCopyInfo DAXA_DEFAULT_BUFFER_COPY_INFO = {};
 
 typedef struct
 {
@@ -44,6 +58,16 @@ typedef struct
     VkExtent3D image_extent;
 } daxa_BufferImageCopyInfo;
 
+static const daxa_BufferImageCopyInfo DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
+    .buffer = {},
+    .buffer_offset = {},
+    .image = {},
+    .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .image_slice = {},
+    .image_offset = {},
+    .image_extent = {},
+}
+
 typedef struct
 {
     daxa_ImageId image;
@@ -54,6 +78,16 @@ typedef struct
     daxa_BufferId buffer;
     size_t buffer_offset;
 } daxa_ImageBufferCopyInfo;
+
+static const daxa_ImageBufferCopyInfo DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
+    .image = {},
+    .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    .image_slice = {},
+    .image_offset = {},
+    .image_extent = {},
+    .buffer = {},
+    .buffer_offset = {},
+};
 
 typedef struct
 {
@@ -68,13 +102,38 @@ typedef struct
     VkExtent3D extent;
 } daxa_ImageCopyInfo;
 
+static const daxa_ImageCopyInfo DAXA_DEFAULT_IMAGE_COPY_INFO = {
+    .src_image = {},
+    .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    .dst_image = {},
+    .dst_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .src_slice = {},
+    .src_offset = {},
+    .dst_slice = {},
+    .dst_offset = {},
+    .extent = {},
+};
+
+typedef struct 
+{
+    usize index;
+    VkClearValue value;
+} daxa_ClearValue;
+
 typedef struct
 {
     VkImageLayout dst_image_layout;
-    VkClearValue clear_value;
+    daxa_ClearValue clear_value;
     daxa_ImageId dst_image;
     daxa_ImageMipArraySlice dst_slice;
 } daxa_ImageClearInfo;
+
+static const daxa_ImageClearInfo DAXA_DEFAULT_IMAGE_CLEAR_INFO = {
+    .dst_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .clear_value = {},
+    .dst_image = {},
+    .dst_slice = {},
+};
 
 typedef struct
 {
@@ -84,29 +143,44 @@ typedef struct
     uint32_t clear_value;
 } daxa_BufferClearInfo;
 
+static const daxa_BufferClearInfo DAXA_DEFAULT_BUFFER_CLEAR_INFO = {};
+
 typedef struct
 {
     daxa_ImageViewId image_view;
     VkImageLayout layout;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
-    VkClearValue clear_value;
+    daxa_ClearValue clear_value;
 } daxa_RenderAttachmentInfo;
+_DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
+_DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)
+
+static const daxa_RenderAttachmentInfo DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
+    .image_view = {},
+    .layout = DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+    .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
+    .store_op = VK_ATTACHMENT_STORE_OP_STORE,
+    .clear_value = {},
+};  
 
 typedef struct
 {
-    daxa_RenderAttachmentInfo const * color_attachments;
-    size_t color_attachment_count;
-    daxa_RenderAttachmentInfo const * depth_attachment;
-    daxa_RenderAttachmentInfo const * stencil_attachment;
+    daxa_FixedList(daxa_RenderAttachmentInfo, 8) color_attachments;
+    daxa_Optional(daxa_RenderAttachmentInfo) depth_attachment;
+    daxa_Optional(daxa_RenderAttachmentInfo) stencil_attachment;
     VkRect2D render_area;
 } daxa_RenderPassBeginInfo;
+
+static const daxa_RenderPassBeginInfo DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = {};
 
 typedef struct
 {
     daxa_BufferId indirect_buffer;
     size_t offset;
 } daxa_DispatchIndirectInfo;
+
+static const daxa_DispatchIndirectInfo DAXA_DEFAULT_DISPATCH_INDIRECT_INFO = {};
 
 typedef struct
 {
@@ -115,6 +189,13 @@ typedef struct
     uint32_t draw_count;
     uint32_t stride;
 } daxa_DrawMeshTasksIndirectInfo;
+
+static const daxa_DrawMeshTasksIndirectInfo DAXA_DEFAULT_DRAW_MESH_TASKS_INDIRECT_INFO = {
+    .indirect_buffer = {},
+    .offset = {},
+    .draw_count = 1,
+    .stride = 12,
+}
 
 typedef struct
 {
@@ -126,6 +207,15 @@ typedef struct
     uint32_t stride;
 } daxa_DrawMeshTasksIndirectCountInfo;
 
+static const daxa_DrawMeshTasksIndirectCountInfo DAXA_DRAW_MESH_TASKS_INDIRECT_COUNT_INFO = {
+    .indirect_buffer = {},
+    .offset = {},
+    .count_buffer = {},
+    .count_offset = {},
+    .max_count = {},
+    .stride = 12,
+};
+
 typedef struct
 {
     uint32_t vertex_count;
@@ -133,6 +223,13 @@ typedef struct
     uint32_t first_vertex;
     uint32_t first_instance;
 } daxa_DrawInfo;
+
+static const daxa_DrawInfo DAXA_DEFAULT_DRAW_INFO = {
+    .vertex_count = {},
+    .instance_count = 1,
+    .first_vertex = {},
+    .first_instance = {},
+}
 
 typedef struct
 {
@@ -143,6 +240,14 @@ typedef struct
     uint32_t first_instance;
 } daxa_DrawIndexedInfo;
 
+static const daxa_DrawIndexedInfo DAXA_DEFAULT_DRAW_INDEXED_INFO = {
+    .index_count = {},
+    .instance_count = 1,
+    .first_index = {},
+    .vertex_offset = {},
+    .first_instance = {},
+} 
+
 typedef struct
 {
     daxa_BufferId draw_command_buffer;
@@ -151,6 +256,14 @@ typedef struct
     uint32_t draw_command_stride;
     VkBool32 is_indexed;
 } daxa_DrawIndirectInfo;
+
+static const daxa_DrawIndirectInfo DAXA_DEFAULT_DRAW_INDIRECT_INFO = {
+     .draw_command_buffer = {},
+     .draw_command_buffer_read_offset = {},
+     .draw_count = 1,
+     .draw_command_stride = {},
+     .is_indexed = {},
+};
 
 typedef struct
 {
@@ -163,6 +276,16 @@ typedef struct
     VkBool32 is_indexed;
 } daxa_DrawIndirectCountInfo;
 
+static const daxa_DrawIndirectCountInfo DAXA_DEFAULT_DRAW_INDIRECT_COUNT_INFO = {
+    .draw_command_buffer = {},
+    .draw_command_buffer_read_offset = {},
+    .draw_count_buffer = {},
+    .draw_count_buffer_read_offset = {},
+    .max_draw_count = ((1 << 16) - 1),
+    .draw_command_stride = {},
+    .is_indexed = {},
+};
+
 typedef struct
 {
     daxa_Event event;
@@ -171,7 +294,7 @@ typedef struct
 
 typedef struct
 {
-    daxa_Event events;
+    daxa_Event const * events;
     size_t event_count;
 } daxa_WaitEventsInfo;
 
@@ -208,7 +331,9 @@ typedef struct
     daxa_BufferId buffer;
     size_t size;
     size_t offset;
-} daxa_SetConstantBufferInfo;
+} daxa_SetUniformBufferInfo;
+
+static const daxa_SetUniformBufferInfo DAXA_DEFAULT_SET_UNIFORM_BUFFER_INFO = {};
 
 typedef struct
 {
@@ -216,6 +341,8 @@ typedef struct
     float clamp;
     float slope_factor;
 } daxa_DepthBiasInfo;
+
+static const daxa_DepthBiasInfo DAXA_DEFAULT_DEPTH_BIAS_INFO = {};
 
 typedef struct daxa_ImplCommandList * daxa_CommandList;
 
@@ -251,7 +378,7 @@ DAXA_EXPORT void daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * 
 ///         Set uniform buffer slots are cleared after a pipeline is bound.
 ///         Before setting another pipeline, they need to be set again.
 /// @param info parameters.
-DAXA_EXPORT void daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetConstantBufferInfo const * info);
+DAXA_EXPORT void daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetUniformBufferInfo const * info);
 DAXA_EXPORT void daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
 DAXA_EXPORT void daxa_cmd_set_raster_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
 DAXA_EXPORT void daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);

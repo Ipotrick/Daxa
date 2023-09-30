@@ -21,14 +21,14 @@ namespace daxa
         );
     }
 
-    SplitBarrierState::SplitBarrierState(SplitBarrierState && other) noexcept
+    Event::Event(Event && other) noexcept
         : device{other.device}, create_info{other.create_info}, data{other.data}
     {
         other.create_info = {};
         other.data = {};
     }
 
-    auto SplitBarrierState::operator=(SplitBarrierState && other) noexcept -> SplitBarrierState &
+    auto Event::operator=(Event && other) noexcept -> Event &
     {
         this->cleanup();
         this->device = std::move(other.device);
@@ -39,17 +39,17 @@ namespace daxa
         return *this;
     }
 
-    SplitBarrierState::~SplitBarrierState() // NOLINT(bugprone-exception-escape)
+    Event::~Event() // NOLINT(bugprone-exception-escape)
     {
         this->cleanup();
     }
 
-    auto SplitBarrierState::info() const -> SplitBarrierInfo const &
+    auto Event::info() const -> SplitBarrierInfo const &
     {
         return this->create_info;
     }
 
-    void SplitBarrierState::cleanup()
+    void Event::cleanup()
     {
         if (this->data != 0u)
         {
@@ -65,7 +65,7 @@ namespace daxa
         }
     }
 
-    SplitBarrierState::SplitBarrierState(daxa_Device a_device, SplitBarrierInfo a_info)
+    Event::Event(daxa_Device a_device, SplitBarrierInfo a_info)
         : device{a_device}, create_info{std::move(a_info)}
     {
         VkEventCreateInfo const vk_event_create_info{

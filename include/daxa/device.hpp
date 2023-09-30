@@ -5,10 +5,7 @@
 #include <daxa/pipeline.hpp>
 #include <daxa/swapchain.hpp>
 #include <daxa/command_list.hpp>
-#include <daxa/semaphore.hpp>
-#include <daxa/split_barrier.hpp>
-#include <daxa/timeline_query.hpp>
-#include <daxa/memory_block.hpp>
+#include <daxa/sync.hpp>
 
 namespace daxa
 {
@@ -262,7 +259,7 @@ namespace daxa
         auto create_command_list(CommandListInfo const & info) -> CommandList;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
-        auto create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrierState;
+        auto create_split_barrier(SplitBarrierInfo const & info) -> Event;
         auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         auto info() const -> DeviceInfo const &;

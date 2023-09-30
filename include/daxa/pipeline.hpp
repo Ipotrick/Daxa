@@ -4,19 +4,18 @@
 
 namespace daxa
 {
-    using ShaderByteCode = std::span<u32 const>;
-
     struct ShaderInfo
     {
-        ShaderByteCode byte_code = {};
-        std::optional<std::string> entry_point = {};
+        u32 const * byte_code;
+        usize byte_code_size;
+        char const * entry_point = {};
     };
 
     struct ComputePipelineInfo
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        std::string name = {};
+        char const * name = {};
     };
 
     struct ComputePipeline : ManagedPtr
@@ -34,7 +33,6 @@ namespace daxa
     struct DepthTestInfo
     {
         Format depth_attachment_format = Format::UNDEFINED;
-        bool enable_depth_test = {};
         bool enable_depth_write = {};
         CompareOp depth_test_compare_op = CompareOp::LESS_OR_EQUAL;
         f32 min_depth_bounds = 0.0f;
@@ -61,13 +59,13 @@ namespace daxa
         f32 depth_bias_clamp = 0.0f;
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
-        std::optional<ConservativeRasterInfo> conservative_raster_info = std::nullopt;
+        Optional<ConservativeRasterInfo> conservative_raster_info = {};
     };
 
     struct RenderAttachment
     {
         Format format = {};
-        BlendInfo blend = {};
+        Optional<BlendInfo> blend = {};
     };
 
     struct TesselationInfo
@@ -78,18 +76,18 @@ namespace daxa
 
     struct RasterPipelineInfo
     {
-        std::optional<ShaderInfo> mesh_shader_info = {};
-        std::optional<ShaderInfo> vertex_shader_info = {};
-        std::optional<ShaderInfo> tesselation_control_shader_info = {};
-        std::optional<ShaderInfo> tesselation_evaluation_shader_info = {};
-        std::optional<ShaderInfo> fragment_shader_info = {};
-        std::optional<ShaderInfo> task_shader_info = {};
-        std::vector<RenderAttachment> color_attachments = {};
-        DepthTestInfo depth_test = {};
+        Optional<ShaderInfo> mesh_shader_info = {};
+        Optional<ShaderInfo> vertex_shader_info = {};
+        Optional<ShaderInfo> tesselation_control_shader_info = {};
+        Optional<ShaderInfo> tesselation_evaluation_shader_info = {};
+        Optional<ShaderInfo> fragment_shader_info = {};
+        Optional<ShaderInfo> task_shader_info = {};
+        FixedList<RenderAttachment, 8> color_attachments = {};
+        Optional<DepthTestInfo> depth_test = {};
+        Optional<TesselationInfo> tesselation = {};
         RasterizerInfo raster = {};
-        TesselationInfo tesselation = {};
         u32 push_constant_size = {};
-        std::string name = {};
+        char const * name = {};
     };
 
     struct RasterPipeline : ManagedPtr

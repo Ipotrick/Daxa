@@ -3,10 +3,9 @@
 #include <daxa/core.hpp>
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
-#include <daxa/split_barrier.hpp>
+#include <daxa/sync.hpp>
 
 #include <span>
-#include <daxa/timeline_query.hpp>
 
 namespace daxa
 {
@@ -14,7 +13,7 @@ namespace daxa
 
     struct CommandListInfo
     {
-        std::string name = {};
+        char const * name = {};
     };
 
     struct ImageBlitInfo
@@ -77,7 +76,7 @@ namespace daxa
     struct ImageClearInfo
     {
         ImageLayout dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL;
-        ClearValue clear_value;
+        ClearValue clear_value = {};    // TODO: might be incompatible c abi with daxa_ClearValue!
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
@@ -96,14 +95,14 @@ namespace daxa
         ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
-        ClearValue clear_value = {};
+        ClearValue clear_value = {};    // TODO: might be incompatible c abi with daxa_ClearValue!
     };
 
     struct RenderPassBeginInfo
     {
-        std::vector<RenderAttachmentInfo> color_attachments = {};
-        std::optional<RenderAttachmentInfo> depth_attachment = {};
-        std::optional<RenderAttachmentInfo> stencil_attachment = {};
+        FixedList<RenderAttachmentInfo> color_attachments = {};
+        Optional<RenderAttachmentInfo> depth_attachment = {};
+        Optional<RenderAttachmentInfo> stencil_attachment = {};
         Rect2D render_area = {};
     };
 
@@ -168,15 +167,15 @@ namespace daxa
         bool is_indexed = {};
     };
 
-    struct ResetSplitBarriersInfo
+    struct ResetEventInfo
     {
-        SplitBarrierState & split_barrier;
-        PipelineStageFlags stage;
+        Event & event;
+        PipelineStageFlags stage = {};
     };
 
-    struct WaitSplitBarriersInfo
+    struct WaitEventInfo
     {
-        std::span<SplitBarrierState> split_barriers = {};
+        std::span<Event> events = {};
     };
 
     struct WriteTimestampInfo
@@ -196,16 +195,16 @@ namespace daxa
     struct CommandLabelInfo
     {
         std::array<f32, 4> label_color = {0.463f, 0.333f, 0.671f, 1.0f};
-        std::string name = {};
+        char const * name = {};
     };
 
-    struct ResetSplitBarrierInfo
+    struct ResetEventInfo
     {
-        SplitBarrierState & barrier;
+        Event & barrier;
         PipelineStageFlags stage_masks = {};
     };
 
-    struct SetConstantBufferInfo
+    struct SetUniformBufferInfo
     {
         // Binding slot the buffer will be bound to.
         u32 slot = {};
@@ -242,10 +241,10 @@ namespace daxa
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
         /// @param info parameters.
         void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
-        void signal_split_barrier(SplitBarrierSignalInfo const & info);
-        void wait_split_barriers(std::span<SplitBarrierWaitInfo const> const & infos);
-        void wait_split_barrier(SplitBarrierWaitInfo const & info);
-        void reset_split_barrier(ResetSplitBarrierInfo const & info);
+        void signal_event(EventSignalInfo const & info);
+        void wait_events(std::span<EventWaitInfo const> const & infos);
+        void wait_event(EventWaitInfo const & info);
+        void reset_event(ResetEventInfo const & info);
 
         void push_constant_vptr(void const * data, u32 size, u32 offset = 0);
         template <typename T>
@@ -262,7 +261,7 @@ namespace daxa
         ///         Set uniform buffer slots are cleared after a pipeline is bound.
         ///         Before setting another pipeline, they need to be set again.
         /// @param info parameters.
-        void set_uniform_buffer(SetConstantBufferInfo const & info);
+        void set_uniform_buffer(SetUniformBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
         void set_pipeline(RasterPipeline const & pipeline);
         void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);
