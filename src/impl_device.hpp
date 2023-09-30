@@ -20,7 +20,7 @@
 
 using namespace daxa;
 
-struct daxa_ImplDevice
+struct daxa_ImplDevice final : ManagedSharedState
 {
     daxa_Instance instance = {};
     VkPhysicalDevice vk_physical_device = {};

@@ -286,7 +286,7 @@ namespace daxa
         }
 
         ManagedPtr() = default;
-        explicit ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deletor);
+        ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deletor);
         ~ManagedPtr();
 
         ManagedPtr(ManagedPtr const &);

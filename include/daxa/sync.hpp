@@ -1,6 +1,6 @@
 #pragma once
 
-#include <daxa/core.hpp>
+#include <daxa/types.hpp>
 #include <daxa/gpu_resources.hpp>
 
 namespace daxa
@@ -32,7 +32,7 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct BinarySemaphore : ManagedPtr
+    struct BinarySemaphore final : ManagedPtr
     {
         BinarySemaphore() = default;
 
@@ -50,7 +50,7 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct TimelineSemaphore : ManagedPtr
+    struct TimelineSemaphore final : ManagedPtr
     {
         TimelineSemaphore() = default;
 
@@ -71,24 +71,16 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct Event
+    struct Event final : ManagedPtr
     {
         Event() = default;
-
-        Event(Event && other) noexcept;
-        auto operator=(Event && other) noexcept -> Event &;
-        ~Event();
 
         auto info() const -> EventInfo const &;
 
       private:
         friend struct CommandList;
-        Event(daxa_Device a_device, EventInfo a_info);
-        void cleanup();
-
-        daxa_Device device = {};
-        EventInfo create_info = {};
-        u64 data = {};
+        friend struct Device;
+        Event(ManagedPtr impl);
     };
 
     struct EventSignalInfo

@@ -11,7 +11,7 @@
 
 namespace daxa
 {
-    #if 0
+#if 0
     auto create_instance(InstanceInfo const & info) -> Instance
     {
         daxa_Instance instance;
@@ -43,28 +43,81 @@ namespace daxa
     {
         daxa_destroy_instance(instance);
     }
-    #endif
+#endif
+
+    /// --- Begin Instance ---
+    
+    Instance::Instance(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+
+    void device_deletor(daxa::ManagedSharedState * v)
+    {
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_dvc_destroy(reinterpret_cast<daxa_Device>(v)) == daxa_Result::DAXA_RESULT_SUCCESS,
+            "failed to destroy device");
+    }
+
+    auto Instance::create_device(DeviceInfo const & device_info) -> Device
+    {
+        auto self = this->as<daxa_ImplInstance>();
+        daxa_Device device = {};
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_instance_create_device(self, reinterpret_cast<daxa_DeviceInfo const *>(&device_info), &device) == VK_SUCCESS,
+            "failed to create device");
+        return Device(ManagedPtr{reinterpret_cast<ManagedSharedState *>(device), &device_deletor});
+    }
+
+    auto Instance::into() const -> InstanceInfo const &
+    {
+        auto self = this->as<daxa_ImplInstance>();
+        return *reinterpret_cast<InstanceInfo const *>(daxa_instance_info(self));
+    }
+
+    void instance_deletor(daxa::ManagedSharedState * v)
+    {
+        // Can't fail.
+        daxa_destroy_instance(reinterpret_cast<daxa_Instance>(v));
+    }
+
+    auto create_instance(InstanceInfo const & info) -> Instance
+    {
+        daxa_Instance instance;
+        auto c_info = reinterpret_cast<daxa_InstanceInfo const *>(&info);
+        DAXA_DBG_ASSERT_TRUE_M(
+            daxa_create_instance(c_info, &instance) == daxa_Result::DAXA_RESULT_SUCCESS,
+            "failed to create instance");
+        return Instance{ManagedPtr{reinterpret_cast<ManagedSharedState *>(instance), instance_deletor}};
+    }
+
+    /// --- End Instance ---
+
+    /// --- Begin Device ---
+
+    
+
+    /// --- End Device ---
 
     /// --- Begin BinarySemaphore ---
+
+    BinarySemaphore::BinarySemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
         auto self = this->as<daxa_ImplBinarySemaphore>();
         return *reinterpret_cast<BinarySemaphoreInfo const *>(
-            daxa_binary_semaphore_info(self)
-        );
+            daxa_binary_semaphore_info(self));
     }
 
     /// --- End BinarySemaphore ---
 
     /// --- Begin TimelineSemaphore ---
 
+    TimelineSemaphore::TimelineSemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+
     auto TimelineSemaphore::info() const -> TimelineSemaphoreInfo const &
     {
         auto self = this->as<daxa_ImplTimelineSemaphore>();
         return *reinterpret_cast<TimelineSemaphoreInfo const *>(
-            daxa_timeline_semaphore_info(self)
-        );
+            daxa_timeline_semaphore_info(self));
     }
 
     auto TimelineSemaphore::value() const -> u64
@@ -72,7 +125,7 @@ namespace daxa
         auto self = this->as<daxa_ImplTimelineSemaphore>();
         u64 ret = {};
         DAXA_DBG_ASSERT_TRUE_M(
-            daxa_timeline_semaphore_get_value(self, &ret) == VK_SUCCESS, 
+            daxa_timeline_semaphore_get_value(self, &ret) == VK_SUCCESS,
             "cant get timeline value");
         return ret;
     }
@@ -81,7 +134,7 @@ namespace daxa
     {
         auto self = this->as<daxa_ImplTimelineSemaphore>();
         DAXA_DBG_ASSERT_TRUE_M(
-            daxa_timeline_semaphore_set_value(self, value) == VK_SUCCESS, 
+            daxa_timeline_semaphore_set_value(self, value) == VK_SUCCESS,
             "cant set timeline value");
     }
 
@@ -95,8 +148,20 @@ namespace daxa
 
     /// --- End TimelineSemaphore ---
 
+    /// --- Begin Event
+
+    Event::Event(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
+
+    auto Event::info() const -> EventInfo const &
+    {
+        auto self = this->as<daxa_ImplEvent>();
+        return *reinterpret_cast<EventInfo const *>(daxa_event_info(self));
+    }
+
+    /// --- End Event
+
     /// --- Begin to_string ---
-    
+
     auto to_string(MemoryBarrierInfo const & info) -> std::string
     {
         return fmt::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
@@ -104,14 +169,13 @@ namespace daxa
 
     auto to_string(ImageBarrierInfo const & info) -> std::string
     {
-        return fmt::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}", 
-        to_string(info.src_access), 
-        to_string(info.dst_access),
-        to_string(info.src_layout),
-        to_string(info.dst_layout),
-        to_string(info.image_slice),
-        to_string(info.image_id)
-        );
+        return fmt::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}",
+                           to_string(info.src_access),
+                           to_string(info.dst_access),
+                           to_string(info.src_layout),
+                           to_string(info.dst_layout),
+                           to_string(info.image_slice),
+                           to_string(info.image_id));
     }
 
     auto to_string(AccessTypeFlags flags) -> std::string
@@ -159,7 +223,7 @@ namespace daxa
 
     auto to_string(ImageUsageFlags const & flags) -> std::string
     {
-        if (flags ==  ImageUsageFlagBits::NONE)
+        if (flags == ImageUsageFlagBits::NONE)
         {
             return "NONE";
         }

@@ -82,7 +82,7 @@ static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = {};
 typedef struct daxa_ImplDevice * daxa_Device;
 
 DAXA_EXPORT daxa_Result
-daxa_destroy_device(daxa_Device device);
+daxa_dvc_destroy(daxa_Device device);
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);

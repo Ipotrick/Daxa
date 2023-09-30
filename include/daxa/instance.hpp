@@ -5,9 +5,20 @@
 
 namespace daxa
 {
+    struct InstanceFlagsProperties
+    {
+        using Data = u64;
+    };
+    using InstanceFlags = Flags<InstanceFlagsProperties>;
+    struct InstanceFlagBits
+    {
+        static inline constexpr InstanceFlags NONE = {0x00000000};
+        static inline constexpr InstanceFlags DEBUG_UTILS = {0x00000001};
+    };
+
     struct InstanceInfo
     {
-        bool enable_debug_utils = true;
+        InstanceFlags flags = InstanceFlagBits::DEBUG_UTILS;
     };
 
     struct Instance : ManagedPtr
@@ -15,6 +26,8 @@ namespace daxa
         Instance() = default;
 
         auto create_device(DeviceInfo const & device_info) -> Device;
+
+        auto into() const -> InstanceInfo const &;
 
       private:
         friend auto create_instance(InstanceInfo const & info) -> Instance;
