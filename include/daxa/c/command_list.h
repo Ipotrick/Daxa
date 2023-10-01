@@ -437,5 +437,7 @@ DAXA_EXPORT VkCommandBuffer
 daxa_cmd_get_vk_command_buffer(daxa_CommandList cmd_list);
 DAXA_EXPORT VkCommandPool
 daxa_cmd_get_vk_command_pool(daxa_CommandList cmd_list);
+DAXA_EXPORT daxa_Result
+daxa_destroy_command_list(daxa_CommandListInfo command_list);
 
 #endif // #ifndef __DAXA_COMMAND_LIST_H__

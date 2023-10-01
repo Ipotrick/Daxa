@@ -202,7 +202,7 @@ namespace daxa
 
     struct CommandSubmitInfo
     {
-        PipelineStageFlags src_stages = {};
+        PipelineStageFlags wait_stages = {};
         std::vector<CommandList> command_lists = {};
         std::vector<BinarySemaphore> wait_binary_semaphores = {};
         std::vector<BinarySemaphore> signal_binary_semaphores = {};

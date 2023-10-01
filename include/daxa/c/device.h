@@ -56,8 +56,8 @@ static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
 typedef struct
 {
     VkPipelineStageFlags wait_stages;
-    daxa_CommandList const * cmd_lists;
-    uint64_t cmd_list_count;
+    daxa_CommandList const * command_lists;
+    uint64_t command_list_count;
     daxa_BinarySemaphore const * wait_binary_semaphores;
     uint64_t wait_binary_semaphore_count;
     daxa_BinarySemaphore const * signal_binary_semaphores;
@@ -160,35 +160,18 @@ daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa_Even
 DAXA_EXPORT daxa_Result
 daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool);
 
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_raster_pipeline(daxa_Device device, daxa_RasterPipeline pipeline);
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_compute_pipeline(daxa_Device device, daxa_ComputePipeline pipeline);
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_swapchain(daxa_Device device, daxa_Swapchain swapchain);
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_command_list(daxa_Device device, daxa_CommandListInfo command_list);
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_binary_semaphore(daxa_Device device, daxa_BinarySemaphore binary_semaphore);
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_timeline_semaphore(daxa_Device device, daxa_TimelineSemaphore timeline_semaphore);
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_event(daxa_Device device, daxa_Event event);
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPool timeline_query_pool);
-
 DAXA_EXPORT daxa_DeviceInfo const *
 daxa_dvc_info(daxa_Device device);
 DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 
-DAXA_EXPORT void
+DAXA_EXPORT daxa_Result
 daxa_dvc_submit(daxa_Device device, daxa_CommandSubmitInfo const * info);
-DAXA_EXPORT void
+DAXA_EXPORT daxa_Result
 daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
-DAXA_EXPORT void
+DAXA_EXPORT daxa_Result
 daxa_dvc_wait_idle(daxa_Device device);
-DAXA_EXPORT void
+DAXA_EXPORT daxa_Result
 daxa_dvc_collect_garbage(daxa_Device device);
 
 #endif // #ifndef __DAXA_DEVICE_H__

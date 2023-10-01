@@ -116,8 +116,8 @@ daxa_binary_semaphore_info(daxa_BinarySemaphore binary_semaphore);
 DAXA_EXPORT VkSemaphore
 daxa_binary_semaphore_get_vk_semaphore(daxa_BinarySemaphore binary_semaphore);
 
-DAXA_EXPORT void
-daxa_binary_semaphore_destroy(daxa_BinarySemaphore binary_semaphore);
+DAXA_EXPORT daxa_Result
+daxa_destroy_binary_semaphore(daxa_BinarySemaphore binary_semaphore);
 
 struct daxa_ImplTimelineSemaphore;
 typedef struct daxa_ImplTimelineSemaphore * daxa_TimelineSemaphore;
@@ -146,6 +146,9 @@ daxa_timeline_semaphore_get_vk_semaphore(daxa_TimelineSemaphore timeline_semapho
 DAXA_EXPORT void
 daxa_timeline_semaphore_destroy(daxa_TimelineSemaphore timeline_semaphore);
 
+DAXA_EXPORT daxa_Result
+daxa_destroy_timeline_semaphore(daxa_TimelineSemaphore timeline_semaphore);
+
 struct daxa_ImplEvent;
 typedef struct daxa_ImplEvent * daxa_Event;
 
@@ -168,7 +171,7 @@ typedef daxa_EventSignalInfo daxa_EventWaitInfo;
 DAXA_EXPORT daxa_EventInfo const *
 daxa_event_info(daxa_Event event);
 
-DAXA_EXPORT void
-daxa_event_destroy(daxa_Event event);
+DAXA_EXPORT daxa_Result
+daxa_destroy_event(daxa_Event event);
 
 #endif // #if __DAXA_SYNC_H__

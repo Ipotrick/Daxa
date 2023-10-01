@@ -25,6 +25,18 @@ typedef enum
     DAXA_RESULT_UNKNOWN = 0,
     DAXA_RESULT_SUCCESS = 1,
     DAXA_RESULT_MISSING_EXTENSION = 2,
+    DAXA_RESULT_INVALID_BUFFER_ID = (1 << 30) + 1,
+    DAXA_RESULT_INVALID_IMAGE_ID = (1 << 30) + 2,
+    DAXA_RESULT_INVALID_IMAGE_VIEW_ID =(1 << 30) + 3,
+    DAXA_RESULT_INVALID_SAMPLER_ID = (1 << 30) + 4,
+    DAXA_RESULT_BUFFER_DOUBLE_FREE = (1 << 30) + 5,
+    DAXA_RESULT_IMAGE_DOUBLE_FREE = (1 << 30) + 6,
+    DAXA_RESULT_IMAGE_VIEW_DOUBLE_FREE =(1 << 30) + 7,
+    DAXA_RESULT_SAMPLER_DOUBLE_FREE = (1 << 30) + 8,
+    DAXA_RESULT_INVALID_BUFFER_INFO = (1 << 30) + 9,
+    DAXA_RESULT_INVALID_IMAGE_INFO = (1 << 30) + 10,
+    DAXA_RESULT_INVALID_IMAGE_VIEW_INFO =(1 << 30) + 11,
+    DAXA_RESULT_INVALID_SAMPLER_INFO = (1 << 30) + 12,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
@@ -244,7 +256,11 @@ typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
 DAXA_EXPORT daxa_TimelineQueryPoolInfo const *
 daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
 
-DAXA_EXPORT void daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
+DAXA_EXPORT void
+daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
+
+DAXA_EXPORT daxa_Result
+daxa_destroy_timeline_query_pool(daxa_TimelineQueryPool timeline_query_pool);
 
 #define _DAXA_DECL_OPTIONAL(T) \
     typedef struct             \

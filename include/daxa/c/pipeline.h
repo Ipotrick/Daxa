@@ -23,6 +23,9 @@ typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
 DAXA_EXPORT daxa_ComputePipelineInfo const *
 daxa_compute_pipeline_info(daxa_ComputePipeline compute_pipeline);
 
+DAXA_EXPORT daxa_Result
+daxa_destroy_compute_pipeline(daxa_ComputePipeline pipeline);
+
 typedef struct
 {
     VkFormat depth_attachment_format;
@@ -140,5 +143,8 @@ typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
 
 DAXA_EXPORT daxa_RasterPipelineInfo const *
 daxa_raster_pipeline_info(daxa_RasterPipeline raster_pipeline);
+
+DAXA_EXPORT daxa_Result
+daxa_destroy_raster_pipeline(daxa_RasterPipeline pipeline);
 
 #endif // #ifndef __DAXA_PIPELINE_H__

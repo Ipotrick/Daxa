@@ -89,12 +89,6 @@ struct daxa_ImplDevice final : ManagedSharedState
     auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
     auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
 
-    auto new_buffer(BufferInfo const & buffer_info) -> BufferId;
-    auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & info) -> ImageId;
-    auto new_image(ImageInfo const & image_info) -> ImageId;
-    auto new_image_view(ImageViewInfo const & image_view_info) -> ImageViewId;
-    auto new_sampler(SamplerInfo const & sampler_info) -> SamplerId;
-
     auto slot(BufferId id) -> ImplBufferSlot &;
     auto slot(ImageId id) -> ImplImageSlot &;
     auto slot(ImageViewId id) -> ImplImageViewSlot &;
@@ -104,11 +98,6 @@ struct daxa_ImplDevice final : ManagedSharedState
     auto slot(ImageId id) const -> ImplImageSlot const &;
     auto slot(ImageViewId id) const -> ImplImageViewSlot const &;
     auto slot(SamplerId id) const -> ImplSamplerSlot const &;
-
-    void zombify_buffer(BufferId id);
-    void zombify_image(ImageId id);
-    void zombify_image_view(ImageViewId id);
-    void zombify_sampler(SamplerId id);
 
     void cleanup_buffer(BufferId id);
     void cleanup_image(ImageId id);
