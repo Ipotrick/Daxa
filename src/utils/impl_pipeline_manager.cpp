@@ -520,13 +520,19 @@ namespace daxa
                 return Result<ComputePipelineState>(spirv_result.message());
             }
         }
+        char const * entry_point = nullptr;
+        if (a_info.shader_info.compile_options.entry_point.has_value())
+        {
+            entry_point = a_info.shader_info.compile_options.entry_point.value().c_str();
+        }
         (*pipe_result.pipeline_ptr) = this->info.device.create_compute_pipeline({
             .shader_info = {
-                .byte_code = spirv_result.value(),
-                .entry_point = a_info.shader_info.compile_options.entry_point,
+                .byte_code = spirv_result.value().data(),
+                .byte_code_size = spirv_result.value().size(),
+                .entry_point = entry_point,
             },
             .push_constant_size = modified_info.push_constant_size,
-            .name = modified_info.name,
+            .name = modified_info.name.c_str(),
         });
         return Result<ComputePipelineState>(std::move(pipe_result));
     }
@@ -833,12 +839,12 @@ namespace daxa
     {
         current_shader_info = &shader_info;
         std::vector<u32> spirv = {};
-        if (std::holds_alternative<ShaderByteCode>(shader_info.source))
-        {
-            auto byte_code = std::get<ShaderByteCode>(shader_info.source);
-            spirv.assign(byte_code.begin(), byte_code.end());
-        }
-        else
+        // if (std::holds_alternative<ShaderByteCode>(shader_info.source))
+        // {
+        //     auto byte_code = std::get<ShaderByteCode>(shader_info.source);
+        //     spirv.assign(byte_code.begin(), byte_code.end());
+        // }
+        // else
         {
             ShaderCode code;
             if (auto const * shader_source = std::get_if<ShaderFile>(&shader_info.source))

@@ -258,7 +258,7 @@ namespace daxa
     struct ManagedPtr
     {
         ManagedSharedState * object = {};
-        std::function<void(ManagedSharedState *)> deletor = {};
+        std::function<void(ManagedSharedState *)> deleter = {};
 
         template <typename T>
         auto as() -> T *
@@ -286,7 +286,7 @@ namespace daxa
         }
 
         ManagedPtr() = default;
-        ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deletor);
+        ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deleter);
         ~ManagedPtr();
 
         ManagedPtr(ManagedPtr const &);

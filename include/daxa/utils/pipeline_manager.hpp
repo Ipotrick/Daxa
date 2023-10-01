@@ -19,7 +19,7 @@ namespace daxa
         std::string string;
     };
 
-    using ShaderSource = std::variant<std::monostate, ShaderFile, ShaderCode, ShaderByteCode>;
+    using ShaderSource = std::variant<std::monostate, ShaderFile, ShaderCode>;
 
     struct ShaderDefine
     {

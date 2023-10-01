@@ -33,7 +33,7 @@ static const daxa_ImageBlitInfo DAXA_DEFAULT_IMAGE_BLIT_INFO = {
     .src_offsets = {},
     .dst_slice = {},
     .dst_offsets = {},
-    .filter = {},
+    .filter = VK_FILTER_NEAREST,
 };
 
 typedef struct
@@ -60,7 +60,7 @@ typedef struct
 
 static const daxa_BufferImageCopyInfo DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
     .buffer = {},
-    .buffer_offset = {},
+    .buffer_offset = 0,
     .image = {},
     .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
     .image_slice = {},
@@ -86,7 +86,7 @@ static const daxa_ImageBufferCopyInfo DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
     .image_offset = {},
     .image_extent = {},
     .buffer = {},
-    .buffer_offset = {},
+    .buffer_offset = 0,
 };
 
 typedef struct
@@ -115,7 +115,7 @@ static const daxa_ImageCopyInfo DAXA_DEFAULT_IMAGE_COPY_INFO = {
 };
 
 // TODO: ABI compatibility!
-typedef struct 
+typedef struct
 {
     size_t index;
     VkClearValue value;
@@ -163,7 +163,7 @@ static const daxa_RenderAttachmentInfo DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     .store_op = VK_ATTACHMENT_STORE_OP_STORE,
     .clear_value = {},
-};  
+};
 
 typedef struct
 {
@@ -193,7 +193,7 @@ typedef struct
 
 static const daxa_DrawMeshTasksIndirectInfo DAXA_DEFAULT_DRAW_MESH_TASKS_INDIRECT_INFO = {
     .indirect_buffer = {},
-    .offset = {},
+    .offset = 0,
     .draw_count = 1,
     .stride = 12,
 };
@@ -210,10 +210,10 @@ typedef struct
 
 static const daxa_DrawMeshTasksIndirectCountInfo DAXA_DRAW_MESH_TASKS_INDIRECT_COUNT_INFO = {
     .indirect_buffer = {},
-    .offset = {},
+    .offset = 0,
     .count_buffer = {},
-    .count_offset = {},
-    .max_count = {},
+    .count_offset = 0,
+    .max_count = 0,
     .stride = 12,
 };
 
@@ -226,10 +226,10 @@ typedef struct
 } daxa_DrawInfo;
 
 static const daxa_DrawInfo DAXA_DEFAULT_DRAW_INFO = {
-    .vertex_count = {},
+    .vertex_count = 0,
     .instance_count = 1,
-    .first_vertex = {},
-    .first_instance = {},
+    .first_vertex = 0,
+    .first_instance = 0,
 };
 
 typedef struct
@@ -242,12 +242,12 @@ typedef struct
 } daxa_DrawIndexedInfo;
 
 static const daxa_DrawIndexedInfo DAXA_DEFAULT_DRAW_INDEXED_INFO = {
-    .index_count = {},
+    .index_count = 0,
     .instance_count = 1,
-    .first_index = {},
-    .vertex_offset = {},
-    .first_instance = {},
-} ;
+    .first_index = 0,
+    .vertex_offset = 0,
+    .first_instance = 0,
+};
 
 typedef struct
 {
@@ -259,11 +259,11 @@ typedef struct
 } daxa_DrawIndirectInfo;
 
 static const daxa_DrawIndirectInfo DAXA_DEFAULT_DRAW_INDIRECT_INFO = {
-     .draw_command_buffer = {},
-     .draw_command_buffer_read_offset = {},
-     .draw_count = 1,
-     .draw_command_stride = {},
-     .is_indexed = {},
+    .draw_command_buffer = {},
+    .draw_command_buffer_read_offset = 0,
+    .draw_count = 1,
+    .draw_command_stride = 0,
+    .is_indexed = 0,
 };
 
 typedef struct
@@ -279,12 +279,12 @@ typedef struct
 
 static const daxa_DrawIndirectCountInfo DAXA_DEFAULT_DRAW_INDIRECT_COUNT_INFO = {
     .draw_command_buffer = {},
-    .draw_command_buffer_read_offset = {},
+    .draw_command_buffer_read_offset = 0,
     .draw_count_buffer = {},
-    .draw_count_buffer_read_offset = {},
+    .draw_count_buffer_read_offset = 0,
     .max_draw_count = ((1 << 16) - 1),
-    .draw_command_stride = {},
-    .is_indexed = {},
+    .draw_command_stride = 0,
+    .is_indexed = 0,
 };
 
 typedef struct

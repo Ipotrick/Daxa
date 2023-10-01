@@ -123,12 +123,12 @@ auto daxa_ImplBinarySemaphore::create(daxa_Device device, daxa_BinarySemaphoreIn
     vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &self.vk_semaphore);
     if ((device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !self.info_name.empty())
     {
-        auto binary_semaphore_name = self.info.name;
+        auto binary_semaphore_name = std::string{self.info.name.data, self.info.name.size};
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
-            .objectHandle = reinterpret_cast<u64>(self->vk_semaphore),
+            .objectHandle = reinterpret_cast<u64>(self.vk_semaphore),
             .pObjectName = binary_semaphore_name.c_str(),
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);

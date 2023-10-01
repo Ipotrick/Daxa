@@ -3,9 +3,8 @@
 #include <daxa/command_list.hpp>
 
 #include "impl_core.hpp"
-#include "impl_semaphore.hpp"
+#include "impl_sync.hpp"
 #include "impl_pipeline.hpp"
-#include "impl_split_barrier.hpp"
 
 namespace daxa
 {

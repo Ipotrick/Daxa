@@ -52,7 +52,7 @@ namespace daxa
 
     Instance::Instance(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    void device_deletor(daxa::ManagedSharedState * v)
+    void device_deleter(daxa::ManagedSharedState * v)
     {
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_destroy(reinterpret_cast<daxa_Device>(v)) == daxa_Result::DAXA_RESULT_SUCCESS,
@@ -66,7 +66,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_instance_create_device(self, reinterpret_cast<daxa_DeviceInfo const *>(&device_info), &device) == VK_SUCCESS,
             "failed to create device");
-        return Device(ManagedPtr{reinterpret_cast<ManagedSharedState *>(device), &device_deletor});
+        return Device(ManagedPtr{reinterpret_cast<ManagedSharedState *>(device), &device_deleter});
     }
 
     auto Instance::into() const -> InstanceInfo const &
@@ -75,7 +75,7 @@ namespace daxa
         return *reinterpret_cast<InstanceInfo const *>(daxa_instance_info(self));
     }
 
-    void instance_deletor(daxa::ManagedSharedState * v)
+    void instance_deleter(daxa::ManagedSharedState * v)
     {
         // Can't fail.
         daxa_destroy_instance(reinterpret_cast<daxa_Instance>(v));
@@ -88,14 +88,14 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_create_instance(c_info, &instance) == daxa_Result::DAXA_RESULT_SUCCESS,
             "failed to create instance");
-        return Instance{ManagedPtr{reinterpret_cast<ManagedSharedState *>(instance), instance_deletor}};
+        return Instance{ManagedPtr{reinterpret_cast<ManagedSharedState *>(instance), instance_deleter}};
     }
 
     /// --- End Instance ---
 
     /// --- Begin Device ---
 
-    void memory_deletor(daxa::ManagedSharedState * v)
+    void memory_deleter(daxa::ManagedSharedState * v)
     {
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_memory_destroy(reinterpret_cast<daxa_MemoryBlock>(v)) == daxa_Result::DAXA_RESULT_SUCCESS,
@@ -110,7 +110,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_create_memory(self, c_info, &c_memory_block) == daxa_Result::DAXA_RESULT_SUCCESS,
             "failed to create memory");
-        return MemoryBlock{ManagedPtr{reinterpret_cast<ManagedSharedState *>(c_memory_block), memory_deletor}};
+        return MemoryBlock{ManagedPtr{reinterpret_cast<ManagedSharedState *>(c_memory_block), memory_deleter}};
     }
 
     auto Device::get_memory_requirements(BufferInfo const & info) -> MemoryRequirements
@@ -135,7 +135,7 @@ namespace daxa
         daxa_##Name##Id c_id = {};                                        \
         DAXA_DBG_ASSERT_TRUE_M(                                           \
             daxa_dvc_create_##name(self, c_info, &c_id),                  \
-            "failed to create " #name, );                                 \
+            "failed to create " #name);                                   \
         return std::bit_cast<Name##Id>(c_id);                             \
     }                                                                     \
     void Device::destroy_##name(Name##Id id)                              \
@@ -144,22 +144,22 @@ namespace daxa
         auto c_id = std::bit_cast<daxa_##Name##Id>(id);                   \
         DAXA_DBG_ASSERT_TRUE_M(                                           \
             daxa_dvc_destroy_##name(self, c_id),                          \
-            "failed to destroy " #name, );                                \
+            "failed to destroy " #name);                                  \
     }                                                                     \
     auto Device::is_id_valid(Name##Id id) const->bool                     \
     {                                                                     \
         auto self = this->as<daxa_ImplDevice>();                          \
         auto c_id = std::bit_cast<daxa_##Name##Id>(id);                   \
-        return daxa_dvc_is_##name##_id_valid(self, c_id);                 \
+        return daxa_dvc_is_##name##_valid(self, c_id);                    \
     }                                                                     \
     auto Device::info_##name(Name##Id id) const->Name##Info const &       \
     {                                                                     \
         auto self = this->as<daxa_ImplDevice>();                          \
         auto c_id = std::bit_cast<daxa_##Name##Id>(id);                   \
-        daxa_##Name##Info * c_info = {};                                  \
+        daxa_##Name##Info const * c_info = {};                            \
         DAXA_DBG_ASSERT_TRUE_M(                                           \
             daxa_dvc_info_##name(self, c_id, &c_info),                    \
-            "failed to get info of " #name, );                            \
+            "failed to get info of " #name);                              \
         return *reinterpret_cast<Name##Info const *>(c_info);             \
     }
 
@@ -175,7 +175,7 @@ namespace daxa
         daxa_BufferDeviceAddress c_bda = {};
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_buffer_device_address(self, c_id, &c_bda),
-            "failed to get buffer device address", );
+            "failed to get buffer device address");
         return std::bit_cast<daxa::BufferDeviceAddress>(c_bda);
     }
 
@@ -186,12 +186,12 @@ namespace daxa
         void * c_ptr = {};
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_buffer_host_address(self, c_id, &c_ptr),
-            "failed to get buffer device address", );
+            "failed to get buffer device address");
         return c_ptr;
     }
 
 #define _DAXA_DECL_DVC_CREATE_FN(Name, name)                                                           \
-    void name##_deletor(ManagedSharedState * v)                                                        \
+    void name##_deleter(ManagedSharedState * v)                                                        \
     {                                                                                                  \
         DAXA_DBG_ASSERT_TRUE_M(                                                                        \
             daxa_destroy_##name(reinterpret_cast<daxa_##Name>(v)) == daxa_Result::DAXA_RESULT_SUCCESS, \
@@ -207,7 +207,7 @@ namespace daxa
             "failed to create " #name);                                                                \
         return Name{ManagedPtr{                                                                        \
             reinterpret_cast<ManagedSharedState *>(c_obj),                                             \
-            &name##_deletor}};                                                                         \
+            &name##_deleter}};                                                                         \
     }
 
     _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
@@ -226,7 +226,7 @@ namespace daxa
 
     static const DeviceProperties DAXA_DEVICE_PROPERTIES_DUMMY = {};
 
-    auto Device::properties() const -> DeviceProperties const & 
+    auto Device::properties() const -> DeviceProperties const &
     {
         auto self = this->as<daxa_ImplDevice>();
         DAXA_DBG_ASSERT_TRUE_M(false, "UNIMPLEMENTED");
@@ -253,7 +253,7 @@ namespace daxa
         auto self = this->as<daxa_ImplDevice>();
         // TODO(capi): Find solution to remove this struct translation!
         daxa_CommandSubmitInfo c_submit_info = {
-            .wait_stages = submit_info.wait_stages,
+            .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
             .command_lists = submit_info.command_lists.data(),
             .command_list_count = submit_info.command_lists.size(),
             .wait_binary_semaphores = submit_info.wait_binary_semaphores.data(),
@@ -277,7 +277,7 @@ namespace daxa
         daxa_PresentInfo c_present_info = {
             .wait_binary_semaphores = info.wait_binary_semaphores.data(),
             .wait_binary_semaphore_count = info.wait_binary_semaphores.size(),
-            .swapchain = info.swapchain
+            .swapchain = info.swapchain,
         };
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_present(self, &c_present_info) == DAXA_RESULT_SUCCESS,

@@ -115,7 +115,7 @@ static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
     .name = 0,
 };
 static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
-    .flags = {},
+    .flags = 0,
     .dimensions = 2,
     .format = VK_FORMAT_R8G8B8A8_SRGB,
     .size = {0, 0, 0},

@@ -23,7 +23,7 @@ namespace daxa
         VkPipeline vk_pipeline = {};
         VkPipelineLayout vk_pipeline_layout = {};
 
-        virtual ~ImplPipeline() override;
+        virtual ~ImplPipeline();
     };
 
     struct ImplRasterPipeline final : ImplPipeline

@@ -64,15 +64,15 @@ add_library(daxa STATIC
     "src/cpp_wrapper.cpp"
 
     "src/impl_device.cpp"
+    "src/impl_features.cpp"
     "src/impl_instance.cpp"
     "src/impl_core.cpp"
     "src/impl_pipeline.cpp"
     "src/impl_swapchain.cpp"
     "src/impl_command_list.cpp"
     "src/impl_gpu_resources.cpp"
-    "src/impl_semaphore.cpp"
+    "src/impl_sync.cpp"
     "src/impl_dependencies.cpp"
-    "src/impl_split_barrier.cpp"
     "src/impl_timeline_query.cpp"
     "src/impl_memory_block.cpp"
 

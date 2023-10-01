@@ -23,7 +23,7 @@ namespace daxa
     {
         auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
         auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
-        auto get_uniform_buffer_info() const -> SetConstantBufferInfo;
+        auto get_uniform_buffer_info() const -> SetUniformBufferInfo;
       protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskGraph;

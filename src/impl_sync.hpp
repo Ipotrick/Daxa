@@ -4,7 +4,7 @@
 #include "impl_device.hpp"
 #include <daxa/c/sync.h>
 
-struct daxa_ImplBinarySemaphore final : ManagedSharedState
+struct daxa_ImplBinarySemaphore final : daxa::ManagedSharedState
 {
     daxa_BinarySemaphoreInfo info = {};
     std::string info_name = {};
@@ -13,7 +13,7 @@ struct daxa_ImplBinarySemaphore final : ManagedSharedState
     static auto create(daxa_Device device, daxa_BinarySemaphoreInfo a_info) -> daxa_ImplBinarySemaphore;
 };
 
-struct daxa_ImplTimelineSemaphore final : ManagedSharedState
+struct daxa_ImplTimelineSemaphore final : daxa::ManagedSharedState
 {
     daxa_TimelineSemaphoreInfo info = {};
     std::string info_name = {};
@@ -22,7 +22,7 @@ struct daxa_ImplTimelineSemaphore final : ManagedSharedState
     static auto create(daxa_Device device, daxa_TimelineSemaphoreInfo a_info) -> daxa_ImplTimelineSemaphore;
 };
 
-struct daxa_ImplEvent final : ManagedSharedState
+struct daxa_ImplEvent final : daxa::ManagedSharedState
 {
     daxa_EventInfo info = {};
     std::string info_name = {};
