@@ -101,7 +101,7 @@ void daxa_event_destroy(daxa_Event self)
 
         self->device->main_queue_split_barrier_zombies.emplace_back(
             main_queue_cpu_timeline,
-            SplitBarrierZombie{
+            EventZombie{
                 .vk_event = reinterpret_cast<VkEvent>(self->data),
             });
     }

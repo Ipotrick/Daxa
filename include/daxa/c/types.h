@@ -27,15 +27,15 @@ typedef enum
     DAXA_RESULT_MISSING_EXTENSION = 2,
     DAXA_RESULT_INVALID_BUFFER_ID = (1 << 30) + 1,
     DAXA_RESULT_INVALID_IMAGE_ID = (1 << 30) + 2,
-    DAXA_RESULT_INVALID_IMAGE_VIEW_ID =(1 << 30) + 3,
+    DAXA_RESULT_INVALID_IMAGE_VIEW_ID = (1 << 30) + 3,
     DAXA_RESULT_INVALID_SAMPLER_ID = (1 << 30) + 4,
     DAXA_RESULT_BUFFER_DOUBLE_FREE = (1 << 30) + 5,
     DAXA_RESULT_IMAGE_DOUBLE_FREE = (1 << 30) + 6,
-    DAXA_RESULT_IMAGE_VIEW_DOUBLE_FREE =(1 << 30) + 7,
+    DAXA_RESULT_IMAGE_VIEW_DOUBLE_FREE = (1 << 30) + 7,
     DAXA_RESULT_SAMPLER_DOUBLE_FREE = (1 << 30) + 8,
     DAXA_RESULT_INVALID_BUFFER_INFO = (1 << 30) + 9,
     DAXA_RESULT_INVALID_IMAGE_INFO = (1 << 30) + 10,
-    DAXA_RESULT_INVALID_IMAGE_VIEW_INFO =(1 << 30) + 11,
+    DAXA_RESULT_INVALID_IMAGE_VIEW_INFO = (1 << 30) + 11,
     DAXA_RESULT_INVALID_SAMPLER_INFO = (1 << 30) + 12,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
@@ -187,6 +187,41 @@ daxa_u32mat4x3;
 _DAXA_DECL_VEC4_TYPE(daxa_u32vec4)
 daxa_u32mat4x4;
 
+/// ABI STABLE OPTIONAL TYPE.
+/// THIS TYPE MUST STAY IN SYNC WITH daxa::Optional
+#define _DAXA_DECL_OPTIONAL(T) \
+    typedef struct             \
+    {                          \
+        T value;               \
+        daxa_Bool8 has_value;  \
+    } daxa_Optional##T;
+
+#define daxa_Optional(T) daxa_Optional##T
+
+/// ABI STABLE FIXED LIST TYPE.
+/// THIS TYPE MUST STAY IN SYNC WITH daxa::FixedList
+#define _DAXA_DECL_FIXED_LIST(T, CAPACITY) \
+    typedef struct                         \
+    {                                      \
+        T data[CAPACITY];                  \
+        size_t size;                       \
+    } daxa_FixedList##T##CAPACITY;
+
+#define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
+
+#define _DAXA_VARIANT_INDEX_TYPE i32
+
+/// ABI STABLE VARIANT TYPE.
+/// THIS TYPE MUST STAY IN SYNC WITH daxa::Variant
+#define _DAXA_DECL_VARIANT(UNION)       \
+    typedef struct                      \
+    {                                   \
+        _DAXA_VARIANT_INDEX_TYPE index; \
+        UNION values;                   \
+    } daxa_Variant##Union;
+
+#define daxa_Variant(UNION) daxa_Variant##Union
+
 typedef struct
 {
     uint32_t base_mip_level;
@@ -235,15 +270,12 @@ typedef struct
     size_t offset;
 } daxa_ManualAllocInfo;
 
-typedef struct
+typedef union
 {
-    uint64_t index;
-    union
-    {
-        daxa_MemoryFlags auto_alloc_info;
-        daxa_ManualAllocInfo manual_alloc_info;
-    };
-} daxa_AllocateInfo;
+    daxa_MemoryFlags auto_alloc_info;
+    daxa_ManualAllocInfo manual_alloc_info;
+} daxa_AllocInfoUnion;
+_DAXA_DECL_VARIANT(daxa_AllocInfoUnion)
 
 typedef struct
 {
@@ -261,23 +293,5 @@ daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_poo
 
 DAXA_EXPORT daxa_Result
 daxa_destroy_timeline_query_pool(daxa_TimelineQueryPool timeline_query_pool);
-
-#define _DAXA_DECL_OPTIONAL(T) \
-    typedef struct             \
-    {                          \
-        T value;               \
-        daxa_Bool8 has_value;  \
-    } daxa_Optional##T;
-
-#define daxa_Optional(T) daxa_Optional##T
-
-#define _DAXA_DECL_FIXED_LIST(T, CAPACITY) \
-    typedef struct                         \
-    {                                      \
-        T data[CAPACITY];                  \
-        size_t size;                       \
-    } daxa_FixedList##T##CAPACITY;
-
-#define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
 
 #endif // #ifndef __DAXA_TYPES_H__

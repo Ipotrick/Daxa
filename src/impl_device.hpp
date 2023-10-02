@@ -76,13 +76,13 @@ struct daxa_ImplDevice final : ManagedSharedState
     std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
     std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
     std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
-    std::deque<std::pair<u64, SplitBarrierZombie>> main_queue_split_barrier_zombies = {};
+    std::deque<std::pair<u64, EventZombie>> main_queue_split_barrier_zombies = {};
     std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
     std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
     void main_queue_collect_garbage();
     void wait_idle() const;
 
-    static auto create(daxa_Instance instance, daxa_DeviceInfo info, VkPhysicalDevice physical_device) -> daxa_ImplDevice;
+    static auto create(daxa_Instance instance, daxa_DeviceInfo info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Result>;
 
     auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
     auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;

@@ -114,17 +114,13 @@ static const daxa_ImageCopyInfo DAXA_DEFAULT_IMAGE_COPY_INFO = {
     .extent = {},
 };
 
-// TODO: ABI compatibility!
-typedef struct
-{
-    size_t index;
-    VkClearValue value;
-} daxa_ClearValue;
+// Make sure this stays abi compatible with daxa::ClearValue
+_DAXA_DECL_VARIANT(VkClearColorValue)
 
 typedef struct
 {
     daxa_ImageLayout dst_image_layout;
-    daxa_ClearValue clear_value;
+    daxa_Variant(VkClearColorValue) clear_value;
     daxa_ImageId dst_image;
     daxa_ImageMipArraySlice dst_slice;
 } daxa_ImageClearInfo;
@@ -152,7 +148,7 @@ typedef struct
     daxa_ImageLayout layout;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
-    daxa_ClearValue clear_value;
+    daxa_Variant(VkClearColorValue) clear_value;
 } daxa_RenderAttachmentInfo;
 _DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
 _DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)

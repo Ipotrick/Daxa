@@ -75,7 +75,7 @@ typedef struct
     uint32_t array_layer_count;
     uint32_t sample_count;
     daxa_ImageUsageFlags usage;
-    daxa_AllocateInfo allocate_info;
+    daxa_Variant(daxa_AllocInfoUnion) allocate_info;
     daxa_StringView name;
 } daxa_ImageInfo;
 

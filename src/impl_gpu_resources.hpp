@@ -33,6 +33,7 @@ namespace daxa
     struct ImplBufferSlot
     {
         BufferInfo info = {};
+        std::string info_name = {};
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
         VkDeviceAddress device_address = {};
@@ -45,6 +46,7 @@ namespace daxa
     struct ImplImageViewSlot
     {
         ImageViewInfo info = {};
+        std::string info_name = {};
         VkImageView vk_image_view = {};
     };
 
@@ -52,6 +54,7 @@ namespace daxa
     {
         ImplImageViewSlot view_slot = {};
         ImageInfo info = {};
+        std::string info_name = {};
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
@@ -62,6 +65,7 @@ namespace daxa
     struct ImplSamplerSlot
     {
         SamplerInfo info = {};
+        std::string info_name = {};
         VkSampler vk_sampler = {};
         bool zombie = {};
     };

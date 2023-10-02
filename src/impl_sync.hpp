@@ -4,6 +4,16 @@
 #include "impl_device.hpp"
 #include <daxa/c/sync.h>
 
+struct SemaphoreZombie
+{
+    VkSemaphore vk_semaphore = {};
+};
+
+struct EventZombie
+{
+    VkEvent vk_event = {};
+};
+
 struct daxa_ImplBinarySemaphore final : daxa::ManagedSharedState
 {
     daxa_BinarySemaphoreInfo info = {};

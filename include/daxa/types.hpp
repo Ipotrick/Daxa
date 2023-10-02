@@ -343,6 +343,145 @@ namespace daxa
         // TODO: Implement iterator and missing member functions!
     };
 
+    using VariantIndex = i32;
+
+    template<typename T_SINGLE, typename ... T_REST>
+    struct VariantUnion
+    {
+        constexpr VariantUnion() {}
+        using T_REST_VARIANT = VariantUnion<T_REST...>;
+        union InnerPair
+        {
+            constexpr InnerPair() {}
+            T_SINGLE value;
+            T_REST_VARIANT rest;
+        } inner_pair;
+        template<typename T_GET>
+        constexpr auto get() -> T_GET &
+        {
+            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return this->inner_pair.value;
+            else return inner_pair.rest.get<T_GET>();
+        }
+        template<typename T_GET>
+       constexpr  auto get() const -> T_GET const &
+        {
+            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return this->inner_pair.value;
+            else return inner_pair.rest.get<T_GET>();
+        }
+    }; 
+
+    template<typename T_SINGLE>
+    struct VariantUnion<T_SINGLE>
+    {
+        constexpr VariantUnion() {}
+        T_SINGLE value;
+        template<typename T_GET>
+        constexpr auto get() -> T_GET &
+        {
+            static_assert(std::is_same_v<T_GET,T_SINGLE>, "INVALID GET TYPE");
+            return this->value;
+        }
+        template<typename T_GET>
+        constexpr auto get() const -> T_GET const &
+        {
+            static_assert(std::is_same_v<T_GET,T_SINGLE>, "INVALID GET TYPE");
+            return this->value;
+        }
+    };
+
+    struct NullVariant {};
+
+    template<VariantIndex INDEX, typename T_GET, typename T_SINGLE, typename ... T_REST>
+    struct IndexOf
+    {
+        static constexpr auto value() -> VariantIndex
+        {
+            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return INDEX;
+            else return IndexOf<INDEX+1,T_GET,T_REST...>::value();
+        }
+    };
+    
+    template<VariantIndex INDEX, typename T_GET, typename T_SINGLE>
+    struct IndexOf<INDEX,T_GET,T_SINGLE>
+    {
+        static constexpr auto value() -> VariantIndex
+        {
+            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return INDEX;
+            else return -1;
+        }
+    };
+    
+    /// @brief ABI Stable variant type for c interop.
+    /// ABI:
+    /// struct Variant
+    /// {
+    ///     i32 index;
+    ///     union Values {
+    ///         types...
+    ///     } values;
+    /// };
+    /// index == -1 => NullVariant, no value in the union is valid.
+    /// index >= 0  => value in union at index is valid.
+    template<typename ... T_ALL>
+    struct Variant
+    {
+      private:
+        using T_VALUES = VariantUnion<T_ALL...>;
+        VariantIndex m_index;
+        T_VALUES values;
+        template<typename T_GET>
+        static constexpr auto checked_index_of() -> VariantIndex
+        {
+            constexpr VariantIndex INDEX = IndexOf<0,T_GET,T_ALL...>::value();
+            static_assert(INDEX != -1, "INVALID VARIANT TYPE");
+            return INDEX;
+        }
+      public:
+        constexpr Variant() : m_index{-1} {}
+
+        template<typename T_SET>
+        constexpr Variant(T_SET v) { this->set<T_SET>(v); }
+
+        template<typename T_SET>
+        constexpr Variant& operator=(T_SET v) { this->set<T_SET>(v); }
+
+        template<typename T_SET>
+        constexpr void set(T_SET set_value)
+        {
+            if constexpr(std::is_same_v<T_SET, NullVariant>)
+            {
+                this->m_index = -1;
+            }
+            else
+            {
+                constexpr VariantIndex INDEX = checked_index_of<T_SET>();
+                this->m_index = INDEX;
+                this->values.get<T_SET>() = set_value;
+            }
+        }
+
+        template<typename T_GET>
+        constexpr auto get_if() -> T_GET *
+        {
+            if (checked_index_of<T_GET>() == this->m_index) return &this->values.get<T_GET>();
+            else return nullptr;
+        }
+
+        template<typename T_GET>
+        constexpr auto get_if() const -> T_GET const *
+        {
+            if (checked_index_of<T_GET>() != this->m_index) return &this->values.get<T_GET>();
+            else return nullptr;
+        }
+
+        constexpr auto has_value() const -> bool { return this->m_index == -1; }
+
+        constexpr auto index() const -> isize { return this->m_index; }
+
+        template<typename T_GET>
+        static constexpr auto index_of() -> isize { return checked_index_of<T_GET>(); }
+    };
+
     enum struct Format
     {
         UNDEFINED = 0,
@@ -1211,7 +1350,7 @@ namespace daxa
         usize offset = {};
     };
 
-    using AllocateInfo = std::variant<AutoAllocInfo, ManualAllocInfo>;
+    using AllocateInfo = Variant<AutoAllocInfo, ManualAllocInfo>;
 
     struct TimelineQueryPoolInfo
     {

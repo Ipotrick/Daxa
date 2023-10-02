@@ -348,11 +348,19 @@ auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId buffer, void *
 
 auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
 {
+    // --- Begin Parameter Validation ---
+
+    bool parameters_valid = true;
+    // Size must be larger then one.
+    parameters_valid = parameters_valid && info->size > 0;
+    if (!parameters_valid) return DAXA_RESULT_INVALID_BUFFER_INFO;
+
+    // --- End Parameter Validation ---
+
     auto [id, ret] = self->gpu_shader_resource_table.buffer_slots.new_slot();
-
-    DAXA_DBG_ASSERT_TRUE_M(buffer_info->size > 0, "can not create buffers with size zero");
-
-    ret.info = buffer_info;
+    ret.info = std::bit_cast<BufferInfo>(*buffer_info);
+    ret.info_name = ret.info.name;
+    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
 
     VkBufferCreateInfo const vk_buffer_create_info{
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
@@ -367,7 +375,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
     bool host_accessible = false;
     VmaAllocationInfo vma_allocation_info = {};
-    if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&buffer_info.allocate_info))
+    if (AutoAllocInfo const * auto_info = std::get_if<AutoAllocInfo>(&buffer_info.manual_alloc_info))
     {
         auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->data);
         if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
@@ -462,27 +470,27 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
             return DAXA_RESULT_INVALID_##NAME##_ID;                                                                   \
         out_info = reinterpret_cast<daxa_##Name##Info const *>(&self->slot(id).info);                                 \
         return DAXA_RESULT_SUCCESS;                                                                                   \
+    }                                                                                                                 \
+    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                                 \
+    {                                                                                                                 \
+        return id.value != 0 && impl.gpu_shader_resource_table.name##_slots.is_id_valid(id);                          \
+    }                                                                                                                 \
+    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id)                                                 \
+    {                                                                                                                 \
+        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_zombies_mtx});                         \
+        u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(self->main_queue_cpu_timeline);                   \
+        if (!daxa_dvc_is_##name##_valid(self, id))                                                                    \
+        {                                                                                                             \
+            return DAXA_RESULT_INVALID_##NAME##_ID;                                                                   \
+        }                                                                                                             \
+        if (self->slot(id).zombie)                                                                                    \
+        {                                                                                                             \
+            return DAXA_RESULT_##NAME##_DOUBLE_FREE;                                                                  \
+        }                                                                                                             \
+        self->slot(id).zombie = true;                                                                                 \
+        self->main_queue_##name##_zombies.push_front({main_queue_cpu_timeline_value, id});                            \
+        return DAXA_RESULT_SUCCESS;                                                                                   \
     }
-auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id) -> daxa_Bool8
-{
-    return id.value != 0 && impl.gpu_shader_resource_table.name##_slots.is_id_valid(id);
-}
-auto daxa_dvc_destroy_##name(daxa_Device device, daxa_##Name##Id)
-{
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_zombies_mtx});
-    u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(self->main_queue_cpu_timeline);
-    if (!daxa_dvc_is_##name##_valid(self, id))
-    {
-        return DAXA_RESULT_INVALID_##NAME##_ID;
-    }
-    if (self->slot(id).zombie)
-    {
-        return DAXA_RESULT_##NAME##_DOUBLE_FREE;
-    }
-    self->slot(id).zombie = true;
-    self->main_queue_##name##_zombies.push_front({main_queue_cpu_timeline_value, id});
-    return DAXA_RESULT_SUCCESS;
-}
 
 _DAXA_DECL_DVC_GPU_RES_FN(BUFFER, Buffer, buffer)
 _DAXA_DECL_DVC_GPU_RES_FN(IMAGE, Image, image)
