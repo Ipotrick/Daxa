@@ -343,29 +343,45 @@ static const daxa_DepthBiasInfo DAXA_DEFAULT_DEPTH_BIAS_INFO = {};
 
 typedef struct daxa_ImplCommandList * daxa_CommandList;
 
-DAXA_EXPORT void daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
-DAXA_EXPORT void daxa_cmd_copy_buffer_to_image(daxa_CommandList cmd_list, daxa_BufferImageCopyInfo const * info);
-DAXA_EXPORT void daxa_cmd_copy_image_to_buffer(daxa_CommandList cmd_list, daxa_ImageBufferCopyInfo const * info);
-DAXA_EXPORT void daxa_cmd_copy_image_to_image(daxa_CommandList cmd_list, daxa_ImageCopyInfo const * info);
-DAXA_EXPORT void daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const * info);
+typedef struct daxa_ImplBakedCommands * daxa_BakedCommands;
 
-DAXA_EXPORT void daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
-DAXA_EXPORT void daxa_cmd_clear_image(daxa_CommandList cmd_list, daxa_ImageClearInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_copy_buffer_to_image(daxa_CommandList cmd_list, daxa_BufferImageCopyInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_copy_image_to_buffer(daxa_CommandList cmd_list, daxa_ImageBufferCopyInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_copy_image_to_image(daxa_CommandList cmd_list, daxa_ImageCopyInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const * info);
+
+DAXA_EXPORT void
+daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_clear_image(daxa_CommandList cmd_list, daxa_ImageClearInfo const * info);
 
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-DAXA_EXPORT void daxa_cmd_pipeline_barrier(daxa_CommandList cmd_list, daxa_MemoryBarrierInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_pipeline_barrier(daxa_CommandList cmd_list, daxa_MemoryBarrierInfo const * info);
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-DAXA_EXPORT void daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageMemoryBarrierInfo const * info);
-DAXA_EXPORT void daxa_cmd_signal_event(daxa_CommandList cmd_list, daxa_EventSignalInfo const * info);
-DAXA_EXPORT void daxa_cmd_wait_events(daxa_CommandList cmd_list, daxa_EventWaitInfo const * infos, size_t info_count);
-DAXA_EXPORT void daxa_cmd_wait_event(daxa_CommandList cmd_list, daxa_EventWaitInfo const * info);
-DAXA_EXPORT void daxa_cmd_reset_event(daxa_CommandList cmd_list, daxa_ResetEventInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageMemoryBarrierInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_signal_event(daxa_CommandList cmd_list, daxa_EventSignalInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_wait_events(daxa_CommandList cmd_list, daxa_EventWaitInfo const * infos, size_t info_count);
+DAXA_EXPORT void
+daxa_cmd_wait_event(daxa_CommandList cmd_list, daxa_EventWaitInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_reset_event(daxa_CommandList cmd_list, daxa_ResetEventInfo const * info);
 
-DAXA_EXPORT void daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t size, uint32_t offset);
+DAXA_EXPORT void
+daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t size, uint32_t offset);
 /// @brief  Binds a buffer region to the uniform buffer slot.
 ///         There are 8 uniform buffer slots (indices range from 0 to 7).
 ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
@@ -375,11 +391,16 @@ DAXA_EXPORT void daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * 
 ///         Set uniform buffer slots are cleared after a pipeline is bound.
 ///         Before setting another pipeline, they need to be set again.
 /// @param info parameters.
-DAXA_EXPORT void daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetUniformBufferInfo const * info);
-DAXA_EXPORT void daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
-DAXA_EXPORT void daxa_cmd_set_raster_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
-DAXA_EXPORT void daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
-DAXA_EXPORT void daxa_cmd_dispatch_indirect(daxa_CommandList cmd_list, daxa_DispatchIndirectInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetUniformBufferInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
+DAXA_EXPORT void
+daxa_cmd_set_raster_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
+DAXA_EXPORT void
+daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
+DAXA_EXPORT void
+daxa_cmd_dispatch_indirect(daxa_CommandList cmd_list, daxa_DispatchIndirectInfo const * info);
 
 /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
@@ -404,28 +425,51 @@ DAXA_EXPORT void daxa_cmd_destroy_sampler_deferred(daxa_CommandList cmd_list, da
 DAXA_EXPORT void daxa_cmd_begin_renderpass(daxa_CommandList cmd_list, daxa_RenderPassBeginInfo const * info);
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
-DAXA_EXPORT void daxa_cmd_end_renderpass(daxa_CommandList cmd_list);
-DAXA_EXPORT void daxa_cmd_set_viewport(daxa_CommandList cmd_list, VkViewport const * info);
-DAXA_EXPORT void daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
-DAXA_EXPORT void daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
-DAXA_EXPORT void daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, size_t index_type_byte_size);
+DAXA_EXPORT void
+daxa_cmd_end_renderpass(daxa_CommandList cmd_list);
+DAXA_EXPORT void
+daxa_cmd_set_viewport(daxa_CommandList cmd_list, VkViewport const * info);
+DAXA_EXPORT void
+daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
+DAXA_EXPORT void
+daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, size_t index_type_byte_size);
 
-DAXA_EXPORT void daxa_cmd_draw(daxa_CommandList cmd_list, daxa_DrawInfo const * info);
-DAXA_EXPORT void daxa_cmd_draw_indexed(daxa_CommandList cmd_list, daxa_DrawIndexedInfo const * info);
-DAXA_EXPORT void daxa_cmd_draw_indirect(daxa_CommandList cmd_list, daxa_DrawIndirectInfo const * info);
-DAXA_EXPORT void daxa_cmd_draw_indirect_count(daxa_CommandList cmd_list, daxa_DrawIndirectCountInfo const * info);
-DAXA_EXPORT void daxa_cmd_draw_mesh_tasks(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
-DAXA_EXPORT void daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectInfo const * info);
-DAXA_EXPORT void daxa_cmd_draw_mesh_tasks_indirect_count(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectCountInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_draw(daxa_CommandList cmd_list, daxa_DrawInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_draw_indexed(daxa_CommandList cmd_list, daxa_DrawIndexedInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_draw_indirect(daxa_CommandList cmd_list, daxa_DrawIndirectInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_draw_indirect_count(daxa_CommandList cmd_list, daxa_DrawIndirectCountInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_draw_mesh_tasks(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
+DAXA_EXPORT void
+daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_draw_mesh_tasks_indirect_count(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectCountInfo const * info);
 
-DAXA_EXPORT void daxa_cmd_write_timestamp(daxa_CommandList cmd_list, daxa_WriteTimestampInfo const * info);
-DAXA_EXPORT void daxa_cmd_reset_timestamps(daxa_CommandList cmd_list, daxa_ResetTimestampsInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_write_timestamp(daxa_CommandList cmd_list, daxa_WriteTimestampInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_reset_timestamps(daxa_CommandList cmd_list, daxa_ResetTimestampsInfo const * info);
 
-DAXA_EXPORT void daxa_cmd_begin_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo const * info);
-DAXA_EXPORT void daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
+DAXA_EXPORT void
+daxa_cmd_begin_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo const * info);
+DAXA_EXPORT void
+daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 
-DAXA_EXPORT void daxa_cmd_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
-DAXA_EXPORT VkBool32
+// Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
+DAXA_EXPORT void
+daxa_cmd_flush_barriers(daxa_CommandList cmd_list);
+/// @brief  Consumes the command list. Creates backed commands that can be submitted to the device.
+///         After calling complete, the command list CAN NOT BE USED any longer,
+///         that includes destroying it, it is fully consumed by complete!
+DAXA_EXPORT daxa_BakedCommands
+daxa_cmd_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
+DAXA_EXPORT daxa_Bool8
 daxa_cmd_is_complete(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 DAXA_EXPORT daxa_CommandListInfo const *
 daxa_cmd_info(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
@@ -433,7 +477,9 @@ DAXA_EXPORT VkCommandBuffer
 daxa_cmd_get_vk_command_buffer(daxa_CommandList cmd_list);
 DAXA_EXPORT VkCommandPool
 daxa_cmd_get_vk_command_pool(daxa_CommandList cmd_list);
-DAXA_EXPORT daxa_Result
+DAXA_EXPORT void
 daxa_destroy_command_list(daxa_CommandListInfo command_list);
+DAXA_EXPORT void
+daxa_destroy_baked_commands(daxa_BakedCommands baked_commands);
 
 #endif // #ifndef __DAXA_COMMAND_LIST_H__

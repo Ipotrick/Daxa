@@ -337,10 +337,51 @@ namespace daxa
     template <typename T, usize CAPACITY>
     struct FixedList
     {
+      private:
         std::array<T, CAPACITY> m_data = {};
         usize m_size = {};
-
-        // TODO: Implement iterator and missing member functions!
+      public:
+        FixedList() = default;
+        auto at(usize i) -> T&
+        {
+            return this->m_data.at(i);
+        }
+        auto at(usize i) const -> T const &
+        {
+            return this->m_data.at(i);
+        }
+        auto operator[](usize i) -> T&
+        {
+            return this->m_data[i];
+        }
+        auto operator[](usize i) const -> T const&
+        {
+            return this->m_data[i];
+        }
+        static auto capacity() -> usize
+        {
+            return CAPACITY;
+        }
+        auto size() const -> usize
+        {
+            return this->size;
+        }
+        void push_back(T v)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size < CAPACITY, "EXCEEDED CAPACITY");
+            this->m_data[this->size++] = v;
+        }
+        void pop_back()
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "ALREADY EMPTY");
+            this->m_data[this->m_size-1].~T();
+            this->m_size -= 1;
+        }
+        auto back() -> T&
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "EMPTY");
+            return this->m_data[this->m_size - 1];
+        }
     };
 
     using VariantIndex = i32;
@@ -392,17 +433,17 @@ namespace daxa
     struct NullVariant {};
 
     template<VariantIndex INDEX, typename T_GET, typename T_SINGLE, typename ... T_REST>
-    struct IndexOf
+    struct VariantIndexOf
     {
         static constexpr auto value() -> VariantIndex
         {
             if constexpr(std::is_same_v<T_GET,T_SINGLE>) return INDEX;
-            else return IndexOf<INDEX+1,T_GET,T_REST...>::value();
+            else return VariantIndexOf<INDEX+1,T_GET,T_REST...>::value();
         }
     };
     
     template<VariantIndex INDEX, typename T_GET, typename T_SINGLE>
-    struct IndexOf<INDEX,T_GET,T_SINGLE>
+    struct VariantIndexOf<INDEX,T_GET,T_SINGLE>
     {
         static constexpr auto value() -> VariantIndex
         {
@@ -432,7 +473,7 @@ namespace daxa
         template<typename T_GET>
         static constexpr auto checked_index_of() -> VariantIndex
         {
-            constexpr VariantIndex INDEX = IndexOf<0,T_GET,T_ALL...>::value();
+            constexpr VariantIndex INDEX = VariantIndexOf<0,T_GET,T_ALL...>::value();
             static_assert(INDEX != -1, "INVALID VARIANT TYPE");
             return INDEX;
         }

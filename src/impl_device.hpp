@@ -6,8 +6,8 @@
 #include "impl_core.hpp"
 
 #include "impl_instance.hpp"
-#include "impl_pipeline.hpp"
 #include "impl_command_list.hpp"
+#include "impl_pipeline.hpp"
 #include "impl_swapchain.hpp"
 #include "impl_gpu_resources.hpp"
 #include "impl_timeline_query.hpp"

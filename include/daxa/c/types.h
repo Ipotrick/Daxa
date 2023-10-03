@@ -37,6 +37,8 @@ typedef enum
     DAXA_RESULT_INVALID_IMAGE_INFO = (1 << 30) + 10,
     DAXA_RESULT_INVALID_IMAGE_VIEW_INFO = (1 << 30) + 11,
     DAXA_RESULT_INVALID_SAMPLER_INFO = (1 << 30) + 12,
+    DAXA_RESULT_COMMAND_LIST_COMPLETED = (1 << 30) + 13,
+    DAXA_RESULT_COMMAND_LIST_NOT_COMPLETED = (1 << 30) + 14,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
@@ -63,6 +65,12 @@ typedef enum
         };                                \
         SCALAR_TYPE data[2];              \
     }
+
+#define daxa_i32 int32_t
+#define daxa_u32 uint32_t
+#define daxa_f32 float
+#define daxa_i64 int64_t
+#define daxa_u64 uint64_t
 
 _DAXA_DECL_VEC2_TYPE(float)
 daxa_f32vec2;
@@ -209,7 +217,7 @@ daxa_u32mat4x4;
 
 #define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
 
-#define _DAXA_VARIANT_INDEX_TYPE i32
+#define _DAXA_VARIANT_INDEX_TYPE daxa_i32
 
 /// ABI STABLE VARIANT TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Variant
