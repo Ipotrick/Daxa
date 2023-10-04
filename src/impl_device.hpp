@@ -1,8 +1,5 @@
 #pragma once
 
-#include <daxa/daxa.hpp>
-#include <daxa/device.hpp>
-
 #include "impl_core.hpp"
 
 #include "impl_instance.hpp"
@@ -13,7 +10,6 @@
 #include "impl_timeline_query.hpp"
 #include "impl_memory_block.hpp"
 
-#include "cpp_wrapper.hpp"
 #include <daxa/c/device.h>
 
 using namespace daxa;
@@ -84,21 +80,21 @@ struct daxa_ImplDevice final : ManagedSharedState
 
     static auto create(daxa_Instance instance, daxa_DeviceInfo info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Result>;
 
-    auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
-    auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
+    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice;
+    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice;
 
-    auto slot(BufferId id) -> ImplBufferSlot &;
-    auto slot(ImageId id) -> ImplImageSlot &;
-    auto slot(ImageViewId id) -> ImplImageViewSlot &;
-    auto slot(SamplerId id) -> ImplSamplerSlot &;
+    auto slot(daxa_BufferId id) -> ImplBufferSlot &;
+    auto slot(daxa_ImageId id) -> ImplImageSlot &;
+    auto slot(daxa_ImageViewId id) -> ImplImageViewSlot &;
+    auto slot(daxa_SamplerId id) -> ImplSamplerSlot &;
 
-    auto slot(BufferId id) const -> ImplBufferSlot const &;
-    auto slot(ImageId id) const -> ImplImageSlot const &;
-    auto slot(ImageViewId id) const -> ImplImageViewSlot const &;
-    auto slot(SamplerId id) const -> ImplSamplerSlot const &;
+    auto slot(daxa_BufferId id) const -> ImplBufferSlot const &;
+    auto slot(daxa_ImageId id) const -> ImplImageSlot const &;
+    auto slot(daxa_ImageViewId id) const -> ImplImageViewSlot const &;
+    auto slot(daxa_SamplerId id) const -> ImplSamplerSlot const &;
 
-    void cleanup_buffer(BufferId id);
-    void cleanup_image(ImageId id);
-    void cleanup_image_view(ImageViewId id);
-    void cleanup_sampler(SamplerId id);
+    void cleanup_buffer(daxa_BufferId id);
+    void cleanup_image(daxa_ImageId id);
+    void cleanup_image_view(daxa_ImageViewId id);
+    void cleanup_sampler(daxa_SamplerId id);
 };

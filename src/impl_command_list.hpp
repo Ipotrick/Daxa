@@ -18,6 +18,7 @@ static inline constexpr usize DEFERRED_DESTRUCTION_COUNT_MAX = 32;
 
 static inline constexpr usize COMMAND_LIST_BARRIER_MAX_BATCH_SIZE = 16;
 static inline constexpr usize COMMAND_LIST_COLOR_ATTACHMENT_MAX = 16;
+static inline constexpr usize DAXA_UNIFORM_BUFFER_BINDINGS_COUNT = 8;
 
 struct CommandBufferPoolPool
 {
@@ -38,10 +39,8 @@ struct CommandListZombie
 
 struct daxa_ImplCommandList final : ManagedSharedState
 {
-    using InfoT = CommandListInfo;
-
     daxa_Device device = {};
-    CommandListInfo info = {};
+    daxa_CommandListInfo info = {};
     VkCommandBuffer vk_cmd_buffer = {};
     VkCommandPool vk_cmd_pool = {};
     bool recording_complete = false;
@@ -52,7 +51,7 @@ struct daxa_ImplCommandList final : ManagedSharedState
     usize split_barrier_batch_count = 0;
     std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> * pipeline_layouts = {};
     std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
-    std::array<SetUniformBufferInfo, CONSTANT_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
+    std::array<daxa_SetUniformBufferInfo, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
 
     void flush_barriers();
     void flush_constant_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);

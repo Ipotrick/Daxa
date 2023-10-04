@@ -39,8 +39,8 @@ static const daxa_ImageBlitInfo DAXA_DEFAULT_IMAGE_BLIT_INFO = {
 typedef struct
 {
     daxa_BufferId src_buffer;
-    size_t src_offset;
     daxa_BufferId dst_buffer;
+    size_t src_offset;
     size_t dst_offset;
     size_t size;
 } daxa_BufferCopyInfo;
@@ -115,12 +115,12 @@ static const daxa_ImageCopyInfo DAXA_DEFAULT_IMAGE_COPY_INFO = {
 };
 
 // Make sure this stays abi compatible with daxa::ClearValue
-_DAXA_DECL_VARIANT(VkClearColorValue)
+_DAXA_DECL_VARIANT(VkClearValue)
 
 typedef struct
 {
     daxa_ImageLayout dst_image_layout;
-    daxa_Variant(VkClearColorValue) clear_value;
+    daxa_Variant(VkClearValue) clear_value;
     daxa_ImageId dst_image;
     daxa_ImageMipArraySlice dst_slice;
 } daxa_ImageClearInfo;
@@ -358,7 +358,7 @@ daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const
 
 DAXA_EXPORT void
 daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
-DAXA_EXPORT void
+DAXA_EXPORT daxa_Result
 daxa_cmd_clear_image(daxa_CommandList cmd_list, daxa_ImageClearInfo const * info);
 
 /// @brief  Successive pipeline barrier calls are combined.

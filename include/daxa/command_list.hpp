@@ -32,8 +32,8 @@ namespace daxa
     struct BufferCopyInfo
     {
         BufferId src_buffer = {};
-        usize src_offset = {};
         BufferId dst_buffer = {};
+        usize src_offset = {};
         usize dst_offset = {};
         usize size = {};
     };

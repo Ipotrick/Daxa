@@ -161,8 +161,8 @@ typedef struct
 {
     daxa_MemoryBarrierInfo * memory_barriers;
     uint64_t memory_barrier_count;
-    daxa_MemoryBarrierInfo * image_barriers;
-    uint64_t image_barrier_count;
+    daxa_ImageMemoryBarrierInfo * image_memory_barriers;
+    uint64_t image_memory_barrier_count;
     daxa_Event event;
 } daxa_EventSignalInfo;
 
