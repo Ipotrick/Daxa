@@ -12,10 +12,10 @@ auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barri
     return VkImageMemoryBarrier2{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = nullptr,
-        .srcStageMask = image_barrier.src_access.stages.data,
-        .srcAccessMask = image_barrier.src_access.type.data,
-        .dstStageMask = image_barrier.dst_access.stages.data,
-        .dstAccessMask = image_barrier.dst_access.type.data,
+        .srcStageMask = image_barrier.src_access.stages,
+        .srcAccessMask = image_barrier.src_access.access_type,
+        .dstStageMask = image_barrier.dst_access.stages,
+        .dstAccessMask = image_barrier.dst_access.access_type,
         .oldLayout = static_cast<VkImageLayout>(image_barrier.src_layout),
         .newLayout = static_cast<VkImageLayout>(image_barrier.dst_layout),
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -30,10 +30,10 @@ auto get_vk_memory_barrier(daxa_MemoryBarrierInfo const & memory_barrier) -> VkM
     return VkMemoryBarrier2{
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
         .pNext = nullptr,
-        .srcStageMask = memory_barrier.src_access.stages.data,
-        .srcAccessMask = memory_barrier.src_access.type.data,
-        .dstStageMask = memory_barrier.dst_access.stages.data,
-        .dstAccessMask = memory_barrier.dst_access.type.data,
+        .srcStageMask = memory_barrier.src_access.stages,
+        .srcAccessMask = memory_barrier.src_access.access_type,
+        .dstStageMask = memory_barrier.dst_access.stages,
+        .dstAccessMask = memory_barrier.dst_access.access_type,
     };
 }
 
@@ -129,8 +129,8 @@ void daxa_cmd_copy_buffer_to_image(daxa_CommandList self, daxa_BufferImageCopyIn
         .bufferRowLength = 0u,   // self->image_extent.x,
         .bufferImageHeight = 0u, // self->image_extent.y,
         .imageSubresource = make_subresource_layers(info->image_slice, img_slot.aspect_flags),
-        .imageOffset = self->image_offset,
-        .imageExtent = self->image_extent,
+        .imageOffset = info->image_offset,
+        .imageExtent = info->image_extent,
     };
     vkCmdCopyBufferToImage(
         self->vk_cmd_buffer,
@@ -192,9 +192,9 @@ void daxa_cmd_blit_image_to_image(daxa_CommandList self, daxa_ImageBlitInfo cons
     auto const & dst_slot = self->device->slot(info->dst_image);
     VkImageBlit const vk_blit{
         .srcSubresource = make_subresource_layers(info->src_slice, src_slot.aspect_flags),
-        .srcOffsets = info->src_offsets,
+        .srcOffsets = { info->src_offsets[0], info->src_offsets[1] },
         .dstSubresource = make_subresource_layers(info->dst_slice, dst_slot.aspect_flags),
-        .dstOffsets = info->dst_offsets,
+        .dstOffsets = { info->dst_offsets[0], info->dst_offsets[1] },
     };
     vkCmdBlitImage(
         self->vk_cmd_buffer,
@@ -269,10 +269,10 @@ void daxa_cmd_pipeline_barrier(daxa_CommandList self, daxa_MemoryBarrierInfo con
     self->memory_barrier_batch.at(self->memory_barrier_batch_count++) = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
         .pNext = nullptr,
-        .srcStageMask = info.src_access.stages.data,
-        .srcAccessMask = info.src_access.type.data,
-        .dstStageMask = info.dst_access.stages.data,
-        .dstAccessMask = info.dst_access.type.data,
+        .srcStageMask = info->src_access.stages,
+        .srcAccessMask = info->src_access.access_type,
+        .dstStageMask = info->dst_access.stages,
+        .dstAccessMask = info->dst_access.access_type,
     };
 }
 
@@ -289,10 +289,10 @@ void daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList self, daxa_Imag
     self->image_barrier_batch.at(self->image_barrier_batch_count++) = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = nullptr,
-        .srcStageMask = info->src_access.stages.data,
-        .srcAccessMask = info->src_access.type.data,
-        .dstStageMask = info->dst_access.stages.data,
-        .dstAccessMask = info->dst_access.type.data,
+        .srcStageMask = info->src_access.stages,
+        .srcAccessMask = info->src_access.access_type,
+        .dstStageMask = info->dst_access.stages,
+        .dstAccessMask = info->dst_access.access_type,
         .oldLayout = static_cast<VkImageLayout>(info->src_layout),
         .newLayout = static_cast<VkImageLayout>(info->dst_layout),
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -393,7 +393,7 @@ void daxa_cmd_push_constant(daxa_CommandList self, void const * data, uint32_t s
     self->flush_barriers();
     u64 layout_index = (size + sizeof(u32) - 1) / sizeof(u32);
     // TODO(general): The size can be smaller then the layouts size... Is that a problem? I remember renderdoc complaining sometimes.
-    vkCmdPushConstants(self->vk_cmd_buffer, self->pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
+    vkCmdPushConstants(self->vk_cmd_buffer, self->device->gpu_shader_resource_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
 /// @brief  Binds a buffer region to the uniform buffer slot.
@@ -545,32 +545,44 @@ void daxa_cmd_flush_barriers(daxa_CommandList self)
 ///         After calling complete, the command list CAN NOT BE USED any longer,
 ///         that includes destroying it, it is fully consumed by complete!
 daxa_BakedCommands
-daxa_cmd_complete(daxa_CommandList self, daxa_CommandLabelInfo label)
+daxa_cmd_complete(daxa_CommandList self)
 {
-}
-
-daxa_Bool8
-daxa_cmd_is_complete(daxa_CommandList self, daxa_CommandLabelInfo label)
-{
+    self->recording_complete = true;
+    return reinterpret_cast<daxa_BakedCommands>(self);
 }
 
 daxa_CommandListInfo const *
-daxa_cmd_info(daxa_CommandList self, daxa_CommandLabelInfo label)
+daxa_cmd_info(daxa_CommandList self)
 {
+    return &self->info;
 }
 
 VkCommandBuffer
 daxa_cmd_get_vk_command_buffer(daxa_CommandList self)
 {
+    return self->vk_cmd_buffer;
 }
 
 VkCommandPool
 daxa_cmd_get_vk_command_pool(daxa_CommandList self)
 {
+    return self->vk_cmd_pool;
 }
 
-void daxa_destroy_command_list(daxa_CommandListInfo command_list)
+void daxa_destroy_command_list(daxa_CommandList self)
 {
+    vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
+
+    u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
+    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
+
+    device->main_queue_command_list_zombies.push_front({
+        main_queue_cpu_timeline,
+        CommandListZombie{
+            .vk_cmd_buffer = vk_cmd_buffer,
+            .vk_cmd_pool = vk_cmd_pool,
+        },
+    });
 }
 
 void daxa_destroy_baked_commands(daxa_BakedCommands baked_commands)
@@ -581,39 +593,46 @@ void daxa_destroy_baked_commands(daxa_BakedCommands baked_commands)
 
 /// --- Begin Internals ---
 
-void daxa_ImplCommandList::initialize()
+auto daxa_ImplCommandList::create(daxa_Device device, daxa_CommandListInfo const * info, VkCommandBuffer vk_cmd_buffer, VkCommandPool vk_cmd_pool) -> std::pair<daxa_ImplCommandList, daxa_Result>
 {
+    daxa_ImplCommandList ret = {
+        .device = device,
+        .info = *info,
+        .vk_cmd_buffer = vk_cmd_buffer,
+        .vk_cmd_pool = vk_cmd_pool,
+    };
+    ret.info_name = {info->name.data, info->name.size};
+    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     VkCommandBufferBeginInfo const vk_command_buffer_begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = nullptr,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         .pInheritanceInfo = {},
     };
-
-    vkBeginCommandBuffer(this->vk_cmd_buffer, &vk_command_buffer_begin_info);
-
-    if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !this->info.name.empty())
+    vkBeginCommandBuffer(ret.vk_cmd_buffer, &vk_command_buffer_begin_info);
+    if ((ret.device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && ret.info.name.size != 0)
     {
-        auto cmd_buffer_name = this->info.name;
+        auto cmd_buffer_name = ret.info.name;
         VkDebugUtilsObjectNameInfoEXT const cmd_buffer_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_COMMAND_BUFFER,
-            .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_buffer),
-            .pObjectName = cmd_buffer_name.c_str(),
+            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_cmd_buffer),
+            .pObjectName = cmd_buffer_name.data,
         };
-        this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &cmd_buffer_name_info);
+        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_buffer_name_info);
 
-        auto cmd_pool_name = this->info.name;
+        auto cmd_pool_name = ret.info.name;
         VkDebugUtilsObjectNameInfoEXT const cmd_pool_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_COMMAND_POOL,
-            .objectHandle = reinterpret_cast<uint64_t>(this->vk_cmd_pool),
-            .pObjectName = cmd_pool_name.c_str(),
+            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_cmd_pool),
+            .pObjectName = cmd_pool_name.data,
         };
-        this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &cmd_pool_name_info);
+        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
+    return {ret, DAXA_RESULT_SUCCESS};
 }
 
 void daxa_ImplCommandList::flush_barriers()
@@ -642,11 +661,11 @@ void daxa_ImplCommandList::flush_barriers()
 void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
 {
     auto & device = *this->device;
-    std::array<VkDescriptorBufferInfo, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
-    std::array<VkWriteDescriptorSet, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_writes = {};
-    for (u32 index = 0; index < CONSTANT_BUFFER_BINDINGS_COUNT; ++index)
+    std::array<VkDescriptorBufferInfo, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
+    std::array<VkWriteDescriptorSet, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_writes = {};
+    for (u32 index = 0; index < DAXA_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
     {
-        if (this->current_constant_buffer_bindings[index].buffer.is_empty())
+        if (this->current_constant_buffer_bindings[index].buffer.value == 0)
         {
             descriptor_buffer_info[index] = VkDescriptorBufferInfo{
                 .buffer = device.vk_null_buffer,
@@ -677,7 +696,7 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
     }
 
     device.vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
-    for (u32 index = 0; index < CONSTANT_BUFFER_BINDINGS_COUNT; ++index)
+    for (u32 index = 0; index < DAXA_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
     {
         this->current_constant_buffer_bindings.at(index) = {};
     }
@@ -944,7 +963,7 @@ namespace daxa
         const usize buffer_size = impl.device->slot(info.buffer).info.size;
         [[maybe_unused]] bool const binding_in_range = info.size + info.offset <= buffer_size;
         DAXA_DBG_ASSERT_TRUE_M(binding_in_range, "The given offset and size of the buffer binding is outside of the bounds of the given buffer");
-        DAXA_DBG_ASSERT_TRUE_M(info.slot < CONSTANT_BUFFER_BINDINGS_COUNT, "there are only 8 binding slots available for constant buffers");
+        DAXA_DBG_ASSERT_TRUE_M(info.slot < DAXA_UNIFORM_BUFFER_BINDINGS_COUNT, "there are only 8 binding slots available for constant buffers");
         impl.current_constant_buffer_bindings[info.slot] = info;
     }
 
