@@ -340,28 +340,32 @@ void daxa_cmd_signal_event(daxa_CommandList self, daxa_EventSignalInfo const * i
 void daxa_cmd_wait_events(daxa_CommandList self, daxa_EventWaitInfo const * infos, size_t info_count)
 {
     self->flush_barriers();
-    for (u64 i = 0; i < infos->memory_barrier_count; ++i)
+    for (u64 i = 0; i < info_count; ++i)
     {
-        auto & end_info = infos->
+        auto & end_info = infos[i];
         tl_split_barrier_dependency_infos_aux_buffer.push_back({});
         auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
-        for (auto & image_barrier : end_info.image_barriers)
+        for (u64 j = 0; j < end_info.memory_barrier_count; ++j)
         {
-            dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
-                get_vk_image_memory_barrier(image_barrier, device.slot(image_barrier.image_id).vk_image, device.slot(image_barrier.image_id).aspect_flags));
-        }
-        for (auto const & memory_barrier : end_info.memory_barriers)
-        {
+            auto & memory_barrier = end_info.memory_barriers[j];
             dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
+        }
+        for (u64 j = 0; j < end_info.image_memory_barrier_count; ++j)
+        {
+            auto & image_barrier = end_info.image_memory_barriers[j];
+            dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(get_vk_image_memory_barrier(
+                image_barrier,
+                self->device->slot(image_barrier.image_id).vk_image,
+                self->device->slot(image_barrier.image_id).aspect_flags));
         }
         tl_split_barrier_dependency_infos_buffer.push_back(get_vk_dependency_info(
             dependency_infos_aux_buffer.vk_image_memory_barriers,
             dependency_infos_aux_buffer.vk_memory_barriers));
 
-        tl_split_barrier_events_buffer.push_back(reinterpret_cast<VkEvent>(end_info.split_barrier.data));
+        tl_split_barrier_events_buffer.push_back(end_info.event->vk_event);
     }
     vkCmdWaitEvents2(
-        impl.vk_cmd_buffer,
+        self->vk_cmd_buffer,
         static_cast<u32>(tl_split_barrier_events_buffer.size()),
         tl_split_barrier_events_buffer.data(),
         tl_split_barrier_dependency_infos_buffer.data());
@@ -372,14 +376,24 @@ void daxa_cmd_wait_events(daxa_CommandList self, daxa_EventWaitInfo const * info
 
 void daxa_cmd_wait_event(daxa_CommandList self, daxa_EventWaitInfo const * info)
 {
+    daxa_cmd_wait_events(self, info, 1);
 }
 
 void daxa_cmd_reset_event(daxa_CommandList self, daxa_ResetEventInfo const * info)
 {
+    self->flush_barriers();
+    vkCmdResetEvent2(
+        self->vk_cmd_buffer,
+        info->barrier->vk_event,
+        info->stage_masks);
 }
 
 void daxa_cmd_push_constant(daxa_CommandList self, void const * data, uint32_t size, uint32_t offset)
 {
+    self->flush_barriers();
+    u64 layout_index = (size + sizeof(u32) - 1) / sizeof(u32);
+    // TODO(general): The size can be smaller then the layouts size... Is that a problem? I remember renderdoc complaining sometimes.
+    vkCmdPushConstants(self->vk_cmd_buffer, self->pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
 /// @brief  Binds a buffer region to the uniform buffer slot.
@@ -395,20 +409,30 @@ void daxa_cmd_set_uniform_buffer(daxa_CommandList self, daxa_SetUniformBufferInf
 {
 }
 
-void daxa_cmd_set_compute_pipeline(daxa_CommandList self, daxa_ComputePipeline const * pipeline)
+void daxa_cmd_set_compute_pipeline(daxa_CommandList self, daxa_ComputePipeline pipeline)
 {
+    self->flush_barriers();
+    self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout);
+    vkCmdBindDescriptorSets(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
 }
 
-void daxa_cmd_set_raster_pipeline(daxa_CommandList self, daxa_RasterPipeline const * pipeline)
+void daxa_cmd_set_raster_pipeline(daxa_CommandList self, daxa_RasterPipeline pipeline)
 {
+    self->flush_barriers();
+    self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout);
+    vkCmdBindDescriptorSets(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
 }
 
 void daxa_cmd_dispatch(daxa_CommandList self, uint32_t x, uint32_t y, uint32_t z)
 {
+    vkCmdDispatch(self->vk_cmd_buffer, x, y, z);
 }
 
 void daxa_cmd_dispatch_indirect(daxa_CommandList self, daxa_DispatchIndirectInfo const * info)
 {
+    vkCmdDispatchIndirect(self->vk_cmd_buffer, self->device->slot(info->indirect_buffer).vk_buffer, info->offset);
 }
 
 /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
@@ -615,7 +639,7 @@ void daxa_ImplCommandList::flush_barriers()
     }
 }
 
-void daxa_ImplCommandList::flush_constant_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
+void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
 {
     auto & device = *this->device;
     std::array<VkDescriptorBufferInfo, CONSTANT_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
@@ -904,7 +928,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout);
+        impl.flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout);
 
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
@@ -934,7 +958,7 @@ namespace daxa
 
         vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
-        impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout);
+        impl.flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline);
     }

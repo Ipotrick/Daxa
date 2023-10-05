@@ -394,9 +394,9 @@ daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t si
 DAXA_EXPORT void
 daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetUniformBufferInfo const * info);
 DAXA_EXPORT void
-daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline const * pipeline);
+daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline pipeline);
 DAXA_EXPORT void
-daxa_cmd_set_raster_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline const * pipeline);
+daxa_cmd_set_raster_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline pipeline);
 DAXA_EXPORT void
 daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
 DAXA_EXPORT void

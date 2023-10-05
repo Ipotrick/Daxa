@@ -54,7 +54,7 @@ struct daxa_ImplCommandList final : ManagedSharedState
     std::array<daxa_SetUniformBufferInfo, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
 
     void flush_barriers();
-    void flush_constant_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
+    void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
 
     //ImplCommandList(daxa_Device a_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
     //virtual ~ImplCommandList() override final;
