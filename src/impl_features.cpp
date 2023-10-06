@@ -66,7 +66,7 @@ namespace daxa
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = chain,
             .bufferDeviceAddress = VK_TRUE,
-            .bufferDeviceAddressCaptureReplay = static_cast<VkBool32>(self->info.flags & DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT),
+            .bufferDeviceAddressCaptureReplay = static_cast<VkBool32>(info.flags & DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT),
             .bufferDeviceAddressMultiDevice = VK_FALSE,
         };
         this->chain = reinterpret_cast<void *>(&this->buffer_device_address);
@@ -125,18 +125,19 @@ namespace daxa
             .scalarBlockLayout = VK_TRUE,
         };
         this->chain = reinterpret_cast<void *>(&this->scalar_layout);
-        if (daxa_DeviceInfo.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL)
+        auto vk_memory_model = VkPhysicalDeviceVulkanMemoryModelFeatures{};
+        if (info.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL)
         {
-            this->vk_memory_model = {
+            vk_memory_model = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
                 .pNext = this->chain,
                 .vulkanMemoryModel = VK_TRUE,
                 .vulkanMemoryModelDeviceScope = VK_TRUE,
                 .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low support.
             };
-            this->chain = reinterpret_cast<void *>(&this->vk_memory_model);
+            this->chain = reinterpret_cast<void *>(&vk_memory_model);
         }
-        if (daxa_DeviceInfo.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64)
+        if (info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64)
         {
             this->shader_atomic64 = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
@@ -146,7 +147,7 @@ namespace daxa
             };
             this->chain = reinterpret_cast<void *>(&this->shader_atomic64);
         }
-        if (daxa_DeviceInfo.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
+        if (info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
         {
             this->image_atomic64 = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
@@ -156,7 +157,7 @@ namespace daxa
             };
             this->chain = reinterpret_cast<void *>(&this->image_atomic64);
         }
-        if (daxa_DeviceInfo.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+        if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
         {
             this->mesh_shader = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
@@ -175,13 +176,19 @@ namespace daxa
     {
         // NOTE(pahrens): Make sure to never exceed EXTENSION_LIST_MAX!
         this->size = 0;
-        if (daxa_DeviceInfo.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION)
+        if (info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION)
         {
-            this->data[size++] = VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME;
+            this->data[size++] = {
+                .data = VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
+                .size = strlen(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME),
+            };
         }
-        if (daxa_DeviceInfo.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+        if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
         {
-            this->data[size++] = VK_EXT_MESH_SHADER_EXTENSION_NAME;
+            this->data[size++] = {
+                .data = VK_EXT_MESH_SHADER_EXTENSION_NAME,
+                .size = strlen(VK_EXT_MESH_SHADER_EXTENSION_NAME),
+            };
         }
     }
 } // namespace daxa

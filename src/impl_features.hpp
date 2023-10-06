@@ -9,7 +9,7 @@
 #include <daxa/c/device.h>
 
 // NOTE(pahrens): Arbitrary limit. Bump if needed.
-static constexpr inline u32 EXTENSION_LIST_MAX = 16;
+static constexpr inline daxa::u32 EXTENSION_LIST_MAX = 16;
 
 namespace daxa
 {

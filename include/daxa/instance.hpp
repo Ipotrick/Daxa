@@ -27,7 +27,7 @@ namespace daxa
 
         auto create_device(DeviceInfo const & device_info) -> Device;
 
-        auto into() const -> InstanceInfo const &;
+        auto info() const -> InstanceInfo const &;
 
       private:
         friend auto create_instance(InstanceInfo const & info) -> Instance;

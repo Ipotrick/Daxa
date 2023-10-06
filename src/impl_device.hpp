@@ -78,10 +78,11 @@ struct daxa_ImplDevice final : ManagedSharedState
     void main_queue_collect_garbage();
     void wait_idle() const;
 
-    static auto create(daxa_Instance instance, daxa_DeviceInfo info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Result>;
+    static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Device>;
 
-    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice;
-    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice;
+    auto validate_image_slice(ImageMipArraySlice const & slice, daxa_ImageId id) -> ImageMipArraySlice;
+    auto validate_image_slice(ImageMipArraySlice const & slice, daxa_ImageViewId id) -> ImageMipArraySlice;
+    auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> ImageId;
 
     auto slot(daxa_BufferId id) -> ImplBufferSlot &;
     auto slot(daxa_ImageId id) -> ImplImageSlot &;

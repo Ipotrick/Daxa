@@ -1,7 +1,7 @@
 #pragma once
 
 #include "impl_core.hpp"
-#include "impl_device.hpp"
+#include <daxa/c/device.h>
 #include <daxa/c/sync.h>
 
 struct SemaphoreZombie
@@ -20,7 +20,7 @@ struct daxa_ImplBinarySemaphore final : daxa::ManagedSharedState
     std::string info_name = {};
     daxa_Device device = {};
     VkSemaphore vk_semaphore = {};
-    static auto create(daxa_Device device, daxa_BinarySemaphoreInfo a_info) -> daxa_ImplBinarySemaphore;
+    static auto create(daxa_Device device, daxa_BinarySemaphoreInfo a_info) -> daxa_BinarySemaphore;
 };
 
 struct daxa_ImplTimelineSemaphore final : daxa::ManagedSharedState
@@ -29,7 +29,7 @@ struct daxa_ImplTimelineSemaphore final : daxa::ManagedSharedState
     std::string info_name = {};
     daxa_Device device = {};
     VkSemaphore vk_semaphore = {};
-    static auto create(daxa_Device device, daxa_TimelineSemaphoreInfo a_info) -> daxa_ImplTimelineSemaphore;
+    static auto create(daxa_Device device, daxa_TimelineSemaphoreInfo a_info) -> daxa_TimelineSemaphore;
 };
 
 struct daxa_ImplEvent final : daxa::ManagedSharedState
@@ -38,5 +38,5 @@ struct daxa_ImplEvent final : daxa::ManagedSharedState
     std::string info_name = {};
     daxa_Device device = {};
     VkEvent vk_event = {};
-    static auto create(daxa_Device device, daxa_EventInfo a_info) -> daxa_ImplEvent;
+    static auto create(daxa_Device device, daxa_EventInfo a_info) -> daxa_Event;
 };

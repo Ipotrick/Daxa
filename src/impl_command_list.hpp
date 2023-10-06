@@ -1,11 +1,13 @@
 #pragma once
 
-// #include <daxa/command_list.hpp>
 #include <daxa/c/command_list.h>
+#include <daxa/command_list.hpp>
 
 #include "impl_core.hpp"
 #include "impl_sync.hpp"
 #include "impl_pipeline.hpp"
+
+using namespace daxa;
 
 struct ImplDevice;
 
@@ -52,17 +54,18 @@ struct daxa_ImplCommandList final : ManagedSharedState
     usize split_barrier_batch_count = {};
     std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
     std::array<daxa_SetUniformBufferInfo, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
-    
+
     static auto create(
         daxa_Device device,
         daxa_CommandListInfo const * info,
         VkCommandBuffer vk_cmd_buffer,
-        VkCommandPool vk_cmd_pool) -> std::pair<daxa_ImplCommandList, daxa_Result>;
+        VkCommandPool vk_cmd_pool) -> std::pair<daxa_CommandList, daxa_Result>;
     void flush_barriers();
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
 
-    //ImplCommandList(daxa_Device a_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
-    //virtual ~ImplCommandList() override final;
+    // ImplCommandList(daxa_Device a_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
+    // virtual ~ImplCommandList() override final;
 };
 
-using daxa_ImplBakedCommands = daxa_ImplCommandList;
+// TODO(capi) ???
+// using daxa_ImplBakedCommands = daxa_ImplCommandList;

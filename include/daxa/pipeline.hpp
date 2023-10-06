@@ -2,6 +2,7 @@
 
 #include <daxa/core.hpp>
 #include <daxa/c/types.h>
+#include <daxa/types.hpp>
 
 namespace daxa
 {

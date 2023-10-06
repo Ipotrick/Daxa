@@ -148,7 +148,7 @@ typedef struct
     daxa_ImageLayout layout;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
-    daxa_Variant(VkClearColorValue) clear_value;
+    daxa_Variant(VkClearValue) clear_value;
 } daxa_RenderAttachmentInfo;
 _DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
 _DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)

@@ -17,6 +17,9 @@
 #include <span>
 #include <bit>
 
+#include <daxa/core.hpp>
+#include <daxa/c/device.h>
+
 #if DAXA_THREADSAFETY
 #define DAXA_ONLY_IF_THREADSAFETY(x) x
 #define DAXA_ATOMIC_U64 std::atomic_uint64_t
@@ -265,7 +268,7 @@ namespace daxa
         {
 #if DAXA_VALIDATION
             DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
-            auto ret = dynamic_cast<T *>(object);
+            auto ret = reinterpret_cast<T *>(object);
             DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
             return ret;
 #else
@@ -273,11 +276,11 @@ namespace daxa
 #endif
         }
         template <typename T>
-        auto as() const -> T *
+        auto as() const -> T const *
         {
 #if DAXA_VALIDATION
             DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
-            auto ret = dynamic_cast<T const *>(object);
+            auto ret = reinterpret_cast<T const *>(object);
             DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
             return ret;
 #else
@@ -314,8 +317,9 @@ namespace daxa
         Optional<T> & operator=(Optional<T> const &) = default;
         Optional<T> & operator=(T const & v)
         {
-            this->m_has_value = v;
-            this->has_value = true;
+            this->m_value = v;
+            this->m_has_value = true;
+            return *this;
         }
 
         auto has_value() const -> bool
@@ -340,9 +344,10 @@ namespace daxa
       private:
         std::array<T, CAPACITY> m_data = {};
         usize m_size = {};
+
       public:
         FixedList() = default;
-        auto at(usize i) -> T&
+        auto at(usize i) -> T &
         {
             return this->m_data.at(i);
         }
@@ -350,11 +355,11 @@ namespace daxa
         {
             return this->m_data.at(i);
         }
-        auto operator[](usize i) -> T&
+        auto operator[](usize i) -> T &
         {
             return this->m_data[i];
         }
-        auto operator[](usize i) const -> T const&
+        auto operator[](usize i) const -> T const &
         {
             return this->m_data[i];
         }
@@ -364,7 +369,7 @@ namespace daxa
         }
         auto size() const -> usize
         {
-            return this->size;
+            return this->m_size;
         }
         void push_back(T v)
         {
@@ -374,10 +379,10 @@ namespace daxa
         void pop_back()
         {
             DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "ALREADY EMPTY");
-            this->m_data[this->m_size-1].~T();
+            this->m_data[this->m_size - 1].~T();
             this->m_size -= 1;
         }
-        auto back() -> T&
+        auto back() -> T &
         {
             DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "EMPTY");
             return this->m_data[this->m_size - 1];
@@ -386,72 +391,85 @@ namespace daxa
 
     using VariantIndex = i32;
 
-    template<typename T_SINGLE, typename ... T_REST>
+    template <typename T_SINGLE, typename... T_REST>
     struct VariantUnion
     {
         constexpr VariantUnion() {}
+        ~VariantUnion() {}
         using T_REST_VARIANT = VariantUnion<T_REST...>;
         union InnerPair
         {
             constexpr InnerPair() {}
+            ~InnerPair() {}
             T_SINGLE value;
             T_REST_VARIANT rest;
         } inner_pair;
-        template<typename T_GET>
+        template <typename T_GET>
         constexpr auto get() -> T_GET &
         {
-            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return this->inner_pair.value;
-            else return inner_pair.rest.get<T_GET>();
+            if constexpr (std::is_same_v<T_GET, T_SINGLE>)
+                return this->inner_pair.value;
+            else
+                return inner_pair.rest.template get<T_GET>();
         }
-        template<typename T_GET>
-       constexpr  auto get() const -> T_GET const &
+        template <typename T_GET>
+        constexpr auto get() const -> T_GET const &
         {
-            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return this->inner_pair.value;
-            else return inner_pair.rest.get<T_GET>();
+            if constexpr (std::is_same_v<T_GET, T_SINGLE>)
+                return this->inner_pair.value;
+            else
+                return inner_pair.rest.template get<T_GET>();
         }
-    }; 
+    };
 
-    template<typename T_SINGLE>
+    template <typename T_SINGLE>
     struct VariantUnion<T_SINGLE>
     {
         constexpr VariantUnion() {}
+        ~VariantUnion() {}
         T_SINGLE value;
-        template<typename T_GET>
+        template <typename T_GET>
         constexpr auto get() -> T_GET &
         {
-            static_assert(std::is_same_v<T_GET,T_SINGLE>, "INVALID GET TYPE");
+            static_assert(std::is_same_v<T_GET, T_SINGLE>, "INVALID GET TYPE");
             return this->value;
         }
-        template<typename T_GET>
+        template <typename T_GET>
         constexpr auto get() const -> T_GET const &
         {
-            static_assert(std::is_same_v<T_GET,T_SINGLE>, "INVALID GET TYPE");
+            static_assert(std::is_same_v<T_GET, T_SINGLE>, "INVALID GET TYPE");
             return this->value;
         }
     };
 
-    struct NullVariant {};
+    struct NullVariant
+    {
+    };
 
-    template<VariantIndex INDEX, typename T_GET, typename T_SINGLE, typename ... T_REST>
+    template <VariantIndex INDEX, typename T_GET, typename T_SINGLE, typename... T_REST>
     struct VariantIndexOf
     {
         static constexpr auto value() -> VariantIndex
         {
-            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return INDEX;
-            else return VariantIndexOf<INDEX+1,T_GET,T_REST...>::value();
+            if constexpr (std::is_same_v<T_GET, T_SINGLE>)
+                return INDEX;
+            else
+                return VariantIndexOf<INDEX + 1, T_GET, T_REST...>::value();
         }
     };
-    
-    template<VariantIndex INDEX, typename T_GET, typename T_SINGLE>
-    struct VariantIndexOf<INDEX,T_GET,T_SINGLE>
+
+    template <VariantIndex INDEX, typename T_GET, typename T_SINGLE>
+    struct VariantIndexOf<INDEX, T_GET, T_SINGLE>
     {
         static constexpr auto value() -> VariantIndex
         {
-            if constexpr(std::is_same_v<T_GET,T_SINGLE>) return INDEX;
-            else return -1;
+            if constexpr (std::is_same_v<T_GET, T_SINGLE>)
+                return INDEX;
+            else
+                return -1;
         }
     };
-    
+
     /// @brief ABI Stable variant type for c interop.
     /// ABI:
     /// struct Variant
@@ -463,33 +481,35 @@ namespace daxa
     /// };
     /// index == -1 => NullVariant, no value in the union is valid.
     /// index >= 0  => value in union at index is valid.
-    template<typename ... T_ALL>
+    template <typename... T_ALL>
     struct Variant
     {
       private:
         using T_VALUES = VariantUnion<T_ALL...>;
         VariantIndex m_index;
         T_VALUES values;
-        template<typename T_GET>
+        template <typename T_GET>
         static constexpr auto checked_index_of() -> VariantIndex
         {
-            constexpr VariantIndex INDEX = VariantIndexOf<0,T_GET,T_ALL...>::value();
+            constexpr VariantIndex INDEX = VariantIndexOf<0, T_GET, T_ALL...>::value();
             static_assert(INDEX != -1, "INVALID VARIANT TYPE");
             return INDEX;
         }
+
       public:
         constexpr Variant() : m_index{-1} {}
+        ~Variant() {}
 
-        template<typename T_SET>
+        template <typename T_SET>
         constexpr Variant(T_SET v) { this->set<T_SET>(v); }
 
-        template<typename T_SET>
-        constexpr Variant& operator=(T_SET v) { this->set<T_SET>(v); }
+        template <typename T_SET>
+        constexpr Variant & operator=(T_SET v) { this->set<T_SET>(v); }
 
-        template<typename T_SET>
+        template <typename T_SET>
         constexpr void set(T_SET set_value)
         {
-            if constexpr(std::is_same_v<T_SET, NullVariant>)
+            if constexpr (std::is_same_v<T_SET, NullVariant>)
             {
                 this->m_index = -1;
             }
@@ -497,29 +517,33 @@ namespace daxa
             {
                 constexpr VariantIndex INDEX = checked_index_of<T_SET>();
                 this->m_index = INDEX;
-                this->values.get<T_SET>() = set_value;
+                this->values.template get<T_SET>() = set_value;
             }
         }
 
-        template<typename T_GET>
+        template <typename T_GET>
         constexpr auto get_if() -> T_GET *
         {
-            if (checked_index_of<T_GET>() == this->m_index) return &this->values.get<T_GET>();
-            else return nullptr;
+            if (checked_index_of<T_GET>() == this->m_index)
+                return &this->values.template get<T_GET>();
+            else
+                return nullptr;
         }
 
-        template<typename T_GET>
+        template <typename T_GET>
         constexpr auto get_if() const -> T_GET const *
         {
-            if (checked_index_of<T_GET>() != this->m_index) return &this->values.get<T_GET>();
-            else return nullptr;
+            if (checked_index_of<T_GET>() != this->m_index)
+                return &this->values.template get<T_GET>();
+            else
+                return nullptr;
         }
 
         constexpr auto has_value() const -> bool { return this->m_index == -1; }
 
         constexpr auto index() const -> isize { return this->m_index; }
 
-        template<typename T_GET>
+        template <typename T_GET>
         static constexpr auto index_of() -> isize { return checked_index_of<T_GET>(); }
     };
 
@@ -1380,6 +1404,9 @@ namespace daxa
       private:
         friend struct ImplDevice;
         friend struct Device;
+
+        friend daxa_Result daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);
+
         MemoryBlock(ManagedPtr impl);
     };
 

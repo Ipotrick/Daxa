@@ -161,7 +161,7 @@ namespace daxa
     struct ImplPersistentTaskBuffer final : ManagedSharedState
     {
         ImplPersistentTaskBuffer(TaskBufferInfo const & a_info);
-        virtual ~ImplPersistentTaskBuffer() override final;
+        ~ImplPersistentTaskBuffer();
 
         TaskBufferInfo info = {};
         std::vector<BufferId> actual_buffers = {};
@@ -176,7 +176,7 @@ namespace daxa
     struct ImplPersistentTaskImage final : ManagedSharedState
     {
         ImplPersistentTaskImage(TaskImageInfo const & a_info);
-        virtual ~ImplPersistentTaskImage() override final;
+        ~ImplPersistentTaskImage();
 
         TaskImageInfo info = {};
         // One task buffer can back multiple buffers.
@@ -302,7 +302,7 @@ namespace daxa
     struct ImplTaskGraph final : ManagedSharedState
     {
         ImplTaskGraph(TaskGraphInfo a_info);
-        virtual ~ImplTaskGraph() override final;
+        // virtual ~ImplTaskGraph() override final;
 
         static inline std::atomic_uint32_t exec_unique_next_index = 1;
         u32 unique_index = {};

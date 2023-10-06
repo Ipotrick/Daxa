@@ -1152,11 +1152,14 @@ static constexpr auto imgui_frag_spv = std::array<daxa::u32, (1148 - 630) * 8 + 
 namespace daxa
 {
     ImGuiRenderer::ImGuiRenderer(ImGuiRendererInfo const & info)
-        : ManagedPtr{new ImplImGuiRenderer(info)}
+        : ManagedPtr{
+              new ImplImGuiRenderer(info),
+              [](daxa::ManagedSharedState * self_ptr)
+              {
+                  delete reinterpret_cast<ImGuiRenderer *>(self_ptr);
+              }}
     {
     }
-
-    ImGuiRenderer::~ImGuiRenderer() = default;
 
     void ImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
     {
@@ -1352,7 +1355,7 @@ namespace daxa
                   create_info.raster = {};
                   create_info.push_constant_size = sizeof(Push);
                   create_info.name = "ImGui Draw Pipeline";
-                  //return daxa::RasterPipeline{};
+                  // return daxa::RasterPipeline{};
                   return this->info.device.create_raster_pipeline(create_info);
               }()}
     {

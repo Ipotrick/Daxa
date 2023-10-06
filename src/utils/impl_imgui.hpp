@@ -19,6 +19,6 @@ namespace daxa
         void record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y);
 
         ImplImGuiRenderer(ImGuiRendererInfo a_info);
-        virtual ~ImplImGuiRenderer() override final;
+        ~ImplImGuiRenderer();
     };
 } // namespace daxa

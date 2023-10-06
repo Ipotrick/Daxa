@@ -108,7 +108,7 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
     // TODO: Needs C impl of device
     *out_device = nullptr;
 
-    auto [result, device] = daxa_Device::create(self, info, physical_device);
+    auto [result, device] = daxa_ImplDevice::create(self, *info, physical_device);
     *out_device = device;
     return result;
 }

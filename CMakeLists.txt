@@ -57,7 +57,9 @@ if(DAXA_ENABLE_STATIC_ANALYSIS)
             --fix)
     endif()
 else()
-    set(CMAKE_UNITY_BUILD true)
+    # TODO(capi): re-enable when not dealing with the compile errors.
+    # Also, the features in the CMakePresets are disabled for now
+    # set(CMAKE_UNITY_BUILD true)
 endif()
 
 add_library(daxa STATIC

@@ -37,7 +37,7 @@ namespace daxa
     struct ImplSwapchain final : ManagedSharedState
     {
         daxa_Device device = {};
-        SwapchainInfo info = {};
+        daxa_SwapchainInfo info = {};
         VkSwapchainKHR vk_swapchain = VK_NULL_HANDLE;
         VkSurfaceKHR vk_surface = {};
         VkSurfaceFormatKHR vk_surface_format = {};
@@ -58,7 +58,8 @@ namespace daxa
 
         auto get_index_of_image(ImageId image) const -> usize;
 
-        ImplSwapchain(daxa_Device a_device, SwapchainInfo a_info);
+        // TODO(capi) replace with static create function
+        ImplSwapchain(daxa_Device a_device, daxa_SwapchainInfo a_info);
         ~ImplSwapchain();
 
         void recreate();

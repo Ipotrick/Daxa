@@ -1,6 +1,6 @@
 #pragma once
 
-#include <daxa/types.hpp>
+#include <optional>
 
 #if !defined(DAXA_THREADSAFETY)
 #define DAXA_THREADSAFETY 1

@@ -1,4 +1,5 @@
 #include "impl_sync.hpp"
+#include "impl_device.hpp"
 
 daxa_BinarySemaphoreInfo const *
 daxa_binary_semaphore_info(daxa_BinarySemaphore self)
@@ -102,15 +103,15 @@ void daxa_event_destroy(daxa_Event self)
         self->device->main_queue_split_barrier_zombies.emplace_back(
             main_queue_cpu_timeline,
             EventZombie{
-                .vk_event = reinterpret_cast<VkEvent>(self->data),
+                .vk_event = self->vk_event,
             });
     }
     delete self;
 }
 
-auto daxa_ImplBinarySemaphore::create(daxa_Device device, daxa_BinarySemaphoreInfo a_info) -> daxa_ImplBinarySemaphore
+auto daxa_ImplBinarySemaphore::create(daxa_Device device, daxa_BinarySemaphoreInfo a_info) -> daxa_BinarySemaphore
 {
-    daxa_ImplBinarySemaphore self = {};
+    daxa_ImplBinarySemaphore & self = *(new daxa_ImplBinarySemaphore);
     self.device = device;
     self.info = a_info;
     self.info_name = std::string(self.info.name.data, self.info.name.size);
@@ -133,12 +134,12 @@ auto daxa_ImplBinarySemaphore::create(daxa_Device device, daxa_BinarySemaphoreIn
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
-    return self;
+    return &self;
 }
 
-auto daxa_ImplTimelineSemaphore::create(daxa_Device device, daxa_TimelineSemaphoreInfo a_info) -> daxa_ImplTimelineSemaphore
+auto daxa_ImplTimelineSemaphore::create(daxa_Device device, daxa_TimelineSemaphoreInfo a_info) -> daxa_TimelineSemaphore
 {
-    daxa_ImplTimelineSemaphore self = {};
+    daxa_ImplTimelineSemaphore & self = *(new daxa_ImplTimelineSemaphore);
     self.device = device;
     self.info = a_info;
     self.info_name = std::string(self.info.name.data, self.info.name.size);
@@ -147,7 +148,7 @@ auto daxa_ImplTimelineSemaphore::create(daxa_Device device, daxa_TimelineSemapho
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
         .pNext = nullptr,
         .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
-        .initialValue = info.initial_value,
+        .initialValue = self.info.initial_value,
     };
 
     VkSemaphoreCreateInfo const vk_semaphore_create_info{
@@ -160,7 +161,7 @@ auto daxa_ImplTimelineSemaphore::create(daxa_Device device, daxa_TimelineSemapho
 
     if ((self.device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !self.info_name.empty())
     {
-        auto timeline_semaphore_name = self.info.name;
+        auto timeline_semaphore_name = self.info_name;
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
@@ -170,12 +171,12 @@ auto daxa_ImplTimelineSemaphore::create(daxa_Device device, daxa_TimelineSemapho
         };
         self.device->vkSetDebugUtilsObjectNameEXT(self.device->vk_device, &name_info);
     }
-    return self;
+    return &self;
 }
 
-auto daxa_ImplEvent::create(daxa_Device device, daxa_EventInfo a_info) -> daxa_ImplEvent
+auto daxa_ImplEvent::create(daxa_Device device, daxa_EventInfo a_info) -> daxa_Event
 {
-    daxa_ImplTimelineSemaphore self = {};
+    daxa_ImplEvent & self = *(new daxa_ImplEvent);
     self.device = device;
     self.info = a_info;
     self.info_name = std::string(self.info.name.data, self.info.name.size);
@@ -187,19 +188,19 @@ auto daxa_ImplEvent::create(daxa_Device device, daxa_EventInfo a_info) -> daxa_I
     };
     VkEvent event = {};
     vkCreateEvent(self.device->vk_device, &vk_event_create_info, nullptr, &event);
-    self.vk_event = reinterpret_cast<u64>(event);
+    self.vk_event = event;
 
     if ((device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !self.info_name.empty())
     {
-        auto name = self.create_info.name;
+        auto name = self.info_name;
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_EVENT,
-            .objectHandle = self.data,
+            .objectHandle = std::bit_cast<uint64_t>(self.vk_event),
             .pObjectName = name.c_str(),
         };
         self.device->vkSetDebugUtilsObjectNameEXT(self.device->vk_device, &name_info);
     }
-    return self;
+    return &self;
 }

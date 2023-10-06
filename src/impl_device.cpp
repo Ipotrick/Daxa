@@ -5,20 +5,20 @@
 
 namespace
 {
-    auto initialize_image_create_info_from_image_info(daxa::ImageInfo const & image_info, u32 const * queue_family_index_ptr) -> VkImageCreateInfo
+    auto initialize_image_create_info_from_image_info(daxa_ImageInfo const & image_info, u32 const * queue_family_index_ptr) -> VkImageCreateInfo
     {
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 64, "image samples must be power of two and between 1 and 64(inclusive)");
         DAXA_DBG_ASSERT_TRUE_M(
-            image_info.size.x > 0 &&
-                image_info.size.y > 0 &&
-                image_info.size.z > 0,
+            image_info.size.width > 0 &&
+                image_info.size.height > 0 &&
+                image_info.size.depth > 0,
             "image (x,y,z) dimensions must be greater then 0");
         DAXA_DBG_ASSERT_TRUE_M(image_info.array_layer_count > 0, "image array layer count must be greater then 0");
         DAXA_DBG_ASSERT_TRUE_M(image_info.mip_level_count > 0, "image mip level count must be greater then 0");
 
         auto const vk_image_type = static_cast<VkImageType>(image_info.dimensions - 1);
 
-        VkImageCreateFlags vk_image_create_flags = static_cast<VkImageCreateFlags>(image_info.flags.data);
+        VkImageCreateFlags vk_image_create_flags = static_cast<VkImageCreateFlags>(image_info.flags);
 
         VkImageCreateInfo const vk_image_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -31,7 +31,7 @@ namespace
             .arrayLayers = image_info.array_layer_count,
             .samples = static_cast<VkSampleCountFlagBits>(image_info.sample_count),
             .tiling = VK_IMAGE_TILING_OPTIMAL,
-            .usage = image_info.usage.data,
+            .usage = image_info.usage,
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = queue_family_index_ptr,
@@ -54,12 +54,12 @@ namespace
     // auto Device::properties() const -> DeviceProperties const &
     // {
     //     auto const & impl = *as<ImplDevice>();
-    //     return impl.vk_info;
+    //     return self->vk_info;
     // }
     // auto Device::mesh_shader_properties() const -> MeshShaderDeviceProperties const &
     // {
     //     auto const & impl = *as<ImplDevice>();
-    //     return impl.mesh_shader_properties;
+    //     return self->mesh_shader_properties;
     // }
 
 #endif
@@ -92,7 +92,14 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
     VmaAllocationInfo allocation_info = {};
     vmaAllocateMemory(self->vma_allocator, &info->requirements, &create_info, &allocation, &allocation_info);
 
-    return MemoryBlock{ManagedPtr{new ImplMemoryBlock(self, *reinterpret_cast<MemoryBlockInfo const *>(info), allocation, allocation_info)}};
+    // TODO(capi): This needs to return a result, but thought needs to be given to how to handle the managed pointer
+    // return MemoryBlock{ManagedPtr{
+    //     new ImplMemoryBlock(self, *reinterpret_cast<MemoryBlockInfo const *>(info), allocation, allocation_info),
+    //     [](daxa::ManagedSharedState * self_ptr)
+    //     {
+    //         delete reinterpret_cast<ImplMemoryBlock *>(self_ptr);
+    //     }}};
+    return DAXA_RESULT_UNKNOWN;
 }
 auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const * info) -> VkMemoryRequirements
 {
@@ -100,7 +107,7 @@ auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const
         .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        .size = static_cast<VkDeviceSize>(info.size),
+        .size = static_cast<VkDeviceSize>(info->size),
         .usage = BUFFER_USE_FLAGS,
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 1,
@@ -117,233 +124,292 @@ auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const
         .memoryRequirements = {},
     };
     vkGetDeviceBufferMemoryRequirements(self->vk_device, &buffer_requirement_info, &mem_requirements);
-    MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
-    return ret;
+    // MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
+    return mem_requirements.memoryRequirements;
 }
 auto daxa_dvc_image_memory_requirements(daxa_Device self, daxa_ImageInfo const * info) -> VkMemoryRequirements
 {
-    auto const & impl = *as<ImplDevice>();
-    VkImageCreateInfo vk_image_create_info = initialize_image_create_info_from_image_info(info, &impl.main_queue_family_index);
+    VkImageCreateInfo vk_image_create_info = initialize_image_create_info_from_image_info(*info, &self->main_queue_family_index);
     VkDeviceImageMemoryRequirements image_requirement_info{
         .sType = VK_STRUCTURE_TYPE_DEVICE_IMAGE_MEMORY_REQUIREMENTS,
         .pNext = {},
         .pCreateInfo = &vk_image_create_info,
-        .planeAspect = static_cast<VkImageAspectFlagBits>(infer_aspect_from_format(info.format)),
+        .planeAspect = static_cast<VkImageAspectFlagBits>(infer_aspect_from_format(info->format)),
     };
     VkMemoryRequirements2 mem_requirements{
         .sType = VK_STRUCTURE_TYPE_MEMORY_REQUIREMENTS_2,
         .pNext = {},
         .memoryRequirements = {},
     };
-    vkGetDeviceImageMemoryRequirements(impl.vk_device, &image_requirement_info, &mem_requirements);
-    MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
-    return ret;
+    vkGetDeviceImageMemoryRequirements(self->vk_device, &image_requirement_info, &mem_requirements);
+    return mem_requirements.memoryRequirements;
 }
 
 auto daxa_dvc_info(daxa_Device self) -> daxa_DeviceInfo const *
 {
-    auto const & impl = *as<ImplDevice>();
-    return impl.info;
+    return &self->info;
 }
 
-void daxa_dvc_wait_idle(daxa_Device self)
+auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 {
-    auto & impl = *as<ImplDevice>();
-    impl.wait_idle();
+    self->wait_idle();
+    // TODO(capi) get result from c++ api
+    return DAXA_RESULT_SUCCESS;
 }
-void daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info)
+auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
 {
-    auto & impl = *as<ImplDevice>();
+    self->main_queue_collect_garbage();
 
-    impl.main_queue_collect_garbage();
-
-    u64 const current_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(impl.main_queue_cpu_timeline) + 1;
+    u64 const current_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(self->main_queue_cpu_timeline) + 1;
 
     std::pair<u64, std::vector<ManagedPtr>> submit = {current_main_queue_cpu_timeline_value, {}};
 
-    for (auto const & command_list : submit_info.command_lists)
-    {
-        auto const * cmd_list = command_list.as<ImplCommandList>();
-        for (auto [id, index] : cmd_list->deferred_destructions)
-        {
-            switch (index)
-            {
-            case DEFERRED_DESTRUCTION_BUFFER_INDEX: impl.main_queue_buffer_zombies.push_front({current_main_queue_cpu_timeline_value, BufferId{id}}); break;
-            case DEFERRED_DESTRUCTION_IMAGE_INDEX: impl.main_queue_image_zombies.push_front({current_main_queue_cpu_timeline_value, ImageId{id}}); break;
-            case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: impl.main_queue_image_view_zombies.push_front({current_main_queue_cpu_timeline_value, ImageViewId{id}}); break;
-            case DEFERRED_DESTRUCTION_SAMPLER_INDEX: impl.main_queue_sampler_zombies.push_front({current_main_queue_cpu_timeline_value, SamplerId{id}}); break;
-            default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
-            }
-        }
-    }
+    // TODO(capi): bruh
+    // for (auto const & command_list : submit_info.command_lists)
+    // {
+    //     auto const * cmd_list = command_list.as<ImplCommandList>();
+    //     for (auto [id, index] : cmd_list->deferred_destructions)
+    //     {
+    //         switch (index)
+    //         {
+    //         case DEFERRED_DESTRUCTION_BUFFER_INDEX: self->main_queue_buffer_zombies.push_front({current_main_queue_cpu_timeline_value, BufferId{id}}); break;
+    //         case DEFERRED_DESTRUCTION_IMAGE_INDEX: self->main_queue_image_zombies.push_front({current_main_queue_cpu_timeline_value, ImageId{id}}); break;
+    //         case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: self->main_queue_image_view_zombies.push_front({current_main_queue_cpu_timeline_value, ImageViewId{id}}); break;
+    //         case DEFERRED_DESTRUCTION_SAMPLER_INDEX: self->main_queue_sampler_zombies.push_front({current_main_queue_cpu_timeline_value, SamplerId{id}}); break;
+    //         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+    //         }
+    //     }
+    // }
 
-    std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
-    for (auto const & command_list : submit_info.command_lists)
-    {
-        auto const & impl_cmd_list = *command_list.as<ImplCommandList>();
-        DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
-        submit.second.push_back(command_list);
-        submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
-    }
+    // std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
+    // for (auto const & command_list : submit_info.command_lists)
+    // {
+    //     auto const & impl_cmd_list = *command_list.as<ImplCommandList>();
+    //     DAXA_DBG_ASSERT_TRUE_M(impl_cmd_list.recording_complete, "all submitted command lists must be completed before submission");
+    //     submit.second.push_back(command_list);
+    //     submit_vk_command_buffers.push_back(impl_cmd_list.vk_cmd_buffer);
+    // }
 
-    std::vector<VkSemaphore> submit_semaphore_signals = {}; // All timeline semaphores come first, then binary semaphores follow.
-    std::vector<u64> submit_semaphore_signal_values = {};   // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+    // std::vector<VkSemaphore> submit_semaphore_signals = {}; // All timeline semaphores come first, then binary semaphores follow.
+    // std::vector<u64> submit_semaphore_signal_values = {};   // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
-    // Add main queue timeline signaling as first timeline semaphore signaling:
-    submit_semaphore_signals.push_back(impl.vk_main_queue_gpu_timeline_semaphore);
-    submit_semaphore_signal_values.push_back(current_main_queue_cpu_timeline_value);
+    // // Add main queue timeline signaling as first timeline semaphore signaling:
+    // submit_semaphore_signals.push_back(self->vk_main_queue_gpu_timeline_semaphore);
+    // submit_semaphore_signal_values.push_back(current_main_queue_cpu_timeline_value);
 
-    for (auto const & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
-    {
-        auto const & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
-        submit_semaphore_signals.push_back(impl_timeline_semaphore.vk_semaphore);
-        submit_semaphore_signal_values.push_back(signal_value);
-    }
+    // for (auto const & [timeline_semaphore, signal_value] : submit_info.signal_timeline_semaphores)
+    // {
+    //     auto const & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
+    //     submit_semaphore_signals.push_back(impl_timeline_semaphore.vk_semaphore);
+    //     submit_semaphore_signal_values.push_back(signal_value);
+    // }
 
-    for (auto const & binary_semaphore : submit_info.signal_binary_semaphores)
-    {
-        auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
-        submit_semaphore_signals.push_back(impl_binary_semaphore.vk_semaphore);
-        submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
-    }
+    // for (auto const & binary_semaphore : submit_info.signal_binary_semaphores)
+    // {
+    //     auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
+    //     submit_semaphore_signals.push_back(impl_binary_semaphore.vk_semaphore);
+    //     submit_semaphore_signal_values.push_back(0); // The vulkan spec requires to have dummy values for binary semaphores.
+    // }
 
-    // used to synchronize with previous submits:
-    std::vector<VkSemaphore> submit_semaphore_waits = {}; // All timeline semaphores come first, then binary semaphores follow.
-    std::vector<VkPipelineStageFlags> submit_semaphore_wait_stage_masks = {};
-    std::vector<u64> submit_semaphore_wait_values = {}; // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+    // // used to synchronize with previous submits:
+    // std::vector<VkSemaphore> submit_semaphore_waits = {}; // All timeline semaphores come first, then binary semaphores follow.
+    // std::vector<VkPipelineStageFlags> submit_semaphore_wait_stage_masks = {};
+    // std::vector<u64> submit_semaphore_wait_values = {}; // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
-    for (auto const & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
-    {
-        auto const & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
-        submit_semaphore_waits.push_back(impl_timeline_semaphore.vk_semaphore);
-        submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-        submit_semaphore_wait_values.push_back(wait_value);
-    }
+    // for (auto const & [timeline_semaphore, wait_value] : submit_info.wait_timeline_semaphores)
+    // {
+    //     auto const & impl_timeline_semaphore = *timeline_semaphore.as<ImplTimelineSemaphore>();
+    //     submit_semaphore_waits.push_back(impl_timeline_semaphore.vk_semaphore);
+    //     submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    //     submit_semaphore_wait_values.push_back(wait_value);
+    // }
 
-    for (auto const & binary_semaphore : submit_info.wait_binary_semaphores)
-    {
-        auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
-        submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
-        submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
-        submit_semaphore_wait_values.push_back(0);
-    }
+    // for (auto const & binary_semaphore : submit_info.wait_binary_semaphores)
+    // {
+    //     auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
+    //     submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
+    //     submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+    //     submit_semaphore_wait_values.push_back(0);
+    // }
 
-    VkTimelineSemaphoreSubmitInfo timeline_info{
-        .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
-        .pNext = nullptr,
-        .waitSemaphoreValueCount = static_cast<u32>(submit_semaphore_wait_values.size()),
-        .pWaitSemaphoreValues = submit_semaphore_wait_values.data(),
-        .signalSemaphoreValueCount = static_cast<u32>(submit_semaphore_signal_values.size()),
-        .pSignalSemaphoreValues = submit_semaphore_signal_values.data(),
-    };
+    // VkTimelineSemaphoreSubmitInfo timeline_info{
+    //     .sType = VK_STRUCTURE_TYPE_TIMELINE_SEMAPHORE_SUBMIT_INFO,
+    //     .pNext = nullptr,
+    //     .waitSemaphoreValueCount = static_cast<u32>(submit_semaphore_wait_values.size()),
+    //     .pWaitSemaphoreValues = submit_semaphore_wait_values.data(),
+    //     .signalSemaphoreValueCount = static_cast<u32>(submit_semaphore_signal_values.size()),
+    //     .pSignalSemaphoreValues = submit_semaphore_signal_values.data(),
+    // };
 
-    VkSubmitInfo const vk_submit_info{
-        .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pNext = reinterpret_cast<void *>(&timeline_info),
-        .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
-        .pWaitSemaphores = submit_semaphore_waits.data(),
-        .pWaitDstStageMask = submit_semaphore_wait_stage_masks.data(),
-        .commandBufferCount = static_cast<u32>(submit_vk_command_buffers.size()),
-        .pCommandBuffers = submit_vk_command_buffers.data(),
-        .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signals.size()),
-        .pSignalSemaphores = submit_semaphore_signals.data(),
-    };
-    vkQueueSubmit(impl.main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
+    // VkSubmitInfo const vk_submit_info{
+    //     .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
+    //     .pNext = reinterpret_cast<void *>(&timeline_info),
+    //     .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
+    //     .pWaitSemaphores = submit_semaphore_waits.data(),
+    //     .pWaitDstStageMask = submit_semaphore_wait_stage_masks.data(),
+    //     .commandBufferCount = static_cast<u32>(submit_vk_command_buffers.size()),
+    //     .pCommandBuffers = submit_vk_command_buffers.data(),
+    //     .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signals.size()),
+    //     .pSignalSemaphores = submit_semaphore_signals.data(),
+    // };
+    // vkQueueSubmit(self->main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
 
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{impl.main_queue_zombies_mtx});
-    impl.main_queue_submits_zombies.push_front(std::move(submit));
+    // DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_zombies_mtx});
+    // self->main_queue_submits_zombies.push_front(std::move(submit));
+
+    return DAXA_RESULT_SUCCESS;
 }
-void daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info)
+auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_Result
 {
-    auto & impl = *as<ImplDevice>();
-    auto const & swapchain_impl = *info.swapchain.as<ImplSwapchain>();
+    // auto & impl = *as<ImplDevice>();
 
-    // used to synchronize with previous submits:
-    std::vector<VkSemaphore> submit_semaphore_waits = {};
+    // TODO(capi): impl
+    // auto const & swapchain_impl = *info.swapchain.as<ImplSwapchain>();
 
-    for (auto const & binary_semaphore : info.wait_binary_semaphores)
-    {
-        auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
-        submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
-    }
+    // // used to synchronize with previous submits:
+    // std::vector<VkSemaphore> submit_semaphore_waits = {};
 
-    VkPresentInfoKHR const present_info{
-        .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .pNext = nullptr,
-        .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
-        .pWaitSemaphores = submit_semaphore_waits.data(),
-        .swapchainCount = static_cast<u32>(1),
-        .pSwapchains = &swapchain_impl.vk_swapchain,
-        .pImageIndices = &swapchain_impl.current_image_index,
-        .pResults = {},
-    };
+    // for (auto const & binary_semaphore : info.wait_binary_semaphores)
+    // {
+    //     auto const & impl_binary_semaphore = *binary_semaphore.as<ImplBinarySemaphore>();
+    //     submit_semaphore_waits.push_back(impl_binary_semaphore.vk_semaphore);
+    // }
 
-    [[maybe_unused]] VkResult const err = vkQueuePresentKHR(impl.main_queue_vk_queue, &present_info);
-    // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
-    // because supposedly these kinds of things are not specified within the spec. This is also handled in Swapchain::acquire_next_image()
-    DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Present fails");
+    // VkPresentInfoKHR const present_info{
+    //     .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
+    //     .pNext = nullptr,
+    //     .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
+    //     .pWaitSemaphores = submit_semaphore_waits.data(),
+    //     .swapchainCount = static_cast<u32>(1),
+    //     .pSwapchains = &swapchain_impl.vk_swapchain,
+    //     .pImageIndices = &swapchain_impl.current_image_index,
+    //     .pResults = {},
+    // };
 
-    collect_garbage();
+    // [[maybe_unused]] VkResult const err = vkQueuePresentKHR(self->main_queue_vk_queue, &present_info);
+    // // We currently ignore VK_ERROR_OUT_OF_DATE_KHR, VK_ERROR_SURFACE_LOST_KHR and VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT
+    // // because supposedly these kinds of things are not specified within the spec. This is also handled in Swapchain::acquire_next_image()
+    // DAXA_DBG_ASSERT_TRUE_M(err == VK_SUCCESS || err == VK_ERROR_OUT_OF_DATE_KHR || err == VK_ERROR_SURFACE_LOST_KHR || err == VK_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT, "Daxa should never be in a situation where Present fails");
+
+    self->main_queue_collect_garbage();
 }
 
 daxa_Result
 daxa_dvc_collect_garbage(daxa_Device self)
 {
-    auto & impl = *as<ImplDevice>();
     // TODO(capi): Return proper error here!
-    impl.main_queue_collect_garbage();
+    self->main_queue_collect_garbage();
     return DAXA_RESULT_SUCCESS;
 }
 
 auto daxa_dvc_create_swapchain(daxa_Device self, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain) -> daxa_Result
 {
-    return Swapchain{ManagedPtr{new ImplSwapchain(this->make_weak(), info)}};
+// TODO(capi): switch to create function when it's ready
+#if 0
+    return Swapchain{
+        ManagedPtr{
+            new ImplSwapchain(self, *info),
+            [](daxa::ManagedSharedState * self_ptr)
+            {
+                delete reinterpret_cast<ImplSwapchain *>(self_ptr);
+            }}};
+#endif
 }
 auto daxa_dvc_create_raster_pipeline(daxa_Device self, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline) -> daxa_Result
 {
-    return RasterPipeline{ManagedPtr{new ImplRasterPipeline(this->make_weak(), info)}};
+// TODO(capi): switch to create function when it's ready
+#if 0
+    return RasterPipeline{
+        ManagedPtr{
+            new daxa_ImplRasterPipeline(self, *info),
+            [](daxa::ManagedSharedState * self_ptr)
+            {
+                delete reinterpret_cast<daxa_ImplRasterPipeline *>(self_ptr);
+            }}};
+#endif
 }
 auto daxa_dvc_create_compute_pipeline(daxa_Device self, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline) -> daxa_Result
 {
-    return ComputePipeline{ManagedPtr{new ImplComputePipeline(this->make_weak(), info)}};
+// TODO(capi): switch to create function when it's ready
+#if 0
+    return ComputePipeline{
+        ManagedPtr{
+            new daxa_ImplComputePipeline(self, *info),
+            [](daxa::ManagedSharedState * self_ptr)
+            {
+                delete reinterpret_cast<daxa_ImplComputePipeline *>(self_ptr);
+            }}};
+#endif
 }
 auto daxa_dvc_create_command_list(daxa_Device self, daxa_CommandListInfo const * info, daxa_CommandList * out_command_list) -> daxa_Result
 {
-    auto & impl = *as<ImplDevice>();
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{impl.main_queue_command_pool_buffer_recycle_mtx});
-    auto [pool, buffer] = impl.buffer_pool_pool.get(&impl);
-    return CommandList{ManagedPtr{new ImplCommandList{this->make_weak(), pool, buffer, info}}};
+    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_command_pool_buffer_recycle_mtx});
+    auto [pool, buffer] = self->buffer_pool_pool.get(self);
+// TODO(capi): switch to create function when it's ready
+#if 0
+    return CommandList{
+        ManagedPtr{
+            new daxa_ImplCommandList{self, pool, buffer, info},
+            [](daxa::ManagedSharedState * self_ptr)
+            {
+                delete reinterpret_cast<daxa_ImplCommandList *>(self_ptr);
+            }}};
+#endif
 }
 auto daxa_dvc_create_binary_semaphore(daxa_Device self, daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore) -> daxa_Result
 {
-    return BinarySemaphore(ManagedPtr(new ImplBinarySemaphore{this->make_weak(), info}));
+// TODO(capi): switch to create function when it's ready
+#if 0
+    return BinarySemaphore(ManagedPtr(
+        new daxa_ImplBinarySemaphore{self, info},
+        [](daxa::ManagedSharedState * self_ptr)
+        {
+            delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
+        }));
+#endif
 }
 auto daxa_dvc_create_timeline_semaphore(daxa_Device self, daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_timeline_semaphore) -> daxa_Result
 {
-    return TimelineSemaphore(ManagedPtr(new ImplTimelineSemaphore(this->make_weak(), info)));
+// TODO(capi): switch to create function when it's ready
+#if 0
+    return TimelineSemaphore(ManagedPtr(
+        new daxa_ImplTimelineSemaphore(self, info),
+        [](daxa::ManagedSharedState * self_ptr)
+        {
+            delete reinterpret_cast<daxa_ImplTimelineSemaphore *>(self_ptr);
+        }));
+#endif
 }
 auto daxa_dvc_create_event(daxa_Device self, daxa_EventInfo const * info, daxa_Event * out_event) -> daxa_Result
 {
-    return {this->make_weak(), info};
+    // return {this->make_weak(), info};
 }
 auto daxa_dvc_create_timeline_query_pool(daxa_Device self, daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool) -> daxa_Result
 {
-    return TimelineQueryPool(ManagedPtr(new ImplTimelineQueryPool(this->make_weak(), info)));
+// TODO(capi): switch to create function when it's ready
+#if 0
+    return TimelineQueryPool(ManagedPtr(
+        new ImplTimelineQueryPool(self, info),
+        [](daxa::ManagedSharedState * self_ptr)
+        {
+            delete reinterpret_cast<ImplTimelineQueryPool *>(self_ptr);
+        }));
+#endif
 }
 
 auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId buffer, daxa_BufferDeviceAddress * out_bda) -> daxa_Result
 {
     auto const & impl = *as<ImplDevice>();
-    return BufferDeviceAddress{static_cast<u64>(impl.slot(id).device_address)};
+    return BufferDeviceAddress{static_cast<u64>(self->slot(id).device_address)};
 }
 
 auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId buffer, void ** out_ptr) -> daxa_Result
 {
     auto const & impl = *as<ImplDevice>();
     DAXA_DBG_ASSERT_TRUE_M(
-        impl.slot(id).host_address != nullptr,
+        self->slot(id).host_address != nullptr,
         "host buffer address is only available if the buffer is created with either of the following memory flags: HOST_ACCESS_RANDOM, HOST_ACCESS_SEQUENTIAL_WRITE");
-    return impl.slot(id).host_address;
+    return self->slot(id).host_address;
 }
 
 auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
@@ -353,12 +419,13 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
     bool parameters_valid = true;
     // Size must be larger then one.
     parameters_valid = parameters_valid && info->size > 0;
-    if (!parameters_valid) return DAXA_RESULT_INVALID_BUFFER_INFO;
+    if (!parameters_valid)
+        return DAXA_RESULT_INVALID_BUFFER_INFO;
 
     // --- End Parameter Validation ---
 
     auto [id, ret] = self->gpu_shader_resource_table.buffer_slots.new_slot();
-    ret.info = std::bit_cast<BufferInfo>(*buffer_info);
+    ret.info = std::bit_cast<BufferInfo>(*info);
     ret.info_name = ret.info.name;
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
 
@@ -397,7 +464,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
             .priority = 0.5f,
         };
 
-        [[maybe_unused]] VkResult const vk_create_buffer_result = vmaCreateBuffer(this->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, &vma_allocation_info);
+        [[maybe_unused]] VkResult const vk_create_buffer_result = vmaCreateBuffer(self->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &ret.vk_buffer, &ret.vma_allocation, &vma_allocation_info);
         DAXA_DBG_ASSERT_TRUE_M(vk_create_buffer_result == VK_SUCCESS, "failed to create buffer");
     }
     else
@@ -407,10 +474,10 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
         // TODO(pahrens): Add validation for memory type requirements.
 
-        vkCreateBuffer(this->vk_device, &vk_buffer_create_info, nullptr, &ret.vk_buffer);
+        vkCreateBuffer(self->vk_device, &self->vk_buffer_create_info, nullptr, &ret.vk_buffer);
 
         vmaBindBufferMemory2(
-            this->vma_allocator,
+            self->vma_allocator,
             mem_block.allocation,
             manual_info.offset,
             ret.vk_buffer,
@@ -423,7 +490,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
         .buffer = ret.vk_buffer,
     };
 
-    ret.device_address = vkGetBufferDeviceAddress(vk_device, &vk_buffer_device_address_info);
+    ret.device_address = vkGetBufferDeviceAddress(self->vk_device, &vk_buffer_device_address_info);
 
     ret.host_address = host_accessible ? vma_allocation_info.pMappedData : nullptr;
     ret.zombie = false;
@@ -450,17 +517,17 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_ImageId * out_id) -> daxa_Result
 {
     auto & impl = *as<ImplDevice>();
-    return impl.new_image(info);
+    return self->new_image(info);
 }
 auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id) -> daxa_Result
 {
     auto & impl = *as<ImplDevice>();
-    return impl.new_image_view(info);
+    return self->new_image_view(info);
 }
 auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, daxa_SamplerId * out_id) -> daxa_Result
 {
     auto & impl = *as<ImplDevice>();
-    return impl.new_sampler(info);
+    return self->new_sampler(info);
 }
 
 #define _DAXA_DECL_DVC_GPU_RES_FN(NAME, Name, name)                                                                   \
@@ -473,9 +540,9 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }                                                                                                                 \
     auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                                 \
     {                                                                                                                 \
-        return id.value != 0 && impl.gpu_shader_resource_table.name##_slots.is_id_valid(id);                          \
+        return id.value != 0 && self->gpu_shader_resource_table.name##_slots.is_id_valid(id);                         \
     }                                                                                                                 \
-    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id)                                                 \
+    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id)                                                   \
     {                                                                                                                 \
         DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_zombies_mtx});                         \
         u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(self->main_queue_cpu_timeline);                   \
@@ -519,7 +586,7 @@ auto daxa_destroy_device(daxa_Device self) -> daxa_Result
 
 // --- Begin Internal Functions ---
 
-auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Result>
+auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Device>
 {
     auto * self = new daxa_ImplDevice;
     self->vk_physical_device = physical_device;
@@ -1345,7 +1412,7 @@ auto daxa_ImplDevice::new_image_view(ImageViewInfo const & image_view_info) -> I
             .b = VK_COMPONENT_SWIZZLE_IDENTITY,
             .a = VK_COMPONENT_SWIZZLE_IDENTITY,
         },
-        .subresourceRange = make_subressource_range(slice, parent_image_slot.aspect_flags),
+        .subresourceRange = make_subresource_range(slice, parent_image_slot.aspect_flags),
     };
     [[maybe_unused]] VkResult const result = vkCreateImageView(vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
     DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS, "failed to create image view");

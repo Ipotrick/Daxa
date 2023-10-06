@@ -1,6 +1,7 @@
 #pragma once
 
 #include <daxa/c/instance.h>
+#include <atomic>
 
 struct daxa_ImplInstance
 {

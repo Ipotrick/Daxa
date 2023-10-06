@@ -2,8 +2,8 @@
 
 namespace daxa
 {
-    ManagedPtr::ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deleter) 
-    : object{ptr}, deleter{deleter}
+    ManagedPtr::ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deleter)
+        : object{ptr}, deleter{deleter}
     {
         DAXA_ATOMIC_FETCH_INC(object->strong_count);
     }
@@ -323,10 +323,9 @@ namespace daxa
         return VK_IMAGE_ASPECT_COLOR_BIT;
     }
 
-    auto make_subressource_range(ImageMipArraySlice const& slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
+    auto make_subresource_range(ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
     {
-        return VkImageSubresourceRange
-        {
+        return VkImageSubresourceRange{
             .aspectMask = aspect,
             .baseMipLevel = slice.base_mip_level,
             .levelCount = slice.level_count,

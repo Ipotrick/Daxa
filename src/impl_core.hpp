@@ -60,6 +60,8 @@
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
 
+#include <daxa/types.hpp>
+
 namespace daxa
 {
     static inline constexpr u32 MAX_PUSH_CONSTANT_WORD_SIZE = {32};
@@ -77,7 +79,22 @@ namespace daxa
 
     auto infer_aspect_from_format(Format format) -> VkImageAspectFlags;
 
-    auto make_subressource_range(ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange;
+    auto make_subresource_range(ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange;
 
     auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers;
+
+    auto infer_aspect_from_format(VkFormat format) -> VkImageAspectFlags
+    {
+        return infer_aspect_from_format(*reinterpret_cast<Format const *>(&format));
+    }
+
+    auto make_subresource_range(daxa_ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
+    {
+        return make_subresource_range(*reinterpret_cast<ImageMipArraySlice const *>(&slice), aspect);
+    }
+
+    auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers
+    {
+        return make_subresource_layers(*reinterpret_cast<ImageArraySlice const *>(&slice), aspect);
+    }
 } // namespace daxa

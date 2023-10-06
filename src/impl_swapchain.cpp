@@ -1,4 +1,6 @@
+#include "impl_core.hpp"
 #include "impl_swapchain.hpp"
+#include "impl_device.hpp"
 
 #include <utility>
 
@@ -46,7 +48,7 @@ namespace daxa
         VkResult const err = vkAcquireNextImageKHR(
             impl.device->vk_device,
             impl.vk_swapchain, UINT64_MAX,
-            acquire_semaphore.as<ImplBinarySemaphore>()->vk_semaphore,
+            acquire_semaphore.as<daxa_ImplBinarySemaphore>()->vk_semaphore,
             nullptr,
             &impl.current_image_index);
         DAXA_DBG_ASSERT_TRUE_M(
@@ -166,10 +168,15 @@ namespace daxa
         return std::numeric_limits<usize>::max();
     }
 
-    ImplSwapchain::ImplSwapchain(daxa_Device a_device, SwapchainInfo a_info)
+    ImplSwapchain::ImplSwapchain(daxa_Device a_device, daxa_SwapchainInfo a_info)
         : device{a_device},
-          info{std::move(a_info)},
-          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(new ImplTimelineSemaphore{this->device, TimelineSemaphoreInfo{.initial_value = 0, .name = this->info.name + " gpu timeline"}})}}
+          info{a_info}, // TODO(capi) needs to make std::string storage for name!!
+          gpu_frame_timeline{TimelineSemaphore{ManagedPtr(
+              daxa_ImplTimelineSemaphore::create(this->device, daxa_TimelineSemaphoreInfo{.initial_value = 0, .name = {/* this->info.name + " gpu timeline" */}}),
+              [](daxa::ManagedSharedState * self_ptr)
+              {
+                  delete reinterpret_cast<daxa_ImplTimelineSemaphore *>(self_ptr);
+              })}}
     {
         recreate_surface();
 
@@ -198,24 +205,24 @@ namespace daxa
         for (u32 i = 0; i < this->info.max_allowed_frames_in_flight; i++)
         {
             acquire_semaphores.push_back(BinarySemaphore{
-                ManagedPtr(new ImplBinarySemaphore{
-                    this->device,
-                    BinarySemaphoreInfo{
-                        .name = this->info.name + ", image " + std::to_string(i) + " acquire semaphore",
-                    },
-                }),
+                ManagedPtr(
+                    daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " acquire semaphore" */}}),
+                    [](daxa::ManagedSharedState * self_ptr)
+                    {
+                        delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
+                    }),
             });
         }
         // We have a present semaphore for each swapchain image.
         for (u32 i = 0; i < this->images.size(); i++)
         {
             present_semaphores.push_back(BinarySemaphore{
-                ManagedPtr(new ImplBinarySemaphore{
-                    this->device,
-                    BinarySemaphoreInfo{
-                        .name = this->info.name + ", image " + std::to_string(i) + " present semaphore",
-                    },
-                }),
+                ManagedPtr(
+                    daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " present semaphore" */}}),
+                    [](daxa::ManagedSharedState * self_ptr)
+                    {
+                        delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
+                    }),
             });
         }
     }
@@ -306,7 +313,8 @@ namespace daxa
                 .format = static_cast<Format>(this->vk_surface_format.format),
                 .size = {this->surface_extent.x, this->surface_extent.y, 1},
                 .usage = usage,
-                .name = this->info.name + " Image #" + std::to_string(i),
+                // TODO(capi) needs a std::string backing
+                .name = {}, /* this->info.name + " Image #" + std::to_string(i) */
             };
             this->images[i] = this->device->new_swapchain_image(
                 swapchain_images[i], vk_surface_format.format, i, usage, image_info);
@@ -314,7 +322,7 @@ namespace daxa
 
         if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !this->info.name.empty())
         {
-            auto swapchain_name = this->info.name;
+            auto swapchain_name = std::string(this->info.name);
             VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,

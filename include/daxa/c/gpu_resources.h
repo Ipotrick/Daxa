@@ -42,7 +42,7 @@ typedef struct
 typedef struct
 {
     size_t size;
-    daxa_AllocateInfo allocate_info;
+    daxa_Variant(daxa_AllocInfoUnion) allocate_info;
     daxa_StringView name;
 } daxa_BufferInfo;
 
@@ -111,7 +111,7 @@ typedef struct
 
 static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
     .size = 0,
-    .allocate_info = {.index = 0, .auto_alloc_info = 0},
+    .allocate_info = {.index = 0, .values = {.auto_alloc_info = 0}},
     .name = 0,
 };
 static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
@@ -123,7 +123,7 @@ static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
     .array_layer_count = 1,
     .sample_count = 1,
     .usage = 0,
-    .allocate_info = {.index = 0, .auto_alloc_info = 0},
+    .allocate_info = {.index = 0, .values = {.auto_alloc_info = 0}},
     .name = 0,
 };
 static const daxa_ImageViewInfo DAXA_DEFAULT_IMAGE_VIEW_INFO = {

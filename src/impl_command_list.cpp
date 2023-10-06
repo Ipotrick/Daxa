@@ -4,6 +4,7 @@
 
 #include "impl_sync.hpp"
 #include "impl_device.hpp"
+#include "impl_core.hpp"
 
 /// --- Begin Helpers ---
 
@@ -21,7 +22,7 @@ auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barri
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = vk_image,
-        .subresourceRange = make_subressource_range(image_barrier.image_slice, aspect_flags),
+        .subresourceRange = make_subresource_range(image_barrier.image_slice, aspect_flags),
     };
 }
 
@@ -192,9 +193,9 @@ void daxa_cmd_blit_image_to_image(daxa_CommandList self, daxa_ImageBlitInfo cons
     auto const & dst_slot = self->device->slot(info->dst_image);
     VkImageBlit const vk_blit{
         .srcSubresource = make_subresource_layers(info->src_slice, src_slot.aspect_flags),
-        .srcOffsets = { info->src_offsets[0], info->src_offsets[1] },
+        .srcOffsets = {info->src_offsets[0], info->src_offsets[1]},
         .dstSubresource = make_subresource_layers(info->dst_slice, dst_slot.aspect_flags),
-        .dstOffsets = { info->dst_offsets[0], info->dst_offsets[1] },
+        .dstOffsets = {info->dst_offsets[0], info->dst_offsets[1]},
     };
     vkCmdBlitImage(
         self->vk_cmd_buffer,
@@ -231,7 +232,7 @@ daxa_cmd_clear_image(daxa_CommandList self, daxa_ImageClearInfo const * info)
         {
             return DAXA_RESULT_INVALID_CLEAR_VALUE;
         }
-        VkImageSubresourceRange sub_range = make_subressource_range(info->dst_slice, img_slot.aspect_flags);
+        VkImageSubresourceRange sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
         vkCmdClearDepthStencilImage(
             self->vk_cmd_buffer,
             img_slot.vk_image,
@@ -246,7 +247,7 @@ daxa_cmd_clear_image(daxa_CommandList self, daxa_ImageClearInfo const * info)
         {
             return DAXA_RESULT_INVALID_CLEAR_VALUE;
         }
-        VkImageSubresourceRange sub_range = make_subressource_range(info->dst_slice, img_slot.aspect_flags);
+        VkImageSubresourceRange sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
         vkCmdClearColorImage(
             self->vk_cmd_buffer,
             img_slot.vk_image,
@@ -298,7 +299,7 @@ void daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList self, daxa_Imag
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = img_slot.vk_image,
-        .subresourceRange = make_subressource_range(info->image_slice, img_slot.aspect_flags),
+        .subresourceRange = make_subresource_range(info->image_slice, img_slot.aspect_flags),
     };
 }
 struct SplitBarrierDependencyInfoBuffer
@@ -573,14 +574,14 @@ void daxa_destroy_command_list(daxa_CommandList self)
 {
     vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
 
-    u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
+    u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(self->device->main_queue_cpu_timeline);
+    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->device->main_queue_zombies_mtx});
 
-    device->main_queue_command_list_zombies.push_front({
+    self->device->main_queue_command_list_zombies.push_front({
         main_queue_cpu_timeline,
         CommandListZombie{
-            .vk_cmd_buffer = vk_cmd_buffer,
-            .vk_cmd_pool = vk_cmd_pool,
+            .vk_cmd_buffer = self->vk_cmd_buffer,
+            .vk_cmd_pool = self->vk_cmd_pool,
         },
     });
 }
@@ -593,14 +594,14 @@ void daxa_destroy_baked_commands(daxa_BakedCommands baked_commands)
 
 /// --- Begin Internals ---
 
-auto daxa_ImplCommandList::create(daxa_Device device, daxa_CommandListInfo const * info, VkCommandBuffer vk_cmd_buffer, VkCommandPool vk_cmd_pool) -> std::pair<daxa_ImplCommandList, daxa_Result>
+auto daxa_ImplCommandList::create(daxa_Device device, daxa_CommandListInfo const * info, VkCommandBuffer vk_cmd_buffer, VkCommandPool vk_cmd_pool) -> std::pair<daxa_CommandList, daxa_Result>
 {
-    daxa_ImplCommandList ret = {
-        .device = device,
-        .info = *info,
-        .vk_cmd_buffer = vk_cmd_buffer,
-        .vk_cmd_pool = vk_cmd_pool,
-    };
+    auto * self = new daxa_ImplCommandList;
+    auto & ret = *self;
+    ret.device = device,
+    ret.info = *info,
+    ret.vk_cmd_buffer = vk_cmd_buffer,
+    ret.vk_cmd_pool = vk_cmd_pool,
     ret.info_name = {info->name.data, info->name.size};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     VkCommandBufferBeginInfo const vk_command_buffer_begin_info{
@@ -632,7 +633,7 @@ auto daxa_ImplCommandList::create(daxa_Device device, daxa_CommandListInfo const
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
-    return {ret, DAXA_RESULT_SUCCESS};
+    return std::pair<daxa_CommandList, daxa_Result>{self, DAXA_RESULT_SUCCESS};
 }
 
 void daxa_ImplCommandList::flush_barriers()
@@ -869,7 +870,7 @@ namespace daxa
                 .depth = clear_value.depth,
                 .stencil = clear_value.stencil,
             };
-            VkImageSubresourceRange sub_range = make_subressource_range(info.dst_slice, img_slot.aspect_flags);
+            VkImageSubresourceRange sub_range = make_subresource_range(info.dst_slice, img_slot.aspect_flags);
             vkCmdClearDepthStencilImage(
                 impl.vk_cmd_buffer,
                 impl.device->slot(info.dst_image).vk_image,
@@ -903,7 +904,7 @@ namespace daxa
                 },
                 info.clear_value);
 
-            VkImageSubresourceRange sub_range = make_subressource_range(info.dst_slice, img_slot.aspect_flags);
+            VkImageSubresourceRange sub_range = make_subresource_range(info.dst_slice, img_slot.aspect_flags);
             vkCmdClearColorImage(
                 impl.vk_cmd_buffer,
                 img_slot.vk_image,
@@ -1182,7 +1183,7 @@ namespace daxa
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .image = img_slot.vk_image,
-            .subresourceRange = make_subressource_range(info.image_slice, img_slot.aspect_flags),
+            .subresourceRange = make_subresource_range(info.image_slice, img_slot.aspect_flags),
         };
     }
 

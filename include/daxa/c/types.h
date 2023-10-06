@@ -227,9 +227,9 @@ daxa_u32mat4x4;
     {                                   \
         _DAXA_VARIANT_INDEX_TYPE index; \
         UNION values;                   \
-    } daxa_Variant##Union;
+    } daxa_Variant##UNION;
 
-#define daxa_Variant(UNION) daxa_Variant##Union
+#define daxa_Variant(UNION) daxa_Variant##UNION
 
 typedef struct
 {
