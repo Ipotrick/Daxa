@@ -11,7 +11,7 @@
 
 namespace daxa
 {
-    struct ImplFsr2Context final : ManagedSharedState
+    struct ImplFsr2Context final : daxa_ImplHandle
     {
         UpscaleInstanceInfo info;
 

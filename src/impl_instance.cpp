@@ -1,3 +1,4 @@
+#include "impl_core.hpp"
 #include "impl_instance.hpp"
 #include "impl_device.hpp"
 

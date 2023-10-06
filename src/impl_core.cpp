@@ -2,10 +2,11 @@
 
 namespace daxa
 {
-    ManagedPtr::ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deleter)
-        : object{ptr}, deleter{deleter}
+    ManagedPtr::ManagedPtr(daxa_ImplHandle * ptr, void (*deleter)(daxa_ImplHandle *))
+        : object{ptr}
     {
         DAXA_ATOMIC_FETCH_INC(object->strong_count);
+        object->deleter = deleter;
     }
     ManagedPtr::~ManagedPtr()
     {
@@ -18,7 +19,6 @@ namespace daxa
     {
         cleanup();
         this->object = other.object;
-        this->deleter = other.deleter;
         if (this->object != nullptr)
         {
             DAXA_ATOMIC_FETCH_INC(this->object->strong_count);
@@ -29,7 +29,6 @@ namespace daxa
     {
         cleanup();
         std::swap(this->object, other.object);
-        std::swap(this->deleter, other.deleter);
         return *this;
     }
 
@@ -37,12 +36,11 @@ namespace daxa
     {
         if (this->object != nullptr)
         {
-            if (DAXA_ATOMIC_FETCH_DEC(this->object->strong_count) == 1)
+            if (DAXA_ATOMIC_FETCH_DEC(object->strong_count) == 1)
             {
-                deleter(object);
+                object->deleter(object);
             }
             this->object = {};
-            this->deleter = {};
         }
     }
 

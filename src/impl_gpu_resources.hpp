@@ -48,6 +48,8 @@ namespace daxa
         ImageViewInfo info = {};
         std::string info_name = {};
         VkImageView vk_image_view = {};
+        // TODO(capi): Maybe revisit, because why was this not here before??
+        bool zombie = {};
     };
 
     struct ImplImageSlot

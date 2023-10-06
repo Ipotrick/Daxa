@@ -83,17 +83,17 @@ namespace daxa
 
     auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers;
 
-    auto infer_aspect_from_format(VkFormat format) -> VkImageAspectFlags
+    inline auto infer_aspect_from_format(VkFormat format) -> VkImageAspectFlags
     {
         return infer_aspect_from_format(*reinterpret_cast<Format const *>(&format));
     }
 
-    auto make_subresource_range(daxa_ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
+    inline auto make_subresource_range(daxa_ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
     {
         return make_subresource_range(*reinterpret_cast<ImageMipArraySlice const *>(&slice), aspect);
     }
 
-    auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers
+    inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers
     {
         return make_subresource_layers(*reinterpret_cast<ImageArraySlice const *>(&slice), aspect);
     }

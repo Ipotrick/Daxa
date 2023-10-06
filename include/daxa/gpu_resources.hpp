@@ -1,6 +1,7 @@
 #pragma once
 
 #include <daxa/types.hpp>
+#include <daxa/c/types.h>
 
 namespace daxa
 {

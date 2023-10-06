@@ -39,7 +39,7 @@ struct CommandListZombie
     VkCommandPool vk_cmd_pool = {};
 };
 
-struct daxa_ImplCommandList final : ManagedSharedState
+struct daxa_ImplCommandList final : daxa_ImplHandle
 {
     daxa_Device device = {};
     daxa_CommandListInfo info = {};

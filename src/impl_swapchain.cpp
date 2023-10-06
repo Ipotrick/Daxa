@@ -3,6 +3,7 @@
 #include "impl_device.hpp"
 
 #include <utility>
+#include <bit>
 
 namespace daxa
 {
@@ -17,7 +18,7 @@ namespace daxa
     auto Swapchain::info() const -> SwapchainInfo const &
     {
         auto const & impl = *as<ImplSwapchain>();
-        return impl.info;
+        return *reinterpret_cast<SwapchainInfo const*>(&impl.info);
     }
 
     auto Swapchain::get_surface_extent() const -> Extent2D
@@ -173,7 +174,7 @@ namespace daxa
           info{a_info}, // TODO(capi) needs to make std::string storage for name!!
           gpu_frame_timeline{TimelineSemaphore{ManagedPtr(
               daxa_ImplTimelineSemaphore::create(this->device, daxa_TimelineSemaphoreInfo{.initial_value = 0, .name = {/* this->info.name + " gpu timeline" */}}),
-              [](daxa::ManagedSharedState * self_ptr)
+              [](daxa_ImplHandle * self_ptr)
               {
                   delete reinterpret_cast<daxa_ImplTimelineSemaphore *>(self_ptr);
               })}}
@@ -192,8 +193,8 @@ namespace daxa
 
         auto format_comparator = [&](auto const & a, auto const & b) -> bool
         {
-            return this->info.surface_format_selector(static_cast<Format>(a.format)) <
-                   this->info.surface_format_selector(static_cast<Format>(b.format));
+            return this->info.surface_format_selector(a.format) <
+                   this->info.surface_format_selector(b.format);
         };
         auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
         DAXA_DBG_ASSERT_TRUE_M(best_format != surface_formats.end(), "No viable formats found");
@@ -207,7 +208,7 @@ namespace daxa
             acquire_semaphores.push_back(BinarySemaphore{
                 ManagedPtr(
                     daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " acquire semaphore" */}}),
-                    [](daxa::ManagedSharedState * self_ptr)
+                    [](daxa_ImplHandle * self_ptr)
                     {
                         delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
                     }),
@@ -219,7 +220,7 @@ namespace daxa
             present_semaphores.push_back(BinarySemaphore{
                 ManagedPtr(
                     daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " present semaphore" */}}),
-                    [](daxa::ManagedSharedState * self_ptr)
+                    [](daxa_ImplHandle * self_ptr)
                     {
                         delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
                     }),
@@ -267,7 +268,7 @@ namespace daxa
 
         cleanup();
 
-        ImageUsageFlags const usage = info.image_usage | ImageUsageFlagBits::COLOR_ATTACHMENT;
+        ImageUsageFlags const usage = std::bit_cast<ImageUsageFlags>(info.image_usage) | ImageUsageFlagBits::COLOR_ATTACHMENT;
 
         VkSwapchainCreateInfoKHR const swapchain_create_info{
             .sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR,
@@ -320,9 +321,9 @@ namespace daxa
                 swapchain_images[i], vk_surface_format.format, i, usage, image_info);
         }
 
-        if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !this->info.name.empty())
+        if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && this->info.name.size != 0)
         {
-            auto swapchain_name = std::string(this->info.name);
+            auto swapchain_name = std::string(this->info.name.data, this->info.name.size);
             VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
@@ -338,7 +339,7 @@ namespace daxa
     {
         for (auto & image : images)
         {
-            this->device->zombify_image(image);
+            this->device->zombify_image(std::bit_cast<daxa_ImageId>(image));
         }
         images.clear();
     }

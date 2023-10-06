@@ -14,7 +14,7 @@ struct EventZombie
     VkEvent vk_event = {};
 };
 
-struct daxa_ImplBinarySemaphore final : daxa::ManagedSharedState
+struct daxa_ImplBinarySemaphore final : daxa_ImplHandle
 {
     daxa_BinarySemaphoreInfo info = {};
     std::string info_name = {};
@@ -23,7 +23,7 @@ struct daxa_ImplBinarySemaphore final : daxa::ManagedSharedState
     static auto create(daxa_Device device, daxa_BinarySemaphoreInfo a_info) -> daxa_BinarySemaphore;
 };
 
-struct daxa_ImplTimelineSemaphore final : daxa::ManagedSharedState
+struct daxa_ImplTimelineSemaphore final : daxa_ImplHandle
 {
     daxa_TimelineSemaphoreInfo info = {};
     std::string info_name = {};
@@ -32,7 +32,7 @@ struct daxa_ImplTimelineSemaphore final : daxa::ManagedSharedState
     static auto create(daxa_Device device, daxa_TimelineSemaphoreInfo a_info) -> daxa_TimelineSemaphore;
 };
 
-struct daxa_ImplEvent final : daxa::ManagedSharedState
+struct daxa_ImplEvent final : daxa_ImplHandle
 {
     daxa_EventInfo info = {};
     std::string info_name = {};

@@ -20,6 +20,14 @@ typedef struct
     size_t size;
 } daxa_StringView;
 
+// This is C polymorphism. All handles actually point to a struct
+// which inherits this
+typedef struct daxa_ImplHandleT
+{
+    uint64_t strong_count;
+    void (*deleter)(struct daxa_ImplHandleT *);
+} daxa_ImplHandle;
+
 typedef enum
 {
     DAXA_RESULT_UNKNOWN = 0,

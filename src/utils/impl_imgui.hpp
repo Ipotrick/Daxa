@@ -5,7 +5,7 @@
 
 namespace daxa
 {
-    struct ImplImGuiRenderer final : ManagedSharedState
+    struct ImplImGuiRenderer final : daxa_ImplHandle
     {
         ImGuiRendererInfo info;
         RasterPipeline raster_pipeline;

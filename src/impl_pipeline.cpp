@@ -25,7 +25,7 @@ daxa_ImplRasterPipeline::daxa_ImplRasterPipeline(daxa_Device a_device, daxa_Rast
     std::vector<VkShaderModule> vk_shader_modules{};
     std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos{};
 
-    this->name_storage = a_info.name.empty() ? std::string("main") : std::string(a_info.name.data(), a_info.name.size());
+    this->name_storage = a_info.name.size == 0 ? std::string("main") : std::string(a_info.name.data, a_info.name.size);
 
     auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage)
     {

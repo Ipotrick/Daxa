@@ -22,11 +22,11 @@
 
 #if DAXA_THREADSAFETY
 #define DAXA_ONLY_IF_THREADSAFETY(x) x
-#define DAXA_ATOMIC_U64 std::atomic_uint64_t
-#define DAXA_ATOMIC_FETCH_INC(x) x.fetch_add(1)
-#define DAXA_ATOMIC_ADD_FETCH(x, v) x.fetch_add(v)
-#define DAXA_ATOMIC_FETCH_DEC(x) x.fetch_sub(1)
-#define DAXA_ATOMIC_FETCH(x) x.load()
+#define DAXA_ATOMIC_U64 uint64_t
+#define DAXA_ATOMIC_FETCH_INC(x) std::atomic_ref<uint64_t>{x}.fetch_add(1)
+#define DAXA_ATOMIC_ADD_FETCH(x, v) std::atomic_ref<uint64_t>{x}.fetch_add(v)
+#define DAXA_ATOMIC_FETCH_DEC(x) std::atomic_ref<uint64_t>{x}.fetch_sub(1)
+#define DAXA_ATOMIC_FETCH(x) std::atomic_ref<uint64_t>{x}.load()
 #else
 #define DAXA_ONLY_IF_THREADSAFETY(x)
 #define DAXA_ATOMIC_U64 uint64_t
@@ -209,15 +209,9 @@ namespace daxa
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
     } // namespace types
 
-    struct ManagedSharedState
-    {
-        DAXA_ATOMIC_U64 strong_count = {};
-        DAXA_ATOMIC_U64 weak_count = {};
-    };
-
     struct ManagedWeakPtr
     {
-        ManagedSharedState * object = {};
+        daxa_ImplHandle * object = {};
 
         template <typename T>
         auto as() -> T *
@@ -249,7 +243,7 @@ namespace daxa
         }
 
         ManagedWeakPtr() = default;
-        explicit ManagedWeakPtr(ManagedSharedState * ptr);
+        explicit ManagedWeakPtr(daxa_ImplHandle * ptr);
         ~ManagedWeakPtr();
 
         ManagedWeakPtr(ManagedWeakPtr const &);
@@ -260,8 +254,7 @@ namespace daxa
 
     struct ManagedPtr
     {
-        ManagedSharedState * object = {};
-        std::function<void(ManagedSharedState *)> deleter = {};
+        daxa_ImplHandle * object = {};
 
         template <typename T>
         auto as() -> T *
@@ -269,7 +262,7 @@ namespace daxa
 #if DAXA_VALIDATION
             DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
             auto ret = reinterpret_cast<T *>(object);
-            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
+            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "bad dynamic cast");
             return ret;
 #else
             return reinterpret_cast<T *>(object);
@@ -289,7 +282,7 @@ namespace daxa
         }
 
         ManagedPtr() = default;
-        ManagedPtr(ManagedSharedState * ptr, std::function<void(ManagedSharedState *)> deleter);
+        ManagedPtr(daxa_ImplHandle * ptr, void (*deleter)(daxa_ImplHandle *));
         ~ManagedPtr();
 
         ManagedPtr(ManagedPtr const &);
@@ -305,6 +298,7 @@ namespace daxa
       private:
         void cleanup();
     };
+
     template <typename T>
     struct Optional
     {

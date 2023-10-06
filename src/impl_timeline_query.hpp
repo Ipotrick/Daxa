@@ -15,7 +15,7 @@ namespace daxa
         VkQueryPool vk_timeline_query_pool = {};
     };
 
-    struct ImplTimelineQueryPool final : ManagedSharedState
+    struct ImplTimelineQueryPool final : daxa_ImplHandle
     {
         TimelineQueryPoolInfo info = {};
         VkQueryPool vk_timeline_query_pool = {};

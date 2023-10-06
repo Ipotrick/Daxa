@@ -34,7 +34,7 @@ namespace daxa
     /// This means the acquire semaphores are not tied to the number of swapchain images like present semaphores but to the number of frames in flight!!
     ///
     /// To limit the frames in flight we employ a timeline semaphore that must be signaled in a submission that uses or after one that uses the swapchain image.
-    struct ImplSwapchain final : ManagedSharedState
+    struct ImplSwapchain final : daxa_ImplHandle
     {
         daxa_Device device = {};
         daxa_SwapchainInfo info = {};

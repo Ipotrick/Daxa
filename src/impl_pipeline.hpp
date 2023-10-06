@@ -13,7 +13,7 @@ struct PipelineZombie
     VkPipeline vk_pipeline = {};
 };
 
-struct ImplPipeline : ManagedSharedState
+struct ImplPipeline : daxa_ImplHandle
 {
     explicit ImplPipeline(daxa_Device a_device);
 

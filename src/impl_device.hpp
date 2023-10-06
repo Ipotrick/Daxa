@@ -14,7 +14,7 @@
 
 using namespace daxa;
 
-struct daxa_ImplDevice final : ManagedSharedState
+struct daxa_ImplDevice final : daxa_ImplHandle
 {
     daxa_Instance instance = {};
     VkPhysicalDevice vk_physical_device = {};
@@ -98,4 +98,9 @@ struct daxa_ImplDevice final : ManagedSharedState
     void cleanup_image(daxa_ImageId id);
     void cleanup_image_view(daxa_ImageViewId id);
     void cleanup_sampler(daxa_SamplerId id);
+
+    void zombify_buffer(daxa_BufferId id);
+    void zombify_image(daxa_ImageId id);
+    void zombify_image_view(daxa_ImageViewId id);
+    void zombify_sampler(daxa_SamplerId id);
 };

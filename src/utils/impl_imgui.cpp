@@ -1154,7 +1154,7 @@ namespace daxa
     ImGuiRenderer::ImGuiRenderer(ImGuiRendererInfo const & info)
         : ManagedPtr{
               new ImplImGuiRenderer(info),
-              [](daxa::ManagedSharedState * self_ptr)
+              [](daxa_ImplHandle * self_ptr)
               {
                   delete reinterpret_cast<ImGuiRenderer *>(self_ptr);
               }}

@@ -6,7 +6,7 @@
 
 namespace daxa
 {
-    struct ImplMemoryBlock : ManagedSharedState
+    struct ImplMemoryBlock : daxa_ImplHandle
     {
         ImplMemoryBlock(daxa_Device a_device, MemoryBlockInfo const & info, VmaAllocation allocation, VmaAllocationInfo alloc_info);
         ~ImplMemoryBlock();
