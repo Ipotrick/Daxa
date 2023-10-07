@@ -18,7 +18,7 @@ namespace daxa
     auto Swapchain::info() const -> SwapchainInfo const &
     {
         auto const & impl = *as<ImplSwapchain>();
-        return *reinterpret_cast<SwapchainInfo const*>(&impl.info);
+        return *reinterpret_cast<SwapchainInfo const *>(&impl.info);
     }
 
     auto Swapchain::get_surface_extent() const -> Extent2D
@@ -173,11 +173,13 @@ namespace daxa
         : device{a_device},
           info{a_info}, // TODO(capi) needs to make std::string storage for name!!
           gpu_frame_timeline{TimelineSemaphore{ManagedPtr(
-              daxa_ImplTimelineSemaphore::create(this->device, daxa_TimelineSemaphoreInfo{.initial_value = 0, .name = {/* this->info.name + " gpu timeline" */}}),
-              [](daxa_ImplHandle * self_ptr)
-              {
-                  delete reinterpret_cast<daxa_ImplTimelineSemaphore *>(self_ptr);
-              })}}
+              daxa_ImplTimelineSemaphore::create(this->device, daxa_TimelineSemaphoreInfo{.initial_value = 0, .name = {/* this->info.name + " gpu timeline" */}})
+              // TODO(capi) where does this go now??
+              // [](daxa_ImplHandle * self_ptr)
+              // {
+              //     delete reinterpret_cast<daxa_ImplTimelineSemaphore *>(self_ptr);
+              // }
+              )}}
     {
         recreate_surface();
 
@@ -206,24 +208,24 @@ namespace daxa
         for (u32 i = 0; i < this->info.max_allowed_frames_in_flight; i++)
         {
             acquire_semaphores.push_back(BinarySemaphore{
-                ManagedPtr(
-                    daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " acquire semaphore" */}}),
-                    [](daxa_ImplHandle * self_ptr)
-                    {
-                        delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
-                    }),
+                ManagedPtr(daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " acquire semaphore" */}})),
+                // TODO(capi): where does this go now?
+                // [](daxa_ImplHandle * self_ptr)
+                //     {
+                //         delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
+                //     }
             });
         }
         // We have a present semaphore for each swapchain image.
         for (u32 i = 0; i < this->images.size(); i++)
         {
             present_semaphores.push_back(BinarySemaphore{
-                ManagedPtr(
-                    daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " present semaphore" */}}),
-                    [](daxa_ImplHandle * self_ptr)
-                    {
-                        delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
-                    }),
+                ManagedPtr(daxa_ImplBinarySemaphore::create(this->device, daxa_BinarySemaphoreInfo{.name = {/* this->info.name + ", image " + std::to_string(i) + " present semaphore" */}})),
+                // TODO(capi): where does this go now?
+                // [](daxa_ImplHandle * self_ptr)
+                //     {
+                //         delete reinterpret_cast<daxa_ImplBinarySemaphore *>(self_ptr);
+                //     }
             });
         }
     }

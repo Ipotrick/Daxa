@@ -61,6 +61,7 @@
 #include <vk_mem_alloc.h>
 
 #include <daxa/types.hpp>
+#include <daxa/c/types.h>
 
 namespace daxa
 {
@@ -98,3 +99,7 @@ namespace daxa
         return make_subresource_layers(*reinterpret_cast<ImageArraySlice const *>(&slice), aspect);
     }
 } // namespace daxa
+
+struct daxa_ImplHandle {
+    std::atomic_uint64_t strong_count = {};
+};

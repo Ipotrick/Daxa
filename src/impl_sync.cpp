@@ -16,8 +16,8 @@ daxa_binary_semaphore_get_vk_semaphore(daxa_BinarySemaphore self)
 void daxa_binary_semaphore_destroy(daxa_BinarySemaphore self)
 {
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->device->main_queue_zombies_mtx});
-        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(self->device->main_queue_cpu_timeline);
+        std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+        u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
         self->device->main_queue_semaphore_zombies.emplace_back(
             main_queue_cpu_timeline,
             SemaphoreZombie{
@@ -76,8 +76,8 @@ daxa_timeline_semaphore_get_vk_semaphore(daxa_TimelineSemaphore self)
 void daxa_timeline_semaphore_destroy(daxa_TimelineSemaphore self)
 {
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->device->main_queue_zombies_mtx});
-        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(self->device->main_queue_cpu_timeline);
+        std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+        u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 
         self->device->main_queue_semaphore_zombies.emplace_back(
             main_queue_cpu_timeline,
@@ -97,8 +97,8 @@ daxa_event_info(daxa_Event self)
 void daxa_event_destroy(daxa_Event self)
 {
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->device->main_queue_zombies_mtx});
-        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(self->device->main_queue_cpu_timeline);
+        std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+        u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 
         self->device->main_queue_split_barrier_zombies.emplace_back(
             main_queue_cpu_timeline,

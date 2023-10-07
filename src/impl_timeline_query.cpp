@@ -66,8 +66,8 @@ namespace daxa
 
     ImplTimelineQueryPool::~ImplTimelineQueryPool() // NOLINT(bugprone-exception-escape)
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
-        u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
+        std::unique_lock const lock{device->main_queue_zombies_mtx};
+        u64 const main_queue_cpu_timeline = device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
 
         device->main_queue_timeline_query_pool_zombies.emplace_back(
             main_queue_cpu_timeline,

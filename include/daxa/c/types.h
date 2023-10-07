@@ -2,31 +2,7 @@
 #define __DAXA_TYPES_H__
 
 #include <vulkan/vulkan.h>
-#include <stdint.h>
-
-#if defined(__cplusplus)
-#define DAXA_EXPORT extern "C"
-#else
-#define DAXA_EXPORT
-#endif
-
-typedef uint64_t daxa_Flags;
-
-typedef char daxa_Bool8;
-
-typedef struct
-{
-    char const * data;
-    size_t size;
-} daxa_StringView;
-
-// This is C polymorphism. All handles actually point to a struct
-// which inherits this
-typedef struct daxa_ImplHandleT
-{
-    uint64_t strong_count;
-    void (*deleter)(struct daxa_ImplHandleT *);
-} daxa_ImplHandle;
+#include <daxa/c/core.h>
 
 typedef enum
 {
@@ -275,9 +251,6 @@ typedef struct
     daxa_MemoryFlags flags;
 } daxa_MemoryBlockInfo;
 
-struct daxa_ImplMemoryBlock;
-typedef struct daxa_ImplMemoryBlock * daxa_MemoryBlock;
-
 DAXA_EXPORT daxa_Result
 daxa_memory_destroy(daxa_MemoryBlock memory_block);
 
@@ -299,8 +272,6 @@ typedef struct
     uint32_t query_count;
     daxa_StringView name;
 } daxa_TimelineQueryPoolInfo;
-
-typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
 
 DAXA_EXPORT daxa_TimelineQueryPoolInfo const *
 daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);

@@ -574,8 +574,8 @@ void daxa_destroy_command_list(daxa_CommandList self)
 {
     vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
 
-    u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(self->device->main_queue_cpu_timeline);
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->device->main_queue_zombies_mtx});
+    u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+    std::unique_lock const lock{self->device->main_queue_zombies_mtx};
 
     self->device->main_queue_command_list_zombies.push_front({
         main_queue_cpu_timeline,
@@ -718,8 +718,8 @@ ImplCommandList::~ImplCommandList() // NOLINT(bugprone-exception-escape)
 {
     vkResetCommandPool(device->vk_device, this->vk_cmd_pool, {});
 
-    u64 const main_queue_cpu_timeline = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
+    u64 const main_queue_cpu_timeline = device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+    std::unique_lock const lock{device->main_queue_zombies_mtx};
 
     device->main_queue_command_list_zombies.push_front({
         main_queue_cpu_timeline,

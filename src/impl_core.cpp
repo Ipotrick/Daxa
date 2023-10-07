@@ -2,11 +2,10 @@
 
 namespace daxa
 {
-    ManagedPtr::ManagedPtr(daxa_ImplHandle * ptr, void (*deleter)(daxa_ImplHandle *))
+    ManagedPtr::ManagedPtr(daxa_Handle ptr)
         : object{ptr}
     {
-        DAXA_ATOMIC_FETCH_INC(object->strong_count);
-        object->deleter = deleter;
+        daxa_refcnt_inc(object);
     }
     ManagedPtr::~ManagedPtr()
     {
@@ -21,7 +20,7 @@ namespace daxa
         this->object = other.object;
         if (this->object != nullptr)
         {
-            DAXA_ATOMIC_FETCH_INC(this->object->strong_count);
+            daxa_refcnt_inc(this->object);
         }
         return *this;
     }
@@ -36,10 +35,7 @@ namespace daxa
     {
         if (this->object != nullptr)
         {
-            if (DAXA_ATOMIC_FETCH_DEC(object->strong_count) == 1)
-            {
-                object->deleter(object);
-            }
+            daxa_refcnt_dec(object);
             this->object = {};
         }
     }

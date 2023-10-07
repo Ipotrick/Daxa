@@ -337,8 +337,8 @@ ImplPipeline::ImplPipeline(daxa_Device a_device)
 
 ImplPipeline::~ImplPipeline() // NOLINT(bugprone-exception-escape)
 {
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{device->main_queue_zombies_mtx});
-    u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(device->main_queue_cpu_timeline);
+    std::unique_lock const lock{device->main_queue_zombies_mtx};
+    u64 const main_queue_cpu_timeline_value = device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     device->main_queue_pipeline_zombies.push_front({
         main_queue_cpu_timeline_value,
         PipelineZombie{

@@ -18,8 +18,6 @@ typedef struct
     daxa_StringView name;
 } daxa_ComputePipelineInfo;
 
-typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
-
 DAXA_EXPORT daxa_ComputePipelineInfo const *
 daxa_compute_pipeline_info(daxa_ComputePipeline compute_pipeline);
 
@@ -138,8 +136,6 @@ typedef struct
     uint32_t push_constant_size;
     daxa_StringView name;
 } daxa_RasterPipelineInfo;
-
-typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
 
 DAXA_EXPORT daxa_RasterPipelineInfo const *
 daxa_raster_pipeline_info(daxa_RasterPipeline raster_pipeline);

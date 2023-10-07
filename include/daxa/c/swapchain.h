@@ -34,8 +34,6 @@ typedef struct
     daxa_StringView name;
 } daxa_SwapchainInfo;
 
-typedef struct daxa_ImplSwapchain * daxa_Swapchain;
-
 DAXA_EXPORT VkExtent2D
 daxa_swp_get_surface_extent(daxa_Swapchain swapchain);
 DAXA_EXPORT VkFormat

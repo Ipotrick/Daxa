@@ -160,7 +160,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 {
     self->main_queue_collect_garbage();
 
-    u64 const current_main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH_INC(self->main_queue_cpu_timeline) + 1;
+    u64 const current_main_queue_cpu_timeline_value = self->main_queue_cpu_timeline.fetch_add(1) + 1;
 
     std::pair<u64, std::vector<ManagedPtr>> submit = {current_main_queue_cpu_timeline_value, {}};
 
@@ -254,7 +254,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     // };
     // vkQueueSubmit(self->main_queue_vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
 
-    // DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_zombies_mtx});
+    // std::unique_lock const lock{self->main_queue_zombies_mtx};
     // self->main_queue_submits_zombies.push_front(std::move(submit));
 
     return DAXA_RESULT_SUCCESS;
@@ -347,7 +347,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device self, daxa_ComputePipelineInfo
 }
 auto daxa_dvc_create_command_list(daxa_Device self, daxa_CommandListInfo const * info, daxa_CommandList * out_command_list) -> daxa_Result
 {
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_command_pool_buffer_recycle_mtx});
+    std::unique_lock const lock{self->main_queue_command_pool_buffer_recycle_mtx};
     auto [pool, buffer] = self->buffer_pool_pool.get(self);
 // TODO(capi): switch to create function when it's ready
 #if 0
@@ -559,8 +559,8 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }                                                                                                                 \
     auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                                   \
     {                                                                                                                 \
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{self->main_queue_zombies_mtx});                         \
-        u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(self->main_queue_cpu_timeline);                   \
+        std::unique_lock const lock{self->main_queue_zombies_mtx};                                                    \
+        u64 const main_queue_cpu_timeline_value = self->main_queue_cpu_timeline.load(std::memory_order::relaxed);     \
         if (!daxa_dvc_is_##name##_valid(self, id))                                                                    \
         {                                                                                                             \
             return DAXA_RESULT_INVALID_##NAME##_ID;                                                                   \
@@ -1094,7 +1094,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
 
 void daxa_ImplDevice::main_queue_collect_garbage()
 {
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock lock{this->main_queue_zombies_mtx});
+    std::unique_lock lock{this->main_queue_zombies_mtx};
 
     u64 gpu_timeline_value = std::numeric_limits<u64>::max();
     [[maybe_unused]] auto vk_result = vkGetSemaphoreCounterValue(this->vk_device, this->vk_main_queue_gpu_timeline_semaphore, &gpu_timeline_value);
@@ -1122,7 +1122,7 @@ void daxa_ImplDevice::main_queue_collect_garbage()
         [](auto & /* command_lists */) {});
     lock.lock();
     {
-        DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const l_lock{this->main_queue_command_pool_buffer_recycle_mtx});
+        std::unique_lock const l_lock{this->main_queue_command_pool_buffer_recycle_mtx};
         check_and_cleanup_gpu_resources(
             this->main_queue_command_list_zombies,
             [&](auto & command_list_zombie)
@@ -1370,8 +1370,8 @@ void daxa_ImplDevice::zombify_buffer(daxa_BufferId id)
 {
     // TODO(capi): Finish impl!
 #if 0
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
-    u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+    std::unique_lock const lock{this->main_queue_zombies_mtx};
+    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.buffer_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie == false,
                            "detected free after free - buffer already is a zombie");
     gpu_shader_resource_table.buffer_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie = true;
@@ -1383,8 +1383,8 @@ void daxa_ImplDevice::zombify_image(daxa_ImageId id)
 {
     // TODO(capi): Finish impl!
 #if 0
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
-    u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+    std::unique_lock const lock{this->main_queue_zombies_mtx};
+    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie == false,
                            "detected free after free - image already is a zombie");
     gpu_shader_resource_table.image_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie = true;
@@ -1396,8 +1396,8 @@ void daxa_ImplDevice::zombify_image_view(daxa_ImageViewId id)
 {
     // TODO(capi): Finish impl!
 #if 0
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
-    u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+    std::unique_lock const lock{this->main_queue_zombies_mtx};
+    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline_value, std::bit_cast<GPUResourceId>(id)});
 #endif
 }
@@ -1406,8 +1406,8 @@ void daxa_ImplDevice::zombify_sampler(daxa_SamplerId id)
 {
     // TODO(capi): Finish impl!
 #if 0
-    DAXA_ONLY_IF_THREADSAFETY(std::unique_lock const lock{this->main_queue_zombies_mtx});
-    u64 const main_queue_cpu_timeline_value = DAXA_ATOMIC_FETCH(this->main_queue_cpu_timeline);
+    std::unique_lock const lock{this->main_queue_zombies_mtx};
+    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.sampler_slots.dereference_id(id).zombie == false,
                            "detected free after free - sampler already is a zombie");
     gpu_shader_resource_table.sampler_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie = true;

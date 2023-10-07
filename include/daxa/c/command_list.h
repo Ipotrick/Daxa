@@ -341,10 +341,6 @@ typedef struct
 
 static const daxa_DepthBiasInfo DAXA_DEFAULT_DEPTH_BIAS_INFO = {};
 
-typedef struct daxa_ImplCommandList * daxa_CommandList;
-
-typedef struct daxa_ImplBakedCommands * daxa_BakedCommands;
-
 DAXA_EXPORT void
 daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
 DAXA_EXPORT void

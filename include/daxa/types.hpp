@@ -18,23 +18,7 @@
 #include <bit>
 
 #include <daxa/core.hpp>
-#include <daxa/c/device.h>
-
-#if DAXA_THREADSAFETY
-#define DAXA_ONLY_IF_THREADSAFETY(x) x
-#define DAXA_ATOMIC_U64 uint64_t
-#define DAXA_ATOMIC_FETCH_INC(x) std::atomic_ref<uint64_t>{x}.fetch_add(1)
-#define DAXA_ATOMIC_ADD_FETCH(x, v) std::atomic_ref<uint64_t>{x}.fetch_add(v)
-#define DAXA_ATOMIC_FETCH_DEC(x) std::atomic_ref<uint64_t>{x}.fetch_sub(1)
-#define DAXA_ATOMIC_FETCH(x) std::atomic_ref<uint64_t>{x}.load()
-#else
-#define DAXA_ONLY_IF_THREADSAFETY(x)
-#define DAXA_ATOMIC_U64 uint64_t
-#define DAXA_ATOMIC_FETCH_INC(x) (x++)
-#define DAXA_ATOMIC_FETCH_DEC(x) (x--)
-#define DAXA_ATOMIC_ADD_FETCH(x, v) (x += v)
-#define DAXA_ATOMIC_FETCH(x) (x)
-#endif
+#include <daxa/c/core.h>
 
 namespace daxa
 {
@@ -209,49 +193,6 @@ namespace daxa
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
     } // namespace types
 
-    struct ManagedWeakPtr
-    {
-        daxa_ImplHandle * object = {};
-
-        template <typename T>
-        auto as() -> T *
-        {
-#if DAXA_VALIDATION
-            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
-            auto ret = dynamic_cast<T *>(object);
-            u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
-            DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
-            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
-            return ret;
-#else
-            return reinterpret_cast<T *>(object);
-#endif
-        }
-        template <typename T>
-        auto as() const -> T const *
-        {
-#if DAXA_VALIDATION
-            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
-            auto ret = dynamic_cast<T const *>(object);
-            u64 strong_count = DAXA_ATOMIC_FETCH(object->strong_count);
-            DAXA_DBG_ASSERT_TRUE_M(strong_count > 0, "strong count must be greater then zero when a weak ptr is still alive!");
-            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
-            return ret;
-#else
-            return reinterpret_cast<T const *>(object);
-#endif
-        }
-
-        ManagedWeakPtr() = default;
-        explicit ManagedWeakPtr(daxa_ImplHandle * ptr);
-        ~ManagedWeakPtr();
-
-        ManagedWeakPtr(ManagedWeakPtr const &);
-        ManagedWeakPtr(ManagedWeakPtr &&) noexcept;
-        ManagedWeakPtr & operator=(ManagedWeakPtr const &);
-        ManagedWeakPtr & operator=(ManagedWeakPtr &&) noexcept;
-    };
-
     struct ManagedPtr
     {
         daxa_ImplHandle * object = {};
@@ -282,15 +223,13 @@ namespace daxa
         }
 
         ManagedPtr() = default;
-        ManagedPtr(daxa_ImplHandle * ptr, void (*deleter)(daxa_ImplHandle *));
+        ManagedPtr(daxa_Handle ptr);
         ~ManagedPtr();
 
         ManagedPtr(ManagedPtr const &);
         ManagedPtr(ManagedPtr &&) noexcept;
         ManagedPtr & operator=(ManagedPtr const &);
         ManagedPtr & operator=(ManagedPtr &&) noexcept;
-
-        ManagedWeakPtr make_weak() const;
 
         auto is_valid() const -> bool;
         operator bool() const;
@@ -1396,10 +1335,11 @@ namespace daxa
         MemoryBlock() = default;
 
       private:
-        friend struct ImplDevice;
+        friend struct daxa_ImplDevice;
         friend struct Device;
 
-        friend daxa_Result daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);
+        // TODO(capi): Figure out how to do this without including device.h
+        // friend daxa_Result daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);
 
         MemoryBlock(ManagedPtr impl);
     };

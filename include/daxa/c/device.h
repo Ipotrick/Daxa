@@ -79,8 +79,6 @@ typedef struct
 
 static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = {};
 
-typedef struct daxa_ImplDevice * daxa_Device;
-
 DAXA_EXPORT daxa_Result
 daxa_dvc_destroy(daxa_Device device);
 

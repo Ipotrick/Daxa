@@ -55,16 +55,16 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     GPUShaderResourceTable gpu_shader_resource_table = {};
 
     // Resource recycling:
-    DAXA_ONLY_IF_THREADSAFETY(std::mutex main_queue_command_pool_buffer_recycle_mtx = {});
+    std::mutex main_queue_command_pool_buffer_recycle_mtx = {};
     CommandBufferPoolPool buffer_pool_pool = {};
     // Main queue:
     VkQueue main_queue_vk_queue = {};
     u32 main_queue_family_index = {};
 
-    DAXA_ATOMIC_U64 main_queue_cpu_timeline = {};
+    std::atomic_uint64_t main_queue_cpu_timeline = {};
     VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
 
-    DAXA_ONLY_IF_THREADSAFETY(std::mutex main_queue_zombies_mtx = {});
+    std::mutex main_queue_zombies_mtx = {};
     std::deque<std::pair<u64, std::vector<ManagedPtr>>> main_queue_submits_zombies = {};
     std::deque<std::pair<u64, CommandListZombie>> main_queue_command_list_zombies = {};
     std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};

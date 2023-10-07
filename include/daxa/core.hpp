@@ -2,10 +2,6 @@
 
 #include <optional>
 
-#if !defined(DAXA_THREADSAFETY)
-#define DAXA_THREADSAFETY 1
-#endif
-
 #if !defined(DAXA_VALIDATION)
 #if defined(NDEBUG)
 #define DAXA_VALIDATION 0

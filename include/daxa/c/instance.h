@@ -3,9 +3,6 @@
 
 #include <daxa/c/device.h>
 
-struct daxa_ImplInstance;
-typedef struct daxa_ImplInstance * daxa_Instance;
-
 typedef daxa_Flags daxa_InstanceFlags;
 static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_DEBUG_UTIL = 0x1;
 

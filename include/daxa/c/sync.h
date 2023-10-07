@@ -102,9 +102,6 @@ typedef struct
     daxa_ImageId image_id;
 } daxa_ImageMemoryBarrierInfo;
 
-struct daxa_ImplBinarySemaphore;
-typedef struct daxa_ImplBinarySemaphore * daxa_BinarySemaphore;
-
 typedef struct
 {
     daxa_StringView name;
@@ -119,9 +116,6 @@ daxa_binary_semaphore_get_vk_semaphore(daxa_BinarySemaphore binary_semaphore);
 DAXA_EXPORT daxa_Result
 daxa_destroy_binary_semaphore(daxa_BinarySemaphore binary_semaphore);
 
-struct daxa_ImplTimelineSemaphore;
-typedef struct daxa_ImplTimelineSemaphore * daxa_TimelineSemaphore;
-
 typedef struct
 {
     uint64_t initial_value;
@@ -134,7 +128,7 @@ daxa_timeline_semaphore_info(daxa_TimelineSemaphore timeline_semaphore);
 DAXA_EXPORT daxa_Result
 daxa_timeline_semaphore_get_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t * out_value);
 
-DAXA_EXPORT daxa_Result 
+DAXA_EXPORT daxa_Result
 daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value);
 
 DAXA_EXPORT daxa_Result
@@ -148,9 +142,6 @@ daxa_timeline_semaphore_destroy(daxa_TimelineSemaphore timeline_semaphore);
 
 DAXA_EXPORT daxa_Result
 daxa_destroy_timeline_semaphore(daxa_TimelineSemaphore timeline_semaphore);
-
-struct daxa_ImplEvent;
-typedef struct daxa_ImplEvent * daxa_Event;
 
 typedef struct
 {

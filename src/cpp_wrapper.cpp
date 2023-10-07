@@ -69,7 +69,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_instance_create_device(self, reinterpret_cast<daxa_DeviceInfo const *>(&device_info), &device) == VK_SUCCESS,
             "failed to create device");
-        return Device(ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(device), &device_deleter});
+        return Device(ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(device)});
+        // TODO(capi) where does this go now??
+        // device_deleter
     }
 
     auto Instance::info() const -> InstanceInfo const &
@@ -91,7 +93,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_create_instance(c_info, &instance) == daxa_Result::DAXA_RESULT_SUCCESS,
             "failed to create instance");
-        return Instance{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(instance), instance_deleter}};
+        return Instance{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(instance)}};
+        // TODO(capi) where does this go now??
+        // instance_deleter
     }
 
     /// --- End Instance ---
@@ -113,7 +117,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_create_memory(self, c_info, &c_memory_block) == daxa_Result::DAXA_RESULT_SUCCESS,
             "failed to create memory");
-        return MemoryBlock{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_memory_block), memory_deleter}};
+        return MemoryBlock{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_memory_block)}};
+        // TODO(capi) where does this go now??
+        // memory_deleter
     }
 
     auto Device::get_memory_requirements(BufferInfo const & info) -> MemoryRequirements
@@ -194,7 +200,7 @@ namespace daxa
     }
 
 #define _DAXA_DECL_DVC_CREATE_FN(Name, name)                                                           \
-    void name##_deleter(daxa_ImplHandle * v)                                                        \
+    void name##_deleter(daxa_ImplHandle * v)                                                           \
     {                                                                                                  \
         DAXA_DBG_ASSERT_TRUE_M(                                                                        \
             daxa_destroy_##name(reinterpret_cast<daxa_##Name>(v)) == daxa_Result::DAXA_RESULT_SUCCESS, \
@@ -208,11 +214,10 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(                                                                        \
             daxa_dvc_create_##name(self, c_info, &c_obj) == daxa_Result::DAXA_RESULT_SUCCESS,          \
             "failed to create " #name);                                                                \
-        return Name{ManagedPtr{                                                                        \
-            reinterpret_cast<daxa_ImplHandle *>(c_obj),                                                \
-            &name##_deleter}};                                                                         \
+        return Name{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_obj)}};                           \
     }
 
+    // TODO(capi) where do the deleters go now??
     _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
