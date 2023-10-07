@@ -251,8 +251,13 @@ typedef struct
     daxa_MemoryFlags flags;
 } daxa_MemoryBlockInfo;
 
-DAXA_EXPORT daxa_Result
-daxa_memory_destroy(daxa_MemoryBlock memory_block);
+DAXA_EXPORT daxa_MemoryBlockInfo const *
+daxa_memory_info(daxa_MemoryBlock memory_block);
+
+DAXA_EXPORT uint64_t
+daxa_memory_inc_refcnt(daxa_MemoryBlock memory_block);
+DAXA_EXPORT uint64_t
+daxa_memory_dec_refcnt(daxa_MemoryBlock memory_block);
 
 typedef struct
 {
@@ -279,7 +284,9 @@ daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
 DAXA_EXPORT void
 daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
 
-DAXA_EXPORT daxa_Result
-daxa_destroy_timeline_query_pool(daxa_TimelineQueryPool timeline_query_pool);
+DAXA_EXPORT uint64_t
+daxa_timeline_query_pool_inc_refcnt(daxa_TimelineQueryPool timeline_query_pool);
+DAXA_EXPORT uint64_t
+daxa_timeline_query_pool_dec_refcnt(daxa_TimelineQueryPool timeline_query_pool);
 
 #endif // #ifndef __DAXA_TYPES_H__

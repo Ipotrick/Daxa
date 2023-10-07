@@ -460,10 +460,7 @@ daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 // Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 DAXA_EXPORT void
 daxa_cmd_flush_barriers(daxa_CommandList cmd_list);
-/// @brief  Consumes the command list. Creates backed commands that can be submitted to the device.
-///         After calling complete, the command list CAN NOT BE USED any longer,
-///         that includes destroying it, it is fully consumed by complete!
-DAXA_EXPORT daxa_BakedCommands
+DAXA_EXPORT void
 daxa_cmd_complete(daxa_CommandList cmd_list);
 DAXA_EXPORT daxa_CommandListInfo const *
 daxa_cmd_info(daxa_CommandList cmd_list);
@@ -471,9 +468,9 @@ DAXA_EXPORT VkCommandBuffer
 daxa_cmd_get_vk_command_buffer(daxa_CommandList cmd_list);
 DAXA_EXPORT VkCommandPool
 daxa_cmd_get_vk_command_pool(daxa_CommandList cmd_list);
-DAXA_EXPORT void
-daxa_destroy_command_list(daxa_CommandList command_list);
-DAXA_EXPORT void
-daxa_destroy_baked_commands(daxa_BakedCommands baked_commands);
+DAXA_EXPORT uint64_t
+daxa_cmd_inc_refcnt(daxa_CommandList command_list);
+DAXA_EXPORT uint64_t
+daxa_cmd_dec_refcnt(daxa_CommandList command_list);
 
 #endif // #ifndef __DAXA_COMMAND_LIST_H__

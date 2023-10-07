@@ -21,8 +21,10 @@ typedef struct
 DAXA_EXPORT daxa_ComputePipelineInfo const *
 daxa_compute_pipeline_info(daxa_ComputePipeline compute_pipeline);
 
-DAXA_EXPORT daxa_Result
-daxa_destroy_compute_pipeline(daxa_ComputePipeline pipeline);
+DAXA_EXPORT uint64_t
+daxa_compute_pipeline_inc_refcnt(daxa_ComputePipeline pipeline);
+DAXA_EXPORT uint64_t
+daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline pipeline);
 
 typedef struct
 {
@@ -140,7 +142,9 @@ typedef struct
 DAXA_EXPORT daxa_RasterPipelineInfo const *
 daxa_raster_pipeline_info(daxa_RasterPipeline raster_pipeline);
 
-DAXA_EXPORT daxa_Result
-daxa_destroy_raster_pipeline(daxa_RasterPipeline pipeline);
+DAXA_EXPORT uint64_t
+daxa_raster_pipeline_inc_refcnt(daxa_RasterPipeline pipeline);
+DAXA_EXPORT uint64_t
+daxa_raster_pipeline_dec_refcnt(daxa_RasterPipeline pipeline);
 
 #endif // #ifndef __DAXA_PIPELINE_H__

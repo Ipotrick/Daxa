@@ -59,7 +59,9 @@ DAXA_EXPORT VkSwapchainKHR
 daxa_swp_get_vk_swapchain(daxa_Swapchain swapchain);
 DAXA_EXPORT VkSurfaceKHR
 daxa_swp_get_vk_surface(daxa_Swapchain swapchain);
-DAXA_EXPORT daxa_Result
-daxa_destroy_swapchain(daxa_Swapchain swapchain);
+DAXA_EXPORT uint64_t
+daxa_swp_inc_refcnt(daxa_Swapchain swapchain);
+DAXA_EXPORT uint64_t
+daxa_swp_dec_refcnt(daxa_Swapchain swapchain);
 
 #endif // #ifndef __DAXA_SWAPCHAIN_H__

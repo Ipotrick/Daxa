@@ -79,8 +79,12 @@ typedef struct
 
 static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = {};
 
-DAXA_EXPORT daxa_Result
-daxa_dvc_destroy(daxa_Device device);
+// Returns previous ref count.
+DAXA_EXPORT uint64_t
+daxa_dvc_inc_refcnt(daxa_Device device);
+// Returns previous ref count.
+DAXA_EXPORT uint64_t
+daxa_dvc_dec_refcnt(daxa_Device device);
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);
@@ -99,13 +103,22 @@ DAXA_EXPORT daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
 
 DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
+daxa_dvc_inc_refcnt_buffer(daxa_Device device, daxa_BufferId buffer, uint64_t * out_prev_refcnt);
 DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_image(daxa_Device device, daxa_ImageId image);
+daxa_dvc_inc_refcnt_image(daxa_Device device, daxa_ImageId image, uint64_t * out_prev_refcnt);
 DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_image_view(daxa_Device device, daxa_ImageViewId id);
+daxa_dvc_inc_refcnt_image_view(daxa_Device device, daxa_ImageViewId id, uint64_t * out_prev_refcnt);
 DAXA_EXPORT daxa_Result
-daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
+daxa_dvc_inc_refcnt_sampler(daxa_Device device, daxa_SamplerId sampler, uint64_t * out_prev_refcnt);
+
+DAXA_EXPORT daxa_Result
+daxa_dvc_dec_refcnt_buffer(daxa_Device device, daxa_BufferId buffer, uint64_t * out_prev_refcnt);
+DAXA_EXPORT daxa_Result
+daxa_dvc_dc_refcnty_image(daxa_Device device, daxa_ImageId image, uint64_t * out_prev_refcnt);
+DAXA_EXPORT daxa_Result
+daxa_dvc_destroc_refcntge_view(daxa_Device device, daxa_ImageViewId id, uint64_t * out_prev_refcnt);
+DAXA_EXPORT daxa_Result
+daxa_dvc_desc_refcntsampler(daxa_Device device, daxa_SamplerId sampler, uint64_t * out_prev_refcnt);
 
 DAXA_EXPORT daxa_Result
 daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo const ** out_info);

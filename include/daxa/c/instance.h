@@ -17,7 +17,12 @@ daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance *out_instance
 DAXA_EXPORT daxa_Result
 daxa_instance_create_device(daxa_Instance instance, daxa_DeviceInfo const * info, daxa_Device * out_device);
 
-DAXA_EXPORT void daxa_destroy_instance(daxa_Instance instance);
+// Returns previous ref count.
+DAXA_EXPORT uint64_t
+daxa_instance_inc_refcnt(daxa_Instance instance);
+// Returns previous ref count.
+DAXA_EXPORT uint64_t
+daxa_instance_dec_refcnt(daxa_Instance instance);
 
 DAXA_EXPORT daxa_InstanceInfo const *
 daxa_instance_info(daxa_Instance instance);

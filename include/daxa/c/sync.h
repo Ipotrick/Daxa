@@ -113,8 +113,10 @@ daxa_binary_semaphore_info(daxa_BinarySemaphore binary_semaphore);
 DAXA_EXPORT VkSemaphore
 daxa_binary_semaphore_get_vk_semaphore(daxa_BinarySemaphore binary_semaphore);
 
-DAXA_EXPORT daxa_Result
-daxa_destroy_binary_semaphore(daxa_BinarySemaphore binary_semaphore);
+DAXA_EXPORT uint64_t
+daxa_binary_semaphore_inc_refcnt(daxa_BinarySemaphore binary_semaphore);
+DAXA_EXPORT uint64_t
+daxa_binary_semaphore_dec_refcnt(daxa_BinarySemaphore binary_semaphore);
 
 typedef struct
 {
@@ -137,11 +139,10 @@ daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore timeline_semaphore
 DAXA_EXPORT VkSemaphore
 daxa_timeline_semaphore_get_vk_semaphore(daxa_TimelineSemaphore timeline_semaphore);
 
-DAXA_EXPORT void
-daxa_timeline_semaphore_destroy(daxa_TimelineSemaphore timeline_semaphore);
-
-DAXA_EXPORT daxa_Result
-daxa_destroy_timeline_semaphore(daxa_TimelineSemaphore timeline_semaphore);
+DAXA_EXPORT uint64_t
+daxa_timeline_semaphore_inc_refcnt(daxa_TimelineSemaphore timeline_semaphore);
+DAXA_EXPORT uint64_t
+daxa_timeline_semaphore_dec_refcnt(daxa_TimelineSemaphore timeline_semaphore);
 
 typedef struct
 {
