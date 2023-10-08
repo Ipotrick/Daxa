@@ -529,7 +529,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }
 
     write_descriptor_set_sampler(self->vk_device, self->gpu_shader_resource_table.vk_descriptor_set, ret.vk_sampler, id.index);
-
+    *out_id = std::bit_cast<daxa_SamplerId>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1480,7 +1480,7 @@ auto daxa_ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, dax
     }
 }
 
-auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, daxa_ImageId>
+auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, ImageId>
 {
     auto [id, image_slot] = gpu_shader_resource_table.image_slots.new_slot();
 
@@ -1527,7 +1527,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
     auto result = vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
     if (result != VK_SUCCESS)
     {
-        return {std::bit_cast<daxa_Result>(result), daxa_ImageId{}};
+        return {std::bit_cast<daxa_Result>(result), ImageId{}};
     }
 
     if ((this->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !image_info.name.empty())
@@ -1555,7 +1555,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     image_slot = ret;
 
-    return {DAXA_RESULT_SUCCESS, std::bit_cast<daxa_ImageId>(id)};
+    return {DAXA_RESULT_SUCCESS, ImageId{id}};
 }
 
 void daxa_ImplDevice::cleanup_buffer(BufferId id)

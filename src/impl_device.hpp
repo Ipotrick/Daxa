@@ -20,6 +20,7 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     VkPhysicalDeviceProperties2 vk_physical_device_properties2;
     VkDevice vk_device = {};
 
+    // Debug utils:
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
     PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
     PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
@@ -75,11 +76,13 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
     std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
 
+    // TODO: Give physical device in info so that this function can be removed.
+    // TODO: Better device selection.
     static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
 
     auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
     auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
-    auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, daxa_ImageId>;
+    auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, ImageId>;
 
     auto slot(BufferId id) -> ImplBufferSlot &;
     auto slot(ImageId id) -> ImplImageSlot &;

@@ -117,10 +117,21 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
     return result;
 }
 
-void daxa_destroy_instance(daxa_Instance self)
+
+auto daxa_instance_inc_refcnt(daxa_Instance self) -> u64
 {
-    vkDestroyInstance(self->vk_instance, nullptr);
-    delete self;
+    return daxa_inc_refcnt(self);
+}
+
+auto daxa_instance_dec_refcnt(daxa_Instance self) -> u64
+{
+    auto prev = daxa_dec_refcnt(self);
+    if (prev == 1)
+    {
+        vkDestroyInstance(self->vk_instance, nullptr);
+        delete self;
+    }
+    return prev;
 }
 
 auto daxa_instance_info(daxa_Instance self) -> daxa_InstanceInfo const *

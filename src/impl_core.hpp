@@ -38,6 +38,7 @@
 
 #include <daxa/types.hpp>
 #include <daxa/c/types.h>
+#include <daxa/daxa.hpp>
 
 using namespace daxa;
 

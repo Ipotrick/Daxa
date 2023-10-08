@@ -17,6 +17,7 @@ auto pipeline_dec_refcnt(ImplPipeline * pipeline) -> u64
                 .vk_pipeline = pipeline->vk_pipeline,
             },
         });
+        delete pipeline;
     }
     return prev;
 }

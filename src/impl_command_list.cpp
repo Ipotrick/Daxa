@@ -400,7 +400,7 @@ void daxa_cmd_push_constant(daxa_CommandList self, void const * data, uint32_t s
 
 daxa_Result
 daxa_cmd_set_uniform_buffer(daxa_CommandList self, daxa_SetUniformBufferInfo const * info)
-{    
+{
     usize const buffer_size = self->device->slot(info->buffer).info.size;
     bool const binding_in_range = info->size + info->offset <= buffer_size;
     if (info->size == 0 || !binding_in_range)
@@ -726,28 +726,24 @@ void daxa_cmd_flush_barriers(daxa_CommandList self)
     }
 }
 
-daxa_Result
-daxa_cmd_complete(daxa_CommandList self)
+auto daxa_cmd_complete(daxa_CommandList self) -> daxa_Result
 {
     self->recording_complete = true;
     auto result = vkEndCommandBuffer(self->vk_cmd_buffer);
     return std::bit_cast<daxa_Result>(result);
 }
 
-daxa_CommandListInfo const *
-daxa_cmd_info(daxa_CommandList self)
+auto daxa_cmd_info(daxa_CommandList self) -> daxa_CommandListInfo const *
 {
     return &self->info;
 }
 
-VkCommandBuffer
-daxa_cmd_get_vk_command_buffer(daxa_CommandList self)
+auto daxa_cmd_get_vk_command_buffer(daxa_CommandList self) -> VkCommandBuffer
 {
     return self->vk_cmd_buffer;
 }
 
-VkCommandPool
-daxa_cmd_get_vk_command_pool(daxa_CommandList self)
+auto daxa_cmd_get_vk_command_pool(daxa_CommandList self) -> VkCommandPool
 {
     return self->vk_cmd_pool;
 }
@@ -768,16 +764,14 @@ void daxa_destroy_command_list(daxa_CommandList self)
     });
 }
 
-DAXA_EXPORT uint64_t
-daxa_cmd_inc_refcnt(daxa_CommandList self)
+auto daxa_cmd_inc_refcnt(daxa_CommandList self) -> u64
 {
     return daxa_inc_refcnt(self);
 }
 
-DAXA_EXPORT uint64_t
-daxa_cmd_dec_refcnt(daxa_CommandList self)
+auto daxa_cmd_dec_refcnt(daxa_CommandList self) -> u64
 {
-    u64 prev = daxa_dec_refcnt(self);
+    auto prev = daxa_dec_refcnt(self);
     if (prev == 1)
     {
         vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
@@ -791,18 +785,22 @@ daxa_cmd_dec_refcnt(daxa_CommandList self)
                 .vk_cmd_pool = self->vk_cmd_pool,
             },
         });
+        delete self;
     }
     return prev;
 }
 
-/// --- End API Functions ---
-
-/// --- Begin Internals ---
-
-auto daxa_ImplCommandList::create(daxa_Device device, daxa_CommandListInfo const * info, VkCommandBuffer vk_cmd_buffer, VkCommandPool vk_cmd_pool) -> std::pair<daxa_CommandList, daxa_Result>
+auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const * info, daxa_CommandList * out_cmd_list) -> daxa_Result
 {
-    auto * self = new daxa_ImplCommandList;
-    auto & ret = *self;
+    VkCommandBuffer vk_cmd_buffer = {};
+    VkCommandPool vk_cmd_pool = {};
+    {
+        std::unique_lock l{device->main_queue_command_pool_buffer_recycle_mtx};
+        auto pair = device->buffer_pool_pool.get(device);
+        vk_cmd_pool = pair.first;
+        vk_cmd_buffer = pair.second;
+    }
+    auto ret = daxa_ImplCommandList{};
     ret.device = device,
     ret.info = *info,
     ret.vk_cmd_buffer = vk_cmd_buffer,
@@ -838,8 +836,14 @@ auto daxa_ImplCommandList::create(daxa_Device device, daxa_CommandListInfo const
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
-    return std::pair<daxa_CommandList, daxa_Result>{self, DAXA_RESULT_SUCCESS};
+    *out_cmd_list = new daxa_ImplCommandList{};
+    **out_cmd_list = std::move(ret);
+    return DAXA_RESULT_SUCCESS;
 }
+
+/// --- End API Functions ---
+
+/// --- Begin Internals ---
 
 void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
 {
