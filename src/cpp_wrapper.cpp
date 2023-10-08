@@ -200,15 +200,11 @@ namespace daxa
         return *reinterpret_cast<DeviceInfo const *>(daxa_dvc_info(const_cast<daxa_Device>(self)));
     }
 
-    static const DeviceProperties DAXA_DEVICE_PROPERTIES_DUMMY = {};
-
     auto Device::properties() const -> DeviceProperties const &
     {
         auto self = this->as<daxa_ImplDevice>();
         return *reinterpret_cast<DeviceProperties const *>(&self->vk_physical_device_properties2.properties);
     }
-
-    static const MeshShaderDeviceProperties DAXA_MESH_SHADER_DEVICE_PROPERTIES_DUMMY = {};
 
     auto Device::mesh_shader_properties() const -> MeshShaderDeviceProperties const &
     {
