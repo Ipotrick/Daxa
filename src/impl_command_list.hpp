@@ -20,7 +20,7 @@ static inline constexpr usize DEFERRED_DESTRUCTION_COUNT_MAX = 32;
 
 static inline constexpr usize COMMAND_LIST_BARRIER_MAX_BATCH_SIZE = 16;
 static inline constexpr usize COMMAND_LIST_COLOR_ATTACHMENT_MAX = 16;
-static inline constexpr usize DAXA_UNIFORM_BUFFER_BINDINGS_COUNT = 8;
+static inline constexpr usize COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT = 8;
 
 struct CommandBufferPoolPool
 {
@@ -53,7 +53,7 @@ struct daxa_ImplCommandList final : daxa_ImplHandle
     usize memory_barrier_batch_count = {};
     usize split_barrier_batch_count = {};
     std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
-    std::array<daxa_SetUniformBufferInfo, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
+    std::array<daxa_SetUniformBufferInfo, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
 
     static auto create(
         daxa_Device device,
@@ -62,10 +62,4 @@ struct daxa_ImplCommandList final : daxa_ImplHandle
         VkCommandPool vk_cmd_pool) -> std::pair<daxa_CommandList, daxa_Result>;
     void flush_barriers();
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
-
-    // ImplCommandList(daxa_Device a_device, VkCommandPool pool, VkCommandBuffer buffer, CommandListInfo a_info);
-    // virtual ~ImplCommandList() override final;
 };
-
-// TODO(capi) ???
-// using daxa_ImplBakedCommands = daxa_ImplCommandList;

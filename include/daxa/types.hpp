@@ -327,13 +327,11 @@ namespace daxa
     template <typename T_SINGLE, typename... T_REST>
     struct VariantUnion
     {
-        constexpr VariantUnion() {}
-        ~VariantUnion() {}
         using T_REST_VARIANT = VariantUnion<T_REST...>;
+        constexpr VariantUnion() { inner_pair = {}; }
         union InnerPair
         {
-            constexpr InnerPair() {}
-            ~InnerPair() {}
+            constexpr InnerPair() { value = {}; }
             T_SINGLE value;
             T_REST_VARIANT rest;
         } inner_pair;
@@ -358,8 +356,6 @@ namespace daxa
     template <typename T_SINGLE>
     struct VariantUnion<T_SINGLE>
     {
-        constexpr VariantUnion() {}
-        ~VariantUnion() {}
         T_SINGLE value;
         template <typename T_GET>
         constexpr auto get() -> T_GET &
@@ -420,7 +416,7 @@ namespace daxa
       private:
         using T_VALUES = VariantUnion<T_ALL...>;
         VariantIndex m_index;
-        T_VALUES values;
+        T_VALUES m_values;
         template <typename T_GET>
         static constexpr auto checked_index_of() -> VariantIndex
         {
@@ -434,10 +430,14 @@ namespace daxa
         ~Variant() {}
 
         template <typename T_SET>
-        constexpr Variant(T_SET v) { this->set<T_SET>(v); }
+        constexpr Variant(T_SET const& v) { this->set<T_SET>(v); }
+        
+        constexpr Variant(Variant<T_ALL...> const& v) { *this = v; }
 
         template <typename T_SET>
-        constexpr Variant & operator=(T_SET v) { this->set<T_SET>(v); }
+        constexpr Variant & operator=(T_SET const& v) { this->set<T_SET>(v); }
+
+        constexpr Variant & operator=(Variant<T_ALL...> const& v) { this->m_index = v.m_index; this->m_values = v.m_values; }
 
         template <typename T_SET>
         constexpr void set(T_SET set_value)
@@ -450,7 +450,7 @@ namespace daxa
             {
                 constexpr VariantIndex INDEX = checked_index_of<T_SET>();
                 this->m_index = INDEX;
-                this->values.template get<T_SET>() = set_value;
+                this->m_values.template get<T_SET>() = set_value;
             }
         }
 
@@ -458,7 +458,7 @@ namespace daxa
         constexpr auto get_if() -> T_GET *
         {
             if (checked_index_of<T_GET>() == this->m_index)
-                return &this->values.template get<T_GET>();
+                return &this->m_values.template get<T_GET>();
             else
                 return nullptr;
         }
@@ -467,7 +467,7 @@ namespace daxa
         constexpr auto get_if() const -> T_GET const *
         {
             if (checked_index_of<T_GET>() != this->m_index)
-                return &this->values.template get<T_GET>();
+                return &this->m_values.template get<T_GET>();
             else
                 return nullptr;
         }
@@ -1337,10 +1337,6 @@ namespace daxa
       private:
         friend struct daxa_ImplDevice;
         friend struct Device;
-
-        // TODO(capi): Figure out how to do this without including device.h
-        // friend daxa_Result daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);
-
         MemoryBlock(ManagedPtr impl);
     };
 
@@ -1357,7 +1353,7 @@ namespace daxa
     struct TimelineQueryPoolInfo
     {
         u32 query_count = {};
-        std::string name = {};
+        std::string_view name = {};
     };
 
     struct TimelineQueryPool : ManagedPtr

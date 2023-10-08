@@ -8,7 +8,6 @@
 #include "impl_swapchain.hpp"
 #include "impl_gpu_resources.hpp"
 #include "impl_timeline_query.hpp"
-#include "impl_memory_block.hpp"
 
 #include <daxa/c/device.h>
 
@@ -75,14 +74,12 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     std::deque<std::pair<u64, EventZombie>> main_queue_split_barrier_zombies = {};
     std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
     std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
-    void main_queue_collect_garbage();
-    void wait_idle() const;
 
-    static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device) -> std::pair<daxa_Result, daxa_Device>;
+    static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
 
     auto validate_image_slice(ImageMipArraySlice const & slice, daxa_ImageId id) -> ImageMipArraySlice;
     auto validate_image_slice(ImageMipArraySlice const & slice, daxa_ImageViewId id) -> ImageMipArraySlice;
-    auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> ImageId;
+    auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, daxa_ImageId>;
 
     auto slot(daxa_BufferId id) -> ImplBufferSlot &;
     auto slot(daxa_ImageId id) -> ImplImageSlot &;

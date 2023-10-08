@@ -40,7 +40,7 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
         }
         if (!found)
         {
-            return DAXA_RESULT_UNKNOWN;
+            return DAXA_RESULT_ERROR_UNKNOWN;
         }
         // DAXA_DBG_ASSERT_TRUE_M(found, "Not all required instance extensions are available, extension missing: " + std::string(req_ext));
     }
@@ -66,7 +66,7 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     auto vk_res = vkCreateInstance(&instance_ci, nullptr, &self->vk_instance);
     if (vk_res != VK_SUCCESS)
     {
-        return DAXA_RESULT_UNKNOWN;
+        return DAXA_RESULT_ERROR_UNKNOWN;
     }
     *out_instance = self;
 
@@ -107,10 +107,13 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
     VkPhysicalDevice physical_device = *best_physical_device;
 
     // TODO: Needs C impl of device
-    *out_device = nullptr;
+    *out_device = new daxa_ImplDevice{};
 
-    auto [result, device] = daxa_ImplDevice::create(self, *info, physical_device);
-    *out_device = device;
+    auto const result = daxa_ImplDevice::create(self, *info, physical_device, *out_device);
+    if (result != DAXA_RESULT_SUCCESS)
+    {
+        delete *out_device;
+    }
     return result;
 }
 

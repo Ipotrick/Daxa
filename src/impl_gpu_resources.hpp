@@ -38,6 +38,7 @@ namespace daxa
         VmaAllocation vma_allocation = {};
         VkDeviceAddress device_address = {};
         void * host_address = {};
+        u64 strong_count = {};
         bool zombie = {};
     };
 
@@ -48,6 +49,7 @@ namespace daxa
         ImageViewInfo info = {};
         std::string info_name = {};
         VkImageView vk_image_view = {};
+        u64 strong_count = {};
         // TODO(capi): Maybe revisit, because why was this not here before??
         bool zombie = {};
     };
@@ -61,6 +63,7 @@ namespace daxa
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
         VkImageAspectFlags aspect_flags = {}; // Inferred from format.
+        u64 strong_count = {};
         bool zombie = {};
     };
 
@@ -69,6 +72,7 @@ namespace daxa
         SamplerInfo info = {};
         std::string info_name = {};
         VkSampler vk_sampler = {};
+        u64 strong_count = {};
         bool zombie = {};
     };
 

@@ -76,7 +76,6 @@ add_library(daxa STATIC
     "src/impl_sync.cpp"
     "src/impl_dependencies.cpp"
     "src/impl_timeline_query.cpp"
-    "src/impl_memory_block.cpp"
 
     "src/utils/impl_task_graph.cpp"
     "src/utils/impl_imgui.cpp"

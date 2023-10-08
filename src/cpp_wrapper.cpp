@@ -55,35 +55,20 @@ namespace daxa
 
     Instance::Instance(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
-    void device_deleter(daxa_ImplHandle * v)
-    {
-        DAXA_DBG_ASSERT_TRUE_M(
-            daxa_dvc_destroy(reinterpret_cast<daxa_Device>(v)) == daxa_Result::DAXA_RESULT_SUCCESS,
-            "failed to destroy device");
-    }
-
     auto Instance::create_device(DeviceInfo const & device_info) -> Device
     {
         auto self = this->as<daxa_ImplInstance>();
         daxa_Device device = {};
         DAXA_DBG_ASSERT_TRUE_M(
-            daxa_instance_create_device(self, reinterpret_cast<daxa_DeviceInfo const *>(&device_info), &device) == VK_SUCCESS,
+            daxa_instance_create_device(self, reinterpret_cast<daxa_DeviceInfo const *>(&device_info), &device) == DAXA_RESULT_SUCCESS,
             "failed to create device");
         return Device(ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(device)});
-        // TODO(capi) where does this go now??
-        // device_deleter
     }
 
     auto Instance::info() const -> InstanceInfo const &
     {
         auto self = this->as<daxa_ImplInstance>();
         return *reinterpret_cast<InstanceInfo const *>(daxa_instance_info(const_cast<daxa_Instance>(self)));
-    }
-
-    void instance_deleter(daxa_ImplHandle * v)
-    {
-        // Can't fail.
-        daxa_destroy_instance(reinterpret_cast<daxa_Instance>(v));
     }
 
     auto create_instance(InstanceInfo const & info) -> Instance
@@ -94,20 +79,11 @@ namespace daxa
             daxa_create_instance(c_info, &instance) == daxa_Result::DAXA_RESULT_SUCCESS,
             "failed to create instance");
         return Instance{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(instance)}};
-        // TODO(capi) where does this go now??
-        // instance_deleter
     }
 
     /// --- End Instance ---
 
     /// --- Begin Device ---
-
-    void memory_deleter(daxa_ImplHandle * v)
-    {
-        DAXA_DBG_ASSERT_TRUE_M(
-            daxa_memory_destroy(reinterpret_cast<daxa_MemoryBlock>(v)) == daxa_Result::DAXA_RESULT_SUCCESS,
-            "failed to destroy memory");
-    }
 
     auto Device::create_memory(MemoryBlockInfo const & info) -> MemoryBlock
     {
@@ -118,8 +94,6 @@ namespace daxa
             daxa_dvc_create_memory(self, c_info, &c_memory_block) == daxa_Result::DAXA_RESULT_SUCCESS,
             "failed to create memory");
         return MemoryBlock{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_memory_block)}};
-        // TODO(capi) where does this go now??
-        // memory_deleter
     }
 
     auto Device::get_memory_requirements(BufferInfo const & info) -> MemoryRequirements
@@ -152,7 +126,7 @@ namespace daxa
         auto self = this->as<daxa_ImplDevice>();                                \
         auto c_id = std::bit_cast<daxa_##Name##Id>(id);                         \
         DAXA_DBG_ASSERT_TRUE_M(                                                 \
-            daxa_dvc_destroy_##name(self, c_id),                                \
+            daxa_dvc_dec_refcnt_##name(self, c_id),                             \
             "failed to destroy " #name);                                        \
     }                                                                           \
     auto Device::is_id_valid(Name##Id id) const->bool                           \
@@ -199,22 +173,16 @@ namespace daxa
         return c_ptr;
     }
 
-#define _DAXA_DECL_DVC_CREATE_FN(Name, name)                                                           \
-    void name##_deleter(daxa_ImplHandle * v)                                                           \
-    {                                                                                                  \
-        DAXA_DBG_ASSERT_TRUE_M(                                                                        \
-            daxa_destroy_##name(reinterpret_cast<daxa_##Name>(v)) == daxa_Result::DAXA_RESULT_SUCCESS, \
-            "failed to destroy " #name);                                                               \
-    }                                                                                                  \
-    auto Device::create_##name(Name##Info const & info)->Name                                          \
-    {                                                                                                  \
-        auto self = this->as<daxa_ImplDevice>();                                                       \
-        auto c_info = reinterpret_cast<daxa_##Name##Info const *>(&info);                              \
-        daxa_##Name c_obj = {};                                                                        \
-        DAXA_DBG_ASSERT_TRUE_M(                                                                        \
-            daxa_dvc_create_##name(self, c_info, &c_obj) == daxa_Result::DAXA_RESULT_SUCCESS,          \
-            "failed to create " #name);                                                                \
-        return Name{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_obj)}};                           \
+#define _DAXA_DECL_DVC_CREATE_FN(Name, name)                                     \
+    auto Device::create_##name(Name##Info const & info)->Name                    \
+    {                                                                            \
+        auto self = this->as<daxa_ImplDevice>();                                 \
+        auto c_info = reinterpret_cast<daxa_##Name##Info const *>(&info);        \
+        daxa_##Name c_obj = {};                                                  \
+        DAXA_DBG_ASSERT_TRUE_M(                                                  \
+            daxa_dvc_create_##name(self, c_info, &c_obj) == DAXA_RESULT_SUCCESS, \
+            "failed to create " #name);                                          \
+        return Name{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_obj)}};     \
     }
 
     // TODO(capi) where do the deleters go now??

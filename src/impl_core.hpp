@@ -63,6 +63,8 @@
 #include <daxa/types.hpp>
 #include <daxa/c/types.h>
 
+using namespace daxa;
+
 namespace daxa
 {
     static inline constexpr u32 MAX_PUSH_CONSTANT_WORD_SIZE = {32};
@@ -98,8 +100,21 @@ namespace daxa
     {
         return make_subresource_layers(*reinterpret_cast<ImageArraySlice const *>(&slice), aspect);
     }
+
+    struct MemoryBlockZombie {
+        VmaAllocation allocation = {};
+    };
 } // namespace daxa
 
-struct daxa_ImplHandle {
+struct daxa_ImplHandle 
+{
     std::atomic_uint64_t strong_count = {};
+};
+
+struct daxa_ImplMemoryBlock final : daxa_ImplHandle
+{
+    daxa_Device device = {};
+    MemoryBlockInfo info = {};
+    VmaAllocation allocation = {};
+    VmaAllocationInfo alloc_info = {};
 };

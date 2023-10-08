@@ -537,19 +537,16 @@ void daxa_cmd_end_label(daxa_CommandList self, daxa_CommandLabelInfo label)
 {
 }
 
-// Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 void daxa_cmd_flush_barriers(daxa_CommandList self)
 {
 }
 
-/// @brief  Consumes the command list. Creates backed commands that can be submitted to the device.
-///         After calling complete, the command list CAN NOT BE USED any longer,
-///         that includes destroying it, it is fully consumed by complete!
-daxa_BakedCommands
+daxa_Result
 daxa_cmd_complete(daxa_CommandList self)
 {
     self->recording_complete = true;
-    return reinterpret_cast<daxa_BakedCommands>(self);
+    auto result = vkEndCommandBuffer(self->vk_cmd_buffer);
+    return std::bit_cast<daxa_Result>(result);
 }
 
 daxa_CommandListInfo const *
@@ -586,8 +583,31 @@ void daxa_destroy_command_list(daxa_CommandList self)
     });
 }
 
-void daxa_destroy_baked_commands(daxa_BakedCommands baked_commands)
+DAXA_EXPORT uint64_t
+daxa_cmd_inc_refcnt(daxa_CommandList self)
 {
+    return self->strong_count.fetch_add(1);
+}
+
+DAXA_EXPORT uint64_t
+daxa_cmd_dec_refcnt(daxa_CommandList self)
+{
+    u64 prev = self->strong_count.fetch_sub(1);
+    if (prev == 1)
+    {
+        vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
+        u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+        std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+
+        self->device->main_queue_command_list_zombies.push_front({
+            main_queue_cpu_timeline,
+            CommandListZombie{
+                .vk_cmd_buffer = self->vk_cmd_buffer,
+                .vk_cmd_pool = self->vk_cmd_pool,
+            },
+        });
+    }
+    return prev;
 }
 
 /// --- End API Functions ---
@@ -662,9 +682,9 @@ void daxa_ImplCommandList::flush_barriers()
 void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
 {
     auto & device = *this->device;
-    std::array<VkDescriptorBufferInfo, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
-    std::array<VkWriteDescriptorSet, DAXA_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_writes = {};
-    for (u32 index = 0; index < DAXA_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
+    std::array<VkDescriptorBufferInfo, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
+    std::array<VkWriteDescriptorSet, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_writes = {};
+    for (u32 index = 0; index < COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
     {
         if (this->current_constant_buffer_bindings[index].buffer.value == 0)
         {
@@ -697,7 +717,7 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
     }
 
     device.vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
-    for (u32 index = 0; index < DAXA_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
+    for (u32 index = 0; index < COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
     {
         this->current_constant_buffer_bindings.at(index) = {};
     }
@@ -964,7 +984,7 @@ namespace daxa
         const usize buffer_size = impl.device->slot(info.buffer).info.size;
         [[maybe_unused]] bool const binding_in_range = info.size + info.offset <= buffer_size;
         DAXA_DBG_ASSERT_TRUE_M(binding_in_range, "The given offset and size of the buffer binding is outside of the bounds of the given buffer");
-        DAXA_DBG_ASSERT_TRUE_M(info.slot < DAXA_UNIFORM_BUFFER_BINDINGS_COUNT, "there are only 8 binding slots available for constant buffers");
+        DAXA_DBG_ASSERT_TRUE_M(info.slot < COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT, "there are only 8 binding slots available for constant buffers");
         impl.current_constant_buffer_bindings[info.slot] = info;
     }
 

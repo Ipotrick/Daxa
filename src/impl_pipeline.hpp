@@ -15,26 +15,22 @@ struct PipelineZombie
 
 struct ImplPipeline : daxa_ImplHandle
 {
-    explicit ImplPipeline(daxa_Device a_device);
-
+    std::string info_name = {};
     daxa_Device device = {};
     VkPipeline vk_pipeline = {};
     VkPipelineLayout vk_pipeline_layout = {};
-    std::string name_storage;
-
-    ~ImplPipeline();
 };
 
 struct daxa_ImplRasterPipeline final : ImplPipeline
 {
-    daxa_RasterPipelineInfo info;
+    daxa_RasterPipelineInfo info = {};
 
-    daxa_ImplRasterPipeline(daxa_Device a_device, daxa_RasterPipelineInfo a_info);
+    static auto create(daxa_Device device, daxa_RasterPipelineInfo const * a_info, daxa_RasterPipeline pipeline) -> daxa_Result;
 };
 
 struct daxa_ImplComputePipeline final : ImplPipeline
 {
-    daxa_ComputePipelineInfo info;
+    daxa_ComputePipelineInfo info = {};
 
-    daxa_ImplComputePipeline(daxa_Device a_device, daxa_ComputePipelineInfo a_info);
+    static auto create(daxa_Device a_device, daxa_ComputePipelineInfo const * a_info, daxa_ComputePipeline pipeline) -> daxa_Result;
 };

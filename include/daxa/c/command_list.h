@@ -460,7 +460,7 @@ daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
 // Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 DAXA_EXPORT void
 daxa_cmd_flush_barriers(daxa_CommandList cmd_list);
-DAXA_EXPORT void
+DAXA_EXPORT daxa_Result
 daxa_cmd_complete(daxa_CommandList cmd_list);
 DAXA_EXPORT daxa_CommandListInfo const *
 daxa_cmd_info(daxa_CommandList cmd_list);
