@@ -78,6 +78,9 @@ typedef enum
     DAXA_RESULT_FAILED_TO_CREATE_NULL_SAMPLER = (1 << 30) + 25,
     DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER = (1 << 30) + 26,
     DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS = (1 << 30) + 27,
+    DAXA_RESULT_INVALID_BUFFER_RANGE = (1 << 30) + 28,
+    DAXA_RESULT_INVALID_BUFFER_OFFSET = (1 << 30) + 29,
+    DAXA_RESULT_INVALID_UNIFORM_BUFFER_SLOT = (1 << 30) + 29,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
@@ -245,13 +248,15 @@ daxa_u32mat4x4;
 
 #define daxa_Optional(T) daxa_Optional##T
 
+#define _DAXA_FIXED_LIST_SIZE_T uint32_t
+
 /// ABI STABLE FIXED LIST TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::FixedList
 #define _DAXA_DECL_FIXED_LIST(T, CAPACITY) \
     typedef struct                         \
     {                                      \
         T data[CAPACITY];                  \
-        size_t size;                       \
+        _DAXA_FIXED_LIST_SIZE_T size;      \
     } daxa_FixedList##T##CAPACITY;
 
 #define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY

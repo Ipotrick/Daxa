@@ -298,7 +298,7 @@ typedef struct
 typedef struct
 {
     daxa_TimelineQueryPool query_pool;
-    VkPipelineStageFlags pipeline_stage;
+    VkPipelineStageFlagBits pipeline_stage;
     uint32_t query_index;
 } daxa_WriteTimestampInfo;
 
@@ -387,7 +387,7 @@ daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t si
 ///         Set uniform buffer slots are cleared after a pipeline is bound.
 ///         Before setting another pipeline, they need to be set again.
 /// @param info parameters.
-DAXA_EXPORT void
+DAXA_EXPORT daxa_Result
 daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetUniformBufferInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline pipeline);
@@ -430,7 +430,7 @@ daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
 DAXA_EXPORT void
 daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
 DAXA_EXPORT void
-daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, size_t index_type_byte_size);
+daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, VkIndexType index_type);
 
 DAXA_EXPORT void
 daxa_cmd_draw(daxa_CommandList cmd_list, daxa_DrawInfo const * info);

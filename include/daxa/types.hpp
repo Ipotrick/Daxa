@@ -271,36 +271,38 @@ namespace daxa
         }
     };
 
-    template <typename T, usize CAPACITY>
+    using FixedListSizeT = u32;
+
+    template <typename T, FixedListSizeT CAPACITY>
     struct FixedList
     {
       private:
         std::array<T, CAPACITY> m_data = {};
-        usize m_size = {};
+        u32 m_size = {};
 
       public:
         FixedList() = default;
-        auto at(usize i) -> T &
+        auto at(FixedListSizeT i) -> T &
         {
             return this->m_data.at(i);
         }
-        auto at(usize i) const -> T const &
+        auto at(FixedListSizeT i) const -> T const &
         {
             return this->m_data.at(i);
         }
-        auto operator[](usize i) -> T &
+        auto operator[](FixedListSizeT i) -> T &
         {
             return this->m_data[i];
         }
-        auto operator[](usize i) const -> T const &
+        auto operator[](FixedListSizeT i) const -> T const &
         {
             return this->m_data[i];
         }
-        static auto capacity() -> usize
+        static auto capacity() -> FixedListSizeT
         {
             return CAPACITY;
         }
-        auto size() const -> usize
+        auto size() const -> FixedListSizeT
         {
             return this->m_size;
         }
