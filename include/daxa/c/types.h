@@ -119,6 +119,14 @@ typedef enum
 #define daxa_i64 int64_t
 #define daxa_u64 uint64_t
 
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wgnu-anonymous-struct"
+#elif defined(_MSC_VER)
+#pragma warning(push)
+#pragma warning(disable : 4201)
+#endif
+
 _DAXA_DECL_VEC2_TYPE(float)
 daxa_f32vec2;
 _DAXA_DECL_VEC2_TYPE(double)
@@ -242,6 +250,12 @@ daxa_u32mat4x3;
 _DAXA_DECL_VEC4_TYPE(daxa_u32vec4)
 daxa_u32mat4x4;
 
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#elif defined(_MSC_VER)
+#pragma warning(pop)
+#endif
+
 /// ABI STABLE OPTIONAL TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Optional
 #define _DAXA_DECL_OPTIONAL(T) \
@@ -266,15 +280,15 @@ daxa_u32mat4x4;
 
 #define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
 
-#define _DAXA_VARIANT_INDEX_TYPE daxa_i32
+#define _DAXA_VARIANT_INDEX_TYPE uint8_t
 
 /// ABI STABLE VARIANT TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Variant
 #define _DAXA_DECL_VARIANT(UNION)       \
     typedef struct                      \
     {                                   \
-        _DAXA_VARIANT_INDEX_TYPE index; \
         UNION values;                   \
+        _DAXA_VARIANT_INDEX_TYPE index; \
     } daxa_Variant##UNION;
 
 #define daxa_Variant(UNION) daxa_Variant##UNION

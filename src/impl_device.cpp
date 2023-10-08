@@ -142,7 +142,8 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
     // --- End Parameter Validation ---
 
     auto [id, ret] = self->gpu_shader_resource_table.buffer_slots.new_slot();
-    ret.info = std::bit_cast<BufferInfo>(*info);
+    static_assert(sizeof(BufferInfo) == sizeof(daxa_BufferInfo));
+    ret.info = *reinterpret_cast<BufferInfo const *>(info);
     ret.info_name = ret.info.name;
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
 
@@ -159,7 +160,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
     bool host_accessible = false;
     VmaAllocationInfo vma_allocation_info = {};
-    if (AutoAllocInfo const * auto_info = ret.info.allocate_info.get_if<AutoAllocInfo>())
+    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(&ret.info.allocate_info))
     {
         auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->data);
         if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
@@ -195,7 +196,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
     }
     else
     {
-        auto const & manual_info = *ret.info.allocate_info.get_if<ManualAllocInfo>();
+        auto const & manual_info = *daxa::get_if<ManualAllocInfo>(&ret.info.allocate_info);
         auto const & mem_block = *manual_info.memory_block.as<daxa_ImplMemoryBlock const>();
 
         // TODO(pahrens): Add validation for memory type requirements.
@@ -271,7 +272,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
 
     ImplImageSlot ret = {};
     ret.zombie = false;
-    ret.info = std::bit_cast<daxa::ImageInfo>(*info);
+    ret.info = *reinterpret_cast<daxa::ImageInfo const*>(info);
     ret.view_slot.info = ImageViewInfo{
         .type = static_cast<ImageViewType>(info->dimensions - 1),
         .format = ret.info.format,
@@ -318,7 +319,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     };
     ret.aspect_flags = infer_aspect_from_format(info->format);
     VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(*info, &self->main_queue_family_index);
-    if (AutoAllocInfo const * auto_info = ret.info.allocate_info.get_if<AutoAllocInfo>())
+    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(&ret.info.allocate_info))
     {
         VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(auto_info->data),
@@ -348,8 +349,8 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     }
     else
     {
-        ManualAllocInfo const & manual_info = *ret.info.allocate_info.get_if<ManualAllocInfo>();
-        daxa_ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<daxa_MemoryBlock const>();
+        ManualAllocInfo const & manual_info = *daxa::get_if<ManualAllocInfo>(&ret.info.allocate_info);
+        daxa_ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<daxa_ImplMemoryBlock const>();
         // TODO(pahrens): Add validation for memory requirements.
         auto result = vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
         if (result != VK_SUCCESS)
@@ -380,7 +381,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         }
     }
 
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL != 0) && info->name.size != 0)
+    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && info->name.size != 0)
     {
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -445,7 +446,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         self->gpu_shader_resource_table.image_slots.return_slot(id);
         return DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW;
     }
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL != 0) && info->name.size != 0)
+    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && info->name.size != 0)
     {
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -515,7 +516,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
         return DAXA_RESULT_FAILED_TO_CREATE_SAMPLER;
     }
 
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL != 0) && info->name.size != 0)
+    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && info->name.size != 0)
     {
         VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -1563,7 +1564,7 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     ImplBufferSlot & buffer_slot = this->gpu_shader_resource_table.buffer_slots.dereference_id(gid);
     this->buffer_device_address_buffer_host_ptr[gid.index] = 0;
     write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
-    if (auto _ptr = buffer_slot.info.allocate_info.get_if<AutoAllocInfo>())
+    if (auto _ptr = daxa::get_if<AutoAllocInfo>(&buffer_slot.info.allocate_info))
     {
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
     }
@@ -1583,7 +1584,7 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
     vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
     if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
     {
-        if (auto _ptr = image_slot.info.allocate_info.get_if<AutoAllocInfo>())
+        if (auto _ptr = daxa::get_if<AutoAllocInfo>(&image_slot.info.allocate_info))
         {
             vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
         }

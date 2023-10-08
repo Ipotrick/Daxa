@@ -19,7 +19,7 @@ namespace daxa
         std::string string;
     };
 
-    using ShaderSource = std::variant<std::monostate, ShaderFile, ShaderCode>;
+    using ShaderSource = Variant<std::monostate, ShaderFile, ShaderCode>;
 
     struct ShaderDefine
     {
@@ -104,7 +104,7 @@ namespace daxa
     };
     using NoPipelineChanged = std::monostate;
 
-    using PipelineReloadResult = std::variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
+    using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
     struct PipelineManager : ManagedPtr
     {

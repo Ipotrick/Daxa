@@ -256,6 +256,7 @@ daxa_cmd_clear_image(daxa_CommandList self, daxa_ImageClearInfo const * info)
             1,
             &sub_range);
     }
+    return DAXA_RESULT_SUCCESS;
 }
 
 /// @brief  Successive pipeline barrier calls are combined.
@@ -446,22 +447,22 @@ void daxa_cmd_dispatch_indirect(daxa_CommandList self, daxa_DispatchIndirectInfo
 
 void daxa_cmd_destroy_buffer_deferred(daxa_CommandList self, daxa_BufferId id)
 {
-    self->deferred_destructions.emplace_back(self, std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_BUFFER_INDEX);
+    self->deferred_destructions.emplace_back(std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_BUFFER_INDEX);
 }
 
 void daxa_cmd_destroy_image_deferred(daxa_CommandList self, daxa_ImageId id)
 {
-    self->deferred_destructions.emplace_back(self, std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_IMAGE_INDEX);
+    self->deferred_destructions.emplace_back(std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_IMAGE_INDEX);
 }
 
 void daxa_cmd_destroy_image_view_deferred(daxa_CommandList self, daxa_ImageViewId id)
 {
-    self->deferred_destructions.emplace_back(self, std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX);
+    self->deferred_destructions.emplace_back(std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX);
 }
 
 void daxa_cmd_destroy_sampler_deferred(daxa_CommandList self, daxa_SamplerId id)
 {
-    self->deferred_destructions.emplace_back(self, std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_SAMPLER_INDEX);
+    self->deferred_destructions.emplace_back(std::bit_cast<GPUResourceId>(id), DEFERRED_DESTRUCTION_SAMPLER_INDEX);
 }
 
 void daxa_cmd_begin_renderpass(daxa_CommandList self, daxa_RenderPassBeginInfo const * info)
@@ -681,10 +682,10 @@ void daxa_cmd_begin_label(daxa_CommandList self, daxa_CommandLabelInfo const * i
         .pNext = {},
         .pLabelName = info->name.data,
         .color = {
-            info->label_color.data[0],
-            info->label_color.data[1],
-            info->label_color.data[2],
-            info->label_color.data[3]},
+            info->label_color.x,
+            info->label_color.y,
+            info->label_color.z,
+            info->label_color.w},
     };
 
     if ((self->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0)
@@ -842,7 +843,6 @@ auto daxa_ImplCommandList::create(daxa_Device device, daxa_CommandListInfo const
 
 void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout)
 {
-    auto & device = *this->device;
     std::array<VkDescriptorBufferInfo, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_buffer_info = {};
     std::array<VkWriteDescriptorSet, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> descriptor_writes = {};
     for (u32 index = 0; index < COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
@@ -850,7 +850,7 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
         if (this->current_constant_buffer_bindings[index].buffer.value == 0)
         {
             descriptor_buffer_info[index] = VkDescriptorBufferInfo{
-                .buffer = device.vk_null_buffer,
+                .buffer = device->vk_null_buffer,
                 .offset = {},
                 .range = VK_WHOLE_SIZE,
             };
@@ -858,7 +858,7 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
         else
         {
             descriptor_buffer_info[index] = VkDescriptorBufferInfo{
-                .buffer = device.slot(current_constant_buffer_bindings[index].buffer).vk_buffer,
+                .buffer = device->slot(current_constant_buffer_bindings[index].buffer).vk_buffer,
                 .offset = current_constant_buffer_bindings[index].offset,
                 .range = current_constant_buffer_bindings[index].size,
             };
@@ -877,7 +877,7 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
         };
     }
 
-    device.vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
+    device->vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
     for (u32 index = 0; index < COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT; ++index)
     {
         this->current_constant_buffer_bindings.at(index) = {};

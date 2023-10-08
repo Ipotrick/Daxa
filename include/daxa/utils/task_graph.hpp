@@ -71,7 +71,7 @@ namespace daxa
     struct TaskImageAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskImageView, std::string> aliased_image = {};
+        Variant<TaskImageView, std::string> aliased_image = {};
         u32 base_mip_level_offset = {};
         u32 base_array_layer_offset = {};
     };
@@ -79,7 +79,7 @@ namespace daxa
     struct TaskBufferAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskBufferView, std::string> aliased_buffer = {};
+        Variant<TaskBufferView, std::string> aliased_buffer = {};
     };
 
     template <typename TaskArgs>

@@ -111,8 +111,8 @@ typedef struct
 
 static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
     .size = 0,
-    .allocate_info = {.index = 0, .values = {.auto_alloc_info = 0}},
-    .name = 0,
+    .allocate_info = {.values = {.auto_alloc_info = 0}, .index = 0},
+    .name = {.data = 0, .size = 0},
 };
 static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
     .flags = 0,
@@ -123,13 +123,13 @@ static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
     .array_layer_count = 1,
     .sample_count = 1,
     .usage = 0,
-    .allocate_info = {.index = 0, .values = {.auto_alloc_info = 0}},
-    .name = 0,
+    .allocate_info = {.values = {.auto_alloc_info = 0}, .index = 0},
+    .name = {.data = 0, .size = 0},
 };
 static const daxa_ImageViewInfo DAXA_DEFAULT_IMAGE_VIEW_INFO = {
     .type = VK_IMAGE_VIEW_TYPE_2D,
     .format = VK_FORMAT_R8G8B8A8_SRGB,
-    .name = 0,
+    .name = {.data = 0, .size = 0},
 };
 static const daxa_SamplerInfo DAXA_DEFAULT_SAMPLER_INFO = {
     .magnification_filter = VK_FILTER_LINEAR,
@@ -148,7 +148,7 @@ static const daxa_SamplerInfo DAXA_DEFAULT_SAMPLER_INFO = {
     .max_lod = 1000.0f,
     .border_color = VK_BORDER_COLOR_INT_TRANSPARENT_BLACK,
     .enable_unnormalized_coordinates = 0,
-    .name = 0,
+    .name = {.data = 0, .size = 0},
 };
 
 DAXA_EXPORT VmaAllocation

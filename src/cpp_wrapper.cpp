@@ -299,7 +299,7 @@ namespace daxa
         auto self = this->as<daxa_ImplTimelineSemaphore>();
         u64 ret = {};
         DAXA_DBG_ASSERT_TRUE_M(
-            daxa_timeline_semaphore_get_value(const_cast<daxa_TimelineSemaphore>(self), &ret) == VK_SUCCESS,
+            daxa_timeline_semaphore_get_value(const_cast<daxa_TimelineSemaphore>(self), &ret) == DAXA_RESULT_SUCCESS,
             "cant get timeline value");
         return ret;
     }
@@ -308,7 +308,7 @@ namespace daxa
     {
         auto self = this->as<daxa_ImplTimelineSemaphore>();
         DAXA_DBG_ASSERT_TRUE_M(
-            daxa_timeline_semaphore_set_value(self, value) == VK_SUCCESS,
+            daxa_timeline_semaphore_set_value(self, value) == DAXA_RESULT_SUCCESS,
             "cant set timeline value");
     }
 
@@ -316,8 +316,8 @@ namespace daxa
     {
         auto self = this->as<daxa_ImplTimelineSemaphore>();
         auto result = daxa_timeline_semaphore_wait_for_value(self, value, timeout_nanos);
-        DAXA_DBG_ASSERT_TRUE_M(result == VK_SUCCESS || result == VK_TIMEOUT, "could not wait on timeline");
-        return result == VK_SUCCESS;
+        DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS || result == DAXA_RESULT_TIMEOUT, "could not wait on timeline");
+        return result == DAXA_RESULT_SUCCESS;
     }
 
     /// --- End TimelineSemaphore ---

@@ -14,30 +14,6 @@
 #include <stdexcept>
 
 #define DAXA_GPU_ID_VALIDATION 1
-
-#define DAXA_DBG_ASSERT_FAIL_STRING "[[DAXA ASSERT FAILURE]]"
-
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)                                              \
-    [&] {                                                                         \
-        if (!(x))                                                                 \
-        {                                                                         \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
-        }                                                                         \
-    }()
-#define DAXA_DBG_ASSERT_TRUE_MS(x, STREAM)                                        \
-    [&] {                                                                         \
-        if (!(x))                                                                 \
-        {                                                                         \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " STREAM << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
-        }                                                                         \
-    }()
-#else
-
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)
-#define DAXA_DBG_ASSERT_TRUE_MS(x, m)
-
 #endif
 
 #if defined(_WIN32)
