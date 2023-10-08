@@ -1,11 +1,26 @@
 #include "impl_core.hpp"
 
+// --- Begin API Functions ---
+
+auto daxa_inc_refcnt(daxa_Handle handle) -> u64
+{
+    return std::atomic_ref{handle->strong_count}.fetch_add(1, std::memory_order::relaxed);
+}
+
+auto daxa_dec_refcnt(daxa_Handle handle) -> u64
+{
+    return std::atomic_ref{handle->strong_count}.fetch_sub(1, std::memory_order::relaxed);
+}
+
+// --- End API Functions ---
+
+// TODO(capi): move this to cpp wrapper!
 namespace daxa
 {
     ManagedPtr::ManagedPtr(daxa_Handle ptr)
         : object{ptr}
     {
-        daxa_refcnt_inc(object);
+        daxa_inc_refcnt(object);
     }
     ManagedPtr::~ManagedPtr()
     {
@@ -20,7 +35,7 @@ namespace daxa
         this->object = other.object;
         if (this->object != nullptr)
         {
-            daxa_refcnt_inc(this->object);
+            daxa_inc_refcnt(this->object);
         }
         return *this;
     }
@@ -35,7 +50,7 @@ namespace daxa
     {
         if (this->object != nullptr)
         {
-            daxa_refcnt_dec(object);
+            daxa_dec_refcnt(object);
             this->object = {};
         }
     }

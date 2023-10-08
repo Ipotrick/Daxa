@@ -84,7 +84,7 @@ namespace daxa
 
 struct daxa_ImplHandle 
 {
-    std::atomic_uint64_t strong_count = {};
+    u64 strong_count = {};
 };
 
 struct daxa_ImplMemoryBlock final : daxa_ImplHandle

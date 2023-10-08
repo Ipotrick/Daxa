@@ -205,8 +205,7 @@ namespace daxa
     auto Device::properties() const -> DeviceProperties const &
     {
         auto self = this->as<daxa_ImplDevice>();
-        DAXA_DBG_ASSERT_TRUE_M(false, "UNIMPLEMENTED");
-        return DAXA_DEVICE_PROPERTIES_DUMMY;
+        return *reinterpret_cast<DeviceProperties const *>(&self->vk_physical_device_properties2.properties);
     }
 
     static const MeshShaderDeviceProperties DAXA_MESH_SHADER_DEVICE_PROPERTIES_DUMMY = {};
@@ -214,8 +213,7 @@ namespace daxa
     auto Device::mesh_shader_properties() const -> MeshShaderDeviceProperties const &
     {
         auto self = this->as<daxa_ImplDevice>();
-        DAXA_DBG_ASSERT_TRUE_M(false, "UNIMPLEMENTED");
-        return DAXA_MESH_SHADER_DEVICE_PROPERTIES_DUMMY;
+        return *reinterpret_cast<MeshShaderDeviceProperties const *>(&self->mesh_shader_properties);
     }
 
     void Device::wait_idle()
@@ -227,19 +225,18 @@ namespace daxa
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
         auto self = this->as<daxa_ImplDevice>();
-        // TODO(capi): Find solution to remove this struct translation!
         daxa_CommandSubmitInfo c_submit_info = {
             .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
-            // .command_lists = submit_info.command_lists.data(),
-            // .command_list_count = submit_info.command_lists.size(),
-            // .wait_binary_semaphores = submit_info.wait_binary_semaphores.data(),
-            // .wait_binary_semaphore_count = submit_info.wait_binary_semaphores.size(),
-            // .signal_binary_semaphores = submit_info.signal_binary_semaphores.data(),
-            // .signal_binary_semaphore_count = submit_info.signal_binary_semaphores.size(),
-            // .wait_timeline_semaphores = submit_info.wait_timeline_semaphores.data(),
-            // .wait_timeline_semaphore_count = submit_info.wait_timeline_semaphores.size(),
-            // .signal_timeline_semaphores = submit_info.signal_timeline_semaphores.data(),
-            // .signal_timeline_semaphoreCount = submit_info.signal_timeline_semaphores.size(),
+            .command_lists = reinterpret_cast<daxa_CommandList const*>(submit_info.command_lists.data()),
+            .command_list_count = submit_info.command_lists.size(),
+            .wait_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const*>(submit_info.wait_binary_semaphores.data()),
+            .wait_binary_semaphore_count = submit_info.wait_binary_semaphores.size(),
+            .signal_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const*>(submit_info.signal_binary_semaphores.data()),
+            .signal_binary_semaphore_count = submit_info.signal_binary_semaphores.size(),
+            .wait_timeline_semaphores = reinterpret_cast<daxa_TimelinePair const*>(submit_info.wait_timeline_semaphores.data()),
+            .wait_timeline_semaphore_count = submit_info.wait_timeline_semaphores.size(),
+            .signal_timeline_semaphores = reinterpret_cast<daxa_TimelinePair const*>(submit_info.signal_timeline_semaphores.data()),
+            .signal_timeline_semaphore_count = submit_info.signal_timeline_semaphores.size(),
         };
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_submit(self, &c_submit_info) == DAXA_RESULT_SUCCESS,
@@ -249,11 +246,10 @@ namespace daxa
     void Device::present_frame(PresentInfo const & info)
     {
         auto self = this->as<daxa_ImplDevice>();
-        // TODO(capi): Find solution to remove this struct translation!
         daxa_PresentInfo c_present_info = {
-            // .wait_binary_semaphores = info.wait_binary_semaphores.data(),
-            // .wait_binary_semaphore_count = info.wait_binary_semaphores.size(),
-            // .swapchain = info.swapchain,
+            .wait_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const*>(info.wait_binary_semaphores.data()),
+            .wait_binary_semaphore_count = info.wait_binary_semaphores.size(),
+            .swapchain = *reinterpret_cast<daxa_Swapchain const *>(&info.swapchain),
         };
         DAXA_DBG_ASSERT_TRUE_M(
             daxa_dvc_present(self, &c_present_info) == DAXA_RESULT_SUCCESS,

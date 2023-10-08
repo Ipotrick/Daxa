@@ -203,16 +203,16 @@ namespace daxa
     struct CommandSubmitInfo
     {
         PipelineStageFlags wait_stages = {};
-        std::vector<CommandList> command_lists = {};
-        std::vector<BinarySemaphore> wait_binary_semaphores = {};
-        std::vector<BinarySemaphore> signal_binary_semaphores = {};
-        std::vector<std::pair<TimelineSemaphore, u64>> wait_timeline_semaphores = {};
-        std::vector<std::pair<TimelineSemaphore, u64>> signal_timeline_semaphores = {};
+        std::span<CommandList> command_lists = {};
+        std::span<BinarySemaphore> wait_binary_semaphores = {};
+        std::span<BinarySemaphore> signal_binary_semaphores = {};
+        std::span<std::pair<TimelineSemaphore, u64>> wait_timeline_semaphores = {};
+        std::span<std::pair<TimelineSemaphore, u64>> signal_timeline_semaphores = {};
     };
 
     struct PresentInfo
     {
-        std::vector<BinarySemaphore> wait_binary_semaphores = {};
+        std::span<BinarySemaphore> wait_binary_semaphores = {};
         Swapchain swapchain;
     };
 

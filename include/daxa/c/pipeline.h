@@ -6,7 +6,7 @@
 typedef struct
 {
     uint32_t const * byte_code;
-    size_t byte_code_size;
+    uint32_t byte_code_size;
     daxa_StringView entry_point;
 } daxa_ShaderInfo;
 _DAXA_DECL_OPTIONAL(daxa_ShaderInfo)

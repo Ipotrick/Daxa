@@ -268,6 +268,11 @@ namespace daxa
         {
             return this->m_value;
         }
+
+        auto value_or(T const & v) const -> T const &
+        {
+            return has_value() ? value() : v;
+        }
     };
 
     using FixedListSizeT = u32;
@@ -1613,7 +1618,6 @@ namespace daxa
 
     struct BlendInfo
     {
-        u32 blend_enable = false;
         BlendFactor src_color_blend_factor = BlendFactor::ONE;
         BlendFactor dst_color_blend_factor = BlendFactor::ZERO;
         BlendOp color_blend_op = BlendOp::ADD;

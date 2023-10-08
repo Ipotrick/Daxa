@@ -24,9 +24,9 @@ typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
 typedef struct daxa_ImplMemoryBlock * daxa_MemoryBlock;
 
 DAXA_EXPORT uint64_t
-daxa_refcnt_inc(daxa_Handle handle);
+daxa_inc_refcnt(daxa_Handle handle);
 DAXA_EXPORT uint64_t
-daxa_refcnt_dec(daxa_Handle handle);
+daxa_dec_refcnt(daxa_Handle handle);
 
 typedef uint64_t daxa_Flags;
 

@@ -9,15 +9,15 @@ namespace daxa
     struct ShaderInfo
     {
         u32 const * byte_code;
-        usize byte_code_size;
-        daxa_StringView entry_point = {};
+        u32 byte_code_size;
+        std::string_view entry_point = "main";
     };
 
     struct ComputePipelineInfo
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        daxa_StringView name = {};
+        std::string_view name = {};
     };
 
     struct ComputePipeline : ManagedPtr

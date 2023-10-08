@@ -1,11 +1,11 @@
 #pragma once
 
-#include <daxa/c/instance.h>
-#include <atomic>
+#include "impl_core.hpp"
 
-struct daxa_ImplInstance
+#include <daxa/c/instance.h>
+
+struct daxa_ImplInstance final : daxa_ImplHandle
 {
-    std::atomic_uint64_t ref_count = {};
     daxa_InstanceInfo info = {};
     VkInstance vk_instance = {};
 };

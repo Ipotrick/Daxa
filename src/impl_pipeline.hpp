@@ -23,14 +23,10 @@ struct ImplPipeline : daxa_ImplHandle
 
 struct daxa_ImplRasterPipeline final : ImplPipeline
 {
-    daxa_RasterPipelineInfo info = {};
-
-    static auto create(daxa_Device device, daxa_RasterPipelineInfo const * a_info, daxa_RasterPipeline pipeline) -> daxa_Result;
+    RasterPipelineInfo info = {};
 };
 
 struct daxa_ImplComputePipeline final : ImplPipeline
 {
-    daxa_ComputePipelineInfo info = {};
-
-    static auto create(daxa_Device a_device, daxa_ComputePipelineInfo const * a_info, daxa_ComputePipeline pipeline) -> daxa_Result;
+    ComputePipelineInfo info = {};
 };

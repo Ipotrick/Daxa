@@ -455,7 +455,7 @@ daxa_cmd_reset_timestamps(daxa_CommandList cmd_list, daxa_ResetTimestampsInfo co
 DAXA_EXPORT void
 daxa_cmd_begin_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo const * info);
 DAXA_EXPORT void
-daxa_cmd_end_label(daxa_CommandList cmd_list, daxa_CommandLabelInfo label);
+daxa_cmd_end_label(daxa_CommandList cmd_list);
 
 // Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 DAXA_EXPORT void

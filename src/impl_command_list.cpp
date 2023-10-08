@@ -694,7 +694,7 @@ void daxa_cmd_begin_label(daxa_CommandList self, daxa_CommandLabelInfo const * i
     }
 }
 
-void daxa_cmd_end_label(daxa_CommandList self, daxa_CommandLabelInfo label)
+void daxa_cmd_end_label(daxa_CommandList self)
 {
     daxa_cmd_flush_barriers(self);
     if ((self->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0)
@@ -771,13 +771,13 @@ void daxa_destroy_command_list(daxa_CommandList self)
 DAXA_EXPORT uint64_t
 daxa_cmd_inc_refcnt(daxa_CommandList self)
 {
-    return self->strong_count.fetch_add(1);
+    return daxa_inc_refcnt(self);
 }
 
 DAXA_EXPORT uint64_t
 daxa_cmd_dec_refcnt(daxa_CommandList self)
 {
-    u64 prev = self->strong_count.fetch_sub(1);
+    u64 prev = daxa_dec_refcnt(self);
     if (prev == 1)
     {
         vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
