@@ -87,6 +87,7 @@ typedef enum
     DAXA_RESULT_INVALID_BUFFER_OFFSET = (1 << 30) + 34,
     DAXA_RESULT_INVALID_UNIFORM_BUFFER_SLOT = (1 << 30) + 35,
     DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND = (1 << 30) + 36,
+    DAXA_RESULT_RANGE_OUT_OF_BOUNDS = (1 << 30) + 37,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
@@ -360,8 +361,8 @@ typedef struct
 DAXA_EXPORT daxa_TimelineQueryPoolInfo const *
 daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
 
-DAXA_EXPORT void
-daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint64_t * out_counnt, uint64_t * out_results);
+DAXA_EXPORT daxa_Result
+daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint32_t start, uint32_t count, uint64_t * out_results);
 
 DAXA_EXPORT uint64_t
 daxa_timeline_query_pool_inc_refcnt(daxa_TimelineQueryPool timeline_query_pool);

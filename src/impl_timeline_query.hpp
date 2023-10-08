@@ -8,23 +8,16 @@
 
 namespace daxa
 {
-    struct ImplDevice;
-
     struct TimelineQueryPoolZombie
     {
         VkQueryPool vk_timeline_query_pool = {};
     };
-
-    struct ImplTimelineQueryPool final : daxa_ImplHandle
-    {
-        TimelineQueryPoolInfo info = {};
-        VkQueryPool vk_timeline_query_pool = {};
-
-        ImplTimelineQueryPool(daxa_Device a_device, TimelineQueryPoolInfo a_info);
-        ~ImplTimelineQueryPool();
-
-      private:
-        friend struct TimelineQueryPool;
-        daxa_Device device = {};
-    };
 } // namespace daxa
+
+struct daxa_ImplTimelineQueryPool final : daxa_ImplHandle
+{
+    daxa_Device device = {};
+    TimelineQueryPoolInfo info = {};
+    std::string info_name = {};
+    VkQueryPool vk_timeline_query_pool = {};
+};
