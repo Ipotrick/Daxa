@@ -77,9 +77,19 @@ struct daxa_ImplDevice final : daxa_ImplHandle
 
     static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
 
-    auto validate_image_slice(ImageMipArraySlice const & slice, daxa_ImageId id) -> ImageMipArraySlice;
-    auto validate_image_slice(ImageMipArraySlice const & slice, daxa_ImageViewId id) -> ImageMipArraySlice;
+    auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
+    auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
     auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, daxa_ImageId>;
+
+    auto slot(BufferId id) -> ImplBufferSlot &;
+    auto slot(ImageId id) -> ImplImageSlot &;
+    auto slot(ImageViewId id) -> ImplImageViewSlot &;
+    auto slot(SamplerId id) -> ImplSamplerSlot &;
+
+    auto slot(BufferId id) const -> ImplBufferSlot const &;
+    auto slot(ImageId id) const -> ImplImageSlot const &;
+    auto slot(ImageViewId id) const -> ImplImageViewSlot const &;
+    auto slot(SamplerId id) const -> ImplSamplerSlot const &;
 
     auto slot(daxa_BufferId id) -> ImplBufferSlot &;
     auto slot(daxa_ImageId id) -> ImplImageSlot &;
@@ -91,13 +101,13 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     auto slot(daxa_ImageViewId id) const -> ImplImageViewSlot const &;
     auto slot(daxa_SamplerId id) const -> ImplSamplerSlot const &;
 
-    void cleanup_buffer(daxa_BufferId id);
-    void cleanup_image(daxa_ImageId id);
-    void cleanup_image_view(daxa_ImageViewId id);
-    void cleanup_sampler(daxa_SamplerId id);
+    void cleanup_buffer(BufferId id);
+    void cleanup_image(ImageId id);
+    void cleanup_image_view(ImageViewId id);
+    void cleanup_sampler(SamplerId id);
 
-    void zombify_buffer(daxa_BufferId id);
-    void zombify_image(daxa_ImageId id);
-    void zombify_image_view(daxa_ImageViewId id);
-    void zombify_sampler(daxa_SamplerId id);
+    void zombify_buffer(BufferId id);
+    void zombify_image(ImageId id);
+    void zombify_image_view(ImageViewId id);
+    void zombify_sampler(SamplerId id);
 };
