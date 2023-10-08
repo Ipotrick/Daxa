@@ -207,7 +207,7 @@ auto daxa_event_info(daxa_Event self) -> daxa_EventInfo const *
 
 auto daxa_evemt_inc_refcnt(daxa_Event self) -> u64
 {
-    daxa_inc_refcnt(self);
+    return daxa_inc_refcnt(self);
 }
 
 auto daxa_evemt_dec_refcnt(daxa_Event self) -> u64

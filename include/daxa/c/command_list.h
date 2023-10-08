@@ -377,7 +377,7 @@ DAXA_EXPORT void
 daxa_cmd_reset_event(daxa_CommandList cmd_list, daxa_ResetEventInfo const * info);
 
 DAXA_EXPORT void
-daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t size, uint32_t offset);
+daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t size);
 /// @brief  Binds a buffer region to the uniform buffer slot.
 ///         There are 8 uniform buffer slots (indices range from 0 to 7).
 ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!

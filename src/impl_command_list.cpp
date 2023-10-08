@@ -390,7 +390,7 @@ void daxa_cmd_reset_event(daxa_CommandList self, daxa_ResetEventInfo const * inf
         info->stage_masks);
 }
 
-void daxa_cmd_push_constant(daxa_CommandList self, void const * data, uint32_t size, uint32_t offset)
+void daxa_cmd_push_constant(daxa_CommandList self, void const * data, uint32_t size)
 {
     daxa_cmd_flush_barriers(self);
     u64 layout_index = (size + sizeof(u32) - 1) / sizeof(u32);
