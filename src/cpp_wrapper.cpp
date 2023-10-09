@@ -129,30 +129,28 @@ namespace daxa
 
     auto create_instance(InstanceInfo const & info) -> Instance
     {
-        Instance instance = {};
+        Instance ret = {};
         check_result(daxa_create_instance(
-                         reinterpret_cast<daxa_InstanceInfo const *>(&info),
-                         reinterpret_cast<daxa_Instance *>(&instance)),
+                         r_cast<daxa_InstanceInfo const *>(&info),
+                         r_cast<daxa_Instance *>(&ret)),
                      "failed to create instance");
-        return instance;
+        return ret;
     }
 
-    auto Instance::create_device(DeviceInfo const & device_info) -> Device
+    auto Instance::create_device(DeviceInfo const & info) -> Device
     {
-        Device device = {};
+        Device ret = {};
         check_result(daxa_instance_create_device(
-                         reinterpret_cast<daxa_Instance>(this),
-                         reinterpret_cast<daxa_DeviceInfo const *>(&device_info),
-                         reinterpret_cast<daxa_Device *>(&device)),
+                         r_cast<daxa_Instance>(this),
+                         r_cast<daxa_DeviceInfo const *>(&info),
+                         r_cast<daxa_Device *>(&ret)),
                      "failed to create device");
-        return device;
+        return ret;
     }
 
     auto Instance::info() const -> InstanceInfo const &
     {
-        return *reinterpret_cast<InstanceInfo const *>(
-            daxa_instance_info(const_cast<daxa_Instance>(reinterpret_cast<daxa_ImplInstance const *>(this))) 
-        );
+        return *r_cast<InstanceInfo const *>(daxa_instance_info(rc_cast<daxa_Instance>(this)));
     }
 
     /// --- End Instance ---
@@ -161,63 +159,63 @@ namespace daxa
 
     auto Device::create_memory(MemoryBlockInfo const & info) -> MemoryBlock
     {
-        auto self = this->as<daxa_ImplDevice>();
-        auto c_info = reinterpret_cast<daxa_MemoryBlockInfo const *>(&info);
-        daxa_MemoryBlock c_memory_block;
-        DAXA_DBG_ASSERT_TRUE_M(
-            daxa_dvc_create_memory(self, c_info, &c_memory_block) == daxa_Result::DAXA_RESULT_SUCCESS,
-            "failed to create memory");
-        return MemoryBlock{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_memory_block)}};
+        MemoryBlock ret = {};
+        check_result(daxa_dvc_create_memory(
+                         r_cast<daxa_Device>(this),
+                         r_cast<daxa_MemoryBlockInfo const *>(&info),
+                         r_cast<daxa_MemoryBlock *>(&ret)),
+                     "failed to create memory block");
+        return ret;
     }
 
-    auto Device::get_memory_requirements(BufferInfo const & info) -> MemoryRequirements
+    auto Device::get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements
     {
-        auto self = this->as<daxa_ImplDevice>();
-        auto c_info = reinterpret_cast<daxa_BufferInfo const *>(&info);
-        return std::bit_cast<MemoryRequirements>(daxa_dvc_buffer_memory_requirements(self, c_info));
+        return std::bit_cast<MemoryRequirements>(
+            daxa_dvc_buffer_memory_requirements(
+                rc_cast<daxa_Device>(this),
+                r_cast<daxa_BufferInfo const *>(&info)));
     }
 
-    auto Device::get_memory_requirements(ImageInfo const & info) -> MemoryRequirements
+    auto Device::get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements
     {
-        auto self = this->as<daxa_ImplDevice>();
-        auto c_info = reinterpret_cast<daxa_ImageInfo const *>(&info);
-        return std::bit_cast<MemoryRequirements>(daxa_dvc_image_memory_requirements(self, c_info));
+        return std::bit_cast<MemoryRequirements>(
+            daxa_dvc_image_memory_requirements(
+                rc_cast<daxa_Device>(this),
+                r_cast<daxa_ImageInfo const *>(&info)));
     }
 
-#define _DAXA_DECL_GPU_RES_FN(Name, name)                                       \
-    auto Device::create_##name(Name##Info const & info)->Name##Id               \
-    {                                                                           \
-        auto self = this->as<daxa_ImplDevice>();                                \
-        auto c_info = reinterpret_cast<daxa_##Name##Info const *>(&info);       \
-        daxa_##Name##Id c_id = {};                                              \
-        DAXA_DBG_ASSERT_TRUE_M(                                                 \
-            daxa_dvc_create_##name(self, c_info, &c_id),                        \
-            "failed to create " #name);                                         \
-        return std::bit_cast<Name##Id>(c_id);                                   \
-    }                                                                           \
-    void Device::destroy_##name(Name##Id id)                                    \
-    {                                                                           \
-        auto self = this->as<daxa_ImplDevice>();                                \
-        auto c_id = std::bit_cast<daxa_##Name##Id>(id);                         \
-        DAXA_DBG_ASSERT_TRUE_M(                                                 \
-            daxa_dvc_dec_refcnt_##name(self, c_id),                             \
-            "failed to destroy " #name);                                        \
-    }                                                                           \
-    auto Device::is_id_valid(Name##Id id) const->bool                           \
-    {                                                                           \
-        auto self = this->as<daxa_ImplDevice>();                                \
-        auto c_id = std::bit_cast<daxa_##Name##Id>(id);                         \
-        return daxa_dvc_is_##name##_valid(const_cast<daxa_Device>(self), c_id); \
-    }                                                                           \
-    auto Device::info_##name(Name##Id id) const->Name##Info const &             \
-    {                                                                           \
-        auto self = this->as<daxa_ImplDevice>();                                \
-        auto c_id = std::bit_cast<daxa_##Name##Id>(id);                         \
-        daxa_##Name##Info const * c_info = {};                                  \
-        DAXA_DBG_ASSERT_TRUE_M(                                                 \
-            daxa_dvc_info_##name(const_cast<daxa_Device>(self), c_id, &c_info), \
-            "failed to get info of " #name);                                    \
-        return *reinterpret_cast<Name##Info const *>(c_info);                   \
+#define _DAXA_DECL_GPU_RES_FN(Name, name)                                              \
+    auto Device::create_##name(Name##Info const & info)->Name##Id                      \
+    {                                                                                  \
+        Name##Id id = {};                                                              \
+        check_result(                                                                  \
+            daxa_dvc_create_##name(                                                    \
+                r_cast<daxa_Device>(this),                                             \
+                r_cast<daxa_##Name##Info const *>(&info),                              \
+                r_cast<daxa_##Name##Id *>(&id)),                                       \
+            "failed to create buffer");                                                \
+        return id;                                                                     \
+    }                                                                                  \
+    void Device::destroy_##name(Name##Id id)                                           \
+    {                                                                                  \
+        DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id"); \
+        [[maybe_unused]] auto prev_refcnt = daxa_dvc_dec_refcnt_##name(                \
+            r_cast<daxa_Device>(this),                                                 \
+            std::bit_cast<daxa_##Name##Id>(id));                                       \
+    }                                                                                  \
+    auto Device::is_id_valid(Name##Id id) const->bool                                  \
+    {                                                                                  \
+        return daxa_dvc_is_##name##_valid(                                             \
+            rc_cast<daxa_Device>(this),                                                \
+            std::bit_cast<daxa_##Name##Id>(id));                                       \
+    }                                                                                  \
+    auto Device::info_##name(Name##Id id) const->Name##Info const &                    \
+    {                                                                                  \
+        DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id"); \
+        return *r_cast<Name##Info const *>(                                            \
+            daxa_dvc_info_##name(                                                      \
+                rc_cast<daxa_Device>(this),                                            \
+                std::bit_cast<daxa_##Name##Id>(id)));                                  \
     }
 
     _DAXA_DECL_GPU_RES_FN(Buffer, buffer)
@@ -227,39 +225,40 @@ namespace daxa
 
     auto Device::get_device_address(BufferId id) const -> BufferDeviceAddress
     {
-        auto self = this->as<daxa_ImplDevice>();
-        auto c_id = std::bit_cast<daxa_BufferId>(id);
-        daxa_BufferDeviceAddress c_bda = {};
-        DAXA_DBG_ASSERT_TRUE_M(
-            daxa_dvc_buffer_device_address(const_cast<daxa_Device>(self), c_id, &c_bda),
-            "failed to get buffer device address");
-        return std::bit_cast<daxa::BufferDeviceAddress>(c_bda);
+        auto ret = BufferDeviceAddress{};
+        check_result(
+            daxa_dvc_buffer_device_address(
+                rc_cast<daxa_Device>(this),
+                std::bit_cast<daxa_BufferId>(id),
+                r_cast<daxa_BufferDeviceAddress *>(&ret)),
+            "buffer is not device accessable");
+        return ret;
     }
 
     auto Device::get_host_address(BufferId id) const -> void *
     {
-        auto self = this->as<daxa_ImplDevice>();
-        auto c_id = std::bit_cast<daxa_BufferId>(id);
-        void * c_ptr = {};
-        DAXA_DBG_ASSERT_TRUE_M(
-            daxa_dvc_buffer_host_address(const_cast<daxa_Device>(self), c_id, &c_ptr),
-            "failed to get buffer device address");
-        return c_ptr;
+        void * ret = {};
+        check_result(
+            daxa_dvc_buffer_host_address(
+                rc_cast<daxa_Device>(this),
+                std::bit_cast<daxa_BufferId>(id),
+                &ret),
+            "buffer is not host accessable");
+        return ret;
     }
 
-#define _DAXA_DECL_DVC_CREATE_FN(Name, name)                                     \
-    auto Device::create_##name(Name##Info const & info)->Name                    \
-    {                                                                            \
-        auto self = this->as<daxa_ImplDevice>();                                 \
-        auto c_info = reinterpret_cast<daxa_##Name##Info const *>(&info);        \
-        daxa_##Name c_obj = {};                                                  \
-        DAXA_DBG_ASSERT_TRUE_M(                                                  \
-            daxa_dvc_create_##name(self, c_info, &c_obj) == DAXA_RESULT_SUCCESS, \
-            "failed to create " #name);                                          \
-        return Name{ManagedPtr{reinterpret_cast<daxa_ImplHandle *>(c_obj)}};     \
+#define _DAXA_DECL_DVC_CREATE_FN(Name, name)                       \
+    auto Device::create_##name(Name##Info const & info)->Name      \
+    {                                                              \
+        Name ret = {};                                             \
+        check_result(daxa_dvc_create_##name(                       \
+                         r_cast<daxa_Device>(this),                \
+                         r_cast<daxa_##Name##Info const *>(&info), \
+                         r_cast<daxa_##Name *>(&ret)),             \
+                     "failed to create " #name);                   \
+        return ret;                                                \
     }
 
-    // TODO(capi) where do the deleters go now??
     _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)

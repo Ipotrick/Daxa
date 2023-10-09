@@ -224,7 +224,9 @@ daxa_cmd_clear_image(daxa_CommandList self, daxa_ImageClearInfo const * info)
 {
     daxa_cmd_flush_barriers(self);
     auto & img_slot = self->device->slot(info->dst_image);
-    bool const is_image_depth_stencil = is_depth_format(img_slot.info.format) || is_stencil_format(img_slot.info.format);
+    bool const is_image_depth_stencil =
+        is_depth_format(std::bit_cast<Format>(img_slot.info.format)) ||
+        is_stencil_format(std::bit_cast<Format>(img_slot.info.format));
     bool const is_clear_depth_stencil = info->clear_value.index == 3;
     if (is_clear_depth_stencil)
     {
@@ -614,7 +616,7 @@ void daxa_cmd_draw_indirect_count(daxa_CommandList self, daxa_DrawIndirectCountI
 
 void daxa_cmd_draw_mesh_tasks(daxa_CommandList self, uint32_t x, uint32_t y, uint32_t z)
 {
-    if (self->device->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER_BIT) != DeviceFlagBits::MESH_SHADER_BIT)
     {
         self->device->vkCmdDrawMeshTasksEXT(self->vk_cmd_buffer, x, y, z);
     }
@@ -622,7 +624,7 @@ void daxa_cmd_draw_mesh_tasks(daxa_CommandList self, uint32_t x, uint32_t y, uin
 
 void daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandList self, daxa_DrawMeshTasksIndirectInfo const * info)
 {
-    if (self->device->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER_BIT) != DeviceFlagBits::MESH_SHADER_BIT)
     {
         self->device->vkCmdDrawMeshTasksIndirectEXT(
             self->vk_cmd_buffer,
@@ -637,7 +639,7 @@ void daxa_cmd_draw_mesh_tasks_indirect_count(
     daxa_CommandList self,
     daxa_DrawMeshTasksIndirectCountInfo const * info)
 {
-    if (self->device->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER_BIT) != DeviceFlagBits::MESH_SHADER_BIT)
     {
         self->device->vkCmdDrawMeshTasksIndirectCountEXT(
             self->vk_cmd_buffer,
@@ -766,28 +768,15 @@ void daxa_destroy_command_list(daxa_CommandList self)
 
 auto daxa_cmd_inc_refcnt(daxa_CommandList self) -> u64
 {
-    return daxa_inc_refcnt(self);
+    return self->inc_refcnt();
 }
 
 auto daxa_cmd_dec_refcnt(daxa_CommandList self) -> u64
 {
-    auto prev = daxa_dec_refcnt(self);
-    if (prev == 1)
-    {
-        vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
-        u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-        std::unique_lock const lock{self->device->main_queue_zombies_mtx};
-
-        self->device->main_queue_command_list_zombies.push_front({
-            main_queue_cpu_timeline,
-            CommandListZombie{
-                .vk_cmd_buffer = self->vk_cmd_buffer,
-                .vk_cmd_pool = self->vk_cmd_pool,
-            },
-        });
-        delete self;
-    }
-    return prev;
+    return self->dec_refcnt(
+        &daxa_ImplCommandList::zero_ref_callback,
+        self->device->instance
+    );
 }
 
 auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const * info, daxa_CommandList * out_cmd_list) -> daxa_Result
@@ -838,6 +827,7 @@ auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const
     }
     *out_cmd_list = new daxa_ImplCommandList{};
     **out_cmd_list = std::move(ret);
+    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -887,3 +877,25 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
         this->current_constant_buffer_bindings.at(index) = {};
     }
 }
+
+void zero_ref_callback(daxa_ImplHandle * handle)
+{
+    auto self = r_cast<daxa_CommandList>(handle);
+    vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
+    u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+    std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+    self->device->main_queue_command_list_zombies.push_front({
+        main_queue_cpu_timeline,
+        CommandListZombie{
+            .vk_cmd_buffer = self->vk_cmd_buffer,
+            .vk_cmd_pool = self->vk_cmd_pool,
+        },
+    });
+    self->device->dec_weak_refcnt(
+        daxa_ImplDevice::zero_ref_callback,
+        self->device->instance
+    );
+    delete self;
+}
+
+// --- End Internals ---

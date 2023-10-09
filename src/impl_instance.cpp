@@ -4,6 +4,8 @@
 
 #include <vector>
 
+// --- Begin API Functions ---
+
 auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_instance) -> daxa_Result
 {
     auto ret = daxa_ImplInstance{};
@@ -140,18 +142,14 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
 
 auto daxa_instance_inc_refcnt(daxa_Instance self) -> u64
 {
-    return daxa_inc_refcnt(self);
+    return self->inc_refcnt();
 }
 
 auto daxa_instance_dec_refcnt(daxa_Instance self) -> u64
 {
-    auto prev = daxa_dec_refcnt(self);
-    if (prev == 1)
-    {
-        vkDestroyInstance(self->vk_instance, nullptr);
-        delete self;
-    }
-    return prev;
+    return self->dec_refcnt(
+        &daxa_ImplInstance::zero_ref_callback,
+        self);
 }
 
 auto daxa_instance_info(daxa_Instance self) -> daxa_InstanceInfo const *
@@ -163,3 +161,16 @@ auto daxa_instance_get_vk_instance(daxa_Instance self) -> VkInstance
 {
     return self->vk_instance;
 }
+
+// --- End API Functions ---
+
+// --- Begin Internals ---
+
+void zero_ref_callback(daxa_ImplHandle * handle)
+{
+    daxa_Instance self = r_cast<daxa_Instance>(handle);
+    vkDestroyInstance(self->vk_instance, nullptr);
+    delete self;
+}
+
+// --- End Internals ---

@@ -12,7 +12,6 @@
 typedef struct daxa_ImplHandle * daxa_Handle;
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandList * daxa_CommandList;
-typedef struct daxa_ImplBakedCommands * daxa_BakedCommands;
 typedef struct daxa_ImplInstance * daxa_Instance;
 typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
 typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
@@ -22,11 +21,6 @@ typedef struct daxa_ImplTimelineSemaphore * daxa_TimelineSemaphore;
 typedef struct daxa_ImplEvent * daxa_Event;
 typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
 typedef struct daxa_ImplMemoryBlock * daxa_MemoryBlock;
-
-DAXA_EXPORT uint64_t
-daxa_inc_refcnt(daxa_Handle handle);
-DAXA_EXPORT uint64_t
-daxa_dec_refcnt(daxa_Handle handle);
 
 typedef uint64_t daxa_Flags;
 

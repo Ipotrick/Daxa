@@ -16,9 +16,12 @@ using namespace daxa;
 struct daxa_ImplDevice final : daxa_ImplHandle
 {
     daxa_Instance instance = {};
+    DeviceInfo info = {};
+    std::string info_name = {};
     VkPhysicalDevice vk_physical_device = {};
     VkPhysicalDeviceProperties2 vk_physical_device_properties2;
     VkDevice vk_device = {};
+    VmaAllocator vma_allocator = {};
 
     // Debug utils:
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
@@ -32,9 +35,6 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT = {};
     VkPhysicalDeviceMeshShaderPropertiesEXT mesh_shader_properties = {};
 
-    VmaAllocator vma_allocator = {};
-    daxa_DeviceInfo info = {};
-    std::string info_name = {};
     VkBuffer buffer_device_address_buffer = {};
     u64 * buffer_device_address_buffer_host_ptr = {};
     VmaAllocation buffer_device_address_buffer_allocation = {};
@@ -76,12 +76,8 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
     std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
 
-    // TODO: Give physical device in info so that this function can be removed.
-    // TODO: Better device selection.
-    static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
-
-    auto validate_image_slice(ImageMipArraySlice const & slice, ImageId id) -> ImageMipArraySlice;
-    auto validate_image_slice(ImageMipArraySlice const & slice, ImageViewId id) -> ImageMipArraySlice;
+    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice;
+    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice;
     auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, ImageId>;
 
     auto slot(BufferId id) -> ImplBufferSlot &;
@@ -109,8 +105,23 @@ struct daxa_ImplDevice final : daxa_ImplHandle
     void cleanup_image_view(ImageViewId id);
     void cleanup_sampler(SamplerId id);
 
-    void zombify_buffer(BufferId id);
-    void zombify_image(ImageId id);
-    void zombify_image_view(ImageViewId id);
-    void zombify_sampler(SamplerId id);
+    auto inc_weak_refcnt_buffer(BufferId id) -> u64;
+    auto inc_weak_refcnt_image(ImageId id) -> u64;
+    auto inc_weak_refcnt_image_view(ImageViewId id) -> u64;
+    auto inc_weak_refcnt_sampler(SamplerId id) -> u64;
+
+    auto dec_weak_refcnt_buffer(BufferId id) -> u64;
+    auto dec_weak_refcnt_image(ImageId id) -> u64;
+    auto dec_weak_refcnt_image_view(ImageViewId id) -> u64;
+    auto dec_weak_refcnt_sampler(SamplerId id) -> u64;
+
+    void zero_ref_callback_buffer(BufferId id);
+    void zero_ref_callback_image(ImageId id);
+    void zero_ref_callback_image_view(ImageViewId id);
+    void zero_ref_callback_sampler(SamplerId id);
+
+    // TODO: Give physical device in info so that this function can be removed.
+    // TODO: Better device selection.
+    static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
+    static void zero_ref_callback(daxa_ImplHandle * handle);
 };

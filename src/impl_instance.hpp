@@ -10,4 +10,6 @@ struct daxa_ImplInstance final : daxa_ImplHandle
     std::string engine_name = {};
     std::string app_name = {};
     VkInstance vk_instance = {};
+
+    static void zero_ref_callback(daxa_ImplHandle * handle);
 };

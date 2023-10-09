@@ -164,8 +164,8 @@ DAXA_EXPORT daxa_EventInfo const *
 daxa_event_info(daxa_Event event);
 
 DAXA_EXPORT uint64_t
-daxa_evemt_inc_refcnt(daxa_Event event);
+daxa_event_inc_refcnt(daxa_Event event);
 DAXA_EXPORT uint64_t
-daxa_evemt_dec_refcnt(daxa_Event event);
+daxa_event_dec_refcnt(daxa_Event event);
 
 #endif // #if __DAXA_SYNC_H__

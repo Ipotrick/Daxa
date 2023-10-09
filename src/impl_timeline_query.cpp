@@ -42,6 +42,7 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
     }
     *out_tqp = new daxa_ImplTimelineQueryPool{};
     **out_tqp = std::move(ret);
+    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -70,24 +71,36 @@ auto daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool self, u32 sta
 
 auto daxa_timeline_query_pool_inc_refcnt(daxa_TimelineQueryPool self) -> u64
 {
-    return daxa_inc_refcnt(self);
+    return self->inc_refcnt();
 }
 
 auto daxa_timeline_query_pool_dec_refcnt(daxa_TimelineQueryPool self) -> u64
 {
-    auto prev = daxa_inc_refcnt(self);
-    if (prev == 1)
-    {
-        std::unique_lock const lock{self->device->main_queue_zombies_mtx};
-        u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-        self->device->main_queue_timeline_query_pool_zombies.emplace_back(
-            main_queue_cpu_timeline,
-            TimelineQueryPoolZombie{
-                .vk_timeline_query_pool = self->vk_timeline_query_pool,
-            });
-        delete self;
-    }
-    return prev;
+    return self->dec_refcnt(
+        &daxa_ImplTimelineQueryPool::zero_ref_callback,
+        self->device->instance
+    );
 }
 
 // --- End API Functions ---
+
+// --- Begin Internals ---
+
+void daxa_ImplTimelineQueryPool::zero_ref_callback(daxa_ImplHandle * handle)
+{
+    auto self = r_cast<daxa_TimelineQueryPool>(handle);
+    std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+    u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+    self->device->main_queue_timeline_query_pool_zombies.emplace_back(
+        main_queue_cpu_timeline,
+        TimelineQueryPoolZombie{
+            .vk_timeline_query_pool = self->vk_timeline_query_pool,
+        });
+    self->device->dec_weak_refcnt(
+        daxa_ImplDevice::zero_ref_callback,
+        self->device->instance
+    );
+    delete self;
+}
+
+// --- End Internals ---

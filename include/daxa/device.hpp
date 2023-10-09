@@ -141,7 +141,8 @@ namespace daxa
         DeviceLimits limits = {};
     };
 
-    struct MeshShaderDeviceProperties {
+    struct MeshShaderDeviceProperties
+    {
         u32 max_task_work_group_total_count = {};
         u32 max_task_work_group_count[3] = {};
         u32 max_task_work_group_invocations = {};
@@ -185,14 +186,26 @@ namespace daxa
         return score;
     }
 
+    struct DeviceFlagsProperties
+    {
+        using Data = u32;
+    };
+    using DeviceFlags = Flags<DeviceFlagsProperties>;
+    struct DeviceFlagBits
+    {
+        static inline constexpr DeviceFlags NONE = {0x00000000};
+        static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
+        static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
+        static inline constexpr DeviceFlags MESH_SHADER_BIT = {0x1 << 2};
+        static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
+        static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
+        static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
+    };
+
     struct DeviceInfo
     {
         std::function<i32(DeviceProperties const &)> selector = default_device_score;
-
-        // TODO(grundlett): Remove these in favor of a more general solution
-        bool enable_buffer_device_address_capture_replay = true;
-        bool enable_conservative_rasterization = false;
-        bool enable_mesh_shader = false;
+        DeviceFlags flags = DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
@@ -221,8 +234,8 @@ namespace daxa
         Device() = default;
 
         auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
-        auto get_memory_requirements(BufferInfo const & info) -> MemoryRequirements;
-        auto get_memory_requirements(ImageInfo const & info) -> MemoryRequirements;
+        auto get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
+        auto get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
 
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
@@ -233,7 +246,7 @@ namespace daxa
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
-        
+
         auto info_buffer(BufferId id) const -> BufferInfo const &;
         auto info_image(ImageId id) const -> ImageInfo const &;
         auto info_image_view(ImageViewId id) const -> ImageViewInfo const &;

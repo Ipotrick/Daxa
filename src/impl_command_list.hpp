@@ -57,4 +57,6 @@ struct daxa_ImplCommandList final : daxa_ImplHandle
     std::array<daxa_SetUniformBufferInfo, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
 
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
+    
+    static void zero_ref_callback(daxa_ImplHandle * handle);
 };

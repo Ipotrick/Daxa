@@ -64,7 +64,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     {
         BinarySemaphore sema = {};
         daxa_BinarySemaphoreInfo sema_info = {};
-        auto result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore*>(&sema));
+        auto result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
         {
             return result;
@@ -76,7 +76,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     {
         BinarySemaphore sema = {};
         daxa_BinarySemaphoreInfo sema_info = {};
-        auto result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore*>(&sema));
+        auto result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
         {
             return result;
@@ -85,6 +85,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     }
     *out_swapchain = new daxa_ImplSwapchain{};
     **out_swapchain = std::move(ret);
+    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -168,21 +169,15 @@ auto daxa_swp_get_vk_surface(daxa_Swapchain self) -> VkSurfaceKHR
 
 auto daxa_swp_inc_refcnt(daxa_Swapchain self) -> u64
 {
-    return daxa_inc_refcnt(self);
+    return self->inc_refcnt();
 }
 
 auto daxa_swp_dec_refcnt(daxa_Swapchain self) -> u64
 {
-    // TODO(capi): uuuuuuh, dont we need to defer this destruction with a zombie?
-    auto prev = daxa_dec_refcnt(self);
-    if (prev == 1)
-    {
-        self->cleanup();
-        vkDestroySwapchainKHR(self->device->vk_device, self->vk_swapchain, nullptr);
-        vkDestroySurfaceKHR(self->device->instance->vk_instance, self->vk_surface, nullptr);
-        delete self;
-    }
-    return prev;
+    return self->dec_refcnt(
+        &daxa_ImplSwapchain::zero_ref_callback,
+        self->device->instance
+    );
 }
 
 // --- End API Functions ---
@@ -316,7 +311,7 @@ void daxa_ImplSwapchain::cleanup()
 {
     for (auto & image : images)
     {
-        this->device->zombify_image(image);
+        daxa_dvc_dec_refcnt_image(this->device, std::bit_cast<daxa_ImageId>(image));
     }
     images.clear();
 }
@@ -380,6 +375,20 @@ void daxa_ImplSwapchain::recreate_surface()
     }
 #endif
 #endif
+}
+
+void daxa_ImplSwapchain::zero_ref_callback(daxa_ImplHandle * handle)
+{
+    // TODO: Dont we need to defer the destruction with a zombie?
+    auto self = r_cast<daxa_Swapchain>(handle);
+    self->cleanup();
+    vkDestroySwapchainKHR(self->device->vk_device, self->vk_swapchain, nullptr);
+    vkDestroySurfaceKHR(self->device->instance->vk_instance, self->vk_surface, nullptr);
+    self->device->dec_weak_refcnt(
+        daxa_ImplDevice::zero_ref_callback,
+        self->device->instance
+    );
+    delete self;
 }
 
 // --- End Internals ---

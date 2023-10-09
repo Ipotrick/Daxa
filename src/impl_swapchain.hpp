@@ -39,6 +39,7 @@ struct daxa_ImplSwapchain final : daxa_ImplHandle
     VkSurfaceKHR vk_surface = {};
     VkSurfaceFormatKHR vk_surface_format = {};
     VkExtent2D surface_extent = {};
+    // Swapchain holds strong references to these objects as it owns them.
     std::vector<ImageId> images = {};
     std::vector<BinarySemaphore> acquire_semaphores = {};
     std::vector<BinarySemaphore> present_semaphores = {};
@@ -53,12 +54,13 @@ struct daxa_ImplSwapchain final : daxa_ImplHandle
     // This index must be used for present semaphores as they are paired to the images.
     u32 current_image_index = {};
 
+    auto recreate() -> daxa_Result;
+    void cleanup();
+    void recreate_surface();
+    
     // TODO(capi) replace with static create function
     // ImplSwapchain(daxa_Device a_device, daxa_SwapchainInfo a_info);
     // ~ImplSwapchain();
     static auto create(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain swapchain) -> daxa_Result;
-
-    auto recreate() -> daxa_Result;
-    void cleanup();
-    void recreate_surface();
+    static void zero_ref_callback(daxa_ImplHandle * handle);
 };

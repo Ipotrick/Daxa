@@ -93,42 +93,6 @@ auto daxa_dvc_image_memory_requirements(daxa_Device self, daxa_ImageInfo const *
     return mem_requirements.memoryRequirements;
 }
 
-auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block) -> daxa_Result
-{
-    if (info->requirements.memoryTypeBits == 0)
-    {
-        DAXA_DBG_ASSERT_TRUE_M(false, "memory_type_bits must be non zero");
-        return DAXA_RESULT_ERROR_UNKNOWN;
-    }
-
-    VmaAllocationCreateInfo create_info{
-        .flags = info->flags,
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
-        .requiredFlags = {}, // TODO: idk what this is...
-        .preferredFlags = {},
-        .memoryTypeBits = {}, // TODO: idk what this is....
-        .pool = {},
-        .pUserData = {},
-        .priority = 0.5f,
-    };
-    VmaAllocation allocation = {};
-    VmaAllocationInfo allocation_info = {};
-    auto result = vmaAllocateMemory(self->vma_allocator, &info->requirements, &create_info, &allocation, &allocation_info);
-    if (result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(result);
-    }
-
-    *out_memory_block = new daxa_ImplMemoryBlock{};
-    // TODO(capi): memory block is missing a name.
-    (**out_memory_block).device = self;
-    (**out_memory_block).info = std::bit_cast<daxa::MemoryBlockInfo>(*info);
-    (**out_memory_block).allocation = allocation;
-    (**out_memory_block).alloc_info = allocation_info;
-    daxa_dvc_inc_refcnt(self);
-    return DAXA_RESULT_SUCCESS;
-}
-
 auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
 {
     // --- Begin Parameter Validation ---
@@ -143,8 +107,8 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
     auto [id, ret] = self->gpu_shader_resource_table.buffer_slots.new_slot();
     static_assert(sizeof(BufferInfo) == sizeof(daxa_BufferInfo));
-    ret.info = *reinterpret_cast<BufferInfo const *>(info);
-    ret.info_name = ret.info.name;
+    ret.info = *info;
+    ret.info_name = {ret.info.name.data, ret.info.name.size};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
 
     VkBufferCreateInfo const vk_buffer_create_info{
@@ -160,7 +124,8 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
     bool host_accessible = false;
     VmaAllocationInfo vma_allocation_info = {};
-    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(&ret.info.allocate_info))
+    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(
+            r_cast<AllocateInfo *>(&ret.info.allocate_info)))
     {
         auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->data);
         if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
@@ -196,7 +161,8 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
     }
     else
     {
-        auto const & manual_info = *daxa::get_if<ManualAllocInfo>(&ret.info.allocate_info);
+        auto const & manual_info = *daxa::get_if<ManualAllocInfo>(
+            r_cast<AllocateInfo *>(&ret.info.allocate_info));
         auto const & mem_block = *manual_info.memory_block.as<daxa_ImplMemoryBlock const>();
 
         // TODO(pahrens): Add validation for memory type requirements.
@@ -233,7 +199,8 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
     self->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
-    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE &&
+        !ret.info_name.empty())
     {
         auto const & buffer_name = ret.info_name;
         VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
@@ -254,6 +221,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
         id.index);
 
     *out_id = std::bit_cast<daxa_BufferId>(id);
+    self->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -271,11 +239,12 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     auto [id, image_slot_variant] = self->gpu_shader_resource_table.image_slots.new_slot();
 
     ImplImageSlot ret = {};
-    ret.zombie = false;
-    ret.info = *reinterpret_cast<daxa::ImageInfo const*>(info);
-    ret.view_slot.info = ImageViewInfo{
+    ret.info = *info;
+    ret.info_name = {ret.info.name.data, ret.info.name.size};
+    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
+    ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
         .type = static_cast<ImageViewType>(info->dimensions - 1),
-        .format = ret.info.format,
+        .format = std::bit_cast<Format>(ret.info.format),
         .image = {id},
         .slice = ImageMipArraySlice{
             .base_mip_level = 0,
@@ -284,7 +253,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
             .layer_count = info->array_layer_count,
         },
         .name = info->name.data,
-    };
+    });
 
     VkImageViewType vk_image_view_type = {};
     if (info->array_layer_count > 1)
@@ -319,7 +288,8 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     };
     ret.aspect_flags = infer_aspect_from_format(info->format);
     VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(*info, &self->main_queue_family_index);
-    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(&ret.info.allocate_info))
+    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(
+            r_cast<AllocateInfo *>(&ret.info.allocate_info)))
     {
         VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = static_cast<VmaAllocationCreateFlags>(auto_info->data),
@@ -349,7 +319,8 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     }
     else
     {
-        ManualAllocInfo const & manual_info = *daxa::get_if<ManualAllocInfo>(&ret.info.allocate_info);
+        ManualAllocInfo const & manual_info = *daxa::get_if<ManualAllocInfo>(
+            r_cast<AllocateInfo *>(&ret.info.allocate_info));
         daxa_ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<daxa_ImplMemoryBlock const>();
         // TODO(pahrens): Add validation for memory requirements.
         auto result = vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
@@ -402,11 +373,17 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_view_name_info);
     }
 
-    write_descriptor_set_image(self->vk_device, self->gpu_shader_resource_table.vk_descriptor_set, ret.view_slot.vk_image_view, ret.info.usage, id.index);
+    write_descriptor_set_image(
+        self->vk_device,
+        self->gpu_shader_resource_table.vk_descriptor_set,
+        ret.view_slot.vk_image_view,
+        std::bit_cast<ImageUsageFlags>(ret.info.usage),
+        id.index);
 
     image_slot_variant = ret;
 
     *out_id = std::bit_cast<daxa_ImageId>(id);
+    self->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -420,10 +397,10 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     image_slot = {};
     ImplImageSlot const & parent_image_slot = self->slot(info->image);
     ImplImageViewSlot ret = {};
-    ret.info = std::bit_cast<daxa::ImageViewInfo>(*info);
-    ret.info_name = {info->name.data, info->name.size};
+    ret.info = *info;
+    ret.info_name = {ret.info.name.data, ret.info.name.size};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
-    ImageMipArraySlice slice = self->validate_image_slice(ret.info.slice, ret.info.image);
+    daxa_ImageMipArraySlice slice = self->validate_image_slice(ret.info.slice, ret.info.image);
     ret.info.slice = slice;
     VkImageViewCreateInfo const vk_image_view_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -457,10 +434,16 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &name_info);
     }
-    write_descriptor_set_image(self->vk_device, self->gpu_shader_resource_table.vk_descriptor_set, ret.vk_image_view, parent_image_slot.info.usage, id.index);
+    write_descriptor_set_image(
+        self->vk_device,
+        self->gpu_shader_resource_table.vk_descriptor_set,
+        ret.vk_image_view,
+        std::bit_cast<ImageUsageFlags>(parent_image_slot.info.usage),
+        id.index);
     image_slot.view_slot = ret;
-    daxa_dvc_inc_refcnt_image(self, info->image);
     *out_id = std::bit_cast<daxa_ImageViewId>(id);
+    self->inc_weak_refcnt_image(std::bit_cast<ImageId>(info->image));
+    self->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -477,8 +460,8 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 
     auto [id, ret] = self->gpu_shader_resource_table.sampler_slots.new_slot();
 
-    ret.info = std::bit_cast<daxa::SamplerInfo>(*info);
-    ret.info_name = {info->name.data, info->name.size};
+    ret.info = *info;
+    ret.info_name = {ret.info.name.data, ret.info.name.size};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     ret.zombie = false;
 
@@ -530,34 +513,44 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 
     write_descriptor_set_sampler(self->vk_device, self->gpu_shader_resource_table.vk_descriptor_set, ret.vk_sampler, id.index);
     *out_id = std::bit_cast<daxa_SamplerId>(id);
+    self->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                                            \
-    auto daxa_dvc_inc_refcnt_##name(daxa_Device self, daxa_##Name##Id id)->uint64_t                                                \
-    {                                                                                                                              \
-        return std::atomic_ref{self->slot(std::bit_cast<Name##Id>(id)).strong_count}.fetch_add(1, std::memory_order::relaxed);     \
-    }                                                                                                                              \
-    auto daxa_dvc_dec_refcnt_##name(daxa_Device self, daxa_##Name##Id id)->uint64_t                                                \
-    {                                                                                                                              \
-        u64 prev = std::atomic_ref{self->slot(std::bit_cast<Name##Id>(id)).strong_count}.fetch_sub(1, std::memory_order::relaxed); \
-        if (prev == 1)                                                                                                             \
-        {                                                                                                                          \
-            self->zombify_##name(std::bit_cast<daxa::Name##Id>(id));                                                               \
-        }                                                                                                                          \
-        return prev;                                                                                                               \
-    }                                                                                                                              \
-    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id)->Name##Info const *                                            \
-    {                                                                                                                              \
-        return &self->slot(std::bit_cast<Name##Id>(id)).info;                                                                      \
-    }                                                                                                                              \
-    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                                              \
-    {                                                                                                                              \
-        return std::bit_cast<bool>(self->gpu_shader_resource_table.SLOT_NAME.is_id_valid(std::bit_cast<daxa::GPUResourceId>(id))); \
-    }                                                                                                                              \
-    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                                    \
-    {                                                                                                                              \
-        return self->slot(std::bit_cast<Name##Id>(id)).vk_##name;                                                                  \
+#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                                    \
+    auto daxa_dvc_inc_refcnt_##name(daxa_Device self, daxa_##Name##Id id)->uint64_t                                        \
+    {                                                                                                                      \
+        return std::atomic_ref{self->slot(id).strong_count}.fetch_add(1, std::memory_order::relaxed);                      \
+    }                                                                                                                      \
+    auto daxa_dvc_dec_refcnt_##name(daxa_Device self, daxa_##Name##Id id)->uint64_t                                        \
+    {                                                                                                                      \
+        u64 prev = std::atomic_ref{self->slot(id).strong_count}.fetch_sub(1, std::memory_order::relaxed);                  \
+        if (prev == 1)                                                                                                     \
+        {                                                                                                                  \
+            auto weak = std::atomic_ref{self->slot(id).weak_count}.load(std::memory_order::relaxed);                       \
+            if (weak == 0)                                                                                                 \
+            {                                                                                                              \
+                self->zero_ref_callback_##name(std::bit_cast<Name##Id>(id));                                               \
+            }                                                                                                              \
+            else if ((self->instance->info.flags & InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD) != InstanceFlagBits::NONE) \
+            {                                                                                                              \
+                DAXA_DBG_ASSERT_TRUE_M(false, "not all children have been destroyed prior to destroying object");          \
+            }                                                                                                              \
+        }                                                                                                                  \
+        return prev;                                                                                                       \
+    }                                                                                                                      \
+    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id)->daxa_##Name##Info const *                             \
+    {                                                                                                                      \
+        return &self->slot(id).info;                                                                                       \
+    }                                                                                                                      \
+    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                                      \
+    {                                                                                                                      \
+        return std::bit_cast<bool>(self->gpu_shader_resource_table.SLOT_NAME.is_id_valid(                                  \
+            std::bit_cast<daxa::GPUResourceId>(id)));                                                                      \
+    }                                                                                                                      \
+    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                            \
+    {                                                                                                                      \
+        return self->slot(id).vk_##name;                                                                                   \
     }
 
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots)
@@ -587,7 +580,7 @@ auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId id, void ** ou
 
 auto daxa_dvc_info(daxa_Device self) -> daxa_DeviceInfo const *
 {
-    return &self->info;
+    return reinterpret_cast<daxa_DeviceInfo const *>(&self->info);
 }
 
 auto daxa_dvc_get_vk_device(daxa_Device self) -> VkDevice
@@ -843,23 +836,16 @@ daxa_dvc_collect_garbage(daxa_Device self)
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_destroy_device(daxa_Device self) -> daxa_Result
+auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
 {
-    daxa_dvc_wait_idle(self);
-    daxa_dvc_collect_garbage(self);
-    self->buffer_pool_pool.cleanup(self);
-    vmaUnmapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation);
-    vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);
-    self->gpu_shader_resource_table.cleanup(self->vk_device);
-    vmaDestroyImage(self->vma_allocator, self->vk_null_image, self->vk_null_image_vma_allocation);
-    vmaDestroyBuffer(self->vma_allocator, self->vk_null_buffer, self->vk_null_buffer_vma_allocation);
-    vmaDestroyAllocator(self->vma_allocator);
-    vkDestroySampler(self->vk_device, self->vk_null_sampler, nullptr);
-    vkDestroyImageView(self->vk_device, self->vk_null_image_view, nullptr);
-    vkDestroySemaphore(self->vk_device, self->vk_main_queue_gpu_timeline_semaphore, nullptr);
-    vkDestroyDevice(self->vk_device, nullptr);
-    delete self;
-    return DAXA_RESULT_ERROR_UNKNOWN;
+    return self->inc_refcnt();
+}
+
+auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
+{
+    return self->dec_refcnt(
+        &daxa_ImplDevice::zero_ref_callback,
+        self->instance);
 }
 
 // --- End API Functions ---
@@ -873,7 +859,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     auto self = out_device;
     self->vk_physical_device = physical_device;
     self->instance = instance;
-    self->info = info;
+    self->info = *reinterpret_cast<DeviceInfo const *>(&info);
     self->info_name = std::string{info.name.data, info.name.size};
     self->info.name = {self->info_name.c_str(), self->info_name.size()};
     using namespace daxa;
@@ -953,7 +939,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     }
     self->vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdPushDescriptorSetKHR"));
 
-    if ((self->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0)
+    if ((self->info.flags & DeviceFlagBits::MESH_SHADER_BIT) != DeviceFlagBits::NONE)
     {
         self->vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksEXT"));
         self->vkCmdDrawMeshTasksIndirectEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
@@ -1450,12 +1436,12 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, daxa::ImageId id) -> ImageMipArraySlice
+auto daxa_ImplDevice::validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice
 {
     if (slice.level_count == std::numeric_limits<u32>::max() || slice.level_count == 0)
     {
         auto & image_info = this->slot(id).info;
-        return ImageMipArraySlice{
+        return daxa_ImageMipArraySlice{
             .base_mip_level = 0,
             .level_count = image_info.mip_level_count,
             .base_array_layer = 0,
@@ -1468,7 +1454,7 @@ auto daxa_ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, dax
     }
 }
 
-auto daxa_ImplDevice::validate_image_slice(ImageMipArraySlice const & slice, daxa::ImageViewId id) -> ImageMipArraySlice
+auto daxa_ImplDevice::validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice
 {
     if (slice.level_count == std::numeric_limits<u32>::max() || slice.level_count == 0)
     {
@@ -1486,7 +1472,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     ImplImageSlot ret;
     ret.vk_image = swapchain_image;
-    ret.view_slot.info = ImageViewInfo{
+    ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
         .type = static_cast<ImageViewType>(image_info.dimensions - 1),
         .format = image_info.format,
         .image = {id},
@@ -1497,7 +1483,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .layer_count = image_info.array_layer_count,
         },
         .name = image_info.name,
-    };
+    });
     ret.aspect_flags = infer_aspect_from_format(image_info.format);
 
     VkImageViewCreateInfo const view_ci{
@@ -1523,7 +1509,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
     };
     ret.swapchain_image_index = static_cast<i32>(index);
 
-    ret.info = image_info;
+    ret.info = *r_cast<daxa_ImageInfo const *>(&image_info);
     auto result = vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view);
     if (result != VK_SUCCESS)
     {
@@ -1564,7 +1550,8 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     ImplBufferSlot & buffer_slot = this->gpu_shader_resource_table.buffer_slots.dereference_id(gid);
     this->buffer_device_address_buffer_host_ptr[gid.index] = 0;
     write_descriptor_set_buffer(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
-    if (auto _ptr = daxa::get_if<AutoAllocInfo>(&buffer_slot.info.allocate_info))
+    if (auto _ptr = daxa::get_if<AutoAllocInfo>(
+            r_cast<AllocateInfo *>(&buffer_slot.info.allocate_info)))
     {
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
     }
@@ -1580,11 +1567,17 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
 {
     auto gid = std::bit_cast<GPUResourceId>(id);
     ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(gid);
-    write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, image_slot.info.usage, gid.index);
+    write_descriptor_set_image(
+        this->vk_device,
+        this->gpu_shader_resource_table.vk_descriptor_set,
+        this->vk_null_image_view,
+        std::bit_cast<ImageUsageFlags>(image_slot.info.usage),
+        gid.index);
     vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
     if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
     {
-        if (auto _ptr = daxa::get_if<AutoAllocInfo>(&image_slot.info.allocate_info))
+        if (auto _ptr = daxa::get_if<AutoAllocInfo>(
+                r_cast<AllocateInfo *>(&image_slot.info.allocate_info)))
         {
             vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
         }
@@ -1615,49 +1608,6 @@ void daxa_ImplDevice::cleanup_sampler(SamplerId id)
     vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
     sampler_slot = {};
     gpu_shader_resource_table.sampler_slots.return_slot(std::bit_cast<GPUResourceId>(id));
-}
-
-void daxa_ImplDevice::zombify_buffer(BufferId id)
-{
-    std::unique_lock const lock{this->main_queue_zombies_mtx};
-    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    // TODO(capi): move these out?
-    DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.buffer_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie == false,
-                           "detected free after free - buffer already is a zombie");
-    gpu_shader_resource_table.buffer_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie = true;
-    this->main_queue_buffer_zombies.push_front({main_queue_cpu_timeline_value, std::bit_cast<daxa::BufferId>(id)});
-}
-
-void daxa_ImplDevice::zombify_image(ImageId id)
-{
-    std::unique_lock const lock{this->main_queue_zombies_mtx};
-    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    // TODO(capi): move these out?
-    DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie == false,
-                           "detected free after free - image already is a zombie");
-    gpu_shader_resource_table.image_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie = true;
-    this->main_queue_image_zombies.push_front({main_queue_cpu_timeline_value, std::bit_cast<daxa::ImageId>(id)});
-}
-
-void daxa_ImplDevice::zombify_image_view(ImageViewId id)
-{
-    std::unique_lock const lock{this->main_queue_zombies_mtx};
-    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    // TODO(capi): move these out?
-    DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.image_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie == false,
-                           "detected free after free - image view already is a zombie");
-    this->main_queue_image_view_zombies.push_front({main_queue_cpu_timeline_value, std::bit_cast<daxa::ImageViewId>(id)});
-}
-
-void daxa_ImplDevice::zombify_sampler(SamplerId id)
-{
-    std::unique_lock const lock{this->main_queue_zombies_mtx};
-    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    // TODO(capi): move these out?
-    DAXA_DBG_ASSERT_TRUE_M(gpu_shader_resource_table.sampler_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie == false,
-                           "detected free after free - sampler already is a zombie");
-    gpu_shader_resource_table.sampler_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie = true;
-    this->main_queue_sampler_zombies.push_front({main_queue_cpu_timeline_value, std::bit_cast<daxa::SamplerId>(id)});
 }
 
 auto daxa_ImplDevice::slot(BufferId id) -> ImplBufferSlot &
@@ -1739,5 +1689,62 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
 {
     return gpu_shader_resource_table.sampler_slots.dereference_id(std::bit_cast<daxa::GPUResourceId>(id));
 }
+
+void daxa_ImplDevice::zero_ref_callback(daxa_ImplHandle * handle)
+{
+    auto self = r_cast<daxa_Device>(handle);
+    daxa_dvc_wait_idle(self);
+    daxa_dvc_collect_garbage(self);
+    self->buffer_pool_pool.cleanup(self);
+    vmaUnmapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation);
+    vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);
+    self->gpu_shader_resource_table.cleanup(self->vk_device);
+    vmaDestroyImage(self->vma_allocator, self->vk_null_image, self->vk_null_image_vma_allocation);
+    vmaDestroyBuffer(self->vma_allocator, self->vk_null_buffer, self->vk_null_buffer_vma_allocation);
+    vmaDestroyAllocator(self->vma_allocator);
+    vkDestroySampler(self->vk_device, self->vk_null_sampler, nullptr);
+    vkDestroyImageView(self->vk_device, self->vk_null_image_view, nullptr);
+    vkDestroySemaphore(self->vk_device, self->vk_main_queue_gpu_timeline_semaphore, nullptr);
+    vkDestroyDevice(self->vk_device, nullptr);
+    self->instance->dec_weak_refcnt(
+        daxa_ImplInstance::zero_ref_callback,
+        self->instance);
+    delete self;
+}
+
+#define _DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                            \
+    auto daxa_ImplDevice::inc_weak_refcnt_##name(Name##Id id)->u64                                                        \
+    {                                                                                                                     \
+        return std::atomic_ref{this->slot(id).weak_count}.fetch_add(1, std::memory_order::relaxed);                       \
+    }                                                                                                                     \
+    auto daxa_ImplDevice::dec_weak_refcnt_##name(Name##Id id)->u64                                                        \
+    {                                                                                                                     \
+        auto & slot = this->slot(id);                                                                                     \
+        auto prev = std::atomic_ref{slot.weak_count}.fetch_sub(1, std::memory_order::relaxed);                            \
+        if (prev == 1)                                                                                                    \
+        {                                                                                                                 \
+            auto strong = std::atomic_ref{slot.weak_count}.load(std::memory_order::relaxed);                              \
+            if (strong == 0)                                                                                              \
+            {                                                                                                             \
+                this->zero_ref_callback_##name(id);                                                                       \
+            }                                                                                                             \
+        }                                                                                                                 \
+        return prev;                                                                                                      \
+    }                                                                                                                     \
+    void daxa_ImplDevice::zero_ref_callback_##name(Name##Id id)                                                           \
+    {                                                                                                                     \
+        std::unique_lock const lock{this->main_queue_zombies_mtx};                                                        \
+        u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);         \
+        gpu_shader_resource_table.SLOT_NAME.dereference_id(std::bit_cast<GPUResourceId>(id)).zombie = true;               \
+        this->main_queue_##name##_zombies.push_front({main_queue_cpu_timeline_value, std::bit_cast<daxa::Name##Id>(id)}); \
+        this->dec_weak_refcnt(                                                                                            \
+            daxa_ImplDevice::zero_ref_callback,                                                                           \
+            this->instance);                                                                                              \
+    }
+
+_DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots)
+_DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(image, Image, IMAGE, image_slots)
+_DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(image_view, ImageView, IMAGE_VIEW, image_slots)
+_DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots)
 
 // --- End Internal Functions ---

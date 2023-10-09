@@ -2,28 +2,6 @@
 #include "impl_pipeline.hpp"
 #include "impl_swapchain.hpp"
 
-// --- Begin Helpers ---
-
-auto pipeline_dec_refcnt(ImplPipeline * pipeline) -> u64
-{
-    auto const prev = daxa_dec_refcnt(pipeline);
-    if (prev == 1)
-    {
-        std::unique_lock const lock{pipeline->device->main_queue_zombies_mtx};
-        u64 const main_queue_cpu_timeline_value = pipeline->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-        pipeline->device->main_queue_pipeline_zombies.push_front({
-            main_queue_cpu_timeline_value,
-            PipelineZombie{
-                .vk_pipeline = pipeline->vk_pipeline,
-            },
-        });
-        delete pipeline;
-    }
-    return prev;
-}
-
-// --- End Helpers ---
-
 // --- Begin API Functions ---
 
 auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline) -> daxa_Result
@@ -62,6 +40,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             .pSpecializationInfo = nullptr,
         };
         vk_pipeline_shader_stage_create_infos.push_back(vk_pipeline_shader_stage_create_info);
+        device->inc_weak_refcnt();
         return result;
     };
 
@@ -82,7 +61,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     _DAXA_DECL_TRY_CREATE_MODULE(tesselation_control, TESSELLATION_CONTROL_BIT)
     _DAXA_DECL_TRY_CREATE_MODULE(tesselation_evaluation, TESSELLATION_EVALUATION_BIT)
     _DAXA_DECL_TRY_CREATE_MODULE(fragment, FRAGMENT_BIT)
-    if ((ret.device->info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0)
+    if ((ret.device->info.flags & DeviceFlagBits::MESH_SHADER_BIT) != DeviceFlagBits::NONE)
     {
         _DAXA_DECL_TRY_CREATE_MODULE(task, TASK_BIT_EXT)
         _DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
@@ -150,9 +129,10 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .conservativeRasterizationMode = VK_CONSERVATIVE_RASTERIZATION_MODE_OVERESTIMATE_EXT,
         .extraPrimitiveOverestimationSize = 0.0f,
     };
-    if (ret.info.raster.conservative_raster_info.has_value())
+    if (
+        ret.info.raster.conservative_raster_info.has_value() &&
+        ((ret.device->info.flags & DeviceFlagBits::CONSERVATIVE_RASTERIZATION) != DeviceFlagBits::NONE))
     {
-        DAXA_DBG_ASSERT_TRUE_M((ret.device->info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION) != 0, "You must enable conservative rasterization in the device to use this feature");
         // TODO(grundlett): Ask Patrick why this doesn't work
         // auto vk_instance = ret.device->instance->vk_instance;
         // PFN_vkGetPhysicalDeviceProperties2KHR vkGetPhysicalDeviceProperties2KHR =
@@ -306,12 +286,14 @@ auto daxa_raster_pipeline_info(daxa_RasterPipeline self) -> daxa_RasterPipelineI
 
 auto daxa_raster_pipeline_inc_refcnt(daxa_RasterPipeline self) -> u64
 {
-    return daxa_inc_refcnt(self);
+    return self->inc_refcnt();
 }
 
 auto daxa_raster_pipeline_dec_refcnt(daxa_RasterPipeline self) -> u64
 {
-    return pipeline_dec_refcnt(self);
+    return self->dec_refcnt(
+        &ImplPipeline::zero_ref_callback,
+        self->device->instance);
 }
 
 auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline) -> daxa_Result
@@ -376,6 +358,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     }
     *out_pipeline = new daxa_ImplComputePipeline{};
     **out_pipeline = std::move(ret);
+    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -386,12 +369,36 @@ auto daxa_compute_pipeline_info(daxa_ComputePipeline self) -> daxa_ComputePipeli
 
 auto daxa_compute_pipeline_inc_refcnt(daxa_ComputePipeline self) -> u64
 {
-    return daxa_inc_refcnt(self);
+    return self->inc_refcnt();
 }
 
 auto daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline self) -> u64
 {
-    return pipeline_dec_refcnt(self);
+    return self->dec_refcnt(
+        &ImplPipeline::zero_ref_callback,
+        self->device->instance);
 }
 
 // --- End API Functions ---
+
+// --- Begin Internals ---
+
+void zero_ref_callback(daxa_ImplHandle * handle)
+{
+    auto self = r_cast<ImplPipeline*>(handle);
+    std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+    u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+    self->device->main_queue_pipeline_zombies.push_front({
+        main_queue_cpu_timeline_value,
+        PipelineZombie{
+            .vk_pipeline = self->vk_pipeline,
+        },
+    });
+    self->device->dec_weak_refcnt(
+        daxa_ImplDevice::zero_ref_callback,
+        self->device->instance
+    );
+    delete self;
+}
+
+// --- End Internals ---

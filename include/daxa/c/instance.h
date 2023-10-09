@@ -5,6 +5,8 @@
 
 typedef daxa_Flags daxa_InstanceFlags;
 static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_DEBUG_UTIL = 0x1;
+// TODO(capi): IMPLEMENT:
+static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_PARENT_MUST_OUTLIVE_CHILD = 0x2;
 
 typedef struct
 {
@@ -15,8 +17,8 @@ typedef struct
 
 static const daxa_InstanceInfo DAXA_DEFAULT_INSTANCE_INFO = {
     .flags = DAXA_INSTANCE_FLAG_DEBUG_UTIL,
-    .engine_name = { .data = "daxa", .size = 4 },
-    .app_name = { .data = "daxa app", .size = 8 },
+    .engine_name = {.data = "daxa", .size = 4},
+    .app_name = {.data = "daxa app", .size = 8},
 };
 
 DAXA_EXPORT daxa_Result

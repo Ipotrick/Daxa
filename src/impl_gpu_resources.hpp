@@ -32,47 +32,55 @@ namespace daxa
 
     struct ImplBufferSlot
     {
-        BufferInfo info = {};
+        u64 strong_count = {};
+        u64 weak_count = {};
+        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
+        daxa_BufferInfo info = {};
         std::string info_name = {};
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
         VkDeviceAddress device_address = {};
         void * host_address = {};
-        u64 strong_count = {};
         bool zombie = {};
     };
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
 
-    struct ImplImageViewSlot
+    struct ImplImageViewSlot 
     {
-        ImageViewInfo info = {};
+        u64 strong_count = {};
+        u64 weak_count = {};
+        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
+        daxa_ImageViewInfo info = {};
         std::string info_name = {};
         VkImageView vk_image_view = {};
-        u64 strong_count = {};
         // TODO(capi): Maybe revisit, because why was this not here before??
         bool zombie = {};
     };
 
     struct ImplImageSlot
     {
+        u64 strong_count = {};
+        u64 weak_count = {};
         ImplImageViewSlot view_slot = {};
-        ImageInfo info = {};
+        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
+        daxa_ImageInfo info = {};
         std::string info_name = {};
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
         VkImageAspectFlags aspect_flags = {}; // Inferred from format.
-        u64 strong_count = {};
         bool zombie = {};
     };
 
     struct ImplSamplerSlot
     {
-        SamplerInfo info = {};
+        u64 strong_count = {};
+        u64 weak_count = {};
+        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
+        daxa_SamplerInfo info = {};
         std::string info_name = {};
         VkSampler vk_sampler = {};
-        u64 strong_count = {};
         bool zombie = {};
     };
 
