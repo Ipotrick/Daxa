@@ -30,10 +30,6 @@ namespace daxa
         auto create_device(DeviceInfo const & device_info) -> Device;
 
         auto info() const -> InstanceInfo const &;
-
-      private:
-        friend auto create_instance(InstanceInfo const & info) -> Instance;
-        explicit Instance(ManagedPtr impl);
     };
 
     auto create_instance(InstanceInfo const & info) -> Instance;
