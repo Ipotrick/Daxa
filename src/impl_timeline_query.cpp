@@ -29,7 +29,7 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
         return std::bit_cast<daxa_Result>(vk_result);
     }
     vkResetQueryPool(ret.device->vk_device, ret.vk_timeline_query_pool, 0, ret.info.query_count);
-    if ((ret.device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !ret.info.name.empty())
+    if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
     {
         VkDebugUtilsObjectNameInfoEXT const query_pool_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,

@@ -6,6 +6,8 @@
 
 struct daxa_ImplInstance final : daxa_ImplHandle
 {
-    daxa_InstanceInfo info = {};
+    InstanceInfo info = {};
+    std::string engine_name = {};
+    std::string app_name = {};
     VkInstance vk_instance = {};
 };

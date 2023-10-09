@@ -233,7 +233,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
     self->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
 
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !ret.info.name.empty())
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
     {
         auto const & buffer_name = ret.info_name;
         VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
@@ -381,7 +381,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         }
     }
 
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && info->name.size != 0)
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -446,7 +446,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         self->gpu_shader_resource_table.image_slots.return_slot(id);
         return DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW;
     }
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && info->name.size != 0)
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -516,7 +516,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
         return DAXA_RESULT_FAILED_TO_CREATE_SAMPLER;
     }
 
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && info->name.size != 0)
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
         VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -945,7 +945,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         return std::bit_cast<daxa_Result>(result);
     }
 
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0)
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
     {
         self->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(self->vk_device, "vkSetDebugUtilsObjectNameEXT"));
         self->vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
@@ -1349,7 +1349,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         }
     }
 
-    if ((self->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !self->info_name.empty())
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !self->info_name.empty())
     {
         auto const device_name = self->info_name;
         VkDebugUtilsObjectNameInfoEXT const device_name_info{
@@ -1530,7 +1530,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
         return {std::bit_cast<daxa_Result>(result), ImageId{}};
     }
 
-    if ((this->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !image_info.name.empty())
+    if ((this->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !image_info.name.empty())
     {
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,

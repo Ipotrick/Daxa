@@ -19,6 +19,8 @@ namespace daxa
     struct InstanceInfo
     {
         InstanceFlags flags = InstanceFlagBits::DEBUG_UTILS;
+        std::string_view engine_name;
+        std::string_view app_name;
     };
 
     struct Instance : ManagedPtr

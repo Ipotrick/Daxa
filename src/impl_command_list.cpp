@@ -688,7 +688,7 @@ void daxa_cmd_begin_label(daxa_CommandList self, daxa_CommandLabelInfo const * i
             info->label_color.w},
     };
 
-    if ((self->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0)
+    if ((self->device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
     {
         self->device->vkCmdBeginDebugUtilsLabelEXT(self->vk_cmd_buffer, &vk_debug_label_info);
     }
@@ -697,7 +697,7 @@ void daxa_cmd_begin_label(daxa_CommandList self, daxa_CommandLabelInfo const * i
 void daxa_cmd_end_label(daxa_CommandList self)
 {
     daxa_cmd_flush_barriers(self);
-    if ((self->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0)
+    if ((self->device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
     {
         self->device->vkCmdEndDebugUtilsLabelEXT(self->vk_cmd_buffer);
     }
@@ -814,7 +814,7 @@ auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const
         .pInheritanceInfo = {},
     };
     vkBeginCommandBuffer(ret.vk_cmd_buffer, &vk_command_buffer_begin_info);
-    if ((ret.device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && ret.info.name.size != 0)
+    if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
         auto cmd_buffer_name = ret.info.name;
         VkDebugUtilsObjectNameInfoEXT const cmd_buffer_name_info{

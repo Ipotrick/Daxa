@@ -20,7 +20,7 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
-    if ((device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !ret.info_name.empty())
+    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info_name.empty())
     {
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -85,7 +85,7 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
-    if ((device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !ret.info_name.empty())
+    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info_name.empty())
     {
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -184,7 +184,7 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
         return std::bit_cast<daxa_Result>(vk_result);
     }
     ret.vk_event = event;
-    if ((device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && !ret.info_name.empty())
+    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info_name.empty())
     {
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,

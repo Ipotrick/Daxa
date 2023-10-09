@@ -9,10 +9,18 @@ static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_DEBUG_UTIL = 0x1;
 typedef struct
 {
     daxa_InstanceFlags flags;
+    daxa_StringView engine_name;
+    daxa_StringView app_name;
 } daxa_InstanceInfo;
 
+static const daxa_InstanceInfo DAXA_DEFAULT_INSTANCE_INFO = {
+    .flags = DAXA_INSTANCE_FLAG_DEBUG_UTIL,
+    .engine_name = { .data = "daxa", .size = 4 },
+    .app_name = { .data = "daxa app", .size = 8 },
+};
+
 DAXA_EXPORT daxa_Result
-daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance *out_instance);
+daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_instance);
 
 DAXA_EXPORT daxa_Result
 daxa_instance_create_device(daxa_Instance instance, daxa_DeviceInfo const * info, daxa_Device * out_device);

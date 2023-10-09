@@ -298,7 +298,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         this->images[i] = result_pair.second;
     }
 
-    if ((this->device->instance->info.flags & DAXA_INSTANCE_FLAG_DEBUG_UTIL) != 0 && this->info_name.size() != 0)
+    if ((this->device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && this->info_name.size() != 0)
     {
         VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
