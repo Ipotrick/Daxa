@@ -163,7 +163,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
     {
         auto const & manual_info = *daxa::get_if<ManualAllocInfo>(
             r_cast<AllocateInfo *>(&ret.info.allocate_info));
-        auto const & mem_block = *manual_info.memory_block.as<daxa_ImplMemoryBlock const>();
+        auto const & mem_block = **r_cast<daxa_MemoryBlock const *>(&manual_info.memory_block);
 
         // TODO(pahrens): Add validation for memory type requirements.
 
@@ -321,7 +321,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     {
         ManualAllocInfo const & manual_info = *daxa::get_if<ManualAllocInfo>(
             r_cast<AllocateInfo *>(&ret.info.allocate_info));
-        daxa_ImplMemoryBlock const & mem_block = *manual_info.memory_block.as<daxa_ImplMemoryBlock const>();
+        daxa_ImplMemoryBlock const & mem_block = **r_cast<daxa_MemoryBlock const*>(&manual_info.memory_block);
         // TODO(pahrens): Add validation for memory requirements.
         auto result = vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
         if (result != VK_SUCCESS)
@@ -613,8 +613,6 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     u64 const current_main_queue_cpu_timeline_value = self->main_queue_cpu_timeline.fetch_add(1) + 1;
 
-    std::pair<u64, std::vector<ManagedPtr>> submit = {current_main_queue_cpu_timeline_value, {}};
-
     for (auto const & cmd_list : std::span{info->command_lists, info->command_list_count})
     {
         for (auto [id, index] : cmd_list->deferred_destructions)
@@ -637,7 +635,6 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
         {
             return DAXA_RESULT_INCOMPLETE_COMMAND_LIST;
         }
-        submit.second.push_back(cmd_list);
         submit_vk_command_buffers.push_back(cmd_list->vk_cmd_buffer);
     }
 
@@ -706,7 +703,6 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     }
 
     std::unique_lock const lock{self->main_queue_zombies_mtx};
-    self->main_queue_submits_zombies.push_front(std::move(submit));
 
     return DAXA_RESULT_SUCCESS;
 }
@@ -770,12 +766,6 @@ daxa_dvc_collect_garbage(daxa_Device self)
             zombies.pop_back();
         }
     };
-    // Need to unlock, as command list destructor locks this mutex too.
-    lock.unlock();
-    check_and_cleanup_gpu_resources(
-        self->main_queue_submits_zombies,
-        [](auto & /* command_lists */) {});
-    lock.lock();
     {
         std::unique_lock const l_lock{self->main_queue_command_pool_buffer_recycle_mtx};
         check_and_cleanup_gpu_resources(

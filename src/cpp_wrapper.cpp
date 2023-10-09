@@ -335,8 +335,6 @@ namespace daxa
 
     /// --- Begin TimelineSemaphore ---
 
-    TimelineSemaphore::TimelineSemaphore(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
-
     auto TimelineSemaphore::info() const -> TimelineSemaphoreInfo const &
     {
         return *r_cast<TimelineSemaphoreInfo const *>(daxa_timeline_semaphore_info(rc_cast<daxa_TimelineSemaphore>(this)));
@@ -353,9 +351,8 @@ namespace daxa
 
     void TimelineSemaphore::set_value(u64 value)
     {
-        auto self = this->as<daxa_ImplTimelineSemaphore>();
         check_result(
-            daxa_timeline_semaphore_set_value(self, value),
+            daxa_timeline_semaphore_set_value(r_cast<daxa_TimelineSemaphore>(this), value),
             "failed to set timeline value");
     }
 
@@ -369,8 +366,6 @@ namespace daxa
     /// --- End TimelineSemaphore ---
 
     /// --- Begin Event
-
-    Event::Event(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
 
     auto Event::info() const -> EventInfo const &
     {

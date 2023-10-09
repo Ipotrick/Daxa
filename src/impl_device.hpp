@@ -13,6 +13,12 @@
 
 using namespace daxa;
 
+struct SubmitZombie
+{
+    std::vector<daxa_BinarySemaphore> binary_semaphores = {};
+    std::vector<daxa_TimelineSemaphore> timeline_semaphores = {};
+};
+
 struct daxa_ImplDevice final : public daxa_ImplHandle
 {
     daxa_Instance instance = {};
@@ -65,7 +71,6 @@ struct daxa_ImplDevice final : public daxa_ImplHandle
     VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
 
     std::mutex main_queue_zombies_mtx = {};
-    std::deque<std::pair<u64, std::vector<ManagedPtr>>> main_queue_submits_zombies = {};
     std::deque<std::pair<u64, CommandListZombie>> main_queue_command_list_zombies = {};
     std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
     std::deque<std::pair<u64, ImageId>> main_queue_image_zombies = {};
