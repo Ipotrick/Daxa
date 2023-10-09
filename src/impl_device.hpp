@@ -13,7 +13,7 @@
 
 using namespace daxa;
 
-struct daxa_ImplDevice final : daxa_ImplHandle
+struct daxa_ImplDevice final : public daxa_ImplHandle
 {
     daxa_Instance instance = {};
     DeviceInfo info = {};

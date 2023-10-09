@@ -20,16 +20,17 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct ComputePipeline : ManagedPtr
+    struct ComputePipeline final : ManagedPtr<ComputePipeline>
     {
         ComputePipeline() = default;
 
         auto info() const -> ComputePipelineInfo const &;
 
-      private:
-        friend struct Device;
-        friend struct CommandList;
-        explicit ComputePipeline(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 
     struct DepthTestInfo
@@ -92,15 +93,16 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct RasterPipeline : ManagedPtr
+    struct RasterPipeline final : ManagedPtr<RasterPipeline>
     {
         RasterPipeline() = default;
 
         auto info() const -> RasterPipelineInfo const &;
 
-      private:
-        friend struct Device;
-        friend struct CommandList;
-        explicit RasterPipeline(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 } // namespace daxa

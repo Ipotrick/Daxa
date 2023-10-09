@@ -6,7 +6,7 @@
 namespace daxa
 {
     struct Device;
-    
+
     struct MemoryBarrierInfo
     {
         Access src_access = AccessConsts::NONE;
@@ -32,16 +32,17 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct BinarySemaphore final : ManagedPtr
+    struct BinarySemaphore final : ManagedPtr<BinarySemaphore>
     {
         BinarySemaphore() = default;
 
         auto info() const -> BinarySemaphoreInfo const &;
 
-      private:
-        friend struct Device;
-        friend struct ImplSwapchain;
-        explicit BinarySemaphore(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 
     struct TimelineSemaphoreInfo
@@ -50,7 +51,7 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct TimelineSemaphore final : ManagedPtr
+    struct TimelineSemaphore final : ManagedPtr<TimelineSemaphore>
     {
         TimelineSemaphore() = default;
 
@@ -60,10 +61,11 @@ namespace daxa
         void set_value(u64 value);
         auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
 
-      private:
-        friend struct Device;
-        friend struct ImplSwapchain;
-        explicit TimelineSemaphore(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 
     struct EventInfo
@@ -71,16 +73,17 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct Event final : ManagedPtr
+    struct Event final : ManagedPtr<Event>
     {
         Event() = default;
 
         auto info() const -> EventInfo const &;
 
-      private:
-        friend struct CommandList;
-        friend struct Device;
-        Event(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 
     struct EventSignalInfo

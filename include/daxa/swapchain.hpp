@@ -31,7 +31,7 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct Swapchain : ManagedPtr
+    struct Swapchain final : ManagedPtr<Swapchain>
     {
         Swapchain() = default;
 
@@ -59,8 +59,10 @@ namespace daxa
         /// @return The cpu frame timeline value.
         auto get_cpu_timeline_value() const -> usize;
 
-      private:
-        friend struct Device;
-        explicit Swapchain(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 } // namespace daxa

@@ -192,49 +192,59 @@ namespace daxa
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
     } // namespace types
 
+    template <typename CRTP_CHILD_T>
     struct ManagedPtr
     {
+        ManagedPtr() = default;
+
+        ~ManagedPtr()
+        {
+            cleanup();
+        }
+
+        ManagedPtr(ManagedPtr const & other) { *this = other; }
+
+        ManagedPtr(ManagedPtr && other) noexcept { *this = std::move(other); }
+
+        auto operator=(ManagedPtr const & other) -> ManagedPtr &
+        {
+            cleanup();
+            this->object = other.object;
+            if (this->object != nullptr)
+            {
+                CRTP_CHILD_T::inc_refcnt(object);
+            }
+            return *this;
+        }
+
+        auto operator=(ManagedPtr && other) noexcept -> ManagedPtr &
+        {
+            cleanup();
+            std::swap(this->object, other.object);
+            return *this;
+        }
+
+        auto is_valid() const -> bool
+        {
+            return this->object != nullptr;
+        }
+
+        operator bool() const
+        {
+            return this->is_valid();
+        }
+
+      protected:
         daxa_ImplHandle * object = {};
 
-        template <typename T>
-        auto as() -> T *
+        void cleanup()
         {
-#if DAXA_VALIDATION
-            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
-            auto ret = reinterpret_cast<T *>(object);
-            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "bad dynamic cast");
-            return ret;
-#else
-            return reinterpret_cast<T *>(object);
-#endif
+            if (this->object != nullptr)
+            {
+                CRTP_CHILD_T::dec_refcnt(object);
+                this->object = {};
+            }
         }
-        template <typename T>
-        auto as() const -> T const *
-        {
-#if DAXA_VALIDATION
-            DAXA_DBG_ASSERT_TRUE_M(object != nullptr, "can not dereference empty weak pointer!");
-            auto ret = reinterpret_cast<T const *>(object);
-            DAXA_DBG_ASSERT_TRUE_M(ret != nullptr, "bad dynamic cast");
-            return ret;
-#else
-            return reinterpret_cast<T *>(object);
-#endif
-        }
-
-        ManagedPtr() = default;
-        ManagedPtr(daxa_Handle ptr);
-        ~ManagedPtr();
-
-        ManagedPtr(ManagedPtr const &);
-        ManagedPtr(ManagedPtr &&) noexcept;
-        ManagedPtr & operator=(ManagedPtr const &);
-        ManagedPtr & operator=(ManagedPtr &&) noexcept;
-
-        auto is_valid() const -> bool;
-        operator bool() const;
-
-      private:
-        void cleanup();
     };
 
     template <typename T>
@@ -1733,14 +1743,17 @@ namespace daxa
         MemoryFlags flags = {};
     };
 
-    struct MemoryBlock : ManagedPtr
+    struct MemoryBlock : ManagedPtr<MemoryBlock>
     {
         MemoryBlock() = default;
 
-      private:
-        friend struct ::daxa_ImplDevice;
-        friend struct Device;
-        MemoryBlock(ManagedPtr impl);
+        auto info() -> MemoryBlockInfo const &;
+
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 
     using AutoAllocInfo = MemoryFlags;
@@ -1759,7 +1772,7 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct TimelineQueryPool : ManagedPtr
+    struct TimelineQueryPool : ManagedPtr<TimelineQueryPool>
     {
         TimelineQueryPool() = default;
 
@@ -1767,8 +1780,10 @@ namespace daxa
 
         auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;
 
-      private:
-        friend struct Device;
-        explicit TimelineQueryPool(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 } // namespace daxa

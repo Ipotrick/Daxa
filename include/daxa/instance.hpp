@@ -19,18 +19,25 @@ namespace daxa
 
     struct InstanceInfo
     {
-        InstanceFlags flags = InstanceFlagBits::DEBUG_UTILS;
-        std::string_view engine_name;
-        std::string_view app_name;
+        InstanceFlags flags =
+            InstanceFlagBits::DEBUG_UTILS |
+            InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD;
+        std::string_view engine_name = "daxa";
+        std::string_view app_name = "daxa app";
     };
 
-    struct Instance : ManagedPtr
+    struct Instance final : ManagedPtr<Instance>
     {
         Instance() = default;
 
         auto create_device(DeviceInfo const & device_info) -> Device;
 
         auto info() const -> InstanceInfo const &;
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 
     auto create_instance(InstanceInfo const & info) -> Instance;

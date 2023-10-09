@@ -229,7 +229,7 @@ namespace daxa
         Swapchain swapchain;
     };
 
-    struct Device : ManagedPtr
+    struct Device final : ManagedPtr<Device>
     {
         Device() = default;
 
@@ -276,16 +276,15 @@ namespace daxa
         auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         auto info() const -> DeviceInfo const &;
-        auto properties() const -> DeviceProperties const &;
-        auto mesh_shader_properties() const -> MeshShaderDeviceProperties const &;
         void wait_idle();
 
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
         void collect_garbage();
-
-      private:
-        friend struct Instance;
-        Device(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 } // namespace daxa

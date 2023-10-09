@@ -76,7 +76,7 @@ namespace daxa
     struct ImageClearInfo
     {
         ImageLayout dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL;
-        ClearValue clear_value = {};    // TODO: might be incompatible c abi with daxa_ClearValue!
+        ClearValue clear_value = {}; // TODO: might be incompatible c abi with daxa_ClearValue!
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
@@ -95,7 +95,7 @@ namespace daxa
         ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
-        ClearValue clear_value = {};    // TODO: might be incompatible c abi with daxa_ClearValue!
+        ClearValue clear_value = {}; // TODO: might be incompatible c abi with daxa_ClearValue!
     };
 
     struct RenderPassBeginInfo
@@ -214,7 +214,7 @@ namespace daxa
         f32 slope_factor = {};
     };
 
-    struct CommandList : ManagedPtr
+    struct CommandList final : ManagedPtr<CommandList>
     {
         CommandList() = default;
 
@@ -309,8 +309,10 @@ namespace daxa
 
         auto info() const -> CommandListInfo const &;
 
-      private:
-        friend struct Device;
-        explicit CommandList(ManagedPtr impl);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(daxa_ImplHandle * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle * object) -> u64;
     };
 } // namespace daxa

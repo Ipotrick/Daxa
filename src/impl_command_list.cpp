@@ -888,7 +888,7 @@ void zero_ref_callback(daxa_ImplHandle * handle)
         },
     });
     self->device->dec_weak_refcnt(
-        daxa_ImplDevice::zero_ref_callback,
+        &daxa_ImplDevice::zero_ref_callback,
         self->device->instance
     );
     delete self;
