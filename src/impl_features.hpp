@@ -34,7 +34,7 @@ namespace daxa
 
     struct PhysicalDeviceExtensionList
     {
-        daxa_StringView data[EXTENSION_LIST_MAX] = {};
+        char const * data[EXTENSION_LIST_MAX] = {};
         u32 size = {};
 
         void initialize(daxa_DeviceInfo info);

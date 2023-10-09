@@ -5,7 +5,6 @@
 
 typedef daxa_Flags daxa_InstanceFlags;
 static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_DEBUG_UTIL = 0x1;
-// TODO(capi): IMPLEMENT:
 static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_PARENT_MUST_OUTLIVE_CHILD = 0x2;
 
 typedef struct

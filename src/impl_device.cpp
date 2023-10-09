@@ -921,8 +921,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         .enabledLayerCount = 0,
         .ppEnabledLayerNames = nullptr,
         .enabledExtensionCount = static_cast<u32>(extension_list.size),
-        // TODO(capi): This is a list of string views... this should be a list of c pointers!!
-        // .ppEnabledExtensionNames = extension_list.data,
+        .ppEnabledExtensionNames = extension_list.data,
         .pEnabledFeatures = nullptr,
     };
     result = vkCreateDevice(self->vk_physical_device, &device_ci, nullptr, &self->vk_device);

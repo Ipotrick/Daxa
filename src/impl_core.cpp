@@ -102,7 +102,7 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
     }
 
     *out_memory_block = new daxa_ImplMemoryBlock{};
-    // TODO(capi): memory block is missing a name.
+    // TODO(general): memory block is missing a name.
     (**out_memory_block).device = self;
     (**out_memory_block).info = std::bit_cast<daxa::MemoryBlockInfo>(*info);
     (**out_memory_block).allocation = allocation;

@@ -14,7 +14,6 @@ namespace daxa
     {
         static inline constexpr InstanceFlags NONE = {0x00000000};
         static inline constexpr InstanceFlags DEBUG_UTILS = {0x00000001};
-        // TODO(capi): IMPLEMENT:
         static inline constexpr InstanceFlags PARENT_MUST_OUTLIVE_CHILD = {0x00000002};
     };
 

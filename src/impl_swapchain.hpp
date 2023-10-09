@@ -58,9 +58,6 @@ struct daxa_ImplSwapchain final : daxa_ImplHandle
     void cleanup();
     void recreate_surface();
     
-    // TODO(capi) replace with static create function
-    // ImplSwapchain(daxa_Device a_device, daxa_SwapchainInfo a_info);
-    // ~ImplSwapchain();
     static auto create(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain swapchain) -> daxa_Result;
     static void zero_ref_callback(daxa_ImplHandle * handle);
 };

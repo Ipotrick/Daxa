@@ -178,17 +178,11 @@ namespace daxa
         this->size = 0;
         if (info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION)
         {
-            this->data[size++] = {
-                .data = VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
-                .size = strlen(VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME),
-            };
+            this->data[size++] = {VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME};
         }
         if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
         {
-            this->data[size++] = {
-                .data = VK_EXT_MESH_SHADER_EXTENSION_NAME,
-                .size = strlen(VK_EXT_MESH_SHADER_EXTENSION_NAME),
-            };
+            this->data[size++] = {VK_EXT_MESH_SHADER_EXTENSION_NAME};
         }
     }
 } // namespace daxa
