@@ -11,7 +11,7 @@
 
 namespace daxa
 {
-    struct ImplFsr2Context final : daxa_ImplHandle
+    struct ImplFsr2Context final : ImplHandle
     {
         UpscaleInstanceInfo info;
 

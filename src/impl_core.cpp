@@ -64,28 +64,14 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
 
 // --- End Helpers ---
 
-// --- Begin API Functions ---
+// --- Begin ImplHandle ---
 
-auto daxa_inc_refcnt(daxa_Handle handle) -> u64
-{
-    return std::atomic_ref{handle->strong_count}.fetch_add(1, std::memory_order::relaxed);
-}
-
-auto daxa_dec_refcnt(daxa_Handle handle) -> u64
-{
-    return std::atomic_ref{handle->strong_count}.fetch_sub(1, std::memory_order::relaxed);
-}
-
-// --- End API Functions ---
-
-// --- Begin daxa_ImplHandle ---
-
-auto daxa_ImplHandle::inc_refcnt() -> u64
+auto ImplHandle::inc_refcnt() -> u64
 {
     return std::atomic_ref{this->strong_count}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto daxa_ImplHandle::dec_refcnt(void (*zero_ref_callback)(daxa_ImplHandle *), daxa_Instance instance) -> u64
+auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance instance) -> u64
 {
     auto prev = std::atomic_ref{this->strong_count}.fetch_add(1, std::memory_order::relaxed);
     if (prev == 1)
@@ -103,17 +89,17 @@ auto daxa_ImplHandle::dec_refcnt(void (*zero_ref_callback)(daxa_ImplHandle *), d
     return prev;
 }
 
-auto daxa_ImplHandle::get_refcnt() -> u64
+auto ImplHandle::get_refcnt() -> u64
 {
     return std::atomic_ref{this->strong_count}.load(std::memory_order::relaxed);
 }
 
-auto daxa_ImplHandle::inc_weak_refcnt() -> u64
+auto ImplHandle::inc_weak_refcnt() -> u64
 {
     return std::atomic_ref{this->weak_count}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto daxa_ImplHandle::dec_weak_refcnt(void (*zero_ref_callback)(daxa_ImplHandle *), daxa_Instance) -> u64
+auto ImplHandle::dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance) -> u64
 {
     auto prev = std::atomic_ref{this->weak_count}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
@@ -127,12 +113,12 @@ auto daxa_ImplHandle::dec_weak_refcnt(void (*zero_ref_callback)(daxa_ImplHandle 
     return prev;
 }
 
-auto daxa_ImplHandle::get_weak_refcnt() -> u64
+auto ImplHandle::get_weak_refcnt() -> u64
 {
     return std::atomic_ref{this->weak_count}.load(std::memory_order::relaxed);
 }
 
-// --- End daxa_ImplHandle ---
+// --- End ImplHandle ---
 
 // --- Begin daxa_ImplMemoryBlock ---
 
@@ -190,7 +176,7 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
         self->device->instance);
 }
 
-void daxa_ImplMemoryBlock::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle * handle)
 {
     auto self = r_cast<daxa_MemoryBlock>(handle);
     // TODO: Does this make sense without a zombie?

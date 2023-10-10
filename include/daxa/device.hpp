@@ -199,7 +199,7 @@ namespace daxa
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 400;
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct CommandSubmitInfo
@@ -273,7 +273,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(void const * object) -> u64;
-        static auto dec_refcnt(void const * object) -> u64;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

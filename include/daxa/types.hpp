@@ -191,6 +191,8 @@ namespace daxa
         using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
     } // namespace types
 
+    struct ImplHandle;
+
     template <typename CRTP_CHILD_T>
     struct ManagedPtr
     {
@@ -234,14 +236,14 @@ namespace daxa
         }
 
       protected:
-        void * object = {};
+        ImplHandle * object = {};
 
         void cleanup()
         {
             if (this->object != nullptr)
             {
                 // Need const cast due to c-isms :( .
-                CRTP_CHILD_T::dec_refcnt(const_cast<void*>(object));
+                CRTP_CHILD_T::dec_refcnt(const_cast<ImplHandle*>(object));
                 this->object = {};
             }
         }
@@ -1752,8 +1754,8 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(void const * object) -> u64;
-        static auto dec_refcnt(void const * object) -> u64;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
     using AutoAllocInfo = MemoryFlags;
@@ -1769,7 +1771,7 @@ namespace daxa
     struct TimelineQueryPoolInfo
     {
         u32 query_count = {};
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct TimelineQueryPool : ManagedPtr<TimelineQueryPool>
@@ -1783,7 +1785,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(void const * object) -> u64;
-        static auto dec_refcnt(void const * object) -> u64;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

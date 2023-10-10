@@ -28,7 +28,7 @@ namespace daxa
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
         usize max_allowed_frames_in_flight = 2;
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct Swapchain final : ManagedPtr<Swapchain>
@@ -62,7 +62,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(void const * object) -> u64;
-        static auto dec_refcnt(void const * object) -> u64;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

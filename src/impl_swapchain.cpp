@@ -378,7 +378,7 @@ void daxa_ImplSwapchain::recreate_surface()
 #endif
 }
 
-void daxa_ImplSwapchain::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplSwapchain::zero_ref_callback(ImplHandle * handle)
 {
     // TODO: Dont we need to defer the destruction with a zombie?
     auto self = r_cast<daxa_Swapchain>(handle);

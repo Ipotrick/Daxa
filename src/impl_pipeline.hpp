@@ -13,14 +13,14 @@ struct PipelineZombie
     VkPipeline vk_pipeline = {};
 };
 
-struct ImplPipeline : daxa_ImplHandle
+struct ImplPipeline : ImplHandle
 {
     std::string info_name = {};
     daxa_Device device = {};
     VkPipeline vk_pipeline = {};
     VkPipelineLayout vk_pipeline_layout = {};
 
-    static void zero_ref_callback(daxa_ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle * handle);
 };
 
 struct daxa_ImplRasterPipeline final : ImplPipeline

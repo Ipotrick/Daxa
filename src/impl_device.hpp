@@ -19,7 +19,7 @@ struct SubmitZombie
     std::vector<daxa_TimelineSemaphore> timeline_semaphores = {};
 };
 
-struct daxa_ImplDevice final : public daxa_ImplHandle
+struct daxa_ImplDevice final : public ImplHandle
 {
     daxa_Instance instance = {};
     DeviceInfo info = {};
@@ -128,5 +128,5 @@ struct daxa_ImplDevice final : public daxa_ImplHandle
     // TODO: Give physical device in info so that this function can be removed.
     // TODO: Better device selection.
     static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
-    static void zero_ref_callback(daxa_ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle * handle);
 };

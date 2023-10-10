@@ -880,7 +880,7 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
     }
 }
 
-void daxa_ImplCommandList::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplCommandList::zero_ref_callback(ImplHandle * handle)
 {
     auto self = r_cast<daxa_CommandList>(handle);
     vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});

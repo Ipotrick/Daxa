@@ -40,7 +40,7 @@ struct CommandListZombie
     VkCommandPool vk_cmd_pool = {};
 };
 
-struct daxa_ImplCommandList final : daxa_ImplHandle
+struct daxa_ImplCommandList final : ImplHandle
 {
     daxa_Device device = {};
     daxa_CommandListInfo info = {};
@@ -58,5 +58,5 @@ struct daxa_ImplCommandList final : daxa_ImplHandle
 
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
     
-    static void zero_ref_callback(daxa_ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle * handle);
 };

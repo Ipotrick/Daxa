@@ -158,7 +158,7 @@ namespace daxa
         void present(TaskPresentInfo const & info);
     };
 
-    struct ImplPersistentTaskBuffer final : daxa_ImplHandle
+    struct ImplPersistentTaskBuffer final : ImplHandle
     {
         ImplPersistentTaskBuffer(TaskBufferInfo const & a_info);
         ~ImplPersistentTaskBuffer();
@@ -173,7 +173,7 @@ namespace daxa
         u32 unique_index = std::numeric_limits<u32>::max();
     };
 
-    struct ImplPersistentTaskImage final : daxa_ImplHandle
+    struct ImplPersistentTaskImage final : ImplHandle
     {
         ImplPersistentTaskImage(TaskImageInfo const & a_info);
         ~ImplPersistentTaskImage();
@@ -299,7 +299,7 @@ namespace daxa
         std::optional<BinarySemaphore> last_submit_semaphore = {};
     };
 
-    struct ImplTaskGraph final : daxa_ImplHandle
+    struct ImplTaskGraph final : ImplHandle
     {
         ImplTaskGraph(TaskGraphInfo a_info);
         // virtual ~ImplTaskGraph() override final;

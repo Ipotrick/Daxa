@@ -154,7 +154,7 @@ typedef enum
     DAXA_DEVICE_FLAG_VK_MEMORY_MODEL = 0x1 << 5,
 } daxa_DeviceFlagBits;
 
-typedef uint64_t daxa_DeviceFlags;
+typedef uint32_t daxa_DeviceFlags;
 
 typedef struct
 {

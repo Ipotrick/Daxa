@@ -5,7 +5,7 @@
 
 namespace daxa
 {
-    struct ImplImGuiRenderer final : daxa_ImplHandle
+    struct ImplImGuiRenderer final : ImplHandle
     {
         ImGuiRendererInfo info;
         RasterPipeline raster_pipeline;

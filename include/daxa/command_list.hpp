@@ -13,7 +13,7 @@ namespace daxa
 
     struct CommandListInfo
     {
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct ImageBlitInfo
@@ -195,7 +195,7 @@ namespace daxa
     struct CommandLabelInfo
     {
         std::array<f32, 4> label_color = {0.463f, 0.333f, 0.671f, 1.0f};
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct SetUniformBufferInfo
@@ -326,7 +326,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(void const * object) -> u64;
-        static auto dec_refcnt(void const * object) -> u64;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

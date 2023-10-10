@@ -95,32 +95,36 @@ inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageA
 
 // --- End Helpers ---
 
-struct daxa_ImplHandle 
+namespace daxa
 {
-    // Used for user side reference count.
-    u64 strong_count = {};
-    // Used for internal reference count.
-    u64 weak_count = {};
+    struct ImplHandle
+    {
+        // Used for user side reference count.
+        u64 strong_count = {};
+        // Used for internal reference count.
+        u64 weak_count = {};
 
-    // For user side ref counting.
-    auto inc_refcnt() -> u64;
-    auto dec_refcnt(void(*zero_ref_callback)(daxa_ImplHandle*), daxa_Instance instance) -> u64;
-    auto get_refcnt() -> u64;
-    // For internal ref counting.
-    auto inc_weak_refcnt() -> u64;
-    auto dec_weak_refcnt(void(*zero_ref_callback)(daxa_ImplHandle*), daxa_Instance instance) -> u64;
-    auto get_weak_refcnt() -> u64;
-};
+        // For user side ref counting.
+        auto inc_refcnt() -> u64;
+        auto dec_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance instance) -> u64;
+        auto get_refcnt() -> u64;
+        // For internal ref counting.
+        auto inc_weak_refcnt() -> u64;
+        auto dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance instance) -> u64;
+        auto get_weak_refcnt() -> u64;
+    };
+} // namespace daxa
 
-struct MemoryBlockZombie {
+struct MemoryBlockZombie
+{
     VmaAllocation allocation = {};
 };
-struct daxa_ImplMemoryBlock final : daxa_ImplHandle
+struct daxa_ImplMemoryBlock final : ImplHandle
 {
     daxa_Device device = {};
     MemoryBlockInfo info = {};
     VmaAllocation allocation = {};
     VmaAllocationInfo alloc_info = {};
 
-    static void zero_ref_callback(daxa_ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle * handle);
 };

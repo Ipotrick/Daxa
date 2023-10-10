@@ -41,7 +41,7 @@ namespace daxa
 
     using VirtualFileSet = std::map<std::string, VirtualFileState>;
 
-    struct ImplPipelineManager final : daxa_ImplHandle
+    struct ImplPipelineManager final : ImplHandle
     {
         enum class ShaderStage
         {

@@ -864,7 +864,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     self->vk_physical_device = physical_device;
     self->instance = instance;
     self->info = *reinterpret_cast<DeviceInfo const *>(&info);
-    self->info_name = std::string{info.name.data, info.name.size};
+    self->info_name = {info.name.data, info.name.size};
     self->info.name = {self->info_name.c_str(), self->info_name.size()};
     using namespace daxa;
 
@@ -1693,7 +1693,7 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
     return gpu_shader_resource_table.sampler_slots.dereference_id(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
-void daxa_ImplDevice::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplDevice::zero_ref_callback(ImplHandle * handle)
 {
     auto self = r_cast<daxa_Device>(handle);
     daxa_dvc_wait_idle(self);

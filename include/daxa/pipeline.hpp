@@ -16,7 +16,7 @@ namespace daxa
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct ComputePipeline final : ManagedPtr<ComputePipeline>
@@ -28,8 +28,8 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(void const * object) -> u64;
-        static auto dec_refcnt(void const * object) -> u64;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
     struct DepthTestInfo
@@ -89,7 +89,7 @@ namespace daxa
         Optional<TesselationInfo> tesselation = {};
         RasterizerInfo raster = {};
         u32 push_constant_size = {};
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct RasterPipeline final : ManagedPtr<RasterPipeline>
@@ -101,7 +101,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(void const * object) -> u64;
-        static auto dec_refcnt(void const * object) -> u64;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

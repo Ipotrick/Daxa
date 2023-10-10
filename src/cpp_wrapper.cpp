@@ -129,7 +129,7 @@ namespace daxa
         check_result(daxa_create_instance(
                          r_cast<daxa_InstanceInfo const *>(&info),
                          r_cast<daxa_Instance *>(&ret)),
-                     "failed to create instance");        
+                     "failed to create instance");
         return ret;
     }
 
@@ -137,7 +137,7 @@ namespace daxa
     {
         Device ret = {};
         check_result(daxa_instance_create_device(
-                         r_cast<daxa_Instance>(this),
+                         r_cast<daxa_Instance>(this->object),
                          r_cast<daxa_DeviceInfo const *>(&info),
                          r_cast<daxa_Device *>(&ret)),
                      "failed to create device");
@@ -146,19 +146,18 @@ namespace daxa
 
     auto Instance::info() const -> InstanceInfo const &
     {
-        return *r_cast<InstanceInfo const *>(daxa_instance_info(rc_cast<daxa_Instance>(this)));
+        return *r_cast<InstanceInfo const *>(daxa_instance_info(rc_cast<daxa_Instance>(this->object)));
     }
 
-    auto Instance::inc_refcnt(void const * object) -> u64
+    auto Instance::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_instance_inc_refcnt(rc_cast<daxa_Instance>(object));
     }
 
-    auto Instance::dec_refcnt(void const * object) -> u64
+    auto Instance::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_instance_dec_refcnt(rc_cast<daxa_Instance>(object));
     }
-
 
     /// --- End Instance ---
 
@@ -173,7 +172,7 @@ namespace daxa
     {
         MemoryBlock ret = {};
         check_result(daxa_dvc_create_memory(
-                         r_cast<daxa_Device>(this),
+                         r_cast<daxa_Device>(this->object),
                          r_cast<daxa_MemoryBlockInfo const *>(&info),
                          r_cast<daxa_MemoryBlock *>(&ret)),
                      "failed to create memory block");
@@ -184,7 +183,7 @@ namespace daxa
     {
         return std::bit_cast<MemoryRequirements>(
             daxa_dvc_buffer_memory_requirements(
-                rc_cast<daxa_Device>(this),
+                rc_cast<daxa_Device>(this->object),
                 r_cast<daxa_BufferInfo const *>(&info)));
     }
 
@@ -192,42 +191,42 @@ namespace daxa
     {
         return std::bit_cast<MemoryRequirements>(
             daxa_dvc_image_memory_requirements(
-                rc_cast<daxa_Device>(this),
+                rc_cast<daxa_Device>(this->object),
                 r_cast<daxa_ImageInfo const *>(&info)));
     }
 
-#define _DAXA_DECL_GPU_RES_FN(Name, name)                                              \
-    auto Device::create_##name(Name##Info const & info)->Name##Id                      \
-    {                                                                                  \
-        Name##Id id = {};                                                              \
-        check_result(                                                                  \
-            daxa_dvc_create_##name(                                                    \
-                r_cast<daxa_Device>(this),                                             \
-                r_cast<daxa_##Name##Info const *>(&info),                              \
-                r_cast<daxa_##Name##Id *>(&id)),                                       \
-            "failed to create buffer");                                                \
-        return id;                                                                     \
-    }                                                                                  \
-    void Device::destroy_##name(Name##Id id)                                           \
-    {                                                                                  \
+#define _DAXA_DECL_GPU_RES_FN(Name, name)                                                      \
+    auto Device::create_##name(Name##Info const & info)->Name##Id                              \
+    {                                                                                          \
+        Name##Id id = {};                                                                      \
+        check_result(                                                                          \
+            daxa_dvc_create_##name(                                                            \
+                r_cast<daxa_Device>(this->object),                                             \
+                r_cast<daxa_##Name##Info const *>(&info),                                      \
+                r_cast<daxa_##Name##Id *>(&id)),                                               \
+            "failed to create buffer");                                                        \
+        return id;                                                                             \
+    }                                                                                          \
+    void Device::destroy_##name(Name##Id id)                                                   \
+    {                                                                                          \
+        DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id");         \
+        [[maybe_unused]] auto prev_refcnt = daxa_dvc_dec_refcnt_##name(                        \
+            r_cast<daxa_Device>(this->object),                                                 \
+            std::bit_cast<daxa_##Name##Id>(id));                                               \
+    }                                                                                          \
+    auto Device::is_id_valid(Name##Id id) const->bool                                          \
+    {                                                                                          \
+        return daxa_dvc_is_##name##_valid(                                                     \
+            rc_cast<daxa_Device>(this->object),                                                \
+            std::bit_cast<daxa_##Name##Id>(id));                                               \
+    }                                                                                          \
+    auto Device::info_##name(Name##Id id) const->Name##Info const &                            \
+    {                                                                                          \
         DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id"); \
-        [[maybe_unused]] auto prev_refcnt = daxa_dvc_dec_refcnt_##name(                \
-            r_cast<daxa_Device>(this),                                                 \
-            std::bit_cast<daxa_##Name##Id>(id));                                       \
-    }                                                                                  \
-    auto Device::is_id_valid(Name##Id id) const->bool                                  \
-    {                                                                                  \
-        return daxa_dvc_is_##name##_valid(                                             \
-            rc_cast<daxa_Device>(this),                                                \
-            std::bit_cast<daxa_##Name##Id>(id));                                       \
-    }                                                                                  \
-    auto Device::info_##name(Name##Id id) const->Name##Info const &                    \
-    {                                                                                  \
-        DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id"); \
-        return *r_cast<Name##Info const *>(                                            \
-            daxa_dvc_info_##name(                                                      \
-                rc_cast<daxa_Device>(this),                                            \
-                std::bit_cast<daxa_##Name##Id>(id)));                                  \
+        return *r_cast<Name##Info const *>(                                                    \
+            daxa_dvc_info_##name(                                                              \
+                rc_cast<daxa_Device>(this->object),                                            \
+                std::bit_cast<daxa_##Name##Id>(id)));                                          \
     }
 
     _DAXA_DECL_GPU_RES_FN(Buffer, buffer)
@@ -240,7 +239,7 @@ namespace daxa
         auto ret = BufferDeviceAddress{};
         check_result(
             daxa_dvc_buffer_device_address(
-                rc_cast<daxa_Device>(this),
+                rc_cast<daxa_Device>(this->object),
                 std::bit_cast<daxa_BufferId>(id),
                 r_cast<daxa_BufferDeviceAddress *>(&ret)),
             "buffer is not device accessable");
@@ -252,7 +251,7 @@ namespace daxa
         void * ret = {};
         check_result(
             daxa_dvc_buffer_host_address(
-                rc_cast<daxa_Device>(this),
+                rc_cast<daxa_Device>(this->object),
                 std::bit_cast<daxa_BufferId>(id),
                 &ret),
             "buffer is not host accessable");
@@ -264,7 +263,7 @@ namespace daxa
     {                                                              \
         Name ret = {};                                             \
         check_result(daxa_dvc_create_##name(                       \
-                         r_cast<daxa_Device>(this),                \
+                         r_cast<daxa_Device>(this->object),                \
                          r_cast<daxa_##Name##Info const *>(&info), \
                          r_cast<daxa_##Name *>(&ret)),             \
                      "failed to create " #name);                   \
@@ -281,12 +280,12 @@ namespace daxa
 
     auto Device::info() const -> DeviceInfo const &
     {
-        return *r_cast<DeviceInfo const *>(daxa_dvc_info(rc_cast<daxa_Device>(this)));
+        return *r_cast<DeviceInfo const *>(daxa_dvc_info(rc_cast<daxa_Device>(this->object)));
     }
 
     void Device::wait_idle()
     {
-        daxa_dvc_wait_idle(r_cast<daxa_Device>(this));
+        daxa_dvc_wait_idle(r_cast<daxa_Device>(this->object));
     }
 
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
@@ -305,7 +304,7 @@ namespace daxa
             .signal_timeline_semaphore_count = submit_info.signal_timeline_semaphores.size(),
         };
         check_result(
-            daxa_dvc_submit(r_cast<daxa_Device>(this), &c_submit_info),
+            daxa_dvc_submit(r_cast<daxa_Device>(this->object), &c_submit_info),
             "failed to submit commands");
     }
 
@@ -317,23 +316,23 @@ namespace daxa
             .swapchain = *reinterpret_cast<daxa_Swapchain const *>(&info.swapchain),
         };
         check_result(
-            daxa_dvc_present(r_cast<daxa_Device>(this), &c_present_info),
+            daxa_dvc_present(r_cast<daxa_Device>(this->object), &c_present_info),
             "failed to present frame");
     }
 
     void Device::collect_garbage()
     {
         check_result(
-            daxa_dvc_collect_garbage(r_cast<daxa_Device>(this)),
+            daxa_dvc_collect_garbage(r_cast<daxa_Device>(this->object)),
             "failed to collect garbage");
     }
 
-    auto Device::inc_refcnt(void const * object) -> u64
+    auto Device::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_dvc_inc_refcnt(rc_cast<daxa_Device>(object));
     }
 
-    auto Device::dec_refcnt(void const * object) -> u64
+    auto Device::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_dvc_dec_refcnt(rc_cast<daxa_Device>(object));
     }
@@ -347,12 +346,12 @@ namespace daxa
         return *r_cast<BinarySemaphoreInfo const *>(daxa_binary_semaphore_info(rc_cast<daxa_BinarySemaphore>(this)));
     }
 
-    auto BinarySemaphore::inc_refcnt(void const * object) -> u64
+    auto BinarySemaphore::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_binary_semaphore_inc_refcnt(rc_cast<daxa_BinarySemaphore>(object));
     }
 
-    auto BinarySemaphore::dec_refcnt(void const * object) -> u64
+    auto BinarySemaphore::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_binary_semaphore_dec_refcnt(rc_cast<daxa_BinarySemaphore>(object));
     }
@@ -389,12 +388,12 @@ namespace daxa
         return result == DAXA_RESULT_SUCCESS;
     }
 
-    auto TimelineSemaphore::inc_refcnt(void const * object) -> u64
+    auto TimelineSemaphore::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_timeline_semaphore_inc_refcnt(rc_cast<daxa_TimelineSemaphore>(object));
     }
 
-    auto TimelineSemaphore::dec_refcnt(void const * object) -> u64
+    auto TimelineSemaphore::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_timeline_semaphore_dec_refcnt(rc_cast<daxa_TimelineSemaphore>(object));
     }
@@ -408,12 +407,12 @@ namespace daxa
         return *reinterpret_cast<EventInfo const *>(daxa_event_info(rc_cast<daxa_Event>(this)));
     }
 
-    auto Event::inc_refcnt(void const * object) -> u64
+    auto Event::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_event_inc_refcnt(rc_cast<daxa_Event>(object));
     }
 
-    auto Event::dec_refcnt(void const * object) -> u64
+    auto Event::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_event_dec_refcnt(rc_cast<daxa_Event>(object));
     }
@@ -427,12 +426,12 @@ namespace daxa
         return *r_cast<MemoryBlockInfo const *>(daxa_memory_block_info(r_cast<daxa_MemoryBlock>(this)));
     }
 
-    auto MemoryBlock::inc_refcnt(void const * object) -> u64
+    auto MemoryBlock::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_memory_block_inc_refcnt(rc_cast<daxa_MemoryBlock>(object));
     }
 
-    auto MemoryBlock::dec_refcnt(void const * object) -> u64
+    auto MemoryBlock::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_memory_block_dec_refcnt(rc_cast<daxa_MemoryBlock>(object));
     }
@@ -456,11 +455,11 @@ namespace daxa
         return ret;
     }
 
-    auto TimelineQueryPool::inc_refcnt(void const * object) -> u64
+    auto TimelineQueryPool::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_timeline_query_pool_inc_refcnt(rc_cast<daxa_TimelineQueryPool>(object));
     }
-    auto TimelineQueryPool::dec_refcnt(void const * object) -> u64
+    auto TimelineQueryPool::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_timeline_query_pool_dec_refcnt(rc_cast<daxa_TimelineQueryPool>(object));
     }
@@ -473,17 +472,15 @@ namespace daxa
     {
         check_result(
             daxa_swp_resize(r_cast<daxa_Swapchain>(this)),
-            "failed to resize swapchain"
-        );
+            "failed to resize swapchain");
     }
 
     auto Swapchain::acquire_next_image() -> ImageId
     {
         ImageId ret = {};
         check_result(
-            daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this), r_cast<daxa_ImageId*>(&ret)),
-            "failed to acquire next swapchain image"
-        );
+            daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this), r_cast<daxa_ImageId *>(&ret)),
+            "failed to acquire next swapchain image");
         return ret;
     }
 
@@ -522,12 +519,12 @@ namespace daxa
         return std::bit_cast<Format>(daxa_swp_get_format(rc_cast<daxa_Swapchain>(this)));
     }
 
-    auto Swapchain::inc_refcnt(void const * object) -> u64
+    auto Swapchain::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_swp_inc_refcnt(rc_cast<daxa_Swapchain>(object));
     }
 
-    auto Swapchain::dec_refcnt(void const * object) -> u64
+    auto Swapchain::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_swp_dec_refcnt(rc_cast<daxa_Swapchain>(object));
     }
@@ -541,12 +538,12 @@ namespace daxa
         return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(object));
     }
 
-    auto ComputePipeline::inc_refcnt(void const * object) -> u64
+    auto ComputePipeline::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_compute_pipeline_inc_refcnt(rc_cast<daxa_ComputePipeline>(object));
     }
 
-    auto ComputePipeline::dec_refcnt(void const * object) -> u64
+    auto ComputePipeline::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_compute_pipeline_dec_refcnt(rc_cast<daxa_ComputePipeline>(object));
     }
@@ -556,12 +553,12 @@ namespace daxa
         return *r_cast<RasterPipelineInfo const *>(rc_cast<daxa_RasterPipeline>(object));
     }
 
-    auto RasterPipeline::inc_refcnt(void const * object) -> u64
+    auto RasterPipeline::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_raster_pipeline_inc_refcnt(rc_cast<daxa_RasterPipeline>(object));
     }
 
-    auto RasterPipeline::dec_refcnt(void const * object) -> u64
+    auto RasterPipeline::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_raster_pipeline_dec_refcnt(rc_cast<daxa_RasterPipeline>(object));
     }
@@ -695,12 +692,12 @@ namespace daxa
         return *r_cast<CommandListInfo const *>(daxa_cmd_info(*rc_cast<daxa_CommandList *>(this)));
     }
 
-    auto CommandList::inc_refcnt(void const * object) -> u64
+    auto CommandList::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_cmd_inc_refcnt(rc_cast<daxa_CommandList>(object));
     }
 
-    auto CommandList::dec_refcnt(void const * object) -> u64
+    auto CommandList::dec_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_cmd_dec_refcnt(rc_cast<daxa_CommandList>(object));
     }

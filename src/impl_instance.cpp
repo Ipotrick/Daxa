@@ -140,6 +140,7 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
     }
     else
     {
+        self->inc_weak_refcnt();
         daxa_dvc_inc_refcnt(*out_device);
     }
     return result;
@@ -171,7 +172,7 @@ auto daxa_instance_get_vk_instance(daxa_Instance self) -> VkInstance
 
 // --- Begin Internals ---
 
-void daxa_ImplInstance::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplInstance::zero_ref_callback(ImplHandle * handle)
 {
     daxa_Instance self = r_cast<daxa_Instance>(handle);
     vkDestroyInstance(self->vk_instance, nullptr);

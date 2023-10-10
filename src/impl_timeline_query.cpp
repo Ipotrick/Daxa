@@ -87,7 +87,7 @@ auto daxa_timeline_query_pool_dec_refcnt(daxa_TimelineQueryPool self) -> u64
 
 // --- Begin Internals ---
 
-void daxa_ImplTimelineQueryPool::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplTimelineQueryPool::zero_ref_callback(ImplHandle * handle)
 {
     auto self = r_cast<daxa_TimelineQueryPool>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};

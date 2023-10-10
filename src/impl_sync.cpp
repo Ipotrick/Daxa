@@ -206,7 +206,7 @@ auto daxa_event_dec_refcnt(daxa_Event self) -> u64
 
 // --- Begin Internals ---
 
-void daxa_ImplBinarySemaphore::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplBinarySemaphore::zero_ref_callback(ImplHandle * handle)
 {
     auto self = r_cast<daxa_BinarySemaphore>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
@@ -222,7 +222,7 @@ void daxa_ImplBinarySemaphore::zero_ref_callback(daxa_ImplHandle * handle)
     delete self;
 }
 
-void daxa_ImplTimelineSemaphore::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplTimelineSemaphore::zero_ref_callback(ImplHandle * handle)
 {
     auto self = r_cast<daxa_TimelineSemaphore>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
@@ -238,7 +238,7 @@ void daxa_ImplTimelineSemaphore::zero_ref_callback(daxa_ImplHandle * handle)
     delete self;
 }
 
-void daxa_ImplEvent::zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplEvent::zero_ref_callback(ImplHandle * handle)
 {
     auto self = r_cast<daxa_Event>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};

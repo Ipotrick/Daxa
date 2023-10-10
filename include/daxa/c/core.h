@@ -9,7 +9,6 @@
 #define DAXA_EXPORT
 #endif
 
-typedef struct daxa_ImplHandle * daxa_Handle;
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandList * daxa_CommandList;
 typedef struct daxa_ImplInstance * daxa_Instance;

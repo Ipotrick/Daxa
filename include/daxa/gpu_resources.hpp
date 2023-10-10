@@ -70,7 +70,7 @@ namespace daxa
     {
         u32 size = {};
         AllocateInfo allocate_info = {};
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct ImageCreateFlagsProperties
@@ -98,7 +98,7 @@ namespace daxa
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
         AllocateInfo allocate_info = {};
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct ImageViewInfo
@@ -107,7 +107,7 @@ namespace daxa
         Format format = Format::R8G8B8A8_UNORM;
         ImageId image = {};
         ImageMipArraySlice slice = {};
-        std::string_view name = {};
+        std::string_view name = "";
     };
 
     struct SamplerInfo
@@ -128,6 +128,6 @@ namespace daxa
         f32 max_lod = 1000.0f; // This value is the "VK_LOD_CLAMP_MODE_NONE" value
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
-        std::string_view name = {};
+        std::string_view name = "";
     };
 } // namespace daxa
