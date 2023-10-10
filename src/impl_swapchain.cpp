@@ -195,7 +195,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         this->device->vk_physical_device,
         this->vk_surface,
         &surface_capabilities);
-    DAXA_DBG_ASSERT_TRUE_M(vk_result == VK_SUCCESS, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed");
+    DAXA_DBG_ASSERT_TRUE_M(vk_result == VK_SUCCESS, "CRITICAL ERROR vkGetPhysicalDeviceSurfaceCapabilitiesKHR failed");
     if (surface_extent.width == surface_capabilities.currentExtent.width &&
         surface_extent.height == surface_capabilities.currentExtent.height &&
         this->vk_swapchain != VK_NULL_HANDLE)

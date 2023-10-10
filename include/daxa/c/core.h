@@ -9,6 +9,8 @@
 #define DAXA_EXPORT
 #endif
 
+// TODO(capi): check all flags for abi compat.
+
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandList * daxa_CommandList;
 typedef struct daxa_ImplInstance * daxa_Instance;

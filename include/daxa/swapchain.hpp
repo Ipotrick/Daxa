@@ -23,7 +23,7 @@ namespace daxa
     {
         NativeWindowHandle native_window;
         NativeWindowPlatform native_window_platform;
-        std::function<i32(Format)> surface_format_selector = default_format_score;
+        i32(*surface_format_selector)(Format) = default_format_score;
         PresentMode present_mode = PresentMode::FIFO;
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};

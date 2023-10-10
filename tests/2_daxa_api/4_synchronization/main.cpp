@@ -30,26 +30,26 @@ namespace tests
         // This semaphore is useful in the future, it can be used to make submits wait on each other,
         // or to make a present wait for a submit to finish
         app.device.submit_commands({
-            .command_lists = {cmd_list1},
-            .signal_binary_semaphores = {binary_semaphore_1},
+            .command_lists = {&cmd_list1, 1},
+            .signal_binary_semaphores = {&binary_semaphore_1, 1},
         });
 
         app.device.submit_commands({
-            .command_lists = {cmd_list2},
-            .wait_binary_semaphores = {binary_semaphore_1},
-            .signal_binary_semaphores = {binary_semaphore_2},
+            .command_lists = {&cmd_list2, 1},
+            .wait_binary_semaphores = {&binary_semaphore_1, 1},
+            .signal_binary_semaphores = {&binary_semaphore_2, 1},
         });
 
         // Binary semaphores can be reused ONLY after they have been signaled.
         app.device.submit_commands({
-            .command_lists = {cmd_list3},
-            .wait_binary_semaphores = {binary_semaphore_2},
-            .signal_binary_semaphores = {binary_semaphore_1},
+            .command_lists = {&cmd_list3, 1},
+            .wait_binary_semaphores = {&binary_semaphore_2, 1},
+            .signal_binary_semaphores = {&binary_semaphore_1, 1},
         });
 
         app.device.submit_commands({
-            .command_lists = {cmd_list4},
-            .wait_binary_semaphores = {binary_semaphore_1},
+            .command_lists = {&cmd_list4, 1},
+            .wait_binary_semaphores = {&binary_semaphore_1, 1},
         });
 
         app.device.wait_idle();
@@ -62,7 +62,7 @@ namespace tests
         cmd_list.complete();
 
         app.device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = {&cmd_list, 1},
         });
 
         app.device.wait_idle();

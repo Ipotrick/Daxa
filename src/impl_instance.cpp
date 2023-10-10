@@ -55,9 +55,8 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
         }
         if (!found)
         {
-            return DAXA_RESULT_ERROR_UNKNOWN;
+            return DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT;
         }
-        // DAXA_DBG_ASSERT_TRUE_M(found, "Not all required instance extensions are available, extension missing: " + std::string(req_ext));
     }
     const VkApplicationInfo app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,

@@ -1542,7 +1542,9 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
 
+    ret.strong_count = 1;
     image_slot = ret;
+    this->inc_weak_refcnt();
 
     return {DAXA_RESULT_SUCCESS, ImageId{id}};
 }
@@ -1568,6 +1570,7 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
 
 void daxa_ImplDevice::cleanup_image(ImageId id)
 {
+    printf("cleanup image\n");
     auto gid = std::bit_cast<GPUResourceId>(id);
     ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(gid);
     write_descriptor_set_image(
