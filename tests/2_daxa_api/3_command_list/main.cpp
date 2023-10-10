@@ -3,7 +3,7 @@
 
 struct App
 {
-    daxa::Instance daxa_ctx = daxa::create_instance({});
+    daxa::Instance daxa_ctx = daxa::create_instance({.flags = daxa::InstanceFlagBits::DEBUG_UTILS });
     daxa::Device device = daxa_ctx.create_device({});
 };
 
@@ -327,8 +327,16 @@ namespace tests
 
 auto main() -> int
 {
-    App app = {};
-    tests::simplest(app);
-    tests::copy(app);
-    tests::deferred_destruction(app);
+    {
+        App app = {};
+        tests::simplest(app);
+    }
+    {
+        App app = {};
+        tests::copy(app);
+    }
+    {
+        App app = {};
+        tests::deferred_destruction(app);
+    }
 }

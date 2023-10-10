@@ -41,12 +41,11 @@ namespace daxa
         VmaAllocation vma_allocation = {};
         VkDeviceAddress device_address = {};
         void * host_address = {};
-        bool zombie = {};
     };
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
 
-    struct ImplImageViewSlot 
+    struct ImplImageViewSlot
     {
         u64 strong_count = {};
         u64 weak_count = {};
@@ -54,7 +53,6 @@ namespace daxa
         daxa_ImageViewInfo info = {};
         std::string info_name = {};
         VkImageView vk_image_view = {};
-        bool zombie = {};
     };
 
     struct ImplImageSlot
@@ -69,7 +67,6 @@ namespace daxa
         VmaAllocation vma_allocation = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
         VkImageAspectFlags aspect_flags = {}; // Inferred from format.
-        bool zombie = {};
     };
 
     struct ImplSamplerSlot
@@ -80,7 +77,6 @@ namespace daxa
         daxa_SamplerInfo info = {};
         std::string info_name = {};
         VkSampler vk_sampler = {};
-        bool zombie = {};
     };
 
     /**
@@ -195,7 +191,11 @@ namespace daxa
                 return false;
             }
             u8 version = pages[page]->at(offset).second;
-            if (!(version == id.version) || pages[page]->at(offset).first.zombie)
+            // strong_count == weak_count == 0 => zombie or unused slot.
+            if (
+                !(version == id.version) ||
+                ((pages[page]->at(offset).first.strong_count == 0) &&
+                 (pages[page]->at(offset).first.weak_count == 0)))
             {
                 return false;
             }

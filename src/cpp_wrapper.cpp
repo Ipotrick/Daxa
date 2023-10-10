@@ -285,7 +285,7 @@ namespace daxa
     {
         return *r_cast<DeviceInfo const *>(daxa_dvc_info(rc_cast<daxa_Device>(this->object)));
     }
-
+    
     void Device::wait_idle()
     {
         daxa_dvc_wait_idle(r_cast<daxa_Device>(this->object));
