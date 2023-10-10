@@ -48,6 +48,20 @@ namespace
 
 // --- Begin API Functions ---
 
+auto daxa_default_device_score(daxa_DeviceProperties const * c_properties) -> i32
+{
+    DeviceProperties const * properties = r_cast<DeviceProperties const*>(c_properties); 
+    i32 score = 0;
+    switch (properties->device_type)
+    {
+    case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
+    case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
+    case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
+    default: break;
+    }
+    return score;
+}
+
 auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const * info) -> VkMemoryRequirements
 {
     VkBufferCreateInfo const vk_buffer_create_info{

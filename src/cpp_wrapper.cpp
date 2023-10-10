@@ -153,6 +153,11 @@ namespace daxa
 
     /// --- Begin Device ---
 
+    auto default_device_score(DeviceProperties const & device_props) -> i32
+    {
+        return daxa_default_device_score(r_cast<daxa_DeviceProperties const *>(&device_props));
+    }
+
     auto Device::create_memory(MemoryBlockInfo const & info) -> MemoryBlock
     {
         MemoryBlock ret = {};
@@ -314,12 +319,12 @@ namespace daxa
 
     auto Device::inc_refcnt(daxa_ImplHandle const * object) -> u64
     {
-        daxa_dvc_inc_refcnt(rc_cast<daxa_Device>(object));
+        return daxa_dvc_inc_refcnt(rc_cast<daxa_Device>(object));
     }
 
     auto Device::dec_refcnt(daxa_ImplHandle const * object) -> u64
     {
-        daxa_dvc_dec_refcnt(rc_cast<daxa_Device>(object));
+        return daxa_dvc_dec_refcnt(rc_cast<daxa_Device>(object));
     }
 
     /// --- End Device ---
@@ -329,6 +334,16 @@ namespace daxa
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
         return *r_cast<BinarySemaphoreInfo const *>(daxa_binary_semaphore_info(rc_cast<daxa_BinarySemaphore>(this)));
+    }
+
+    auto BinarySemaphore::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_binary_semaphore_inc_refcnt(rc_cast<daxa_BinarySemaphore>(object));
+    }
+
+    auto BinarySemaphore::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_binary_semaphore_dec_refcnt(rc_cast<daxa_BinarySemaphore>(object));
     }
 
     /// --- End BinarySemaphore ---
@@ -363,6 +378,16 @@ namespace daxa
         return result == DAXA_RESULT_SUCCESS;
     }
 
+    auto TimelineSemaphore::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_timeline_semaphore_inc_refcnt(rc_cast<daxa_TimelineSemaphore>(object));
+    }
+
+    auto TimelineSemaphore::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_timeline_semaphore_dec_refcnt(rc_cast<daxa_TimelineSemaphore>(object));
+    }
+
     /// --- End TimelineSemaphore ---
 
     /// --- Begin Event
@@ -372,7 +397,156 @@ namespace daxa
         return *reinterpret_cast<EventInfo const *>(daxa_event_info(rc_cast<daxa_Event>(this)));
     }
 
+    auto Event::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_event_inc_refcnt(rc_cast<daxa_Event>(object));
+    }
+
+    auto Event::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_event_dec_refcnt(rc_cast<daxa_Event>(object));
+    }
+
     /// --- End Event
+
+    /// --- Begin CommandList ---
+
+#define _DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
+    void CommandList::name(Info const & info)       \
+    {                                               \
+        daxa_cmd_##name(                            \
+            r_cast<daxa_CommandList>(this),         \
+            r_cast<daxa_##Info const *>(&info));    \
+    }
+
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_buffer_to_buffer, BufferCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_buffer_to_image, BufferImageCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_image_to_buffer, ImageBufferCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_image_to_image, ImageCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(blit_image_to_image, ImageBlitInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(clear_buffer, BufferClearInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(clear_image, ImageClearInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
+
+    void CommandList::wait_events(std::span<EventWaitInfo const> const & infos)
+    {
+        daxa_cmd_wait_events(
+            r_cast<daxa_CommandList>(this), r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
+    }
+
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_event, ResetEventInfo)
+
+    void CommandList::push_constant_vptr(void const * data, u32 size)
+    {
+        daxa_cmd_push_constant(
+            r_cast<daxa_CommandList>(this), data, size);
+    }
+
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(set_uniform_buffer, SetUniformBufferInfo)
+
+    void CommandList::set_pipeline(ComputePipeline const & pipeline)
+    {
+        daxa_cmd_set_compute_pipeline(
+            r_cast<daxa_CommandList>(this),
+            *r_cast<daxa_ComputePipeline const *>(&pipeline));
+    }
+
+    void CommandList::set_pipeline(RasterPipeline const & pipeline)
+    {
+        daxa_cmd_set_raster_pipeline(
+            r_cast<daxa_CommandList>(this),
+            *r_cast<daxa_RasterPipeline const *>(&pipeline));
+    }
+
+    void CommandList::dispatch(u32 x, u32 y, u32 z)
+    {
+        daxa_cmd_dispatch(
+            r_cast<daxa_CommandList>(this),
+            x, y, z);
+    }
+
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(dispatch_indirect, DispatchIndirectInfo)
+
+#define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name) \
+    void CommandList::destroy_##name##_deferred(Name##Id id)    \
+    {                                                           \
+        daxa_cmd_destroy_##name##_deferred(                     \
+            r_cast<daxa_CommandList>(this),                     \
+            std::bit_cast<daxa_##Name##Id>(id));                \
+    }
+    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
+    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)
+    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
+    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_renderpass, RenderPassBeginInfo)
+
+    void CommandList::set_viewport(ViewportInfo const & info)
+    {
+        daxa_cmd_set_viewport(
+            r_cast<daxa_CommandList>(this),
+            r_cast<VkViewport const *>(&info));
+    }
+
+    void CommandList::set_scissor(Rect2D const & info)
+    {
+        daxa_cmd_set_scissor(
+            r_cast<daxa_CommandList>(this),
+            r_cast<VkRect2D const *>(&info));
+    }
+
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(set_index_buffer, SetIndexBufferInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw, DrawInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_indirect, DrawIndirectInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_indirect_count, DrawIndirectCountInfo)
+
+    void CommandList::draw_mesh_tasks(u32 x, u32 y, u32 z)
+    {
+        daxa_cmd_draw_mesh_tasks(
+            r_cast<daxa_CommandList>(this),
+            x, y, z);
+    }
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)
+    
+    void CommandList::end_label()
+    {
+        daxa_cmd_end_label(r_cast<daxa_CommandList>(this));
+    }
+
+    void CommandList::complete()
+    {
+        daxa_cmd_complete(r_cast<daxa_CommandList>(this));
+    }
+
+    auto CommandList::is_complete() const -> bool
+    {
+        return daxa_cmd_is_complete(r_cast<daxa_CommandList>(this));
+    }
+
+    auto CommandList::info() const -> CommandListInfo const &
+    {
+        return *r_cast<CommandListInfo const *>(daxa_cmd_info(*rc_cast<daxa_CommandList *>(this)));
+    }
+
+    auto CommandList::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_cmd_inc_refcnt(rc_cast<daxa_CommandList>(object));
+    }
+
+    auto CommandList::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_cmd_dec_refcnt(rc_cast<daxa_CommandList>(object));
+    }
+
+    /// --- End CommandList ---
 
     /// --- Begin to_string ---
 
@@ -381,7 +555,7 @@ namespace daxa
         return fmt::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
     }
 
-    auto to_string(ImageBarrierInfo const & info) -> std::string
+    auto to_string(ImageMemoryBarrierInfo const & info) -> std::string
     {
         return fmt::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}",
                            to_string(info.src_access),

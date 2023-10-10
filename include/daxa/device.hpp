@@ -173,18 +173,7 @@ namespace daxa
         u32 prefers_compact_primitive_output = {};
     };
 
-    static inline auto default_device_score(DeviceProperties const & device_props) -> i32
-    {
-        i32 score = 0;
-        switch (device_props.device_type)
-        {
-        case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
-        case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
-        case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
-        default: break;
-        }
-        return score;
-    }
+    auto default_device_score(DeviceProperties const & device_props) -> i32;
 
     struct DeviceFlagsProperties
     {
@@ -204,12 +193,12 @@ namespace daxa
 
     struct DeviceInfo
     {
-        std::function<i32(DeviceProperties const &)> selector = default_device_score;
+        i32 (*selector)(DeviceProperties const & properties) = default_device_score;
         DeviceFlags flags = DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
-        u32 max_allowed_samplers = 1'000;
+        u32 max_allowed_samplers = 400;
         std::string_view name = {};
     };
 

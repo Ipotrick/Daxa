@@ -337,7 +337,7 @@ void daxa_cmd_signal_event(daxa_CommandList self, daxa_EventSignalInfo const * i
     VkDependencyInfo const vk_dependency_info = get_vk_dependency_info(
         dependency_infos_aux_buffer.vk_image_memory_barriers,
         dependency_infos_aux_buffer.vk_memory_barriers);
-    vkCmdSetEvent2(self->vk_cmd_buffer, info->event->vk_event, &vk_dependency_info);
+    vkCmdSetEvent2(self->vk_cmd_buffer, (**info->event).vk_event, &vk_dependency_info);
     tl_split_barrier_dependency_infos_aux_buffer.clear();
 }
 
@@ -366,7 +366,7 @@ void daxa_cmd_wait_events(daxa_CommandList self, daxa_EventWaitInfo const * info
             dependency_infos_aux_buffer.vk_image_memory_barriers,
             dependency_infos_aux_buffer.vk_memory_barriers));
 
-        tl_split_barrier_events_buffer.push_back(end_info.event->vk_event);
+        tl_split_barrier_events_buffer.push_back((**end_info.event).vk_event);
     }
     vkCmdWaitEvents2(
         self->vk_cmd_buffer,
@@ -388,7 +388,7 @@ void daxa_cmd_reset_event(daxa_CommandList self, daxa_ResetEventInfo const * inf
     daxa_cmd_flush_barriers(self);
     vkCmdResetEvent2(
         self->vk_cmd_buffer,
-        info->barrier->vk_event,
+        (**info->barrier).vk_event,
         info->stage_masks);
 }
 
@@ -658,7 +658,7 @@ void daxa_cmd_write_timestamp(daxa_CommandList self, daxa_WriteTimestampInfo con
     vkCmdWriteTimestamp(
         self->vk_cmd_buffer,
         info->pipeline_stage,
-        info->query_pool->vk_timeline_query_pool,
+        (**info->query_pool).vk_timeline_query_pool,
         info->query_index);
 }
 
@@ -667,7 +667,7 @@ void daxa_cmd_reset_timestamps(daxa_CommandList self, daxa_ResetTimestampsInfo c
     daxa_cmd_flush_barriers(self);
     vkCmdResetQueryPool(
         self->vk_cmd_buffer,
-        info->query_pool->vk_timeline_query_pool,
+        (**info->query_pool).vk_timeline_query_pool,
         info->start_index,
         info->count);
 }
@@ -729,6 +729,11 @@ auto daxa_cmd_complete(daxa_CommandList self) -> daxa_Result
     self->recording_complete = true;
     auto result = vkEndCommandBuffer(self->vk_cmd_buffer);
     return std::bit_cast<daxa_Result>(result);
+}
+
+auto daxa_cmd_is_complete(daxa_CommandList self) -> daxa_Bool8
+{
+    return self->recording_complete;
 }
 
 auto daxa_cmd_info(daxa_CommandList self) -> daxa_CommandListInfo const *

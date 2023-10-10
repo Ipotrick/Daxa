@@ -251,7 +251,7 @@ typedef struct
     size_t draw_command_buffer_read_offset;
     uint32_t draw_count;
     uint32_t draw_command_stride;
-    VkBool32 is_indexed;
+    daxa_Bool8 is_indexed;
 } daxa_DrawIndirectInfo;
 
 static const daxa_DrawIndirectInfo DAXA_DEFAULT_DRAW_INDIRECT_INFO = {
@@ -270,7 +270,7 @@ typedef struct
     size_t draw_count_buffer_read_offset;
     uint32_t max_draw_count;
     uint32_t draw_command_stride;
-    VkBool32 is_indexed;
+    daxa_Bool8 is_indexed;
 } daxa_DrawIndirectCountInfo;
 
 static const daxa_DrawIndirectCountInfo DAXA_DEFAULT_DRAW_INDIRECT_COUNT_INFO = {
@@ -285,26 +285,26 @@ static const daxa_DrawIndirectCountInfo DAXA_DEFAULT_DRAW_INDIRECT_COUNT_INFO = 
 
 typedef struct
 {
-    daxa_Event event;
+    daxa_Event * event;
     VkPipelineStageFlags stage;
 } daxa_ResetEventsInfo;
 
 typedef struct
 {
-    daxa_Event const * events;
+    daxa_Event * events;
     size_t event_count;
 } daxa_WaitEventsInfo;
 
 typedef struct
 {
-    daxa_TimelineQueryPool query_pool;
+    daxa_TimelineQueryPool * query_pool;
     VkPipelineStageFlagBits pipeline_stage;
     uint32_t query_index;
 } daxa_WriteTimestampInfo;
 
 typedef struct
 {
-    daxa_TimelineQueryPool query_pool;
+    daxa_TimelineQueryPool * query_pool;
     uint32_t start_index;
     uint32_t count;
 } daxa_ResetTimestampsInfo;
@@ -317,7 +317,7 @@ typedef struct
 
 typedef struct
 {
-    daxa_Event barrier;
+    daxa_Event * barrier;
     VkPipelineStageFlags stage_masks;
 } daxa_ResetEventInfo;
 
@@ -340,6 +340,19 @@ typedef struct
 } daxa_DepthBiasInfo;
 
 static const daxa_DepthBiasInfo DAXA_DEFAULT_DEPTH_BIAS_INFO = {};
+
+typedef struct
+{
+    daxa_BufferId id;
+    size_t offset;
+    VkIndexType index_type;
+} daxa_SetIndexBufferInfo;
+
+static const daxa_SetIndexBufferInfo DAXA_DEFAULT_SET_INDEX_BUFFER_INFO = {
+    .id = {},
+    .offset = 0,
+    .index_type = VK_INDEX_TYPE_UINT32,
+};
 
 DAXA_EXPORT void
 daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
@@ -430,7 +443,7 @@ daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
 DAXA_EXPORT void
 daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
 DAXA_EXPORT void
-daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_BufferId id, size_t offset, VkIndexType index_type);
+daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_SetIndexBufferInfo const * info);
 
 DAXA_EXPORT void
 daxa_cmd_draw(daxa_CommandList cmd_list, daxa_DrawInfo const * info);
@@ -462,6 +475,8 @@ DAXA_EXPORT void
 daxa_cmd_flush_barriers(daxa_CommandList cmd_list);
 DAXA_EXPORT daxa_Result
 daxa_cmd_complete(daxa_CommandList cmd_list);
+DAXA_EXPORT daxa_Bool8
+daxa_cmd_is_complete(daxa_CommandList cmd_list);
 DAXA_EXPORT daxa_CommandListInfo const *
 daxa_cmd_info(daxa_CommandList cmd_list);
 DAXA_EXPORT VkCommandBuffer

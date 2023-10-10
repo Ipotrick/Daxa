@@ -15,7 +15,7 @@ namespace daxa
 
     auto to_string(MemoryBarrierInfo const & info) -> std::string;
 
-    struct ImageBarrierInfo
+    struct ImageMemoryBarrierInfo
     {
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
@@ -25,7 +25,7 @@ namespace daxa
         ImageId image_id = {};
     };
 
-    auto to_string(ImageBarrierInfo const & info) -> std::string;
+    auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
 
     struct BinarySemaphoreInfo
     {
@@ -89,8 +89,8 @@ namespace daxa
     struct EventSignalInfo
     {
         std::span<MemoryBarrierInfo> memory_barriers = {};
-        std::span<ImageBarrierInfo> image_barriers = {};
-        Event & split_barrier;
+        std::span<ImageMemoryBarrierInfo> image_barriers = {};
+        Event & event;
     };
 
     using EventWaitInfo = EventSignalInfo;

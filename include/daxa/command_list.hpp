@@ -76,7 +76,7 @@ namespace daxa
     struct ImageClearInfo
     {
         ImageLayout dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL;
-        ClearValue clear_value = {}; // TODO: might be incompatible c abi with daxa_ClearValue!
+        ClearValue clear_value = {};
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
@@ -214,6 +214,21 @@ namespace daxa
         f32 slope_factor = {};
     };
 
+    enum struct IndexType
+    {
+        uint64 = 0,
+        uint32 = 1,
+        uint8 = 1000265000,
+        none = 1000165000,
+    };
+
+    struct SetIndexBufferInfo
+    {
+        BufferId id = {};
+        usize offset = {};
+        IndexType index_type = IndexType::uint32;
+    };
+
     struct CommandList final : ManagedPtr<CommandList>
     {
         CommandList() = default;
@@ -223,7 +238,6 @@ namespace daxa
         void copy_image_to_buffer(ImageBufferCopyInfo const & info);
         void copy_image_to_image(ImageCopyInfo const & info);
         void blit_image_to_image(ImageBlitInfo const & info);
-
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
 
@@ -234,17 +248,17 @@ namespace daxa
         /// @brief  Successive pipeline barrier calls are combined.
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
         /// @param info parameters.
-        void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
+        void pipeline_barrier_image_transition(ImageMemoryBarrierInfo const & info);
         void signal_event(EventSignalInfo const & info);
         void wait_events(std::span<EventWaitInfo const> const & infos);
         void wait_event(EventWaitInfo const & info);
         void reset_event(ResetEventInfo const & info);
 
-        void push_constant_vptr(void const * data, u32 size, u32 offset = 0);
+        void push_constant_vptr(void const * data, u32 size);
         template <typename T>
-        void push_constant(T const & constant, usize offset = 0)
+        void push_constant(T const & constant)
         {
-            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)), static_cast<u32>(offset));
+            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
         }
         /// @brief  Binds a buffer region to the uniform buffer slot.
         ///         There are 8 uniform buffer slots (indices range from 0 to 7).
@@ -258,7 +272,7 @@ namespace daxa
         void set_uniform_buffer(SetUniformBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
         void set_pipeline(RasterPipeline const & pipeline);
-        void dispatch(u32 group_x, u32 group_y = 1, u32 group_z = 1);
+        void dispatch(u32 x, u32 y = 1, u32 z = 1);
         void dispatch_indirect(DispatchIndirectInfo const & info);
 
         /// @brief  Destroyes the buffer AFTER the gpu is finished executing the command list.
@@ -288,7 +302,7 @@ namespace daxa
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
         void set_depth_bias(DepthBiasInfo const & info);
-        void set_index_buffer(BufferId id, usize offset, usize index_type_byte_size = sizeof(u32));
+        void set_index_buffer(SetIndexBufferInfo const & info);
 
         void draw(DrawInfo const & info);
         void draw_indexed(DrawIndexedInfo const & info);
@@ -312,7 +326,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle * object) -> u64;
+        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
     };
 } // namespace daxa

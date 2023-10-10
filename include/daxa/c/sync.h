@@ -151,11 +151,12 @@ typedef struct
 
 typedef struct
 {
-    daxa_MemoryBarrierInfo * memory_barriers;
+    // TODO(capi): make sure these ptr + size pairs are abi compatible with std::span.
+    daxa_MemoryBarrierInfo const * memory_barriers;
     uint64_t memory_barrier_count;
-    daxa_ImageMemoryBarrierInfo * image_memory_barriers;
+    daxa_ImageMemoryBarrierInfo const * image_memory_barriers;
     uint64_t image_memory_barrier_count;
-    daxa_Event event;
+    daxa_Event * event;
 } daxa_EventSignalInfo;
 
 typedef daxa_EventSignalInfo daxa_EventWaitInfo;

@@ -113,8 +113,8 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
             // NOTE: Found device with incompatible API version. Skipping this device...
             return 0;
         }
-        // TODO add device limits
-        return info->selector(&vk_device_properties);
+        auto props = r_cast<daxa_DeviceProperties const *>(&vk_device_properties);
+        return info->selector(props);
     };
 
     auto device_comparator = [&](auto const & a, auto const & b) -> bool

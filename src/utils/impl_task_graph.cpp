@@ -2219,7 +2219,7 @@ namespace daxa
     }
 
     thread_local std::vector<SplitBarrierWaitInfo> tl_split_barrier_wait_infos = {};
-    thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
+    thread_local std::vector<ImageMemoryBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
     void insert_pipeline_barrier(ImplTaskGraph const & impl, TaskGraphPermutation & perm, CommandList & command_list, TaskBarrier & barrier)
     {
@@ -2360,7 +2360,7 @@ namespace daxa
                         {
                             for (auto execution_image_id : impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, permutation))
                             {
-                                ImageBarrierInfo img_barrier_info{
+                                ImageMemoryBarrierInfo img_barrier_info{
                                     .src_access = previous_access_slices[previous_access_slice_index].latest_access,
                                     .dst_access = remaining_first_accesses[first_access_slice_index].state.latest_access,
                                     .src_layout = previous_access_slices[previous_access_slice_index].latest_layout,
@@ -2422,7 +2422,7 @@ namespace daxa
                 {
                     for (auto execution_image_id : impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, permutation))
                     {
-                        ImageBarrierInfo img_barrier_info{
+                        ImageMemoryBarrierInfo img_barrier_info{
                             .src_access = AccessConsts::NONE,
                             .dst_access = remaining_first_accesses[remaining_first_uses_index].state.latest_access,
                             .src_layout = ImageLayout::UNDEFINED,
@@ -2562,7 +2562,7 @@ namespace daxa
                             usize const img_bar_vec_start_size = tl_image_barrier_infos.size();
                             for (auto image : impl.get_actual_images(split_barrier.image_id, permutation))
                             {
-                                tl_image_barrier_infos.push_back(ImageBarrierInfo{
+                                tl_image_barrier_infos.push_back(ImageMemoryBarrierInfo{
                                     .src_access = split_barrier.src_access,
                                     .dst_access = split_barrier.dst_access,
                                     .src_layout = split_barrier.layout_before,
