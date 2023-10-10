@@ -87,13 +87,13 @@ struct daxa_DeviceLimits
     uint32_t max_viewport_dimensions[2];
     float viewport_bounds_range[2];
     uint32_t viewport_sub_pixel_bits;
-    usize min_memory_map_alignment;
+    size_t min_memory_map_alignment;
     uint64_t min_texel_buffer_offset_alignment;
     uint64_t min_uniform_buffer_offset_alignment;
     uint64_t min_storage_buffer_offset_alignment;
-    i32 min_texel_offset;
+    int32_t min_texel_offset;
     uint32_t max_texel_offset;
-    i32 min_texel_gather_offset;
+    int32_t min_texel_gather_offset;
     uint32_t max_texel_gather_offset;
     float min_interpolation_offset;
     float max_interpolation_offset;
@@ -131,14 +131,14 @@ struct daxa_DeviceLimits
 
 typedef struct
 {
-    uint32_t vulkan_api_version = {};
-    uint32_t driver_version = {};
-    uint32_t vendor_id = {};
-    uint32_t device_id = {};
-    daxa_DeviceType device_type = {};
-    char device_name[256U] = {};
-    char pipeline_cache_uuid[16U] = {};
-    daxa_DeviceLimits limits = {};
+    uint32_t vulkan_api_version;
+    uint32_t driver_version;
+    uint32_t vendor_id;
+    uint32_t device_id;
+    daxa_DeviceType device_type;
+    char device_name[256U];
+    char pipeline_cache_uuid[16U];
+    daxa_DeviceLimits limits;
 } daxa_DeviceProperties;
 
 DAXA_EXPORT int32_t

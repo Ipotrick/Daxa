@@ -528,7 +528,7 @@ namespace daxa
 
     auto CommandList::is_complete() const -> bool
     {
-        return daxa_cmd_is_complete(r_cast<daxa_CommandList>(this));
+        return daxa_cmd_is_complete(rc_cast<daxa_CommandList>(this));
     }
 
     auto CommandList::info() const -> CommandListInfo const &
