@@ -132,19 +132,19 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
     return std::bit_cast<daxa_Result>(result);
 }
 
-auto daxa_swp_get_acquire_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore
+auto daxa_swp_get_acquire_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
 {
-    return *r_cast<daxa_BinarySemaphore*>(&self->acquire_semaphores[self->acquire_semaphore_index]);
+    return r_cast<daxa_BinarySemaphore*>(&self->acquire_semaphores[self->acquire_semaphore_index]);
 }
 
-auto daxa_swp_get_present_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore
+auto daxa_swp_get_present_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
 {
-    return *r_cast<daxa_BinarySemaphore*>(&self->present_semaphores[self->current_image_index]);
+    return r_cast<daxa_BinarySemaphore*>(&self->present_semaphores[self->current_image_index]);
 }
 
-auto daxa_swp_get_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaphore
+auto daxa_swp_get_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaphore *
 {
-    return *r_cast<daxa_TimelineSemaphore*>(&self->gpu_frame_timeline);
+    return r_cast<daxa_TimelineSemaphore*>(&self->gpu_frame_timeline);
 }
 
 auto daxa_swp_get_cpu_timeline_value(daxa_Swapchain self) -> usize

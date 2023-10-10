@@ -43,11 +43,11 @@ daxa_swp_resize(daxa_Swapchain swapchain);
 
 DAXA_EXPORT daxa_Result
 daxa_swp_acquire_next_image(daxa_Swapchain swapchain, daxa_ImageId * out_image_id);
-DAXA_EXPORT daxa_BinarySemaphore
+DAXA_EXPORT daxa_BinarySemaphore *
 daxa_swp_get_acquire_semaphore(daxa_Swapchain swapchain);
-DAXA_EXPORT daxa_BinarySemaphore
+DAXA_EXPORT daxa_BinarySemaphore *
 daxa_swp_get_present_semaphore(daxa_Swapchain swapchain);
-DAXA_EXPORT daxa_TimelineSemaphore
+DAXA_EXPORT daxa_TimelineSemaphore *
 daxa_swp_get_gpu_timeline_semaphore(daxa_Swapchain swapchain);
 DAXA_EXPORT size_t
 daxa_swp_get_cpu_timeline_value(daxa_Swapchain swapchain);

@@ -111,17 +111,17 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_memory_info(daxa_MemoryBlock self) -> daxa_MemoryBlockInfo const *
+auto daxa_memory_block_info(daxa_MemoryBlock self) -> daxa_MemoryBlockInfo const *
 {
     return r_cast<daxa_MemoryBlockInfo const *>(&self->info);
 }
 
-auto daxa_memory_inc_refcnt(daxa_MemoryBlock self) -> u64
+auto daxa_memory_block_inc_refcnt(daxa_MemoryBlock self) -> u64
 {
     return self->inc_refcnt();
 }
 
-auto daxa_memory_dec_refcnt(daxa_MemoryBlock self) -> u64
+auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
 {
     return self->dec_refcnt(
         &daxa_ImplMemoryBlock::zero_ref_callback,

@@ -333,12 +333,12 @@ typedef struct
 } daxa_MemoryBlockInfo;
 
 DAXA_EXPORT daxa_MemoryBlockInfo const *
-daxa_memory_info(daxa_MemoryBlock memory_block);
+daxa_memory_block_info(daxa_MemoryBlock memory_block);
 
 DAXA_EXPORT uint64_t
-daxa_memory_inc_refcnt(daxa_MemoryBlock memory_block);
+daxa_memory_block_inc_refcnt(daxa_MemoryBlock memory_block);
 DAXA_EXPORT uint64_t
-daxa_memory_dec_refcnt(daxa_MemoryBlock memory_block);
+daxa_memory_block_dec_refcnt(daxa_MemoryBlock memory_block);
 
 typedef struct
 {

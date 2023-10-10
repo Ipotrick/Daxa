@@ -409,6 +409,154 @@ namespace daxa
 
     /// --- End Event
 
+    /// --- Begin MemoryBlock
+
+    auto MemoryBlock::info() -> MemoryBlockInfo const &
+    {
+        return *r_cast<MemoryBlockInfo const *>(daxa_memory_block_info(r_cast<daxa_MemoryBlock>(this)));
+    }
+
+    auto MemoryBlock::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_memory_block_inc_refcnt(rc_cast<daxa_MemoryBlock>(object));
+    }
+
+    auto MemoryBlock::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_memory_block_dec_refcnt(rc_cast<daxa_MemoryBlock>(object));
+    }
+
+    /// --- End MemoryBlock
+
+    /// --- Begin TimelineQueryPool ---
+
+    auto TimelineQueryPool::info() const -> TimelineQueryPoolInfo const &
+    {
+        return *r_cast<TimelineQueryPoolInfo const *>(daxa_timeline_query_pool_info(rc_cast<daxa_TimelineQueryPool>(this)));
+    }
+
+    auto TimelineQueryPool::get_query_results(u32 start_index, u32 count) -> std::vector<u64>
+    {
+        std::vector<u64> ret = {};
+        ret.resize(count);
+        check_result(
+            daxa_timeline_query_pool_query_results(rc_cast<daxa_TimelineQueryPool>(this), start_index, count, ret.data()),
+            "failed to query results of timeline query pool");
+        return ret;
+    }
+
+    auto TimelineQueryPool::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_timeline_query_pool_inc_refcnt(rc_cast<daxa_TimelineQueryPool>(object));
+    }
+    auto TimelineQueryPool::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_timeline_query_pool_dec_refcnt(rc_cast<daxa_TimelineQueryPool>(object));
+    }
+
+    /// --- End TimelineQueryPool ---
+
+    /// --- Begin Swapchain ---
+
+    void Swapchain::resize()
+    {
+        check_result(
+            daxa_swp_resize(r_cast<daxa_Swapchain>(this)),
+            "failed to resize swapchain"
+        );
+    }
+
+    auto Swapchain::acquire_next_image() -> ImageId
+    {
+        ImageId ret = {};
+        check_result(
+            daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this), r_cast<daxa_ImageId*>(&ret)),
+            "failed to acquire next swapchain image"
+        );
+        return ret;
+    }
+
+    auto Swapchain::get_acquire_semaphore() const -> BinarySemaphore const &
+    {
+        return *rc_cast<BinarySemaphore *>(daxa_swp_get_acquire_semaphore(rc_cast<daxa_Swapchain>(this)));
+    }
+
+    auto Swapchain::get_present_semaphore() const -> BinarySemaphore const &
+    {
+        return *rc_cast<BinarySemaphore *>(daxa_swp_get_present_semaphore(rc_cast<daxa_Swapchain>(this)));
+    }
+
+    auto Swapchain::get_gpu_timeline_semaphore() const -> TimelineSemaphore const &
+    {
+        return *rc_cast<TimelineSemaphore *>(daxa_swp_get_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this)));
+    }
+
+    auto Swapchain::get_cpu_timeline_value() const -> usize
+    {
+        return daxa_swp_get_cpu_timeline_value(rc_cast<daxa_Swapchain>(this));
+    }
+
+    auto Swapchain::info() const -> SwapchainInfo const &
+    {
+        return *r_cast<SwapchainInfo const *>(daxa_swp_info(rc_cast<daxa_Swapchain>(this)));
+    }
+
+    auto Swapchain::get_surface_extent() const -> Extent2D
+    {
+        return std::bit_cast<Extent2D>(daxa_swp_get_surface_extent(rc_cast<daxa_Swapchain>(this)));
+    }
+
+    auto Swapchain::get_format() const -> Format
+    {
+        return std::bit_cast<Format>(daxa_swp_get_format(rc_cast<daxa_Swapchain>(this)));
+    }
+
+    auto Swapchain::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_swp_inc_refcnt(rc_cast<daxa_Swapchain>(object));
+    }
+
+    auto Swapchain::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_swp_dec_refcnt(rc_cast<daxa_Swapchain>(object));
+    }
+
+    /// --- End Swapchain ---
+
+    /// --- Begin Pipelines
+
+    auto ComputePipeline::info() const -> ComputePipelineInfo const &
+    {
+        return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(object));
+    }
+
+    auto ComputePipeline::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_compute_pipeline_inc_refcnt(rc_cast<daxa_ComputePipeline>(object));
+    }
+
+    auto ComputePipeline::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_compute_pipeline_dec_refcnt(rc_cast<daxa_ComputePipeline>(object));
+    }
+
+    auto RasterPipeline::info() const -> RasterPipelineInfo const &
+    {
+        return *r_cast<RasterPipelineInfo const *>(rc_cast<daxa_RasterPipeline>(object));
+    }
+
+    auto RasterPipeline::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_raster_pipeline_inc_refcnt(rc_cast<daxa_RasterPipeline>(object));
+    }
+
+    auto RasterPipeline::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    {
+        return daxa_raster_pipeline_dec_refcnt(rc_cast<daxa_RasterPipeline>(object));
+    }
+
+    /// --- End Pipelines
+
     /// --- Begin CommandList ---
 
 #define _DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
@@ -515,7 +663,7 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)
-    
+
     void CommandList::end_label()
     {
         daxa_cmd_end_label(r_cast<daxa_CommandList>(this));
