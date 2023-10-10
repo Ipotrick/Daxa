@@ -233,9 +233,9 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
         static_cast<VkDeviceSize>(ret.info.size),
         id.index);
 
-    *out_id = std::bit_cast<daxa_BufferId>(id);
-    daxa_dvc_inc_refcnt_buffer(self, *out_id);
+    ret.strong_count = 1;
     self->inc_weak_refcnt();
+    *out_id = std::bit_cast<daxa_BufferId>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -398,9 +398,9 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
 
     image_slot_variant = ret;
 
-    *out_id = std::bit_cast<daxa_ImageId>(id);
-    daxa_dvc_inc_refcnt_image(self, *out_id);
+    ret.strong_count = 1;
     self->inc_weak_refcnt();
+    *out_id = std::bit_cast<daxa_ImageId>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -457,11 +457,11 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         ret.vk_image_view,
         std::bit_cast<ImageUsageFlags>(parent_image_slot.info.usage),
         id.index);
-    image_slot.view_slot = ret;
-    *out_id = std::bit_cast<daxa_ImageViewId>(id);
-    daxa_dvc_inc_refcnt_image_view(self, *out_id);
+    ret.strong_count = 1;
     self->inc_weak_refcnt_image(std::bit_cast<ImageId>(info->image));
     self->inc_weak_refcnt();
+    image_slot.view_slot = ret;
+    *out_id = std::bit_cast<daxa_ImageViewId>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -529,9 +529,9 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }
 
     write_descriptor_set_sampler(self->vk_device, self->gpu_shader_resource_table.vk_descriptor_set, ret.vk_sampler, id.index);
-    *out_id = std::bit_cast<daxa_SamplerId>(id);
-    daxa_dvc_inc_refcnt_sampler(self, *out_id);
+    ret.strong_count = 1;
     self->inc_weak_refcnt();
+    *out_id = std::bit_cast<daxa_SamplerId>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -842,11 +842,13 @@ daxa_dvc_collect_garbage(daxa_Device self)
 
 auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
 {
+    printf("device inc refcnt\n");
     return self->inc_refcnt();
 }
 
 auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
 {
+    printf("device dec refcnt\n");
     return self->dec_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
         self->instance);
@@ -1698,6 +1700,7 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
 
 void daxa_ImplDevice::zero_ref_callback(ImplHandle * handle)
 {
+    printf("    daxa_ImplDevice::zero_ref_callback\n");
     auto self = r_cast<daxa_Device>(handle);
     daxa_dvc_wait_idle(self);
     daxa_dvc_collect_garbage(self);

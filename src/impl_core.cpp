@@ -68,11 +68,13 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
 
 auto ImplHandle::inc_refcnt() -> u64
 {
+    printf("  inc weak refcnt\n");
     return std::atomic_ref{this->strong_count}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance instance) -> u64
 {
+    printf("  dec weak refcnt\n");
     auto prev = std::atomic_ref{this->strong_count}.fetch_add(1, std::memory_order::relaxed);
     if (prev == 1)
     {
@@ -124,6 +126,10 @@ auto ImplHandle::get_weak_refcnt() -> u64
 
 auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block) -> daxa_Result
 {
+    daxa_ImplMemoryBlock ret = {};
+    ret.device = self;
+    ret.info = std::bit_cast<daxa::MemoryBlockInfo>(*info);
+
     if (info->requirements.memoryTypeBits == 0)
     {
         DAXA_DBG_ASSERT_TRUE_M(false, "memory_type_bits must be non zero");
@@ -140,22 +146,17 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
         .pUserData = {},
         .priority = 0.5f,
     };
-    VmaAllocation allocation = {};
-    VmaAllocationInfo allocation_info = {};
-    auto result = vmaAllocateMemory(self->vma_allocator, &info->requirements, &create_info, &allocation, &allocation_info);
+    auto result = vmaAllocateMemory(self->vma_allocator, &info->requirements, &create_info, &ret.allocation, &ret.alloc_info);
     if (result != VK_SUCCESS)
     {
         return std::bit_cast<daxa_Result>(result);
     }
 
+    ret.strong_count = 1;
+    self->inc_weak_refcnt();
     *out_memory_block = new daxa_ImplMemoryBlock{};
     // TODO(general): memory block is missing a name.
-    (**out_memory_block).device = self;
-    (**out_memory_block).info = std::bit_cast<daxa::MemoryBlockInfo>(*info);
-    (**out_memory_block).allocation = allocation;
-    (**out_memory_block).alloc_info = allocation_info;
-    daxa_memory_block_inc_refcnt(*out_memory_block);
-    self->inc_weak_refcnt();
+    **out_memory_block = std::move(ret);
     return DAXA_RESULT_SUCCESS;
 }
 

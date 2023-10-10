@@ -40,10 +40,10 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &query_pool_name_info);
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_tqp = new daxa_ImplTimelineQueryPool{};
     **out_tqp = std::move(ret);
-    daxa_timeline_query_pool_inc_refcnt(*out_tqp);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 

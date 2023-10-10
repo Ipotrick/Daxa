@@ -100,7 +100,7 @@ namespace daxa
     struct ImplHandle
     {
         // Used for user side reference count.
-        u64 strong_count = {};
+        u64 strong_count = 1;
         // Used for internal reference count.
         u64 weak_count = {};
 

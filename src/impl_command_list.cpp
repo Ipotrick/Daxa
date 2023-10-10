@@ -826,10 +826,10 @@ auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_cmd_list = new daxa_ImplCommandList{};
     **out_cmd_list = std::move(ret);
-    daxa_cmd_inc_refcnt(*out_cmd_list);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 

@@ -83,10 +83,10 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         }
         ret.present_semaphores.push_back(std::move(sema));
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_swapchain = new daxa_ImplSwapchain{};
     **out_swapchain = std::move(ret);
-    daxa_swp_inc_refcnt(*out_swapchain);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -380,6 +380,7 @@ void daxa_ImplSwapchain::recreate_surface()
 
 void daxa_ImplSwapchain::zero_ref_callback(ImplHandle * handle)
 {
+    printf("      daxa_ImplSwapchain::zero_ref_callback\n");
     // TODO: Dont we need to defer the destruction with a zombie?
     auto self = r_cast<daxa_Swapchain>(handle);
     self->cleanup();

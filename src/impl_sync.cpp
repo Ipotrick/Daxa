@@ -31,10 +31,10 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_semaphore = new daxa_ImplBinarySemaphore{};
     **out_semaphore = std::move(ret);
-    daxa_binary_semaphore_inc_refcnt(*out_semaphore);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -88,10 +88,10 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_semaphore = new daxa_ImplTimelineSemaphore{};
     **out_semaphore = std::move(ret);
-    daxa_timeline_semaphore_inc_refcnt(*out_semaphore);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -178,10 +178,10 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_event = new daxa_ImplEvent{};
     **out_event = std::move(ret);
-    daxa_event_inc_refcnt(*out_event);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 

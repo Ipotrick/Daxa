@@ -274,10 +274,10 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_pipeline = new daxa_ImplRasterPipeline{};
     **out_pipeline = std::move(ret);
-    daxa_raster_pipeline_inc_refcnt(*out_pipeline);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -358,10 +358,10 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
     *out_pipeline = new daxa_ImplComputePipeline{};
     **out_pipeline = std::move(ret);
-    daxa_compute_pipeline_inc_refcnt(*out_pipeline);
-    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
