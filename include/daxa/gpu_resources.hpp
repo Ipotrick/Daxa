@@ -68,7 +68,7 @@ namespace daxa
 
     struct BufferInfo
     {
-        u32 size = {};
+        usize size = {};
         AllocateInfo allocate_info = {};
         std::string_view name = "";
     };

@@ -110,10 +110,12 @@ void check_result(daxa_Result result, std::string const & message)
 {
     if (result != DAXA_RESULT_SUCCESS)
     {
-        throw std::runtime_error(fmt::format(
-            "[[DAXA ASSERT FAILURE]]: error code: {}, {}.\n",
+        std::cerr << fmt::format(
+            "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n",
             daxa_result_to_string(result),
-            message));
+            std::bit_cast<i32>(result),
+            message) << std::endl;
+        throw std::runtime_error({});
     }
 }
 
@@ -270,6 +272,7 @@ namespace daxa
         return ret;                                                \
     }
 
+    _DAXA_DECL_DVC_CREATE_FN(CommandList, command_list)
     _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
@@ -343,7 +346,7 @@ namespace daxa
 
     auto BinarySemaphore::info() const -> BinarySemaphoreInfo const &
     {
-        return *r_cast<BinarySemaphoreInfo const *>(daxa_binary_semaphore_info(rc_cast<daxa_BinarySemaphore>(this)));
+        return *r_cast<BinarySemaphoreInfo const *>(daxa_binary_semaphore_info(rc_cast<daxa_BinarySemaphore>(this->object)));
     }
 
     auto BinarySemaphore::inc_refcnt(ImplHandle const * object) -> u64
@@ -362,14 +365,14 @@ namespace daxa
 
     auto TimelineSemaphore::info() const -> TimelineSemaphoreInfo const &
     {
-        return *r_cast<TimelineSemaphoreInfo const *>(daxa_timeline_semaphore_info(rc_cast<daxa_TimelineSemaphore>(this)));
+        return *r_cast<TimelineSemaphoreInfo const *>(daxa_timeline_semaphore_info(rc_cast<daxa_TimelineSemaphore>(this->object)));
     }
 
     auto TimelineSemaphore::value() const -> u64
     {
         u64 ret = {};
         check_result(
-            daxa_timeline_semaphore_get_value(rc_cast<daxa_TimelineSemaphore>(this), &ret),
+            daxa_timeline_semaphore_get_value(rc_cast<daxa_TimelineSemaphore>(this->object), &ret),
             "failed to get timeline value");
         return ret;
     }
@@ -377,13 +380,13 @@ namespace daxa
     void TimelineSemaphore::set_value(u64 value)
     {
         check_result(
-            daxa_timeline_semaphore_set_value(r_cast<daxa_TimelineSemaphore>(this), value),
+            daxa_timeline_semaphore_set_value(r_cast<daxa_TimelineSemaphore>(this->object), value),
             "failed to set timeline value");
     }
 
     auto TimelineSemaphore::wait_for_value(u64 value, u64 timeout_nanos) -> bool
     {
-        auto result = daxa_timeline_semaphore_wait_for_value(r_cast<daxa_TimelineSemaphore>(this), value, timeout_nanos);
+        auto result = daxa_timeline_semaphore_wait_for_value(r_cast<daxa_TimelineSemaphore>(this->object), value, timeout_nanos);
         DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS || result == DAXA_RESULT_TIMEOUT, "failed to wait on timeline");
         return result == DAXA_RESULT_SUCCESS;
     }
@@ -404,7 +407,7 @@ namespace daxa
 
     auto Event::info() const -> EventInfo const &
     {
-        return *reinterpret_cast<EventInfo const *>(daxa_event_info(rc_cast<daxa_Event>(this)));
+        return *reinterpret_cast<EventInfo const *>(daxa_event_info(rc_cast<daxa_Event>(this->object)));
     }
 
     auto Event::inc_refcnt(ImplHandle const * object) -> u64
@@ -423,7 +426,7 @@ namespace daxa
 
     auto MemoryBlock::info() -> MemoryBlockInfo const &
     {
-        return *r_cast<MemoryBlockInfo const *>(daxa_memory_block_info(r_cast<daxa_MemoryBlock>(this)));
+        return *r_cast<MemoryBlockInfo const *>(daxa_memory_block_info(r_cast<daxa_MemoryBlock>(this->object)));
     }
 
     auto MemoryBlock::inc_refcnt(ImplHandle const * object) -> u64
@@ -442,7 +445,7 @@ namespace daxa
 
     auto TimelineQueryPool::info() const -> TimelineQueryPoolInfo const &
     {
-        return *r_cast<TimelineQueryPoolInfo const *>(daxa_timeline_query_pool_info(rc_cast<daxa_TimelineQueryPool>(this)));
+        return *r_cast<TimelineQueryPoolInfo const *>(daxa_timeline_query_pool_info(rc_cast<daxa_TimelineQueryPool>(this->object)));
     }
 
     auto TimelineQueryPool::get_query_results(u32 start_index, u32 count) -> std::vector<u64>
@@ -450,7 +453,7 @@ namespace daxa
         std::vector<u64> ret = {};
         ret.resize(count);
         check_result(
-            daxa_timeline_query_pool_query_results(rc_cast<daxa_TimelineQueryPool>(this), start_index, count, ret.data()),
+            daxa_timeline_query_pool_query_results(rc_cast<daxa_TimelineQueryPool>(this->object), start_index, count, ret.data()),
             "failed to query results of timeline query pool");
         return ret;
     }
@@ -471,7 +474,7 @@ namespace daxa
     void Swapchain::resize()
     {
         check_result(
-            daxa_swp_resize(r_cast<daxa_Swapchain>(this)),
+            daxa_swp_resize(r_cast<daxa_Swapchain>(this->object)),
             "failed to resize swapchain");
     }
 
@@ -479,44 +482,44 @@ namespace daxa
     {
         ImageId ret = {};
         check_result(
-            daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this), r_cast<daxa_ImageId *>(&ret)),
+            daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this->object), r_cast<daxa_ImageId *>(&ret)),
             "failed to acquire next swapchain image");
         return ret;
     }
 
     auto Swapchain::get_acquire_semaphore() const -> BinarySemaphore const &
     {
-        return *rc_cast<BinarySemaphore *>(daxa_swp_get_acquire_semaphore(rc_cast<daxa_Swapchain>(this)));
+        return *rc_cast<BinarySemaphore *>(daxa_swp_get_acquire_semaphore(rc_cast<daxa_Swapchain>(this->object)));
     }
 
     auto Swapchain::get_present_semaphore() const -> BinarySemaphore const &
     {
-        return *rc_cast<BinarySemaphore *>(daxa_swp_get_present_semaphore(rc_cast<daxa_Swapchain>(this)));
+        return *rc_cast<BinarySemaphore *>(daxa_swp_get_present_semaphore(rc_cast<daxa_Swapchain>(this->object)));
     }
 
     auto Swapchain::get_gpu_timeline_semaphore() const -> TimelineSemaphore const &
     {
-        return *rc_cast<TimelineSemaphore *>(daxa_swp_get_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this)));
+        return *rc_cast<TimelineSemaphore *>(daxa_swp_get_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
     }
 
     auto Swapchain::get_cpu_timeline_value() const -> usize
     {
-        return daxa_swp_get_cpu_timeline_value(rc_cast<daxa_Swapchain>(this));
+        return daxa_swp_get_cpu_timeline_value(rc_cast<daxa_Swapchain>(this->object));
     }
 
     auto Swapchain::info() const -> SwapchainInfo const &
     {
-        return *r_cast<SwapchainInfo const *>(daxa_swp_info(rc_cast<daxa_Swapchain>(this)));
+        return *r_cast<SwapchainInfo const *>(daxa_swp_info(rc_cast<daxa_Swapchain>(this->object)));
     }
 
     auto Swapchain::get_surface_extent() const -> Extent2D
     {
-        return std::bit_cast<Extent2D>(daxa_swp_get_surface_extent(rc_cast<daxa_Swapchain>(this)));
+        return std::bit_cast<Extent2D>(daxa_swp_get_surface_extent(rc_cast<daxa_Swapchain>(this->object)));
     }
 
     auto Swapchain::get_format() const -> Format
     {
-        return std::bit_cast<Format>(daxa_swp_get_format(rc_cast<daxa_Swapchain>(this)));
+        return std::bit_cast<Format>(daxa_swp_get_format(rc_cast<daxa_Swapchain>(this->object)));
     }
 
     auto Swapchain::inc_refcnt(ImplHandle const * object) -> u64
@@ -535,7 +538,7 @@ namespace daxa
 
     auto ComputePipeline::info() const -> ComputePipelineInfo const &
     {
-        return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(object));
+        return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(this->object));
     }
 
     auto ComputePipeline::inc_refcnt(ImplHandle const * object) -> u64
@@ -550,7 +553,7 @@ namespace daxa
 
     auto RasterPipeline::info() const -> RasterPipelineInfo const &
     {
-        return *r_cast<RasterPipelineInfo const *>(rc_cast<daxa_RasterPipeline>(object));
+        return *r_cast<RasterPipelineInfo const *>(rc_cast<daxa_RasterPipeline>(this->object));
     }
 
     auto RasterPipeline::inc_refcnt(ImplHandle const * object) -> u64
@@ -571,7 +574,7 @@ namespace daxa
     void CommandList::name(Info const & info)       \
     {                                               \
         daxa_cmd_##name(                            \
-            r_cast<daxa_CommandList>(this),         \
+            r_cast<daxa_CommandList>(this->object),         \
             r_cast<daxa_##Info const *>(&info));    \
     }
 
@@ -589,7 +592,7 @@ namespace daxa
     void CommandList::wait_events(std::span<EventWaitInfo const> const & infos)
     {
         daxa_cmd_wait_events(
-            r_cast<daxa_CommandList>(this), r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
+            r_cast<daxa_CommandList>(this->object), r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
@@ -598,7 +601,7 @@ namespace daxa
     void CommandList::push_constant_vptr(void const * data, u32 size)
     {
         daxa_cmd_push_constant(
-            r_cast<daxa_CommandList>(this), data, size);
+            r_cast<daxa_CommandList>(this->object), data, size);
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER(set_uniform_buffer, SetUniformBufferInfo)
@@ -606,21 +609,21 @@ namespace daxa
     void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
         daxa_cmd_set_compute_pipeline(
-            r_cast<daxa_CommandList>(this),
+            r_cast<daxa_CommandList>(this->object),
             *r_cast<daxa_ComputePipeline const *>(&pipeline));
     }
 
     void CommandList::set_pipeline(RasterPipeline const & pipeline)
     {
         daxa_cmd_set_raster_pipeline(
-            r_cast<daxa_CommandList>(this),
+            r_cast<daxa_CommandList>(this->object),
             *r_cast<daxa_RasterPipeline const *>(&pipeline));
     }
 
     void CommandList::dispatch(u32 x, u32 y, u32 z)
     {
         daxa_cmd_dispatch(
-            r_cast<daxa_CommandList>(this),
+            r_cast<daxa_CommandList>(this->object),
             x, y, z);
     }
 
@@ -630,7 +633,7 @@ namespace daxa
     void CommandList::destroy_##name##_deferred(Name##Id id)    \
     {                                                           \
         daxa_cmd_destroy_##name##_deferred(                     \
-            r_cast<daxa_CommandList>(this),                     \
+            r_cast<daxa_CommandList>(this->object),                     \
             std::bit_cast<daxa_##Name##Id>(id));                \
     }
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
@@ -642,14 +645,14 @@ namespace daxa
     void CommandList::set_viewport(ViewportInfo const & info)
     {
         daxa_cmd_set_viewport(
-            r_cast<daxa_CommandList>(this),
+            r_cast<daxa_CommandList>(this->object),
             r_cast<VkViewport const *>(&info));
     }
 
     void CommandList::set_scissor(Rect2D const & info)
     {
         daxa_cmd_set_scissor(
-            r_cast<daxa_CommandList>(this),
+            r_cast<daxa_CommandList>(this->object),
             r_cast<VkRect2D const *>(&info));
     }
 
@@ -663,7 +666,7 @@ namespace daxa
     void CommandList::draw_mesh_tasks(u32 x, u32 y, u32 z)
     {
         daxa_cmd_draw_mesh_tasks(
-            r_cast<daxa_CommandList>(this),
+            r_cast<daxa_CommandList>(this->object),
             x, y, z);
     }
     _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
@@ -674,17 +677,17 @@ namespace daxa
 
     void CommandList::end_label()
     {
-        daxa_cmd_end_label(r_cast<daxa_CommandList>(this));
+        daxa_cmd_end_label(r_cast<daxa_CommandList>(this->object));
     }
 
     void CommandList::complete()
     {
-        daxa_cmd_complete(r_cast<daxa_CommandList>(this));
+        daxa_cmd_complete(r_cast<daxa_CommandList>(this->object));
     }
 
     auto CommandList::is_complete() const -> bool
     {
-        return daxa_cmd_is_complete(rc_cast<daxa_CommandList>(this));
+        return daxa_cmd_is_complete(rc_cast<daxa_CommandList>(this->object));
     }
 
     auto CommandList::info() const -> CommandListInfo const &

@@ -279,11 +279,11 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
     }
 
-    VkImageViewCreateInfo const vk_image_view_create_info{
+    VkImageViewCreateInfo vk_image_view_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        .image = ret.vk_image,
+        // .image = ret.vk_image, // FILL THIS LATER!
         .viewType = vk_image_view_type,
         .format = *reinterpret_cast<VkFormat const *>(&info->format),
         .components = VkComponentMapping{
@@ -323,6 +323,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
 
+        vk_image_view_create_info.image = ret.vk_image;
         result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
         if (result != VK_SUCCESS)
         {
@@ -356,6 +357,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
 
+        vk_image_view_create_info.image = ret.vk_image;
         result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
         if (result != VK_SUCCESS)
         {
