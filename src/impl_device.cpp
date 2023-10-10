@@ -611,21 +611,13 @@ auto daxa_dvc_get_vk_device(daxa_Device self) -> VkDevice
 
 auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 {
+    auto vk_result = vkQueueWaitIdle(self->main_queue_vk_queue);
+    if (vk_result != VK_SUCCESS)
     {
-        auto result = vkQueueWaitIdle(self->main_queue_vk_queue);
-        if (result != VK_SUCCESS)
-        {
-            return std::bit_cast<daxa_Result>(result);
-        }
+        return std::bit_cast<daxa_Result>(vk_result);
     }
-    {
-        auto result = vkDeviceWaitIdle(self->vk_device);
-        if (result != VK_SUCCESS)
-        {
-            return std::bit_cast<daxa_Result>(result);
-        }
-    }
-    return DAXA_RESULT_SUCCESS;
+    vk_result = vkDeviceWaitIdle(self->vk_device);
+    return std::bit_cast<daxa_Result>(vk_result);
 }
 
 auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result

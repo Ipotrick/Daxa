@@ -451,7 +451,7 @@ namespace daxa
     auto TimelineQueryPool::get_query_results(u32 start_index, u32 count) -> std::vector<u64>
     {
         std::vector<u64> ret = {};
-        ret.resize(count);
+        ret.resize(count * 2);
         check_result(
             daxa_timeline_query_pool_query_results(rc_cast<daxa_TimelineQueryPool>(this->object), start_index, count, ret.data()),
             "failed to query results of timeline query pool");

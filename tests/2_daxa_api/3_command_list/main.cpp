@@ -248,11 +248,11 @@ namespace tests
 
         app.device.wait_idle();
 
-        // auto query_results = timeline_query_pool.get_query_results(0, 2);
-        // if ((query_results[1] != 0u) && (query_results[3] != 0u))
-        // {
-        //     std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
-        // }
+        auto query_results = timeline_query_pool.get_query_results(0, 2);
+        if ((query_results[1] != 0u) && (query_results[3] != 0u))
+        {
+            std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
+        }
 
         auto const & readback_data = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_readback_buffer);
 

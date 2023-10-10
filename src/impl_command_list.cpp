@@ -655,7 +655,7 @@ void daxa_cmd_draw_mesh_tasks_indirect_count(
 void daxa_cmd_write_timestamp(daxa_CommandList self, daxa_WriteTimestampInfo const * info)
 {
     daxa_cmd_flush_barriers(self);
-    vkCmdWriteTimestamp(
+    vkCmdWriteTimestamp2(
         self->vk_cmd_buffer,
         info->pipeline_stage,
         (**info->query_pool).vk_timeline_query_pool,

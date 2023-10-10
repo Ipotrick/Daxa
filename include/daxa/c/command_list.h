@@ -298,7 +298,7 @@ typedef struct
 typedef struct
 {
     daxa_TimelineQueryPool * query_pool;
-    VkPipelineStageFlagBits pipeline_stage;
+    VkPipelineStageFlags2 pipeline_stage;
     uint32_t query_index;
 } daxa_WriteTimestampInfo;
 
