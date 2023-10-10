@@ -144,7 +144,7 @@ auto daxa_timeline_semaphore_inc_refcnt(daxa_TimelineSemaphore self) -> u64
 auto daxa_timeline_semaphore_dec_refcnt(daxa_TimelineSemaphore self) -> u64
 {
     return self->dec_refcnt(
-        &daxa_ImplBinarySemaphore::zero_ref_callback,
+        &daxa_ImplTimelineSemaphore::zero_ref_callback,
         self->device->instance);
 }
 

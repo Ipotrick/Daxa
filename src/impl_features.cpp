@@ -133,7 +133,7 @@ namespace daxa
                 .pNext = this->chain,
                 .vulkanMemoryModel = VK_TRUE,
                 .vulkanMemoryModelDeviceScope = VK_TRUE,
-                .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low support.
+                .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low general gpu support.
             };
             this->chain = reinterpret_cast<void *>(&vk_memory_model);
         }
@@ -153,7 +153,7 @@ namespace daxa
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
                 .pNext = this->chain,
                 .shaderImageInt64Atomics = VK_TRUE,
-                .sparseImageInt64Atomics = VK_FALSE, // I do not care about sparse images.
+                .sparseImageInt64Atomics = VK_FALSE, // No sparse support in daxa.
             };
             this->chain = reinterpret_cast<void *>(&this->image_atomic64);
         }
@@ -164,9 +164,9 @@ namespace daxa
                 .pNext = this->chain,
                 .taskShader = VK_TRUE,
                 .meshShader = VK_TRUE,
-                .multiviewMeshShader = VK_FALSE,
-                .primitiveFragmentShadingRateMeshShader = VK_FALSE,
-                .meshShaderQueries = VK_FALSE,
+                .multiviewMeshShader = VK_FALSE,                    // No multiview support.
+                .primitiveFragmentShadingRateMeshShader = VK_FALSE, // No vrs support.
+                .meshShaderQueries = VK_FALSE,                      // I dont even know what this is.
             };
             this->chain = reinterpret_cast<void *>(&this->mesh_shader);
         }

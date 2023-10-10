@@ -83,6 +83,18 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         }
         ret.present_semaphores.push_back(std::move(sema));
     }
+
+    std::string timeline_sema_name = ret.info_name + " timeline semaphore";
+    auto timeline_sema_info = daxa_TimelineSemaphoreInfo{
+        .initial_value = 0,
+        .name = {timeline_sema_name.data(), timeline_sema_name.size() },
+    };
+    auto result = daxa_dvc_create_timeline_semaphore(device, &timeline_sema_info, r_cast<daxa_TimelineSemaphore*>(&ret.gpu_frame_timeline));
+    if (result != DAXA_RESULT_SUCCESS)
+    {
+        return result;
+    }
+
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_swapchain = new daxa_ImplSwapchain{};
