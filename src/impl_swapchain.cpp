@@ -85,6 +85,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     }
     *out_swapchain = new daxa_ImplSwapchain{};
     **out_swapchain = std::move(ret);
+    daxa_swp_inc_refcnt(*out_swapchain);
     device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }

@@ -85,6 +85,7 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     }
     *out_instance = new daxa_ImplInstance{};
     **out_instance = std::move(ret);
+    daxa_instance_inc_refcnt(*out_instance);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -137,6 +138,10 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
     {
         delete *out_device;
     }
+    else
+    {
+        daxa_dvc_inc_refcnt(*out_device);
+    }
     return result;
 }
 
@@ -166,7 +171,7 @@ auto daxa_instance_get_vk_instance(daxa_Instance self) -> VkInstance
 
 // --- Begin Internals ---
 
-void zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplInstance::zero_ref_callback(daxa_ImplHandle * handle)
 {
     daxa_Instance self = r_cast<daxa_Instance>(handle);
     vkDestroyInstance(self->vk_instance, nullptr);

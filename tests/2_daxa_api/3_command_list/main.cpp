@@ -19,7 +19,7 @@ namespace tests
         cmd_list.complete();
 
         app.device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = {&cmd_list, 1},
         });
     }
 
@@ -243,7 +243,7 @@ namespace tests
         cmd_list.complete();
 
         app.device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = {&cmd_list, 1},
         });
 
         app.device.wait_idle();
@@ -314,7 +314,7 @@ namespace tests
 
         // Even after this call the resources will still be alive, as zombie resources are not checked to be dead in submit calls.
         app.device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = {&cmd_list, 1},
         });
 
         app.device.wait_idle();

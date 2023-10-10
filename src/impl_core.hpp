@@ -1,5 +1,9 @@
 #pragma once
 
+#ifdef VULKAN_H_
+#error MOST NOT INCLUDE VULKAN H BEFORE THIS FILE!
+#endif
+
 #include <unordered_map>
 #include <mutex>
 #include <fstream>

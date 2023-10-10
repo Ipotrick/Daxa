@@ -41,8 +41,8 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto inc_refcnt(void const * object) -> u64;
+        static auto dec_refcnt(void const * object) -> u64;
     };
 
     struct TimelineSemaphoreInfo
@@ -64,8 +64,8 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto inc_refcnt(void const * object) -> u64;
+        static auto dec_refcnt(void const * object) -> u64;
     };
 
     struct EventInfo
@@ -82,8 +82,8 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto inc_refcnt(void const * object) -> u64;
+        static auto dec_refcnt(void const * object) -> u64;
     };
 
     struct EventSignalInfo

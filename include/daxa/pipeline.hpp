@@ -1,7 +1,6 @@
 #pragma once
 
 #include <daxa/core.hpp>
-#include <daxa/c/core.h>
 #include <daxa/types.hpp>
 
 namespace daxa
@@ -29,8 +28,8 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto inc_refcnt(void const * object) -> u64;
+        static auto dec_refcnt(void const * object) -> u64;
     };
 
     struct DepthTestInfo
@@ -102,7 +101,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto inc_refcnt(void const * object) -> u64;
+        static auto dec_refcnt(void const * object) -> u64;
     };
 } // namespace daxa

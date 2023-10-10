@@ -45,7 +45,9 @@
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
 #include <daxa/daxa.hlsl>
 #endif
-#else
+
+#elif __cplusplus
+
 #include <daxa/daxa.hpp>
 
 #if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
@@ -62,6 +64,7 @@
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
 
+#ifndef daxa_i32
 #define daxa_i32 daxa::types::i32
 #define daxa_u32 daxa::types::u32
 #define daxa_f32 daxa::types::f32
@@ -91,23 +94,28 @@
 #define daxa_BufferId daxa::types::BufferId
 #define daxa_ImageViewId daxa::types::ImageViewId
 #define daxa_SamplerId daxa::types::SamplerId
+#endif
 
 #if DAXA_ENABLE_SHADER_NO_NAMESPACE
 using namespace daxa::types;
 #endif
 
-// for daxa.hlsl
+#else // c
 
-#define DAXA_DEFINE_GET_RWSTRUCTURED_BUFFER(Type)
-#define DAXA_DEFINE_GET_STRUCTURED_BUFFER(Type)
-#define DAXA_DEFINE_GET_BUFFER(Type)
-#define DAXA_DEFINE_GET_TEXTURE1D(Type)
-#define DAXA_DEFINE_GET_TEXTURE2D(Type)
-#define DAXA_DEFINE_GET_TEXTURE3D(Type)
-#define DAXA_DEFINE_GET_TEXTURE1DARRAY(Type)
-#define DAXA_DEFINE_GET_TEXTURE2DARRAY(Type)
-#define DAXA_DEFINE_GET_RWTEXTURE1D(Type)
-#define DAXA_DEFINE_GET_RWTEXTURE2D(Type)
-#define DAXA_DEFINE_GET_RWTEXTURE3D(Type)
+#include <daxa/c/daxa.h>
+
+#if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
+#define DAXA_UNIFORM_BUFFER_ALIGNMENT 64
+#endif // #if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
+
+/// @brief The c++ equivalent of a constant buffer in a file is simply a struct.
+#define DAXA_DECL_UNIFORM_BUFFER(SLOT) typedef struct alignas(DAXA_UNIFORM_BUFFER_ALIGNMENT)
+/// @brief Buffer ptr enable is ignored in c++.
+#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
+#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
+/// @brief Buffer ptr types map to the buffer device address type in daxa.
+#define daxa_RWBufferPtr(x) daxa_BufferDeviceAddress
+/// @brief Buffer ptr types map to the buffer device address type in daxa.
+#define daxa_BufferPtr(x) daxa_BufferDeviceAddress
 
 #endif

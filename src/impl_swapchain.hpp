@@ -1,8 +1,8 @@
 #pragma once
 
-#include <daxa/swapchain.hpp>
-
 #include "impl_core.hpp"
+
+#include <daxa/swapchain.hpp>
 
 #include <daxa/c/device.h>
 

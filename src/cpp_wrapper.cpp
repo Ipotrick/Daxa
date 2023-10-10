@@ -1,4 +1,4 @@
-#include "cpp_wrapper.hpp"
+#include "impl_core.hpp"
 
 #include <daxa/c/daxa.h>
 #include <daxa/daxa.hpp>
@@ -129,7 +129,7 @@ namespace daxa
         check_result(daxa_create_instance(
                          r_cast<daxa_InstanceInfo const *>(&info),
                          r_cast<daxa_Instance *>(&ret)),
-                     "failed to create instance");
+                     "failed to create instance");        
         return ret;
     }
 
@@ -148,6 +148,17 @@ namespace daxa
     {
         return *r_cast<InstanceInfo const *>(daxa_instance_info(rc_cast<daxa_Instance>(this)));
     }
+
+    auto Instance::inc_refcnt(void const * object) -> u64
+    {
+        return daxa_instance_inc_refcnt(rc_cast<daxa_Instance>(object));
+    }
+
+    auto Instance::dec_refcnt(void const * object) -> u64
+    {
+        return daxa_instance_dec_refcnt(rc_cast<daxa_Instance>(object));
+    }
+
 
     /// --- End Instance ---
 
@@ -317,12 +328,12 @@ namespace daxa
             "failed to collect garbage");
     }
 
-    auto Device::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto Device::inc_refcnt(void const * object) -> u64
     {
         return daxa_dvc_inc_refcnt(rc_cast<daxa_Device>(object));
     }
 
-    auto Device::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto Device::dec_refcnt(void const * object) -> u64
     {
         return daxa_dvc_dec_refcnt(rc_cast<daxa_Device>(object));
     }
@@ -336,12 +347,12 @@ namespace daxa
         return *r_cast<BinarySemaphoreInfo const *>(daxa_binary_semaphore_info(rc_cast<daxa_BinarySemaphore>(this)));
     }
 
-    auto BinarySemaphore::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto BinarySemaphore::inc_refcnt(void const * object) -> u64
     {
         return daxa_binary_semaphore_inc_refcnt(rc_cast<daxa_BinarySemaphore>(object));
     }
 
-    auto BinarySemaphore::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto BinarySemaphore::dec_refcnt(void const * object) -> u64
     {
         return daxa_binary_semaphore_dec_refcnt(rc_cast<daxa_BinarySemaphore>(object));
     }
@@ -378,12 +389,12 @@ namespace daxa
         return result == DAXA_RESULT_SUCCESS;
     }
 
-    auto TimelineSemaphore::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto TimelineSemaphore::inc_refcnt(void const * object) -> u64
     {
         return daxa_timeline_semaphore_inc_refcnt(rc_cast<daxa_TimelineSemaphore>(object));
     }
 
-    auto TimelineSemaphore::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto TimelineSemaphore::dec_refcnt(void const * object) -> u64
     {
         return daxa_timeline_semaphore_dec_refcnt(rc_cast<daxa_TimelineSemaphore>(object));
     }
@@ -397,12 +408,12 @@ namespace daxa
         return *reinterpret_cast<EventInfo const *>(daxa_event_info(rc_cast<daxa_Event>(this)));
     }
 
-    auto Event::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto Event::inc_refcnt(void const * object) -> u64
     {
         return daxa_event_inc_refcnt(rc_cast<daxa_Event>(object));
     }
 
-    auto Event::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto Event::dec_refcnt(void const * object) -> u64
     {
         return daxa_event_dec_refcnt(rc_cast<daxa_Event>(object));
     }
@@ -416,12 +427,12 @@ namespace daxa
         return *r_cast<MemoryBlockInfo const *>(daxa_memory_block_info(r_cast<daxa_MemoryBlock>(this)));
     }
 
-    auto MemoryBlock::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto MemoryBlock::inc_refcnt(void const * object) -> u64
     {
         return daxa_memory_block_inc_refcnt(rc_cast<daxa_MemoryBlock>(object));
     }
 
-    auto MemoryBlock::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto MemoryBlock::dec_refcnt(void const * object) -> u64
     {
         return daxa_memory_block_dec_refcnt(rc_cast<daxa_MemoryBlock>(object));
     }
@@ -445,11 +456,11 @@ namespace daxa
         return ret;
     }
 
-    auto TimelineQueryPool::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto TimelineQueryPool::inc_refcnt(void const * object) -> u64
     {
         return daxa_timeline_query_pool_inc_refcnt(rc_cast<daxa_TimelineQueryPool>(object));
     }
-    auto TimelineQueryPool::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto TimelineQueryPool::dec_refcnt(void const * object) -> u64
     {
         return daxa_timeline_query_pool_dec_refcnt(rc_cast<daxa_TimelineQueryPool>(object));
     }
@@ -511,12 +522,12 @@ namespace daxa
         return std::bit_cast<Format>(daxa_swp_get_format(rc_cast<daxa_Swapchain>(this)));
     }
 
-    auto Swapchain::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto Swapchain::inc_refcnt(void const * object) -> u64
     {
         return daxa_swp_inc_refcnt(rc_cast<daxa_Swapchain>(object));
     }
 
-    auto Swapchain::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto Swapchain::dec_refcnt(void const * object) -> u64
     {
         return daxa_swp_dec_refcnt(rc_cast<daxa_Swapchain>(object));
     }
@@ -530,12 +541,12 @@ namespace daxa
         return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(object));
     }
 
-    auto ComputePipeline::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto ComputePipeline::inc_refcnt(void const * object) -> u64
     {
         return daxa_compute_pipeline_inc_refcnt(rc_cast<daxa_ComputePipeline>(object));
     }
 
-    auto ComputePipeline::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto ComputePipeline::dec_refcnt(void const * object) -> u64
     {
         return daxa_compute_pipeline_dec_refcnt(rc_cast<daxa_ComputePipeline>(object));
     }
@@ -545,12 +556,12 @@ namespace daxa
         return *r_cast<RasterPipelineInfo const *>(rc_cast<daxa_RasterPipeline>(object));
     }
 
-    auto RasterPipeline::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto RasterPipeline::inc_refcnt(void const * object) -> u64
     {
         return daxa_raster_pipeline_inc_refcnt(rc_cast<daxa_RasterPipeline>(object));
     }
 
-    auto RasterPipeline::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto RasterPipeline::dec_refcnt(void const * object) -> u64
     {
         return daxa_raster_pipeline_dec_refcnt(rc_cast<daxa_RasterPipeline>(object));
     }
@@ -684,12 +695,12 @@ namespace daxa
         return *r_cast<CommandListInfo const *>(daxa_cmd_info(*rc_cast<daxa_CommandList *>(this)));
     }
 
-    auto CommandList::inc_refcnt(daxa_ImplHandle const * object) -> u64
+    auto CommandList::inc_refcnt(void const * object) -> u64
     {
         return daxa_cmd_inc_refcnt(rc_cast<daxa_CommandList>(object));
     }
 
-    auto CommandList::dec_refcnt(daxa_ImplHandle const * object) -> u64
+    auto CommandList::dec_refcnt(void const * object) -> u64
     {
         return daxa_cmd_dec_refcnt(rc_cast<daxa_CommandList>(object));
     }
@@ -1566,63 +1577,6 @@ namespace daxa
     auto operator&(Access const & a, Access const & b) -> Access
     {
         return Access{.stages = a.stages & b.stages, .type = a.type & b.type};
-    }
-
-    auto is_depth_format(Format format) -> bool
-    {
-        switch (format)
-        {
-        case Format::D16_UNORM: return true;
-        case Format::X8_D24_UNORM_PACK32: return true;
-        case Format::D32_SFLOAT: return true;
-        case Format::S8_UINT: return true;
-        case Format::D16_UNORM_S8_UINT: return true;
-        case Format::D24_UNORM_S8_UINT: return true;
-        case Format::D32_SFLOAT_S8_UINT: return true;
-        default: return false;
-        }
-    }
-
-    auto is_stencil_format(Format format) -> bool
-    {
-        switch (format)
-        {
-        case Format::S8_UINT: return true;
-        case Format::D16_UNORM_S8_UINT: return true;
-        case Format::D24_UNORM_S8_UINT: return true;
-        case Format::D32_SFLOAT_S8_UINT: return true;
-        default: return false;
-        }
-    }
-
-    auto infer_aspect_from_format(Format format) -> VkImageAspectFlags
-    {
-        if (is_depth_format(format) || is_stencil_format(format))
-        {
-            return (is_depth_format(format) ? VK_IMAGE_ASPECT_DEPTH_BIT : 0) | (is_stencil_format(format) ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
-        }
-        return VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    auto make_subresource_range(ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
-    {
-        return VkImageSubresourceRange{
-            .aspectMask = aspect,
-            .baseMipLevel = slice.base_mip_level,
-            .levelCount = slice.level_count,
-            .baseArrayLayer = slice.base_array_layer,
-            .layerCount = slice.layer_count,
-        };
-    }
-
-    auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers
-    {
-        return VkImageSubresourceLayers{
-            .aspectMask = aspect,
-            .mipLevel = slice.mip_level,
-            .baseArrayLayer = slice.base_array_layer,
-            .layerCount = slice.layer_count,
-        };
     }
 
     // -- End Misc ---

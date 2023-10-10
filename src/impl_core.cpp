@@ -3,6 +3,67 @@
 #include "impl_instance.hpp"
 #include "impl_device.hpp"
 
+// --- Begin Helpers ---
+
+auto is_depth_format(Format format) -> bool
+{
+    switch (format)
+    {
+    case Format::D16_UNORM: return true;
+    case Format::X8_D24_UNORM_PACK32: return true;
+    case Format::D32_SFLOAT: return true;
+    case Format::S8_UINT: return true;
+    case Format::D16_UNORM_S8_UINT: return true;
+    case Format::D24_UNORM_S8_UINT: return true;
+    case Format::D32_SFLOAT_S8_UINT: return true;
+    default: return false;
+    }
+}
+
+auto is_stencil_format(Format format) -> bool
+{
+    switch (format)
+    {
+    case Format::S8_UINT: return true;
+    case Format::D16_UNORM_S8_UINT: return true;
+    case Format::D24_UNORM_S8_UINT: return true;
+    case Format::D32_SFLOAT_S8_UINT: return true;
+    default: return false;
+    }
+}
+
+auto infer_aspect_from_format(Format format) -> VkImageAspectFlags
+{
+    if (is_depth_format(format) || is_stencil_format(format))
+    {
+        return (is_depth_format(format) ? VK_IMAGE_ASPECT_DEPTH_BIT : 0) | (is_stencil_format(format) ? VK_IMAGE_ASPECT_STENCIL_BIT : 0);
+    }
+    return VK_IMAGE_ASPECT_COLOR_BIT;
+}
+
+auto make_subresource_range(ImageMipArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceRange
+{
+    return VkImageSubresourceRange{
+        .aspectMask = aspect,
+        .baseMipLevel = slice.base_mip_level,
+        .levelCount = slice.level_count,
+        .baseArrayLayer = slice.base_array_layer,
+        .layerCount = slice.layer_count,
+    };
+}
+
+auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags aspect) -> VkImageSubresourceLayers
+{
+    return VkImageSubresourceLayers{
+        .aspectMask = aspect,
+        .mipLevel = slice.mip_level,
+        .baseArrayLayer = slice.base_array_layer,
+        .layerCount = slice.layer_count,
+    };
+}
+
+// --- End Helpers ---
+
 // --- Begin API Functions ---
 
 auto daxa_inc_refcnt(daxa_Handle handle) -> u64
@@ -107,6 +168,7 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
     (**out_memory_block).info = std::bit_cast<daxa::MemoryBlockInfo>(*info);
     (**out_memory_block).allocation = allocation;
     (**out_memory_block).alloc_info = allocation_info;
+    daxa_memory_block_inc_refcnt(*out_memory_block);
     self->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
@@ -136,8 +198,7 @@ void daxa_ImplMemoryBlock::zero_ref_callback(daxa_ImplHandle * handle)
     vmaFreeMemory(self->device->vma_allocator, self->allocation);
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
     delete self;
 }
 

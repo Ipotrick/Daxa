@@ -17,7 +17,6 @@
 #include <bit>
 
 #include <daxa/core.hpp>
-#include <daxa/c/core.h>
 
 namespace daxa
 {
@@ -235,13 +234,14 @@ namespace daxa
         }
 
       protected:
-        daxa_ImplHandle * object = {};
+        void * object = {};
 
         void cleanup()
         {
             if (this->object != nullptr)
             {
-                CRTP_CHILD_T::dec_refcnt(object);
+                // Need const cast due to c-isms :( .
+                CRTP_CHILD_T::dec_refcnt(const_cast<void*>(object));
                 this->object = {};
             }
         }
@@ -1752,8 +1752,8 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto inc_refcnt(void const * object) -> u64;
+        static auto dec_refcnt(void const * object) -> u64;
     };
 
     using AutoAllocInfo = MemoryFlags;
@@ -1783,7 +1783,7 @@ namespace daxa
       protected:
         template <typename T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(daxa_ImplHandle const * object) -> u64;
-        static auto dec_refcnt(daxa_ImplHandle const * object) -> u64;
+        static auto inc_refcnt(void const * object) -> u64;
+        static auto dec_refcnt(void const * object) -> u64;
     };
 } // namespace daxa

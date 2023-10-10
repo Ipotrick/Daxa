@@ -1,11 +1,11 @@
 #pragma once
 
-#include <daxa/c/command_list.h>
-#include <daxa/command_list.hpp>
-
 #include "impl_core.hpp"
 #include "impl_sync.hpp"
 #include "impl_pipeline.hpp"
+
+#include <daxa/c/command_list.h>
+#include <daxa/command_list.hpp>
 
 using namespace daxa;
 

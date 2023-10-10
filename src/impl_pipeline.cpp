@@ -276,6 +276,8 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     }
     *out_pipeline = new daxa_ImplRasterPipeline{};
     **out_pipeline = std::move(ret);
+    daxa_raster_pipeline_inc_refcnt(*out_pipeline);
+    device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -358,6 +360,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     }
     *out_pipeline = new daxa_ImplComputePipeline{};
     **out_pipeline = std::move(ret);
+    daxa_compute_pipeline_inc_refcnt(*out_pipeline);
     device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
@@ -383,7 +386,7 @@ auto daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline self) -> u64
 
 // --- Begin Internals ---
 
-void zero_ref_callback(daxa_ImplHandle * handle)
+void ImplPipeline::zero_ref_callback(daxa_ImplHandle * handle)
 {
     auto self = r_cast<ImplPipeline*>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};

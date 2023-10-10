@@ -19,7 +19,7 @@ typedef enum
     DAXA_DEVICE_TYPE_MAX_ENUM = 0x7fffffff,
 } daxa_DeviceType;
 
-struct daxa_DeviceLimits
+typedef struct
 {
     uint32_t max_image_dimension1d;
     uint32_t max_image_dimension2d;
@@ -127,7 +127,7 @@ struct daxa_DeviceLimits
     uint64_t optimal_buffer_copy_offset_alignment;
     uint64_t optimal_buffer_copy_row_pitch_alignment;
     uint64_t non_coherent_atom_size;
-};
+} daxa_DeviceLimits;
 
 typedef struct
 {
@@ -172,7 +172,7 @@ static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
     .max_allowed_images = 10000,
     .max_allowed_buffers = 10000,
     .max_allowed_samplers = 400,
-    .name = {},
+    .name = {.data = 0, .size = 0},
 };
 
 typedef struct

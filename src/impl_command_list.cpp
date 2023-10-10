@@ -551,9 +551,9 @@ void daxa_cmd_set_depth_bias(daxa_CommandList self, daxa_DepthBiasInfo const * i
     vkCmdSetDepthBias(self->vk_cmd_buffer, info->constant_factor, info->clamp, info->slope_factor);
 }
 
-void daxa_cmd_set_index_buffer(daxa_CommandList self, daxa_BufferId id, size_t offset, VkIndexType index_type)
+void daxa_cmd_set_index_buffer(daxa_CommandList self, daxa_SetIndexBufferInfo const * info)
 {
-    vkCmdBindIndexBuffer(self->vk_cmd_buffer, self->device->slot(id).vk_buffer, offset, index_type);
+    vkCmdBindIndexBuffer(self->vk_cmd_buffer, self->device->slot(info->id).vk_buffer, info->offset, info->index_type);
 }
 
 void daxa_cmd_draw(daxa_CommandList self, daxa_DrawInfo const * info)
@@ -828,6 +828,7 @@ auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const
     }
     *out_cmd_list = new daxa_ImplCommandList{};
     **out_cmd_list = std::move(ret);
+    daxa_cmd_inc_refcnt(*out_cmd_list);
     device->inc_weak_refcnt();
     return DAXA_RESULT_SUCCESS;
 }
@@ -879,7 +880,7 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
     }
 }
 
-void zero_ref_callback(daxa_ImplHandle * handle)
+void daxa_ImplCommandList::zero_ref_callback(daxa_ImplHandle * handle)
 {
     auto self = r_cast<daxa_CommandList>(handle);
     vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
