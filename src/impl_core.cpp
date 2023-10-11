@@ -66,16 +66,18 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
 
 // --- Begin ImplHandle ---
 
-auto ImplHandle::inc_refcnt() -> u64
+auto ImplHandle::inc_refcnt() const -> u64
 {
-    printf("  inc weak refcnt\n");
-    return std::atomic_ref{this->strong_count}.fetch_add(1, std::memory_order::relaxed);
+    printf("  inc strong refcnt\n");
+    auto& mut_strong_ref = *rc_cast<u64*>(&this->strong_count);
+    return std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance instance) -> u64
+auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64
 {
-    printf("  dec weak refcnt\n");
-    auto prev = std::atomic_ref{this->strong_count}.fetch_add(1, std::memory_order::relaxed);
+    printf("  dec strong refcnt\n");
+    auto& mut_strong_ref = *rc_cast<u64*>(&this->strong_count);
+    auto prev = std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
     if (prev == 1)
     {
         auto weak = this->get_weak_refcnt();
@@ -83,7 +85,7 @@ auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instan
         {
             zero_ref_callback(this);
         }
-        else if ((instance->info.flags & InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD) != InstanceFlagBits::NONE)
+        else if (instance != nullptr && (instance->info.flags & InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD) != InstanceFlagBits::NONE)
         {
             DAXA_DBG_ASSERT_TRUE_M(false, "not all children have been destroyed prior to destroying object");
         }
@@ -91,19 +93,21 @@ auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instan
     return prev;
 }
 
-auto ImplHandle::get_refcnt() -> u64
+auto ImplHandle::get_refcnt() const -> u64
 {
     return std::atomic_ref{this->strong_count}.load(std::memory_order::relaxed);
 }
 
-auto ImplHandle::inc_weak_refcnt() -> u64
+auto ImplHandle::inc_weak_refcnt() const -> u64
 {
-    return std::atomic_ref{this->weak_count}.fetch_add(1, std::memory_order::relaxed);
+    auto& mut_weak_ref = *rc_cast<u64*>(&this->weak_count);
+    return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance) -> u64
+auto ImplHandle::dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance) const -> u64
 {
-    auto prev = std::atomic_ref{this->weak_count}.fetch_sub(1, std::memory_order::relaxed);
+    auto& mut_weak_ref = *rc_cast<u64*>(&this->weak_count);
+    auto prev = std::atomic_ref{mut_weak_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {
         auto strong = this->get_refcnt();
@@ -115,7 +119,7 @@ auto ImplHandle::dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_I
     return prev;
 }
 
-auto ImplHandle::get_weak_refcnt() -> u64
+auto ImplHandle::get_weak_refcnt() const -> u64
 {
     return std::atomic_ref{this->weak_count}.load(std::memory_order::relaxed);
 }
@@ -177,9 +181,9 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
         self->device->instance);
 }
 
-void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle * handle)
+void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
 {
-    auto self = r_cast<daxa_MemoryBlock>(handle);
+    auto self = rc_cast<daxa_MemoryBlock>(handle);
     // TODO: Does this make sense without a zombie?
     // Destruction not deferred.
     vmaFreeMemory(self->device->vma_allocator, self->allocation);

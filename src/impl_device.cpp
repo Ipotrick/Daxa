@@ -748,8 +748,7 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
     return std::bit_cast<daxa_Result>(result);
 }
 
-daxa_Result
-daxa_dvc_collect_garbage(daxa_Device self)
+auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
 {
     std::unique_lock lock{self->main_queue_zombies_mtx};
 
@@ -838,6 +837,11 @@ daxa_dvc_collect_garbage(daxa_Device self)
             vkDestroyQueryPool(self->vk_device, timeline_query_pool_zombie.vk_timeline_query_pool, nullptr);
         });
     return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
+{
+    return r_cast<daxa_DeviceProperties const *>(&device->vk_physical_device_properties2.properties);
 }
 
 auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
@@ -1698,10 +1702,10 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
     return gpu_shader_resource_table.sampler_slots.dereference_id(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
-void daxa_ImplDevice::zero_ref_callback(ImplHandle * handle)
+void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
 {
     printf("    daxa_ImplDevice::zero_ref_callback\n");
-    auto self = r_cast<daxa_Device>(handle);
+    auto self = rc_cast<daxa_Device>(handle);
     daxa_dvc_wait_idle(self);
     daxa_dvc_collect_garbage(self);
     self->buffer_pool_pool.cleanup(self);

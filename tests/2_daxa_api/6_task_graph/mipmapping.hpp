@@ -420,15 +420,15 @@ namespace tests
                     .image_id = swapchain_image,
                 });
                 cmd_list.complete();
+                std::array timeline_semas = {std::pair{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}};
                 device.submit_commands({
-                    .command_lists = {std::move(cmd_list)},
-                    .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
-                    .signal_binary_semaphores = {swapchain.get_present_semaphore()},
-                    .signal_timeline_semaphores = {
-                        {swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
+                    .command_lists = {&cmd_list,1},
+                    .wait_binary_semaphores = {&swapchain.get_acquire_semaphore(), 1},
+                    .signal_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
+                    .signal_timeline_semaphores = {timeline_semas.data(), timeline_semas.size()},
                 });
                 device.present_frame({
-                    .wait_binary_semaphores = {swapchain.get_present_semaphore()},
+                    .wait_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
                     .swapchain = swapchain,
                 });
             }

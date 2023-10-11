@@ -329,6 +329,11 @@ namespace daxa
             daxa_dvc_collect_garbage(r_cast<daxa_Device>(this->object)),
             "failed to collect garbage");
     }
+    
+    auto Device::properties() const -> DeviceProperties const &
+    {
+        return *r_cast<DeviceProperties const *>(daxa_dvc_properties(rc_cast<daxa_Device>(object)));
+    }
 
     auto Device::inc_refcnt(ImplHandle const * object) -> u64
     {

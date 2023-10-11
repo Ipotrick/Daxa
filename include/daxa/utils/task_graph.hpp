@@ -92,7 +92,7 @@ namespace daxa
 
     struct TaskGraphInfo
     {
-        Device device;
+        Device device = {};
         /// @brief  Optionally the user can provide a swapchain. This enables the use of present.
         std::optional<Swapchain> swapchain = {};
         /// @brief  Task reordering can drastically improve performance,
@@ -174,7 +174,7 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskGraph : ManagedPtr
+    struct TaskGraph : ManagedPtr<TaskGraph>
     {
         TaskGraph() = default;
 
@@ -217,6 +217,12 @@ namespace daxa
 
         auto get_debug_string() -> std::string;
         auto get_transient_memory_size() -> daxa::usize;
+        
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
 
       private:
         void add_task(std::unique_ptr<detail::BaseTask> && base_task);

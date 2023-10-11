@@ -171,9 +171,9 @@ auto daxa_instance_get_vk_instance(daxa_Instance self) -> VkInstance
 
 // --- Begin Internals ---
 
-void daxa_ImplInstance::zero_ref_callback(ImplHandle * handle)
+void daxa_ImplInstance::zero_ref_callback(ImplHandle const * handle)
 {
-    daxa_Instance self = r_cast<daxa_Instance>(handle);
+    daxa_Instance self = rc_cast<daxa_Instance>(handle);
     vkDestroyInstance(self->vk_instance, nullptr);
     delete self;
 }

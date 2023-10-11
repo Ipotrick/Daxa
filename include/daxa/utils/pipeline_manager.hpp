@@ -106,7 +106,7 @@ namespace daxa
 
     using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
-    struct PipelineManager : ManagedPtr
+    struct PipelineManager : ManagedPtr<PipelineManager>
     {
         PipelineManager() = default;
 
@@ -118,5 +118,10 @@ namespace daxa
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & info);
         auto reload_all() -> PipelineReloadResult;
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

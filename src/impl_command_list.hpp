@@ -58,5 +58,5 @@ struct daxa_ImplCommandList final : ImplHandle
 
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
     
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };

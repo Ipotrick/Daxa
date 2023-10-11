@@ -386,9 +386,9 @@ auto daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline self) -> u64
 
 // --- Begin Internals ---
 
-void ImplPipeline::zero_ref_callback(ImplHandle * handle)
+void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
 {
-    auto self = r_cast<ImplPipeline*>(handle);
+    auto self = rc_cast<ImplPipeline*>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     self->device->main_queue_pipeline_zombies.push_front({

@@ -270,6 +270,8 @@ namespace daxa
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
         void collect_garbage();
+
+        auto properties() const -> DeviceProperties const &;
       protected:
         template <typename T>
         friend struct ManagedPtr;

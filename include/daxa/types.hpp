@@ -845,6 +845,12 @@ namespace daxa
                 Variant_detail::visit_with_index(*this, [](auto &elem, auto index_) { Variant_detail::destruct<alternative<index_>>(elem); });
             }
         }
+        // construct this from another variant, for constructors only
+        template <class Other> constexpr void construct_from(Other &&o) {
+            if constexpr (can_be_valueless) if (o.valueless_by_exception()) { current = npos; return; }
+            Variant_detail::visit_with_index(DXV_FWD(o), Variant_detail::emplace_no_dtor_from_elem<Variant &>{*this});
+        }
+        template <class T> friend struct Variant_detail::emplace_no_dtor_from_elem;
         storage_t storage;
         index_type current{};
     };

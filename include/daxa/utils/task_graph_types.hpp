@@ -201,7 +201,7 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskBuffer : ManagedPtr
+    struct TaskBuffer : ManagedPtr<TaskBuffer>
     {
         TaskBuffer() = default;
         TaskBuffer(TaskBufferInfo const & info);
@@ -214,6 +214,11 @@ namespace daxa
 
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
     struct TrackedImages
@@ -230,7 +235,7 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskImage : ManagedPtr
+    struct TaskImage : ManagedPtr<TaskImage>
     {
         TaskImage() = default;
         TaskImage(TaskImageInfo const & info);
@@ -243,6 +248,11 @@ namespace daxa
 
         void set_images(TrackedImages const & images);
         void swap_images(TaskImage & other);
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
     template <TaskBufferAccess T_ACCESS = TaskBufferAccess::NONE>

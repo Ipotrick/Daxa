@@ -20,7 +20,7 @@ struct ImplPipeline : ImplHandle
     VkPipeline vk_pipeline = {};
     VkPipelineLayout vk_pipeline_layout = {};
 
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };
 
 struct daxa_ImplRasterPipeline final : ImplPipeline

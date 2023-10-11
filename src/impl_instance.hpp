@@ -11,5 +11,5 @@ struct daxa_ImplInstance final : ImplHandle
     std::string app_name = {};
     VkInstance vk_instance = {};
 
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };

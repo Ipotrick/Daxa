@@ -880,9 +880,9 @@ void daxa_ImplCommandList::flush_uniform_buffer_bindings(VkPipelineBindPoint bin
     }
 }
 
-void daxa_ImplCommandList::zero_ref_callback(ImplHandle * handle)
+void daxa_ImplCommandList::zero_ref_callback(ImplHandle const * handle)
 {
-    auto self = r_cast<daxa_CommandList>(handle);
+    auto self = rc_cast<daxa_CommandList>(handle);
     vkResetCommandPool(self->device->vk_device, self->vk_cmd_pool, {});
     u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};

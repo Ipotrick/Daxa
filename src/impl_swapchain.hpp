@@ -59,5 +59,5 @@ struct daxa_ImplSwapchain final : ImplHandle
     void recreate_surface();
     
     static auto create(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain swapchain) -> daxa_Result;
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };

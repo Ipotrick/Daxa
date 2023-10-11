@@ -31,7 +31,7 @@ namespace daxa
         bool use_custom_config = true;
     };
 
-    struct ImGuiRenderer : ManagedPtr
+    struct ImGuiRenderer : ManagedPtr<ImGuiRenderer>
     {
         ImGuiRenderer() = default;
 

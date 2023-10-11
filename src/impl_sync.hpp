@@ -21,7 +21,7 @@ struct daxa_ImplBinarySemaphore final : ImplHandle
     std::string info_name = {};
     VkSemaphore vk_semaphore = {};
     
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };
 
 struct daxa_ImplTimelineSemaphore final : ImplHandle
@@ -31,7 +31,7 @@ struct daxa_ImplTimelineSemaphore final : ImplHandle
     std::string info_name = {};
     VkSemaphore vk_semaphore = {};
 
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };
 
 struct daxa_ImplEvent final : ImplHandle
@@ -41,5 +41,5 @@ struct daxa_ImplEvent final : ImplHandle
     std::string info_name = {};
     VkEvent vk_event = {};
 
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };

@@ -24,8 +24,8 @@ namespace tests
         }
         cmd.copy_buffer_to_buffer({
             .src_buffer = ti.get_allocator().buffer(),
-            .src_offset = staging.buffer_offset,
             .dst_buffer = ti.uses[buffer].buffer(),
+            .src_offset = staging.buffer_offset,
             .size = size * sizeof(u32),
         });
     }

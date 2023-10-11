@@ -305,6 +305,8 @@ DAXA_EXPORT daxa_Result
 daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
 DAXA_EXPORT daxa_Result
 daxa_dvc_collect_garbage(daxa_Device device);
+DAXA_EXPORT daxa_DeviceProperties const *
+daxa_dvc_properties(daxa_Device device);
 
 // Returns previous ref count.
 DAXA_EXPORT uint64_t

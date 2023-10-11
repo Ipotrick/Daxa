@@ -390,11 +390,11 @@ void daxa_ImplSwapchain::recreate_surface()
 #endif
 }
 
-void daxa_ImplSwapchain::zero_ref_callback(ImplHandle * handle)
+void daxa_ImplSwapchain::zero_ref_callback(ImplHandle const * handle)
 {
     printf("      daxa_ImplSwapchain::zero_ref_callback\n");
     // TODO: Dont we need to defer the destruction with a zombie?
-    auto self = r_cast<daxa_Swapchain>(handle);
+    auto self = rc_cast<daxa_Swapchain>(handle);
     self->cleanup();
     vkDestroySwapchainKHR(self->device->vk_device, self->vk_swapchain, nullptr);
     vkDestroySurfaceKHR(self->device->instance->vk_instance, self->vk_surface, nullptr);

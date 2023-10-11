@@ -105,13 +105,13 @@ namespace daxa
         u64 weak_count = {};
 
         // For user side ref counting.
-        auto inc_refcnt() -> u64;
-        auto dec_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance instance) -> u64;
-        auto get_refcnt() -> u64;
+        auto inc_refcnt() const -> u64;
+        auto dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64;
+        auto get_refcnt() const -> u64;
         // For internal ref counting.
-        auto inc_weak_refcnt() -> u64;
-        auto dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle *), daxa_Instance instance) -> u64;
-        auto get_weak_refcnt() -> u64;
+        auto inc_weak_refcnt() const -> u64;
+        auto dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64;
+        auto get_weak_refcnt() const -> u64;
     };
 } // namespace daxa
 
@@ -126,5 +126,5 @@ struct daxa_ImplMemoryBlock final : ImplHandle
     VmaAllocation allocation = {};
     VmaAllocationInfo alloc_info = {};
 
-    static void zero_ref_callback(ImplHandle * handle);
+    static void zero_ref_callback(ImplHandle const * handle);
 };
