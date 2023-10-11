@@ -1152,18 +1152,13 @@ static constexpr auto imgui_frag_spv = std::array<daxa::u32, (1148 - 630) * 8 + 
 namespace daxa
 {
     ImGuiRenderer::ImGuiRenderer(ImGuiRendererInfo const & info)
-        : ManagedPtr{
-              new ImplImGuiRenderer(info),
-              [](ImplHandle * self_ptr)
-              {
-                  delete reinterpret_cast<ImGuiRenderer *>(self_ptr);
-              }}
     {
+        this->object = new ImplImGuiRenderer(info);
     }
 
     void ImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
     {
-        auto & impl = *as<ImplImGuiRenderer>();
+        auto & impl = *r_cast<ImplImGuiRenderer *>(this->object);
         impl.record_commands(draw_data, cmd_list, target_image, size_x, size_y);
     }
 
@@ -1266,11 +1261,15 @@ namespace daxa
 
             cmd_list.set_pipeline(raster_pipeline);
             cmd_list.begin_renderpass({
-                .color_attachments = {{.image_view = target_image.default_view(), .load_op = AttachmentLoadOp::LOAD}},
+                .color_attachments = std::array{RenderAttachmentInfo{.image_view = target_image.default_view(), .load_op = AttachmentLoadOp::LOAD}},
                 .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
             });
 
-            cmd_list.set_index_buffer(ibuffer, 0, sizeof(ImDrawIdx));
+            cmd_list.set_index_buffer({
+                .id = ibuffer,
+                .offset = 0,
+                .index_type = IndexType::uint32,
+            });
 
             auto push = Push{};
             push.scale = {2.0f / draw_data->DisplaySize.x, 2.0f / draw_data->DisplaySize.y};
@@ -1426,7 +1425,7 @@ namespace daxa
         });
         cmd_list.complete();
         this->info.device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = {&cmd_list,1},
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         auto image_view = font_sheet.default_view();

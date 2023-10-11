@@ -389,7 +389,7 @@ namespace daxa
         this->defines.insert(this->defines.end(), other.defines.begin(), other.defines.end());
     }
 
-    PipelineManager::PipelineManager(PipelineManagerInfo info) 
+    PipelineManager::PipelineManager(PipelineManagerInfo info)
     {
         this->object = new ImplPipelineManager{std::move(info)};
     }
@@ -541,7 +541,7 @@ namespace daxa
     auto ImplPipelineManager::create_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<RasterPipelineState>
     {
         auto modified_info = a_info;
-        auto const modified_shader_compile_infos = std::array<std::optional<ShaderCompileInfo> *, 6>{
+        auto const modified_shader_compile_infos = std::array<Optional<ShaderCompileInfo> *, 6>{
             &modified_info.vertex_shader_info,
             &modified_info.tesselation_control_shader_info,
             &modified_info.tesselation_evaluation_shader_info,
@@ -572,7 +572,7 @@ namespace daxa
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
         auto raster_pipeline_info = RasterPipelineInfo{
-            .color_attachments = modified_info.color_attachments,
+            .color_attachments = { modified_info.color_attachments.data(), modified_info.color_attachments.size() },
             .depth_test = modified_info.depth_test,
             .tesselation = modified_info.tesselation,
             .raster = modified_info.raster,
@@ -585,7 +585,7 @@ namespace daxa
         auto tesselation_evaluation_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         auto task_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         auto mesh_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        using ElemT = std::tuple<std::optional<ShaderCompileInfo> *, std::optional<ShaderInfo> *, daxa::Result<std::vector<unsigned int>> *, ShaderStage>;
+        using ElemT = std::tuple<Optional<ShaderCompileInfo> *, Optional<ShaderInfo> *, daxa::Result<std::vector<unsigned int>> *, ShaderStage>;
         auto const result_shader_compile_infos = std::array<ElemT, 6>{
             ElemT{&pipe_result.info.vertex_shader_info, &raster_pipeline_info.vertex_shader_info, &vertex_spirv_result, ShaderStage::VERT},
             ElemT{&pipe_result.info.fragment_shader_info, &raster_pipeline_info.fragment_shader_info, &fragment_spirv_result, ShaderStage::FRAG},
@@ -613,8 +613,11 @@ namespace daxa
                     }
                 }
                 *final_shader_info = daxa::ShaderInfo{
-                    .byte_code = spv_result->value(),
-                    .entry_point = pipe_result_shader_info->value().compile_options.entry_point,
+                    .byte_code = spv_result->value().data(),
+                    .entry_point = {
+                        pipe_result_shader_info->value().compile_options.entry_point.value().data(),
+                        pipe_result_shader_info->value().compile_options.entry_point.value().size(),
+                    },
                 };
             }
         }
@@ -1326,7 +1329,7 @@ namespace daxa
         return Result<std::vector<u32>>("Asked for Dxc compilation without enabling Dxc");
 #endif
     }
-    
+
     auto ImplPipelineManager::zero_ref_callback(ImplHandle const * handle)
     {
         delete handle;
@@ -1341,8 +1344,7 @@ namespace daxa
     {
         return object->dec_refcnt(
             ImplPipelineManager::zero_ref_callback,
-            nullptr
-        );
+            nullptr);
     }
 
 } // namespace daxa

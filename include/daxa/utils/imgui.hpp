@@ -44,5 +44,10 @@ namespace daxa
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
         void record_task(ImDrawData * draw_data, TaskGraph & task_graph, TaskImageView task_swapchain_image, u32 size_x, u32 size_y);
 #endif
+      protected:
+        template <typename T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

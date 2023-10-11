@@ -1,5 +1,7 @@
 #pragma once
 
+#include "../impl_core.hpp"
+
 #include <daxa/utils/imgui.hpp>
 #include <deque>
 

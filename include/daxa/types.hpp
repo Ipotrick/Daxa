@@ -242,8 +242,7 @@ namespace daxa
         {
             if (this->object != nullptr)
             {
-                // Need const cast due to c-isms :( .
-                CRTP_CHILD_T::dec_refcnt(const_cast<ImplHandle*>(object));
+                CRTP_CHILD_T::dec_refcnt(object);
                 this->object = {};
             }
         }
@@ -298,6 +297,23 @@ namespace daxa
 
       public:
         FixedList() = default;
+        FixedList(T const * in_data, usize in_size)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(static_cast<u32>(in_size) < CAPACITY, "EXCEEDED CAPACITY");
+            for (u32 i = 0; i < static_cast<u32>(in_size); ++i)
+            {
+                m_data[i] = in_data[i];
+            }
+        }
+        template<usize IN_SIZE>
+        requires (IN_SIZE <= CAPACITY)
+        FixedList(std::array<T,IN_SIZE> const & in)
+        {
+            for (u32 i = 0; i < static_cast<u32>(IN_SIZE); ++i)
+            {
+                m_data[i] = in[i];
+            }
+        }
         auto at(FixedListSizeT i) -> T &
         {
             return this->m_data.at(i);
