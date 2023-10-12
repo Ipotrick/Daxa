@@ -45,9 +45,9 @@ struct App : BaseApp<App>
     void on_update()
     {
         auto reloaded_result = pipeline_manager.reload_all();
-        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
             std::cout << "Failed to reload " << reload_err->message << '\n';
-        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
             std::cout << "Successfully reloaded!\n";
         ui_update();
 

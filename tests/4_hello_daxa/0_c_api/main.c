@@ -16,6 +16,6 @@ int main(void)
     daxa_Instance instance;
     handle_daxa_result(daxa_create_instance(&(daxa_InstanceInfo){0}, &instance));
 
-    daxa_destroy_instance(instance);
+    daxa_instance_dec_refcnt(instance);
     return 0;
 }
