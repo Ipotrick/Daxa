@@ -572,7 +572,7 @@ namespace daxa
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
         auto raster_pipeline_info = RasterPipelineInfo{
-            .color_attachments = { modified_info.color_attachments.data(), modified_info.color_attachments.size() },
+            .color_attachments = {modified_info.color_attachments.data(), modified_info.color_attachments.size()},
             .depth_test = modified_info.depth_test,
             .tesselation = modified_info.tesselation,
             .raster = modified_info.raster,
@@ -1031,7 +1031,7 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
-    auto ImplPipelineManager::get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_glslang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] std::string const & debug_name_opt, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         auto translate_shader_stage = [](ShaderStage stage) -> EShLanguage
@@ -1187,7 +1187,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineManager::get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_dxc([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
         auto u8_ascii_to_wstring = [](char const * str) -> std::wstring

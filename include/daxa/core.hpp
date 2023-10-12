@@ -1,5 +1,6 @@
 #pragma once
 
+#include <daxa/c/core.h>
 #include <optional>
 
 #if !defined(DAXA_VALIDATION)

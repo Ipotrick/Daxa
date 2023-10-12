@@ -1164,7 +1164,7 @@ namespace daxa
 
     auto ImGuiRenderer::create_image_context(ImGuiImageContext const & context) -> ImTextureID
     {
-        DAXA_DBG_ASSERT_TRUE_M(
+        static_assert(
             sizeof(ImGuiImageContext) <= sizeof(ImTextureID),
             "Size of context exceeded size of ImTextureID, unable to pack");
         return std::bit_cast<ImTextureID>(context);
@@ -1337,20 +1337,19 @@ namespace daxa
               [this]()
               {
                   auto create_info = daxa::RasterPipelineInfo{};
-                  create_info.vertex_shader_info = daxa::ShaderInfo{.byte_code = ShaderByteCode(imgui_vert_spv.begin(), imgui_vert_spv.end())};
-                  create_info.fragment_shader_info = daxa::ShaderInfo{.byte_code = ShaderByteCode(imgui_frag_spv.begin(), imgui_frag_spv.end())};
-                  create_info.color_attachments = {
-                      {
-                          .format = info.format,
-                          .blend = {
-                              .blend_enable = 1u,
-                              .src_color_blend_factor = BlendFactor::SRC_ALPHA,
-                              .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                              .src_alpha_blend_factor = BlendFactor::ONE,
-                              .dst_alpha_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
-                          },
+                  create_info.vertex_shader_info = daxa::ShaderInfo{.byte_code = imgui_vert_spv.data(), .byte_code_size = static_cast<u32>(imgui_vert_spv.size())};
+                  create_info.fragment_shader_info = daxa::ShaderInfo{.byte_code = imgui_frag_spv.data(), .byte_code_size = static_cast<u32>(imgui_frag_spv.size())};
+                  create_info.color_attachments = std::array{daxa::RenderAttachment{
+                      .format = info.format,
+                      .blend = daxa::BlendInfo{
+                          // TODO(capi): was this removed?
+                          // .blend_enable = 1u,
+                          .src_color_blend_factor = BlendFactor::SRC_ALPHA,
+                          .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
+                          .src_alpha_blend_factor = BlendFactor::ONE,
+                          .dst_alpha_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
                       },
-                  };
+                  }};
                   create_info.raster = {};
                   create_info.push_constant_size = sizeof(Push);
                   create_info.name = "ImGui Draw Pipeline";
@@ -1425,7 +1424,7 @@ namespace daxa
         });
         cmd_list.complete();
         this->info.device.submit_commands({
-            .command_lists = {&cmd_list,1},
+            .command_lists = {&cmd_list, 1},
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         auto image_view = font_sheet.default_view();

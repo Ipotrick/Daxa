@@ -5,26 +5,6 @@
 
 #include <daxa/c/types.h>
 
-typedef struct
-{
-    uint32_t value;
-} daxa_BufferId;
-
-typedef struct
-{
-    uint32_t value;
-} daxa_ImageId;
-
-typedef struct
-{
-    uint32_t value;
-} daxa_ImageViewId;
-
-typedef struct
-{
-    uint32_t value;
-} daxa_SamplerId;
-
 DAXA_EXPORT daxa_ImageViewId
 daxa_default_view(daxa_ImageId image);
 

@@ -87,9 +87,9 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     std::string timeline_sema_name = ret.info_name + " timeline semaphore";
     auto timeline_sema_info = daxa_TimelineSemaphoreInfo{
         .initial_value = 0,
-        .name = {timeline_sema_name.data(), timeline_sema_name.size() },
+        .name = {timeline_sema_name.data(), timeline_sema_name.size()},
     };
-    auto result = daxa_dvc_create_timeline_semaphore(device, &timeline_sema_info, r_cast<daxa_TimelineSemaphore*>(&ret.gpu_frame_timeline));
+    auto result = daxa_dvc_create_timeline_semaphore(device, &timeline_sema_info, r_cast<daxa_TimelineSemaphore *>(&ret.gpu_frame_timeline));
     if (result != DAXA_RESULT_SUCCESS)
     {
         return result;
@@ -129,7 +129,7 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
     auto result = vkAcquireNextImageKHR(
         self->device->vk_device,
         self->vk_swapchain, UINT64_MAX,
-        (**r_cast<daxa_BinarySemaphore*>(&acquire_semaphore)).vk_semaphore,
+        (**r_cast<daxa_BinarySemaphore *>(&acquire_semaphore)).vk_semaphore,
         nullptr,
         &self->current_image_index);
 
@@ -141,23 +141,23 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
     // }
     // We only bump the cpu timeline, when the acquire succeeds.
     self->cpu_frame_timeline += 1;
-    *out_image_id = std::bit_cast<daxa_ImageId>(self->images[self->current_image_index]);
+    *out_image_id = static_cast<daxa_ImageId>(self->images[self->current_image_index]);
     return std::bit_cast<daxa_Result>(result);
 }
 
 auto daxa_swp_get_acquire_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
 {
-    return r_cast<daxa_BinarySemaphore*>(&self->acquire_semaphores[self->acquire_semaphore_index]);
+    return r_cast<daxa_BinarySemaphore *>(&self->acquire_semaphores[self->acquire_semaphore_index]);
 }
 
 auto daxa_swp_get_present_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
 {
-    return r_cast<daxa_BinarySemaphore*>(&self->present_semaphores[self->current_image_index]);
+    return r_cast<daxa_BinarySemaphore *>(&self->present_semaphores[self->current_image_index]);
 }
 
 auto daxa_swp_get_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaphore *
 {
-    return r_cast<daxa_TimelineSemaphore*>(&self->gpu_frame_timeline);
+    return r_cast<daxa_TimelineSemaphore *>(&self->gpu_frame_timeline);
 }
 
 auto daxa_swp_get_cpu_timeline_value(daxa_Swapchain self) -> usize
@@ -189,8 +189,7 @@ auto daxa_swp_dec_refcnt(daxa_Swapchain self) -> u64
 {
     return self->dec_refcnt(
         &daxa_ImplSwapchain::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
 }
 
 // --- End API Functions ---
@@ -324,7 +323,7 @@ void daxa_ImplSwapchain::cleanup()
 {
     for (auto & image : images)
     {
-        daxa_dvc_dec_refcnt_image(this->device, std::bit_cast<daxa_ImageId>(image));
+        daxa_dvc_dec_refcnt_image(this->device, static_cast<daxa_ImageId>(image));
     }
     images.clear();
 }
@@ -400,8 +399,7 @@ void daxa_ImplSwapchain::zero_ref_callback(ImplHandle const * handle)
     vkDestroySurfaceKHR(self->device->instance->vk_instance, self->vk_surface, nullptr);
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
     delete self;
 }
 

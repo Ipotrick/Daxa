@@ -173,14 +173,16 @@ auto main() -> int
         auto const & gpu_timeline = swapchain.get_gpu_timeline_semaphore();
         auto const cpu_timeline = swapchain.get_cpu_timeline_value();
 
-        device.submit_commands({
-            .command_lists = {command_list},
-            .wait_binary_semaphores = {acquire_semaphore},
-            .signal_binary_semaphores = {present_semaphore},
-            .signal_timeline_semaphores = {{gpu_timeline, cpu_timeline}},
+        // TODO(capi): How to make this syntax good?
+        auto pair = std::pair{gpu_timeline, cpu_timeline};
+        device.submit_commands(daxa::CommandSubmitInfo{
+            .command_lists = std::span{&command_list, 1},
+            .wait_binary_semaphores = std::span{&acquire_semaphore, 1},
+            .signal_binary_semaphores = std::span{&present_semaphore, 1},
+            .signal_timeline_semaphores = std::span{&pair, 1},
         });
         device.present_frame({
-            .wait_binary_semaphores = {present_semaphore},
+            .wait_binary_semaphores = std::array{present_semaphore},
             .swapchain = swapchain,
         });
     }

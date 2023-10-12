@@ -19,16 +19,20 @@
 #define DAXA_SHADER_DEBUG_BUFFER_BINDING 5
 #define DAXA_ID_INDEX_MASK (0x00FFFFFF)
 #define DAXA_ID_VERSION_SHIFT (24)
-#if defined(__cplusplus)
+
+#if defined(_STDC_) // C
 #define DAXA_SHADER 0
-#else
+#elif defined(__cplusplus) // C++
+#define DAXA_SHADER 0
+#elif defined(GL_core_profile) // GLSL
 #define DAXA_SHADER 1
+#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#elif defined(__HLSL_VERSION) // HLSL
+#define DAXA_SHADER 1
+#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
 #endif
 
 #if DAXA_SHADER
-#define DAXA_SHADERLANG_GLSL 1
-#define DAXA_SHADERLANG_HLSL 2
-
 #if !defined(DAXA_ENABLE_SHADER_NO_NAMESPACE)
 #define DAXA_ENABLE_SHADER_NO_NAMESPACE 0
 #else
@@ -45,9 +49,25 @@
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
 #include <daxa/daxa.hlsl>
 #endif
+#else
+#if defined(_STDC_)
+#include <daxa/c/daxa.h>
 
-#elif __cplusplus
+#if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
+#define DAXA_UNIFORM_BUFFER_ALIGNMENT 64
+#endif // #if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
 
+/// @brief The c++ equivalent of a constant buffer in a file is simply a struct.
+#define DAXA_DECL_UNIFORM_BUFFER(SLOT) typedef struct alignas(DAXA_UNIFORM_BUFFER_ALIGNMENT)
+/// @brief Buffer ptr enable is ignored in c++.
+#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
+#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
+/// @brief Buffer ptr types map to the buffer device address type in daxa.
+#define daxa_RWBufferPtr(x) daxa_BufferDeviceAddress
+/// @brief Buffer ptr types map to the buffer device address type in daxa.
+#define daxa_BufferPtr(x) daxa_BufferDeviceAddress
+
+#elif defined(__cplusplus)
 #include <daxa/daxa.hpp>
 
 #if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
@@ -100,22 +120,5 @@
 using namespace daxa::types;
 #endif
 
-#else // c
-
-#include <daxa/c/daxa.h>
-
-#if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
-#define DAXA_UNIFORM_BUFFER_ALIGNMENT 64
-#endif // #if !defined(DAXA_UNIFORM_BUFFER_ALIGNMENT)
-
-/// @brief The c++ equivalent of a constant buffer in a file is simply a struct.
-#define DAXA_DECL_UNIFORM_BUFFER(SLOT) typedef struct alignas(DAXA_UNIFORM_BUFFER_ALIGNMENT)
-/// @brief Buffer ptr enable is ignored in c++.
-#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
-#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
-/// @brief Buffer ptr types map to the buffer device address type in daxa.
-#define daxa_RWBufferPtr(x) daxa_BufferDeviceAddress
-/// @brief Buffer ptr types map to the buffer device address type in daxa.
-#define daxa_BufferPtr(x) daxa_BufferDeviceAddress
-
+#endif
 #endif

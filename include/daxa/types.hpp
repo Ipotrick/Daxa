@@ -137,7 +137,6 @@ namespace daxa
 
     inline namespace types
     {
-
         using b32vec2 = detail::GenericVector<b32, 2>;
         using b32vec3 = detail::GenericVector<b32, 3>;
         using b32vec4 = detail::GenericVector<b32, 4>;
@@ -305,14 +304,15 @@ namespace daxa
                 m_data[i] = in_data[i];
             }
         }
-        template<usize IN_SIZE>
-        requires (IN_SIZE <= CAPACITY)
-        FixedList(std::array<T,IN_SIZE> const & in)
+        template <usize IN_SIZE>
+            requires(IN_SIZE <= CAPACITY)
+        FixedList(std::array<T, IN_SIZE> const & in)
         {
             for (u32 i = 0; i < static_cast<u32>(IN_SIZE); ++i)
             {
                 m_data[i] = in[i];
             }
+            m_size = IN_SIZE;
         }
         auto at(FixedListSizeT i) -> T &
         {
@@ -341,13 +341,12 @@ namespace daxa
         void push_back(T v)
         {
             DAXA_DBG_ASSERT_TRUE_M(m_size < CAPACITY, "EXCEEDED CAPACITY");
-            this->m_data[this->size++] = v;
+            this->m_data[this->m_size++] = v;
         }
         void pop_back()
         {
             DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "ALREADY EMPTY");
-            this->m_data[this->m_size - 1].~T();
-            this->m_size -= 1;
+            this->m_data[this->m_size--].~T();
         }
         auto back() -> T &
         {

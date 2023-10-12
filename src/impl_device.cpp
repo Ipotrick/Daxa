@@ -1608,7 +1608,7 @@ void daxa_ImplDevice::cleanup_image_view(ImageViewId id)
     ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).view_slot;
     write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
     vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
-    daxa_dvc_dec_refcnt_image(this, std::bit_cast<daxa_ImageId>(image_slot.info.image));
+    daxa_dvc_dec_refcnt_image(this, static_cast<daxa_ImageId>(image_slot.info.image));
     image_slot = {};
     gpu_shader_resource_table.image_slots.return_slot(std::bit_cast<GPUResourceId>(id));
 }

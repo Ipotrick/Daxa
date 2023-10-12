@@ -103,7 +103,6 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
     default: return "UNIMPLEMENTED";
     }
-    return "UNIMPLEMENTED";
 };
 
 void check_result(daxa_Result result, std::string const & message)
@@ -111,10 +110,11 @@ void check_result(daxa_Result result, std::string const & message)
     if (result != DAXA_RESULT_SUCCESS)
     {
         std::cerr << fmt::format(
-            "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n",
-            daxa_result_to_string(result),
-            std::bit_cast<i32>(result),
-            message) << std::endl;
+                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n",
+                         daxa_result_to_string(result),
+                         std::bit_cast<i32>(result),
+                         message)
+                  << std::endl;
         throw std::runtime_error({});
     }
 }
@@ -197,38 +197,38 @@ namespace daxa
                 r_cast<daxa_ImageInfo const *>(&info)));
     }
 
-#define _DAXA_DECL_GPU_RES_FN(Name, name)                                                      \
-    auto Device::create_##name(Name##Info const & info)->Name##Id                              \
-    {                                                                                          \
-        Name##Id id = {};                                                                      \
-        check_result(                                                                          \
-            daxa_dvc_create_##name(                                                            \
-                r_cast<daxa_Device>(this->object),                                             \
-                r_cast<daxa_##Name##Info const *>(&info),                                      \
-                r_cast<daxa_##Name##Id *>(&id)),                                               \
-            "failed to create buffer");                                                        \
-        return id;                                                                             \
-    }                                                                                          \
-    void Device::destroy_##name(Name##Id id)                                                   \
-    {                                                                                          \
-        DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id");         \
-        [[maybe_unused]] auto prev_refcnt = daxa_dvc_dec_refcnt_##name(                        \
-            r_cast<daxa_Device>(this->object),                                                 \
-            std::bit_cast<daxa_##Name##Id>(id));                                               \
-    }                                                                                          \
-    auto Device::is_id_valid(Name##Id id) const->bool                                          \
-    {                                                                                          \
-        return daxa_dvc_is_##name##_valid(                                                     \
-            rc_cast<daxa_Device>(this->object),                                                \
-            std::bit_cast<daxa_##Name##Id>(id));                                               \
-    }                                                                                          \
-    auto Device::info_##name(Name##Id id) const->Name##Info const &                            \
-    {                                                                                          \
+#define _DAXA_DECL_GPU_RES_FN(Name, name)                                              \
+    auto Device::create_##name(Name##Info const & info)->Name##Id                      \
+    {                                                                                  \
+        Name##Id id = {};                                                              \
+        check_result(                                                                  \
+            daxa_dvc_create_##name(                                                    \
+                r_cast<daxa_Device>(this->object),                                     \
+                r_cast<daxa_##Name##Info const *>(&info),                              \
+                r_cast<daxa_##Name##Id *>(&id)),                                       \
+            "failed to create buffer");                                                \
+        return id;                                                                     \
+    }                                                                                  \
+    void Device::destroy_##name(Name##Id id)                                           \
+    {                                                                                  \
         DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id"); \
-        return *r_cast<Name##Info const *>(                                                    \
-            daxa_dvc_info_##name(                                                              \
-                rc_cast<daxa_Device>(this->object),                                            \
-                std::bit_cast<daxa_##Name##Id>(id)));                                          \
+        [[maybe_unused]] auto prev_refcnt = daxa_dvc_dec_refcnt_##name(                \
+            r_cast<daxa_Device>(this->object),                                         \
+            static_cast<daxa_##Name##Id>(id));                                         \
+    }                                                                                  \
+    auto Device::is_id_valid(Name##Id id) const->bool                                  \
+    {                                                                                  \
+        return daxa_dvc_is_##name##_valid(                                             \
+            rc_cast<daxa_Device>(this->object),                                        \
+            static_cast<daxa_##Name##Id>(id));                                         \
+    }                                                                                  \
+    auto Device::info_##name(Name##Id id) const->Name##Info const &                    \
+    {                                                                                  \
+        DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id"); \
+        return *r_cast<Name##Info const *>(                                            \
+            daxa_dvc_info_##name(                                                      \
+                rc_cast<daxa_Device>(this->object),                                    \
+                static_cast<daxa_##Name##Id>(id)));                                    \
     }
 
     _DAXA_DECL_GPU_RES_FN(Buffer, buffer)
@@ -242,7 +242,7 @@ namespace daxa
         check_result(
             daxa_dvc_buffer_device_address(
                 rc_cast<daxa_Device>(this->object),
-                std::bit_cast<daxa_BufferId>(id),
+                static_cast<daxa_BufferId>(id),
                 r_cast<daxa_BufferDeviceAddress *>(&ret)),
             "buffer is not device accessable");
         return ret;
@@ -254,7 +254,7 @@ namespace daxa
         check_result(
             daxa_dvc_buffer_host_address(
                 rc_cast<daxa_Device>(this->object),
-                std::bit_cast<daxa_BufferId>(id),
+                static_cast<daxa_BufferId>(id),
                 &ret),
             "buffer is not host accessable");
         return ret;
@@ -265,7 +265,7 @@ namespace daxa
     {                                                              \
         Name ret = {};                                             \
         check_result(daxa_dvc_create_##name(                       \
-                         r_cast<daxa_Device>(this->object),                \
+                         r_cast<daxa_Device>(this->object),        \
                          r_cast<daxa_##Name##Info const *>(&info), \
                          r_cast<daxa_##Name *>(&ret)),             \
                      "failed to create " #name);                   \
@@ -285,7 +285,7 @@ namespace daxa
     {
         return *r_cast<DeviceInfo const *>(daxa_dvc_info(rc_cast<daxa_Device>(this->object)));
     }
-    
+
     void Device::wait_idle()
     {
         daxa_dvc_wait_idle(r_cast<daxa_Device>(this->object));
@@ -329,7 +329,7 @@ namespace daxa
             daxa_dvc_collect_garbage(r_cast<daxa_Device>(this->object)),
             "failed to collect garbage");
     }
-    
+
     auto Device::properties() const -> DeviceProperties const &
     {
         return *r_cast<DeviceProperties const *>(daxa_dvc_properties(rc_cast<daxa_Device>(object)));
@@ -579,7 +579,7 @@ namespace daxa
     void CommandList::name(Info const & info)       \
     {                                               \
         daxa_cmd_##name(                            \
-            r_cast<daxa_CommandList>(this->object),         \
+            r_cast<daxa_CommandList>(this->object), \
             r_cast<daxa_##Info const *>(&info));    \
     }
 
@@ -638,8 +638,8 @@ namespace daxa
     void CommandList::destroy_##name##_deferred(Name##Id id)    \
     {                                                           \
         daxa_cmd_destroy_##name##_deferred(                     \
-            r_cast<daxa_CommandList>(this->object),                     \
-            std::bit_cast<daxa_##Name##Id>(id));                \
+            r_cast<daxa_CommandList>(this->object),             \
+            static_cast<daxa_##Name##Id>(id));                  \
     }
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)

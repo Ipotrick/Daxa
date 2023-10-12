@@ -11,11 +11,11 @@ using namespace daxa;
 
 struct ImplDevice;
 
-static inline constexpr usize DEFERRED_DESTRUCTION_BUFFER_INDEX = 0;
-static inline constexpr usize DEFERRED_DESTRUCTION_IMAGE_INDEX = 1;
-static inline constexpr usize DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX = 2;
-static inline constexpr usize DEFERRED_DESTRUCTION_SAMPLER_INDEX = 3;
-static inline constexpr usize DEFERRED_DESTRUCTION_TIMELINE_QUERY_POOL_INDEX = 4;
+static inline constexpr u8 DEFERRED_DESTRUCTION_BUFFER_INDEX = 0;
+static inline constexpr u8 DEFERRED_DESTRUCTION_IMAGE_INDEX = 1;
+static inline constexpr u8 DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX = 2;
+static inline constexpr u8 DEFERRED_DESTRUCTION_SAMPLER_INDEX = 3;
+static inline constexpr u8 DEFERRED_DESTRUCTION_TIMELINE_QUERY_POOL_INDEX = 4;
 // TODO: maybe reintroduce this in some fashion?
 // static inline constexpr usize DEFERRED_DESTRUCTION_COUNT_MAX = 32;
 

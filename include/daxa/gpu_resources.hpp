@@ -42,10 +42,12 @@ namespace daxa
     {
         struct BufferId : public GPUResourceId
         {
+            operator daxa_BufferId() const { return std::bit_cast<daxa_BufferId>(*this); }
         };
 
         struct ImageViewId : public GPUResourceId
         {
+            operator daxa_ImageViewId() const { return std::bit_cast<daxa_ImageViewId>(*this); }
         };
 
         template <ImageViewType VIEW_TYPE>
@@ -56,11 +58,13 @@ namespace daxa
 
         struct ImageId : public GPUResourceId
         {
+            operator daxa_ImageId() const { return std::bit_cast<daxa_ImageId>(*this); }
             auto default_view() const -> ImageViewId;
         };
 
         struct SamplerId : public GPUResourceId
         {
+            operator daxa_SamplerId() const { return std::bit_cast<daxa_SamplerId>(*this); }
         };
     } // namespace types
 
