@@ -198,6 +198,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
             vkDestroyBuffer(self->vk_device, ret.vk_buffer, nullptr);
             return std::bit_cast<daxa_Result>(result);
         }
+        mem_block.inc_weak_refcnt();
     }
 
     VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
@@ -279,6 +280,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
     }
 
+    ret.aspect_flags = infer_aspect_from_format(info->format);
     VkImageViewCreateInfo vk_image_view_create_info{
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = nullptr,
@@ -300,7 +302,6 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
             .layerCount = info->array_layer_count,
         },
     };
-    ret.aspect_flags = infer_aspect_from_format(info->format);
     VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(*info, &self->main_queue_family_index);
     if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(
             r_cast<AllocateInfo *>(&ret.info.allocate_info)))
@@ -366,6 +367,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
             self->gpu_shader_resource_table.image_slots.return_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
         }
+        mem_block.inc_weak_refcnt();
     }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
@@ -457,7 +459,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         ret.vk_image_view,
         std::bit_cast<ImageUsageFlags>(parent_image_slot.info.usage),
         id.index);
-    ret.strong_count = 1;
+    image_slot.strong_count = 1;
     self->inc_weak_refcnt_image(std::bit_cast<ImageId>(info->image));
     self->inc_weak_refcnt();
     image_slot.view_slot = ret;
@@ -538,17 +540,19 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 #define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                                    \
     auto daxa_dvc_inc_refcnt_##name(daxa_Device self, daxa_##Name##Id id)->uint64_t                                        \
     {                                                                                                                      \
-        auto prev = std::atomic_ref{self->slot(id).strong_count}.fetch_add(1, std::memory_order::relaxed);                 \
+        auto & slot = self->gpu_shader_resource_table.SLOT_NAME.dereference_id(std::bit_cast<GPUResourceId>(id));          \
+        auto prev = std::atomic_ref{slot.strong_count}.fetch_add(1, std::memory_order::relaxed);                           \
         printf("STRONG daxa_dvc_inc_refcnt_%s prev: %i\n", #name, i32(prev));                                              \
         return prev;                                                                                                       \
     }                                                                                                                      \
     auto daxa_dvc_dec_refcnt_##name(daxa_Device self, daxa_##Name##Id id)->uint64_t                                        \
     {                                                                                                                      \
-        u64 prev = std::atomic_ref{self->slot(id).strong_count}.fetch_sub(1, std::memory_order::relaxed);                  \
+        auto & slot = self->gpu_shader_resource_table.SLOT_NAME.dereference_id(std::bit_cast<GPUResourceId>(id));          \
+        u64 prev = std::atomic_ref{slot.strong_count}.fetch_sub(1, std::memory_order::relaxed);                            \
         printf("STRONG daxa_dvc_dec_refcnt_%s prev: %i\n", #name, i32(prev));                                              \
         if (prev == 1)                                                                                                     \
         {                                                                                                                  \
-            auto weak = std::atomic_ref{self->slot(id).weak_count}.load(std::memory_order::relaxed);                       \
+            auto weak = std::atomic_ref{slot.weak_count}.load(std::memory_order::relaxed);                                 \
             if (weak == 0)                                                                                                 \
             {                                                                                                              \
                 self->zero_ref_callback_##name(std::bit_cast<Name##Id>(id));                                               \
@@ -566,7 +570,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }                                                                                                                      \
     auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                                      \
     {                                                                                                                      \
-        return std::bit_cast<bool>(self->gpu_shader_resource_table.SLOT_NAME.is_id_valid(                                  \
+        return std::bit_cast<daxa_Bool8>(self->gpu_shader_resource_table.SLOT_NAME.is_id_valid(                            \
             std::bit_cast<daxa::GPUResourceId>(id)));                                                                      \
     }                                                                                                                      \
     auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                            \
@@ -846,13 +850,13 @@ auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
 
 auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
 {
-    printf("device inc refcnt from %u to %u\n", self->strong_count, self->strong_count+1);
+    printf("device inc refcnt from %u to %u\n", self->strong_count, self->strong_count + 1);
     return self->inc_refcnt();
 }
 
 auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
 {
-    printf("device dec refcnt from %u to %u\n", self->strong_count, self->strong_count-1);
+    printf("device dec refcnt from %u to %u\n", self->strong_count, self->strong_count - 1);
     return self->dec_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
         self->instance);
@@ -1725,27 +1729,28 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     delete self;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(name, Name, NAME, SLOT_NAME)                           \
-    auto daxa_ImplDevice::inc_weak_refcnt_##name(Name##Id id)->u64                                       \
-    {                                                                                                    \
-        auto prev = std::atomic_ref{this->slot(id).weak_count}.fetch_add(1, std::memory_order::relaxed); \
-        printf("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));                      \
-        return prev;                                                                                     \
-    }                                                                                                    \
-    auto daxa_ImplDevice::dec_weak_refcnt_##name(Name##Id id)->u64                                       \
-    {                                                                                                    \
-        auto & slot = this->slot(id);                                                                    \
-        auto prev = std::atomic_ref{slot.weak_count}.fetch_sub(1, std::memory_order::relaxed);           \
-        printf("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));                      \
-        if (prev == 1)                                                                                   \
-        {                                                                                                \
-            auto strong = std::atomic_ref{slot.strong_count}.load(std::memory_order::relaxed);           \
-            if (strong == 0)                                                                             \
-            {                                                                                            \
-                this->zero_ref_callback_##name(id);                                                      \
-            }                                                                                            \
-        }                                                                                                \
-        return prev;                                                                                     \
+#define _DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(name, Name, NAME, SLOT_NAME)                 \
+    auto daxa_ImplDevice::inc_weak_refcnt_##name(Name##Id id)->u64                             \
+    {                                                                                          \
+        auto & slot = this->gpu_shader_resource_table.SLOT_NAME.dereference_id(id);            \
+        auto prev = std::atomic_ref{slot.weak_count}.fetch_add(1, std::memory_order::relaxed); \
+        printf("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));            \
+        return prev;                                                                           \
+    }                                                                                          \
+    auto daxa_ImplDevice::dec_weak_refcnt_##name(Name##Id id)->u64                             \
+    {                                                                                          \
+        auto & slot = this->gpu_shader_resource_table.SLOT_NAME.dereference_id(id);            \
+        auto prev = std::atomic_ref{slot.weak_count}.fetch_sub(1, std::memory_order::relaxed); \
+        printf("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));            \
+        if (prev == 1)                                                                         \
+        {                                                                                      \
+            auto strong = std::atomic_ref{slot.strong_count}.load(std::memory_order::relaxed); \
+            if (strong == 0)                                                                   \
+            {                                                                                  \
+                this->zero_ref_callback_##name(id);                                            \
+            }                                                                                  \
+        }                                                                                      \
+        return prev;                                                                           \
     }
 
 _DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots)

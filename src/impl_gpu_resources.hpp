@@ -47,8 +47,8 @@ namespace daxa
 
     struct ImplImageViewSlot
     {
-        u64 strong_count = {};
-        u64 weak_count = {};
+        // u64 strong_count = {};   // Uses counter in ImageSlot
+        // u64 weak_count = {};     // Uses counter in ImageSlot
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_ImageViewInfo info = {};
         std::string info_name = {};
@@ -158,6 +158,8 @@ namespace daxa
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
+
+            printf("returning new slot id=(%i,%i)\n", index, version);
             return {GPUResourceId{.index = index, .version = version}, pages[page]->at(offset).first};
 #if defined(__GNUG__)
 #pragma GCC diagnostic pop
@@ -191,11 +193,12 @@ namespace daxa
                 return false;
             }
             u8 version = pages[page]->at(offset).second;
+            auto const & slot = pages[page]->at(offset).first;
             // strong_count == weak_count == 0 => zombie or unused slot.
             if (
                 !(version == id.version) ||
-                ((pages[page]->at(offset).first.strong_count == 0) &&
-                 (pages[page]->at(offset).first.weak_count == 0)))
+                ((slot.strong_count == 0) &&
+                 (slot.weak_count == 0)))
             {
                 return false;
             }
