@@ -67,9 +67,10 @@ struct App : AppWindow<App>
     std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
         .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
         .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
-        .color_attachments = {{
+        .color_attachments = std::vector{daxa::RenderAttachment{
             .format = swapchain.get_format(),
-            .blend = {
+            .blend = daxa::BlendInfo{
+                // TODO(capi): was this removed?
                 // .blend_enable = 1u,
                 .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA,
                 .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA,
@@ -192,7 +193,7 @@ struct App : AppWindow<App>
         };
         auto add_int_rect = [&](auto xi, auto yi, auto sx, auto sy, f32 scl, daxa_f32vec4 col)
         {
-            daxa_f32vec2 const p0 = daxa_f32vec2{static_cast<f32>(xi), static_cast<f32>(yi)} + scl * 0.5f;
+            daxa_f32vec2 const p0 = daxa_f32vec2{static_cast<f32>(xi) + scl * 0.5f, static_cast<f32>(yi) + scl * 0.5f};
             daxa_f32vec2 const p1 = daxa_f32vec2{p0.x + static_cast<f32>(sx) - scl, p0.y + static_cast<f32>(sy) - scl};
             add_rect(buffer_ptr, view_transform(p0), view_transform(p1), col);
         };
@@ -228,9 +229,9 @@ struct App : AppWindow<App>
         ui_update();
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
             std::cout << "Failed to reload " << reload_err->message << '\n';
-        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
             std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();
@@ -273,7 +274,7 @@ struct App : AppWindow<App>
         });
 
         cmd_list.begin_renderpass({
-            .color_attachments = {{.image_view = swapchain_image.default_view(), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.5f, 0.5f, 0.5f, 1.0f}}},
+            .color_attachments = std::array{daxa::RenderAttachmentInfo{.image_view = swapchain_image.default_view(), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.5f, 0.5f, 0.5f, 1.0f}}},
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         cmd_list.set_pipeline(*raster_pipeline);
@@ -294,15 +295,16 @@ struct App : AppWindow<App>
 
         cmd_list.complete();
 
+        // TODO(capi): How to make this syntax good?
+        auto pair = std::pair{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()};
         device.submit_commands({
-            .command_lists = {std::move(cmd_list)},
-            .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
-            .signal_binary_semaphores = {swapchain.get_present_semaphore()},
-            .signal_timeline_semaphores = {
-                {swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
+            .command_lists = {&cmd_list, 1},
+            .wait_binary_semaphores = {&swapchain.get_acquire_semaphore(), 1},
+            .signal_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
+            .signal_timeline_semaphores = {&pair, 1},
         });
         device.present_frame({
-            .wait_binary_semaphores = {swapchain.get_present_semaphore()},
+            .wait_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
             .swapchain = swapchain,
         });
     }

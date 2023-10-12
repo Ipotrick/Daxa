@@ -129,7 +129,7 @@ struct App : AppWindow<App>
         });
         cmd_list.complete();
         device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = std::span{&cmd_list, 1},
         });
     }
 
@@ -207,8 +207,8 @@ struct App : AppWindow<App>
             auto cmd_list = ti.get_command_list();
             cmd_list.set_pipeline(*draw_pipeline);
             cmd_list.begin_renderpass({
-                .color_attachments = {
-                    {
+                .color_attachments = std::array{
+                    daxa::RenderAttachmentInfo{
                         .image_view = uses.render_image.view(),
                         .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
@@ -274,9 +274,9 @@ struct App : AppWindow<App>
         prev_time = now;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
             std::cout << "Failed to reload " << reload_err->message << '\n';
-        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
             std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();

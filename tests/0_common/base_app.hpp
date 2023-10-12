@@ -12,9 +12,6 @@ using namespace std::chrono_literals;
 #include <daxa/utils/imgui.hpp>
 #include <imgui_impl_glfw.h>
 
-#include <daxa/utils/math_operators.hpp>
-using namespace daxa::math_operators;
-
 using Clock = std::chrono::high_resolution_clock;
 
 #if !defined(APPNAME)
