@@ -22,5 +22,7 @@ namespace daxa
 
         ImplImGuiRenderer(ImGuiRendererInfo a_info);
         ~ImplImGuiRenderer();
+
+        static void zero_ref_callback(ImplHandle const *);
     };
 } // namespace daxa

@@ -68,16 +68,14 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
 
 auto ImplHandle::inc_refcnt() const -> u64
 {
-    printf("  inc strong refcnt\n");
     auto& mut_strong_ref = *rc_cast<u64*>(&this->strong_count);
     return std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64
 {
-    printf("  dec strong refcnt\n");
     auto& mut_strong_ref = *rc_cast<u64*>(&this->strong_count);
-    auto prev = std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
+    auto prev = std::atomic_ref{mut_strong_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {
         auto weak = this->get_weak_refcnt();
@@ -98,14 +96,16 @@ auto ImplHandle::get_refcnt() const -> u64
     return std::atomic_ref{this->strong_count}.load(std::memory_order::relaxed);
 }
 
-auto ImplHandle::inc_weak_refcnt() const -> u64
+auto ImplHandle::Minc_weak_refcnt(char const * callsite) const -> u64
 {
+    printf("called \"inc_weak_refcnt\" in \"%s\"\n", callsite);
     auto& mut_weak_ref = *rc_cast<u64*>(&this->weak_count);
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance) const -> u64
+auto ImplHandle::Mdec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance,char const * callsite) const -> u64
 {
+    printf("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
     auto& mut_weak_ref = *rc_cast<u64*>(&this->weak_count);
     auto prev = std::atomic_ref{mut_weak_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)

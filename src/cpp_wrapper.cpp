@@ -153,11 +153,13 @@ namespace daxa
 
     auto Instance::inc_refcnt(ImplHandle const * object) -> u64
     {
+        printf("instance inc refcnt\n");
         return daxa_instance_inc_refcnt(rc_cast<daxa_Instance>(object));
     }
 
     auto Instance::dec_refcnt(ImplHandle const * object) -> u64
     {
+        printf("instance dec refcnt\n");
         return daxa_instance_dec_refcnt(rc_cast<daxa_Instance>(object));
     }
 
@@ -646,6 +648,11 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_renderpass, RenderPassBeginInfo)
+
+    void CommandList::end_renderpass()
+    {
+        daxa_cmd_end_renderpass(r_cast<daxa_CommandList>(this->object));
+    }
 
     void CommandList::set_viewport(ViewportInfo const & info)
     {

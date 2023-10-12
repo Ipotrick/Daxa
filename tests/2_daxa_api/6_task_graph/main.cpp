@@ -13,6 +13,8 @@ namespace tests
     void simplest()
     {
         AppContext const app = {};
+        auto d = app.device;
+        struct S { daxa::Device d; } s = { d };
         auto task_graph = daxa::TaskGraph({
             .device = app.device,
             .name = APPNAME_PREFIX("task_graph (simplest)"),
@@ -474,7 +476,7 @@ namespace tests
     }
 } // namespace tests
 
-auto main() -> int
+auto main() -> i32
 {
     tests::simplest();
     tests::execution();

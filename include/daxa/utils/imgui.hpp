@@ -36,7 +36,6 @@ namespace daxa
         ImGuiRenderer() = default;
 
         ImGuiRenderer(ImGuiRendererInfo const & info);
-        ~ImGuiRenderer();
 
         static auto create_image_context(ImGuiImageContext const & context) -> ImTextureID;
 

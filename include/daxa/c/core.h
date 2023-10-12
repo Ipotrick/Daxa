@@ -57,16 +57,11 @@ typedef struct
 } daxa_SamplerId;
 
 #define _DAXA_DECL_VEC2_TYPE(SCALAR_TYPE) \
-    typedef union                         \
+    typedef struct                        \
     {                                     \
-        struct                            \
-        {                                 \
-            SCALAR_TYPE x;                \
-            SCALAR_TYPE y;                \
-        };                                \
-        SCALAR_TYPE data[2];              \
+        SCALAR_TYPE x;                    \
+        SCALAR_TYPE y;                    \
     }
-
 #define daxa_i32 int32_t
 #define daxa_u32 uint32_t
 #define daxa_i64 int64_t
@@ -92,15 +87,11 @@ _DAXA_DECL_VEC2_TYPE(daxa_i32)
 daxa_i32vec2;
 
 #define _DAXA_DECL_VEC3_TYPE(SCALAR_TYPE) \
-    typedef union                         \
+    typedef struct                        \
     {                                     \
-        struct                            \
-        {                                 \
-            SCALAR_TYPE x;                \
-            SCALAR_TYPE y;                \
-            SCALAR_TYPE z;                \
-        };                                \
-        SCALAR_TYPE data[3];              \
+        SCALAR_TYPE x;                    \
+        SCALAR_TYPE y;                    \
+        SCALAR_TYPE z;                    \
     }
 
 _DAXA_DECL_VEC3_TYPE(daxa_f32)
@@ -113,16 +104,12 @@ _DAXA_DECL_VEC3_TYPE(daxa_i32)
 daxa_i32vec3;
 
 #define _DAXA_DECL_VEC4_TYPE(SCALAR_TYPE) \
-    typedef union                         \
+    typedef struct                        \
     {                                     \
-        struct                            \
-        {                                 \
-            SCALAR_TYPE x;                \
-            SCALAR_TYPE y;                \
-            SCALAR_TYPE z;                \
-            SCALAR_TYPE w;                \
-        };                                \
-        SCALAR_TYPE data[4];              \
+        SCALAR_TYPE x;                    \
+        SCALAR_TYPE y;                    \
+        SCALAR_TYPE z;                    \
+        SCALAR_TYPE w;                    \
     }
 _DAXA_DECL_VEC4_TYPE(daxa_f32)
 daxa_f32vec4;

@@ -431,12 +431,13 @@ namespace daxa
 
     void ImplPersistentTaskBuffer::zero_ref_callback(ImplHandle const * handle)
     {
-        delete handle;
+        auto self = r_cast<ImplPersistentTaskBuffer const*>(handle);
+        delete self;
     }
 
     auto TaskBuffer::view() const -> TaskBufferView
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer*>(this->object);
+        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
         return TaskBufferView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
     }
 
@@ -447,7 +448,7 @@ namespace daxa
 
     auto TaskBuffer::info() const -> TaskBufferInfo const &
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer*>(this->object);
+        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
         return impl.info;
     }
 
@@ -462,7 +463,7 @@ namespace daxa
 
     void TaskBuffer::set_buffers(TrackedBuffers const & buffers)
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer*>(this->object);
+        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
         impl.actual_buffers.clear();
         impl.actual_buffers.insert(impl.actual_buffers.end(), buffers.buffers.begin(), buffers.buffers.end());
         impl.latest_access = buffers.latest_access;
@@ -470,8 +471,8 @@ namespace daxa
 
     void TaskBuffer::swap_buffers(TaskBuffer & other)
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer*>(this->object);
-        auto & impl_other = *r_cast<ImplPersistentTaskBuffer*>(other.object);
+        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
+        auto & impl_other = *r_cast<ImplPersistentTaskBuffer *>(other.object);
         std::swap(impl.actual_buffers, impl_other.actual_buffers);
         std::swap(impl.latest_access, impl_other.latest_access);
     }
@@ -507,7 +508,8 @@ namespace daxa
 
     void ImplPersistentTaskImage::zero_ref_callback(ImplHandle const * handle)
     {
-        delete handle;
+        auto self = r_cast<ImplPersistentTaskImage const*>(handle);
+        delete self;
     }
 
     TaskImage::operator TaskImageView() const
@@ -517,13 +519,13 @@ namespace daxa
 
     auto TaskImage::view() const -> TaskImageView
     {
-        auto & impl = *r_cast<ImplPersistentTaskImage*>(this->object);
+        auto & impl = *r_cast<ImplPersistentTaskImage *>(this->object);
         return TaskImageView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
     }
 
     auto TaskImage::info() const -> TaskImageInfo const &
     {
-        auto & impl = *r_cast<ImplPersistentTaskImage*>(this->object);
+        auto & impl = *r_cast<ImplPersistentTaskImage *>(this->object);
         return impl.info;
     }
 
@@ -538,7 +540,7 @@ namespace daxa
 
     void TaskImage::set_images(TrackedImages const & images)
     {
-        auto & impl = *r_cast<ImplPersistentTaskImage*>(this->object);
+        auto & impl = *r_cast<ImplPersistentTaskImage *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.info.swapchain_image || (images.images.size() == 1), "swapchain task image can only have at most one runtime image");
         impl.actual_images.clear();
         impl.actual_images.insert(impl.actual_images.end(), images.images.begin(), images.images.end());
@@ -549,12 +551,24 @@ namespace daxa
 
     void TaskImage::swap_images(TaskImage & other)
     {
-        auto & impl = *r_cast<ImplPersistentTaskImage*>(this->object);
-        auto & impl_other = *r_cast<ImplPersistentTaskImage*>(other.object);
+        auto & impl = *r_cast<ImplPersistentTaskImage *>(this->object);
+        auto & impl_other = *r_cast<ImplPersistentTaskImage *>(other.object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.info.swapchain_image || (impl_other.actual_images.size() <= 1), "swapchain task image can only have at most one runtime image");
         std::swap(impl.actual_images, impl_other.actual_images);
         std::swap(impl.latest_slice_states, impl_other.latest_slice_states);
         std::swap(impl.waited_on_aquire, impl_other.waited_on_aquire);
+    }
+
+    auto TaskImage::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->inc_refcnt();
+    }
+
+    auto TaskImage::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->dec_refcnt(
+            ImplPersistentTaskImage::zero_ref_callback,
+            nullptr);
     }
 
     TaskGraph::TaskGraph(TaskGraphInfo const & info)
@@ -1771,7 +1785,7 @@ namespace daxa
 
     void TaskGraph::submit(TaskSubmitInfo const & info)
     {
-        auto & impl = *r_cast<ImplTaskGraph*>(this->object);
+        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
 
         for (auto & permutation : impl.record_active_permutations)
@@ -1794,7 +1808,7 @@ namespace daxa
 
     void TaskGraph::present(TaskPresentInfo const & info)
     {
-        auto & impl = *r_cast<ImplTaskGraph*>(this->object);
+        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
         DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "can only present, when a swapchain was provided in creation");
 
@@ -1897,6 +1911,10 @@ namespace daxa
     void ImplTaskGraph::allocate_transient_resources()
     {
         // figure out transient resource sizes
+        if (global_image_infos.empty() && global_buffer_infos.empty())
+        {
+            return;
+        }
         usize max_alignment_requirement = 0;
         for (auto & global_image : global_image_infos)
         {
@@ -2154,7 +2172,7 @@ namespace daxa
 
     void TaskGraph::complete(TaskCompleteInfo const &)
     {
-        auto & impl = *r_cast<ImplTaskGraph*>(this->object);
+        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "task graphs can only be completed once");
         impl.compiled = true;
 
@@ -2216,7 +2234,7 @@ namespace daxa
 
     auto TaskGraph::get_command_lists() -> std::vector<CommandList>
     {
-        auto & impl = *r_cast<ImplTaskGraph*>(this->object);
+        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "Can only get command lists of a finished task graph");
         DAXA_DBG_ASSERT_TRUE_M(!impl.executed_once, "Can only get command lists of a task graph that has been executed");
         auto command_lists = std::move(impl.left_over_command_lists);
@@ -2226,7 +2244,7 @@ namespace daxa
 
     auto TaskGraph::get_debug_string() -> std::string
     {
-        auto & impl = *r_cast<ImplTaskGraph*>(this->object);
+        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.info.record_debug_information,
                                "in order to have debug string you need to set record_debug_information flag to true on task graph creation");
         DAXA_DBG_ASSERT_TRUE_M(impl.executed_once,
@@ -2238,7 +2256,7 @@ namespace daxa
 
     auto TaskGraph::get_transient_memory_size() -> daxa::usize
     {
-        auto & impl = *r_cast<ImplTaskGraph*>(this->object);
+        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         return impl.memory_block_size;
     }
 
@@ -2492,7 +2510,7 @@ namespace daxa
     ///     2.3 check if submit scope presents, present if true.
     void TaskGraph::execute(ExecutionInfo const & info)
     {
-        auto & impl = *r_cast<ImplTaskGraph*>(this->object);
+        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(info.permutation_condition_values.size() >= impl.info.permutation_condition_count, "detected invalid permutation condition count");
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "task graphs must be completed before execution");
 
@@ -3181,9 +3199,22 @@ namespace daxa
         this->debug_string_stream << out;
     }
 
+    auto TaskGraph::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->inc_refcnt();
+    }
+
+    auto TaskGraph::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->dec_refcnt(
+            ImplTaskGraph::zero_ref_callback,
+            nullptr);
+    }
+
     void ImplTaskGraph::zero_ref_callback(ImplHandle const * handle)
     {
-        delete handle;
+        auto self = r_cast<ImplTaskGraph const*>(handle);
+        delete self;
     }
 } // namespace daxa
 

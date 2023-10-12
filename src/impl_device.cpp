@@ -846,13 +846,13 @@ auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
 
 auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
 {
-    printf("device inc refcnt\n");
+    printf("device inc refcnt from %u to %u\n", self->strong_count, self->strong_count+1);
     return self->inc_refcnt();
 }
 
 auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
 {
-    printf("device dec refcnt\n");
+    printf("device dec refcnt from %u to %u\n", self->strong_count, self->strong_count-1);
     return self->dec_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
         self->instance);
@@ -1704,7 +1704,7 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
 
 void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
 {
-    printf("    daxa_ImplDevice::zero_ref_callback\n");
+    printf("daxa_ImplDevice::zero_ref_callback\n");
     auto self = rc_cast<daxa_Device>(handle);
     daxa_dvc_wait_idle(self);
     daxa_dvc_collect_garbage(self);

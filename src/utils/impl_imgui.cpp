@@ -1437,7 +1437,27 @@ namespace daxa
         this->info.device.destroy_buffer(vbuffer);
         this->info.device.destroy_buffer(ibuffer);
         this->info.device.destroy_image(font_sheet);
+    }   
+    
+    void ImplImGuiRenderer::zero_ref_callback(ImplHandle const * handle)
+    {
+        auto self = r_cast<ImplImGuiRenderer const*>(handle);
+        delete self;
     }
+
+    auto ImGuiRenderer::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->inc_refcnt();
+    }
+
+    auto ImGuiRenderer::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->dec_refcnt(
+            ImplImGuiRenderer::zero_ref_callback,
+            nullptr
+        );
+    }
+
 } // namespace daxa
 
 namespace

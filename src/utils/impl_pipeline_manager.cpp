@@ -1332,7 +1332,8 @@ namespace daxa
 
     auto ImplPipelineManager::zero_ref_callback(ImplHandle const * handle)
     {
-        delete handle;
+        auto self = r_cast<ImplPipelineManager const*>(handle);
+        delete self;
     }
 
     auto PipelineManager::inc_refcnt(ImplHandle const * object) -> u64

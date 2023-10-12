@@ -173,6 +173,7 @@ auto daxa_instance_get_vk_instance(daxa_Instance self) -> VkInstance
 
 void daxa_ImplInstance::zero_ref_callback(ImplHandle const * handle)
 {
+    printf("daxa_ImplInstance::zero_ref_callback\n");
     daxa_Instance self = rc_cast<daxa_Instance>(handle);
     vkDestroyInstance(self->vk_instance, nullptr);
     delete self;
