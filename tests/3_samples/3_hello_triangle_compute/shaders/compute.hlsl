@@ -1,36 +1,35 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include <shared.inl>
 
 [[vk::push_constant]] const ComputePush p;
 
 // clang-format off
 [numthreads(8, 8, 1)]
-void main(u32vec3 pixel_i : SV_DispatchThreadID)
+void main(uint3 pixel_i : SV_DispatchThreadID)
 // clang-format on
 {
-    RWTexture2D<f32vec4> render_image = daxa::get_RWTexture2D<f32vec4>(p.image);
+    RWTexture2D<float4> render_image = daxa::get_RWTexture2D<float4>(p.image);
     if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
         return;
 
-    f32vec2 uv = f32vec2(pixel_i.xy) / f32vec2(p.frame_dim.xy);
-    uv = (uv - 0.5) * f32vec2(f32(p.frame_dim.x) / f32(p.frame_dim.y), 1);
+    float2 uv = float2(pixel_i.xy) / float2(p.frame_dim.xy);
+    uv = (uv - 0.5) * float2(f32(p.frame_dim.x) / f32(p.frame_dim.y), 1);
     uv = uv * 2;
 
-    f32vec3 col = f32vec3(0, 0, 0);
+    float3 col = float3(0, 0, 0);
 
-    f32vec2 points[3] = {
-        f32vec2(-0.5, +0.5),
-        f32vec2(+0.5, +0.5),
-        f32vec2(+0.0, -0.5),
+    float2 points[3] = {
+        float2(-0.5, +0.5),
+        float2(+0.5, +0.5),
+        float2(+0.0, -0.5),
     };
 
-    f32vec3 point_colors[3] = {
-        f32vec3(1, 0, 0),
-        f32vec3(0, 1, 0),
-        f32vec3(0, 0, 1),
+    float3 point_colors[3] = {
+        float3(1, 0, 0),
+        float3(0, 1, 0),
+        float3(0, 0, 1),
     };
 
-    f32vec2 points_del[3] = {
+    float2 points_del[3] = {
         points[1] - points[0],
         points[2] - points[1],
         points[0] - points[2],
@@ -55,5 +54,5 @@ void main(u32vec3 pixel_i : SV_DispatchThreadID)
         col = lerp(col, point_colors[2], clamp((p1 - p2 + 0.5) / 1.5, 0, 1));
     }
 
-    render_image[pixel_i.xy] = f32vec4(col, 1.0);
+    render_image[pixel_i.xy] = float4(col, 1.0);
 }

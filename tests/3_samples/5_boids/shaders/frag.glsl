@@ -1,4 +1,3 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include <shared.inl>
 
 DAXA_DECL_PUSH_CONSTANT(DrawPushConstant, push)

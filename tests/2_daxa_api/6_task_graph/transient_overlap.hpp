@@ -85,7 +85,7 @@ namespace tests
     {
         cmd.set_pipeline(pipeline);
         cmd.push_constant(TestImagePush{
-            .test_image = {ti.uses[image].view()},
+            .test_image = ti.uses[image].view(),
             .size = size,
             .value = value,
         });
@@ -144,9 +144,9 @@ namespace tests
             const f32 IMAGE_A_VALUE = 1.0f;
             const f32 IMAGE_B_VALUE = 2.0f;
             const f32 IMAGE_C_VALUE = 3.0f;
-            const u32vec3 IMAGE_A_SIZE = {2, 2, 1};
-            const u32vec3 IMAGE_B_SIZE = {2, 2, 1};
-            const u32vec3 IMAGE_C_SIZE = {2, 2, 1};
+            const daxa_u32vec3 IMAGE_A_SIZE = {2, 2, 1};
+            const daxa_u32vec3 IMAGE_B_SIZE = {2, 2, 1};
+            const daxa_u32vec3 IMAGE_C_SIZE = {2, 2, 1};
 
             auto task_graph = daxa::TaskGraph({
                 .device = device,
@@ -288,9 +288,9 @@ namespace tests
             const f32 IMAGE_A_VALUE = 1.0f;
             const f32 IMAGE_B_VALUE = 2.0f;
             const f32 IMAGE_BASE_VALUE = 2.0f;
-            const u32vec3 IMAGE_A_SIZE = {128, 128, 1};
-            const u32vec3 IMAGE_B_SIZE = {256, 256, 1};
-            const u32vec3 IMAGE_BASE_SIZE = {64, 64, 1};
+            const daxa_u32vec3 IMAGE_A_SIZE = {128, 128, 1};
+            const daxa_u32vec3 IMAGE_B_SIZE = {256, 256, 1};
+            const daxa_u32vec3 IMAGE_BASE_SIZE = {64, 64, 1};
 
             auto task_graph = daxa::TaskGraph({
                 .device = device,

@@ -17,7 +17,7 @@ namespace tests
         shader_aligned_vec3.x = 0.0f;
         shader_aligned_vec3.y = 1.0f;
         shader_aligned_vec3.z = 4.0f;
-        shader_aligned_vec3 = daxa::types::f32vec3{0.0f, 1.0f, 4.0f};
+        shader_aligned_vec3 = daxa_f32vec3{0.0f, 1.0f, 4.0f};
         shader_aligned_vec3 = daxa_f32vec3{0.0f, 1.0f, 4.0f};
         std::cout << "content of f32vec3: (" << shader_aligned_vec3.x << "," << shader_aligned_vec3.y << "," << shader_aligned_vec3.z << ")" << std::endl;
     }
@@ -253,8 +253,8 @@ namespace tests
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
                         .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()),
-                        .my_float_image = {ti.uses[f32_image].image()},
-                        .my_uint_image = {ti.uses[u32_image].image()},
+                        .my_float_image = ti.uses[f32_image].view(),
+                        .my_uint_image = ti.uses[u32_image].view(),
                         .my_sampler = sampler,
                     },
                     .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),

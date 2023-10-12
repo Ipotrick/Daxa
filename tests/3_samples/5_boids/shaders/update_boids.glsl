@@ -1,17 +1,16 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include <shared.inl>
 
 DAXA_DECL_PUSH_CONSTANT(UpdateBoidsPushConstant, push)
 
 // Based in pseudo code from: https://people.ece.cornell.edu/land/courses/ece4760/labs/s2021/Boids/Boids.html
-void update_boid(inout Boid boid, in const Boid old_boid, in uint boid_index, BufferPtr(Boids) old_boids_buffer)
+void update_boid(inout Boid boid, in const Boid old_boid, in uint boid_index, daxa_BufferPtr(Boids) old_boids_buffer)
 {
     boid = old_boid;
 
-    vec2 vis_other_pos_average = vec2(0,0);
-    vec2 vis_other_vel_average = vec2(0,0);
+    vec2 vis_other_pos_average = vec2(0, 0);
+    vec2 vis_other_vel_average = vec2(0, 0);
     float vis_other_count = 0;
-    vec2 vis_other_super_close_delta = vec2(0,0);
+    vec2 vis_other_super_close_delta = vec2(0, 0);
     for (uint other_i = 0; other_i < MAX_BOIDS; ++other_i)
     {
         if (other_i == boid_index)
@@ -20,7 +19,7 @@ void update_boid(inout Boid boid, in const Boid old_boid, in uint boid_index, Bu
         }
         Boid other = deref(old_boids_buffer).boids[other_i];
         const vec2 pos_delta = boid.position - other.position;
-        const float squared_distance = dot(pos_delta,pos_delta);
+        float const squared_distance = dot(pos_delta, pos_delta);
         if (squared_distance < BOID_PROTECTED_RANGE_SQUARED)
         {
             vis_other_super_close_delta += boid.position - other.position;
@@ -55,7 +54,7 @@ void update_boid(inout Boid boid, in const Boid old_boid, in uint boid_index, Bu
     {
         boid.speed.y += BOID_WALL_REPULSION;
     }
-    const float speed = max(0.01, length(boid.speed));
+    float const speed = max(0.01, length(boid.speed));
     if (speed < BOID_MIN_SPEED)
     {
         boid.speed = boid.speed / speed * BOID_MIN_SPEED;

@@ -174,34 +174,3 @@ namespace daxa
 #define daxa_Texture2DMSArray(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2DMSArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
 #define daxa_TextureCube(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCube##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
 #define daxa_TextureCubeArray(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCubeArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-
-#if DAXA_ENABLE_SHADER_NO_NAMESPACE
-#define f32 daxa_f32
-#define f32vec1 daxa_f32vec1
-#define f32vec2 daxa_f32vec2
-#define f32mat2x2 daxa_f32mat2x2
-#define f32mat2x3 daxa_f32mat2x3
-#define f32mat2x4 daxa_f32mat2x4
-#define f32vec3 daxa_f32vec3
-#define f32mat3x2 daxa_f32mat3x2
-#define f32mat3x3 daxa_f32mat3x3
-#define f32mat3x4 daxa_f32mat3x4
-#define f32vec4 daxa_f32vec4
-#define f32mat4x2 daxa_f32mat4x2
-#define f32mat4x3 daxa_f32mat4x3
-#define f32mat4x4 daxa_f32mat4x4
-#define i32 daxa_i32
-#define i32vec1 daxa_i32vec1
-#define i32vec2 daxa_i32vec2
-#define i32vec3 daxa_i32vec3
-#define i32vec4 daxa_i32vec4
-#define u32 daxa_u32
-#define u32vec1 daxa_u32vec1
-#define u32vec2 daxa_u32vec2
-#define u32vec3 daxa_u32vec3
-#define u32vec4 daxa_u32vec4
-#define i64 daxa_i64
-#define i64vec1 daxa_i64vec1
-#define u64 daxa_u64
-#define u64vec1 daxa_u64
-#endif
