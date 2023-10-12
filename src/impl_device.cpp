@@ -257,6 +257,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     ret.info = *info;
     ret.info_name = {ret.info.name.data, ret.info.name.size};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
+    ret.view_slot.info.name = {ret.info_name.data(), ret.info_name.size()};
     ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
         .type = static_cast<ImageViewType>(info->dimensions - 1),
         .format = std::bit_cast<Format>(ret.info.format),
@@ -398,9 +399,8 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         std::bit_cast<ImageUsageFlags>(ret.info.usage),
         id.index);
 
-    image_slot_variant = ret;
-
     ret.strong_count = 1;
+    image_slot_variant = ret;
     self->inc_weak_refcnt();
     *out_id = std::bit_cast<daxa_ImageId>(id);
     return DAXA_RESULT_SUCCESS;
@@ -412,13 +412,14 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
 
     /// --- End Validation ---
 
+    ImplImageSlot const & parent_image_slot = self->slot(info->image);
     auto [id, image_slot] = self->gpu_shader_resource_table.image_slots.new_slot();
     image_slot = {};
-    ImplImageSlot const & parent_image_slot = self->slot(info->image);
-    ImplImageViewSlot ret = {};
+    auto & ret = image_slot.view_slot;
     ret.info = *info;
-    ret.info_name = {ret.info.name.data, ret.info.name.size};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
+    image_slot.info_name = {image_slot.info.name.data, image_slot.info.name.size};
+    image_slot.info.name = {image_slot.info_name.data(), image_slot.info_name.size()};
+    ret.info.name = {image_slot.info_name.data(), image_slot.info_name.size()};
     daxa_ImageMipArraySlice slice = self->validate_image_slice(ret.info.slice, ret.info.image);
     ret.info.slice = slice;
     VkImageViewCreateInfo const vk_image_view_create_info{
@@ -449,7 +450,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = image_slot.info_name.c_str(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &name_info);
     }
@@ -459,10 +460,9 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         ret.vk_image_view,
         std::bit_cast<ImageUsageFlags>(parent_image_slot.info.usage),
         id.index);
-    image_slot.strong_count = 1;
     self->inc_weak_refcnt_image(std::bit_cast<ImageId>(info->image));
     self->inc_weak_refcnt();
-    image_slot.view_slot = ret;
+    image_slot.strong_count = 1;
     *out_id = std::bit_cast<daxa_ImageViewId>(id);
     return DAXA_RESULT_SUCCESS;
 }
@@ -1779,7 +1779,7 @@ void daxa_ImplDevice::zero_ref_callback_buffer(BufferId id)
 
 void daxa_ImplDevice::zero_ref_callback_image(ImageId id)
 {
-    printf("daxa_ImplDevice::zero_ref_callback_image\n");
+    printf("daxa_ImplDevice::zero_ref_callback_image (%i,%i)\n", id.index, id.version);
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     {
         std::unique_lock const lock{this->main_queue_zombies_mtx};

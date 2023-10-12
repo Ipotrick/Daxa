@@ -1275,7 +1275,7 @@ namespace daxa
 
     struct AccessTypeFlagsProperties
     {
-        using Data = u32;
+        using Data = u64;
     };
     using AccessTypeFlags = Flags<AccessTypeFlagsProperties>;
     struct AccessTypeFlagBits

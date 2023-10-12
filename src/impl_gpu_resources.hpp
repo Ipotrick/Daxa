@@ -51,7 +51,6 @@ namespace daxa
         // u64 weak_count = {};     // Uses counter in ImageSlot
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_ImageViewInfo info = {};
-        std::string info_name = {};
         VkImageView vk_image_view = {};
     };
 
