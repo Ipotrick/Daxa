@@ -184,26 +184,29 @@ namespace tests
             .name = "task graph tested image",
         });
 
-        auto task_graph = daxa::TaskGraph({
-            .device = app.device,
-            .record_debug_information = true,
-            .name = APPNAME_PREFIX("initial layout image"),
-        });
-        // CREATE IMAGE
-        task_graph.use_persistent_image(task_image);
-        task_graph.add_task({
-            .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("read array layer 2"),
-        });
-        task_graph.add_task({
-            .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 0, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("write array layer 1"),
-        });
-        task_graph.complete({});
-        task_graph.execute({});
-        std::cout << task_graph.get_debug_string() << std::endl;
+        // TG MUST die before image, as it holds image views to the image that must die before the image.
+        {
+            auto task_graph = daxa::TaskGraph({
+                .device = app.device,
+                .record_debug_information = true,
+                .name = APPNAME_PREFIX("initial layout image"),
+            });
+            // CREATE IMAGE
+            task_graph.use_persistent_image(task_image);
+            task_graph.add_task({
+                .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
+                .task = [](daxa::TaskInterface const &) {},
+                .name = APPNAME_PREFIX("read array layer 2"),
+            });
+            task_graph.add_task({
+                .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 0, .layer_count = 1})}},
+                .task = [](daxa::TaskInterface const &) {},
+                .name = APPNAME_PREFIX("write array layer 1"),
+            });
+            task_graph.complete({});
+            task_graph.execute({});
+            std::cout << task_graph.get_debug_string() << std::endl;
+        }
         app.device.destroy_image(image);
     }
 
@@ -241,40 +244,43 @@ namespace tests
             .name = "task graph tested image",
         });
 
-        auto task_graph = daxa::TaskGraph({
-            .device = app.device,
-            .record_debug_information = true,
-            .name = APPNAME_PREFIX("tracked slice barrier collapsing"),
-        });
+        // TG MUST die before image, as it holds image views to the image that must die before the image.
+        {
+            auto task_graph = daxa::TaskGraph({
+                .device = app.device,
+                .record_debug_information = true,
+                .name = APPNAME_PREFIX("tracked slice barrier collapsing"),
+            });
 
-        task_image.set_images({.images = {&image, 1}, .latest_slice_states = {init_access.begin(), init_access.end()}});
+            task_image.set_images({.images = {&image, 1}, .latest_slice_states = {init_access.begin(), init_access.end()}});
 
-        task_graph.use_persistent_image(task_image);
+            task_graph.use_persistent_image(task_image);
 
-        task_graph.add_task({
-            .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("read image layer 2"),
-        });
-        task_graph.add_task({
-            .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 3, .layer_count = 1})}},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("write image layer 4"),
-        });
-        task_graph.add_task({
-            .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("write image layer 1 - 4"),
-        });
-        task_graph.add_task({
-            .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("read image layer 1 - 4"),
-        });
+            task_graph.add_task({
+                .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 1, .layer_count = 1})}},
+                .task = [](daxa::TaskInterface const &) {},
+                .name = APPNAME_PREFIX("read image layer 2"),
+            });
+            task_graph.add_task({
+                .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 3, .layer_count = 1})}},
+                .task = [](daxa::TaskInterface const &) {},
+                .name = APPNAME_PREFIX("write image layer 4"),
+            });
+            task_graph.add_task({
+                .uses = {ImageComputeShaderStorageWriteOnly<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
+                .task = [](daxa::TaskInterface const &) {},
+                .name = APPNAME_PREFIX("write image layer 1 - 4"),
+            });
+            task_graph.add_task({
+                .uses = {ImageComputeShaderSampled<>{task_image.view().view({.base_array_layer = 0, .layer_count = 4})}},
+                .task = [](daxa::TaskInterface const &) {},
+                .name = APPNAME_PREFIX("read image layer 1 - 4"),
+            });
 
-        task_graph.complete({});
-        task_graph.execute({});
-        std::cout << task_graph.get_debug_string() << std::endl;
+            task_graph.complete({});
+            task_graph.execute({});
+            std::cout << task_graph.get_debug_string() << std::endl;
+        }
         app.device.destroy_image(image);
     }
 

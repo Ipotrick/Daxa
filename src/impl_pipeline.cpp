@@ -9,10 +9,12 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     daxa_ImplRasterPipeline ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<RasterPipelineInfo const *>(info);
-    ret.info_name = {ret.info.name.data(), ret.info.name.size()};
+    ret.info_name = {ret.info.name.begin(), ret.info.name.end()};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
-    std::vector<VkShaderModule> vk_shader_modules{};
-    std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos{};
+    std::vector<VkShaderModule> vk_shader_modules = {};
+    // NOTE: Temporarily holds 0 terminated strings, incoming strings are data + size, not null terminated!
+    std::vector<std::unique_ptr<std::string>> entry_point_names = {};
+    std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos = {};
 
     auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> VkResult
     {
@@ -30,13 +32,14 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             return result;
         }
         vk_shader_modules.push_back(vk_shader_module);
+        entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.begin(), shader_info.entry_point.end()));
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .pNext = nullptr,
             .flags = {},
             .stage = shader_stage,
             .module = vk_shader_module,
-            .pName = ret.info_name.c_str(),
+            .pName = entry_point_names.back()->c_str(),
             .pSpecializationInfo = nullptr,
         };
         vk_pipeline_shader_stage_create_infos.push_back(vk_pipeline_shader_stage_create_info);
@@ -45,7 +48,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     };
 
 #define _DAXA_DECL_TRY_CREATE_MODULE(name, NAME)                                                                                \
-    if (ret.info.vertex_shader_info.has_value())                                                                                \
+    if (ret.info.name##_shader_info.has_value())                                                                                \
     {                                                                                                                           \
         auto result = create_shader_module(ret.info.name##_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_##NAME); \
         if (result != VK_SUCCESS)                                                                                               \

@@ -521,7 +521,7 @@ namespace daxa
                 return Result<ComputePipelineState>(spirv_result.message());
             }
         }
-        char const * entry_point = nullptr;
+        char const * entry_point = "main";
         if (a_info.shader_info.compile_options.entry_point.has_value())
         {
             entry_point = a_info.shader_info.compile_options.entry_point.value().c_str();
@@ -1088,7 +1088,6 @@ namespace daxa
         case ShaderStage::MESH: preamble += "#define DAXA_SHADER_STAGE 6\n"; break;
         }
 
-        preamble += "#define DAXA_SHADERLANG 1\n";
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_KHR_memory_scope_semantics : enable\n";
         for (auto const & shader_define : shader_info.compile_options.defines)
@@ -1218,9 +1217,6 @@ namespace daxa
             args.push_back(L"-D");
             args.push_back(wstring_buffer.back().c_str());
         }
-        args.push_back(L"-DDAXA_SHADER");
-        args.push_back(L"-DDAXA_SHADERLANG=2");
-
         args.push_back(L"-DDAXA_SHADER_STAGE_COMPUTE=0");
         args.push_back(L"-DDAXA_SHADER_STAGE_VERTEX=1");
         args.push_back(L"-DDAXA_SHADER_STAGE_TESS_CONTROL=2");

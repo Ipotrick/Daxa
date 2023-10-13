@@ -1910,16 +1910,13 @@ namespace daxa
 
     void ImplTaskGraph::allocate_transient_resources()
     {
-        // figure out transient resource sizes
-        if (global_image_infos.empty() && global_buffer_infos.empty())
-        {
-            return;
-        }
+        usize transient_resource_count = 0;
         usize max_alignment_requirement = 0;
         for (auto & global_image : global_image_infos)
         {
             if (!global_image.is_persistent())
             {
+                transient_resource_count += 1;
                 auto & transient_image = daxa::get<PermIndepTaskImageInfo::Transient>(global_image.task_image_data);
                 ImageInfo const image_info = {
                     .dimensions = transient_image.info.dimensions,
@@ -1940,6 +1937,7 @@ namespace daxa
         {
             if (!global_buffer.is_persistent())
             {
+                transient_resource_count += 1;
                 auto & transient_buffer = daxa::get<PermIndepTaskBufferInfo::Transient>(global_buffer.task_buffer_data);
                 BufferInfo const buffer_info = {
                     .size = transient_buffer.info.size,
@@ -1948,6 +1946,10 @@ namespace daxa
                 transient_buffer.memory_requirements = info.device.get_memory_requirements({buffer_info});
                 max_alignment_requirement = std::max(transient_buffer.memory_requirements.alignment, max_alignment_requirement);
             }
+        }
+        if (transient_resource_count == 0)
+        {
+            return;
         }
 
         // for each permutation figure out the max memory requirements
@@ -2861,6 +2863,24 @@ namespace daxa
 
     ImplTaskGraph::~ImplTaskGraph()
     {
+        for (auto & task : tasks)
+        {
+            for (auto & view_cache : task.image_view_cache)
+            {
+                for (auto & view : view_cache)
+                {
+                    if (info.device.is_id_valid(view))
+                    {
+                        ImageId const parent = info.device.info_image_view(view).image;
+                        bool const is_default_view = parent.default_view() == view;
+                        if (!is_default_view)
+                        {
+                            info.device.destroy_image_view(view);
+                        }
+                    }
+                }
+            }
+        }
         for (auto & permutation : permutations)
         {
             // because transient buffers are owned by the task graph, we need to destroy them
@@ -2881,24 +2901,6 @@ namespace daxa
                 if (!global_image.is_persistent() && perm_image.valid)
                 {
                     info.device.destroy_image(get_actual_images(TaskImageView{{.task_graph_index = unique_index, .index = image_info_idx}}, permutation)[0]);
-                }
-            }
-        }
-        for (auto & task : tasks)
-        {
-            for (auto & view_cache : task.image_view_cache)
-            {
-                for (auto & view : view_cache)
-                {
-                    if (info.device.is_id_valid(view))
-                    {
-                        ImageId const parent = info.device.info_image_view(view).image;
-                        bool const is_default_view = parent.default_view() == view;
-                        if (!is_default_view)
-                        {
-                            info.device.destroy_image_view(view);
-                        }
-                    }
                 }
             }
         }

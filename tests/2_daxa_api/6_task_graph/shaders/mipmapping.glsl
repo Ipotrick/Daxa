@@ -1,13 +1,12 @@
-#define DAXA_ENABLE_IMAGE_OVERLOADS_BASIC 1
 #include <shared.inl>
 
 DAXA_DECL_PUSH_CONSTANT(MipmappingComputePushConstant, push)
 
-f32 segment_distance(vec2 p, vec2 a, vec2 b)
+float segment_distance(vec2 p, vec2 a, vec2 b)
 {
     vec2 ba = b - a;
     vec2 pa = p - a;
-    f32 h = clamp(dot(pa, ba) / dot(ba, ba), 0, 1);
+    float h = clamp(dot(pa, ba) / dot(ba, ba), 0, 1);
     return length(pa - h * ba);
 }
 
@@ -28,7 +27,7 @@ void main()
 
     vec2 uv = pixel_pos * inv_render_size;
 
-    f32 dist = segment_distance(pixel_pos, prev_mouse_pos, mouse_pos);
+    float dist = segment_distance(pixel_pos, prev_mouse_pos, mouse_pos);
 
     if (dist < INPUT.paint_radius)
     {

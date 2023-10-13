@@ -432,9 +432,9 @@ void daxa_cmd_set_compute_pipeline(daxa_CommandList self, daxa_ComputePipeline p
 void daxa_cmd_set_raster_pipeline(daxa_CommandList self, daxa_RasterPipeline pipeline)
 {
     daxa_cmd_flush_barriers(self);
-    self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout);
-    vkCmdBindDescriptorSets(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
-    vkCmdBindPipeline(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
+    self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout);
+    vkCmdBindDescriptorSets(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(self->vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
 }
 
 void daxa_cmd_dispatch(daxa_CommandList self, uint32_t x, uint32_t y, uint32_t z)
