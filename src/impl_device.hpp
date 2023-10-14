@@ -80,6 +80,7 @@ struct daxa_ImplDevice final : public ImplHandle
     std::deque<std::pair<u64, EventZombie>> main_queue_split_barrier_zombies = {};
     std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
     std::deque<std::pair<u64, TimelineQueryPoolZombie>> main_queue_timeline_query_pool_zombies = {};
+    std::deque<std::pair<u64, MemoryBlockZombie>> main_queue_memory_block_zombies = {};
 
     auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice;
     auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice;

@@ -194,7 +194,10 @@ namespace daxa
     struct DeviceInfo
     {
         i32 (*selector)(DeviceProperties const & properties) = default_device_score;
-        DeviceFlags flags = DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT;
+        DeviceFlags flags =
+            DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT |
+            DeviceFlagBits::SHADER_ATOMIC64 |
+            DeviceFlagBits::IMAGE_ATOMIC64;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
@@ -272,6 +275,7 @@ namespace daxa
         void collect_garbage();
 
         auto properties() const -> DeviceProperties const &;
+
       protected:
         template <typename T>
         friend struct ManagedPtr;

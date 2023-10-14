@@ -787,6 +787,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             self->main_queue_command_list_zombies,
             [&](auto & command_list_zombie)
             {
+                vkResetCommandPool(self->vk_device, command_list_zombie.vk_cmd_pool, {});
                 self->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
             });
     }
@@ -837,6 +838,12 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
         [&](auto & timeline_query_pool_zombie)
         {
             vkDestroyQueryPool(self->vk_device, timeline_query_pool_zombie.vk_timeline_query_pool, nullptr);
+        });
+    check_and_cleanup_gpu_resources(
+        self->main_queue_memory_block_zombies,
+        [&](auto & memory_block_zombie)
+        {
+            vmaFreeMemory(self->vma_allocator, memory_block_zombie.allocation);
         });
     return DAXA_RESULT_SUCCESS;
 }

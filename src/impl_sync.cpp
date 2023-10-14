@@ -67,9 +67,15 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
     ret.info = *reinterpret_cast<TimelineSemaphoreInfo const *>(info);
     ret.info_name = {ret.info.name.data(), ret.info.name.size()};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
+    VkSemaphoreTypeCreateInfo timeline_vk_semaphore{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
+        .pNext = nullptr,
+        .semaphoreType = VK_SEMAPHORE_TYPE_TIMELINE,
+        .initialValue = info->initial_value,
+    };
     VkSemaphoreCreateInfo const vk_semaphore_create_info{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = nullptr,
+        .pNext = &timeline_vk_semaphore,
         .flags = {},
     };
     auto vk_result = vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore);

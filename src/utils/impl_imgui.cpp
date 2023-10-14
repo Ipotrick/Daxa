@@ -1282,7 +1282,7 @@ namespace daxa
             push.ibuffer_ptr = this->info.device.get_device_address(ibuffer);
 
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
-            {
+            { 
                 ImDrawList const * draws = draw_data->CmdLists[n];
                 for (i32 cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
                 {
