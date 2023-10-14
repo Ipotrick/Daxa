@@ -19,7 +19,7 @@ void update_boid(inout Boid boid, in const Boid old_boid, in uint boid_index, da
         }
         Boid other = deref(old_boids_buffer).boids[other_i];
         const vec2 pos_delta = boid.position - other.position;
-        float const squared_distance = dot(pos_delta, pos_delta);
+        const float squared_distance = dot(pos_delta, pos_delta);
         if (squared_distance < BOID_PROTECTED_RANGE_SQUARED)
         {
             vis_other_super_close_delta += boid.position - other.position;
@@ -54,7 +54,7 @@ void update_boid(inout Boid boid, in const Boid old_boid, in uint boid_index, da
     {
         boid.speed.y += BOID_WALL_REPULSION;
     }
-    float const speed = max(0.01, length(boid.speed));
+    const float speed = max(0.01, length(boid.speed));
     if (speed < BOID_MIN_SPEED)
     {
         boid.speed = boid.speed / speed * BOID_MIN_SPEED;

@@ -18,12 +18,12 @@ float3 hsv2rgb(float3 c)
 float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
-    uv = (uv - 0.5) * float2(f32(p.frame_dim.x) / f32(p.frame_dim.y), 1);
-    f32 time = daxa_StructuredBuffer(GpuInput, p.input_buffer_id)[0].time;
-    f32 scale = 12.0 / (exp(time) + 0.0001);
+    uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
+    float time = daxa_StructuredBuffer(GpuInput, p.input_buffer_id)[0].time;
+    float scale = 12.0 / (exp(time) + 0.0001);
     float2 z = uv * scale * 2 + CENTER;
     float2 c = z;
-    u32 i = 0;
+    uint i = 0;
     for (; i < 512; ++i)
     {
         float2 z_ = z;
@@ -36,8 +36,8 @@ float3 mandelbrot_colored(float2 pixel_p)
     float3 col = 0;
     if (i != 512)
     {
-        f32 l = i;
-        f32 sl = l - log2(log2(dot(z, z))) + 4.0;
+        float l = i;
+        float sl = l - log2(log2(dot(z, z))) + 4.0;
         sl = pow(sl * 0.01, 1.0);
         col = hsv2rgb(float3(sl, 1, 1));
 #if MY_TOGGLE
@@ -56,14 +56,14 @@ void main(uint3 pixel_i : SV_DispatchThreadID)
         return;
 
     float3 col = 0;
-    for (i32 yi = 0; yi < SUBSAMPLES; ++yi)
+    for (int yi = 0; yi < SUBSAMPLES; ++yi)
     {
-        for (i32 xi = 0; xi < SUBSAMPLES; ++xi)
+        for (int xi = 0; xi < SUBSAMPLES; ++xi)
         {
-            float2 offset = float2(xi, yi) / f32(SUBSAMPLES);
+            float2 offset = float2(xi, yi) / float(SUBSAMPLES);
             col += mandelbrot_colored(float2(pixel_i.xy) + offset);
         }
     }
-    col *= 1.0 / f32(SUBSAMPLES * SUBSAMPLES);
+    col *= 1.0 / float(SUBSAMPLES * SUBSAMPLES);
     daxa_RWTexture2D(float4, p.image_id)[pixel_i.xy] = float4(col, 1);
 }

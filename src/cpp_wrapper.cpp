@@ -105,9 +105,15 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     }
 };
 
-void check_result(daxa_Result result, std::string const & message)
+template <usize N = 1>
+void check_result(daxa_Result result, std::string const & message, std::array<daxa_Result, N> allowed_codes = {DAXA_RESULT_SUCCESS})
 {
-    if (result != DAXA_RESULT_SUCCESS)
+    bool result_allowed = false;
+    for (auto allowed_code : allowed_codes)
+    {
+        result_allowed = result_allowed || allowed_code == result;
+    }
+    if (!result_allowed)
     {
         std::cerr << fmt::format(
                          "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n",
@@ -461,7 +467,7 @@ namespace daxa
         ret.resize(count * 2);
         check_result(
             daxa_timeline_query_pool_query_results(rc_cast<daxa_TimelineQueryPool>(this->object), start_index, count, ret.data()),
-            "failed to query results of timeline query pool");
+            "failed to query results of timeline query pool", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_NOT_READY});
         return ret;
     }
 
