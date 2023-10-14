@@ -37,7 +37,7 @@ namespace daxa
 
         ImGuiRenderer(ImGuiRendererInfo const & info);
 
-        static auto create_image_context(ImGuiImageContext const & context) -> ImTextureID;
+        static auto create_texture_id(ImGuiImageContext const & context) -> ImTextureID;
 
         void record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y);
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH

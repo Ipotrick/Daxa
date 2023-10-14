@@ -86,8 +86,10 @@ struct App : BaseApp<App>
         ImGui::Begin("Settings");
 
         ImGui::Image(
-            daxa::ImGuiRenderer::create_image_context({.image_view_id = render_image.default_view(),
-                                                       .sampler_id = sampler}),
+            daxa::ImGuiRenderer::create_texture_id({
+                .image_view_id = render_image.default_view(),
+                .sampler_id = sampler,
+            }),
             ImVec2(200, 200));
 
         if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
@@ -140,7 +142,7 @@ struct App : BaseApp<App>
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+                .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
             task_render_image.set_images({.images = std::array{render_image}});
             base_on_update();
