@@ -251,9 +251,8 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
 
     /// --- End Validation ---
 
-    auto [id, image_slot_variant] = self->gpu_shader_resource_table.image_slots.new_slot();
+    auto [id, ret] = self->gpu_shader_resource_table.image_slots.new_slot();
 
-    ImplImageSlot ret = {};
     ret.info = *info;
     ret.info_name = {ret.info.name.data, ret.info.name.size};
     ret.info.name = {ret.info_name.data(), ret.info_name.size()};
@@ -400,7 +399,6 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         id.index);
 
     ret.strong_count = 1;
-    image_slot_variant = ret;
     self->inc_weak_refcnt();
     *out_id = std::bit_cast<daxa_ImageId>(id);
     return DAXA_RESULT_SUCCESS;
