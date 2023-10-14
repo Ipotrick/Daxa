@@ -1162,7 +1162,7 @@ namespace daxa
         impl.record_commands(draw_data, cmd_list, target_image, size_x, size_y);
     }
 
-    auto ImGuiRenderer::create_image_context(ImGuiImageContext const & context) -> ImTextureID
+    auto ImGuiRenderer::create_texture_id(ImGuiImageContext const & context) -> ImTextureID
     {
         static_assert(
             sizeof(ImGuiImageContext) <= sizeof(ImTextureID),

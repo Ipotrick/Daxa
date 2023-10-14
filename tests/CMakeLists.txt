@@ -26,6 +26,11 @@ function(DAXA_CREATE_TEST)
 endfunction()
 
 function(DAXA_CREATE_TEST_C)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        # MSVC literally can't compile C properly.
+        return()
+    endif()
+
     set(OPT_ARGS BRUH)
     set(SNG_ARGS BRUH2)
     set(MUL_ARGS FOLDER LIBS)

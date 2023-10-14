@@ -50,8 +50,8 @@ auto main() -> int
         // It also contains a device address that can be passed to a shader directly.
         cmd.copy_buffer_to_buffer({
             .src_buffer = tmem.buffer(),
-            .src_offset = alloc.buffer_offset,
             .dst_buffer = result_buffer,
+            .src_offset = alloc.buffer_offset,
             .dst_offset = sizeof(u32) * ELEMENT_COUNT * iteration,
             .size = sizeof(u32) * ELEMENT_COUNT,
         });
