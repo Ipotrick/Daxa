@@ -781,16 +781,6 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             zombies.pop_back();
         }
     };
-    {
-        std::unique_lock const l_lock{self->main_queue_command_pool_buffer_recycle_mtx};
-        check_and_cleanup_gpu_resources(
-            self->main_queue_command_list_zombies,
-            [&](auto & command_list_zombie)
-            {
-                vkResetCommandPool(self->vk_device, command_list_zombie.vk_cmd_pool, {});
-                self->buffer_pool_pool.put_back({command_list_zombie.vk_cmd_pool, command_list_zombie.vk_cmd_buffer});
-            });
-    }
     check_and_cleanup_gpu_resources(
         self->main_queue_buffer_zombies,
         [&](auto id)
@@ -845,6 +835,27 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
         {
             vmaFreeMemory(self->vma_allocator, memory_block_zombie.allocation);
         });
+        
+    {
+        std::unique_lock const l_lock{self->main_queue_command_pool_buffer_recycle_mtx};
+        while (!self->main_queue_command_list_zombies.empty())
+        {
+            auto & [timeline_value, object] = self->main_queue_command_list_zombies.back();
+
+            if (timeline_value > gpu_timeline_value)
+            {
+                break;
+            }
+
+            auto vk_result = vkResetCommandPool(self->vk_device, object.vk_cmd_pool, {});
+            if (vk_result != VK_SUCCESS)
+            {
+                return std::bit_cast<daxa_Result>(vk_result);
+            }
+            self->buffer_pool_pool.put_back({object.vk_cmd_pool, object.vk_cmd_buffer});
+            self->main_queue_command_list_zombies.pop_back();
+        }
+    }
     return DAXA_RESULT_SUCCESS;
 }
 
