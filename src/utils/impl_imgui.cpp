@@ -1268,7 +1268,7 @@ namespace daxa
             cmd_list.set_index_buffer({
                 .id = ibuffer,
                 .offset = 0,
-                .index_type = IndexType::uint32,
+                .index_type = IndexType::uint16,
             });
 
             auto push = Push{};

@@ -216,7 +216,7 @@ namespace daxa
 
     enum struct IndexType
     {
-        uint64 = 0,
+        uint16 = 0,
         uint32 = 1,
         uint8 = 1000265000,
         none = 1000165000,
