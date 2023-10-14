@@ -78,14 +78,14 @@ typedef struct
     VkSamplerAddressMode address_mode_v;
     VkSamplerAddressMode address_mode_w;
     float mip_lod_bias;
-    VkBool32 enable_anisotropy;
+    daxa_Bool8 enable_anisotropy;
     float max_anisotropy;
-    VkBool32 enable_compare;
+    daxa_Bool8 enable_compare;
     VkCompareOp compare_op;
     float min_lod;
     float max_lod;
     VkBorderColor border_color;
-    VkBool32 enable_unnormalized_coordinates;
+    daxa_Bool8 enable_unnormalized_coordinates;
     daxa_StringView name;
 } daxa_SamplerInfo;
 
