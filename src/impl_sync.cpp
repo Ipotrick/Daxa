@@ -149,7 +149,7 @@ auto daxa_timeline_semaphore_inc_refcnt(daxa_TimelineSemaphore self) -> u64
 
 auto daxa_timeline_semaphore_dec_refcnt(daxa_TimelineSemaphore self) -> u64
 {
-    printf("daxa_timeline_semaphore_dec_refcnt\n");
+    _DAXA_TEST_PRINT("daxa_timeline_semaphore_dec_refcnt\n");
     return self->dec_refcnt(
         &daxa_ImplTimelineSemaphore::zero_ref_callback,
         self->device->instance);
@@ -231,7 +231,7 @@ void daxa_ImplBinarySemaphore::zero_ref_callback(ImplHandle const * handle)
 
 void daxa_ImplTimelineSemaphore::zero_ref_callback(ImplHandle const * handle)
 {
-    printf("daxa_ImplTimelineSemaphore::zero_ref_callback\n");
+    _DAXA_TEST_PRINT("daxa_ImplTimelineSemaphore::zero_ref_callback\n");
     auto self = rc_cast<daxa_TimelineSemaphore>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);

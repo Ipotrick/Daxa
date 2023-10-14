@@ -70,7 +70,7 @@ struct daxa_ImplDevice final : public ImplHandle
     std::atomic_uint64_t main_queue_cpu_timeline = {};
     VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
 
-    std::mutex main_queue_zombies_mtx = {};
+    std::recursive_mutex main_queue_zombies_mtx = {};
     std::deque<std::pair<u64, CommandListZombie>> main_queue_command_list_zombies = {};
     std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
     std::deque<std::pair<u64, ImageId>> main_queue_image_zombies = {};

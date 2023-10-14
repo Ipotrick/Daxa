@@ -540,14 +540,14 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     {                                                                                                                      \
         auto & slot = self->gpu_shader_resource_table.SLOT_NAME.dereference_id(std::bit_cast<GPUResourceId>(id));          \
         auto prev = std::atomic_ref{slot.strong_count}.fetch_add(1, std::memory_order::relaxed);                           \
-        printf("STRONG daxa_dvc_inc_refcnt_%s prev: %i\n", #name, i32(prev));                                              \
+        _DAXA_TEST_PRINT("STRONG daxa_dvc_inc_refcnt_%s prev: %i\n", #name, i32(prev));                                              \
         return prev;                                                                                                       \
     }                                                                                                                      \
     auto daxa_dvc_dec_refcnt_##name(daxa_Device self, daxa_##Name##Id id)->uint64_t                                        \
     {                                                                                                                      \
         auto & slot = self->gpu_shader_resource_table.SLOT_NAME.dereference_id(std::bit_cast<GPUResourceId>(id));          \
         u64 prev = std::atomic_ref{slot.strong_count}.fetch_sub(1, std::memory_order::relaxed);                            \
-        printf("STRONG daxa_dvc_dec_refcnt_%s prev: %i\n", #name, i32(prev));                                              \
+        _DAXA_TEST_PRINT("STRONG daxa_dvc_dec_refcnt_%s prev: %i\n", #name, i32(prev));                                              \
         if (prev == 1)                                                                                                     \
         {                                                                                                                  \
             auto weak = std::atomic_ref{slot.weak_count}.load(std::memory_order::relaxed);                                 \
@@ -625,7 +625,7 @@ auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
 {
     daxa_dvc_collect_garbage(self);
-    printf("\n");
+    _DAXA_TEST_PRINT("\n");
 
     u64 const current_main_queue_cpu_timeline_value = self->main_queue_cpu_timeline.fetch_add(1) + 1;
 
@@ -866,13 +866,13 @@ auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
 
 auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
 {
-    printf("device inc refcnt from %u to %u\n", self->strong_count, self->strong_count + 1);
+    _DAXA_TEST_PRINT("device inc refcnt from %u to %u\n", self->strong_count, self->strong_count + 1);
     return self->inc_refcnt();
 }
 
 auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
 {
-    printf("device dec refcnt from %u to %u\n", self->strong_count, self->strong_count - 1);
+    _DAXA_TEST_PRINT("device dec refcnt from %u to %u\n", self->strong_count, self->strong_count - 1);
     return self->dec_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
         self->instance);
@@ -1596,7 +1596,7 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
 
 void daxa_ImplDevice::cleanup_image(ImageId id)
 {
-    printf("cleanup image\n");
+    _DAXA_TEST_PRINT("cleanup image\n");
     auto gid = std::bit_cast<GPUResourceId>(id);
     ImplImageSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(gid);
     write_descriptor_set_image(
@@ -1628,7 +1628,6 @@ void daxa_ImplDevice::cleanup_image_view(ImageViewId id)
     ImplImageViewSlot & image_slot = gpu_shader_resource_table.image_slots.dereference_id(std::bit_cast<GPUResourceId>(id)).view_slot;
     write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
     vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
-    daxa_dvc_dec_refcnt_image(this, static_cast<daxa_ImageId>(image_slot.info.image));
     image_slot = {};
     gpu_shader_resource_table.image_slots.return_slot(std::bit_cast<GPUResourceId>(id));
 }
@@ -1724,7 +1723,7 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
 
 void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
 {
-    printf("daxa_ImplDevice::zero_ref_callback\n");
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zero_ref_callback\n");
     auto self = rc_cast<daxa_Device>(handle);
     daxa_dvc_wait_idle(self);
     daxa_dvc_collect_garbage(self);
@@ -1750,14 +1749,14 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     {                                                                                          \
         auto & slot = this->gpu_shader_resource_table.SLOT_NAME.dereference_id(id);            \
         auto prev = std::atomic_ref{slot.weak_count}.fetch_add(1, std::memory_order::relaxed); \
-        printf("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));            \
+        _DAXA_TEST_PRINT("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));            \
         return prev;                                                                           \
     }                                                                                          \
     auto daxa_ImplDevice::dec_weak_refcnt_##name(Name##Id id)->u64                             \
     {                                                                                          \
         auto & slot = this->gpu_shader_resource_table.SLOT_NAME.dereference_id(id);            \
         auto prev = std::atomic_ref{slot.weak_count}.fetch_sub(1, std::memory_order::relaxed); \
-        printf("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));            \
+        _DAXA_TEST_PRINT("daxa_ImplDevice::dec_weak_refcnt_%s prev: %i\n", #name, i32(prev));            \
         if (prev == 1)                                                                         \
         {                                                                                      \
             auto strong = std::atomic_ref{slot.strong_count}.load(std::memory_order::relaxed); \
@@ -1776,7 +1775,7 @@ _DAXA_DECL_COMMON_GP_RES_REFCNT_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slo
 
 void daxa_ImplDevice::zero_ref_callback_buffer(BufferId id)
 {
-    printf("daxa_ImplDevice::zero_ref_callback_buffer\n");
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zero_ref_callback_buffer\n");
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     {
         std::unique_lock const lock{this->main_queue_zombies_mtx};
@@ -1795,7 +1794,7 @@ void daxa_ImplDevice::zero_ref_callback_buffer(BufferId id)
 
 void daxa_ImplDevice::zero_ref_callback_image(ImageId id)
 {
-    printf("daxa_ImplDevice::zero_ref_callback_image (%i,%i)\n", id.index, id.version);
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zero_ref_callback_image (%i,%i)\n", id.index, id.version);
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     {
         std::unique_lock const lock{this->main_queue_zombies_mtx};
@@ -1814,7 +1813,7 @@ void daxa_ImplDevice::zero_ref_callback_image(ImageId id)
 
 void daxa_ImplDevice::zero_ref_callback_image_view(ImageViewId id)
 {
-    printf("daxa_ImplDevice::zero_ref_callback_image_view\n");
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zero_ref_callback_image_view\n");
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     {
         std::unique_lock const lock{this->main_queue_zombies_mtx};
@@ -1829,7 +1828,7 @@ void daxa_ImplDevice::zero_ref_callback_image_view(ImageViewId id)
 
 void daxa_ImplDevice::zero_ref_callback_sampler(SamplerId id)
 {
-    printf("daxa_ImplDevice::zero_ref_callback_sampler\n");
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zero_ref_callback_sampler\n");
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     {
         std::unique_lock const lock{this->main_queue_zombies_mtx};

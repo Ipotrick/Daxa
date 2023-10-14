@@ -9,6 +9,8 @@
 #define DAXA_EXPORT
 #endif
 
+#define _DAXA_TEST_PRINT(args...) 
+
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_HLSL 2
 

@@ -4,6 +4,7 @@
 #include <daxa/daxa.hpp>
 
 #include <chrono>
+#include <iostream>
 #include <utility>
 #include <fmt/format.h>
 #include <bit>
@@ -115,7 +116,7 @@ void check_result(daxa_Result result, std::string const & message, std::array<da
     }
     if (!result_allowed)
     {
-        std::cerr << fmt::format(
+        std::cout << fmt::format(
                          "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n",
                          daxa_result_to_string(result),
                          std::bit_cast<i32>(result),
@@ -159,13 +160,13 @@ namespace daxa
 
     auto Instance::inc_refcnt(ImplHandle const * object) -> u64
     {
-        printf("instance inc refcnt\n");
+        _DAXA_TEST_PRINT("instance inc refcnt\n");
         return daxa_instance_inc_refcnt(rc_cast<daxa_Instance>(object));
     }
 
     auto Instance::dec_refcnt(ImplHandle const * object) -> u64
     {
-        printf("instance dec refcnt\n");
+        _DAXA_TEST_PRINT("instance dec refcnt\n");
         return daxa_instance_dec_refcnt(rc_cast<daxa_Instance>(object));
     }
 

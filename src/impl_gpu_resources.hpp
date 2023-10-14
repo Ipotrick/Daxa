@@ -158,7 +158,7 @@ namespace daxa
 #pragma GCC diagnostic ignored "-Wconversion"
 #endif
 
-            printf("returning new slot id=(%i,%i)\n", index, version);
+            _DAXA_TEST_PRINT("returning new slot id=(%i,%i)\n", index, version);
             return {GPUResourceId{.index = index, .version = version}, pages[page]->at(offset).first};
 #if defined(__GNUG__)
 #pragma GCC diagnostic pop

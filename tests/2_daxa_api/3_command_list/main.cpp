@@ -1,9 +1,10 @@
 #include <daxa/daxa.hpp>
 #include <iostream>
+#include <fmt/format.h>
 
 struct App
 {
-    daxa::Instance daxa_ctx = daxa::create_instance({.flags = daxa::InstanceFlagBits::DEBUG_UTILS });
+    daxa::Instance daxa_ctx = daxa::create_instance({.flags = daxa::InstanceFlagBits::DEBUG_UTILS});
     daxa::Device device = daxa_ctx.create_device({});
 };
 
@@ -323,6 +324,50 @@ namespace tests
         // Collect_garbage loops over all zombie resources and destroys them when they are no longer used on the gpu/ their associated command list finished executing.
         app.device.collect_garbage();
     }
+    void recreation(App & app)
+    {
+        std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
+
+        int const outer_iterations = 1000;
+        int const inner_iterations = 1000;
+
+        auto image = app.device.create_image({
+            .size = {1, 1, 1},
+            .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
+            .name = "tested image",
+        });
+
+        for (int outer_i = 0; outer_i < outer_iterations; ++outer_i)
+        {
+            for (int inner_i = 0; inner_i < inner_iterations; ++inner_i)
+            {
+                auto view = app.device.create_image_view({
+                    .image = image,
+                    .name = "test image view long name, past short string optimization",
+                });
+                app.device.destroy_image_view(view);
+            }
+            app.device.collect_garbage();
+        }
+        std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
+        auto total_iterations = outer_iterations * inner_iterations;
+        app.device.destroy_image(image);
+        auto time_taken_mics = std::chrono::duration_cast<std::chrono::microseconds>(end_time_point - begin_time_point);
+        auto time_taken_per_recreation = static_cast<double>(time_taken_mics.count()) * 0.00'000'1 / 60.0 / 60.0 / static_cast<double>(total_iterations);
+        auto time_taken_til_wrap = static_cast<double>(std::numeric_limits<uint32_t>::max()) * time_taken_per_recreation;
+        auto time_taken_til_wrap_64 = static_cast<double>(std::numeric_limits<uint64_t>::max()) * time_taken_per_recreation / 24.0 / 356.0;
+        std::cout
+            << "Recreation test measured "
+            << time_taken_mics
+            << " time passed for "
+            << outer_iterations * inner_iterations
+            << " total iterations for image view recreation. It will take "
+            << time_taken_til_wrap
+            << " hours for the ids to wrap.\nWith 64 bit ids, the wrap time would increase to "
+            << time_taken_til_wrap_64
+            << " years"
+            << std::endl;
+    }
 } // namespace tests
 
 auto main() -> int
@@ -338,5 +383,9 @@ auto main() -> int
     {
         App app = {};
         tests::deferred_destruction(app);
+    }
+    {
+        App app = {};
+        tests::recreation(app);
     }
 }
