@@ -22,11 +22,13 @@ namespace daxa
     {
         auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32
         {
-            if (type == TaskResourceUseType::BUFFER)
-            {
-                return 8;
-            }
-            return 4;
+            // previously IDS were only 32bit large.
+            // if (type == TaskResourceUseType::BUFFER)
+            // {
+            //     return 8;
+            // }
+            // return 4;
+            return 8;
         }
 
         auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>

@@ -21,14 +21,14 @@ namespace daxa
 
     struct GPUResourceId
     {
-        u32 index : 24 = {};
-        u32 version : 8 = {};
+        u64 index : 20 = {};
+        u64 version : 44 = {};
 
         auto is_empty() const -> bool;
 
         constexpr auto operator<=>(GPUResourceId const & other) const
         {
-            return std::bit_cast<u32>(*this) <=> std::bit_cast<u32>(other);
+            return std::bit_cast<u64>(*this) <=> std::bit_cast<u64>(other);
         }
         constexpr bool operator==(GPUResourceId const & other) const = default;
         constexpr bool operator!=(GPUResourceId const & other) const = default;

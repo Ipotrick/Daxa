@@ -97,7 +97,8 @@ namespace daxa
         static constexpr inline usize PAGE_MASK = PAGE_SIZE - 1u;
         static constexpr inline usize PAGE_COUNT = MAX_RESOURCE_COUNT / PAGE_SIZE;
 
-        using PageT = std::array<std::pair<ResourceT, u8>, PAGE_SIZE>;
+        // TODO: Page ptrs and version numbers should be atomic.
+        using PageT = std::array<std::pair<ResourceT, u64>, PAGE_SIZE>;
 
         std::vector<u32> free_index_stack = {};
         u32 next_index = {};
@@ -150,9 +151,9 @@ namespace daxa
                 }
             }
 
-            pages[page]->at(offset).second = std::max<u8>(pages[page]->at(offset).second, 1); // make sure the version is at least one
+            pages[page]->at(offset).second = std::max<u64>(pages[page]->at(offset).second, 1); // make sure the version is at least one
 
-            u8 version = pages[page]->at(offset).second;
+            u64 version = pages[page]->at(offset).second;
 #if defined(__GNUG__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wconversion"
@@ -177,7 +178,8 @@ namespace daxa
 #endif // #if DAXA_GPU_ID_VALIDATION
             std::unique_lock page_alloc_lock{page_alloc_mtx};
 
-            pages[page]->at(offset).second = std::max<u8>(pages[page]->at(offset).second + 1, 1); // the max is needed, as version = 0 is invalid
+            pages[page]->at(offset).second = pages[page]->at(offset).second + 1;
+            DAXA_DBG_ASSERT_TRUE_M(pages[page]->at(offset).second != 0, "VERSION EXCEEDED MAXIMUM, CAN NOT GUARANTEE UNIQUE IDS");
 
             free_index_stack.push_back(id.index);
         }
@@ -191,7 +193,7 @@ namespace daxa
             {
                 return false;
             }
-            u8 version = pages[page]->at(offset).second;
+            u64 version = pages[page]->at(offset).second;
             auto const & slot = pages[page]->at(offset).first;
             // strong_count == weak_count == 0 => zombie or unused slot.
             if (
@@ -212,7 +214,7 @@ namespace daxa
 #if DAXA_GPU_ID_VALIDATION
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
             verify_resource_id(id);
-            u8 version = pages[page]->at(offset).second;
+            u64 version = pages[page]->at(offset).second;
             DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
 #endif // #if DAXA_GPU_ID_VALIDATION
             return pages[page]->at(offset).first;
@@ -226,7 +228,7 @@ namespace daxa
 #if DAXA_GPU_ID_VALIDATION
             std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
             verify_resource_id(id);
-            u8 version = pages[page]->at(offset).second;
+            u64 version = pages[page]->at(offset).second;
             DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
 #endif // #if DAXA_GPU_ID_VALIDATION
             return pages[page]->at(offset).first;

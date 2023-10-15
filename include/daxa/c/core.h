@@ -14,6 +14,11 @@
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_HLSL 2
 
+static const uint32_t DAXA_ID_INDEX_BITS = 20;
+static const uint32_t DAXA_ID_INDEX_OFFSTET = 0;
+static const uint32_t DAXA_ID_VERSION_BITS = 44;
+static const uint32_t DAXA_ID_VERSION_OFFSTET = 20;
+
 // TODO(capi): check all flags for abi compat.
 
 typedef struct daxa_ImplDevice * daxa_Device;
@@ -40,22 +45,22 @@ typedef struct
 
 typedef struct
 {
-    uint32_t value;
+    uint64_t value;
 } daxa_BufferId;
 
 typedef struct
 {
-    uint32_t value;
+    uint64_t value;
 } daxa_ImageId;
 
 typedef struct
 {
-    uint32_t value;
+    uint64_t value;
 } daxa_ImageViewId;
 
 typedef struct
 {
-    uint32_t value;
+    uint64_t value;
 } daxa_SamplerId;
 
 #define _DAXA_DECL_VEC2_TYPE(SCALAR_TYPE) \

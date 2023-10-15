@@ -62,19 +62,73 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
     };
 }
 
+auto mask_from_bit_count(u64 bits) -> u64
+{
+    return (1ull << bits) - 1;
+}
+
 // --- End Helpers ---
+
+// --- Begin API Functions
+
+auto daxa_default_view(daxa_ImageId id) -> daxa_ImageViewId
+{
+    return daxa_ImageViewId{.value = id.value};
+}
+
+auto daxa_index_of_buffer(daxa_BufferId id) -> u32
+{
+    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+}
+
+auto daxa_index_of_image(daxa_ImageId id) -> u32
+{
+    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+}
+
+auto daxa_index_of_image_view(daxa_ImageViewId id) -> u32
+{
+    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+}
+
+auto daxa_index_of_sampler(daxa_SamplerId id) -> u32
+{
+    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+}
+
+auto daxa_version_of_buffer(daxa_BufferId id) -> u64
+{
+    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+}
+
+auto daxa_version_of_image(daxa_ImageId id) -> u64
+{
+    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+}
+
+auto daxa_version_of_image_view(daxa_ImageViewId id) -> u64
+{
+    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+}
+
+auto daxa_version_of_sampler(daxa_SamplerId id) -> u64
+{
+    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+}
+
+// --- End API Functions
 
 // --- Begin ImplHandle ---
 
 auto ImplHandle::inc_refcnt() const -> u64
 {
-    auto& mut_strong_ref = *rc_cast<u64*>(&this->strong_count);
+    auto & mut_strong_ref = *rc_cast<u64 *>(&this->strong_count);
     return std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64
 {
-    auto& mut_strong_ref = *rc_cast<u64*>(&this->strong_count);
+    auto & mut_strong_ref = *rc_cast<u64 *>(&this->strong_count);
     auto prev = std::atomic_ref{mut_strong_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {
@@ -99,14 +153,14 @@ auto ImplHandle::get_refcnt() const -> u64
 auto ImplHandle::Minc_weak_refcnt(char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"inc_weak_refcnt\" in \"%s\"\n", callsite);
-    auto& mut_weak_ref = *rc_cast<u64*>(&this->weak_count);
+    auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::Mdec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance,char const * callsite) const -> u64
+auto ImplHandle::Mdec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance, char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
-    auto& mut_weak_ref = *rc_cast<u64*>(&this->weak_count);
+    auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
     auto prev = std::atomic_ref{mut_weak_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {
@@ -183,7 +237,7 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
 
 void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
 {
-    auto self = rc_cast<daxa_ImplMemoryBlock*>(handle);
+    auto self = rc_cast<daxa_ImplMemoryBlock *>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     self->device->main_queue_memory_block_zombies.push_front({
@@ -194,8 +248,7 @@ void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
     });
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
     delete self;
 }
 

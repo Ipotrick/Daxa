@@ -9,12 +9,15 @@ namespace daxa
 {
     struct ImplImGuiRenderer final : ImplHandle
     {
-        ImGuiRendererInfo info;
-        RasterPipeline raster_pipeline;
-        BufferId vbuffer{};
-        BufferId ibuffer{};
-        ImageId font_sheet{};
+        ImGuiRendererInfo info = {};
+        RasterPipeline raster_pipeline = {};
+        BufferId vbuffer = {};
+        BufferId ibuffer = {};
+        ImageId font_sheet = {};
+        SamplerId font_sampler = {};
         usize frame_count = {};
+
+        std::vector<ImGuiImageContext> image_sampler_pairs = {};
 
         void recreate_vbuffer(usize vbuffer_new_size);
         void recreate_ibuffer(usize ibuffer_new_size);

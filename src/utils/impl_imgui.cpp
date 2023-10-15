@@ -1164,10 +1164,9 @@ namespace daxa
 
     auto ImGuiRenderer::create_texture_id(ImGuiImageContext const & context) -> ImTextureID
     {
-        static_assert(
-            sizeof(ImGuiImageContext) <= sizeof(ImTextureID),
-            "Size of context exceeded size of ImTextureID, unable to pack");
-        return std::bit_cast<ImTextureID>(context);
+        auto & impl = *r_cast<ImplImGuiRenderer *>(this->object);
+        impl.image_sampler_pairs.push_back(context);
+        return std::bit_cast<ImTextureID>(impl.image_sampler_pairs.size() - 1);
     }
 
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
@@ -1282,7 +1281,7 @@ namespace daxa
             push.ibuffer_ptr = this->info.device.get_device_address(ibuffer);
 
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
-            { 
+            {
                 ImDrawList const * draws = draw_data->CmdLists[n];
                 for (i32 cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
                 {
@@ -1309,7 +1308,7 @@ namespace daxa
                     cmd_list.set_scissor(scissor);
 
                     // Draw
-                    auto const image_context = std::bit_cast<ImGuiImageContext>(pcmd->TextureId);
+                    auto const image_context = this->image_sampler_pairs.at(std::bit_cast<usize>(pcmd->TextureId));
                     push.texture0_id = image_context.image_view_id;
                     push.sampler0_id = image_context.sampler_id;
 
@@ -1329,6 +1328,7 @@ namespace daxa
 
             cmd_list.end_renderpass();
         }
+        this->image_sampler_pairs.resize(1);
     }
 
     ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo a_info)
@@ -1427,21 +1427,25 @@ namespace daxa
             .command_lists = {&cmd_list, 1},
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
-        auto image_view = font_sheet.default_view();
-        auto * imgui_texid = reinterpret_cast<ImTextureID>(static_cast<usize>(*reinterpret_cast<u32 *>(&image_view)));
-        io.Fonts->SetTexID(imgui_texid);
+        this->font_sampler = this->info.device.create_sampler({.name = "ImGui Font Sampler"});
+        this->image_sampler_pairs.push_back(ImGuiImageContext{
+            .image_view_id = font_sheet.default_view(),
+            .sampler_id = this->font_sampler,
+        });
+        io.Fonts->SetTexID(0);
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()
     {
-        this->info.device.destroy_buffer(vbuffer);
-        this->info.device.destroy_buffer(ibuffer);
-        this->info.device.destroy_image(font_sheet);
-    }   
-    
+        this->info.device.destroy_buffer(this->vbuffer);
+        this->info.device.destroy_buffer(this->ibuffer);
+        this->info.device.destroy_image(this->font_sheet);
+        this->info.device.destroy_sampler(this->font_sampler);
+    }
+
     void ImplImGuiRenderer::zero_ref_callback(ImplHandle const * handle)
     {
-        auto self = r_cast<ImplImGuiRenderer const*>(handle);
+        auto self = r_cast<ImplImGuiRenderer const *>(handle);
         delete self;
     }
 
@@ -1454,8 +1458,7 @@ namespace daxa
     {
         return object->dec_refcnt(
             ImplImGuiRenderer::zero_ref_callback,
-            nullptr
-        );
+            nullptr);
     }
 
 } // namespace daxa

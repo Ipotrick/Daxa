@@ -18,6 +18,13 @@
 #extension GL_EXT_shader_image_int64 : require
 #extension GL_EXT_samplerless_texture_functions : require
 
+#define DAXA_ID_INDEX_BITS 20
+#define DAXA_ID_INDEX_MASK ((uint64_t(1) << DAXA_ID_INDEX_BITS) - uint64_t(1))
+#define DAXA_ID_INDEX_OFFSTET 0
+#define DAXA_ID_VERSION_BITS 44
+#define DAXA_ID_VERSION_MASK ((uint64_t(1) << DAXA_ID_VERSION_BITS) - uint64_t(1))
+#define DAXA_ID_VERSION_OFFSTET DAXA_ID_INDEX_BITS
+
 #define DAXA_SHADER_STAGE_COMPUTE 0
 #define DAXA_SHADER_STAGE_VERTEX 1
 #define DAXA_SHADER_STAGE_TESSELATION_CONTROL 2
@@ -64,21 +71,15 @@
 
 struct daxa_BufferId
 {
-    // Upper 8 bits contain the version.
-    // Lower 24 bits contain the index.
-    daxa_u32 value;
+    uint64_t value;
 };
 struct daxa_ImageViewId
 {
-    // Upper 8 bits contain the version.
-    // Lower 24 bits contain the index.
-    daxa_u32 value;
+    uint64_t value;
 };
 struct daxa_SamplerId
 {
-    // Upper 8 bits contain the version.
-    // Lower 24 bits contain the index.
-    daxa_u32 value;
+    uint64_t value;
 };
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
@@ -86,7 +87,7 @@ struct daxa_SamplerId
 /// @return The index the id contains.
 daxa_u32 daxa_buffer_id_to_index(daxa_BufferId id)
 {
-    return (DAXA_ID_INDEX_MASK & id.value);
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
@@ -94,7 +95,7 @@ daxa_u32 daxa_buffer_id_to_index(daxa_BufferId id)
 /// @return The index the id contains.
 daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewId id)
 {
-    return (DAXA_ID_INDEX_MASK & id.value);
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
@@ -102,7 +103,7 @@ daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewId id)
 /// @return The index the id contains.
 daxa_u32 daxa_sampler_id_to_index(daxa_SamplerId id)
 {
-    return (DAXA_ID_INDEX_MASK & id.value);
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }
 
 // Daxa implementation detail begin
