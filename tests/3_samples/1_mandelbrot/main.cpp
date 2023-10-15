@@ -86,7 +86,7 @@ struct App : BaseApp<App>
         ImGui::Begin("Settings");
 
         ImGui::Image(
-            daxa::ImGuiRenderer::create_texture_id({
+            imgui_renderer.create_texture_id({
                 .image_view_id = render_image.default_view(),
                 .sampler_id = sampler,
             }),

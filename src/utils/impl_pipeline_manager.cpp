@@ -360,6 +360,24 @@ namespace daxa
 #endif
 } // namespace daxa
 
+namespace
+{
+    auto stage_string(daxa::ImplPipelineManager::ShaderStage stage) -> std::string_view
+    {
+        switch (stage)
+        {
+        case daxa::ImplPipelineManager::ShaderStage::COMP: return "comp";
+        case daxa::ImplPipelineManager::ShaderStage::VERT: return "vert";
+        case daxa::ImplPipelineManager::ShaderStage::FRAG: return "frag";
+        case daxa::ImplPipelineManager::ShaderStage::TESS_CONTROL: return "tess_ctrl";
+        case daxa::ImplPipelineManager::ShaderStage::TESS_EVAL: return "tess_eval";
+        case daxa::ImplPipelineManager::ShaderStage::TASK: return "task";
+        case daxa::ImplPipelineManager::ShaderStage::MESH: return "mesh";
+        default: return "none";
+        }
+    }
+} // namespace
+
 namespace daxa
 {
     void ShaderCompileOptions::inherit(ShaderCompileOptions const & other)
@@ -913,13 +931,13 @@ namespace daxa
         current_shader_info = nullptr;
 
         std::string name = "unnamed-shader";
-        if (ShaderFile const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
-        {
-            name = shader_file->path.string();
-        }
-        else if (!debug_name_opt.empty())
+        if (!debug_name_opt.empty())
         {
             name = debug_name_opt;
+        }
+        else if (ShaderFile const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
+        {
+            name = shader_file->path.string();
         }
 
         if (shader_info.compile_options.write_out_shader_binary.has_value())
@@ -927,7 +945,7 @@ namespace daxa
             std::replace(name.begin(), name.end(), '/', '_');
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
-            name = name + ".spv";
+            name = name + "." + std::string{stage_string(shader_stage)} + ".spv";
             std::ofstream ofs(shader_info.compile_options.write_out_shader_binary.value() / name, std::ios_base::trunc | std::ios_base::binary);
             ofs.write(r_cast<char const *>(spirv.data()), static_cast<std::streamsize>(spirv.size() * 4));
             ofs.close();
@@ -1329,7 +1347,7 @@ namespace daxa
 
     auto ImplPipelineManager::zero_ref_callback(ImplHandle const * handle)
     {
-        auto self = r_cast<ImplPipelineManager const*>(handle);
+        auto self = r_cast<ImplPipelineManager const *>(handle);
         delete self;
     }
 
