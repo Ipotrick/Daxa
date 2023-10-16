@@ -15,8 +15,10 @@
 #define DAXA_SHADERLANG_HLSL 2
 
 static const uint32_t DAXA_ID_INDEX_BITS = 20;
+static const uint32_t DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
 static const uint32_t DAXA_ID_INDEX_OFFSTET = 0;
 static const uint32_t DAXA_ID_VERSION_BITS = 44;
+static const uint64_t DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
 static const uint32_t DAXA_ID_VERSION_OFFSTET = 20;
 
 // TODO(capi): check all flags for abi compat.

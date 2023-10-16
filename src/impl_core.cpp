@@ -150,14 +150,14 @@ auto ImplHandle::get_refcnt() const -> u64
     return std::atomic_ref{this->strong_count}.load(std::memory_order::relaxed);
 }
 
-auto ImplHandle::Minc_weak_refcnt(char const * callsite) const -> u64
+auto ImplHandle::Minc_weak_refcnt([[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"inc_weak_refcnt\" in \"%s\"\n", callsite);
     auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::Mdec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance, char const * callsite) const -> u64
+auto ImplHandle::Mdec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance, [[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
     auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);

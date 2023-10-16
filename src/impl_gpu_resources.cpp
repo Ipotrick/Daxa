@@ -32,7 +32,7 @@ namespace daxa
         }
     }
 
-    void GPUShaderResourceTable::initialize(usize max_buffers, usize max_images, usize max_samplers,
+    void GPUShaderResourceTable::initialize(u32 max_buffers, u32 max_images, u32 max_samplers,
                                             VkDevice device, VkBuffer device_address_buffer,
                                             PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT)
     {
@@ -349,10 +349,6 @@ namespace daxa
                         if (!handle_invalid)
                         {
                             ret += std::string("debug name: \"") + slot.first.info_name + '\"';
-                            if (slot.first.strong_count == 0 && slot.first.weak_count == 0)
-                            {
-                                ret += " (destroy was already called)";
-                            }
                             ret += "\n";
                         }
                     }

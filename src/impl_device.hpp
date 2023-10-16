@@ -86,21 +86,6 @@ struct daxa_ImplDevice final : public ImplHandle
     auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice;
     auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, ImageId>;
 
-    auto slot(BufferId id) -> ImplBufferSlot &;
-    auto slot(ImageId id) -> ImplImageSlot &;
-    auto slot(ImageViewId id) -> ImplImageViewSlot &;
-    auto slot(SamplerId id) -> ImplSamplerSlot &;
-
-    auto slot(BufferId id) const -> ImplBufferSlot const &;
-    auto slot(ImageId id) const -> ImplImageSlot const &;
-    auto slot(ImageViewId id) const -> ImplImageViewSlot const &;
-    auto slot(SamplerId id) const -> ImplSamplerSlot const &;
-
-    auto slot(daxa_BufferId id) -> ImplBufferSlot &;
-    auto slot(daxa_ImageId id) -> ImplImageSlot &;
-    auto slot(daxa_ImageViewId id) -> ImplImageViewSlot &;
-    auto slot(daxa_SamplerId id) -> ImplSamplerSlot &;
-
     auto slot(daxa_BufferId id) const -> ImplBufferSlot const &;
     auto slot(daxa_ImageId id) const -> ImplImageSlot const &;
     auto slot(daxa_ImageViewId id) const -> ImplImageViewSlot const &;
@@ -110,16 +95,6 @@ struct daxa_ImplDevice final : public ImplHandle
     void cleanup_image(ImageId id);
     void cleanup_image_view(ImageViewId id);
     void cleanup_sampler(SamplerId id);
-
-    auto inc_weak_refcnt_buffer(BufferId id) -> u64;
-    auto inc_weak_refcnt_image(ImageId id) -> u64;
-    auto inc_weak_refcnt_image_view(ImageViewId id) -> u64;
-    auto inc_weak_refcnt_sampler(SamplerId id) -> u64;
-
-    auto dec_weak_refcnt_buffer(BufferId id) -> u64;
-    auto dec_weak_refcnt_image(ImageId id) -> u64;
-    auto dec_weak_refcnt_image_view(ImageViewId id) -> u64;
-    auto dec_weak_refcnt_sampler(SamplerId id) -> u64;
 
     void zero_ref_callback_buffer(BufferId id);
     void zero_ref_callback_image(ImageId id);

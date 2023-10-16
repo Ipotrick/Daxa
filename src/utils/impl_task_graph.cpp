@@ -20,7 +20,7 @@ namespace daxa
 
     namespace detail
     {
-        auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32
+        auto get_task_arg_shader_alignment([[maybe_unused]] TaskResourceUseType type) -> u32
         {
             // previously IDS were only 32bit large.
             // if (type == TaskResourceUseType::BUFFER)
@@ -836,6 +836,7 @@ namespace daxa
                     {
                         cache_valid = cache_valid &&
                                       info.device.is_id_valid(view_cache[index]) &&
+                                      info.device.is_id_valid(info.device.info_image_view(view_cache[index]).image) &&
                                       info.device.info_image_view(view_cache[index]).image == actual_images[index];
                     }
                 }
