@@ -23,6 +23,7 @@ I am happy to say that for me (and others) it achieves that goal.
 - [x] Powerful and flexible render graph. While manual sync is exposed in Daxa for best control, it also provides an optional render graph. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
 - [x] C++ and shader code sharing utilities. This, combined with other simplifications, means you will never need shader reflection for convenience. (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
 - [x] Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
+- [x] A full c api. The c++ api and all functionality is implemented in a c api. The c++ api fully abstracts over this c api. The c api also has full direct vulkan interop and binary compatibility with all daxa c++ objects. Be free to use the c api to create bindigns to other langauges!
 
 List of other noteworthy features: [Other Features](https://github.com/Ipotrick/Daxa/tree/master/wiki/Features.md)
 
@@ -42,15 +43,14 @@ For more detailed information on the abstractions and features of Daxa, take a l
 
 ## Design Philosophy
 
-- Daxa should be convenient and easy to use. Iteration times are king. The programmer should be empowered by convenient and modern feature, not hindered by boilerplate and legacy. It is important to make Daxa simple and easy while maintaining exceptional performance at the same time.
+### No Boilerplate!
+Daxa has defaults for every parameter, all simple things should be easy and straightforward to do. Anything small and simple should be super easy and quick to implement with daxa. Utilities should provide great convenience and "battieries included"-style experience. Setup should be very easy.
 
-- While other Vulkan abstractions aim to be overly generalized and backward compatible, Daxa aims to be focused on modern GPUs and features. This focus allows Daxa to make tradeoffs better suited for modern GPUs and techniques while staying simple.
+### Future looking, gpgpu inspired API
+Daxa is meant to be used on modern desktop gpus. These gpus are getting increasingly generalized and support more and more convenient gpgpu features. Daxa is inspired by cudas ease of use and api in many aspects. Anything that does not present a significant performance advantage on these gpus is NOT exposed in daxa. Any new powerful concepts like bindless or gpu device pointers are the default in the api and not an afterthought.
 
-- Daxa is made for GPU-driven applications. This is due to me [Patrick](https://www.github.com/Ipotrick) and [Gabe](https://www.github.com/GabeRundlett) being very interested in these types of GPU workloads. It is also the modern general approach to most problems regarding GPU programming. Other abstractions simply did not satisfy our needs in this area.
+### Features on demand
+As the daxa team is quite small, we need to focus on what is implemented and what is not. If there is no demand for a feature of anyone, daxa will not have it. The internals of daxa are to be keept very tidy, so that outside contribution stays reasonable.
 
-- Daxa is meant to be internally very simple and should not have multiple ways of doing the same thing. If a feature is used very little, it will be axed. Having less code means fewer bugs while also making it easier to understand and maintain.
-
-- Daxa's internals are meant to be efficient and impose very low overhead. Its design is with CPU performance in mind. Daxa does very little tracking in the API itself and is also very restrictive on quickly accumulating costs like frequent hash map lookups or spamming reference count in/decrements.
-Daxa currently imposes a minimal overhead in most parts of the API, compared to raw Vulkan it is practically always under 1% overhead compared to raw Vulkan calls in the tested applications.
-
-- Daxa is made in two layers. The core API and the utils. The utils contain things like the ImGui integration, PipelineManager, and TaskGraph. This split is made to keep the responsibilities of the different parts of Daxa strict
+### Simple, readable and close to Vulkan.
+Daxa should be as close as possible to vulkan naming wise if the concept fits. Structure objects and their use should be close to vulkan. This should make use of daxa much easier for anyone already knowing vulkan. Daxa will not overabstract or rename things, as that can cause confusion and lack of intent.

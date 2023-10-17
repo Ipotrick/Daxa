@@ -46,6 +46,9 @@
 - As Renderpasses and framebuffers are abstracted, those also do not need to be mentioned, pipelines are decoupled.
 - The pipeline manager utility makes pipeline management very simple and convenient.
 
+## Effective use of modern Language features:
+- Nearly all functions take in structs. Each of these info structs has defaults. This allows for named parameters and out of order defaults!
+
 ## Other Features:
 - Automatically managed memory allocations with VMA. Optionally exposed manual management.
 - Integrated object naming (used by tooling validation layers and daxa itself).
