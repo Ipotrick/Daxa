@@ -40,7 +40,7 @@ namespace daxa
      * * can be passed between different threads
      * * may be accessed by only one thread at the same time
     */
-    struct Swapchain final : ManagedPtr<Swapchain>
+    struct Swapchain final : ManagedPtr<Swapchain, daxa_Swapchain>
     {
         Swapchain() = default;
 
@@ -87,7 +87,7 @@ namespace daxa
         auto get_format() const -> Format;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

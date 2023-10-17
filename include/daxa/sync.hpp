@@ -32,7 +32,7 @@ namespace daxa
         std::string_view name = "";
     };
 
-    struct BinarySemaphore final : ManagedPtr<BinarySemaphore>
+    struct BinarySemaphore final : ManagedPtr<BinarySemaphore, daxa_BinarySemaphore>
     {
         BinarySemaphore() = default;
 
@@ -42,7 +42,7 @@ namespace daxa
         auto info() const -> BinarySemaphoreInfo const &;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
@@ -54,7 +54,7 @@ namespace daxa
         std::string_view name = "";
     };
 
-    struct TimelineSemaphore final : ManagedPtr<TimelineSemaphore>
+    struct TimelineSemaphore final : ManagedPtr<TimelineSemaphore, daxa_TimelineSemaphore>
     {
         TimelineSemaphore() = default;
 
@@ -68,7 +68,7 @@ namespace daxa
         auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
@@ -79,7 +79,7 @@ namespace daxa
         std::string_view name = "";
     };
 
-    struct Event final : ManagedPtr<Event>
+    struct Event final : ManagedPtr<Event, daxa_Event>
     {
         Event() = default;
 
@@ -89,7 +89,7 @@ namespace daxa
         auto info() const -> EventInfo const &;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

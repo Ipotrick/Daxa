@@ -201,7 +201,8 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskBuffer : ManagedPtr<TaskBuffer>
+    struct ImplPersistentTaskBuffer;
+    struct TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBuffer*>
     {
         TaskBuffer() = default;
         TaskBuffer(TaskBufferInfo const & info);
@@ -218,7 +219,7 @@ namespace daxa
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
@@ -238,7 +239,8 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskImage : ManagedPtr<TaskImage>
+    struct ImplPersistentTaskImage;
+    struct TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage*>
     {
         TaskImage() = default;
         TaskImage(TaskImageInfo const & info);
@@ -255,7 +257,7 @@ namespace daxa
         void set_images(TrackedImages const & images);
         void swap_images(TaskImage & other);
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

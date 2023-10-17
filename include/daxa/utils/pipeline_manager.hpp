@@ -106,7 +106,8 @@ namespace daxa
 
     using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
-    struct PipelineManager : ManagedPtr<PipelineManager>
+    struct ImplPipelineManager;
+    struct PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager*>
     {
         PipelineManager() = default;
 
@@ -119,7 +120,7 @@ namespace daxa
         void add_virtual_file(VirtualFileInfo const & info);
         auto reload_all() -> PipelineReloadResult;
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

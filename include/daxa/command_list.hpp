@@ -240,7 +240,7 @@ namespace daxa
      * * can be passed between different threads
      * * may only be accessed by one thread at a time.
     */
-    struct CommandList final : ManagedPtr<CommandList>
+    struct CommandList final : ManagedPtr<CommandList, daxa_CommandList>
     {
         CommandList() = default;
 
@@ -338,7 +338,7 @@ namespace daxa
         auto info() const -> CommandListInfo const &;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

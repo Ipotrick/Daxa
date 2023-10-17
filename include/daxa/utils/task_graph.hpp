@@ -174,7 +174,9 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskGraph : ManagedPtr<TaskGraph>
+    struct ImplTaskGraph;
+
+    struct TaskGraph : ManagedPtr<TaskGraph, ImplTaskGraph*>
     {
         TaskGraph() = default;
 
@@ -219,7 +221,7 @@ namespace daxa
         auto get_transient_memory_size() -> daxa::usize;
         
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

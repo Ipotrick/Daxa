@@ -27,7 +27,7 @@ namespace daxa
      * * may be passed to different threads
      * * may be used by multiple threads at the same time.
     */
-    struct ComputePipeline final : ManagedPtr<ComputePipeline>
+    struct ComputePipeline final : ManagedPtr<ComputePipeline, daxa_ComputePipeline>
     {
         ComputePipeline() = default;
 
@@ -37,7 +37,7 @@ namespace daxa
         auto info() const -> ComputePipelineInfo const &;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
@@ -111,7 +111,7 @@ namespace daxa
      * * may be passed to different threads
      * * may be used by multiple threads at the same time.
     */
-    struct RasterPipeline final : ManagedPtr<RasterPipeline>
+    struct RasterPipeline final : ManagedPtr<RasterPipeline, daxa_RasterPipeline>
     {
         RasterPipeline() = default;
 
@@ -121,7 +121,7 @@ namespace daxa
         auto info() const -> RasterPipelineInfo const &;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

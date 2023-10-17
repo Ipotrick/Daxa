@@ -43,7 +43,7 @@ namespace daxa
 
     struct ImplHandle;
 
-    template <typename CRTP_CHILD_T>
+    template <typename CRTP_CHILD_T, typename HANDLE_T = ImplHandle*>
     struct ManagedPtr
     {
         ManagedPtr() = default;
@@ -63,7 +63,7 @@ namespace daxa
             this->object = other.object;
             if (this->object != nullptr)
             {
-                CRTP_CHILD_T::inc_refcnt(object);
+                CRTP_CHILD_T::inc_refcnt(reinterpret_cast<ImplHandle*>(object));
             }
             return *this;
         }
@@ -86,13 +86,13 @@ namespace daxa
         }
 
       protected:
-        ImplHandle * object = {};
+        HANDLE_T object = {};
 
         void cleanup()
         {
             if (this->object != nullptr)
             {
-                CRTP_CHILD_T::dec_refcnt(object);
+                CRTP_CHILD_T::dec_refcnt(reinterpret_cast<ImplHandle*>(object));
                 this->object = {};
             }
         }
@@ -1617,7 +1617,7 @@ namespace daxa
         MemoryFlags flags = {};
     };
 
-    struct MemoryBlock : ManagedPtr<MemoryBlock>
+    struct MemoryBlock : ManagedPtr<MemoryBlock, daxa_MemoryBlock>
     {
         MemoryBlock() = default;
 
@@ -1627,7 +1627,7 @@ namespace daxa
         auto info() -> MemoryBlockInfo const &;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
@@ -1649,7 +1649,7 @@ namespace daxa
         std::string_view name = "";
     };
 
-    struct TimelineQueryPool : ManagedPtr<TimelineQueryPool>
+    struct TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>
     {
         TimelineQueryPool() = default;
 
@@ -1661,7 +1661,7 @@ namespace daxa
         auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

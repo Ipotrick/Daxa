@@ -31,7 +31,8 @@ namespace daxa
         bool use_custom_config = true;
     };
 
-    struct ImGuiRenderer : ManagedPtr<ImGuiRenderer>
+    struct ImplImGuiRenderer;
+    struct ImGuiRenderer : ManagedPtr<ImGuiRenderer, ImplImGuiRenderer*>
     {
         ImGuiRenderer() = default;
 
@@ -44,7 +45,7 @@ namespace daxa
         void record_task(ImDrawData * draw_data, TaskGraph & task_graph, TaskImageView task_swapchain_image, u32 size_x, u32 size_y);
 #endif
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

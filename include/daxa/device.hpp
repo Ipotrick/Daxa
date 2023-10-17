@@ -232,7 +232,7 @@ namespace daxa
      * * may be accessed by multiple threads at the same time
      * * WARNING: there are exceptions to this, those are mentioned above those functions.
      */
-    struct Device final : ManagedPtr<Device>
+    struct Device final : ManagedPtr<Device, daxa_Device>
     {
         Device() = default;
 
@@ -373,7 +373,7 @@ namespace daxa
         auto get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>;
 
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;

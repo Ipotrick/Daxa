@@ -26,7 +26,7 @@ namespace daxa
         std::string_view app_name = "daxa app";
     };
 
-    struct Instance final : ManagedPtr<Instance>
+    struct Instance final : ManagedPtr<Instance, daxa_Instance>
     {
         Instance() = default;
 
@@ -37,7 +37,7 @@ namespace daxa
         /// @return reference to info of object.
         auto info() const -> InstanceInfo const &;
       protected:
-        template <typename T>
+        template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
