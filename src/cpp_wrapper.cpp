@@ -492,13 +492,32 @@ namespace daxa
             "failed to resize swapchain");
     }
 
+    void Swapchain::set_present_mode(PresentMode present_mode)
+    {
+        check_result(
+            daxa_swp_set_present_mode(r_cast<daxa_Swapchain>(this->object), std::bit_cast<VkPresentModeKHR>(present_mode)),
+            "failed to set swapchain present mode");
+    }
+
     auto Swapchain::acquire_next_image() -> ImageId
     {
         ImageId ret = {};
-        check_result(
-            daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this->object), r_cast<daxa_ImageId *>(&ret)),
-            "failed to acquire next swapchain image");
-        return ret;
+        auto result = daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this->object), r_cast<daxa_ImageId *>(&ret));
+        if (result == DAXA_RESULT_ERROR_OUT_OF_DATE_KHR ||
+            result == DAXA_RESULT_ERROR_SURFACE_LOST_KHR ||
+            result == DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
+        {
+            return {};
+        }
+        else if (result == DAXA_RESULT_SUCCESS)
+        {
+            return ret;
+        }
+        else
+        {
+            check_result(result, "failed to acquire next swapchain image");
+        }
+        return {};
     }
 
     auto Swapchain::get_acquire_semaphore() const -> BinarySemaphore const &

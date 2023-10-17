@@ -30,6 +30,7 @@
 /// This means the acquire semaphores are not tied to the number of swapchain images like present semaphores but to the number of frames in flight!!
 ///
 /// To limit the frames in flight we employ a timeline semaphore that must be signaled in a submission that uses or after one that uses the swapchain image.
+/// TODO: investigate if wsi is improved enough to use zombies for swapchain.
 struct daxa_ImplSwapchain final : ImplHandle
 {
     daxa_Device device = {};
@@ -39,6 +40,7 @@ struct daxa_ImplSwapchain final : ImplHandle
     VkSurfaceKHR vk_surface = {};
     VkSurfaceFormatKHR vk_surface_format = {};
     VkExtent2D surface_extent = {};
+    std::vector<PresentMode> supported_present_modes = {};
     // Swapchain holds strong references to these objects as it owns them.
     std::vector<ImageId> images = {};
     std::vector<BinarySemaphore> acquire_semaphores = {};
@@ -54,9 +56,10 @@ struct daxa_ImplSwapchain final : ImplHandle
     // This index must be used for present semaphores as they are paired to the images.
     u32 current_image_index = {};
 
+    void partial_cleanup();
+    void full_cleanup();
+    auto recreate_surface() -> daxa_Result;
     auto recreate() -> daxa_Result;
-    void cleanup();
-    void recreate_surface();
     
     static auto create(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain swapchain) -> daxa_Result;
     static void zero_ref_callback(ImplHandle const * handle);

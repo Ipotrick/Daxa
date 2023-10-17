@@ -21,6 +21,7 @@ struct SubmitZombie
 
 struct daxa_ImplDevice final : public ImplHandle
 {
+    // Properties and capabilities:
     daxa_Instance instance = {};
     DeviceInfo info = {};
     std::string info_name = {};
@@ -57,19 +58,24 @@ struct daxa_ImplDevice final : public ImplHandle
     VmaAllocation vk_null_buffer_vma_allocation = {};
     VmaAllocation vk_null_image_vma_allocation = {};
 
+    // Command Buffer/Pool recycling:
+    std::mutex main_queue_command_pool_buffer_recycle_mtx = {};
+    CommandBufferPoolPool buffer_pool_pool = {};
+
     // Gpu resource table:
     GPUShaderResourceTable gpu_shader_resource_table = {};
 
-    // Resource recycling:
-    std::mutex main_queue_command_pool_buffer_recycle_mtx = {};
-    CommandBufferPoolPool buffer_pool_pool = {};
     // Main queue:
     VkQueue main_queue_vk_queue = {};
     u32 main_queue_family_index = {};
-
+    // Timelines are used to track how far ahead the gpu is before the cpu.
+    // This difference between timelines is used to delay resource destruction.
+    // Resources are destroyed when the gpu timeline reaches the value of the cpu timeline at the destruction of the resource.
+    // This check is performed in collect_garbage, which is either manually called or automatically in submit, present or the device destruction.
     std::atomic_uint64_t main_queue_cpu_timeline = {};
     VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
-
+    // When a resources refcount reaches 0 it becomes a zombie. A zombie is `metadata required for destruction` + `cpu timeline value at the point in time of destruction`.
+    // collect_garbage checks if the gpu timeline reached the zombies timeline value and destroys the zombies.
     std::recursive_mutex main_queue_zombies_mtx = {};
     std::deque<std::pair<u64, CommandListZombie>> main_queue_command_list_zombies = {};
     std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};

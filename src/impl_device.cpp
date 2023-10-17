@@ -896,16 +896,16 @@ auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
 
 auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device out_device) -> daxa_Result
 {
+    using namespace daxa;
     VkResult result = {};
 
+    // Set properties and feature variables:
     auto self = out_device;
     self->vk_physical_device = physical_device;
     self->instance = instance;
     self->info = *reinterpret_cast<DeviceInfo const *>(&info);
     self->info_name = {info.name.data, info.name.size};
     self->info.name = {self->info_name.c_str(), self->info_name.size()};
-    using namespace daxa;
-
     self->vk_physical_device_properties2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
         .pNext = {},

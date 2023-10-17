@@ -31,6 +31,8 @@ namespace daxa
         std::string_view name = "";
     };
 
+    // TODO(capi): Add function to check support for present mode!
+
     struct Swapchain final : ManagedPtr<Swapchain>
     {
         Swapchain() = default;
@@ -38,7 +40,6 @@ namespace daxa
         auto info() const -> SwapchainInfo const &;
         auto get_surface_extent() const -> Extent2D;
         auto get_format() const -> Format;
-        void resize();
         /// @brief The ImageId may change between calls. This must be called to obtain a new swapchain image to be used for rendering.
         /// @return A swapchain image, that will be ready to render to when the acquire semaphore is signaled. This may return an empty image id if the swapchain is out of date.
         auto acquire_next_image() -> ImageId;
@@ -58,6 +59,16 @@ namespace daxa
         /// @brief The last submission that uses the swapchain image needs to signal the timeline with the cpu value.
         /// @return The cpu frame timeline value.
         auto get_cpu_timeline_value() const -> usize;
+
+        /// @brief  When the window size changes the swapchain is in an invalid state for new commands.
+        ///         Calling resize will recreate the swapchain with the proper window size.
+        /// WARKING: Due to wsi limitations this function will WAIT IDLE THE DEVICE.
+        /// WARKING: If the function throws an error, The swapchain will be invalidated and unusable!
+        void resize();
+        /// @brief Recreates swapchain with new present mode.
+        /// WARKING: Due to wsi limitations this function will WAIT IDLE THE DEVICE.
+        /// WARKING: If the function throws an error, The swapchain will be invalidated and unusable!
+        void set_present_mode(PresentMode present_mode);
 
       protected:
         template <typename T>

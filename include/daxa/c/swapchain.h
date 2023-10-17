@@ -40,6 +40,8 @@ DAXA_EXPORT VkFormat
 daxa_swp_get_format(daxa_Swapchain swapchain);
 DAXA_EXPORT daxa_Result
 daxa_swp_resize(daxa_Swapchain swapchain);
+DAXA_EXPORT daxa_Result
+daxa_swp_set_present_mode(daxa_Swapchain swapchain, VkPresentModeKHR present_mode);
 
 DAXA_EXPORT daxa_Result
 daxa_swp_acquire_next_image(daxa_Swapchain swapchain, daxa_ImageId * out_image_id);
