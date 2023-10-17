@@ -224,14 +224,14 @@ namespace daxa
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
      *          Device manages all general gpu operations that are not handled by other objects.
-     *          All objects connected to the device are created by it. 
-     * 
-     * THREADSAFETY: 
+     *          All objects connected to the device are created by it.
+     *
+     * THREADSAFETY:
      * * is internally synchronized
      * * can be passed between different threads
      * * may be accessed by multiple threads at the same time
      * * WARNING: there are exceptions to this, those are mentioned above those functions.
-    */
+     */
     struct Device final : ManagedPtr<Device>
     {
         Device() = default;
@@ -252,8 +252,8 @@ namespace daxa
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
-        /// @param id of the object. 
-        /// WARNING:    
+        /// @param id of the object.
+        /// WARNING:
         /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
         /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
         /// THREADSAFETY:
@@ -266,8 +266,8 @@ namespace daxa
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
-        /// @param id of the object. 
-        /// WARNING:    
+        /// @param id of the object.
+        /// WARNING:
         /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
         /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
         /// THREADSAFETY:
@@ -280,8 +280,8 @@ namespace daxa
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
-        /// @param id of the object. 
-        /// WARNING:    
+        /// @param id of the object.
+        /// WARNING:
         /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
         /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
         /// THREADSAFETY:
@@ -294,8 +294,8 @@ namespace daxa
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
-        /// @param id of the object. 
-        /// WARNING:    
+        /// @param id of the object.
+        /// WARNING:
         /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
         /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
         /// THREADSAFETY:
@@ -370,6 +370,7 @@ namespace daxa
         /// * reference MUST NOT be read after the device is dropped.
         /// @return reference to device properties
         auto properties() const -> DeviceProperties const &;
+        auto get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>;
 
       protected:
         template <typename T>

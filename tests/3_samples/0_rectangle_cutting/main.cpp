@@ -70,8 +70,6 @@ struct App : AppWindow<App>
         .color_attachments = std::vector{daxa::RenderAttachment{
             .format = swapchain.get_format(),
             .blend = daxa::BlendInfo{
-                // TODO(capi): was this removed?
-                // .blend_enable = 1u,
                 .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA,
                 .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA,
                 .src_alpha_blend_factor = daxa::BlendFactor::ONE,

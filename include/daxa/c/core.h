@@ -21,8 +21,6 @@ static const uint32_t DAXA_ID_VERSION_BITS = 44;
 static const uint64_t DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
 static const uint32_t DAXA_ID_VERSION_OFFSTET = 20;
 
-// TODO(capi): check all flags for abi compat.
-
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandList * daxa_CommandList;
 typedef struct daxa_ImplInstance * daxa_Instance;

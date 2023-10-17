@@ -93,6 +93,8 @@ inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageA
     return make_subresource_layers(*r_cast<ImageArraySlice const *>(&slice), aspect);
 }
 
+auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result;
+
 // --- End Helpers ---
 
 namespace daxa

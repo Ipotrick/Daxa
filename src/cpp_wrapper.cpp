@@ -344,6 +344,46 @@ namespace daxa
         return *r_cast<DeviceProperties const *>(daxa_dvc_properties(rc_cast<daxa_Device>(object)));
     }
 
+    auto Device::get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>
+    {
+        auto cdevice = rc_cast<daxa_Device>(object);
+        VkSurfaceKHR surface = {};
+        auto result = create_surface(
+            cdevice->instance,
+            std::bit_cast<daxa_NativeWindowHandle>(native_handle),
+            std::bit_cast<daxa_NativeWindowPlatform>(native_platform),
+            &surface);
+        check_result(result, "could not create surface");
+
+        u32 present_mode_count = {};
+        auto vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+            cdevice->vk_physical_device,
+            surface,
+            &present_mode_count,
+            nullptr
+        );
+        if (vk_result != VK_SUCCESS)
+        {
+            vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
+            check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
+        }
+        std::vector<PresentMode> ret = {};
+        ret.resize(static_cast<usize>(present_mode_count));
+        vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+            cdevice->vk_physical_device,
+            surface,
+            &present_mode_count,
+            r_cast<VkPresentModeKHR*>(ret.data())
+        );
+        if (vk_result != VK_SUCCESS)
+        {
+            vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
+            check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
+        }
+        vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
+        return ret;
+    }
+
     auto Device::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_dvc_inc_refcnt(rc_cast<daxa_Device>(object));

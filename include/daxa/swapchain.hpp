@@ -31,8 +31,6 @@ namespace daxa
         std::string_view name = "";
     };
 
-    // TODO(capi): Add function to check support for present mode!
-
     /**
      * @brief   Swapchain represents the surface, swapchain and synch primives reguarding acquire and present operations.
      *          The swapchain has a cpu and gpu timeline in order to ensure proper frames in flight.

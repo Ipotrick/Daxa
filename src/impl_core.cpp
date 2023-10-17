@@ -61,6 +61,65 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
         .layerCount = slice.layer_count,
     };
 }
+auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[maybe_unused]] daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result
+{
+    #if defined(_WIN32)
+    VkWin32SurfaceCreateInfoKHR const surface_ci{
+        .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .flags = 0,
+        .hinstance = GetModuleHandleA(nullptr),
+        .hwnd = static_cast<HWND>(handle),
+    };
+    {
+        auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWin32SurfaceKHR"));
+        VkResult vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
+        return std::bit_cast<daxa_Result>(vk_result);
+    }
+#elif defined(__linux__)
+    switch (platform)
+    {
+#if DAXA_BUILT_WITH_WAYLAND
+    case NativeWindowPlatform::WAYLAND_API:
+    {
+        // TODO(grundlett): figure out how to link Wayland
+        VkWaylandSurfaceCreateInfoKHR surface_ci{
+            .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .flags = 0,
+            .display = wl_display_connect(nullptr),
+            .surface = static_cast<wl_surface *>(handle),
+        };
+        {
+            auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
+            VkResult vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
+            return std::bit_cast<daxa_Result>(vk_result);
+        }
+    }
+    break;
+#endif
+#if DAXA_BUILT_WITH_X11
+    case NativeWindowPlatform::XLIB_API:
+    default:
+    {
+        VkXlibSurfaceCreateInfoKHR surface_ci{
+            .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .flags = 0,
+            .dpy = XOpenDisplay(nullptr),
+            .window = reinterpret_cast<Window>(handle),
+        };
+        {
+            auto func = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateXlibSurfaceKHR"));
+            VkResult vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
+            return std::bit_cast<daxa_Result>(vk_result);
+        }
+    }
+    break;
+    }
+#endif
+#endif
+}
 
 auto mask_from_bit_count(u64 bits) -> u64
 {

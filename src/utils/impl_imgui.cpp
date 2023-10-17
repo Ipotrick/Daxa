@@ -307,8 +307,6 @@ namespace daxa
                   create_info.color_attachments = std::array{daxa::RenderAttachment{
                       .format = info.format,
                       .blend = daxa::BlendInfo{
-                          // TODO(capi): was this removed?
-                          // .blend_enable = 1u,
                           .src_color_blend_factor = BlendFactor::SRC_ALPHA,
                           .dst_color_blend_factor = BlendFactor::ONE_MINUS_SRC_ALPHA,
                           .src_alpha_blend_factor = BlendFactor::ONE,

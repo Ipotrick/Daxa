@@ -392,7 +392,7 @@ void daxa_ImplSwapchain::full_cleanup()
     if (this->vk_swapchain != VK_NULL_HANDLE)
     {
         // Due to wsi limitations we need to wait idle before destroying the swapchain.
-        vkDeviceWaitIdle(this->device->vk_device); 
+        vkDeviceWaitIdle(this->device->vk_device);
         vkDestroySwapchainKHR(this->device->vk_device, this->vk_swapchain, nullptr);
     }
     if (this->device != nullptr)
@@ -412,62 +412,11 @@ auto daxa_ImplSwapchain::recreate_surface() -> daxa_Result
     {
         vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
     }
-#if defined(_WIN32)
-    VkWin32SurfaceCreateInfoKHR const surface_ci{
-        .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-        .pNext = nullptr,
-        .flags = 0,
-        .hinstance = GetModuleHandleA(nullptr),
-        .hwnd = static_cast<HWND>(info.native_window),
-    };
-    {
-        auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(this->device->instance->vk_instance, "vkCreateWin32SurfaceKHR"));
-        VkResult vk_result = func(this->device->instance->vk_instance, &surface_ci, nullptr, &this->vk_surface);
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
-#elif defined(__linux__)
-    switch (this->info.native_window_platform)
-    {
-#if DAXA_BUILT_WITH_WAYLAND
-    case NativeWindowPlatform::WAYLAND_API:
-    {
-        // TODO(grundlett): figure out how to link Wayland
-        VkWaylandSurfaceCreateInfoKHR surface_ci{
-            .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
-            .pNext = nullptr,
-            .flags = 0,
-            .display = wl_display_connect(nullptr),
-            .surface = static_cast<wl_surface *>(this->info.native_window),
-        };
-        {
-            auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, "vkCreateWaylandSurfaceKHR"));
-            VkResult vk_result = func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
-            return std::bit_cast<daxa_Result>(vk_result);
-        }
-    }
-    break;
-#endif
-#if DAXA_BUILT_WITH_X11
-    case NativeWindowPlatform::XLIB_API:
-    default:
-    {
-        VkXlibSurfaceCreateInfoKHR surface_ci{
-            .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
-            .pNext = nullptr,
-            .flags = 0,
-            .dpy = XOpenDisplay(nullptr),
-            .window = reinterpret_cast<Window>(this->info.native_window),
-        };
-        {
-            auto func = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, "vkCreateXlibSurfaceKHR"));
-            VkResult vk_result = func(impl_device.as<ImplDevice>()->impl_ctx.as<ImplInstance>()->vk_instance, &surface_ci, nullptr, &this->vk_surface);
-            return std::bit_cast<daxa_Result>(vk_result);
-        }
-    }
-    break;
-    }
-#endif
-#endif
+    return create_surface(
+        this->device->instance,
+        std::bit_cast<daxa_NativeWindowHandle>(this->info.native_window),
+        std::bit_cast<daxa_NativeWindowPlatform>(this->info.native_window_platform),
+        &this->vk_surface);
 }
 
 void daxa_ImplSwapchain::zero_ref_callback(ImplHandle const * handle)
