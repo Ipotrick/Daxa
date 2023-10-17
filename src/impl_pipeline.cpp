@@ -6,6 +6,7 @@
 
 auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline) -> daxa_Result
 {
+    _DAXA_TEST_PRINT("daxa_dvc_create_raster_pipeline\n");
     daxa_ImplRasterPipeline ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<RasterPipelineInfo const *>(info);
@@ -43,7 +44,6 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             .pSpecializationInfo = nullptr,
         };
         vk_pipeline_shader_stage_create_infos.push_back(vk_pipeline_shader_stage_create_info);
-        device->inc_weak_refcnt();
         return result;
     };
 
@@ -303,6 +303,7 @@ auto daxa_raster_pipeline_dec_refcnt(daxa_RasterPipeline self) -> u64
 
 auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline) -> daxa_Result
 {
+    _DAXA_TEST_PRINT("daxa_dvc_create_compute_pipeline\n");
     daxa_ImplComputePipeline ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<ComputePipelineInfo const *>(info);
@@ -391,6 +392,7 @@ auto daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline self) -> u64
 
 void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
 {
+    _DAXA_TEST_PRINT("ImplPipeline::zero_ref_callback\n");
     auto self = rc_cast<ImplPipeline*>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);

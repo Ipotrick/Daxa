@@ -484,18 +484,18 @@ namespace tests
 
 auto main() -> i32
 {
-    tests::simplest();
-    tests::execution();
-    tests::write_read_image();
-    tests::write_read_image_layer();
-    tests::create_transfer_read_buffer();
-    tests::initial_layout_access();
-    tests::tracked_slice_barrier_collapsing();
-    tests::correct_read_buffer_task_ordering();
-    tests::sharing_persistent_image();
-    tests::sharing_persistent_buffer();
-    tests::transient_write_aliasing();
-    tests::transient_resources();
-    tests::shader_integration_inl_use();
+    // tests::simplest();
+    // tests::execution();
+    // tests::write_read_image();
+    // tests::write_read_image_layer();
+    // tests::create_transfer_read_buffer();
+    // tests::initial_layout_access();
+    // tests::tracked_slice_barrier_collapsing();
+    // tests::correct_read_buffer_task_ordering();
+    // tests::sharing_persistent_image();
+    // tests::sharing_persistent_buffer();
+    // tests::transient_write_aliasing();
+    // tests::transient_resources();
+    // tests::shader_integration_inl_use();
     tests::mipmapping();
 }

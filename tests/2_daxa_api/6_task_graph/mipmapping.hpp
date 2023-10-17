@@ -113,10 +113,10 @@ namespace tests
             App() : AppWindow<App>(APPNAME, 768 * 2, 512 * 2) {}
             ~App()
             {
-                device.wait_idle();
-                device.collect_garbage();
                 device.destroy_buffer(mipmapping_gpu_input_buffer);
                 device.destroy_image(render_image);
+                device.wait_idle();
+                device.collect_garbage();
             }
 
             bool update()
