@@ -43,6 +43,9 @@ namespace daxa
         // on a queue that uses memory from this pool.
         auto timeline_semaphore() -> TimelineSemaphore;
         auto buffer() const -> daxa::BufferId;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is dropped.
+        /// @return reference to info of object.
         auto info() const -> TransferMemoryPoolInfo const &;
 
       private:

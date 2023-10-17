@@ -19,10 +19,21 @@ namespace daxa
         std::string_view name = "";
     };
 
+    /**
+     * @brief   Represents a pipeline state object, usable in recording commands.
+     * 
+     * THREADSAFETY: 
+     * * is internally synchronized
+     * * may be passed to different threads
+     * * may be used by multiple threads at the same time.
+    */
     struct ComputePipeline final : ManagedPtr<ComputePipeline>
     {
         ComputePipeline() = default;
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is dropped.
+        /// @return reference to info of object.
         auto info() const -> ComputePipelineInfo const &;
 
       protected:
@@ -92,10 +103,21 @@ namespace daxa
         std::string_view name = "";
     };
 
+    /**
+     * @brief   Represents a pipeline state object, usable in recording commands.
+     * 
+     * THREADSAFETY: 
+     * * is internally synchronized
+     * * may be passed to different threads
+     * * may be used by multiple threads at the same time.
+    */
     struct RasterPipeline final : ManagedPtr<RasterPipeline>
     {
         RasterPipeline() = default;
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is dropped.
+        /// @return reference to info of object.
         auto info() const -> RasterPipelineInfo const &;
 
       protected:

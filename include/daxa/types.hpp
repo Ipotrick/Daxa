@@ -1621,6 +1621,9 @@ namespace daxa
     {
         MemoryBlock() = default;
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is dropped.
+        /// @return reference to info of object.
         auto info() -> MemoryBlockInfo const &;
 
       protected:
@@ -1650,6 +1653,9 @@ namespace daxa
     {
         TimelineQueryPool() = default;
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is dropped.
+        /// @return reference to info of object.
         auto info() const -> TimelineQueryPoolInfo const &;
 
         auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;

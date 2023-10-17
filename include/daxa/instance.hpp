@@ -32,6 +32,9 @@ namespace daxa
 
         auto create_device(DeviceInfo const & device_info) -> Device;
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is dropped.
+        /// @return reference to info of object.
         auto info() const -> InstanceInfo const &;
       protected:
         template <typename T>

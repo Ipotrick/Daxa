@@ -221,6 +221,17 @@ namespace daxa
         Swapchain swapchain;
     };
 
+    /**
+     * @brief   Device represents a logical device that may be a virtual or physical gpu.
+     *          Device manages all general gpu operations that are not handled by other objects.
+     *          All objects connected to the device are created by it. 
+     * 
+     * THREADSAFETY: 
+     * * is internally synchronized
+     * * can be passed between different threads
+     * * may be accessed by multiple threads at the same time
+     * * WARNING: there are exceptions to this, those are mentioned above those functions.
+    */
     struct Device final : ManagedPtr<Device>
     {
         Device() = default;
@@ -239,14 +250,92 @@ namespace daxa
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
 
+        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
+        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        /// @param id of the object. 
+        /// WARNING:    
+        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
+        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
+        /// THREADSAFETY:
+        /// * as long as the id is valid, the returned reference will point to the objects info.
+        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
+        /// * destroying the object and still reading the info can lead to race conditions.
+        /// * calling the function with an invalid id can lead to race conditions.
+        /// @return a reference to the info.
         auto info_buffer(BufferId id) const -> BufferInfo const &;
+
+        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
+        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        /// @param id of the object. 
+        /// WARNING:    
+        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
+        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
+        /// THREADSAFETY:
+        /// * as long as the id is valid, the returned reference will point to the objects info.
+        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
+        /// * destroying the object and still reading the info can lead to race conditions.
+        /// * calling the function with an invalid id can lead to race conditions.
+        /// @return a reference to the info.
         auto info_image(ImageId id) const -> ImageInfo const &;
+
+        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
+        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        /// @param id of the object. 
+        /// WARNING:    
+        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
+        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
+        /// THREADSAFETY:
+        /// * as long as the id is valid, the returned reference will point to the objects info.
+        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
+        /// * destroying the object and still reading the info can lead to race conditions.
+        /// * calling the function with an invalid id can lead to race conditions.
+        /// @return a reference to the info.
         auto info_image_view(ImageViewId id) const -> ImageViewInfo const &;
+
+        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
+        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        /// @param id of the object. 
+        /// WARNING:    
+        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
+        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
+        /// THREADSAFETY:
+        /// * as long as the id is valid, the returned reference will point to the objects info.
+        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
+        /// * destroying the object and still reading the info can lead to race conditions.
+        /// * calling the function with an invalid id can lead to race conditions.
+        /// @return a reference to the info.
         auto info_sampler(SamplerId id) const -> SamplerInfo const &;
 
+        /// @brief  Will describe if a given id is valid.
+        ///         An id is valid as long as it was created by the device and not yet destroyed.
+        /// @param id or the object.
+        /// NOTE:
+        /// * can be used to check if the read of a info reference was valid
+        /// @return validity of id
         auto is_id_valid(ImageId id) const -> bool;
+
+        /// @brief  Will describe if a given id is valid.
+        ///         An id is valid as long as it was created by the device and not yet destroyed.
+        /// @param id or the object.
+        /// NOTE:
+        /// * can be used to check if the read of a info reference was valid
+        /// @return validity of id
         auto is_id_valid(ImageViewId id) const -> bool;
+
+        /// @brief  Will describe if a given id is valid.
+        ///         An id is valid as long as it was created by the device and not yet destroyed.
+        /// @param id or the object.
+        /// NOTE:
+        /// * can be used to check if the read of a info reference was valid
+        /// @return validity of id
         auto is_id_valid(BufferId id) const -> bool;
+
+        /// @brief  Will describe if a given id is valid.
+        ///         An id is valid as long as it was created by the device and not yet destroyed.
+        /// @param id or the object.
+        /// NOTE:
+        /// * can be used to check if the read of a info reference was valid
+        /// @return validity of id
         auto is_id_valid(SamplerId id) const -> bool;
 
         auto get_device_address(BufferId id) const -> BufferDeviceAddress;
@@ -267,6 +356,9 @@ namespace daxa
         auto create_event(EventInfo const & info) -> Event;
         auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the device is dropped.
+        /// @return reference to info of object.
         auto info() const -> DeviceInfo const &;
         void wait_idle();
 
@@ -274,6 +366,9 @@ namespace daxa
         void present_frame(PresentInfo const & info);
         void collect_garbage();
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the device is dropped.
+        /// @return reference to device properties
         auto properties() const -> DeviceProperties const &;
 
       protected:

@@ -229,6 +229,17 @@ namespace daxa
         IndexType index_type = IndexType::uint32;
     };
 
+    /**
+     * @brief   CommandList is used to encode commands into a VkCommandBuffer.
+     *          In order to submit a command list one must complete it.
+     *          Completing a command list does SIGNIFICANT driver cpu work, 
+     *          so do not always complete just before submitting. 
+     * 
+     * THREADSAFETY: 
+     * * must be externally synchronized
+     * * can be passed between different threads
+     * * may only be accessed by one thread at a time.
+    */
     struct CommandList final : ManagedPtr<CommandList>
     {
         CommandList() = default;
@@ -321,6 +332,9 @@ namespace daxa
         void complete();
         auto is_complete() const -> bool;
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the device is dropped.
+        /// @return reference to info of object.
         auto info() const -> CommandListInfo const &;
 
       protected:

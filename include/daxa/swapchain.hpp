@@ -33,14 +33,23 @@ namespace daxa
 
     // TODO(capi): Add function to check support for present mode!
 
+    /**
+     * @brief   Swapchain represents the surface, swapchain and synch primives reguarding acquire and present operations.
+     *          The swapchain has a cpu and gpu timeline in order to ensure proper frames in flight.
+     * 
+     * THREADSAFETY: 
+     * * must be externally synchronized
+     * * can be passed between different threads
+     * * may be accessed by only one thread at the same time
+    */
     struct Swapchain final : ManagedPtr<Swapchain>
     {
         Swapchain() = default;
 
-        auto info() const -> SwapchainInfo const &;
-        auto get_surface_extent() const -> Extent2D;
-        auto get_format() const -> Format;
         /// @brief The ImageId may change between calls. This must be called to obtain a new swapchain image to be used for rendering.
+        /// WARNING:
+        /// * ImageIds returned from the swapchain are INVALID after the swapchain is dropped.
+        /// * ImageIds returned from the swapchain are INVALID after calling either resize OR set_present_mode!
         /// @return A swapchain image, that will be ready to render to when the acquire semaphore is signaled. This may return an empty image id if the swapchain is out of date.
         auto acquire_next_image() -> ImageId;
         /// The acquire semaphore must be waited on in the first submission that uses the last acquired image.
@@ -62,13 +71,22 @@ namespace daxa
 
         /// @brief  When the window size changes the swapchain is in an invalid state for new commands.
         ///         Calling resize will recreate the swapchain with the proper window size.
-        /// WARKING: Due to wsi limitations this function will WAIT IDLE THE DEVICE.
-        /// WARKING: If the function throws an error, The swapchain will be invalidated and unusable!
+        /// WARNING: 
+        /// * Due to wsi limitations this function will WAIT IDLE THE DEVICE.
+        /// * If the function throws an error, The swapchain will be invalidated and unusable!
         void resize();
         /// @brief Recreates swapchain with new present mode.
-        /// WARKING: Due to wsi limitations this function will WAIT IDLE THE DEVICE.
-        /// WARKING: If the function throws an error, The swapchain will be invalidated and unusable!
+        /// WARNING:
+        /// * Due to wsi limitations this function will WAIT IDLE THE DEVICE.
+        /// * If the function throws an error, The swapchain will be invalidated and unusable!
         void set_present_mode(PresentMode present_mode);
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the swapchain is dropped
+        /// * reference is INVALIDATED after calling either resize OR set_present_mode
+        /// @return reference to the objects info 
+        auto info() const -> SwapchainInfo const &;
+        auto get_surface_extent() const -> Extent2D;
+        auto get_format() const -> Format;
 
       protected:
         template <typename T>
