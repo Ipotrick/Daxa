@@ -7,67 +7,30 @@ But for some, it is important to know what exactly daxa is doing for resource li
 
 ## Reference Counters
 
-All objects in daxa have a strong and a weak reference count. 
-Technically not all resource need both a strong and weak counter, but for simplicity and forward compatibility, daxa provides them for all resources.
+Nearly all daxa objects have an internal reference count. These reference counters are accessable with the c api, the c++ api simply abstracts the refcounting with RAII shared_ptr-like types. The reference counters are meant to count owning references, held by the user. When an object is created, its reference count is 1, when the reference count is decremented to 0 by the user, the object will be zombiefied (more on that later).
 
-When an objects is created, it is returnd to the user with a strong count of 1 and a weak count of 0. 
+> The reference counting is atomic and threadsafe.
 
-The strong count is used to express an owning relationship. The c api provides functions to in and decrement this strong count, expressing owning handles.
-To end the lifetime of an object, simply decrement the strong count to 0.
+Daxa also keeps a secondary weak reference count for most objects. This count is used to count parent-child dependencies between objects. For example creating a binary semaphore is the child of a device, creating one will increment the weak count of the parent device. Per default daxa will use the weak count to keep parents alive if a child dies before its parent in order to ensure proper destruction order. This is very convenient but may lead to unclear resource lifetimes. 
 
-The weak count is used to track implicit dependencies between objects internally. 
+// TODO: Fix inconsistency in parent child relations for memory block.
 
-For example a BinarySemaphore has an implicit parent->child relationship with Device. 
-Creating a BinarySemaphore will increment the weak count of the device by one, when the semaphore is destroyed the weak count of the device will be decremented.
+> Note: To be sure on when an object is a child to another object, check out the functions creating the objects. When an object has a function to create another one it is a child of the other one. For example an ImageView is not a parent to an image but to the device.
 
-This weak count can be used in two modes. 
+> Note: buffer, image(-view) and sampler are excluded from this. They MUST be destroyed before the device as a user side reference is nessecary to destroy those objects at all!
 
-As a default daxa will treat these weak references as owning, meaning weak counts will keep objects alive.
-This can be quite useful and makes the api simpler and easier to use, for example accidentally destroying an image before an image view pointing to it is completely fine in this mode.
-The image view will keep the image alive, as it incremented the weak count to the image on its creation. When the image view ends its lifetime it will decrement the weak count, ending the lifetime of its parent image.
+// TODO: Implement better error messaging for this mode!
+
+But daxa has an optional secondary lifetime mode in which it is illegal for children to outlive their parents. This secondart mode makes it nessecary to have two different counters as daxa needs to be able to differentiate the user reference counts and the child-parent dependency reference counts. In this mode daxa will panic if one tries to destroy a parent before having destroyed all its children. This mode is prefered by many, as it will force the user to use clear object lifetimes and daxa will detect any errors. This mode is instance wide and can be enabled with the instacee flag `DAXA_INSTANCE_FLAG_PARENT_MUST_OUTLIVE_CHILD`.
 
 The secondary mode `PARENTS_MUST_OUTLLIVE_CHILDREN` makes daxa treat weak references as a simple debug utility, ensuring that parents outlive children.
 So when an image is destroyed before all views to it are destroyed, the strong count to the image is 0 but the weak count is > 0. In this mode daxa will error as a child outlived a parent.
 This mode is very useful if the user does NOT want objects to linger around potentially hogging memory and other resources. This way daxa will find any and all dependency management errors the user might do with daxa objects.
 
-> There is one exception to this, the gpu shader resources (buffer, image, image view, sampler) MUST always outlive the parent (device), as the device is required to destroy these resources. They can never outlive the device.
+## Deferred destruction - Zombies??
 
-This mode can be set as an flag when creating a daxa instance.
+As mentioned above, when the reference count of an object drops to zero it is NOT directly destroyed. They become a "zombie". A zombie is not usable by the user anymore. Daxa keeps zombies around because the gpu could potentially still use these objects when the reference count dropped to zero! In order to prevent destroying objects before the gpu is done using them daxa keeps the nessecary parts of an object alive as a zombie until it is safe to really destroy the resources.
 
-> In the c++ api these reference counters are automatically managed by the c++ wrapper types. 
+Daxa keeps a cpu and gpu timeline to measure how much the gpu is behind the cpu. When a zombie is created it gets assigned the current cpu timeline value. When collect garbage is called on the device, it will check if the gpu reached the zombies cpu timeline value. If so it destroyes them, as the gpu reached past the point in time where the object became a zombie!
 
-## Deferred destruction
-
-In daxa and vulkan it is possible for the gpu to run asynchronously with the cpu.
-
-This has lifetime implications for all gpu objects held by daxa and vulkan. For example a buffer must not be destroyed while the gpu is executing commands that potentially use this buffer.
-
-There are multiple ways to avoid this problem, in daxa i decided to use a timeline based destruction model.
-
-This model allows the user to treat the lifetime of resources as if the gpu would always be in sync with the cpu (but have them actually work asynchonously), making lifetimes much simpler to manage.
-
-There is no need to wait on semaphores or fences to ensure proper destruction, daxa does that all for you.
-
-### How does it work?
-
-The daxa device holds the main graphics queue, a cpu timeline value and a gpu timeline value.
-
-On a submit to the device the cpu timeline value is incremented, and when the gpu execution finishes, the gpu timeline value will be incremented as well.
-
-With these two values (cpu and gpu timeline) we can determine how much the gpu is behind the cpu. 
-
-In daxa, when an object drops to 0 references, instead of immediately destoying it, it becomes a zombie. 
-
-Zombies "stay alive" until the gpu catches up to the cpu timeline at the point of zombiefication of that object.
-
-This ensures that all currently submitted commands can still use the resource until it is done.
-
-When an object becomes a zombie they get the current cpu timeline value as a marker. 
-
-In the `collect_garbage` function, a daxa device reads the current cpu and gpu timeline values, then goes throu all zombies.
-
-When a zombies marker timeline value is greater or equal to the gpu timeline value, that means that the gpu is done executing all commands that were submitted at the time of the zombiefication of that object.
-
-Hence we can safely destroy the zombie at that point.
-
-Doing this daxa batches all resource destructions by this zombification mechanism.
+> Note: collect garbage can be manually called, but it is also automatically called in submit.
