@@ -46,7 +46,7 @@ namespace daxa
 
         /// @brief The ImageId may change between calls. This must be called to obtain a new swapchain image to be used for rendering.
         /// WARNING:
-        /// * ImageIds returned from the swapchain are INVALID after the swapchain is dropped.
+        /// * ImageIds returned from the swapchain are INVALID after the swapchain is destroyed.
         /// * ImageIds returned from the swapchain are INVALID after calling either resize OR set_present_mode!
         /// @return A swapchain image, that will be ready to render to when the acquire semaphore is signaled. This may return an empty image id if the swapchain is out of date.
         auto acquire_next_image() -> ImageId;
@@ -79,7 +79,7 @@ namespace daxa
         /// * If the function throws an error, The swapchain will be invalidated and unusable!
         void set_present_mode(PresentMode present_mode);
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the swapchain is dropped
+        /// * reference MUST NOT be read after the swapchain is destroyed
         /// * reference is INVALIDATED after calling either resize OR set_present_mode
         /// @return reference to the objects info 
         auto info() const -> SwapchainInfo const &;

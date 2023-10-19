@@ -44,7 +44,7 @@ namespace daxa
         auto timeline_semaphore() -> TimelineSemaphore;
         auto buffer() const -> daxa::BufferId;
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> TransferMemoryPoolInfo const &;
 

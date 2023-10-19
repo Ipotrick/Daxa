@@ -1622,7 +1622,7 @@ namespace daxa
         MemoryBlock() = default;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() -> MemoryBlockInfo const &;
 
@@ -1654,7 +1654,7 @@ namespace daxa
         TimelineQueryPool() = default;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> TimelineQueryPoolInfo const &;
 

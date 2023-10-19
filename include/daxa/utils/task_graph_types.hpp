@@ -211,7 +211,7 @@ namespace daxa
 
         auto view() const -> TaskBufferView;
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> TaskBufferInfo const &;
         auto get_state() const -> TrackedBuffers;
@@ -249,7 +249,7 @@ namespace daxa
 
         auto view() const -> TaskImageView;
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> TaskImageInfo const &;
         auto get_state() const -> TrackedImages;

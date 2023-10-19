@@ -32,7 +32,7 @@ namespace daxa
         ComputePipeline() = default;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> ComputePipelineInfo const &;
 
@@ -116,7 +116,7 @@ namespace daxa
         RasterPipeline() = default;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> RasterPipelineInfo const &;
 

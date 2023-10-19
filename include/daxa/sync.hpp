@@ -37,7 +37,7 @@ namespace daxa
         BinarySemaphore() = default;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the device is dropped.
+        /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
         auto info() const -> BinarySemaphoreInfo const &;
 
@@ -59,7 +59,7 @@ namespace daxa
         TimelineSemaphore() = default;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> TimelineSemaphoreInfo const &;
 
@@ -84,7 +84,7 @@ namespace daxa
         Event() = default;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is dropped.
+        /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> EventInfo const &;
 

@@ -240,13 +240,11 @@ namespace daxa
      * THREADSAFETY: 
      * * must be externally synchronized
      * * can be passed between different threads
-     * * may only be accessed by one thread at a time.
+     * * may only be accessed by one thread at a time
      * NOTE:
-     * * When creating a command list, it will LOCK resource lifetimes.
-     * * When resource lifetimes are locked, you CAN NOT call collect_garbage on the device!
-     * * Completing a command list unlocks the resource lifetimes.
-     * * Calling collect_garbage will BLOCK until all read locks are unlocked!
-     * * TODO: If you want fully decoupled command recording use the software command list!
+     * * creating a command list, it will LOCK resource lifetimes
+     * * calling collect_garbage will BLOCK until all resource lifetime locks have been unlocked
+     * * completing a command list will remove its lock on the resource lifetimes
     */
     struct CommandList final : ManagedPtr<CommandList, daxa_CommandList>
     {
@@ -341,7 +339,7 @@ namespace daxa
         auto is_complete() const -> bool;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the device is dropped.
+        /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
         auto info() const -> CommandListInfo const &;
 

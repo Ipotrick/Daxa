@@ -350,7 +350,7 @@ namespace daxa
         auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the device is dropped.
+        /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
         auto info() const -> DeviceInfo const &;
         void wait_idle();
@@ -359,18 +359,18 @@ namespace daxa
         void present_frame(PresentInfo const & info);
 
         /// @brief  Actually destroyes all resources that are ready to be destroyed.
-        ///         When calling destroy, or dropping all references to an object, it is zombiefied.
-        ///         A zombie lifes as long as the gpu still accesses that resource.
-        ///         When the gpu catches up to the point of zombification of the object, it will be destroyed here.
+        ///         When calling destroy, or removing all references to an object, it is zombiefied not really destroyed.
+        ///         A zombie lifes until the gpu catches up to the point of zombiefication.
         /// NOTE:
-        /// * This function WRITE LOCKS the resource lifetimes!
-        /// * This means that it will block until all currently recording command lists complete!
+        /// * this function will block until it gains an exlusive resource lock.
+        /// * command lists may hold shared lifetime locks, those must all unlock before an exclusive lock can be made.
+        /// * look at CommandList for more info on this
         /// * SoftwareCommandList is excempt from this limitation,
         ///   you can freely record those in parallel with collect_garbage.
         void collect_garbage();
 
         /// THREADSAFETY:
-        /// * reference MUST NOT be read after the device is dropped.
+        /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to device properties
         auto properties() const -> DeviceProperties const &;
         auto get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>;
