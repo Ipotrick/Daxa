@@ -160,14 +160,13 @@ namespace daxa
                 u64 refcnt_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
                 u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
                 u64 const version = std::max(refcnt_version & DAXA_ID_VERSION_BITS, 1ull); // Make sure version is at least one.
-                
+
                 // set version to 1 if its not already
                 u64 expected = 0;
                 std::atomic_ref{self.pages[page]->at(offset).second}.compare_exchange_weak(
                     expected, 1ull,
-                    std::memory_order_relaxed
-                );
-                
+                    std::memory_order_relaxed);
+
                 auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = static_cast<u64>(version)};
                 return std::optional{std::pair<GPUResourceId, ResourceT &>(id, self.pages[page]->at(offset).first)};
             }
@@ -334,6 +333,7 @@ namespace daxa
 
     struct GPUShaderResourceTable
     {
+        std::shared_mutex lifetime_lock = {};
         GpuResourcePool<ImplBufferSlot> buffer_slots = {};
         GpuResourcePool<ImplImageSlot> image_slots = {};
         GpuResourcePool<ImplSamplerSlot> sampler_slots = {};

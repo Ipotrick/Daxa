@@ -372,23 +372,37 @@ namespace tests
 
     void ub_protection_perf(App & app)
     {
-        for (int j = 0; j < 10; ++j)
+        auto buf1 = app.device.create_buffer({
+            .size = sizeof(daxa::u32),
+            .name = "buf1",
+        });
+        auto buf2 = app.device.create_buffer({
+            .size = sizeof(daxa::u32),
+            .name = "buf2",
+        });
+
+        int const multi_iter = 20;
+        double results_a[20];
+        double results_b[20];
+
+        for (int j = 0; j < multi_iter; ++j)
         {
-            int const iterations = 10000000;
+            auto cmd_list = app.device.create_command_list({});
+            int const warmup = 1000;
+            int const iterations = 2000000;
 
             double time_taken_per_call_0 = 0.0;
             double time_taken_per_call_1 = 0.0;
 
             {
-                auto cmd_list = app.device.create_command_list({});
-                auto buf1 = app.device.create_buffer({
-                    .size = sizeof(daxa::u32),
-                    .name = "buf1",
-                });
-                auto buf2 = app.device.create_buffer({
-                    .size = sizeof(daxa::u32),
-                    .name = "buf2",
-                });
+                for (int i = 0; i < warmup; ++i)
+                {
+                    cmd_list.copy_buffer_to_buffer({
+                        .src_buffer = buf1,
+                        .dst_buffer = buf2,
+                        .size = sizeof(u32),
+                    });
+                }
                 std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
                 for (int i = 0; i < iterations; ++i)
                 {
@@ -399,32 +413,19 @@ namespace tests
                     });
                 }
                 std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
-                cmd_list.complete();
-                app.device.destroy_buffer(buf1);
-                app.device.destroy_buffer(buf2);
                 auto time_taken_mics = std::chrono::duration_cast<std::chrono::microseconds>(end_time_point - begin_time_point);
                 time_taken_per_call_0 = static_cast<double>(time_taken_mics.count()) / static_cast<double>(iterations);
-                std::cout
-                    << "recording commands with unsafe calls took: "
-                    << time_taken_mics
-                    << " for "
-                    << iterations
-                    << " iterations. That is "
-                    << time_taken_per_call_0
-                    << "us per call"
-                    << std::endl;
             }
 
             {
-                auto cmd_list = app.device.create_command_list({});
-                auto buf1 = app.device.create_buffer({
-                    .size = sizeof(daxa::u32),
-                    .name = "buf1",
-                });
-                auto buf2 = app.device.create_buffer({
-                    .size = sizeof(daxa::u32),
-                    .name = "buf2",
-                });
+                for (int i = 0; i < warmup; ++i)
+                {
+                    cmd_list.copy_buffer_to_buffer2({
+                        .src_buffer = buf1,
+                        .dst_buffer = buf2,
+                        .size = sizeof(u32),
+                    });
+                }
                 std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
                 for (int i = 0; i < iterations; ++i)
                 {
@@ -435,21 +436,12 @@ namespace tests
                     });
                 }
                 std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
-                cmd_list.complete();
-                app.device.destroy_buffer(buf1);
-                app.device.destroy_buffer(buf2);
                 auto time_taken_mics = std::chrono::duration_cast<std::chrono::microseconds>(end_time_point - begin_time_point);
                 time_taken_per_call_1 = static_cast<double>(time_taken_mics.count()) / static_cast<double>(iterations);
-                std::cout
-                    << "recording commands with safe calls took: "
-                    << time_taken_mics
-                    << " for "
-                    << iterations
-                    << " iterations. That is "
-                    << time_taken_per_call_1
-                    << "us per call"
-                    << std::endl;
             }
+            cmd_list.complete();
+            results_a[j] = time_taken_per_call_0;
+            results_b[j] = time_taken_per_call_1;
 
             std::cout
                 << "ratio "
@@ -457,6 +449,27 @@ namespace tests
                 << " %% slower"
                 << std::endl;
         }
+
+        double average_a = 0.0;
+        for (int j = 0; j < multi_iter; ++j)
+        {
+            average_a += results_a[j];
+        }
+        average_a /= 20.0;
+        double average_b = 0.0;
+        for (int j = 0; j < multi_iter; ++j)
+        {
+            average_b += results_b[j];
+        }
+        average_b /= 20.0;
+        std::cout
+            << "FINAL ratio "
+            << (average_b / average_a - 1.0) * 100.0
+            << " %% slower"
+            << std::endl;
+
+        app.device.destroy_buffer(buf1);
+        app.device.destroy_buffer(buf2);
     }
 } // namespace tests
 

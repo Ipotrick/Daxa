@@ -147,8 +147,6 @@ auto daxa_cmd_copy_buffer_to_buffer2(daxa_CommandList self, daxa_BufferCopyInfo 
     self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->src_buffer));
     self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->dst_buffer));
     return DAXA_RESULT_SUCCESS;
-    // daxa_cmd_copy_buffer_to_buffer(self, info);
-    return DAXA_RESULT_SUCCESS;
 }
 
 void daxa_cmd_copy_buffer_to_image(daxa_CommandList self, daxa_BufferImageCopyInfo const * info)
