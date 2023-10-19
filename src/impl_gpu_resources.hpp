@@ -213,7 +213,7 @@ namespace daxa
                 u64 refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
                 refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
                 u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
-                u64 const new_version = new_version + 1;
+                u64 const new_version = version + 1;
                 if (version == id.version)
                 {
                     u64 const new_refcnt_version = (refcnt << DAXA_ID_VERSION_BITS) | new_version;
