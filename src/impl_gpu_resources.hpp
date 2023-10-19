@@ -32,7 +32,6 @@ namespace daxa
 
     struct ImplBufferSlot
     {
-        mutable u64 strong_count = {};
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_BufferInfo info = {};
         std::string info_name = {};
@@ -53,7 +52,6 @@ namespace daxa
 
     struct ImplImageSlot
     {
-        mutable u64 strong_count = {};
         ImplImageViewSlot view_slot = {};
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_ImageInfo info = {};
@@ -66,11 +64,17 @@ namespace daxa
 
     struct ImplSamplerSlot
     {
-        mutable u64 strong_count = {};
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_SamplerInfo info = {};
         std::string info_name = {};
         VkSampler vk_sampler = {};
+    };
+
+    enum class TryZombiefyResult
+    {
+        INVALID_ID,
+        HAS_REMAINING_READ_LOCKS,
+        MAY_BE_ZOMBIEFIED,
     };
 
     /**
@@ -92,8 +96,8 @@ namespace daxa
         static constexpr inline usize PAGE_SIZE = 1u << PAGE_BITS;
         static constexpr inline usize PAGE_MASK = PAGE_SIZE - 1u;
         static constexpr inline usize PAGE_COUNT = MAX_RESOURCE_COUNT / PAGE_SIZE;
-        using VersionT = u64;
-        using PageT = std::array<std::pair<ResourceT, VersionT>, PAGE_SIZE>;
+        using VersionAndRefcntT = u64;
+        using PageT = std::array<std::pair<ResourceT, VersionAndRefcntT>, PAGE_SIZE>;
 
         std::vector<u32> free_index_stack = {};
         u32 next_index = {};
@@ -122,7 +126,7 @@ namespace daxa
              *
              * @return The new resource slot and its id. Can fail if max resources is exceeded.
              */
-            auto create_slot() -> std::optional<std::pair<GPUResourceId, ResourceT &>>
+            auto try_create_slot() -> std::optional<std::pair<GPUResourceId, ResourceT &>>
             {
                 u32 index;
                 if (self.free_index_stack.empty())
@@ -153,9 +157,17 @@ namespace daxa
                     std::atomic_ref{self.valid_page_count}.fetch_add(1, std::memory_order_seq_cst);
                 }
 
-                self.pages[page]->at(offset).second = std::max<u64>(self.pages[page]->at(offset).second, 1); // make sure the version is at least one
-
-                auto const version = self.pages[page]->at(offset).second;
+                u64 refcnt_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
+                u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
+                u64 const version = std::max(refcnt_version & DAXA_ID_VERSION_BITS, 1ull); // Make sure version is at least one.
+                
+                // set version to 1 if its not already
+                u64 expected = 0;
+                std::atomic_ref{self.pages[page]->at(offset).second}.compare_exchange_weak(
+                    expected, 1ull,
+                    std::memory_order_relaxed
+                );
+                
                 auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = static_cast<u64>(version)};
                 return std::optional{std::pair<GPUResourceId, ResourceT &>(id, self.pages[page]->at(offset).first)};
             }
@@ -167,42 +179,110 @@ namespace daxa
              *
              * Always threadsafe.
              * Calling this function with a non zombie id will result in undefined behavior.
-             * WARNING: Not calling unsafe_destroy_slot at some point on a zombiefied resource causes slot leaking!
+             * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombiefied resource causes slot leaking!
              */
-            void unsafe_destroy_slot(GPUResourceId id)
+            void unsafe_destroy_zombie_slot(GPUResourceId id)
             {
                 auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
                 auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-                auto const prev_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
-                // Clear slot:
-                self.pages[page]->at(offset).first = {};
+                auto const refcnt_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
+                u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
                 // Slots that reached max version CAN NOT be recycled.
                 // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
-                if (prev_version != DAXA_ID_VERSION_MASK - 1)
+                if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
                 {
                     self.free_index_stack.push_back(id.index);
                 }
-            }
-
-            /**
-             * @brief   Zombiefies a slot.
-             *          After calling this the slot is reported as INVALID!
-             *          BUT the slot is still accessable with the unsafe get function.
-             *          In order to clear and destroy the slot you MUST call unsafe_destroy_slot after this.
-             *
-             * Always threadsafe.
-             * Calling this function with an invalid id is undefined behavior.
-             * WARNING: Not calling unsafe_destroy_slot at some point on a zombiefied resource causes slot leaking!
-             */
-            void unsafe_zombiefy_slot(GPUResourceId id)
-            {
-                auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-                auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-                // Increase version of slot.
-                // This change in version is then used to identify dangling ids.
-                [[maybe_unused]] auto const prev_version = std::atomic_ref{self.pages[page]->at(offset).second}.fetch_add(1, std::memory_order_relaxed);
+                // Clear slot:
+                self.pages[page]->at(offset).first = {};
             }
         };
+
+        auto try_zombiefy(GPUResourceId id) -> TryZombiefyResult
+        {
+            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+            if (page >= std::atomic_ref{this->valid_page_count}.load(std::memory_order_relaxed))
+            {
+                return TryZombiefyResult::INVALID_ID;
+            }
+            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
+            bool success = false;
+            u64 refcnt = {};
+            while (!success)
+            {
+                u64 refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
+                refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
+                u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
+                u64 const new_version = new_version + 1;
+                if (version == id.version)
+                {
+                    u64 const new_refcnt_version = (refcnt << DAXA_ID_VERSION_BITS) | new_version;
+                    success = std::atomic_ref{(*this->pages[page])[offset].second}.compare_exchange_weak(
+                        refcnt_version, new_refcnt_version,
+                        std::memory_order_relaxed);
+                }
+                else
+                {
+                    return TryZombiefyResult::INVALID_ID;
+                }
+            }
+            if (refcnt == 0)
+            {
+                return TryZombiefyResult::MAY_BE_ZOMBIEFIED;
+            }
+            else
+            {
+                return TryZombiefyResult::HAS_REMAINING_READ_LOCKS;
+            }
+        }
+
+        auto try_read_lock(GPUResourceId id) -> bool
+        {
+            // refcnt is in upper bits, version in lower bits.
+            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+            // clamp page to valid index
+            if (page >= std::atomic_ref{this->valid_page_count}.load(std::memory_order_relaxed))
+            {
+                return false;
+            }
+            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
+            bool success = false;
+            u64 new_refcnt = {};
+            while (!success)
+            {
+                u64 refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
+                u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
+                u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
+                new_refcnt = refcnt + 1;
+                if (version == id.version && new_refcnt < ((1ull << 20) - 1ull))
+                {
+                    u64 const new_refcnt_version = (new_refcnt << DAXA_ID_VERSION_BITS) | version;
+                    success = std::atomic_ref{(*this->pages[page])[offset].second}.compare_exchange_weak(
+                        refcnt_version, new_refcnt_version,
+                        std::memory_order_relaxed);
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        /// @return if resource is zombie AND has zero read locks.
+        auto read_unlock(GPUResourceId id) -> bool
+        {
+            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
+            // dec refcnt
+            u64 const refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.fetch_sub(1ull << DAXA_ID_VERSION_BITS, std::memory_order_relaxed);
+            u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
+            u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
+            // version != id.version => user zombified object
+            // refcnt == 0 => no read locks remaining
+            //   => we must zombiefy
+            return version != id.version && refcnt == 0;
+        }
 
         /**
          * @brief   Returns exclusive accessor.
@@ -225,9 +305,14 @@ namespace daxa
         {
             auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-            return id.version != 0 &&
-                   page < std::atomic_ref{this->valid_page_count}.load(std::memory_order_relaxed) &&
-                   id.version == std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
+            if (id.version == 0 || page >= static_cast<usize>(std::atomic_ref{this->valid_page_count}.load(std::memory_order_relaxed)))
+            {
+                return false;
+            }
+            u64 const refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
+            u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
+            u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
+            return refcnt != 0 && version == id.version;
         }
 
         /**

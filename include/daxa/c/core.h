@@ -33,6 +33,8 @@ typedef struct daxa_ImplEvent * daxa_Event;
 typedef struct daxa_ImplTimelineQueryPool * daxa_TimelineQueryPool;
 typedef struct daxa_ImplMemoryBlock * daxa_MemoryBlock;
 
+// TODO(capi): make all functions that access slots of resources use read locks internally!
+
 typedef uint64_t daxa_Flags;
 
 typedef char daxa_Bool8;

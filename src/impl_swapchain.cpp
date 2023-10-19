@@ -377,7 +377,8 @@ void daxa_ImplSwapchain::partial_cleanup()
 {
     for (auto & image : this->images)
     {
-        daxa_dvc_dec_refcnt_image(this->device, static_cast<daxa_ImageId>(image));
+        // TODO(lifetime): report error.
+        daxa_dvc_destroy_image(this->device, static_cast<daxa_ImageId>(image));
     }
     this->images.clear();
 }

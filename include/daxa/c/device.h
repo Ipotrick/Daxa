@@ -223,23 +223,14 @@ daxa_dvc_create_image_view(daxa_Device device, daxa_ImageViewInfo const * info, 
 DAXA_EXPORT daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
 
-DAXA_EXPORT uint64_t
-daxa_dvc_inc_refcnt_buffer(daxa_Device device, daxa_BufferId buffer);
-DAXA_EXPORT uint64_t
-daxa_dvc_inc_refcnt_image(daxa_Device device, daxa_ImageId image);
-DAXA_EXPORT uint64_t
-daxa_dvc_inc_refcnt_image_view(daxa_Device device, daxa_ImageViewId id);
-DAXA_EXPORT uint64_t
-daxa_dvc_inc_refcnt_sampler(daxa_Device device, daxa_SamplerId sampler);
-
-DAXA_EXPORT uint64_t
-daxa_dvc_dec_refcnt_buffer(daxa_Device device, daxa_BufferId buffer);
-DAXA_EXPORT uint64_t
-daxa_dvc_dec_refcnt_image(daxa_Device device, daxa_ImageId image);
-DAXA_EXPORT uint64_t
-daxa_dvc_dec_refcnt_image_view(daxa_Device device, daxa_ImageViewId id);
-DAXA_EXPORT uint64_t
-daxa_dvc_dec_refcnt_sampler(daxa_Device device, daxa_SamplerId sampler);
+DAXA_EXPORT daxa_Result
+daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
+DAXA_EXPORT daxa_Result
+daxa_dvc_destroy_image(daxa_Device device, daxa_ImageId image);
+DAXA_EXPORT daxa_Result
+daxa_dvc_destroy_image_view(daxa_Device device, daxa_ImageViewId id);
+DAXA_EXPORT daxa_Result
+daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 
 DAXA_EXPORT daxa_BufferInfo const *
 daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer);

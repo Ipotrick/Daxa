@@ -245,6 +245,7 @@ namespace daxa
         CommandList() = default;
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
+        void copy_buffer_to_buffer2(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopyInfo const & info);
         void copy_image_to_buffer(ImageBufferCopyInfo const & info);
         void copy_image_to_image(ImageCopyInfo const & info);

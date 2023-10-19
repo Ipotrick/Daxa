@@ -107,7 +107,7 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
 };
 
 template <usize N = 1>
-void check_result(daxa_Result result, std::string const & message, std::array<daxa_Result, N> allowed_codes = {DAXA_RESULT_SUCCESS})
+void check_result(daxa_Result result, char const * message, std::array<daxa_Result, N> allowed_codes = {DAXA_RESULT_SUCCESS})
 {
     bool result_allowed = false;
     for (auto allowed_code : allowed_codes)
@@ -220,10 +220,10 @@ namespace daxa
     }                                                                                  \
     void Device::destroy_##name(Name##Id id)                                           \
     {                                                                                  \
-        DAXA_DBG_ASSERT_TRUE_M(this->is_id_valid(id), "detected illegal resource id"); \
-        [[maybe_unused]] auto prev_refcnt = daxa_dvc_dec_refcnt_##name(                \
+        auto result = daxa_dvc_destroy_##name(                                         \
             r_cast<daxa_Device>(this->object),                                         \
             static_cast<daxa_##Name##Id>(id));                                         \
+        check_result(result, "invalid resource id");                                   \
     }                                                                                  \
     auto Device::is_id_valid(Name##Id id) const->bool                                  \
     {                                                                                  \
@@ -360,8 +360,7 @@ namespace daxa
             cdevice->vk_physical_device,
             surface,
             &present_mode_count,
-            nullptr
-        );
+            nullptr);
         if (vk_result != VK_SUCCESS)
         {
             vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
@@ -373,8 +372,7 @@ namespace daxa
             cdevice->vk_physical_device,
             surface,
             &present_mode_count,
-            r_cast<VkPresentModeKHR*>(ret.data())
-        );
+            r_cast<VkPresentModeKHR *>(ret.data()));
         if (vk_result != VK_SUCCESS)
         {
             vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
@@ -652,6 +650,13 @@ namespace daxa
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_buffer_to_buffer, BufferCopyInfo)
+    void CommandList::copy_buffer_to_buffer2(BufferCopyInfo const & info)
+    {
+        auto const result = daxa_cmd_copy_buffer_to_buffer2(
+            r_cast<daxa_CommandList>(this->object),
+            r_cast<daxa_BufferCopyInfo const *>(&info));
+        check_result(result, "invalid id");
+    }
     _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_buffer_to_image, BufferImageCopyInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_image_to_buffer, ImageBufferCopyInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_image_to_image, ImageCopyInfo)

@@ -324,6 +324,7 @@ namespace tests
         // Collect_garbage loops over all zombie resources and destroys them when they are no longer used on the gpu/ their associated command list finished executing.
         app.device.collect_garbage();
     }
+
     void recreation(App & app)
     {
         std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
@@ -368,24 +369,109 @@ namespace tests
             << " years"
             << std::endl;
     }
+
+    void ub_protection_perf(App & app)
+    {
+
+        int const iterations = 10000000;
+
+        auto cmd_list = app.device.create_command_list({});
+        auto buf1 = app.device.create_buffer({
+            .size = sizeof(daxa::u32),
+            .name = "buf1",
+        });
+        auto buf2 = app.device.create_buffer({
+            .size = sizeof(daxa::u32),
+            .name = "buf2",
+        });
+        std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < iterations; ++i)
+        {
+            cmd_list.copy_buffer_to_buffer({
+                .src_buffer = buf1,
+                .dst_buffer = buf2,
+                .size = sizeof(u32),
+            });
+        }
+        std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
+        cmd_list.complete();
+        app.device.destroy_buffer(buf1);
+        app.device.destroy_buffer(buf2); 
+        auto time_taken_mics = std::chrono::duration_cast<std::chrono::microseconds>(end_time_point - begin_time_point);
+        auto time_taken_per_call = static_cast<double>(time_taken_mics.count()) / static_cast<double>(iterations);
+        std::cout
+            << "recording commands with unsafe calls took: "
+            << time_taken_mics
+            << " for "
+            << iterations
+            << " iterations. That is "
+            << time_taken_per_call
+            << "us per call"
+            << std::endl;
+    }
+
+    void ub_protection_perf2(App & app)
+    {
+
+        int const iterations = 10000000; 
+
+        auto cmd_list = app.device.create_command_list({});
+        auto buf1 = app.device.create_buffer({
+            .size = sizeof(daxa::u32),
+            .name = "buf1",
+        });
+        auto buf2 = app.device.create_buffer({
+            .size = sizeof(daxa::u32),
+            .name = "buf2",
+        });
+        std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
+        for (int i = 0; i < iterations; ++i)
+        {
+            cmd_list.copy_buffer_to_buffer2({
+                .src_buffer = buf1,
+                .dst_buffer = buf2,
+                .size = sizeof(u32),
+            });
+        }
+        std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
+        cmd_list.complete();
+        app.device.destroy_buffer(buf1);
+        app.device.destroy_buffer(buf2);
+        auto time_taken_mics = std::chrono::duration_cast<std::chrono::microseconds>(end_time_point - begin_time_point);
+        auto time_taken_per_call = static_cast<double>(time_taken_mics.count()) / static_cast<double>(iterations);
+        std::cout
+            << "recording commands with safe calls took: "
+            << time_taken_mics
+            << " for "
+            << iterations
+            << " iterations. That is "
+            << time_taken_per_call
+            << "us per call"
+            << std::endl;
+    }
 } // namespace tests
 
 auto main() -> int
 {
+    // {
+    //     App app = {};
+    //     tests::simplest(app);
+    // }
+    // {
+    //     App app = {};
+    //     tests::copy(app);
+    // }
+    // {
+    //     App app = {};
+    //     tests::deferred_destruction(app);
+    // }
+    // {
+    //     App app = {};
+    //     tests::recreation(app);
+    // }
     {
         App app = {};
-        tests::simplest(app);
-    }
-    {
-        App app = {};
-        tests::copy(app);
-    }
-    {
-        App app = {};
-        tests::deferred_destruction(app);
-    }
-    {
-        App app = {};
-        tests::recreation(app);
+        tests::ub_protection_perf(app);
+        tests::ub_protection_perf2(app);
     }
 }

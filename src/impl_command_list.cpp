@@ -120,6 +120,37 @@ void daxa_cmd_copy_buffer_to_buffer(daxa_CommandList self, daxa_BufferCopyInfo c
         vk_buffer_copy);
 }
 
+auto daxa_cmd_copy_buffer_to_buffer2(daxa_CommandList self, daxa_BufferCopyInfo const * info) -> daxa_Result
+{
+    daxa_cmd_flush_barriers(self);
+    bool const res0 = self->device->gpu_shader_resource_table.buffer_slots.try_read_lock(std::bit_cast<GPUResourceId>(info->src_buffer));
+    bool const res1 = self->device->gpu_shader_resource_table.buffer_slots.try_read_lock(std::bit_cast<GPUResourceId>(info->dst_buffer));
+    if ((!res0) | (!res1))
+    {
+        if (res0)
+        {
+            self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->src_buffer));
+        }
+        if (res1)
+        {
+            self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->dst_buffer));
+        }
+        return DAXA_RESULT_INVALID_BUFFER_ID;
+    }
+    auto vk_buffer_copy = reinterpret_cast<VkBufferCopy const *>(&info->src_offset);
+    vkCmdCopyBuffer(
+        self->vk_cmd_buffer,
+        self->device->slot(info->src_buffer).vk_buffer,
+        self->device->slot(info->dst_buffer).vk_buffer,
+        1,
+        vk_buffer_copy);
+    self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->src_buffer));
+    self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->dst_buffer));
+    return DAXA_RESULT_SUCCESS;
+    // daxa_cmd_copy_buffer_to_buffer(self, info);
+    return DAXA_RESULT_SUCCESS;
+}
+
 void daxa_cmd_copy_buffer_to_image(daxa_CommandList self, daxa_BufferImageCopyInfo const * info)
 {
     daxa_cmd_flush_barriers(self);
@@ -776,8 +807,7 @@ auto daxa_cmd_dec_refcnt(daxa_CommandList self) -> u64
 {
     return self->dec_refcnt(
         &daxa_ImplCommandList::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
 }
 
 auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const * info, daxa_CommandList * out_cmd_list) -> daxa_Result
@@ -894,8 +924,7 @@ void daxa_ImplCommandList::zero_ref_callback(ImplHandle const * handle)
     });
     self->device->dec_weak_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
     delete self;
 }
 

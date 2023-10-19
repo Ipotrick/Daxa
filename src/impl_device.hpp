@@ -102,10 +102,15 @@ struct daxa_ImplDevice final : public ImplHandle
     void cleanup_image_view(ImageViewId id);
     void cleanup_sampler(SamplerId id);
 
-    void zero_ref_callback_buffer(BufferId id);
-    void zero_ref_callback_image(ImageId id);
-    void zero_ref_callback_image_view(ImageViewId id);
-    void zero_ref_callback_sampler(SamplerId id);
+    void zombiefy_buffer(BufferId id);
+    void zombiefy_image(ImageId id);
+    void zombiefy_image_view(ImageViewId id);
+    void zombiefy_sampler(SamplerId id);
+
+    void read_unlock_buffer(BufferId id);
+    void read_unlock_image(ImageId id);
+    void read_unlock_image_view(ImageViewId id);
+    void read_unlock_sampler(SamplerId id);
 
     // TODO: Give physical device in info so that this function can be removed.
     // TODO: Better device selection.
