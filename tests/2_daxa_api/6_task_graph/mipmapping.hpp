@@ -165,6 +165,7 @@ namespace tests
                 std::array<bool, TASK_CONDITION_COUNT> conditions = {};
                 conditions[TASK_CONDITION_MOUSE_DRAWING] = mouse_drawing;
                 task_graph.execute({.permutation_condition_values = {conditions.data(), conditions.size()}, .record_debug_string = true});
+                device.collect_garbage();
                 // std::cout << task_graph.get_debug_string() << std::endl;
             }
 

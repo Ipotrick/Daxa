@@ -356,8 +356,6 @@ static const daxa_SetIndexBufferInfo DAXA_DEFAULT_SET_INDEX_BUFFER_INFO = {
 
 DAXA_EXPORT void
 daxa_cmd_copy_buffer_to_buffer(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
-DAXA_EXPORT daxa_Result
-daxa_cmd_copy_buffer_to_buffer2(daxa_CommandList cmd_list, daxa_BufferCopyInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_copy_buffer_to_image(daxa_CommandList cmd_list, daxa_BufferImageCopyInfo const * info);
 DAXA_EXPORT void

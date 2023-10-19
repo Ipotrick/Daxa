@@ -229,6 +229,8 @@ namespace daxa
         IndexType index_type = IndexType::uint32;
     };
 
+    // TODO: Add software command list for more robust uncoupled command recording.
+    // TODO: Collect all used ids and handles, use them to check validity when submitting.
     /**
      * @brief   CommandList is used to encode commands into a VkCommandBuffer.
      *          In order to submit a command list one must complete it.
@@ -239,13 +241,18 @@ namespace daxa
      * * must be externally synchronized
      * * can be passed between different threads
      * * may only be accessed by one thread at a time.
+     * NOTE:
+     * * When creating a command list, it will LOCK resource lifetimes.
+     * * When resource lifetimes are locked, you CAN NOT call collect_garbage on the device!
+     * * Completing a command list unlocks the resource lifetimes.
+     * * Calling collect_garbage will BLOCK until all read locks are unlocked!
+     * * TODO: If you want fully decoupled command recording use the software command list!
     */
     struct CommandList final : ManagedPtr<CommandList, daxa_CommandList>
     {
         CommandList() = default;
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
-        void copy_buffer_to_buffer2(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopyInfo const & info);
         void copy_image_to_buffer(ImageBufferCopyInfo const & info);
         void copy_image_to_image(ImageCopyInfo const & info);

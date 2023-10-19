@@ -119,7 +119,7 @@ auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa
 
     // --- End Parameter Validation ---
 
-    auto slot_opt = self->gpu_shader_resource_table.buffer_slots.exclusive().try_create_slot();
+    auto slot_opt = self->gpu_shader_resource_table.buffer_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
         return DAXA_RESULT_EXEEDED_MAX_BUFFERS;
@@ -254,7 +254,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
 
     /// --- End Validation ---
 
-    auto slot_opt = self->gpu_shader_resource_table.image_slots.exclusive().try_create_slot();
+    auto slot_opt = self->gpu_shader_resource_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
         return DAXA_RESULT_EXEEDED_MAX_IMAGES;
@@ -328,7 +328,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         auto result = vmaCreateImage(self->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
         if (result != VK_SUCCESS)
         {
-            self->gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(id);
+            self->gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
 
@@ -337,7 +337,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         if (result != VK_SUCCESS)
         {
             vmaDestroyImage(self->vma_allocator, ret.vk_image, ret.vma_allocation);
-            self->gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(id);
+            self->gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
         }
     }
@@ -350,7 +350,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         auto result = vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
         if (result != VK_SUCCESS)
         {
-            self->gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(id);
+            self->gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
         result = vmaBindImageMemory2(
@@ -362,7 +362,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         if (result != VK_SUCCESS)
         {
             vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
-            self->gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(id);
+            self->gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
 
@@ -372,7 +372,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
         {
 
             vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
-            self->gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(id);
+            self->gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
         }
         mem_block.inc_weak_refcnt();
@@ -416,7 +416,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
 
     /// --- End Validation ---
 
-    auto slot_opt = self->gpu_shader_resource_table.image_slots.exclusive().try_create_slot();
+    auto slot_opt = self->gpu_shader_resource_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
         return DAXA_RESULT_EXEEDED_MAX_IMAGE_VIEWS;
@@ -450,7 +450,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     auto result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
     if (result != VK_SUCCESS)
     {
-        self->gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(id);
+        self->gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(id);
         return DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW;
     }
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
@@ -484,7 +484,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }
 
     /// --- End Validation ---
-    auto slot_opt = self->gpu_shader_resource_table.sampler_slots.exclusive().try_create_slot();
+    auto slot_opt = self->gpu_shader_resource_table.sampler_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
         return DAXA_RESULT_EXEEDED_MAX_SAMPLERS;
@@ -525,7 +525,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     auto result = vkCreateSampler(self->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
     if (result != VK_SUCCESS)
     {
-        self->gpu_shader_resource_table.sampler_slots.exclusive().unsafe_destroy_zombie_slot(id);
+        self->gpu_shader_resource_table.sampler_slots.unsafe_destroy_zombie_slot(id);
         return DAXA_RESULT_FAILED_TO_CREATE_SAMPLER;
     }
 
@@ -546,34 +546,30 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     return DAXA_RESULT_SUCCESS;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                         \
-    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                             \
-    {                                                                                                           \
-        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                \
-        auto result = self->gpu_shader_resource_table.SLOT_NAME.try_zombiefy(std::bit_cast<GPUResourceId>(id)); \
-        switch (result)                                                                                         \
-        {                                                                                                       \
-        case TryZombiefyResult::INVALID_ID:                                                                     \
-            return DAXA_RESULT_INVALID_##NAME##_ID;                                                             \
-        case TryZombiefyResult::HAS_REMAINING_READ_LOCKS:                                                       \
-            return DAXA_RESULT_SUCCESS;                                                                         \
-        case TryZombiefyResult::MAY_BE_ZOMBIEFIED:                                                              \
-            self->zombiefy_##name(std::bit_cast<Name##Id>(id));                                        \
-            return DAXA_RESULT_SUCCESS;                                                                         \
-        }                                                                                                       \
-    }                                                                                                           \
-    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id)->daxa_##Name##Info const *                  \
-    {                                                                                                           \
-        return &self->slot(id).info;                                                                            \
-    }                                                                                                           \
-    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                           \
-    {                                                                                                           \
-        return std::bit_cast<daxa_Bool8>(self->gpu_shader_resource_table.SLOT_NAME.is_id_valid(                 \
-            std::bit_cast<daxa::GPUResourceId>(id)));                                                           \
-    }                                                                                                           \
-    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                 \
-    {                                                                                                           \
-        return self->slot(id).vk_##name;                                                                        \
+#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                          \
+    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                              \
+    {                                                                                                            \
+        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                 \
+        auto success = self->gpu_shader_resource_table.SLOT_NAME.try_zombiefy(std::bit_cast<GPUResourceId>(id)); \
+        if (success)                                                                                             \
+        {                                                                                                        \
+            self->zombiefy_##name(std::bit_cast<Name##Id>(id));                                                  \
+            return DAXA_RESULT_SUCCESS;                                                                          \
+        }                                                                                                        \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
+    }                                                                                                            \
+    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id)->daxa_##Name##Info const *                   \
+    {                                                                                                            \
+        return &self->slot(id).info;                                                                             \
+    }                                                                                                            \
+    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                            \
+    {                                                                                                            \
+        return std::bit_cast<daxa_Bool8>(self->gpu_shader_resource_table.SLOT_NAME.is_id_valid(                  \
+            std::bit_cast<daxa::GPUResourceId>(id)));                                                            \
+    }                                                                                                            \
+    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                  \
+    {                                                                                                            \
+        return self->slot(id).vk_##name;                                                                         \
     }
 
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots)
@@ -624,7 +620,6 @@ auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 
 auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
 {
-    daxa_dvc_collect_garbage(self);
     _DAXA_TEST_PRINT("\n");
 
     u64 const current_main_queue_cpu_timeline_value = self->main_queue_cpu_timeline.fetch_add(1) + 1;
@@ -747,12 +742,12 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
 
     auto result = vkQueuePresentKHR(self->main_queue_vk_queue, &present_info);
 
-    daxa_dvc_collect_garbage(self);
     return std::bit_cast<daxa_Result>(result);
 }
 
 auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
 {
+    std::unique_lock lifetime_lock{self->gpu_shader_resource_table.lifetime_lock};
     std::unique_lock lock{self->main_queue_zombies_mtx};
 
     u64 gpu_timeline_value = std::numeric_limits<u64>::max();
@@ -1498,7 +1493,7 @@ auto daxa_ImplDevice::validate_image_slice(daxa_ImageMipArraySlice const & slice
 
 auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, ImageId>
 {
-    auto slot_opt = this->gpu_shader_resource_table.image_slots.exclusive().try_create_slot();
+    auto slot_opt = this->gpu_shader_resource_table.image_slots.try_create_slot();
     DAXA_DBG_ASSERT_TRUE_M(slot_opt.has_value(), "CRITICAL INTERNAL ERROR, EXCEEDED MAX IMAGES IN SAWPCHAIN CREATION");
     auto [id, ret] = slot_opt.value();
 
@@ -1570,8 +1565,6 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
 
-    this->inc_weak_refcnt();
-
     return {DAXA_RESULT_SUCCESS, ImageId{id}};
 }
 
@@ -1590,7 +1583,7 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     {
         vkDestroyBuffer(this->vk_device, buffer_slot.vk_buffer, {});
     }
-    gpu_shader_resource_table.buffer_slots.exclusive().unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_shader_resource_table.buffer_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::cleanup_image(ImageId id)
@@ -1617,7 +1610,7 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
             vkDestroyImage(this->vk_device, image_slot.vk_image, {});
         }
     }
-    gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::cleanup_image_view(ImageViewId id)
@@ -1626,7 +1619,7 @@ void daxa_ImplDevice::cleanup_image_view(ImageViewId id)
     ImplImageViewSlot const & image_slot = gpu_shader_resource_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id)).view_slot;
     write_descriptor_set_image(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
     vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
-    gpu_shader_resource_table.image_slots.exclusive().unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_shader_resource_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::cleanup_sampler(SamplerId id)
@@ -1634,7 +1627,7 @@ void daxa_ImplDevice::cleanup_sampler(SamplerId id)
     ImplSamplerSlot const & sampler_slot = this->gpu_shader_resource_table.sampler_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
     write_descriptor_set_sampler(this->vk_device, this->gpu_shader_resource_table.vk_descriptor_set, this->vk_null_sampler, std::bit_cast<GPUResourceId>(id).index);
     vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
-    gpu_shader_resource_table.sampler_slots.exclusive().unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_shader_resource_table.sampler_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 auto daxa_ImplDevice::slot(daxa_BufferId id) const -> ImplBufferSlot const &
@@ -1740,42 +1733,6 @@ void daxa_ImplDevice::zombiefy_sampler(SamplerId id)
         main_queue_cpu_timeline_value,
         std::bit_cast<SamplerId>(id),
     });
-}
-
-void daxa_ImplDevice::read_unlock_buffer(BufferId id)
-{
-    bool const should_zombiefy = this->gpu_shader_resource_table.buffer_slots.read_unlock(id);
-    if (should_zombiefy)
-    {
-        this->zombiefy_buffer(id);
-    }
-}
-
-void daxa_ImplDevice::read_unlock_image(ImageId id)
-{
-    bool const should_zombiefy = this->gpu_shader_resource_table.image_slots.read_unlock(id);
-    if (should_zombiefy)
-    {
-        this->zombiefy_image(id);
-    }
-}
-
-void daxa_ImplDevice::read_unlock_image_view(ImageViewId id)
-{
-    bool const should_zombiefy = this->gpu_shader_resource_table.image_slots.read_unlock(id);
-    if (should_zombiefy)
-    {
-        this->zombiefy_image_view(id);
-    }
-}
-
-void daxa_ImplDevice::read_unlock_sampler(SamplerId id)
-{
-    bool const should_zombiefy = this->gpu_shader_resource_table.sampler_slots.read_unlock(id);
-    if (should_zombiefy)
-    {
-        this->zombiefy_sampler(id);
-    }
 }
 
 // --- End Internal Functions ---

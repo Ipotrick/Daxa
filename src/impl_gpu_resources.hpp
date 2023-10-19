@@ -70,13 +70,6 @@ namespace daxa
         VkSampler vk_sampler = {};
     };
 
-    enum class TryZombiefyResult
-    {
-        INVALID_ID,
-        HAS_REMAINING_READ_LOCKS,
-        MAY_BE_ZOMBIEFIED,
-    };
-
     /**
      * @brief GpuResourcePool is intended to be used akin to a specialized memory allocator, specific to gpu resource types (like image views).
      *
@@ -96,202 +89,148 @@ namespace daxa
         static constexpr inline usize PAGE_SIZE = 1u << PAGE_BITS;
         static constexpr inline usize PAGE_MASK = PAGE_SIZE - 1u;
         static constexpr inline usize PAGE_COUNT = MAX_RESOURCE_COUNT / PAGE_SIZE;
-        using VersionAndRefcntT = u64;
+        using VersionAndRefcntT = std::atomic_uint64_t;
+        // TODO: split up slots into hot and cold data.
         using PageT = std::array<std::pair<ResourceT, VersionAndRefcntT>, PAGE_SIZE>;
 
+        // TODO: replace with lockless queue.
         std::vector<u32> free_index_stack = {};
         u32 next_index = {};
         u32 max_resources = {};
 
-        std::mutex page_alloc_mtx = {};
         mutable std::mutex mut = {};
+        std::mutex page_alloc_mtx = {};
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
-        u32 valid_page_count = {};
+        std::atomic_uint32_t valid_page_count = {};
 
-        struct ExclusiveAccess
-        {
-          private:
-            GpuResourcePool<ResourceT> & self;
-            std::lock_guard<std::mutex> l;
+        // struct ExclusiveAccess
+        // {
+        //   private:
+        //     GpuResourcePool<ResourceT> & self;
+        //     std::lock_guard<std::shared_mutex> l;
+        //   public:
+        //     ExclusiveAccess(GpuResourcePool<ResourceT> & pool) : self{pool}, l{pool.mut} {}
+        //     /**
+        //      * @brief   Destroyes a slot.
+        //      *          After calling this function, the id of the slot will be forever invalid.
+        //      *          Index may be recycled but index + version pairs are always unique.
+        //      *
+        //      * Always threadsafe.
+        //      * Calling this function with a non zombie id will result in undefined behavior.
+        //      * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombiefied resource causes slot leaking!
+        //      */
+        //     void unsafe_destroy_zombie_slot(GPUResourceId id)
+        //     {
+        //         auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+        //         auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
+        //         auto const refcnt_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
+        //         u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
+        //         // Slots that reached max version CAN NOT be recycled.
+        //         // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
+        //         if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
+        //         {
+        //             self.free_index_stack.push_back(id.index);
+        //         }
+        //         // Clear slot:
+        //         self.pages[page]->at(offset).first = {};
+        //     }
+        // };
 
-          public:
-            ExclusiveAccess(GpuResourcePool<ResourceT> & pool) : self{pool}, l{pool.mut} {}
+        // /**
+        //  * @brief   Returns exclusive accessor.
+        //  *
+        //  * Always threadsafe.
+        //  * @return exclusive accessor.
+        //  */
+        // auto exclusive() -> ExclusiveAccess
+        // {
+        //     return ExclusiveAccess{*this};
+        // }
 
-            /**
-             * @brief   Creates a slot for a resource in the pool.
-             *          Returned slots may be recycled but are guaranteed to have a unique index + version.
-             *
-             * Only Threadsafe when:
-             * * mutable ptr to resource is only used in parallel
-             *
-             * @return The new resource slot and its id. Can fail if max resources is exceeded.
-             */
-            auto try_create_slot() -> std::optional<std::pair<GPUResourceId, ResourceT &>>
-            {
-                u32 index;
-                if (self.free_index_stack.empty())
-                {
-                    index = self.next_index++;
-                    if (index == self.max_resources || index == MAX_RESOURCE_COUNT)
-                    {
-                        return std::nullopt;
-                    }
-                }
-                else
-                {
-                    index = self.free_index_stack.back();
-                    self.free_index_stack.pop_back();
-                }
-
-                auto const page = static_cast<usize>(index) >> PAGE_BITS;
-                auto const offset = static_cast<usize>(index) & PAGE_MASK;
-
-                if (!self.pages[page])
-                {
-                    self.pages[page] = std::make_unique<PageT>();
-                    for (u32 i = 0; i < PAGE_SIZE; ++i)
-                    {
-                        self.pages[page]->at(i).second = 0; // set all version numbers to 0 (invalid)
-                    }
-                    // Needs to be sequential, so that the 0 writes to the versions are visible before the atomic op.
-                    std::atomic_ref{self.valid_page_count}.fetch_add(1, std::memory_order_seq_cst);
-                }
-
-                u64 refcnt_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
-                u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
-                u64 const version = std::max(refcnt_version & DAXA_ID_VERSION_BITS, 1ull); // Make sure version is at least one.
-
-                // set version to 1 if its not already
-                u64 expected = 0;
-                std::atomic_ref{self.pages[page]->at(offset).second}.compare_exchange_weak(
-                    expected, 1ull,
-                    std::memory_order_relaxed);
-
-                auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = static_cast<u64>(version)};
-                return std::optional{std::pair<GPUResourceId, ResourceT &>(id, self.pages[page]->at(offset).first)};
-            }
-
-            /**
-             * @brief   Destroyes a slot.
-             *          After calling this function, the id of the slot will be forever invalid.
-             *          Index may be recycled but index + version pairs are always unique.
-             *
-             * Always threadsafe.
-             * Calling this function with a non zombie id will result in undefined behavior.
-             * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombiefied resource causes slot leaking!
-             */
-            void unsafe_destroy_zombie_slot(GPUResourceId id)
-            {
-                auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-                auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-                auto const refcnt_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
-                u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
-                // Slots that reached max version CAN NOT be recycled.
-                // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
-                if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
-                {
-                    self.free_index_stack.push_back(id.index);
-                }
-                // Clear slot:
-                self.pages[page]->at(offset).first = {};
-            }
-        };
-
-        auto try_zombiefy(GPUResourceId id) -> TryZombiefyResult
+        /**
+         * @brief   Destroyes a slot.
+         *          After calling this function, the id of the slot will be forever invalid.
+         *          Index may be recycled but index + version pairs are always unique.
+         *
+         * Always threadsafe.
+         * Calling this function with a non zombie id will result in undefined behavior.
+         * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombiefied resource causes slot leaking!
+         */
+        void unsafe_destroy_zombie_slot(GPUResourceId id)
         {
             auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-            if (page >= std::atomic_ref{this->valid_page_count}.load(std::memory_order_relaxed))
-            {
-                return TryZombiefyResult::INVALID_ID;
-            }
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-            bool success = false;
-            u64 refcnt = {};
-            while (!success)
+            auto const version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
+            // Slots that reached max version CAN NOT be recycled.
+            // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
+            if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
             {
-                u64 refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
-                refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
-                u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
-                u64 const new_version = version + 1;
-                if (version == id.version)
-                {
-                    u64 const new_refcnt_version = (refcnt << DAXA_ID_VERSION_BITS) | new_version;
-                    success = std::atomic_ref{(*this->pages[page])[offset].second}.compare_exchange_weak(
-                        refcnt_version, new_refcnt_version,
-                        std::memory_order_relaxed);
-                }
-                else
-                {
-                    return TryZombiefyResult::INVALID_ID;
-                }
+                this->free_index_stack.push_back(id.index);
             }
-            if (refcnt == 0)
+            // Clear slot:
+            this->pages[page]->at(offset).first = {};
+        }
+
+        /**
+         * @brief   Creates a slot for a resource in the pool.
+         *          Returned slots may be recycled but are guaranteed to have a unique index + version.
+         *
+         * Only Threadsafe when:
+         * * mutable ptr to resource is only used in parallel
+         *
+         * @return The new resource slot and its id. Can fail if max resources is exceeded.
+         */
+        auto try_create_slot() -> std::optional<std::pair<GPUResourceId, ResourceT &>>
+        {
+            u32 index;
+            if (this->free_index_stack.empty())
             {
-                return TryZombiefyResult::MAY_BE_ZOMBIEFIED;
+                index = this->next_index++;
+                if (index == this->max_resources || index == MAX_RESOURCE_COUNT)
+                {
+                    return std::nullopt;
+                }
             }
             else
             {
-                return TryZombiefyResult::HAS_REMAINING_READ_LOCKS;
+                index = this->free_index_stack.back();
+                this->free_index_stack.pop_back();
             }
+
+            auto const page = static_cast<usize>(index) >> PAGE_BITS;
+            auto const offset = static_cast<usize>(index) & PAGE_MASK;
+
+            if (!this->pages[page])
+            {
+                this->pages[page] = std::make_unique<PageT>();
+                for (u32 i = 0; i < PAGE_SIZE; ++i)
+                {
+                    this->pages[page]->at(i).second.store(1ull, std::memory_order_relaxed);
+                }
+                // Needs to be sequential, so that the 0 writes to the versions are visible before the atomic op.
+                this->valid_page_count.fetch_add(1, std::memory_order_seq_cst);
+            }
+
+            u64 version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
+
+            auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = version};
+            return std::optional{std::pair<GPUResourceId, ResourceT &>(id, this->pages[page]->at(offset).first)};
         }
 
-        auto try_read_lock(GPUResourceId id) -> bool
+        auto try_zombiefy(GPUResourceId id) -> bool
         {
-            // refcnt is in upper bits, version in lower bits.
             auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-            // clamp page to valid index
-            if (page >= std::atomic_ref{this->valid_page_count}.load(std::memory_order_relaxed))
+            if (page >= this->valid_page_count.load(std::memory_order_relaxed))
             {
                 return false;
             }
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-            bool success = false;
-            u64 new_refcnt = {};
-            while (!success)
-            {
-                u64 refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
-                u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
-                u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
-                new_refcnt = refcnt + 1;
-                if (version == id.version && new_refcnt < ((1ull << 20) - 1ull))
-                {
-                    u64 const new_refcnt_version = (new_refcnt << DAXA_ID_VERSION_BITS) | version;
-                    success = std::atomic_ref{(*this->pages[page])[offset].second}.compare_exchange_weak(
-                        refcnt_version, new_refcnt_version,
-                        std::memory_order_relaxed);
-                }
-                else
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-        /// @return if resource is zombie AND has zero read locks.
-        auto read_unlock(GPUResourceId id) -> bool
-        {
-            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-            // dec refcnt
-            u64 const refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.fetch_sub(1ull << DAXA_ID_VERSION_BITS, std::memory_order_relaxed);
-            u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
-            u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
-            // version != id.version => user zombified object
-            // refcnt == 0 => no read locks remaining
-            //   => we must zombiefy
-            return version != id.version && refcnt == 0;
-        }
-
-        /**
-         * @brief   Returns exclusive accessor.
-         *
-         * Always threadsafe.
-         * @return exclusive accessor.
-         */
-        auto exclusive() -> ExclusiveAccess
-        {
-            return ExclusiveAccess{*this};
+            u64 version = id.version;
+            u64 const new_version = version + 1;
+            return (*this->pages[page])[offset].second.compare_exchange_strong(
+                version, new_version,
+                std::memory_order_relaxed,
+                std::memory_order_relaxed);
         }
 
         /**
@@ -304,28 +243,29 @@ namespace daxa
         {
             auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-            if (id.version == 0 || page >= static_cast<usize>(std::atomic_ref{this->valid_page_count}.load(std::memory_order_relaxed)))
+            if (id.version == 0 || page >= this->valid_page_count.load(std::memory_order_relaxed))
             {
                 return false;
             }
-            u64 const refcnt_version = std::atomic_ref{(*this->pages[page])[offset].second}.load(std::memory_order_relaxed);
-            u64 const refcnt = refcnt_version >> DAXA_ID_VERSION_BITS;
-            u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
-            return refcnt != 0 && version == id.version;
+            u64 const slot_version = (*this->pages[page])[offset].second.load(std::memory_order_relaxed);
+            return slot_version == id.version;
         }
 
         /**
          * @brief   Checks if an id referes to a valid resource.
+         *          May return a random slot if the id is invalid.
          *
          * Only Threadsafe when:
          * * resource is not destroyed before the reference is used for the last time.
          *
-         * Calling this function with an invalid id will result in undefined behavior.
          * @returns resource.
          */
         auto unsafe_get(GPUResourceId id) const -> ResourceT const &
         {
-            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+            auto page = static_cast<usize>(id.index) >> PAGE_BITS;
+            // Even in an unsafe read we never want to read memory we do not own!
+            // Clamp so we get some random slot in error case but never invalid memory!
+            page = std::min(static_cast<usize>(this->valid_page_count.load(std::memory_order_relaxed)) - 1, page);
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
             return pages[page]->at(offset).first;
         }

@@ -221,6 +221,7 @@ namespace daxa
         Swapchain swapchain;
     };
 
+    // TODO: change info functions to return a Optional<Info>
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
      *          Device manages all general gpu operations that are not handled by other objects.
@@ -230,7 +231,7 @@ namespace daxa
      * * is internally synchronized
      * * can be passed between different threads
      * * may be accessed by multiple threads at the same time
-     * * WARNING: there are exceptions to this, those are mentioned above those functions.
+     * * WARNING: there are exceptions to this, those are mentioned above those functions. (TODO REMOVE THE EXCEPTIONS TO THIS)
      */
     struct Device final : ManagedPtr<Device, daxa_Device>
     {
@@ -309,32 +310,24 @@ namespace daxa
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id or the object.
-        /// NOTE:
-        /// * can be used to check if the read of a info reference was valid
         /// @return validity of id
         auto is_id_valid(ImageId id) const -> bool;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id or the object.
-        /// NOTE:
-        /// * can be used to check if the read of a info reference was valid
+        /// @param id of the object.
         /// @return validity of id
         auto is_id_valid(ImageViewId id) const -> bool;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id or the object.
-        /// NOTE:
-        /// * can be used to check if the read of a info reference was valid
+        /// @param id of the object.
         /// @return validity of id
         auto is_id_valid(BufferId id) const -> bool;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id or the object.
-        /// NOTE:
-        /// * can be used to check if the read of a info reference was valid
+        /// @param id of the object.
         /// @return validity of id
         auto is_id_valid(SamplerId id) const -> bool;
 
@@ -364,6 +357,16 @@ namespace daxa
 
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
+
+        /// @brief  Actually destroyes all resources that are ready to be destroyed.
+        ///         When calling destroy, or dropping all references to an object, it is zombiefied.
+        ///         A zombie lifes as long as the gpu still accesses that resource.
+        ///         When the gpu catches up to the point of zombification of the object, it will be destroyed here.
+        /// NOTE:
+        /// * This function WRITE LOCKS the resource lifetimes!
+        /// * This means that it will block until all currently recording command lists complete!
+        /// * SoftwareCommandList is excempt from this limitation,
+        ///   you can freely record those in parallel with collect_garbage.
         void collect_garbage();
 
         /// THREADSAFETY:

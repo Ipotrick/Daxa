@@ -76,6 +76,7 @@ struct daxa_ImplDevice final : public ImplHandle
     VkSemaphore vk_main_queue_gpu_timeline_semaphore = {};
     // When a resources refcount reaches 0 it becomes a zombie. A zombie is `metadata required for destruction` + `cpu timeline value at the point in time of destruction`.
     // collect_garbage checks if the gpu timeline reached the zombies timeline value and destroys the zombies.
+    // TODO: replace with lockless queues. 
     std::recursive_mutex main_queue_zombies_mtx = {};
     std::deque<std::pair<u64, CommandListZombie>> main_queue_command_list_zombies = {};
     std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
@@ -106,11 +107,6 @@ struct daxa_ImplDevice final : public ImplHandle
     void zombiefy_image(ImageId id);
     void zombiefy_image_view(ImageViewId id);
     void zombiefy_sampler(SamplerId id);
-
-    void read_unlock_buffer(BufferId id);
-    void read_unlock_image(ImageId id);
-    void read_unlock_image_view(ImageViewId id);
-    void read_unlock_sampler(SamplerId id);
 
     // TODO: Give physical device in info so that this function can be removed.
     // TODO: Better device selection.

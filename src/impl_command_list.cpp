@@ -120,35 +120,6 @@ void daxa_cmd_copy_buffer_to_buffer(daxa_CommandList self, daxa_BufferCopyInfo c
         vk_buffer_copy);
 }
 
-auto daxa_cmd_copy_buffer_to_buffer2(daxa_CommandList self, daxa_BufferCopyInfo const * info) -> daxa_Result
-{
-    daxa_cmd_flush_barriers(self);
-    bool const res0 = self->device->gpu_shader_resource_table.buffer_slots.try_read_lock(std::bit_cast<GPUResourceId>(info->src_buffer));
-    bool const res1 = self->device->gpu_shader_resource_table.buffer_slots.try_read_lock(std::bit_cast<GPUResourceId>(info->dst_buffer));
-    if ((!res0) | (!res1))
-    {
-        if (res0)
-        {
-            self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->src_buffer));
-        }
-        if (res1)
-        {
-            self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->dst_buffer));
-        }
-        return DAXA_RESULT_INVALID_BUFFER_ID;
-    }
-    auto vk_buffer_copy = reinterpret_cast<VkBufferCopy const *>(&info->src_offset);
-    vkCmdCopyBuffer(
-        self->vk_cmd_buffer,
-        self->device->slot(info->src_buffer).vk_buffer,
-        self->device->slot(info->dst_buffer).vk_buffer,
-        1,
-        vk_buffer_copy);
-    self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->src_buffer));
-    self->device->read_unlock_buffer(std::bit_cast<BufferId>(info->dst_buffer));
-    return DAXA_RESULT_SUCCESS;
-}
-
 void daxa_cmd_copy_buffer_to_image(daxa_CommandList self, daxa_BufferImageCopyInfo const * info)
 {
     daxa_cmd_flush_barriers(self);
@@ -756,6 +727,8 @@ void daxa_cmd_flush_barriers(daxa_CommandList self)
 auto daxa_cmd_complete(daxa_CommandList self) -> daxa_Result
 {
     self->recording_complete = true;
+    // TODO: Maybe we should have a try lock variant?
+    self->device->gpu_shader_resource_table.lifetime_lock.unlock_shared();
     auto result = vkEndCommandBuffer(self->vk_cmd_buffer);
     return std::bit_cast<daxa_Result>(result);
 }
@@ -831,7 +804,15 @@ auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         .pInheritanceInfo = {},
     };
-    vkBeginCommandBuffer(ret.vk_cmd_buffer, &vk_command_buffer_begin_info);
+    auto vk_result = vkBeginCommandBuffer(ret.vk_cmd_buffer, &vk_command_buffer_begin_info);
+    if (vk_result != VK_SUCCESS)
+    {
+        {
+            std::unique_lock l{device->main_queue_command_pool_buffer_recycle_mtx};
+            device->buffer_pool_pool.put_back({vk_cmd_pool, vk_cmd_buffer});
+        }
+        return std::bit_cast<daxa_Result>(vk_result);
+    }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
         auto cmd_buffer_name = ret.info.name;
@@ -854,6 +835,8 @@ auto daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
+    // TODO: Maybe we should have a try lock variant?
+    ret.device->gpu_shader_resource_table.lifetime_lock.lock_shared();
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_cmd_list = new daxa_ImplCommandList{};
