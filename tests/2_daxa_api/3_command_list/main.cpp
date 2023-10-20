@@ -243,7 +243,6 @@ namespace tests
 
         cmd_list.complete();
 
-        app.device.destroy_buffer(staging_upload_buffer);
         app.device.submit_commands({
             .command_lists = {&cmd_list, 1},
         });

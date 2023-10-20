@@ -43,7 +43,7 @@ namespace daxa
 
     struct ImplHandle;
 
-    template <typename CRTP_CHILD_T, typename HANDLE_T = ImplHandle*>
+    template <typename CRTP_CHILD_T, typename HANDLE_T = ImplHandle *>
     struct ManagedPtr
     {
         ManagedPtr() = default;
@@ -63,7 +63,7 @@ namespace daxa
             this->object = other.object;
             if (this->object != nullptr)
             {
-                CRTP_CHILD_T::inc_refcnt(reinterpret_cast<ImplHandle*>(object));
+                CRTP_CHILD_T::inc_refcnt(reinterpret_cast<ImplHandle *>(object));
             }
             return *this;
         }
@@ -92,7 +92,7 @@ namespace daxa
         {
             if (this->object != nullptr)
             {
-                CRTP_CHILD_T::dec_refcnt(reinterpret_cast<ImplHandle*>(object));
+                CRTP_CHILD_T::dec_refcnt(reinterpret_cast<ImplHandle *>(object));
                 this->object = {};
             }
         }
@@ -101,9 +101,11 @@ namespace daxa
     template <typename T>
     struct Optional
     {
+      private:
         T m_value = {};
         bool m_has_value = {};
 
+      public:
         Optional() : m_value{}, m_has_value{false} {}
         Optional(Optional<T> const &) = default;
         Optional(T const & v) : m_value{v}, m_has_value{true} {}
@@ -136,21 +138,20 @@ namespace daxa
         }
     };
 
-    using FixedListSizeT = u32;
+    /// NOTE: We never need more then 255 elements in a fixed list.
+    using FixedListSizeT = u8;
 
     template <typename T, FixedListSizeT CAPACITY>
     struct FixedList
     {
-      private:
         std::array<T, CAPACITY> m_data = {};
-        u32 m_size = {};
+        FixedListSizeT m_size = {};
 
-      public:
         FixedList() = default;
         FixedList(T const * in_data, usize in_size)
         {
-            DAXA_DBG_ASSERT_TRUE_M(static_cast<u32>(in_size) < CAPACITY, "EXCEEDED CAPACITY");
-            for (u32 i = 0; i < static_cast<u32>(in_size); ++i)
+            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(in_size) < CAPACITY, "EXCEEDED CAPACITY");
+            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(in_size); ++i)
             {
                 m_data[i] = in_data[i];
             }
@@ -159,7 +160,7 @@ namespace daxa
             requires(IN_SIZE <= CAPACITY)
         FixedList(std::array<T, IN_SIZE> const & in)
         {
-            for (u32 i = 0; i < static_cast<u32>(IN_SIZE); ++i)
+            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(IN_SIZE); ++i)
             {
                 m_data[i] = in[i];
             }
@@ -167,6 +168,7 @@ namespace daxa
         }
         auto at(FixedListSizeT i) -> T &
         {
+            DAXA_DBG_ASSERT_TRUE_M(i < m_size, "INDEX OUT OF RANGE");
             return this->m_data.at(i);
         }
         auto at(FixedListSizeT i) const -> T const &
@@ -189,6 +191,18 @@ namespace daxa
         {
             return this->m_size;
         }
+        auto data() const -> T const *
+        {
+            return this->m_data.data();
+        }
+        auto data() -> T *
+        {
+            return this->m_data.data();
+        }
+        auto empty() const -> bool
+        {
+            return this->m_size == 0;
+        }
         void push_back(T v)
         {
             DAXA_DBG_ASSERT_TRUE_M(m_size < CAPACITY, "EXCEEDED CAPACITY");
@@ -204,7 +218,65 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "EMPTY");
             return this->m_data[this->m_size - 1];
         }
+        auto span() -> std::span<T>
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
+        auto span() const -> std::span<T const>
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
     };
+
+    struct SmallString final : public FixedList<char, 39>
+    {
+        constexpr SmallString(char const * c_str)
+        {
+            while (c_str != nullptr && *c_str != 0)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(this->m_size < this->capacity(), "EXCEEDED CAPACITY");
+                this->m_data[this->m_size++] = *(c_str++);
+            };
+        }
+        constexpr SmallString(std::string_view sw)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(sw.size()) < this->capacity(), "EXCEEDED CAPACITY");
+            this->m_size = static_cast<FixedListSizeT>(sw.size());
+            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(sw.size()); ++i)
+            {
+                this->m_data[i] = sw[i];
+            }
+        }
+        constexpr SmallString(std::string const & stlstr)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(stlstr.size()) < this->capacity(), "EXCEEDED CAPACITY");
+            this->m_size = static_cast<FixedListSizeT>(stlstr.size());
+            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(stlstr.size()); ++i)
+            {
+                this->m_data[i] = stlstr[i];
+            }
+        }
+        SmallString(SmallString const & other) = default;
+        SmallString & operator=(SmallString const & other) = default;
+        auto view() const -> std::string_view
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
+        auto c_str() const -> std::array<char, 40>
+        {
+            std::array<char, 40> ret;
+            for (u8 i = 0; i < this->m_size; ++i)
+            {
+                ret[i] = this->m_data[i];
+            }
+            for (u8 i = this->m_size; i < 40; ++i)
+            {
+                ret[i] = 0;
+            }
+            return ret;
+        }
+    };
+    static_assert(sizeof(SmallString) == 40);
 
     // clang-format off
 

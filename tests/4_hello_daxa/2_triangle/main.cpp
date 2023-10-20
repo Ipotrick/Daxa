@@ -111,8 +111,8 @@ struct DrawToSwapchainTask
     void callback(daxa::TaskInterface ti)
     {
         auto cmd_list = ti.get_command_list();
-        auto const size_x = ti.get_device().info_image(uses.color_target.image()).size.x;
-        auto const size_y = ti.get_device().info_image(uses.color_target.image()).size.y;
+        auto const size_x = ti.get_device().info_image(uses.color_target.image()).value().size.x;
+        auto const size_y = ti.get_device().info_image(uses.color_target.image()).value().size.y;
         cmd_list.begin_renderpass({
             .color_attachments = std::array{
                 daxa::RenderAttachmentInfo{

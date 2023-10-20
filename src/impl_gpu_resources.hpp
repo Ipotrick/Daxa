@@ -34,9 +34,9 @@ namespace daxa
     {
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_BufferInfo info = {};
-        std::string info_name = {};
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
+        daxa_MemoryBlock opt_memory_block = {};
         VkDeviceAddress device_address = {};
         void * host_address = {};
     };
@@ -55,9 +55,9 @@ namespace daxa
         ImplImageViewSlot view_slot = {};
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_ImageInfo info = {};
-        std::string info_name = {};
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
+        daxa_MemoryBlock opt_memory_block = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
         VkImageAspectFlags aspect_flags = {}; // Inferred from format.
     };
@@ -66,7 +66,6 @@ namespace daxa
     {
         // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_SamplerInfo info = {};
-        std::string info_name = {};
         VkSampler vk_sampler = {};
     };
 

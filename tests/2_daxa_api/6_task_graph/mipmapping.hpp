@@ -219,7 +219,7 @@ namespace tests
             }
             void paint(daxa::CommandList & cmd_list, daxa::ImageId render_target_id, daxa::BufferId input_buffer)
             {
-                auto render_target_size = device.info_image(render_target_id).size;
+                auto render_target_size = device.info_image(render_target_id).value().size;
                 cmd_list.set_pipeline(*compute_pipeline);
                 auto const push = MipmappingComputePushConstant{
                     .image = render_target_id.default_view(),
@@ -231,14 +231,14 @@ namespace tests
             }
             void draw_ui(daxa::CommandList & cmd_list, daxa::ImageId render_target_id)
             {
-                auto render_size = device.info_image(render_target_id).size;
+                auto render_size = device.info_image(render_target_id).value().size;
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, render_target_id, render_size.x, render_size.y);
             }
             void blit_image_to_swapchain(daxa::CommandList & cmd_list, daxa::ImageId src_image_id, daxa::ImageId dst_image_id)
             {
-                auto const & src_info = device.info_image(src_image_id);
+                auto const & src_info = device.info_image(src_image_id).value();
                 auto src_size = src_info.size;
-                auto dst_size = device.info_image(dst_image_id).size;
+                auto dst_size = device.info_image(dst_image_id).value().size;
                 cmd_list.blit_image_to_image({
                     .src_image = src_image_id,
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -329,7 +329,7 @@ namespace tests
                 });
                 paint(cmd_list, render_image, mipmapping_gpu_input_buffer);
                 {
-                    auto image_info = device.info_image(render_image);
+                    auto image_info = device.info_image(render_image).value();
                     std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size.x), static_cast<i32>(image_info.size.y), static_cast<i32>(image_info.size.z)};
 
                     cmd_list.pipeline_barrier_image_transition({
@@ -511,7 +511,7 @@ namespace tests
                             .name = "mouse paint",
                         });
                         {
-                            auto image_info = device.info_image(render_image);
+                            auto image_info = device.info_image(render_image).value();
                             std::array<i32, 3> mip_size = {std::max<i32>(1, static_cast<i32>(image_info.size.x)), std::max<i32>(1, static_cast<i32>(image_info.size.y)), std::max<i32>(1, static_cast<i32>(image_info.size.z))};
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {

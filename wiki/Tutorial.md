@@ -123,7 +123,7 @@ if (swapchain_image.is_empty())
 The first thing that is done is retrieving the current swapchain image. This is the image we are going to clear. If swapchain image acquisition failed, then the result of this acquire function will be an "empty image", and thus we want to skip this frame. If we were inside a while loop, this means just saying `continue`.
 
 ```cpp
-daxa::ImageMipArraySlice swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
+daxa::ImageMipArraySlice swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).value().slice;
 ```
 
 Directly after, we define an image slice. As images can be made up of multiple layers, memory planes, and mip levels, Daxa takes slices in many calls to specify a slice of an image that should be operated upon.

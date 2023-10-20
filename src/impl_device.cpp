@@ -3,6 +3,10 @@
 #include <utility>
 #include "impl_features.hpp"
 
+#include "impl_device.hpp"
+
+/// --- Begin Helpers ---
+
 namespace
 {
     auto initialize_image_create_info_from_image_info(daxa_ImageInfo const & image_info, u32 const * queue_family_index_ptr) -> VkImageCreateInfo
@@ -42,9 +46,303 @@ namespace
     using namespace daxa::types;
 } // namespace
 
-#include "impl_device.hpp"
+auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_BufferId * out_id, daxa_MemoryBlock opt_memory_block, usize opt_offset) -> daxa_Result
+{
+    // --- Begin Parameter Validation ---
 
-#include <utility>
+    bool parameters_valid = true;
+    // Size must be larger then one.
+    parameters_valid = parameters_valid && info->size > 0;
+    if (!parameters_valid)
+        return DAXA_RESULT_INVALID_BUFFER_INFO;
+
+    // --- End Parameter Validation ---
+
+    auto slot_opt = self->gpusro_table.buffer_slots.try_create_slot();
+    if (!slot_opt.has_value())
+    {
+        return DAXA_RESULT_EXEEDED_MAX_BUFFERS;
+    }
+    auto [id, ret] = slot_opt.value();
+
+    ret.info = *info;
+
+    VkBufferCreateInfo const vk_buffer_create_info{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = {},
+        .size = static_cast<VkDeviceSize>(ret.info.size),
+        .usage = BUFFER_USE_FLAGS,
+        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+        .queueFamilyIndexCount = 1,
+        .pQueueFamilyIndices = &self->main_queue_family_index,
+    };
+
+    bool host_accessible = false;
+    VmaAllocationInfo vma_allocation_info = {};
+    if (opt_memory_block == nullptr)
+    {
+        auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(info->allocate_info);
+        if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
+            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
+            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
+        {
+            vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+            host_accessible = true;
+        }
+
+        VmaAllocationCreateInfo const vma_allocation_create_info{
+            .flags = vma_allocation_flags,
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .requiredFlags = {},
+            .preferredFlags = {},
+            .memoryTypeBits = std::numeric_limits<u32>::max(),
+            .pool = nullptr,
+            .pUserData = nullptr,
+            .priority = 0.5f,
+        };
+
+        auto result = vmaCreateBuffer(
+            self->vma_allocator,
+            &vk_buffer_create_info,
+            &vma_allocation_create_info,
+            &ret.vk_buffer,
+            &ret.vma_allocation,
+            &vma_allocation_info);
+        if (result != VK_SUCCESS)
+        {
+            return std::bit_cast<daxa_Result>(result);
+        }
+    }
+    else
+    {
+        auto const & mem_block = *opt_memory_block;
+        ret.opt_memory_block = opt_memory_block;
+        opt_memory_block->inc_weak_refcnt();
+
+        // TODO(pahrens): Add validation for memory type requirements.
+
+        auto result = vkCreateBuffer(self->vk_device, &vk_buffer_create_info, nullptr, &ret.vk_buffer);
+        if (result != VK_SUCCESS)
+        {
+            return std::bit_cast<daxa_Result>(result);
+        }
+
+        result = vmaBindBufferMemory2(
+            self->vma_allocator,
+            mem_block.allocation,
+            opt_offset,
+            ret.vk_buffer,
+            {});
+        if (result != VK_SUCCESS)
+        {
+            vkDestroyBuffer(self->vk_device, ret.vk_buffer, nullptr);
+            return std::bit_cast<daxa_Result>(result);
+        }
+        mem_block.inc_weak_refcnt();
+    }
+
+    VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
+        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
+        .pNext = nullptr,
+        .buffer = ret.vk_buffer,
+    };
+
+    ret.device_address = vkGetBufferDeviceAddress(self->vk_device, &vk_buffer_device_address_info);
+
+    ret.host_address = host_accessible ? vma_allocation_info.pMappedData : nullptr;
+
+    self->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
+
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE &&
+        info->name.size != 0)
+    {
+        auto cstrarr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = VK_OBJECT_TYPE_BUFFER,
+            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_buffer),
+            .pObjectName = cstrarr.data(),
+        };
+        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
+    }
+
+    write_descriptor_set_buffer(
+        self->vk_device,
+        self->gpusro_table.vk_descriptor_set, ret.vk_buffer,
+        0,
+        static_cast<VkDeviceSize>(ret.info.size),
+        id.index);
+
+    *out_id = std::bit_cast<daxa_BufferId>(id);
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_ImageId * out_id, daxa_MemoryBlock opt_memory_block, usize opt_offset) -> daxa_Result
+{
+    /// --- Begin Validation ---
+
+    if (!(info->dimensions >= 1 && info->dimensions <= 3))
+    {
+        return DAXA_RESULT_INVALID_IMAGE_INFO;
+    }
+
+    /// --- End Validation ---
+
+    auto slot_opt = self->gpusro_table.image_slots.try_create_slot();
+    if (!slot_opt.has_value())
+    {
+        return DAXA_RESULT_EXEEDED_MAX_IMAGES;
+    }
+    auto [id, ret] = slot_opt.value();
+
+    ret.info = *info;
+    ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
+        .type = static_cast<ImageViewType>(info->dimensions - 1),
+        .format = std::bit_cast<Format>(ret.info.format),
+        .image = {id},
+        .slice = ImageMipArraySlice{
+            .base_mip_level = 0,
+            .level_count = info->mip_level_count,
+            .base_array_layer = 0,
+            .layer_count = info->array_layer_count,
+        },
+        .name = info->name.data,
+    });
+
+    VkImageViewType vk_image_view_type = {};
+    if (info->array_layer_count > 1)
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
+    }
+    else
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
+    }
+
+    ret.aspect_flags = infer_aspect_from_format(info->format);
+    VkImageViewCreateInfo vk_image_view_create_info{
+        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = {},
+        // .image = ret.vk_image, // FILL THIS LATER!
+        .viewType = vk_image_view_type,
+        .format = *reinterpret_cast<VkFormat const *>(&info->format),
+        .components = VkComponentMapping{
+            .r = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .g = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .b = VK_COMPONENT_SWIZZLE_IDENTITY,
+            .a = VK_COMPONENT_SWIZZLE_IDENTITY,
+        },
+        .subresourceRange = {
+            .aspectMask = ret.aspect_flags,
+            .baseMipLevel = 0,
+            .levelCount = info->mip_level_count,
+            .baseArrayLayer = 0,
+            .layerCount = info->array_layer_count,
+        },
+    };
+    VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(*info, &self->main_queue_family_index);
+    if (opt_memory_block == nullptr)
+    {
+        VmaAllocationCreateInfo const vma_allocation_create_info{
+            .flags = static_cast<VmaAllocationCreateFlags>(info->allocate_info),
+            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
+            .requiredFlags = {},
+            .preferredFlags = {},
+            .memoryTypeBits = std::numeric_limits<u32>::max(),
+            .pool = nullptr,
+            .pUserData = nullptr,
+            .priority = 0.5f,
+        };
+
+        auto result = vmaCreateImage(self->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
+        if (result != VK_SUCCESS)
+        {
+            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
+        }
+
+        vk_image_view_create_info.image = ret.vk_image;
+        result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
+        if (result != VK_SUCCESS)
+        {
+            vmaDestroyImage(self->vma_allocator, ret.vk_image, ret.vma_allocation);
+            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
+        }
+    }
+    else
+    {
+        daxa_ImplMemoryBlock const & mem_block = *opt_memory_block;
+        ret.opt_memory_block = opt_memory_block;
+        opt_memory_block->inc_weak_refcnt();
+        // TODO(pahrens): Add validation for memory requirements.
+        auto result = vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
+        if (result != VK_SUCCESS)
+        {
+            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
+        }
+        result = vmaBindImageMemory2(
+            self->vma_allocator,
+            mem_block.allocation,
+            opt_offset,
+            ret.vk_image,
+            {});
+        if (result != VK_SUCCESS)
+        {
+            vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
+            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
+        }
+
+        vk_image_view_create_info.image = ret.vk_image;
+        result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
+        if (result != VK_SUCCESS)
+        {
+
+            vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
+            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
+        }
+        mem_block.inc_weak_refcnt();
+    }
+
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
+    {
+        VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = VK_OBJECT_TYPE_IMAGE,
+            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
+            .pObjectName = info->name.data,
+        };
+        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
+
+        VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+            .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
+            .pObjectName = info->name.data,
+        };
+        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_view_name_info);
+    }
+
+    write_descriptor_set_image(
+        self->vk_device,
+        self->gpusro_table.vk_descriptor_set,
+        ret.view_slot.vk_image_view,
+        std::bit_cast<ImageUsageFlags>(ret.info.usage),
+        id.index);
+
+    *out_id = std::bit_cast<daxa_ImageId>(id);
+    return DAXA_RESULT_SUCCESS;
+}
+
+/// --- End Helpers ---
 
 // --- Begin API Functions ---
 
@@ -109,305 +407,22 @@ auto daxa_dvc_image_memory_requirements(daxa_Device self, daxa_ImageInfo const *
 
 auto daxa_dvc_create_buffer(daxa_Device self, daxa_BufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
 {
-    // --- Begin Parameter Validation ---
-
-    bool parameters_valid = true;
-    // Size must be larger then one.
-    parameters_valid = parameters_valid && info->size > 0;
-    if (!parameters_valid)
-        return DAXA_RESULT_INVALID_BUFFER_INFO;
-
-    // --- End Parameter Validation ---
-
-    auto slot_opt = self->gpusro_table.buffer_slots.try_create_slot();
-    if (!slot_opt.has_value())
-    {
-        return DAXA_RESULT_EXEEDED_MAX_BUFFERS;
-    }
-    auto [id, ret] = slot_opt.value();
-
-    ret.info = *info;
-    ret.info_name = {ret.info.name.data, ret.info.name.size};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
-
-    VkBufferCreateInfo const vk_buffer_create_info{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = {},
-        .size = static_cast<VkDeviceSize>(ret.info.size),
-        .usage = BUFFER_USE_FLAGS,
-        .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-        .queueFamilyIndexCount = 1,
-        .pQueueFamilyIndices = &self->main_queue_family_index,
-    };
-
-    bool host_accessible = false;
-    VmaAllocationInfo vma_allocation_info = {};
-    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(
-            r_cast<AllocateInfo *>(&ret.info.allocate_info)))
-    {
-        auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(auto_info->data);
-        if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
-            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
-            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
-        {
-            vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            host_accessible = true;
-        }
-
-        VmaAllocationCreateInfo const vma_allocation_create_info{
-            .flags = vma_allocation_flags,
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-            .requiredFlags = {},
-            .preferredFlags = {},
-            .memoryTypeBits = std::numeric_limits<u32>::max(),
-            .pool = nullptr,
-            .pUserData = nullptr,
-            .priority = 0.5f,
-        };
-
-        auto result = vmaCreateBuffer(
-            self->vma_allocator,
-            &vk_buffer_create_info,
-            &vma_allocation_create_info,
-            &ret.vk_buffer,
-            &ret.vma_allocation,
-            &vma_allocation_info);
-        if (result != VK_SUCCESS)
-        {
-            return std::bit_cast<daxa_Result>(result);
-        }
-    }
-    else
-    {
-        auto const & manual_info = *daxa::get_if<ManualAllocInfo>(
-            r_cast<AllocateInfo *>(&ret.info.allocate_info));
-        auto const & mem_block = **r_cast<daxa_MemoryBlock const *>(&manual_info.memory_block);
-
-        // TODO(pahrens): Add validation for memory type requirements.
-
-        auto result = vkCreateBuffer(self->vk_device, &vk_buffer_create_info, nullptr, &ret.vk_buffer);
-        if (result != VK_SUCCESS)
-        {
-            return std::bit_cast<daxa_Result>(result);
-        }
-
-        result = vmaBindBufferMemory2(
-            self->vma_allocator,
-            mem_block.allocation,
-            manual_info.offset,
-            ret.vk_buffer,
-            {});
-        if (result != VK_SUCCESS)
-        {
-            vkDestroyBuffer(self->vk_device, ret.vk_buffer, nullptr);
-            return std::bit_cast<daxa_Result>(result);
-        }
-        mem_block.inc_weak_refcnt();
-    }
-
-    VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
-        .sType = VK_STRUCTURE_TYPE_BUFFER_DEVICE_ADDRESS_INFO,
-        .pNext = nullptr,
-        .buffer = ret.vk_buffer,
-    };
-
-    ret.device_address = vkGetBufferDeviceAddress(self->vk_device, &vk_buffer_device_address_info);
-
-    ret.host_address = host_accessible ? vma_allocation_info.pMappedData : nullptr;
-
-    self->buffer_device_address_buffer_host_ptr[id.index] = ret.device_address;
-
-    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE &&
-        !ret.info_name.empty())
-    {
-        auto const & buffer_name = ret.info_name;
-        VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            .pNext = nullptr,
-            .objectType = VK_OBJECT_TYPE_BUFFER,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_buffer),
-            .pObjectName = buffer_name.c_str(),
-        };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
-    }
-
-    write_descriptor_set_buffer(
-        self->vk_device,
-        self->gpusro_table.vk_descriptor_set, ret.vk_buffer,
-        0,
-        static_cast<VkDeviceSize>(ret.info.size),
-        id.index);
-
-    *out_id = std::bit_cast<daxa_BufferId>(id);
-    return DAXA_RESULT_SUCCESS;
+    return create_buffer_helper(self, info, out_id, nullptr, 0);
 }
 
 auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_ImageId * out_id) -> daxa_Result
 {
-    /// --- Begin Validation ---
+    return create_image_helper(self, info, out_id, nullptr, 0);
+}
 
-    if (!(info->dimensions >= 1 && info->dimensions <= 3))
-    {
-        return DAXA_RESULT_INVALID_IMAGE_INFO;
-    }
+auto daxa_dvc_create_buffer_from_block(daxa_Device self, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
+{
+    return create_buffer_helper(self, &info->buffer_info, out_id, *info->memory_block, info->offset);
+}
 
-    /// --- End Validation ---
-
-    auto slot_opt = self->gpusro_table.image_slots.try_create_slot();
-    if (!slot_opt.has_value())
-    {
-        return DAXA_RESULT_EXEEDED_MAX_IMAGES;
-    }
-    auto [id, ret] = slot_opt.value();
-
-    ret.info = *info;
-    ret.info_name = {ret.info.name.data, ret.info.name.size};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
-    ret.view_slot.info.name = {ret.info_name.data(), ret.info_name.size()};
-    ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
-        .type = static_cast<ImageViewType>(info->dimensions - 1),
-        .format = std::bit_cast<Format>(ret.info.format),
-        .image = {id},
-        .slice = ImageMipArraySlice{
-            .base_mip_level = 0,
-            .level_count = info->mip_level_count,
-            .base_array_layer = 0,
-            .layer_count = info->array_layer_count,
-        },
-        .name = info->name.data,
-    });
-
-    VkImageViewType vk_image_view_type = {};
-    if (info->array_layer_count > 1)
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
-    }
-    else
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
-    }
-
-    ret.aspect_flags = infer_aspect_from_format(info->format);
-    VkImageViewCreateInfo vk_image_view_create_info{
-        .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-        .pNext = nullptr,
-        .flags = {},
-        // .image = ret.vk_image, // FILL THIS LATER!
-        .viewType = vk_image_view_type,
-        .format = *reinterpret_cast<VkFormat const *>(&info->format),
-        .components = VkComponentMapping{
-            .r = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .g = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .b = VK_COMPONENT_SWIZZLE_IDENTITY,
-            .a = VK_COMPONENT_SWIZZLE_IDENTITY,
-        },
-        .subresourceRange = {
-            .aspectMask = ret.aspect_flags,
-            .baseMipLevel = 0,
-            .levelCount = info->mip_level_count,
-            .baseArrayLayer = 0,
-            .layerCount = info->array_layer_count,
-        },
-    };
-    VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(*info, &self->main_queue_family_index);
-    if (AutoAllocInfo const * auto_info = daxa::get_if<AutoAllocInfo>(
-            r_cast<AllocateInfo *>(&ret.info.allocate_info)))
-    {
-        VmaAllocationCreateInfo const vma_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(auto_info->data),
-            .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
-            .requiredFlags = {},
-            .preferredFlags = {},
-            .memoryTypeBits = std::numeric_limits<u32>::max(),
-            .pool = nullptr,
-            .pUserData = nullptr,
-            .priority = 0.5f,
-        };
-
-        auto result = vmaCreateImage(self->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
-        if (result != VK_SUCCESS)
-        {
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
-            return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
-        }
-
-        vk_image_view_create_info.image = ret.vk_image;
-        result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
-        if (result != VK_SUCCESS)
-        {
-            vmaDestroyImage(self->vma_allocator, ret.vk_image, ret.vma_allocation);
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
-            return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
-        }
-    }
-    else
-    {
-        ManualAllocInfo const & manual_info = *daxa::get_if<ManualAllocInfo>(
-            r_cast<AllocateInfo *>(&ret.info.allocate_info));
-        daxa_ImplMemoryBlock const & mem_block = **r_cast<daxa_MemoryBlock const *>(&manual_info.memory_block);
-        // TODO(pahrens): Add validation for memory requirements.
-        auto result = vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
-        if (result != VK_SUCCESS)
-        {
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
-            return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
-        }
-        result = vmaBindImageMemory2(
-            self->vma_allocator,
-            mem_block.allocation,
-            manual_info.offset,
-            ret.vk_image,
-            {});
-        if (result != VK_SUCCESS)
-        {
-            vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
-            return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
-        }
-
-        vk_image_view_create_info.image = ret.vk_image;
-        result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view);
-        if (result != VK_SUCCESS)
-        {
-
-            vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
-            return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
-        }
-        mem_block.inc_weak_refcnt();
-    }
-
-    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
-    {
-        VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            .pNext = nullptr,
-            .objectType = VK_OBJECT_TYPE_IMAGE,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
-            .pObjectName = info->name.data,
-        };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
-
-        VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            .pNext = nullptr,
-            .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
-            .pObjectName = info->name.data,
-        };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_view_name_info);
-    }
-
-    write_descriptor_set_image(
-        self->vk_device,
-        self->gpusro_table.vk_descriptor_set,
-        ret.view_slot.vk_image_view,
-        std::bit_cast<ImageUsageFlags>(ret.info.usage),
-        id.index);
-
-    *out_id = std::bit_cast<daxa_ImageId>(id);
-    return DAXA_RESULT_SUCCESS;
+auto daxa_dvc_create_image_from_block(daxa_Device self, daxa_MemoryBlockImageInfo const * info, daxa_ImageId * out_id) -> daxa_Result
+{
+    return create_image_helper(self, &info->image_info, out_id, *info->memory_block, info->offset);
 }
 
 auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id) -> daxa_Result
@@ -427,9 +442,6 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     image_slot = {};
     auto & ret = image_slot.view_slot;
     ret.info = *info;
-    image_slot.info_name = {image_slot.info.name.data, image_slot.info.name.size};
-    image_slot.info.name = {image_slot.info_name.data(), image_slot.info_name.size()};
-    ret.info.name = {image_slot.info_name.data(), image_slot.info_name.size()};
     daxa_ImageMipArraySlice slice = self->validate_image_slice(ret.info.slice, ret.info.image);
     ret.info.slice = slice;
     VkImageViewCreateInfo const vk_image_view_create_info{
@@ -455,12 +467,13 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     }
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
+        auto cstrarr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
-            .pObjectName = image_slot.info_name.c_str(),
+            .pObjectName = cstrarr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &name_info);
     }
@@ -492,8 +505,6 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     auto [id, ret] = slot_opt.value();
 
     ret.info = *info;
-    ret.info_name = {ret.info.name.data, ret.info.name.size};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
 
     VkSamplerReductionModeCreateInfo vk_sampler_reduction_mode_create_info{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_REDUCTION_MODE_CREATE_INFO,
@@ -531,12 +542,13 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
+        auto cstrarr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SAMPLER,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_sampler),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = cstrarr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &sampler_name_info);
     }
@@ -546,30 +558,37 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     return DAXA_RESULT_SUCCESS;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                          \
-    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                              \
-    {                                                                                                            \
-        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                 \
-        auto success = self->gpusro_table.SLOT_NAME.try_zombiefy(std::bit_cast<GPUResourceId>(id)); \
-        if (success)                                                                                             \
-        {                                                                                                        \
-            self->zombiefy_##name(std::bit_cast<Name##Id>(id));                                                  \
-            return DAXA_RESULT_SUCCESS;                                                                          \
-        }                                                                                                        \
-        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
-    }                                                                                                            \
-    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id)->daxa_##Name##Info const *                   \
-    {                                                                                                            \
-        return &self->slot(id).info;                                                                             \
-    }                                                                                                            \
-    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                            \
-    {                                                                                                            \
-        return std::bit_cast<daxa_Bool8>(self->gpusro_table.SLOT_NAME.is_id_valid(                  \
-            std::bit_cast<daxa::GPUResourceId>(id)));                                                            \
-    }                                                                                                            \
-    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                  \
-    {                                                                                                            \
-        return self->slot(id).vk_##name;                                                                         \
+#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                        \
+    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                            \
+    {                                                                                                          \
+        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                               \
+        auto success = self->gpusro_table.SLOT_NAME.try_zombiefy(std::bit_cast<GPUResourceId>(id));            \
+        if (success)                                                                                           \
+        {                                                                                                      \
+            self->zombiefy_##name(std::bit_cast<Name##Id>(id));                                                \
+            return DAXA_RESULT_SUCCESS;                                                                        \
+        }                                                                                                      \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
+    }                                                                                                          \
+    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id, daxa_##Name##Info * out_info)->daxa_Result \
+    {                                                                                                          \
+        /*NOTE: THIS CAN RACE. BUT IT IS OK AS ITS A POD AND WE CHECK IF ITS VALID AFTER THE COPY!*/           \
+        auto info_copy = self->slot(id).info;                                                                  \
+        if (daxa_dvc_is_##name##_valid(self, id))                                                              \
+        {                                                                                                      \
+            *out_info = info_copy;                                                                             \
+            return DAXA_RESULT_SUCCESS;                                                                        \
+        }                                                                                                      \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
+    }                                                                                                          \
+    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                          \
+    {                                                                                                          \
+        return std::bit_cast<daxa_Bool8>(self->gpusro_table.SLOT_NAME.is_id_valid(                             \
+            std::bit_cast<daxa::GPUResourceId>(id)));                                                          \
+    }                                                                                                          \
+    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                \
+    {                                                                                                          \
+        return self->slot(id).vk_##name;                                                                       \
     }
 
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots)
@@ -1577,12 +1596,13 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     if ((this->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !image_info.name.empty())
     {
+        auto cstrarr = image_info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
-            .pObjectName = image_info.name.data(),
+            .pObjectName = cstrarr.data(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
@@ -1591,7 +1611,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
-            .pObjectName = image_info.name.data(),
+            .pObjectName = cstrarr.data(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
     }
@@ -1607,14 +1627,16 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     ImplBufferSlot const & buffer_slot = this->gpusro_table.buffer_slots.unsafe_get(gid);
     this->buffer_device_address_buffer_host_ptr[gid.index] = 0;
     write_descriptor_set_buffer(this->vk_device, this->gpusro_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
-    if (auto _ptr = daxa::get_if<AutoAllocInfo>(
-            r_cast<AllocateInfo const *>(&buffer_slot.info.allocate_info)))
+    if (buffer_slot.opt_memory_block != nullptr)
     {
-        vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
+        vkDestroyBuffer(this->vk_device, buffer_slot.vk_buffer, {});
+        buffer_slot.opt_memory_block->dec_weak_refcnt(
+            daxa_ImplMemoryBlock::zero_ref_callback,
+            this->instance);
     }
     else
     {
-        vkDestroyBuffer(this->vk_device, buffer_slot.vk_buffer, {});
+        vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
     }
     gpusro_table.buffer_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
@@ -1633,14 +1655,16 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
     vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
     if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
     {
-        if (auto _ptr = daxa::get_if<AutoAllocInfo>(
-                r_cast<AllocateInfo const *>(&image_slot.info.allocate_info)))
+        if (image_slot.opt_memory_block != nullptr)
         {
-            vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
+            vkDestroyImage(this->vk_device, image_slot.vk_image, {});
+            image_slot.opt_memory_block->dec_weak_refcnt(
+                daxa_ImplMemoryBlock::zero_ref_callback,
+                this->instance);
         }
         else
         {
-            vkDestroyImage(this->vk_device, image_slot.vk_image, {});
+            vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
         }
     }
     gpusro_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));

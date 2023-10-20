@@ -433,7 +433,7 @@ namespace daxa
 
     void ImplPersistentTaskBuffer::zero_ref_callback(ImplHandle const * handle)
     {
-        auto self = r_cast<ImplPersistentTaskBuffer const*>(handle);
+        auto self = r_cast<ImplPersistentTaskBuffer const *>(handle);
         delete self;
     }
 
@@ -510,7 +510,7 @@ namespace daxa
 
     void ImplPersistentTaskImage::zero_ref_callback(ImplHandle const * handle)
     {
-        auto self = r_cast<ImplPersistentTaskImage const*>(handle);
+        auto self = r_cast<ImplPersistentTaskImage const *>(handle);
         delete self;
     }
 
@@ -786,8 +786,8 @@ namespace daxa
         std::string_view task_name = impl.global_image_infos[task_image_index].get_name();
         for (u32 index = 0; index < actual_images.size(); ++index)
         {
-            ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).slice;
-            auto name_sw = impl.info.device.info_image(actual_images[index]).name;
+            ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).value().slice;
+            auto name_sw = impl.info.device.info_image(actual_images[index]).value().name;
             std::string const & name = {name_sw.data(), name_sw.size()};
             bool const use_within_runtime_image_counts =
                 (access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count) &&
@@ -807,10 +807,10 @@ namespace daxa
         for (u32 index = 0; index < actual_images.size(); ++index)
         {
             ImageId image = actual_images[index];
-            bool const access_valid = (impl.info.device.info_image(image).usage & use_flags) != ImageUsageFlagBits::NONE;
+            bool const access_valid = (impl.info.device.info_image(image).value().usage & use_flags) != ImageUsageFlagBits::NONE;
             DAXA_DBG_ASSERT_TRUE_M(access_valid, fmt::format("detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
                                                              "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
-                                                             impl.info.device.info_image(image).name, task_image_name, use_index, task_name, daxa::to_string(use_flags)));
+                                                             impl.info.device.info_image(image).value().name.view(), task_image_name, use_index, task_name, daxa::to_string(use_flags)));
         }
     }
 
@@ -836,8 +836,8 @@ namespace daxa
                     {
                         cache_valid = cache_valid &&
                                       info.device.is_id_valid(view_cache[index]) &&
-                                      info.device.is_id_valid(info.device.info_image_view(view_cache[index]).image) &&
-                                      info.device.info_image_view(view_cache[index]).image == actual_images[index];
+                                      info.device.is_id_valid(info.device.info_image_view(view_cache[index]).value().image) &&
+                                      info.device.info_image_view(view_cache[index]).value().image == actual_images[index];
                     }
                 }
                 if (!cache_valid)
@@ -848,7 +848,7 @@ namespace daxa
                     {
                         if (info.device.is_id_valid(view))
                         {
-                            ImageViewId const parent_image_default_view = info.device.info_image_view(view).image.default_view();
+                            ImageViewId const parent_image_default_view = info.device.info_image_view(view).value().image.default_view();
                             // Can not destroy the default view of an image!!!
                             if (parent_image_default_view != view)
                             {
@@ -860,7 +860,7 @@ namespace daxa
                     for (u32 index = 0; index < actual_images.size(); ++index)
                     {
                         ImageId parent = actual_images[index];
-                        ImageViewInfo view_info = info.device.info_image_view(parent.default_view());
+                        ImageViewInfo view_info = info.device.info_image_view(parent.default_view()).value();
                         ImageViewType use_view_type = (image_use.m_view_type != ImageViewType::MAX_ENUM) ? image_use.m_view_type : view_info.type;
 
                         // When the use image view parameters match the default view,
@@ -1869,12 +1869,14 @@ namespace daxa
             {
                 auto const & transient_info = daxa::get<PermIndepTaskBufferInfo::Transient>(glob_buffer.task_buffer_data);
 
-                perm_buffer.actual_buffer = info.device.create_buffer(BufferInfo{
-                    .size = transient_info.info.size,
-                    .allocate_info = ManualAllocInfo{
-                        .memory_block = transient_data_memory_block,
-                        .offset = perm_buffer.allocation_offset},
-                    .name = transient_info.info.name});
+                perm_buffer.actual_buffer = info.device.create_buffer_from_block(MemoryBlockBufferInfo{
+                    .buffer_info = BufferInfo{
+                        .size = transient_info.info.size,
+                        .name = transient_info.info.name,
+                    },
+                    .memory_block = transient_data_memory_block,
+                    .offset = perm_buffer.allocation_offset,
+                });
             }
         }
     }
@@ -1893,20 +1895,22 @@ namespace daxa
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
                                            std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
                 auto const & transient_image_info = daxa::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
-                perm_image.actual_image = info.device.create_image(ImageInfo{
-                    .flags = daxa::ImageCreateFlagBits::ALLOW_ALIAS,
-                    .dimensions = transient_image_info.dimensions,
-                    .format = transient_image_info.format,
-                    .size = transient_image_info.size,
-                    .mip_level_count = transient_image_info.mip_level_count,
-                    .array_layer_count = transient_image_info.array_layer_count,
-                    .sample_count = transient_image_info.sample_count,
-                    .usage = perm_image.usage,
-                    .allocate_info = ManualAllocInfo{
+                perm_image.actual_image = info.device.create_image_from_block(
+                    MemoryBlockImageInfo{
+                        .image_info = ImageInfo{
+                            .flags = daxa::ImageCreateFlagBits::ALLOW_ALIAS,
+                            .dimensions = transient_image_info.dimensions,
+                            .format = transient_image_info.format,
+                            .size = transient_image_info.size,
+                            .mip_level_count = transient_image_info.mip_level_count,
+                            .array_layer_count = transient_image_info.array_layer_count,
+                            .sample_count = transient_image_info.sample_count,
+                            .usage = perm_image.usage,
+                            .name = transient_image_info.name,
+                        },
                         .memory_block = transient_data_memory_block,
-                        .offset = perm_image.allocation_offset},
-                    .name = transient_image_info.name,
-                });
+                        .offset = perm_image.allocation_offset,
+                    });
             }
         }
     }
@@ -2874,7 +2878,7 @@ namespace daxa
                 {
                     if (info.device.is_id_valid(view))
                     {
-                        ImageId const parent = info.device.info_image_view(view).image;
+                        ImageId const parent = info.device.info_image_view(view).value().image;
                         bool const is_default_view = parent.default_view() == view;
                         if (!is_default_view)
                         {
@@ -2925,8 +2929,8 @@ namespace daxa
             for (u32 child_i = 0; child_i < get_actual_images(local_id, permutation).size(); ++child_i)
             {
                 auto const child_id = get_actual_images(local_id, permutation)[child_i];
-                auto const & child_info = info.device.info_image(child_id);
-                fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name, to_string(child_id));
+                auto const & child_info = info.device.info_image(child_id).value();
+                fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
             }
             print_seperator_to(out, indent);
         }
@@ -2948,8 +2952,8 @@ namespace daxa
             for (u32 child_i = 0; child_i < get_actual_buffers(local_id, permutation).size(); ++child_i)
             {
                 auto const child_id = get_actual_buffers(local_id, permutation)[child_i];
-                auto const & child_info = info.device.info_buffer(child_id);
-                fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name, to_string(child_id));
+                auto const & child_info = info.device.info_buffer(child_id).value();
+                fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
             }
             print_seperator_to(out, indent);
         }
@@ -3218,7 +3222,7 @@ namespace daxa
 
     void ImplTaskGraph::zero_ref_callback(ImplHandle const * handle)
     {
-        auto self = r_cast<ImplTaskGraph const*>(handle);
+        auto self = r_cast<ImplTaskGraph const *>(handle);
         delete self;
     }
 } // namespace daxa

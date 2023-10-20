@@ -125,7 +125,7 @@ typedef enum
 
 #define daxa_Optional(T) daxa_Optional##T
 
-#define _DAXA_FIXED_LIST_SIZE_T uint32_t
+#define _DAXA_FIXED_LIST_SIZE_T uint8_t
 
 /// ABI STABLE FIXED LIST TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::FixedList
@@ -150,6 +150,9 @@ typedef enum
     } daxa_Variant##UNION;
 
 #define daxa_Variant(UNION) daxa_Variant##UNION
+
+_DAXA_DECL_FIXED_LIST(char, 39)
+typedef daxa_FixedList(char, 39) daxa_SmallString;
 
 typedef struct
 {
@@ -194,19 +197,6 @@ DAXA_EXPORT uint64_t
 daxa_memory_block_inc_refcnt(daxa_MemoryBlock memory_block);
 DAXA_EXPORT uint64_t
 daxa_memory_block_dec_refcnt(daxa_MemoryBlock memory_block);
-
-typedef struct
-{
-    daxa_MemoryBlock memory_block;
-    size_t offset;
-} daxa_ManualAllocInfo;
-
-typedef union
-{
-    daxa_MemoryFlags auto_alloc_info;
-    daxa_ManualAllocInfo manual_alloc_info;
-} daxa_AllocInfoUnion;
-_DAXA_DECL_VARIANT(daxa_AllocInfoUnion)
 
 typedef struct
 {

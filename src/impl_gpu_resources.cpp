@@ -348,7 +348,7 @@ namespace daxa
                         }
                         if (!handle_invalid)
                         {
-                            ret += std::string("debug name: \"") + slot.first.info_name + '\"';
+                            ret += fmt::format("debug name : \"{}\"", r_cast<SmallString const*>(&slot.first.info.name)->view());
                             ret += "\n";
                         }
                     }

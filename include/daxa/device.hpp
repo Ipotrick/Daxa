@@ -220,6 +220,19 @@ namespace daxa
         std::span<BinarySemaphore const> wait_binary_semaphores = {};
         Swapchain swapchain;
     };
+    struct MemoryBlockBufferInfo
+    {
+        BufferInfo buffer_info = {};
+        MemoryBlock & memory_block;
+        usize offset = {};
+    };
+
+    struct MemoryBlockImageInfo
+    {
+        ImageInfo image_info = {};
+        MemoryBlock & memory_block;
+        usize offset = {};
+    };
 
     // TODO: change info functions to return a Optional<Info>
     /**
@@ -243,6 +256,8 @@ namespace daxa
 
         auto create_buffer(BufferInfo const & info) -> BufferId;
         auto create_image(ImageInfo const & info) -> ImageId;
+        auto create_buffer_from_block(MemoryBlockBufferInfo const & info) -> BufferId;
+        auto create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId;
         auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         auto create_sampler(SamplerInfo const & info) -> SamplerId;
 
@@ -254,58 +269,26 @@ namespace daxa
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
-        /// WARNING:
-        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
-        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
-        /// THREADSAFETY:
-        /// * as long as the id is valid, the returned reference will point to the objects info.
-        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
-        /// * destroying the object and still reading the info can lead to race conditions.
-        /// * calling the function with an invalid id can lead to race conditions.
-        /// @return a reference to the info.
-        auto info_buffer(BufferId id) const -> BufferInfo const &;
+        /// @return a value copy of the info. Returns nullopt when the id is invalid.
+        auto info_buffer(BufferId id) const -> Optional<BufferInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
-        /// WARNING:
-        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
-        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
-        /// THREADSAFETY:
-        /// * as long as the id is valid, the returned reference will point to the objects info.
-        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
-        /// * destroying the object and still reading the info can lead to race conditions.
-        /// * calling the function with an invalid id can lead to race conditions.
-        /// @return a reference to the info.
-        auto info_image(ImageId id) const -> ImageInfo const &;
+        /// @return a value copy of the info. Returns nullopt when the id is invalid.
+        auto info_image(ImageId id) const -> Optional<ImageInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
-        /// WARNING:
-        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
-        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
-        /// THREADSAFETY:
-        /// * as long as the id is valid, the returned reference will point to the objects info.
-        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
-        /// * destroying the object and still reading the info can lead to race conditions.
-        /// * calling the function with an invalid id can lead to race conditions.
-        /// @return a reference to the info.
-        auto info_image_view(ImageViewId id) const -> ImageViewInfo const &;
+        /// @return a value copy of the info. Returns nullopt when the id is invalid.
+        auto info_image_view(ImageViewId id) const -> Optional<ImageViewInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
-        /// WARNING:
-        /// * Calling this function with an invalid id will result in a reference pointing to unknown data.
-        /// * It is guaranteed that calling this function with an invalid id WILL NOT corrupt or invalidate the device.
-        /// THREADSAFETY:
-        /// * as long as the id is valid, the returned reference will point to the objects info.
-        /// * object MUST NOT be destroyed until the last time the reference is used to read the info.
-        /// * destroying the object and still reading the info can lead to race conditions.
-        /// * calling the function with an invalid id can lead to race conditions.
-        /// @return a reference to the info.
-        auto info_sampler(SamplerId id) const -> SamplerInfo const &;
+        /// @return a value copy of the info. Returns nullopt when the id is invalid.
+        auto info_sampler(SamplerId id) const -> Optional<SamplerInfo>;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.

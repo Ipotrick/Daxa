@@ -33,8 +33,9 @@ typedef struct
 typedef struct
 {
     size_t size;
-    daxa_Variant(daxa_AllocInfoUnion) allocate_info;
-    daxa_StringView name;
+    // Ignored when allocating with a memory block.
+    daxa_MemoryFlags allocate_info;
+    daxa_SmallString name;
 } daxa_BufferInfo;
 
 typedef uint32_t daxa_ImageFlags;
@@ -66,8 +67,9 @@ typedef struct
     uint32_t array_layer_count;
     uint32_t sample_count;
     daxa_ImageUsageFlags usage;
-    daxa_Variant(daxa_AllocInfoUnion) allocate_info;
-    daxa_StringView name;
+    // Ignored when allocating with a memory block.
+    daxa_MemoryFlags allocate_info;
+    daxa_SmallString name;
 } daxa_ImageInfo;
 
 typedef struct
@@ -76,7 +78,7 @@ typedef struct
     VkFormat format;
     daxa_ImageId image;
     daxa_ImageMipArraySlice slice;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_ImageViewInfo;
 
 typedef struct
@@ -97,13 +99,13 @@ typedef struct
     float max_lod;
     VkBorderColor border_color;
     daxa_Bool8 enable_unnormalized_coordinates;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_SamplerInfo;
 
 static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
     .size = 0,
-    .allocate_info = {.values = {.auto_alloc_info = 0}, .index = 0},
-    .name = {.data = 0, .size = 0},
+    .allocate_info = {},
+    .name = {.data = {}, .size = 0},
 };
 static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
     .flags = 0,
@@ -114,13 +116,13 @@ static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
     .array_layer_count = 1,
     .sample_count = 1,
     .usage = 0,
-    .allocate_info = {.values = {.auto_alloc_info = 0}, .index = 0},
-    .name = {.data = 0, .size = 0},
+    .allocate_info = {},
+    .name = {.data = {}, .size = 0},
 };
 static const daxa_ImageViewInfo DAXA_DEFAULT_IMAGE_VIEW_INFO = {
     .type = VK_IMAGE_VIEW_TYPE_2D,
     .format = VK_FORMAT_R8G8B8A8_SRGB,
-    .name = {.data = 0, .size = 0},
+    .name = {.data = {}, .size = 0},
 };
 static const daxa_SamplerInfo DAXA_DEFAULT_SAMPLER_INFO = {
     .magnification_filter = VK_FILTER_LINEAR,
@@ -139,7 +141,7 @@ static const daxa_SamplerInfo DAXA_DEFAULT_SAMPLER_INFO = {
     .max_lod = 1000.0f,
     .border_color = VK_BORDER_COLOR_INT_TRANSPARENT_BLACK,
     .enable_unnormalized_coordinates = 0,
-    .name = {.data = 0, .size = 0},
+    .name = {.data = {}, .size = 0},
 };
 
 DAXA_EXPORT VmaAllocation

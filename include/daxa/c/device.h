@@ -172,7 +172,7 @@ static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
     .max_allowed_images = 10000,
     .max_allowed_buffers = 10000,
     .max_allowed_samplers = 400,
-    .name = {.data = 0, .size = 0},
+    .name = {.data = {}, .size = 0},
 };
 
 typedef struct
@@ -205,6 +205,24 @@ typedef struct
     daxa_Swapchain swapchain;
 } daxa_PresentInfo;
 
+typedef struct
+{
+    daxa_BufferInfo buffer_info;
+    daxa_MemoryBlock * memory_block;
+    size_t offset;
+} daxa_MemoryBlockBufferInfo;
+
+static const daxa_MemoryBlockBufferInfo DAXA_DEFAULT_MEMORY_BLOCK_BUFFER_INFO = {};
+
+typedef struct
+{
+    daxa_ImageInfo image_info;
+    daxa_MemoryBlock * memory_block;
+    size_t offset;
+} daxa_MemoryBlockImageInfo;
+
+static const daxa_MemoryBlockImageInfo DAXA_DEFAULT_MEMORY_BLOCK_IMAGE_INFO = {};
+
 static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = {};
 
 DAXA_EXPORT VkMemoryRequirements
@@ -224,6 +242,11 @@ DAXA_EXPORT daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
 
 DAXA_EXPORT daxa_Result
+daxa_dvc_create_buffer_from_block(daxa_Device device, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id);
+DAXA_EXPORT daxa_Result
+daxa_dvc_create_image_from_block(daxa_Device device, daxa_MemoryBlockImageInfo const * info, daxa_ImageId * out_id);
+
+DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
 DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_image(daxa_Device device, daxa_ImageId image);
@@ -232,14 +255,14 @@ daxa_dvc_destroy_image_view(daxa_Device device, daxa_ImageViewId id);
 DAXA_EXPORT daxa_Result
 daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 
-DAXA_EXPORT daxa_BufferInfo const *
-daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer);
-DAXA_EXPORT daxa_ImageInfo const *
-daxa_dvc_info_image(daxa_Device device, daxa_ImageId image);
-DAXA_EXPORT daxa_ImageViewInfo const *
-daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id);
-DAXA_EXPORT daxa_SamplerInfo const *
-daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler);
+DAXA_EXPORT daxa_Result
+daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
+DAXA_EXPORT  daxa_Result
+daxa_dvc_info_image(daxa_Device device, daxa_ImageId image, daxa_ImageInfo * out_info);
+DAXA_EXPORT daxa_Result
+daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageViewInfo * out_info);
+DAXA_EXPORT daxa_Result
+daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerInfo * out_info);
 
 DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);

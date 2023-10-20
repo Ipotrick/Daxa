@@ -160,9 +160,9 @@ namespace daxa
         ++frame_count;
         if ((draw_data != nullptr) && draw_data->TotalIdxCount > 0)
         {
-            auto vbuffer_current_size = info.device.info_buffer(vbuffer).size;
+            auto vbuffer_current_size = info.device.info_buffer(vbuffer).value().size;
             auto vbuffer_needed_size = static_cast<usize>(draw_data->TotalVtxCount) * sizeof(ImDrawVert);
-            auto ibuffer_current_size = info.device.info_buffer(ibuffer).size;
+            auto ibuffer_current_size = info.device.info_buffer(ibuffer).value().size;
             auto ibuffer_needed_size = static_cast<usize>(draw_data->TotalIdxCount) * sizeof(ImDrawIdx);
 
             if (vbuffer_needed_size > vbuffer_current_size)
