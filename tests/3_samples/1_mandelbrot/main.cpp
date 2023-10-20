@@ -119,6 +119,7 @@ struct App : BaseApp<App>
             return;
         }
         loop_task_graph.execute({});
+        device.collect_garbage();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
         if ((query_results[1] != 0u) && (query_results[3] != 0u))
@@ -179,7 +180,7 @@ struct App : BaseApp<App>
                 auto staging_gpu_input_buffer = device.create_buffer({
                     .size = sizeof(GpuInput),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                    .name = APPNAME_PREFIX("staging_gpu_input_buffer"),
+                    .name = ("staging_gpu_input_buffer"),
                 });
                 cmd_list.destroy_buffer_deferred(staging_gpu_input_buffer);
                 auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
@@ -190,7 +191,7 @@ struct App : BaseApp<App>
                     .size = sizeof(GpuInput),
                 });
             },
-            .name = APPNAME_PREFIX("Upload Input"),
+            .name = ("Upload Input"),
         });
         new_task_graph.add_task({
             .uses = {
@@ -208,7 +209,7 @@ struct App : BaseApp<App>
                 });
                 cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
             },
-            .name = APPNAME_PREFIX("Draw (Compute)"),
+            .name = ("Draw (Compute)"),
         });
         new_task_graph.add_task({
             .uses = {

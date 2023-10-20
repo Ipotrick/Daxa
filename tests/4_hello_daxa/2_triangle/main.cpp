@@ -69,7 +69,7 @@ struct UploadVertexDataTask
         // GPU memory.
         auto staging_buffer_id = ti.get_device().create_buffer({
             .size = sizeof(data),
-            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "my staging buffer",
         });
         // We can also ask the command list to destroy this temporary buffer,

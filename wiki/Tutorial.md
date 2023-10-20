@@ -477,7 +477,7 @@ In order to send the data to the GPU, we can create a staging buffer, which has 
 ```cpp
 auto staging_buffer_id = ti.get_device().create_buffer({
     .size = sizeof(data),
-    .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
     .name = "my staging buffer",
 });
 ```

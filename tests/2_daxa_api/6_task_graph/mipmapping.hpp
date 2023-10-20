@@ -202,7 +202,7 @@ namespace tests
             {
                 auto staging_buffer = device.create_buffer({
                     .size = sizeof(MipmappingGpuInput),
-                    .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "staging_mipmapping_gpu_input_buffer",
                 });
                 MipmappingGpuInput * buffer_ptr = device.get_host_address_as<MipmappingGpuInput>(staging_buffer);
@@ -223,7 +223,7 @@ namespace tests
                 cmd_list.set_pipeline(*compute_pipeline);
                 auto const push = MipmappingComputePushConstant{
                     .image = render_target_id.default_view(),
-                    .gpu_input = device.get_device_address(input_buffer),
+                    .gpu_input = device.get_device_address(input_buffer).value(),
                     .frame_dim = {render_target_size.x, render_target_size.y},
                 };
                 cmd_list.push_constant(push);

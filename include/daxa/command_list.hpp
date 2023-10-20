@@ -95,7 +95,7 @@ namespace daxa
         ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
-        ClearValue clear_value = {}; // TODO: might be incompatible c abi with daxa_ClearValue!
+        ClearValue clear_value = {};
     };
 
     struct RenderPassBeginInfo
@@ -150,7 +150,7 @@ namespace daxa
     struct DrawIndirectInfo
     {
         BufferId draw_command_buffer = {};
-        usize draw_command_buffer_read_offset = {};
+        usize indirect_buffer_offset = {};
         u32 draw_count = 1;
         u32 draw_command_stride = {};
         bool is_indexed = {};
@@ -159,9 +159,9 @@ namespace daxa
     struct DrawIndirectCountInfo
     {
         BufferId draw_command_buffer = {};
-        usize draw_command_buffer_read_offset = {};
-        BufferId draw_count_buffer = {};
-        usize draw_count_buffer_read_offset = {};
+        usize indirect_buffer = {};
+        BufferId count_buffer = {};
+        usize count_buffer_offset = {};
         u32 max_draw_count = static_cast<u32>(std::numeric_limits<u16>::max());
         u32 draw_command_stride = {};
         bool is_indexed = {};
@@ -175,7 +175,7 @@ namespace daxa
 
     struct WaitEventInfo
     {
-        std::span<Event> events = {};
+        std::span<Event const> events = {};
     };
 
     struct WriteTimestampInfo
@@ -230,7 +230,6 @@ namespace daxa
     };  
 
     // TODO: Add software command list for more robust uncoupled command recording.
-    // TODO: Collect all used ids and handles, use them to check validity when submitting.
     /**
      * @brief   CommandList is used to encode commands into a VkCommandBuffer.
      *          In order to submit a command list one must complete it.
@@ -245,6 +244,9 @@ namespace daxa
      * * creating a command list, it will LOCK resource lifetimes
      * * calling collect_garbage will BLOCK until all resource lifetime locks have been unlocked
      * * completing a command list will remove its lock on the resource lifetimes
+     * * most record commands can throw exceptions on invalid inputs such as invalid ids
+     * * using deferred destructions will make the completed command list not reusable,
+     *   as resources can only be destroyed once
     */
     struct CommandList final : ManagedPtr<CommandList, daxa_CommandList>
     {
@@ -293,18 +295,22 @@ namespace daxa
         void dispatch_indirect(DispatchIndirectInfo const & info);
 
         /// @brief  Destroyes the buffer AFTER the gpu is finished executing the command list.
+        ///         Zombiefies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id buffer to be destroyed after command list finishes.
         void destroy_buffer_deferred(BufferId id);
         /// @brief  Destroyes the image AFTER the gpu is finished executing the command list.
+        ///         Zombiefies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id image to be destroyed after command list finishes.
         void destroy_image_deferred(ImageId id);
         /// @brief  Destroyes the image view AFTER the gpu is finished executing the command list.
+        ///         Zombiefies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id image view to be destroyed after command list finishes.
         void destroy_image_view_deferred(ImageViewId id);
         /// @brief  Destroyes the sampler AFTER the gpu is finished executing the command list.
+        ///         Zombiefies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id image sampler be destroyed after command list finishes.
         void destroy_sampler_deferred(SamplerId id);

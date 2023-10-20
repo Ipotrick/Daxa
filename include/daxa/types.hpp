@@ -1705,16 +1705,6 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    using AutoAllocInfo = MemoryFlags;
-
-    struct ManualAllocInfo
-    {
-        MemoryBlock memory_block = {};
-        usize offset = {};
-    };
-
-    using AllocateInfo = Variant<AutoAllocInfo, ManualAllocInfo>;
-
     struct TimelineQueryPoolInfo
     {
         u32 query_count = {};

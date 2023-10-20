@@ -277,7 +277,7 @@ struct App : AppWindow<App>
         });
         cmd_list.set_pipeline(*raster_pipeline);
         cmd_list.push_constant(DrawPush{
-            .face_buffer = this->device.get_device_address(vertex_buffer),
+            .face_buffer = this->device.get_device_address(vertex_buffer).value(),
         });
         cmd_list.draw({.vertex_count = vert_n});
         cmd_list.end_renderpass();
@@ -293,16 +293,17 @@ struct App : AppWindow<App>
 
         cmd_list.complete();
 
-        // TODO(capi): How to make this syntax good?
-        auto pair = std::pair{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()};
         device.submit_commands({
-            .command_lists = {&cmd_list, 1},
-            .wait_binary_semaphores = {&swapchain.get_acquire_semaphore(), 1},
-            .signal_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
-            .signal_timeline_semaphores = {&pair, 1},
+            .command_lists = std::array{cmd_list},
+            .wait_binary_semaphores = std::array{swapchain.get_acquire_semaphore()},
+            .signal_binary_semaphores = std::array{swapchain.get_present_semaphore()},
+            .signal_timeline_semaphores = std::array{std::pair{
+                swapchain.get_gpu_timeline_semaphore(),
+                swapchain.get_cpu_timeline_value(),
+            }},
         });
         device.present_frame({
-            .wait_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
+            .wait_binary_semaphores = std::array{swapchain.get_present_semaphore()},
             .swapchain = swapchain,
         });
     }

@@ -1,9 +1,6 @@
 #include <0_common/window.hpp>
 #include <thread>
 
-#define APPNAME "Daxa API Sample: Swapchain"
-#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
 namespace tests
 {
     void simple_creation()
@@ -12,7 +9,7 @@ namespace tests
         {
             daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
-                .name = APPNAME_PREFIX("device (simple_creation)"),
+                .name = ("device (simple_creation)"),
             });
 
             daxa::Swapchain swapchain = device.create_swapchain({
@@ -20,10 +17,10 @@ namespace tests
                 .native_window_platform = get_native_platform(),
                 .present_mode = daxa::PresentMode::FIFO,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-                .name = APPNAME_PREFIX("swapchain (simple_creation)"),
+                .name = ("swapchain (simple_creation)"),
             });
 
-            App() : AppWindow<App>(APPNAME " (simple_creation)") {}
+            App() : AppWindow<App>(" (simple_creation)") {}
 
             void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
             void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
@@ -39,17 +36,17 @@ namespace tests
         {
             daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
-                .name = APPNAME_PREFIX("device (clearcolor)"),
+                .name = ("device (clearcolor)"),
             });
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
                 .native_window_platform = get_native_platform(),
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-                .name = APPNAME_PREFIX("swapchain (clearcolor)"),
+                .name = ("swapchain (clearcolor)"),
             });
 
-            App() : AppWindow<App>(APPNAME " (clearcolor)") {}
+            App() : AppWindow<App>(" (clearcolor)") {}
 
             auto update() -> bool
             {
@@ -80,7 +77,7 @@ namespace tests
                     return;
                 }
                 auto cmd_list = device.create_command_list({
-                    .name = APPNAME_PREFIX("cmd_list (clearcolor)"),
+                    .name = ("cmd_list (clearcolor)"),
                 });
 
                 cmd_list.pipeline_barrier_image_transition({

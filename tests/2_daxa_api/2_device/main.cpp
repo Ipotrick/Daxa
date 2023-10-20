@@ -32,8 +32,7 @@ namespace tests
         // once the device is created, you can query its properties, such
         // as its name and much more! These are the same properties we used
         // to discriminate in the GPU selection.
-        // TODO: IMPLEMENT:
-        // std::cout << device.properties().device_name << std::endl;
+        std::cout << device.properties().device_name << std::endl;
     }
 } // namespace tests
 

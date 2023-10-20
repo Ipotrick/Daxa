@@ -139,7 +139,6 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             vkDestroyBuffer(self->vk_device, ret.vk_buffer, nullptr);
             return std::bit_cast<daxa_Result>(result);
         }
-        mem_block.inc_weak_refcnt();
     }
 
     VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
@@ -307,7 +306,6 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
         }
-        mem_block.inc_weak_refcnt();
     }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
@@ -1630,9 +1628,6 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     if (buffer_slot.opt_memory_block != nullptr)
     {
         vkDestroyBuffer(this->vk_device, buffer_slot.vk_buffer, {});
-        buffer_slot.opt_memory_block->dec_weak_refcnt(
-            daxa_ImplMemoryBlock::zero_ref_callback,
-            this->instance);
     }
     else
     {
@@ -1658,9 +1653,6 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
         if (image_slot.opt_memory_block != nullptr)
         {
             vkDestroyImage(this->vk_device, image_slot.vk_image, {});
-            image_slot.opt_memory_block->dec_weak_refcnt(
-                daxa_ImplMemoryBlock::zero_ref_callback,
-                this->instance);
         }
         else
         {
@@ -1735,10 +1727,11 @@ void daxa_ImplDevice::zombiefy_buffer(BufferId id)
     _DAXA_TEST_PRINT("daxa_ImplDevice::zombiefy_buffer\n");
     {
         auto & slot = gpusro_table.buffer_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
-        if (auto ptr = daxa::get_if<ManualAllocInfo>(r_cast<AllocateInfo const *>(&slot.info.allocate_info)))
+        if (slot.opt_memory_block != nullptr)
         {
-            (**r_cast<daxa_MemoryBlock const *>(&ptr->memory_block))
-                .dec_weak_refcnt(daxa_ImplMemoryBlock::zero_ref_callback, this->instance);
+            slot.opt_memory_block->dec_weak_refcnt(
+                daxa_ImplMemoryBlock::zero_ref_callback,
+                this->instance);
         }
         u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
         {
@@ -1755,10 +1748,11 @@ void daxa_ImplDevice::zombiefy_image(ImageId id)
 {
     _DAXA_TEST_PRINT("daxa_ImplDevice::zombiefy_image (%i,%i)\n", id.index, id.version);
     auto & slot = gpusro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
-    if (auto ptr = daxa::get_if<ManualAllocInfo>(r_cast<AllocateInfo const *>(&slot.info.allocate_info)))
+    if (slot.opt_memory_block != nullptr)
     {
-        (**r_cast<daxa_MemoryBlock const *>(&ptr->memory_block))
-            .dec_weak_refcnt(daxa_ImplMemoryBlock::zero_ref_callback, this->instance);
+        slot.opt_memory_block->dec_weak_refcnt(
+            daxa_ImplMemoryBlock::zero_ref_callback,
+            this->instance);
     }
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     {

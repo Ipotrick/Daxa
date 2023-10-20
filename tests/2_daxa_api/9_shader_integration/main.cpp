@@ -69,12 +69,12 @@ namespace tests
         });
         auto src_buffer = device.create_buffer({
             .size = sizeof(TestU64Alignment),
-            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "align_test_src",
         });
         auto dst_buffer = device.create_buffer({
             .size = sizeof(TestU64Alignment),
-            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "align_test_dst",
         });
 
@@ -252,12 +252,12 @@ namespace tests
                 cmd.set_pipeline(*bindless_access);
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
-                        .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()),
+                        .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()).value(),
                         .my_float_image = ti.uses[f32_image].view(),
                         .my_uint_image = ti.uses[u32_image].view(),
                         .my_sampler = sampler,
                     },
-                    .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),
+                    .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
                 });
                 cmd.dispatch(1, 1, 1);
             },
@@ -274,7 +274,7 @@ namespace tests
                 auto cmd = ti.get_command_list();
                 cmd.set_pipeline(*bindless_access_followup);
                 cmd.push_constant(BindlessTestFollowPush{
-                    .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),
+                    .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
                 });
                 cmd.dispatch(1, 1, 1);
             },

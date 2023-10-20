@@ -211,8 +211,8 @@ namespace daxa
         std::span<CommandList const> command_lists = {};
         std::span<BinarySemaphore const> wait_binary_semaphores = {};
         std::span<BinarySemaphore const> signal_binary_semaphores = {};
-        std::span<std::pair<TimelineSemaphore, u64>> wait_timeline_semaphores = {};
-        std::span<std::pair<TimelineSemaphore, u64>> signal_timeline_semaphores = {};
+        std::span<std::pair<TimelineSemaphore, u64> const> wait_timeline_semaphores = {};
+        std::span<std::pair<TimelineSemaphore, u64> const> signal_timeline_semaphores = {};
     };
 
     struct PresentInfo
@@ -220,6 +220,7 @@ namespace daxa
         std::span<BinarySemaphore const> wait_binary_semaphores = {};
         Swapchain swapchain;
     };
+
     struct MemoryBlockBufferInfo
     {
         BufferInfo buffer_info = {};
@@ -234,7 +235,6 @@ namespace daxa
         usize offset = {};
     };
 
-    // TODO: change info functions to return a Optional<Info>
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
      *          Device manages all general gpu operations that are not handled by other objects.
@@ -244,7 +244,6 @@ namespace daxa
      * * is internally synchronized
      * * can be passed between different threads
      * * may be accessed by multiple threads at the same time
-     * * WARNING: there are exceptions to this, those are mentioned above those functions. (TODO REMOVE THE EXCEPTIONS TO THIS)
      */
     struct Device final : ManagedPtr<Device, daxa_Device>
     {
@@ -314,12 +313,17 @@ namespace daxa
         /// @return validity of id
         auto is_id_valid(SamplerId id) const -> bool;
 
-        auto get_device_address(BufferId id) const -> BufferDeviceAddress;
-        auto get_host_address(BufferId id) const -> void *;
+        auto get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>;
+        auto get_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>
         auto get_host_address_as(BufferId id) const -> T *
         {
-            return static_cast<T *>(get_host_address(id));
+            auto opt = get_host_address(id);
+            if (opt.has_value())
+            {
+                return reinterpret_cast<T *>(opt.value());
+            }
+            return {};
         }
 
         auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
@@ -345,11 +349,11 @@ namespace daxa
         ///         When calling destroy, or removing all references to an object, it is zombiefied not really destroyed.
         ///         A zombie lifes until the gpu catches up to the point of zombiefication.
         /// NOTE:
-        /// * this function will block until it gains an exlusive resource lock.
-        /// * command lists may hold shared lifetime locks, those must all unlock before an exclusive lock can be made.
+        /// * this function will block until it gains an exlusive resource lock
+        /// * command lists may hold shared lifetime locks, those must all unlock before an exclusive lock can be made
         /// * look at CommandList for more info on this
         /// * SoftwareCommandList is excempt from this limitation,
-        ///   you can freely record those in parallel with collect_garbage.
+        ///   you can freely record those in parallel with collect_garbage
         void collect_garbage();
 
         /// THREADSAFETY:

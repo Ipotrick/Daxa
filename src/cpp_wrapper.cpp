@@ -281,28 +281,34 @@ namespace daxa
     _DAXA_DECL_GPU_RES_FN(ImageView, image_view)
     _DAXA_DECL_GPU_RES_FN(Sampler, sampler)
 
-    auto Device::get_device_address(BufferId id) const -> BufferDeviceAddress
+    auto Device::get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>
     {
-        auto ret = BufferDeviceAddress{};
-        check_result(
-            daxa_dvc_buffer_device_address(
-                rc_cast<daxa_Device>(this->object),
-                static_cast<daxa_BufferId>(id),
-                r_cast<daxa_BufferDeviceAddress *>(&ret)),
-            "buffer is not device accessable");
-        return ret;
+        BufferDeviceAddress ret;
+        auto result = daxa_dvc_buffer_device_address(
+            rc_cast<daxa_Device>(this->object),
+            static_cast<daxa_BufferId>(id),
+            r_cast<daxa_BufferDeviceAddress *>(&ret));
+        if (result == DAXA_RESULT_SUCCESS)
+        {
+            return {ret};
+        }
+        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BUFFER_ID});
+        return {};
     }
 
-    auto Device::get_host_address(BufferId id) const -> void *
+    auto Device::get_host_address(BufferId id) const -> Optional<std::byte *>
     {
-        void * ret = {};
-        check_result(
-            daxa_dvc_buffer_host_address(
-                rc_cast<daxa_Device>(this->object),
-                static_cast<daxa_BufferId>(id),
-                &ret),
-            "buffer is not host accessable");
-        return ret;
+        std::byte* ret;
+        auto result = daxa_dvc_buffer_host_address(
+            rc_cast<daxa_Device>(this->object),
+            static_cast<daxa_BufferId>(id),
+            r_cast<void* *>(&ret));
+        if (result == DAXA_RESULT_SUCCESS)
+        {
+            return {ret};
+        }
+        check_result(result, "failed to get host address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BUFFER_ID});
+        return {};
     }
 
 #define _DAXA_DECL_DVC_CREATE_FN(Name, name)                       \

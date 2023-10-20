@@ -40,7 +40,7 @@ namespace tests
     {
         cmd.set_pipeline(pipeline);
         cmd.push_constant(TestBufferPush{
-            .test_buffer = ti.get_device().get_device_address(ti.uses[buffer].buffer()),
+            .test_buffer = ti.get_device().get_device_address(ti.uses[buffer].buffer()).value(),
             .size = size,
             .value = value,
         });

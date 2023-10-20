@@ -180,7 +180,7 @@ namespace daxa
 
             auto staging_vbuffer = info.device.create_buffer({
                 .size = static_cast<u32>(vbuffer_needed_size),
-                .allocate_info = AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count),
             });
             auto * vtx_dst = info.device.get_host_address_as<ImDrawVert>(staging_vbuffer);
@@ -193,7 +193,7 @@ namespace daxa
             cmd_list.destroy_buffer_deferred(staging_vbuffer);
             auto staging_ibuffer = info.device.create_buffer({
                 .size = static_cast<u32>(ibuffer_needed_size),
-                .allocate_info = AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count),
             });
             auto * idx_dst = info.device.get_host_address_as<ImDrawIdx>(staging_ibuffer);
@@ -242,8 +242,8 @@ namespace daxa
             ImVec2 const clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
             i32 global_vtx_offset = 0;
             i32 global_idx_offset = 0;
-            push.vbuffer_ptr = this->info.device.get_device_address(vbuffer);
-            push.ibuffer_ptr = this->info.device.get_device_address(ibuffer);
+            push.vbuffer_ptr = this->info.device.get_device_address(vbuffer).value();
+            push.ibuffer_ptr = this->info.device.get_device_address(ibuffer).value();
 
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
@@ -341,7 +341,7 @@ namespace daxa
 
         auto texture_staging_buffer = this->info.device.create_buffer({
             .size = static_cast<u32>(upload_size),
-            .allocate_info = AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         });
 
         u8 * staging_buffer_data = this->info.device.get_host_address_as<u8>(texture_staging_buffer);

@@ -6,9 +6,6 @@
 #include <daxa/utils/pipeline_manager.hpp>
 #include <daxa/utils/task_graph.hpp>
 
-#define APPNAME "Daxa Sample: Boids"
-#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -23,7 +20,7 @@ struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
-        .name = APPNAME_PREFIX("device"),
+        .name = ("device"),
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -31,7 +28,7 @@ struct App : AppWindow<App>
         .native_window_platform = get_native_platform(),
         .present_mode = daxa::PresentMode::FIFO,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .name = APPNAME_PREFIX("swapchain"),
+        .name = ("swapchain"),
     });
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -45,7 +42,7 @@ struct App : AppWindow<App>
             .language = daxa::ShaderLanguage::GLSL,
             .enable_debug_info = true,
         },
-        .name = APPNAME_PREFIX("pipeline_manager"),
+        .name = ("pipeline_manager"),
     });
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> draw_pipeline = pipeline_manager.add_raster_pipeline({
@@ -54,12 +51,12 @@ struct App : AppWindow<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPushConstant),
-        .name = APPNAME_PREFIX("draw_pipeline"),
+        .name = ("draw_pipeline"),
     }).value();
     std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = pipeline_manager.add_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"update_boids.glsl"}},
         .push_constant_size = sizeof(UpdateBoidsPushConstant),
-        .name = APPNAME_PREFIX("draw_pipeline"),
+        .name = ("draw_pipeline"),
     }).value();
     // clang-format on
 
@@ -73,12 +70,12 @@ struct App : AppWindow<App>
 
     daxa::BufferId boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .name = APPNAME_PREFIX("boids buffer a"),
+        .name = ("boids buffer a"),
     });
 
     daxa::BufferId old_boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .name = APPNAME_PREFIX("boids buffer b"),
+        .name = ("boids buffer b"),
     });
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain image"}};
@@ -89,14 +86,14 @@ struct App : AppWindow<App>
 
     daxa::TaskGraph task_graph = record_tasks();
 
-    App() : AppWindow<App>(APPNAME)
+    App() : AppWindow<App>("boids")
     {
-        auto cmd_list = device.create_command_list({.name = APPNAME_PREFIX("boid buffer init commands")});
+        auto cmd_list = device.create_command_list({.name = ("boid buffer init commands")});
 
         auto upload_buffer_id = device.create_buffer({
             .size = sizeof(Boids),
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
-            .name = APPNAME_PREFIX("voids buffer init staging buffer"),
+            .name = ("voids buffer init staging buffer"),
         });
         cmd_list.destroy_buffer_deferred(upload_buffer_id);
 
@@ -180,8 +177,8 @@ struct App : AppWindow<App>
             cmd_list.set_pipeline(*update_boids_pipeline);
 
             cmd_list.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()),
-                .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()),
+                .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()).value(),
+                .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()).value(),
             });
 
             cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
@@ -223,7 +220,7 @@ struct App : AppWindow<App>
             });
 
             cmd_list.push_constant(DrawPushConstant{
-                .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()),
+                .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()).value(),
                 .axis_scaling = {
                     std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
                     std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
@@ -238,7 +235,7 @@ struct App : AppWindow<App>
 
     auto record_tasks() -> daxa::TaskGraph
     {
-        daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task graph")});
+        daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = ("main task graph")});
         new_task_graph.use_persistent_image(task_swapchain_image);
         new_task_graph.use_persistent_buffer(task_boids_current);
         new_task_graph.use_persistent_buffer(task_boids_old);
@@ -286,6 +283,7 @@ struct App : AppWindow<App>
             return;
         }
         task_graph.execute({});
+        device.collect_garbage();
         // Switch boids front and back buffers.
         task_boids_current.swap_buffers(task_boids_old);
     }

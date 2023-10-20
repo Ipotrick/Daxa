@@ -1,16 +1,21 @@
 #pragma once
 
-#if !defined(DAXA_STORAGE_BUFFER_BINDING)
 #define DAXA_STORAGE_BUFFER_BINDING 0
 #define DAXA_STORAGE_IMAGE_BINDING 1
 #define DAXA_SAMPLED_IMAGE_BINDING 2
 #define DAXA_SAMPLER_BINDING 3
 #define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
-#define DAXA_ID_INDEX_MASK (0x00FFFFFF)
-#endif
+#define DAXA_ID_INDEX_BITS 20
+#define DAXA_ID_INDEX_MASK ((uint64_t(1) << DAXA_ID_INDEX_BITS) - uint64_t(1))
+#define DAXA_ID_INDEX_OFFSTET 0
+#define DAXA_ID_VERSION_BITS 44
+#define DAXA_ID_VERSION_MASK ((uint64_t(1) << DAXA_ID_VERSION_BITS) - uint64_t(1))
+#define DAXA_ID_VERSION_OFFSTET DAXA_ID_INDEX_BITS
 
 typedef uint daxa_u32;
 typedef int daxa_i32;
+typedef uint64_t daxa_u64;
+typedef int64_t daxa_i64;
 typedef float daxa_f32;
 typedef double daxa_f64;
 typedef float daxa_f32;
@@ -73,40 +78,40 @@ namespace daxa
 {
     struct BufferId
     {
-        daxa_u32 value;
+        daxa_u64 value;
         daxa_u32 index()
         {
-            return (DAXA_ID_INDEX_MASK & value);
+            return daxa_u32(DAXA_ID_INDEX_MASK & value);
         }
-        daxa_u32 version()
+        daxa_u64 version()
         {
-            return (value >> 24);
+            return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
 
     struct ImageViewId
     {
-        daxa_u32 value;
+        daxa_u64 value;
         daxa_u32 index()
         {
-            return (DAXA_ID_INDEX_MASK & value);
+            return daxa_u32(DAXA_ID_INDEX_MASK & value);
         }
-        daxa_u32 version()
+        daxa_u64 version()
         {
-            return (value >> 24);
+            return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
 
     struct SamplerId
     {
-        daxa_u32 value;
+        daxa_u64 value;
         daxa_u32 index()
         {
-            return (DAXA_ID_INDEX_MASK & value);
+            return daxa_u32(DAXA_ID_INDEX_MASK & value);
         }
-        daxa_u32 version()
+        daxa_u64 version()
         {
-            return (value >> 24);
+            return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
 } // namespace daxa

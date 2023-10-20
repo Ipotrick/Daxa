@@ -9,15 +9,15 @@ namespace daxa
         : m_info{std::move(a_info)},
           gpu_timeline{this->m_info.device.create_timeline_semaphore({
               .initial_value = {},
-              .name = std::string("TransferMemoryPool") + this->m_info.name,
+              .name = this->m_info.name,
           })},
           m_buffer{this->m_info.device.create_buffer({
               .size = this->m_info.capacity,
-              .allocate_info = AutoAllocInfo{ daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE | (a_info.use_bar_memory ? daxa::MemoryFlagBits::DEDICATED_MEMORY : daxa::MemoryFlagBits::NONE) },
-              .name = std::string("TransferMemoryPool") + this->m_info.name,
+              .allocate_info =  daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE | (a_info.use_bar_memory ? daxa::MemoryFlagBits::DEDICATED_MEMORY : daxa::MemoryFlagBits::NONE),
+              .name = this->m_info.name,
           })},
-          buffer_device_address{this->m_info.device.get_device_address(this->m_buffer)},
-          buffer_host_address{this->m_info.device.get_host_address(this->m_buffer)}
+          buffer_device_address{this->m_info.device.get_device_address(this->m_buffer).value()},
+          buffer_host_address{this->m_info.device.get_host_address(this->m_buffer).value()}
     {
     }
     

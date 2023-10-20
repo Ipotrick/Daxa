@@ -394,8 +394,8 @@ namespace tests
                 for (int i = 0; i < iterations; ++i)
                 {
                     cmd_list.copy_image_to_buffer({
-                        .buffer = buf,
                         .image = img,
+                        .buffer = buf,
                     });
                 }
                 std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
