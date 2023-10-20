@@ -55,6 +55,14 @@ struct daxa_ImplCommandList final : ImplHandle
     usize split_barrier_batch_count = {};
     std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
     std::array<daxa_SetUniformBufferInfo, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> current_constant_buffer_bindings = {};
+    // TODO:    These vectors seem to be fast enough. overhead is around 1-4% in cmd recording.
+    //          It might be cool to have some slab allocator for these.
+    // If there is demand, we could make an instance or cmd list flag to disable the submit checks.
+    // TODO:    Also collect ref counted handles.
+    std::vector<BufferId> used_buffers = {};
+    std::vector<ImageId> used_images = {};
+    std::vector<ImageViewId> used_image_views = {};
+    std::vector<SamplerId> used_samplers = {};
 
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
     

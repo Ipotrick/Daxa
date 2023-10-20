@@ -106,7 +106,11 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
         case DAXA_RESULT_EXEEDED_MAX_IMAGE_VIEWS: return "DAXA_RESULT_EXEEDED_MAX_IMAGE_VIEWS";
         case DAXA_RESULT_EXEEDED_MAX_SAMPLERS: return "DAXA_RESULT_EXEEDED_MAX_SAMPLERS";
         case DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE: return "DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE";
-    case DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
+        case DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID";
+        case DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID";
+        case DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID";
+        case DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID";
+        case DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
     default: return "UNIMPLEMENTED";
     }
 };
@@ -653,16 +657,24 @@ namespace daxa
             r_cast<daxa_CommandList>(this->object), \
             r_cast<daxa_##Info const *>(&info));    \
     }
+#define _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
+    void CommandList::name(Info const & info)                    \
+    {                                                            \
+        auto result = daxa_cmd_##name(                           \
+            r_cast<daxa_CommandList>(this->object),              \
+            r_cast<daxa_##Info const *>(&info));                 \
+        check_result(result, "failed in " #name);                \
+    }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_buffer_to_buffer, BufferCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_buffer_to_image, BufferImageCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_image_to_buffer, ImageBufferCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(copy_image_to_image, ImageCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(blit_image_to_image, ImageBlitInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(clear_buffer, BufferClearInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(clear_image, ImageClearInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_buffer, BufferCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_image, BufferImageCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_buffer, ImageBufferCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_image, ImageCopyInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
 
     void CommandList::wait_events(std::span<EventWaitInfo const> const & infos)
@@ -680,7 +692,7 @@ namespace daxa
             r_cast<daxa_CommandList>(this->object), data, size);
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(set_uniform_buffer, SetUniformBufferInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_uniform_buffer, SetUniformBufferInfo)
 
     void CommandList::set_pipeline(ComputePipeline const & pipeline)
     {
@@ -703,7 +715,7 @@ namespace daxa
             x, y, z);
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(dispatch_indirect, DispatchIndirectInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)
 
 #define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name) \
     void CommandList::destroy_##name##_deferred(Name##Id id)    \
@@ -738,11 +750,11 @@ namespace daxa
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(set_index_buffer, SetIndexBufferInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(draw, DrawInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_indirect, DrawIndirectInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_indirect_count, DrawIndirectCountInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
 
     void CommandList::draw_mesh_tasks(u32 x, u32 y, u32 z)
     {
@@ -750,8 +762,8 @@ namespace daxa
             r_cast<daxa_CommandList>(this->object),
             x, y, z);
     }
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)

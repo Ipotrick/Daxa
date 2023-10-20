@@ -63,7 +63,7 @@ struct daxa_ImplDevice final : public ImplHandle
     CommandBufferPoolPool buffer_pool_pool = {};
 
     // Gpu resource table:
-    GPUShaderResourceTable gpu_shader_resource_table = {};
+    GPUShaderResourceTable gpusro_table = {};
 
     // Main queue:
     VkQueue main_queue_vk_queue = {};

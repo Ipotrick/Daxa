@@ -1,36 +1,50 @@
-# Resource Lifetimes in Daxa
+# Objects
 
-Daxa resources are reference counted and when dropped, their destuction is automatically deferred until the gpu is done with current work.
+Daxa splits all objects into two categories. shader resource objects and management objects.
 
-A user of daxa does not need to be concerned about lifetimes in general, the system is quite hard to misuse.
-But for some, it is important to know what exactly daxa is doing for resource lifetimes, especially for those that want to write a wrapper in their own language, binding the c api.
+Shader resource objects are buffers, images, image views and samplers. 
 
-## Reference Counters
+Shader resource objects are represented with 64bit ids in daxa. These ids can be used on the cpu AND gpu! The ids are similar to entity ids in an ecs.
 
-Nearly all daxa objects have an internal reference count. These reference counters are accessable with the c api, the c++ api simply abstracts the refcounting with RAII shared_ptr-like types. The reference counters are meant to count owning references, held by the user. When an object is created, its reference count is 1, when the reference count is decremented to 0 by the user, the object will be zombiefied (more on that later).
+Any other obejct is reference counted. 
 
-> The reference counting is atomic and threadsafe.
+# ids vs reference counting
 
-Daxa also keeps a secondary weak reference count for most objects. This count is used to count parent-child dependencies between objects. For example creating a binary semaphore is the child of a device, creating one will increment the weak count of the parent device. Per default daxa will use the weak count to keep parents alive if a child dies before its parent in order to ensure proper destruction order. This is very convenient but may lead to unclear resource lifetimes. 
+Why have two different lifetime systems in daxa?
 
-// TODO: Fix inconsistency in parent child relations for memory block.
+In the past daxa had only ref counted objects. This was a great convenience, ref counting is very simple, solves all lifetime tracking issues itself and makes use and implementation very easy.
 
-> Note: To be sure on when an object is a child to another object, check out the functions creating the objects. When an object has a function to create another one it is a child of the other one. For example an ImageView is not a parent to an image but to the device.
+The downsides of reference counting are performance and unclear lifetimes. 
 
-> Note: buffer, image(-view) and sampler are excluded from this. They MUST be destroyed before the device as a user side reference is nessecary to destroy those objects at all!
+It is very easy to forget about a reference somewhere and start to hog a ton of memory accidentally by never releasing temporary resources.
 
-// TODO: Implement better error messaging for this mode!
+Daxa tracks all used objects in command recording for validation. The overhad of using ref counting for this is around 5-15%! On top of that the ref counting can cause perf problems on the user side too.
 
-But daxa has an optional secondary lifetime mode in which it is illegal for children to outlive their parents. This secondart mode makes it nessecary to have two different counters as daxa needs to be able to differentiate the user reference counts and the child-parent dependency reference counts. In this mode daxa will panic if one tries to destroy a parent before having destroyed all its children. This mode is prefered by many, as it will force the user to use clear object lifetimes and daxa will detect any errors. This mode is instance wide and can be enabled with the instacee flag `DAXA_INSTANCE_FLAG_PARENT_MUST_OUTLIVE_CHILD`.
+Object types that are high in numbers per application make the issues of ref counting much worse. 
 
-The secondary mode `PARENTS_MUST_OUTLLIVE_CHILDREN` makes daxa treat weak references as a simple debug utility, ensuring that parents outlive children.
-So when an image is destroyed before all views to it are destroyed, the strong count to the image is 0 but the weak count is > 0. In this mode daxa will error as a child outlived a parent.
-This mode is very useful if the user does NOT want objects to linger around potentially hogging memory and other resources. This way daxa will find any and all dependency management errors the user might do with daxa objects.
+In opposition to that is using ids for onject references. These have the upside that they are trivial to copy and have complely rigit lifetimes. 
 
-## Deferred destruction - Zombies??
+The downside is that they require some extra checking, this checking is VERY cheap on average, it is far less then a ref count increment.
 
-As mentioned above, when the reference count of an object drops to zero it is NOT directly destroyed. They become a "zombie". A zombie is not usable by the user anymore. Daxa keeps zombies around because the gpu could potentially still use these objects when the reference count dropped to zero! In order to prevent destroying objects before the gpu is done using them daxa keeps the nessecary parts of an object alive as a zombie until it is safe to really destroy the resources.
+Daxa strikes a compromise. "low frequency" objects, objects that are in relatively low numbers, have unintresting lifetimes and or are not passed around often are refcounted for convenience.
+Any object that typically appears in very high frequency, (shader resource objects) are managed by ids.
 
-Daxa keeps a cpu and gpu timeline to measure how much the gpu is behind the cpu. When a zombie is created it gets assigned the current cpu timeline value. When collect garbage is called on the device, it will check if the gpu reached the zombies cpu timeline value. If so it destroyes them, as the gpu reached past the point in time where the object became a zombie!
+# Parent child dependencies
 
-> Note: collect garbage can be manually called, but it is also automatically called in submit.
+Per default daxa will track parent child dependencies between objects and keep the parents alive until all the children die.
+
+This can be very convenient but also makes the problem of unclear lifetimes even worse.
+
+So daxa also has an optional instance flag (`DAXA_INSTANCE_FLAG_PARENT_MUST_OUTLIVE_CHILD`) that forces parents to outlive their children, the children will NOT keep parents alive but ERROR.
+
+# Deferred destruction - Zombies??
+
+When an objects reference count drops to 0 or gets manually destroyed, it is not actually destroyed yet it is zombiefied.
+
+A zombie object is no longer usable on the user side. But zombies are still valid in daxas internals as well as on the gpu.
+
+Daxa defers the destruction of zombies until the gpu catches up with the cpu at the time of zombiefication.
+
+The real object destructions exclusively happen in `Device::collect_garbage`. This function will check all zombies zombification time point, compare it with the gpu timeline and if the gpu cought up, it will destroy the zombie.
+
+> Note: the functions `Device::submit_commands` and `Device::present` as well as any non-completed `CommandList`s hold a shared read lock on object lifetimes. `Device::collect_garbage` will lock the object lifetimes exclusively, meaning it will block until all shared locks get unlocked! Make sure to not have open command lists while calling `Device::collect_garbage`.

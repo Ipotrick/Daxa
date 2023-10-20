@@ -70,7 +70,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         _DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
     }
 
-    ret.vk_pipeline_layout = ret.device->gpu_shader_resource_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+    ret.vk_pipeline_layout = ret.device->gpusro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
     constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .pNext = nullptr,
@@ -321,7 +321,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     {
         return std::bit_cast<daxa_Result>(module_result);
     }
-    ret.vk_pipeline_layout = ret.device->gpu_shader_resource_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+    ret.vk_pipeline_layout = ret.device->gpusro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
     VkComputePipelineCreateInfo const vk_compute_pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
         .pNext = nullptr,

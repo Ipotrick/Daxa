@@ -227,7 +227,7 @@ namespace daxa
         BufferId id = {};
         usize offset = {};
         IndexType index_type = IndexType::uint32;
-    };
+    };  
 
     // TODO: Add software command list for more robust uncoupled command recording.
     // TODO: Collect all used ids and handles, use them to check validity when submitting.

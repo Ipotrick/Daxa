@@ -54,3 +54,10 @@ As the daxa team is quite small, we need to focus on what is implemented and wha
 
 ### Simple, readable and close to Vulkan.
 Daxa should be as close as possible to vulkan naming wise if the concept fits. Structure objects and their use should be close to vulkan. This should make use of daxa much easier for anyone already knowing vulkan. Daxa will not overabstract or rename things, as that can cause confusion and lack of intent.
+
+### Safe and debuggable
+Daxa should try to prevent most direct misuse of its internals such as data backing a resource id. Daxa should also validate most common errors that could occur with vulkan one the cpu side.
+Debugging should be straight forward and daxa should be very clear and catch as many mistakes as possible. 
+It should be hard to missuse daxa directly.
+Usage errors that may lead to misbehavior on the gpu is not nessecarily checked by daxa as gpu driven makes this near impossible. Daxa should only aim to validate driver and its own integrety on the cpu side.
+The safety overhead should NEVER exceed ~5%.
