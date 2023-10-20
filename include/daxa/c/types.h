@@ -207,7 +207,7 @@ typedef struct
 DAXA_EXPORT daxa_TimelineQueryPoolInfo const *
 daxa_timeline_query_pool_info(daxa_TimelineQueryPool timeline_query_pool);
 
-DAXA_EXPORT daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool timeline_query_pool, uint32_t start, uint32_t count, uint64_t * out_results);
 
 DAXA_EXPORT uint64_t

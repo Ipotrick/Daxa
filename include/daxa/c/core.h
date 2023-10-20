@@ -9,6 +9,12 @@
 #define DAXA_EXPORT
 #endif
 
+#if defined(__cplusplus)
+#define DAXA_NO_DISCARD [[nodiscard]]
+#else
+#define DAXA_NO_DISCARD
+#endif
+
 #define _DAXA_TEST_PRINT(...)
 
 #define DAXA_SHADERLANG_GLSL 1

@@ -127,13 +127,13 @@ typedef struct
 DAXA_EXPORT daxa_TimelineSemaphoreInfo const *
 daxa_timeline_semaphore_info(daxa_TimelineSemaphore timeline_semaphore);
 
-DAXA_EXPORT daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_timeline_semaphore_get_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t * out_value);
 
-DAXA_EXPORT daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value);
 
-DAXA_EXPORT daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore timeline_semaphore, uint64_t value, uint64_t timeout);
 
 DAXA_EXPORT VkSemaphore

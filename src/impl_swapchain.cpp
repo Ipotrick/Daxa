@@ -379,7 +379,7 @@ void daxa_ImplSwapchain::partial_cleanup()
     {
         // TODO:    Add special function that only swapchains can call do destroy these images.
         //          Make it fully illegal to destroy swapchain images from user side!
-        daxa_dvc_destroy_image(this->device, static_cast<daxa_ImageId>(image));
+        [[maybe_unused]] auto _ignore = daxa_dvc_destroy_image(this->device, static_cast<daxa_ImageId>(image));
     }
     this->images.clear();
 }
