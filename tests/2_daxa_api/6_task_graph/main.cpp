@@ -361,7 +361,7 @@ namespace tests
             }),
             .task = [&](daxa::TaskInterface ti)
             {
-                auto cmd = ti.get_command_list();
+                auto cmd = ti.get_encoder();
                 cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
@@ -376,7 +376,7 @@ namespace tests
             }),
             .task = [&](daxa::TaskInterface ti)
             {
-                auto cmd = ti.get_command_list();
+                auto cmd = ti.get_encoder();
                 // Optionally, the shader uses can still be accessed with the usual task interface for immediate tasks. 
                 [[maybe_unused]] auto img = ti.uses[task_image].image();
                 // Get a constant buffer set info, ready to use for the next pipelines constants.

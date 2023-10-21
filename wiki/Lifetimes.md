@@ -47,4 +47,4 @@ Daxa defers the destruction of zombies until the gpu catches up with the cpu at 
 
 The real object destructions exclusively happen in `Device::collect_garbage`. This function will check all zombies zombification time point, compare it with the gpu timeline and if the gpu cought up, it will destroy the zombie.
 
-> Note: the functions `Device::submit_commands` and `Device::present` as well as any non-completed `CommandList`s hold a shared read lock on object lifetimes. `Device::collect_garbage` will lock the object lifetimes exclusively, meaning it will block until all shared locks get unlocked! Make sure to not have open command lists while calling `Device::collect_garbage`.
+> Note: the functions `Device::submit_commands` and `Device::present` as well as any non-completed `CommandEncoder`s hold a shared read lock on object lifetimes. `Device::collect_garbage` will lock the object lifetimes exclusively, meaning it will block until all shared locks get unlocked! Make sure to not have open command lists while calling `Device::collect_garbage`.

@@ -143,7 +143,7 @@ struct BaseApp : AppWindow<T>
             .uses = imgui_task_uses,
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_command_list();
+                auto cmd_list = ti.get_encoder();
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
             .name = "ImGui Task",

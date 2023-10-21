@@ -640,30 +640,30 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     _DAXA_TEST_PRINT("\n");
     std::shared_lock lifetime_lock{self->gpusro_table.lifetime_lock};
 
-    for (daxa_CommandList cmdlist : std::span{info->command_lists, info->command_list_count})
+    for (daxa_ExecutableCommands commands : std::span{info->commands, info->commands_count})
     {
-        for (BufferId id : cmdlist->used_buffers)
+        for (BufferId id : commands->data.used_buffers)
         {
             if (!daxa_dvc_is_buffer_valid(self, id))
             {
                 return DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID;
             }
         }
-        for (ImageId id : cmdlist->used_images)
+        for (ImageId id : commands->data.used_images)
         {
             if (!daxa_dvc_is_image_valid(self, id))
             {
                 return DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID;
             }
         }
-        for (ImageViewId id : cmdlist->used_image_views)
+        for (ImageViewId id : commands->data.used_image_views)
         {
             if (!daxa_dvc_is_image_view_valid(self, id))
             {
                 return DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID;
             }
         }
-        for (SamplerId id : cmdlist->used_samplers)
+        for (SamplerId id : commands->data.used_samplers)
         {
             if (!daxa_dvc_is_sampler_valid(self, id))
             {
@@ -674,9 +674,9 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     u64 const current_main_queue_cpu_timeline_value = self->main_queue_cpu_timeline.fetch_add(1) + 1;
 
-    for (auto const & cmd_list : std::span{info->command_lists, info->command_list_count})
+    for (auto const & commands : std::span{info->commands, info->commands_count})
     {
-        for (auto [id, index] : cmd_list->deferred_destructions)
+        for (auto [id, index] : commands->data.deferred_destructions)
         {
             // TODO(lifetime): check these and report errors if these were destroyed too early.
             [[maybe_unused]] daxa_Result _ignore = {};
@@ -692,13 +692,9 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     }
 
     std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
-    for (auto const & cmd_list : std::span{info->command_lists, info->command_list_count})
+    for (auto const & commands : std::span{info->commands, info->commands_count})
     {
-        if (!cmd_list->recording_complete)
-        {
-            return DAXA_RESULT_INCOMPLETE_COMMAND_LIST;
-        }
-        submit_vk_command_buffers.push_back(cmd_list->vk_cmd_buffer);
+        submit_vk_command_buffers.push_back(commands->data.vk_cmd_buffer);
     }
 
     std::vector<VkSemaphore> submit_semaphore_signals = {}; // All timeline semaphores come first, then binary semaphores follow.
@@ -899,7 +895,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             {
                 return std::bit_cast<daxa_Result>(vk_result);
             }
-            self->buffer_pool_pool.put_back({object.vk_cmd_pool, object.vk_cmd_buffer});
+            self->buffer_pool_pool.put_back(object.vk_cmd_pool);
             self->main_queue_command_list_zombies.pop_back();
         }
     }

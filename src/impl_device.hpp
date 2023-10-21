@@ -60,7 +60,7 @@ struct daxa_ImplDevice final : public ImplHandle
 
     // Command Buffer/Pool recycling:
     std::mutex main_queue_command_pool_buffer_recycle_mtx = {};
-    CommandBufferPoolPool buffer_pool_pool = {};
+    CommandPoolPool buffer_pool_pool = {};
 
     // Gpu resource table:
     GPUShaderResourceTable gpusro_table = {};
@@ -78,7 +78,7 @@ struct daxa_ImplDevice final : public ImplHandle
     // collect_garbage checks if the gpu timeline reached the zombies timeline value and destroys the zombies.
     // TODO: replace with lockless queues. 
     std::recursive_mutex main_queue_zombies_mtx = {};
-    std::deque<std::pair<u64, CommandListZombie>> main_queue_command_list_zombies = {};
+    std::deque<std::pair<u64, CommandEncoderZombie>> main_queue_command_list_zombies = {};
     std::deque<std::pair<u64, BufferId>> main_queue_buffer_zombies = {};
     std::deque<std::pair<u64, ImageId>> main_queue_image_zombies = {};
     std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};

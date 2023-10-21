@@ -32,7 +32,7 @@ auto main() -> int
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
         gpu_timeline.wait_for_value(cpu_timeline - 1);
-        daxa::CommandList cmd = device.create_command_list({});
+        daxa::CommandEncoder cmd = device.create_command_list({});
         cmd.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
@@ -72,7 +72,7 @@ auto main() -> int
         cpu_timeline += 1;
     }
 
-    daxa::CommandList cmd = device.create_command_list({});
+    daxa::CommandEncoder cmd = device.create_command_list({});
     cmd.pipeline_barrier({
         .src_access = daxa::AccessConsts::TRANSFER_WRITE,
         .dst_access = daxa::AccessConsts::HOST_READ,

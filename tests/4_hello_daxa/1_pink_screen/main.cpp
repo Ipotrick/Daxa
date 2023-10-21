@@ -141,7 +141,7 @@ auto main() -> int
         // But for demonstration we show how to get the full slice and pass it to the barriers here.
         daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).value().slice;
 
-        daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
+        daxa::CommandEncoder command_list = device.create_command_list({.name = "my command list"});
 
         command_list.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,

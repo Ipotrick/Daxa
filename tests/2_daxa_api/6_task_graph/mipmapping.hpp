@@ -198,7 +198,7 @@ namespace tests
                 }
             }
 
-            void update_gpu_input(daxa::CommandList & cmd_list, daxa::BufferId input_buffer)
+            void update_gpu_input(daxa::CommandEncoder & cmd_list, daxa::BufferId input_buffer)
             {
                 auto staging_buffer = device.create_buffer({
                     .size = sizeof(MipmappingGpuInput),
@@ -217,7 +217,7 @@ namespace tests
                     .size = sizeof(MipmappingGpuInput),
                 });
             }
-            void paint(daxa::CommandList & cmd_list, daxa::ImageId render_target_id, daxa::BufferId input_buffer)
+            void paint(daxa::CommandEncoder & cmd_list, daxa::ImageId render_target_id, daxa::BufferId input_buffer)
             {
                 auto render_target_size = device.info_image(render_target_id).value().size;
                 cmd_list.set_pipeline(*compute_pipeline);
@@ -229,12 +229,12 @@ namespace tests
                 cmd_list.push_constant(push);
                 cmd_list.dispatch((render_target_size.x + 7) / 8, (render_target_size.y + 7) / 8);
             }
-            void draw_ui(daxa::CommandList & cmd_list, daxa::ImageId render_target_id)
+            void draw_ui(daxa::CommandEncoder & cmd_list, daxa::ImageId render_target_id)
             {
                 auto render_size = device.info_image(render_target_id).value().size;
                 imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, render_target_id, render_size.x, render_size.y);
             }
-            void blit_image_to_swapchain(daxa::CommandList & cmd_list, daxa::ImageId src_image_id, daxa::ImageId dst_image_id)
+            void blit_image_to_swapchain(daxa::CommandEncoder & cmd_list, daxa::ImageId src_image_id, daxa::ImageId dst_image_id)
             {
                 auto const & src_info = device.info_image(src_image_id).value();
                 auto src_size = src_info.size;
@@ -451,7 +451,7 @@ namespace tests
                     
                     void callback(daxa::TaskInterface ti)
                     {
-                        auto cmd_list = ti.get_command_list();
+                        auto cmd_list = ti.get_encoder();
                         cmd_list.blit_image_to_image({
                             .src_image = uses.lower_mip.image(),
                             .dst_image = uses.higher_mip.image(),
@@ -489,7 +489,7 @@ namespace tests
                     },
                     .task = [this](daxa::TaskInterface const & ti)
                     {
-                        auto cmd_list = ti.get_command_list();
+                        auto cmd_list = ti.get_encoder();
                         update_gpu_input(cmd_list, ti.uses[task_mipmapping_gpu_input_buffer].buffer());
                     },
                     .name = "Input Transfer",
@@ -505,7 +505,7 @@ namespace tests
                             },
                             .task = [=, this](daxa::TaskInterface const & ti)
                             {
-                                auto cmd_list = ti.get_command_list();
+                                auto cmd_list = ti.get_encoder();
                                 paint(cmd_list, ti.uses[task_render_image].image(), ti.uses[task_mipmapping_gpu_input_buffer].buffer());
                             },
                             .name = "mouse paint",
@@ -535,7 +535,7 @@ namespace tests
                     .uses = {ImageTransferWrite<>{task_swapchain_image}},
                     .task = [=, this](daxa::TaskInterface const & ti)
                     {
-                        auto cmd_list = ti.get_command_list();
+                        auto cmd_list = ti.get_encoder();
                         cmd_list.clear_image({
                             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
@@ -555,7 +555,7 @@ namespace tests
                         daxa::ImageId render_img = ti.uses[render_img_view].image();
                         daxa::ImageId swapchain_img = ti.uses[task_swapchain_image].image();
 
-                        auto cmd_list = ti.get_command_list();
+                        auto cmd_list = ti.get_encoder();
                         this->blit_image_to_swapchain(cmd_list, render_img, swapchain_img);
                     },
                     .name = "blit to swapchain",
@@ -564,7 +564,7 @@ namespace tests
                     .uses = {ImageColorAttachment<>{task_swapchain_image}},
                     .task = [=, this](daxa::TaskInterface const & ti)
                     {
-                        auto cmd_list = ti.get_command_list();
+                        auto cmd_list = ti.get_encoder();
                         this->draw_ui(cmd_list, ti.uses[task_swapchain_image].image());
                     },
                     .name = "Imgui",

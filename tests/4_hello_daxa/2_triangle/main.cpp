@@ -44,7 +44,7 @@ struct WindowInfo
 // We also create a couple files for the shader, the shared.inl and the main.glsl
 #include "shared.inl"
 
-void draw_to_swapchain_task(daxa::Device & device, daxa::CommandList & cmd_list, std::shared_ptr<daxa::RasterPipeline> & pipeline, daxa::ImageId swapchain_image, daxa::BufferId buffer_id, daxa::u32 width, daxa::u32 height);
+void draw_to_swapchain_task(daxa::Device & device, daxa::CommandEncoder & cmd_list, std::shared_ptr<daxa::RasterPipeline> & pipeline, daxa::ImageId swapchain_image, daxa::BufferId buffer_id, daxa::u32 width, daxa::u32 height);
 
 struct UploadVertexDataTask
 {
@@ -55,7 +55,7 @@ struct UploadVertexDataTask
     std::string_view name = "upload vertices";
     void callback(daxa::TaskInterface ti)
     {
-        auto cmd_list = ti.get_command_list();
+        auto cmd_list = ti.get_encoder();
         // This is the data we'll send to the GPU
         auto data = std::array{
             MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
@@ -110,7 +110,7 @@ struct DrawToSwapchainTask
     std::string_view name = "draw task";
     void callback(daxa::TaskInterface ti)
     {
-        auto cmd_list = ti.get_command_list();
+        auto cmd_list = ti.get_encoder();
         auto const size_x = ti.get_device().info_image(uses.color_target.image()).value().size.x;
         auto const size_y = ti.get_device().info_image(uses.color_target.image()).value().size.y;
         cmd_list.begin_renderpass({

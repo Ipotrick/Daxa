@@ -88,14 +88,14 @@ struct App : AppWindow<App>
 
     App() : AppWindow<App>("boids")
     {
-        auto cmd_list = device.create_command_list({.name = ("boid buffer init commands")});
+        auto encoder = device.create_command_encoder({.name = ("boid buffer init commands")});
 
         auto upload_buffer_id = device.create_buffer({
             .size = sizeof(Boids),
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = ("voids buffer init staging buffer"),
         });
-        cmd_list.destroy_buffer_deferred(upload_buffer_id);
+        encoder.destroy_buffer_deferred(upload_buffer_id);
 
         auto * ptr = device.get_host_address_as<Boids>(upload_buffer_id);
 
@@ -108,25 +108,25 @@ struct App : AppWindow<App>
             boid.speed.y = std::sin(angle);
         }
 
-        cmd_list.copy_buffer_to_buffer({
+        encoder.copy_buffer_to_buffer({
             .src_buffer = upload_buffer_id,
             .dst_buffer = boid_buffer,
             .size = sizeof(Boids),
         });
 
-        cmd_list.copy_buffer_to_buffer({
+        encoder.copy_buffer_to_buffer({
             .src_buffer = upload_buffer_id,
             .dst_buffer = old_boid_buffer,
             .size = sizeof(Boids),
         });
 
-        cmd_list.pipeline_barrier({
+        encoder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::COMPUTE_SHADER_READ_WRITE | daxa::AccessConsts::VERTEX_SHADER_READ,
         });
-        cmd_list.complete();
+        auto executable_commands = encoder.complete_current_commands();
         device.submit_commands({
-            .command_lists = std::span{&cmd_list, 1},
+            .commands = std::span{&executable_commands, 1},
         });
     }
 
@@ -173,15 +173,15 @@ struct App : AppWindow<App>
         std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
         void callback(daxa::TaskInterface ti)
         {
-            auto cmd_list = ti.get_command_list();
-            cmd_list.set_pipeline(*update_boids_pipeline);
+            auto& encoder = ti.get_encoder();
+            encoder.set_pipeline(*update_boids_pipeline);
 
-            cmd_list.push_constant(UpdateBoidsPushConstant{
+            encoder.push_constant(UpdateBoidsPushConstant{
                 .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()).value(),
                 .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()).value(),
             });
 
-            cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
+            encoder.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
         }
     };
 
@@ -201,9 +201,8 @@ struct App : AppWindow<App>
         u32 * size_y = {};
         void callback(daxa::TaskInterface ti)
         {
-            auto cmd_list = ti.get_command_list();
-            cmd_list.set_pipeline(*draw_pipeline);
-            cmd_list.begin_renderpass({
+            auto& encoder = ti.get_encoder();
+            auto render_encoder = std::move(encoder).begin_renderpass({
                 .color_attachments = std::array{
                     daxa::RenderAttachmentInfo{
                         .image_view = uses.render_image.view(),
@@ -218,8 +217,9 @@ struct App : AppWindow<App>
                     .height = *size_y,
                 },
             });
+            render_encoder.set_pipeline(*draw_pipeline);
 
-            cmd_list.push_constant(DrawPushConstant{
+            render_encoder.push_constant(DrawPushConstant{
                 .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()).value(),
                 .axis_scaling = {
                     std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
@@ -227,9 +227,9 @@ struct App : AppWindow<App>
                 },
             });
 
-            cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
+            render_encoder.draw({.vertex_count = 3 * MAX_BOIDS});
 
-            cmd_list.end_renderpass();
+            encoder = std::move(render_encoder).end_renderpass();
         }
     };
 

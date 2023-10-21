@@ -98,12 +98,12 @@ daxa::ImageId swapchain_image = swapchain.acquire_next_image();
 
 If all swapchain images are used in queued submissions to the GPU, the present call will block. `daxa::Swapchain::acquire_next_image()` will always immediately return. The Swapchain will also control frames in flight. It controls the acquire, present and frames in flight semaphores. Each of those can be queried with a function from the swapchain.
 
-## Creating a daxa::CommandList
+## Creating a daxa::CommandEncoder
 
-To execute commands on the GPU, one needs to record them into a daxa::CommandList and submit them to the GPU.
+To execute commands on the GPU, one needs to record them into a daxa::CommandEncoder and submit them to the GPU.
 
 ```cpp
-daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
+daxa::CommandEncoder command_list = device.create_command_list({.name = "my command list"});
 ```
 
 ## Sending commands to the GPU
@@ -131,7 +131,7 @@ Directly after, we define an image slice. As images can be made up of multiple l
 In Daxa, an image view of any image's full range can be retrieved with the `daxa::ImageId::default_view()` member function. From an image view, we can query the slice it represents. In the case of the default view, its slice is the whole image, which is what we want.
 
 ```cpp
-daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
+daxa::CommandEncoder command_list = device.create_command_list({.name = "my command list"});
 ```
 
 We then use the command list to record our commands. 
@@ -431,7 +431,7 @@ These declarations make it so that the resources assigned into them within the t
 Finally, in our task callback, we had some unfinished areas. We can get a command list from the Task interface. The resources are accessible from the uses struct, like so:
 ```cpp
 // Command list
-auto cmd_list = ti.get_command_list();
+auto cmd_list = ti.get_encoder();
 
 // Image view
 .image_view = uses.color_target.view(),

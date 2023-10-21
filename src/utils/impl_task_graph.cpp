@@ -395,19 +395,10 @@ namespace daxa
         return impl.task_graph.info.device;
     }
 
-    auto TaskInterface::get_command_list() const -> CommandList
+    auto TaskInterface::get_encoder() const -> CommandEncoder &
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        if (impl.reuse_last_command_list)
-        {
-            impl.reuse_last_command_list = false;
-            return impl.command_lists.back();
-        }
-        else
-        {
-            impl.command_lists.push_back({get_device().create_command_list({.name = std::string("Task Command List ") + std::to_string(impl.command_lists.size())})});
-            return impl.command_lists.back();
-        }
+        return impl.encoder;
     }
 
     auto TaskInterface::get_allocator() const -> TransferMemoryPool &
@@ -998,12 +989,12 @@ namespace daxa
             };
         }
         impl_runtime.current_task = &task;
-        impl_runtime.command_lists.back().begin_label({
+        impl_runtime.encoder.begin_label({
             .label_color = info.task_label_color,
             .name = std::string("task ") + std::to_string(in_batch_task_index) + std::string(" \"") + task.base_task->get_name() + std::string("\""),
         });
         task.base_task->callback(TaskInterface{&impl_runtime});
-        impl_runtime.command_lists.back().end_label();
+        impl_runtime.encoder.end_label();
     }
 
     void TaskGraph::add_preamble(TaskCallback callback)
@@ -2241,15 +2232,15 @@ namespace daxa
         }
     }
 
-    auto TaskGraph::get_command_lists() -> std::vector<CommandList>
-    {
-        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
-        DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "Can only get command lists of a finished task graph");
-        DAXA_DBG_ASSERT_TRUE_M(!impl.executed_once, "Can only get command lists of a task graph that has been executed");
-        auto command_lists = std::move(impl.left_over_command_lists);
-        impl.left_over_command_lists = {};
-        return command_lists;
-    }
+    // auto TaskGraph::get_command_lists() -> std::vector<CommandEncoder>
+    // {
+    //     auto & impl = *r_cast<ImplTaskGraph *>(this->object);
+    //     DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "Can only get command lists of a finished task graph");
+    //     DAXA_DBG_ASSERT_TRUE_M(!impl.executed_once, "Can only get command lists of a task graph that has been executed");
+    //     auto command_lists = std::move(impl.left_over_command_lists);
+    //     impl.left_over_command_lists = {};
+    //     return command_lists;
+    // }
 
     auto TaskGraph::get_debug_string() -> std::string
     {
@@ -2272,7 +2263,7 @@ namespace daxa
     thread_local std::vector<EventWaitInfo> tl_split_barrier_wait_infos = {};
     thread_local std::vector<ImageMemoryBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
-    void insert_pipeline_barrier(ImplTaskGraph const & impl, TaskGraphPermutation & perm, CommandList & command_list, TaskBarrier & barrier)
+    void insert_pipeline_barrier(ImplTaskGraph const & impl, TaskGraphPermutation & perm, CommandEncoder & command_list, TaskBarrier & barrier)
     {
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
@@ -2310,7 +2301,7 @@ namespace daxa
     void generate_persistent_resource_synch(
         ImplTaskGraph & impl,
         TaskGraphPermutation & permutation,
-        CommandList & cmd_list)
+        CommandEncoder & cmd_list)
     {
         // Persistent resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not manageable.
@@ -2531,8 +2522,9 @@ namespace daxa
         impl.chosen_permutation_last_execution = permutation_index;
         TaskGraphPermutation & permutation = impl.permutations[permutation_index];
 
-        ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .permutation = permutation};
-        impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
+        CommandEncoder encoder = impl.info.device.create_command_encoder({});
+
+        ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .permutation = permutation, .encoder = encoder};
 
         validate_runtime_resources(impl, permutation);
         if (impl.preamble)
@@ -2540,14 +2532,14 @@ namespace daxa
             impl.preamble(TaskInterface{&impl_runtime});
         }
         // Generate and insert synchronization for persistent resources:
-        generate_persistent_resource_synch(impl, permutation, impl_runtime.command_lists.back());
+        generate_persistent_resource_synch(impl, permutation, encoder);
 
         usize submit_scope_index = 0;
         for (auto & submit_scope : permutation.batch_submit_scopes)
         {
             if (impl.info.enable_command_labels)
             {
-                impl_runtime.command_lists.back().begin_label({
+                impl_runtime.encoder.begin_label({
                     .label_color = impl.info.task_graph_label_color,
                     .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index),
                 });
@@ -2557,7 +2549,7 @@ namespace daxa
             {
                 if (impl.info.enable_command_labels)
                 {
-                    impl_runtime.command_lists.back().begin_label({
+                    impl_runtime.encoder.begin_label({
                         .label_color = impl.info.task_batch_label_color,
                         .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index) + std::string(", batch ") + std::to_string(batch_index),
                     });
@@ -2567,7 +2559,7 @@ namespace daxa
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
                     TaskBarrier & barrier = permutation.barriers[barrier_index];
-                    insert_pipeline_barrier(impl, permutation, impl_runtime.command_lists.back(), barrier);
+                    insert_pipeline_barrier(impl, permutation, impl_runtime.encoder, barrier);
                 }
                 // Wait on split barriers before batch execution.
                 if (!impl.info.use_split_barriers)
@@ -2577,7 +2569,7 @@ namespace daxa
                         TaskSplitBarrier const & split_barrier = permutation.split_barriers[barrier_index];
                         // Convert split barrier to normal barrier.
                         TaskBarrier barrier = split_barrier;
-                        insert_pipeline_barrier(impl, permutation, impl_runtime.command_lists.back(), barrier);
+                        insert_pipeline_barrier(impl, permutation, impl_runtime.encoder, barrier);
                     }
                 }
                 else
@@ -2632,7 +2624,7 @@ namespace daxa
                     }
                     if (!tl_split_barrier_wait_infos.empty())
                     {
-                        impl_runtime.command_lists.back().wait_events(tl_split_barrier_wait_infos);
+                        impl_runtime.encoder.wait_events(tl_split_barrier_wait_infos);
                     }
                     tl_split_barrier_wait_infos.clear();
                     tl_image_barrier_infos.clear();
@@ -2653,7 +2645,7 @@ namespace daxa
                         // We wait on the stages, that waited on our split barrier earlier.
                         // This way, we make sure, that the stages that wait on the split barrier
                         // executed and saw the split barrier signaled, before we reset them.
-                        impl_runtime.command_lists.back().reset_event({
+                        impl_runtime.encoder.reset_event({
                             .event = permutation.split_barriers[barrier_index].split_barrier_state,
                             .stage = permutation.split_barriers[barrier_index].dst_access.stages,
                         });
@@ -2668,7 +2660,7 @@ namespace daxa
                                 .src_access = task_split_barrier.src_access,
                                 .dst_access = task_split_barrier.dst_access,
                             };
-                            impl_runtime.command_lists.back().signal_event({
+                            impl_runtime.encoder.signal_event({
                                 .memory_barriers = std::span{&memory_barrier, 1},
                                 .event = task_split_barrier.split_barrier_state,
                             });
@@ -2686,7 +2678,7 @@ namespace daxa
                                     .image_id = image,
                                 });
                             }
-                            impl_runtime.command_lists.back().signal_event({
+                            impl_runtime.encoder.signal_event({
                                 .image_barriers = tl_image_barrier_infos,
                                 .event = task_split_barrier.split_barrier_state,
                             });
@@ -2696,35 +2688,28 @@ namespace daxa
                 }
                 if (impl.info.enable_command_labels)
                 {
-                    impl_runtime.command_lists.back().end_label();
+                    impl_runtime.encoder.end_label();
                 }
             }
             for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
             {
                 TaskBarrier & barrier = permutation.barriers[barrier_index];
-                insert_pipeline_barrier(impl, permutation, impl_runtime.command_lists.back(), barrier);
+                insert_pipeline_barrier(impl, permutation, impl_runtime.encoder, barrier);
             }
             if (impl.info.enable_command_labels)
             {
-                impl_runtime.command_lists.back().end_label();
-            }
-            for (auto & command_list : impl_runtime.command_lists)
-            {
-                DAXA_DBG_ASSERT_TRUE_M(
-                    !command_list.is_complete(),
-                    "it is illegal to complete command lists in tasks that are obtained by the runtime!");
-                command_list.complete();
+                impl_runtime.encoder.end_label();
             }
 
             if (&submit_scope != &permutation.batch_submit_scopes.back())
             {
                 PipelineStageFlags wait_stages = submit_scope.submit_info.wait_stages;
-                std::vector<CommandList> command_lists = {submit_scope.submit_info.command_lists.begin(), submit_scope.submit_info.command_lists.end()};
+                std::vector<ExecutableCommands> commands = {submit_scope.submit_info.commands.begin(), submit_scope.submit_info.commands.end()};
                 std::vector<BinarySemaphore> wait_binary_semaphores = {submit_scope.submit_info.wait_binary_semaphores.begin(), submit_scope.submit_info.wait_binary_semaphores.end()};
                 std::vector<BinarySemaphore> signal_binary_semaphores = {submit_scope.submit_info.signal_binary_semaphores.begin(), submit_scope.submit_info.signal_binary_semaphores.end()};
                 std::vector<std::pair<TimelineSemaphore, u64>> wait_timeline_semaphores = {submit_scope.submit_info.wait_timeline_semaphores.begin(), submit_scope.submit_info.wait_timeline_semaphores.end()};
                 std::vector<std::pair<TimelineSemaphore, u64>> signal_timeline_semaphores = {submit_scope.submit_info.signal_timeline_semaphores.begin(), submit_scope.submit_info.signal_timeline_semaphores.end()};
-                command_lists.insert(command_lists.end(), impl_runtime.command_lists.begin(), impl_runtime.command_lists.end());
+                commands.push_back(encoder.complete_current_commands());
                 if (impl.info.swapchain.has_value())
                 {
                     Swapchain const & swapchain = impl.info.swapchain.value();
@@ -2765,7 +2750,7 @@ namespace daxa
                 }
                 if (submit_scope.user_submit_info.additional_command_lists != nullptr)
                 {
-                    command_lists.insert(command_lists.end(), submit_scope.user_submit_info.additional_command_lists->begin(), submit_scope.user_submit_info.additional_command_lists->end());
+                    commands.insert(commands.end(), submit_scope.user_submit_info.additional_command_lists->begin(), submit_scope.user_submit_info.additional_command_lists->end());
                 }
                 if (submit_scope.user_submit_info.additional_wait_binary_semaphores != nullptr)
                 {
@@ -2789,7 +2774,7 @@ namespace daxa
                 }
                 daxa::CommandSubmitInfo submit_info = {
                     .wait_stages = wait_stages,
-                    .command_lists = command_lists,
+                    .commands = commands,
                     .wait_binary_semaphores = wait_binary_semaphores,
                     .signal_binary_semaphores = signal_binary_semaphores,
                     .wait_timeline_semaphores = wait_timeline_semaphores,
@@ -2815,9 +2800,6 @@ namespace daxa
                         .swapchain = impl.info.swapchain.value(),
                     });
                 }
-                // We need to clear all completed command lists that have been submitted.
-                impl_runtime.command_lists.clear();
-                impl_runtime.command_lists.push_back(impl.info.device.create_command_list({.name = std::string("Task Command List ") + std::to_string(impl_runtime.command_lists.size())}));
             }
             ++submit_scope_index;
         }
@@ -2845,7 +2827,8 @@ namespace daxa
             }
         }
 
-        impl.left_over_command_lists = std::move(impl_runtime.command_lists);
+        // TODO: reimplement left over commands
+        // impl.left_over_command_lists = std::move(impl_runtime.encoder.complete_current_commands());
         impl.executed_once = true;
         impl.prev_frame_permutation_index = permutation_index;
         if (impl.staging_memory.has_value())

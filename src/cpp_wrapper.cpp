@@ -323,7 +323,7 @@ namespace daxa
         return ret;                                                \
     }
 
-    _DAXA_DECL_DVC_CREATE_FN(CommandList, command_list)
+    _DAXA_DECL_DVC_CREATE_FN(CommandEncoder, command_encoder)
     _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
@@ -347,8 +347,8 @@ namespace daxa
     {
         daxa_CommandSubmitInfo c_submit_info = {
             .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
-            .command_lists = reinterpret_cast<daxa_CommandList const *>(submit_info.command_lists.data()),
-            .command_list_count = submit_info.command_lists.size(),
+            .commands = reinterpret_cast<daxa_ExecutableCommands const *>(submit_info.commands.data()),
+            .commands_count = submit_info.commands.size(),
             .wait_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const *>(submit_info.wait_binary_semaphores.data()),
             .wait_binary_semaphore_count = submit_info.wait_binary_semaphores.size(),
             .signal_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const *>(submit_info.signal_binary_semaphores.data()),
@@ -682,20 +682,134 @@ namespace daxa
 
     /// --- End Pipelines
 
-    /// --- Begin CommandList ---
+    /// --- Begin ExecutableCommands
+
+    auto ExecutableCommands::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_executable_commands_inc_refcnt(rc_cast<daxa_ExecutableCommands>(object));
+    }
+
+    auto ExecutableCommands::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_executable_commands_dec_refcnt(rc_cast<daxa_ExecutableCommands>(object));
+    }
+
+    /// --- End Executable Commands
+
+    /// --- Begin RenderCommandBuffer
+
+#define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(name, Info) \
+    void RenderCommandEncoder::name(Info const & info)     \
+    {                                                      \
+        daxa_cmd_##name(                                   \
+            this->internal,                                \
+            r_cast<daxa_##Info const *>(&info));           \
+    }
+#define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
+    void RenderCommandEncoder::name(Info const & info)                  \
+    {                                                                   \
+        auto result = daxa_cmd_##name(                                  \
+            this->internal,                                             \
+            r_cast<daxa_##Info const *>(&info));                        \
+        check_result(result, "failed in " #name);                       \
+    }
+
+    RenderCommandEncoder::RenderCommandEncoder(RenderCommandEncoder && other)
+    {
+        internal = {};
+        std::swap(this->internal, other.internal);
+    }
+
+    RenderCommandEncoder & RenderCommandEncoder::operator=(RenderCommandEncoder && other)
+    {
+        if (internal != nullptr)
+        {
+            daxa_destroy_command_encoder(this->internal);
+            this->internal = {};
+        }
+        std::swap(this->internal, other.internal);
+        return *this;
+    }
+
+    RenderCommandEncoder::~RenderCommandEncoder()
+    {
+        if (this->internal != nullptr)
+        {
+            daxa_destroy_command_encoder(this->internal);
+            this->internal = {};
+        }
+    }
+
+    auto RenderCommandEncoder::end_renderpass() && -> CommandEncoder
+    {
+        daxa_cmd_end_renderpass(this->internal);
+        CommandEncoder ret = {};
+        ret.internal = this->internal;
+        this->internal = {};
+        return ret;
+    }
+
+    void RenderCommandEncoder::set_viewport(ViewportInfo const & info)
+    {
+        daxa_cmd_set_viewport(
+            this->internal,
+            r_cast<VkViewport const *>(&info));
+    }
+
+    void RenderCommandEncoder::set_scissor(Rect2D const & info)
+    {
+        daxa_cmd_set_scissor(
+            this->internal,
+            r_cast<VkRect2D const *>(&info));
+    }
+
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw, DrawInfo)
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
+
+    void RenderCommandEncoder::draw_mesh_tasks(u32 x, u32 y, u32 z)
+    {
+        daxa_cmd_draw_mesh_tasks(
+            this->internal,
+            x, y, z);
+    }
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
+
+    void RenderCommandEncoder::set_pipeline(RasterPipeline const & pipeline)
+    {
+        daxa_cmd_set_raster_pipeline(
+            this->internal,
+            *r_cast<daxa_RasterPipeline const *>(&pipeline));
+    }
+
+    void RenderCommandEncoder::push_constant_vptr(void const * data, u32 size)
+    {
+        daxa_cmd_push_constant(
+            this->internal, data, size);
+    }
+
+    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_uniform_buffer, SetUniformBufferInfo)
+
+    /// --- End RenderCommandBuffer
+
+    /// --- Begin CommandEncoder ---
 
 #define _DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
-    void CommandList::name(Info const & info)       \
+    void CommandEncoder::name(Info const & info)    \
     {                                               \
         daxa_cmd_##name(                            \
-            r_cast<daxa_CommandList>(this->object), \
+            this->internal,                         \
             r_cast<daxa_##Info const *>(&info));    \
     }
 #define _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
-    void CommandList::name(Info const & info)                    \
+    void CommandEncoder::name(Info const & info)                 \
     {                                                            \
         auto result = daxa_cmd_##name(                           \
-            r_cast<daxa_CommandList>(this->object),              \
+            this->internal,                                      \
             r_cast<daxa_##Info const *>(&info));                 \
         check_result(result, "failed in " #name);                \
     }
@@ -711,51 +825,44 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
 
-    void CommandList::wait_events(std::span<EventWaitInfo const> const & infos)
+    void CommandEncoder::wait_events(std::span<EventWaitInfo const> const & infos)
     {
         daxa_cmd_wait_events(
-            r_cast<daxa_CommandList>(this->object), r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
+            this->internal, r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_event, ResetEventInfo)
 
-    void CommandList::push_constant_vptr(void const * data, u32 size)
+    void CommandEncoder::push_constant_vptr(void const * data, u32 size)
     {
         daxa_cmd_push_constant(
-            r_cast<daxa_CommandList>(this->object), data, size);
+            this->internal, data, size);
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_uniform_buffer, SetUniformBufferInfo)
 
-    void CommandList::set_pipeline(ComputePipeline const & pipeline)
+    void CommandEncoder::set_pipeline(ComputePipeline const & pipeline)
     {
         daxa_cmd_set_compute_pipeline(
-            r_cast<daxa_CommandList>(this->object),
+            this->internal,
             *r_cast<daxa_ComputePipeline const *>(&pipeline));
     }
 
-    void CommandList::set_pipeline(RasterPipeline const & pipeline)
-    {
-        daxa_cmd_set_raster_pipeline(
-            r_cast<daxa_CommandList>(this->object),
-            *r_cast<daxa_RasterPipeline const *>(&pipeline));
-    }
-
-    void CommandList::dispatch(u32 x, u32 y, u32 z)
+    void CommandEncoder::dispatch(u32 x, u32 y, u32 z)
     {
         daxa_cmd_dispatch(
-            r_cast<daxa_CommandList>(this->object),
+            this->internal,
             x, y, z);
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)
 
 #define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name) \
-    void CommandList::destroy_##name##_deferred(Name##Id id)    \
+    void CommandEncoder::destroy_##name##_deferred(Name##Id id) \
     {                                                           \
         auto result = daxa_cmd_destroy_##name##_deferred(       \
-            r_cast<daxa_CommandList>(this->object),             \
+            this->internal,                                     \
             static_cast<daxa_##Name##Id>(id));                  \
         check_result(result, "failed to destroy " #name);       \
     }
@@ -763,78 +870,68 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(begin_renderpass, RenderPassBeginInfo)
 
-    void CommandList::end_renderpass()
+    auto CommandEncoder::begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandEncoder
     {
-        daxa_cmd_end_renderpass(r_cast<daxa_CommandList>(this->object));
+        auto result = daxa_cmd_begin_renderpass(
+            this->internal,
+            r_cast<daxa_RenderPassBeginInfo const *>(&info));
+        check_result(result, "failed to begin renderpass");
+        RenderCommandEncoder ret = {};
+        ret.internal = this->internal;
+        this->internal = {};
+        return ret;
     }
 
-    void CommandList::set_viewport(ViewportInfo const & info)
-    {
-        daxa_cmd_set_viewport(
-            r_cast<daxa_CommandList>(this->object),
-            r_cast<VkViewport const *>(&info));
-    }
-
-    void CommandList::set_scissor(Rect2D const & info)
-    {
-        daxa_cmd_set_scissor(
-            r_cast<daxa_CommandList>(this->object),
-            r_cast<VkRect2D const *>(&info));
-    }
-
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw, DrawInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
-
-    void CommandList::draw_mesh_tasks(u32 x, u32 y, u32 z)
-    {
-        daxa_cmd_draw_mesh_tasks(
-            r_cast<daxa_CommandList>(this->object),
-            x, y, z);
-    }
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)
 
-    void CommandList::end_label()
+    void CommandEncoder::end_label()
     {
-        daxa_cmd_end_label(r_cast<daxa_CommandList>(this->object));
+        daxa_cmd_end_label(this->internal);
     }
 
-    void CommandList::complete()
+    auto CommandEncoder::complete_current_commands() -> ExecutableCommands
     {
-        auto result = daxa_cmd_complete(r_cast<daxa_CommandList>(this->object));
-        check_result(result, "failed to complete command list");
+        ExecutableCommands ret = {};
+        auto result = daxa_cmd_complete_current_commands(this->internal, r_cast<daxa_ExecutableCommands *>(&ret));
+        check_result(result, "failed to complete current commands");
+        return ret;
     }
 
-    auto CommandList::is_complete() const -> bool
+    auto CommandEncoder::info() const -> CommandEncoderInfo const &
     {
-        return daxa_cmd_is_complete(rc_cast<daxa_CommandList>(this->object));
+        return *r_cast<CommandEncoderInfo const *>(daxa_cmd_info(*rc_cast<daxa_CommandEncoder *>(this)));
     }
 
-    auto CommandList::info() const -> CommandListInfo const &
+    CommandEncoder::~CommandEncoder()
     {
-        return *r_cast<CommandListInfo const *>(daxa_cmd_info(*rc_cast<daxa_CommandList *>(this)));
+        if (this->internal != nullptr)
+        {
+            daxa_destroy_command_encoder(this->internal);
+            this->internal = {};
+        }
     }
 
-    auto CommandList::inc_refcnt(ImplHandle const * object) -> u64
+    CommandEncoder::CommandEncoder(CommandEncoder && other)
     {
-        return daxa_cmd_inc_refcnt(rc_cast<daxa_CommandList>(object));
+        internal = {};
+        std::swap(this->internal, other.internal);
     }
 
-    auto CommandList::dec_refcnt(ImplHandle const * object) -> u64
+    CommandEncoder & CommandEncoder::operator=(CommandEncoder && other)
     {
-        return daxa_cmd_dec_refcnt(rc_cast<daxa_CommandList>(object));
+        if (internal != nullptr)
+        {
+            daxa_destroy_command_encoder(this->internal);
+            this->internal = {};
+        }
+        std::swap(this->internal, other.internal);
+        return *this;
     }
 
-    /// --- End CommandList ---
+    /// --- End CommandEncoder ---
 
     /// --- Begin to_string ---
 
