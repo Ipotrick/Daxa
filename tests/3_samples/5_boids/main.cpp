@@ -93,7 +93,7 @@ struct App : AppWindow<App>
         auto upload_buffer_id = device.create_buffer({
             .size = sizeof(Boids),
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
-            .name = ("voids buffer init staging buffer"),
+            .name = ("boids buffer init staging buffer"),
         });
         encoder.destroy_buffer_deferred(upload_buffer_id);
 
@@ -132,8 +132,6 @@ struct App : AppWindow<App>
 
     ~App()
     {
-        device.wait_idle();
-        device.collect_garbage();
         device.destroy_buffer(boid_buffer);
         device.destroy_buffer(old_boid_buffer);
     }
