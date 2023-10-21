@@ -202,7 +202,7 @@ namespace daxa
     };
 
     struct ImplPersistentTaskBuffer;
-    struct TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBuffer*>
+    struct TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBuffer *>
     {
         TaskBuffer() = default;
         TaskBuffer(TaskBufferInfo const & info);
@@ -218,6 +218,7 @@ namespace daxa
 
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
+
       protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;
@@ -240,7 +241,7 @@ namespace daxa
     };
 
     struct ImplPersistentTaskImage;
-    struct TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage*>
+    struct TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {
         TaskImage() = default;
         TaskImage(TaskImageInfo const & info);
@@ -256,6 +257,7 @@ namespace daxa
 
         void set_images(TrackedImages const & images);
         void swap_images(TaskImage & other);
+
       protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;
@@ -394,8 +396,8 @@ namespace daxa
             return m_access;
         }
 
-        /// @brief  The layout of images is controlled and changed by task graph. 
-        ///         They can change between tasks at any time. 
+        /// @brief  The layout of images is controlled and changed by task graph.
+        ///         They can change between tasks at any time.
         ///         Within each task callback the imagelayout for each used image is not changing.
         ///         The stable layout of a used image can be queryed with this function.
         /// @return the image layout of the used image at the time of the task.
@@ -489,7 +491,7 @@ namespace daxa
     }
 
     struct TaskInterface;
-    
+
     // Namespace containing implementation details
     namespace detail
     {
@@ -619,7 +621,7 @@ namespace daxa
         auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32;
 
         auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>;
-    }
+    } // namespace detail
 
     inline namespace task_resource_uses
     {

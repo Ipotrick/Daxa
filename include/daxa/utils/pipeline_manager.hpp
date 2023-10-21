@@ -74,7 +74,7 @@ namespace daxa
         Optional<ShaderCompileInfo> fragment_shader_info = {};
         Optional<ShaderCompileInfo> task_shader_info = {};
         std::vector<RenderAttachment> color_attachments = {};
-        DepthTestInfo depth_test = {};
+        Optional<DepthTestInfo> depth_test = {};
         RasterizerInfo raster = {};
         TesselationInfo tesselation = {};
         u32 push_constant_size = {};
@@ -107,7 +107,7 @@ namespace daxa
     using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
     struct ImplPipelineManager;
-    struct PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager*>
+    struct PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
     {
         PipelineManager() = default;
 
@@ -119,6 +119,7 @@ namespace daxa
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & info);
         auto reload_all() -> PipelineReloadResult;
+
       protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;

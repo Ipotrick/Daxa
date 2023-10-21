@@ -107,8 +107,8 @@ namespace daxa
         // Used for internal reference count.
         u64 weak_count = {};
 
-        #define inc_weak_refcnt() Minc_weak_refcnt(__FUNCTION__)
-        #define dec_weak_refcnt(CB,IS) Mdec_weak_refcnt(CB,IS,__FUNCTION__)
+#define inc_weak_refcnt() Minc_weak_refcnt(__FUNCTION__)
+#define dec_weak_refcnt(CB, IS) Mdec_weak_refcnt(CB, IS, __FUNCTION__)
 
         // For user side ref counting.
         auto inc_refcnt() const -> u64;

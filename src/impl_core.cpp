@@ -63,7 +63,7 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
 }
 auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[maybe_unused]] daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result
 {
-    #if defined(_WIN32)
+#if defined(_WIN32)
     VkWin32SurfaceCreateInfoKHR const surface_ci{
         .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
         .pNext = nullptr,

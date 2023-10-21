@@ -20,7 +20,7 @@ struct daxa_ImplBinarySemaphore final : ImplHandle
     BinarySemaphoreInfo info = {};
     std::string info_name = {};
     VkSemaphore vk_semaphore = {};
-    
+
     static void zero_ref_callback(ImplHandle const * handle);
 };
 

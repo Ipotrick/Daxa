@@ -127,7 +127,7 @@ struct DrawToSwapchainTask
         cmd_list.set_pipeline(*pipeline);
         // Set the push constant specifically for the following draw call...
         cmd_list.push_constant(MyPushConstant{
-            .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()),
+            .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()).value(),
         });
         // and issue the draw call with the desired number of vertices.
         cmd_list.draw({.vertex_count = 3});
@@ -316,7 +316,7 @@ auto main() -> int
     {
         // Now we record a secondary task graph, that is only executed once.
         // This task graph uploads the vertex buffer.
-        // Task Graph resources automatically link between graphcs at runtime, 
+        // Task Graph resources automatically link between graphcs at runtime,
         // so you dont need to be concerned about sync of the vertex buffer between the two graphs.
         auto upload_task_graph = daxa::TaskGraph({
             .device = device,
@@ -327,7 +327,7 @@ auto main() -> int
 
         // Now we can record our tasks!
 
-        // First thing we'll do is record the upload task. 
+        // First thing we'll do is record the upload task.
         upload_task_graph.add_task(UploadVertexDataTask{
             .uses = {
                 .vertex_buffer = task_vertex_buffer.view(),

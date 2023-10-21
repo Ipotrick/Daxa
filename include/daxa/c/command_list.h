@@ -367,7 +367,7 @@ daxa_cmd_blit_image_to_image(daxa_CommandList cmd_list, daxa_ImageBlitInfo const
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_clear_buffer(daxa_CommandList cmd_list, daxa_BufferClearInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_clear_image(daxa_CommandList cmd_list, daxa_ImageClearInfo const * info);
 
 /// @brief  Successive pipeline barrier calls are combined.
@@ -378,7 +378,7 @@ daxa_cmd_pipeline_barrier(daxa_CommandList cmd_list, daxa_MemoryBarrierInfo cons
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_pipeline_barrier_image_transition(daxa_CommandList cmd_list, daxa_ImageMemoryBarrierInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_signal_event(daxa_CommandList cmd_list, daxa_EventSignalInfo const * info);
@@ -400,7 +400,7 @@ daxa_cmd_push_constant(daxa_CommandList cmd_list, void const * data, uint32_t si
 ///         Set uniform buffer slots are cleared after a pipeline is bound.
 ///         Before setting another pipeline, they need to be set again.
 /// @param info parameters.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_set_uniform_buffer(daxa_CommandList cmd_list, daxa_SetUniformBufferInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_set_compute_pipeline(daxa_CommandList cmd_list, daxa_ComputePipeline pipeline);
@@ -408,34 +408,34 @@ DAXA_EXPORT void
 daxa_cmd_set_raster_pipeline(daxa_CommandList cmd_list, daxa_RasterPipeline pipeline);
 DAXA_EXPORT void
 daxa_cmd_dispatch(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_dispatch_indirect(daxa_CommandList cmd_list, daxa_DispatchIndirectInfo const * info);
 
 /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id buffer to be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_buffer_deferred(daxa_CommandList cmd_list, daxa_BufferId id);
 /// @brief  Destroys the image AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image to be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_image_deferred(daxa_CommandList cmd_list, daxa_ImageId id);
 /// @brief  Destroys the image view AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image view to be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_image_view_deferred(daxa_CommandList cmd_list, daxa_ImageViewId id);
 /// @brief  Destroys the sampler AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image sampler be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_sampler_deferred(daxa_CommandList cmd_list, daxa_SamplerId id);
 
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
 /// @param info parameters.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_begin_renderpass(daxa_CommandList cmd_list, daxa_RenderPassBeginInfo const * info);
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
@@ -447,22 +447,22 @@ DAXA_EXPORT void
 daxa_cmd_set_scissor(daxa_CommandList cmd_list, VkRect2D const * info);
 DAXA_EXPORT void
 daxa_cmd_set_depth_bias(daxa_CommandList cmd_list, daxa_DepthBiasInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_set_index_buffer(daxa_CommandList cmd_list, daxa_SetIndexBufferInfo const * info);
 
 DAXA_EXPORT void
 daxa_cmd_draw(daxa_CommandList cmd_list, daxa_DrawInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_draw_indexed(daxa_CommandList cmd_list, daxa_DrawIndexedInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_indirect(daxa_CommandList cmd_list, daxa_DrawIndirectInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_indirect_count(daxa_CommandList cmd_list, daxa_DrawIndirectCountInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_draw_mesh_tasks(daxa_CommandList cmd_list, uint32_t x, uint32_t y, uint32_t z);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_mesh_tasks_indirect_count(daxa_CommandList cmd_list, daxa_DrawMeshTasksIndirectCountInfo const * info);
 
 DAXA_EXPORT void
@@ -478,7 +478,7 @@ daxa_cmd_end_label(daxa_CommandList cmd_list);
 // Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 DAXA_EXPORT void
 daxa_cmd_flush_barriers(daxa_CommandList cmd_list);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_complete(daxa_CommandList cmd_list);
 DAXA_EXPORT daxa_Bool8
 daxa_cmd_is_complete(daxa_CommandList cmd_list);

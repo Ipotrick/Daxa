@@ -75,12 +75,13 @@ typedef struct
         SCALAR_TYPE x;                    \
         SCALAR_TYPE y;                    \
     }
-#define daxa_i32 int32_t
-#define daxa_u32 uint32_t
-#define daxa_i64 int64_t
-#define daxa_u64 uint64_t
-#define daxa_f32 float
-#define daxa_f64 double
+typedef uint32_t daxa_b32;
+typedef int32_t daxa_i32;
+typedef uint32_t daxa_u32;
+typedef int64_t daxa_i64;
+typedef uint64_t daxa_u64;
+typedef float daxa_f32;
+typedef double daxa_f64;
 
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic push
