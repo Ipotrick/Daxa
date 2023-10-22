@@ -640,7 +640,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     _DAXA_TEST_PRINT("\n");
     std::shared_lock lifetime_lock{self->gpusro_table.lifetime_lock};
 
-    for (daxa_ExecutableCommands commands : std::span{info->commands, info->commands_count})
+    for (daxa_ExecutableCommandList commands : std::span{info->command_lists, info->command_list_count})
     {
         for (BufferId id : commands->data.used_buffers)
         {
@@ -674,7 +674,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     u64 const current_main_queue_cpu_timeline_value = self->main_queue_cpu_timeline.fetch_add(1) + 1;
 
-    for (auto const & commands : std::span{info->commands, info->commands_count})
+    for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
         for (auto [id, index] : commands->data.deferred_destructions)
         {
@@ -692,7 +692,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     }
 
     std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
-    for (auto const & commands : std::span{info->commands, info->commands_count})
+    for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
         submit_vk_command_buffers.push_back(commands->data.vk_cmd_buffer);
     }

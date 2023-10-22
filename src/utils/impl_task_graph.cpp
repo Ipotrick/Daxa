@@ -395,10 +395,10 @@ namespace daxa
         return impl.task_graph.info.device;
     }
 
-    auto TaskInterface::get_encoder() const -> CommandEncoder &
+    auto TaskInterface::get_recorder() const -> CommandRecorder &
     {
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        return impl.encoder;
+        return impl.recorder;
     }
 
     auto TaskInterface::get_allocator() const -> TransferMemoryPool &
@@ -989,12 +989,12 @@ namespace daxa
             };
         }
         impl_runtime.current_task = &task;
-        impl_runtime.encoder.begin_label({
+        impl_runtime.recorder.begin_label({
             .label_color = info.task_label_color,
             .name = std::string("task ") + std::to_string(in_batch_task_index) + std::string(" \"") + task.base_task->get_name() + std::string("\""),
         });
         task.base_task->callback(TaskInterface{&impl_runtime});
-        impl_runtime.encoder.end_label();
+        impl_runtime.recorder.end_label();
     }
 
     void TaskGraph::add_preamble(TaskCallback callback)
@@ -2232,7 +2232,7 @@ namespace daxa
         }
     }
 
-    // auto TaskGraph::get_command_lists() -> std::vector<CommandEncoder>
+    // auto TaskGraph::get_command_lists() -> std::vector<CommandRecorder>
     // {
     //     auto & impl = *r_cast<ImplTaskGraph *>(this->object);
     //     DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "Can only get command lists of a finished task graph");
@@ -2263,7 +2263,7 @@ namespace daxa
     thread_local std::vector<EventWaitInfo> tl_split_barrier_wait_infos = {};
     thread_local std::vector<ImageMemoryBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<MemoryBarrierInfo> tl_memory_barrier_infos = {};
-    void insert_pipeline_barrier(ImplTaskGraph const & impl, TaskGraphPermutation & perm, CommandEncoder & command_list, TaskBarrier & barrier)
+    void insert_pipeline_barrier(ImplTaskGraph const & impl, TaskGraphPermutation & perm, CommandRecorder & command_list, TaskBarrier & barrier)
     {
         // Check if barrier is image barrier or normal barrier (see TaskBarrier struct comments).
         if (barrier.image_id.is_empty())
@@ -2301,7 +2301,7 @@ namespace daxa
     void generate_persistent_resource_synch(
         ImplTaskGraph & impl,
         TaskGraphPermutation & permutation,
-        CommandEncoder & encoder)
+        CommandRecorder & recorder)
     {
         // Persistent resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not manageable.
@@ -2343,7 +2343,7 @@ namespace daxa
                     .src_access = persistent_data.latest_access,
                     .dst_access = permutation.buffer_infos[task_buffer_index].first_access,
                 };
-                encoder.pipeline_barrier(mem_barrier_info);
+                recorder.pipeline_barrier(mem_barrier_info);
                 if (impl.info.record_debug_information)
                 {
                     fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(mem_barrier_info));
@@ -2410,7 +2410,7 @@ namespace daxa
                                     .image_slice = intersection,
                                     .image_id = execution_image_id,
                                 };
-                                encoder.pipeline_barrier_image_transition(img_barrier_info);
+                                recorder.pipeline_barrier_image_transition(img_barrier_info);
                                 if (impl.info.record_debug_information)
                                 {
                                     fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
@@ -2472,7 +2472,7 @@ namespace daxa
                             .image_slice = remaining_first_accesses[remaining_first_uses_index].state.slice,
                             .image_id = execution_image_id,
                         };
-                        encoder.pipeline_barrier_image_transition(img_barrier_info);
+                        recorder.pipeline_barrier_image_transition(img_barrier_info);
                         if (impl.info.record_debug_information)
                         {
                             fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
@@ -2522,9 +2522,9 @@ namespace daxa
         impl.chosen_permutation_last_execution = permutation_index;
         TaskGraphPermutation & permutation = impl.permutations[permutation_index];
 
-        CommandEncoder encoder = impl.info.device.create_command_encoder({});
+        CommandRecorder recorder = impl.info.device.create_command_recorder({});
 
-        ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .permutation = permutation, .encoder = encoder};
+        ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .permutation = permutation, .recorder = recorder};
 
         validate_runtime_resources(impl, permutation);
         if (impl.preamble)
@@ -2532,14 +2532,14 @@ namespace daxa
             impl.preamble(TaskInterface{&impl_runtime});
         }
         // Generate and insert synchronization for persistent resources:
-        generate_persistent_resource_synch(impl, permutation, encoder);
+        generate_persistent_resource_synch(impl, permutation, recorder);
 
         usize submit_scope_index = 0;
         for (auto & submit_scope : permutation.batch_submit_scopes)
         {
             if (impl.info.enable_command_labels)
             {
-                impl_runtime.encoder.begin_label({
+                impl_runtime.recorder.begin_label({
                     .label_color = impl.info.task_graph_label_color,
                     .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index),
                 });
@@ -2549,7 +2549,7 @@ namespace daxa
             {
                 if (impl.info.enable_command_labels)
                 {
-                    impl_runtime.encoder.begin_label({
+                    impl_runtime.recorder.begin_label({
                         .label_color = impl.info.task_batch_label_color,
                         .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index) + std::string(", batch ") + std::to_string(batch_index),
                     });
@@ -2559,7 +2559,7 @@ namespace daxa
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
                 {
                     TaskBarrier & barrier = permutation.barriers[barrier_index];
-                    insert_pipeline_barrier(impl, permutation, impl_runtime.encoder, barrier);
+                    insert_pipeline_barrier(impl, permutation, impl_runtime.recorder, barrier);
                 }
                 // Wait on split barriers before batch execution.
                 if (!impl.info.use_split_barriers)
@@ -2569,7 +2569,7 @@ namespace daxa
                         TaskSplitBarrier const & split_barrier = permutation.split_barriers[barrier_index];
                         // Convert split barrier to normal barrier.
                         TaskBarrier barrier = split_barrier;
-                        insert_pipeline_barrier(impl, permutation, impl_runtime.encoder, barrier);
+                        insert_pipeline_barrier(impl, permutation, impl_runtime.recorder, barrier);
                     }
                 }
                 else
@@ -2624,7 +2624,7 @@ namespace daxa
                     }
                     if (!tl_split_barrier_wait_infos.empty())
                     {
-                        impl_runtime.encoder.wait_events(tl_split_barrier_wait_infos);
+                        impl_runtime.recorder.wait_events(tl_split_barrier_wait_infos);
                     }
                     tl_split_barrier_wait_infos.clear();
                     tl_image_barrier_infos.clear();
@@ -2645,7 +2645,7 @@ namespace daxa
                         // We wait on the stages, that waited on our split barrier earlier.
                         // This way, we make sure, that the stages that wait on the split barrier
                         // executed and saw the split barrier signaled, before we reset them.
-                        impl_runtime.encoder.reset_event({
+                        impl_runtime.recorder.reset_event({
                             .event = permutation.split_barriers[barrier_index].split_barrier_state,
                             .stage = permutation.split_barriers[barrier_index].dst_access.stages,
                         });
@@ -2660,7 +2660,7 @@ namespace daxa
                                 .src_access = task_split_barrier.src_access,
                                 .dst_access = task_split_barrier.dst_access,
                             };
-                            impl_runtime.encoder.signal_event({
+                            impl_runtime.recorder.signal_event({
                                 .memory_barriers = std::span{&memory_barrier, 1},
                                 .event = task_split_barrier.split_barrier_state,
                             });
@@ -2678,7 +2678,7 @@ namespace daxa
                                     .image_id = image,
                                 });
                             }
-                            impl_runtime.encoder.signal_event({
+                            impl_runtime.recorder.signal_event({
                                 .image_barriers = tl_image_barrier_infos,
                                 .event = task_split_barrier.split_barrier_state,
                             });
@@ -2688,28 +2688,28 @@ namespace daxa
                 }
                 if (impl.info.enable_command_labels)
                 {
-                    impl_runtime.encoder.end_label();
+                    impl_runtime.recorder.end_label();
                 }
             }
             for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
             {
                 TaskBarrier & barrier = permutation.barriers[barrier_index];
-                insert_pipeline_barrier(impl, permutation, impl_runtime.encoder, barrier);
+                insert_pipeline_barrier(impl, permutation, impl_runtime.recorder, barrier);
             }
             if (impl.info.enable_command_labels)
             {
-                impl_runtime.encoder.end_label();
+                impl_runtime.recorder.end_label();
             }
 
             if (&submit_scope != &permutation.batch_submit_scopes.back())
             {
                 PipelineStageFlags wait_stages = submit_scope.submit_info.wait_stages;
-                std::vector<ExecutableCommands> commands = {submit_scope.submit_info.commands.begin(), submit_scope.submit_info.commands.end()};
+                std::vector<ExecutableCommandList> commands = {submit_scope.submit_info.command_lists.begin(), submit_scope.submit_info.command_lists.end()};
                 std::vector<BinarySemaphore> wait_binary_semaphores = {submit_scope.submit_info.wait_binary_semaphores.begin(), submit_scope.submit_info.wait_binary_semaphores.end()};
                 std::vector<BinarySemaphore> signal_binary_semaphores = {submit_scope.submit_info.signal_binary_semaphores.begin(), submit_scope.submit_info.signal_binary_semaphores.end()};
                 std::vector<std::pair<TimelineSemaphore, u64>> wait_timeline_semaphores = {submit_scope.submit_info.wait_timeline_semaphores.begin(), submit_scope.submit_info.wait_timeline_semaphores.end()};
                 std::vector<std::pair<TimelineSemaphore, u64>> signal_timeline_semaphores = {submit_scope.submit_info.signal_timeline_semaphores.begin(), submit_scope.submit_info.signal_timeline_semaphores.end()};
-                commands.push_back(encoder.complete_current_commands());
+                commands.push_back(recorder.complete_current_commands());
                 if (impl.info.swapchain.has_value())
                 {
                     Swapchain const & swapchain = impl.info.swapchain.value();
@@ -2774,7 +2774,7 @@ namespace daxa
                 }
                 daxa::CommandSubmitInfo submit_info = {
                     .wait_stages = wait_stages,
-                    .commands = commands,
+                    .command_lists = commands,
                     .wait_binary_semaphores = wait_binary_semaphores,
                     .signal_binary_semaphores = signal_binary_semaphores,
                     .wait_timeline_semaphores = wait_timeline_semaphores,
@@ -2828,7 +2828,7 @@ namespace daxa
         }
 
         // TODO: reimplement left over commands
-        // impl.left_over_command_lists = std::move(impl_runtime.encoder.complete_current_commands());
+        // impl.left_over_command_lists = std::move(impl_runtime.recorder.complete_current_commands());
         impl.executed_once = true;
         impl.prev_frame_permutation_index = permutation_index;
         if (impl.staging_memory.has_value())

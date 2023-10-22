@@ -137,7 +137,7 @@ namespace tests
             .uses = daxa::detail::to_generic_uses(uses),
             .task = [&](daxa::TaskInterface const & ti)
             {
-                auto cmd = ti.get_encoder();
+                auto cmd = ti.get_recorder();
                 cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
@@ -248,7 +248,7 @@ namespace tests
             },
             .task = [&](daxa::TaskInterface ti)
             {
-                auto cmd = ti.get_encoder();
+                auto cmd = ti.get_recorder();
                 cmd.set_pipeline(*bindless_access);
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
@@ -271,7 +271,7 @@ namespace tests
             },
             .task = [&](daxa::TaskInterface const & ti)
             {
-                auto cmd = ti.get_encoder();
+                auto cmd = ti.get_recorder();
                 cmd.set_pipeline(*bindless_access_followup);
                 cmd.push_constant(BindlessTestFollowPush{
                     .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),

@@ -297,7 +297,7 @@ namespace daxa
         // interface:
         ImplTaskGraph & task_graph;
         TaskGraphPermutation & permutation;
-        CommandEncoder & encoder;
+        CommandRecorder & recorder;
         ImplTask * current_task = {};
         Optional<SetUniformBufferInfo> set_uniform_buffer_info = {};
         types::BufferDeviceAddress device_address = {};
@@ -342,7 +342,7 @@ namespace daxa
         // post execution information:
         usize last_execution_staging_timeline_value = 0;
         u32 chosen_permutation_last_execution = {};
-        std::vector<ExecutableCommands> left_over_command_lists = {};
+        std::vector<ExecutableCommandList> left_over_command_lists = {};
         bool executed_once = {};
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};

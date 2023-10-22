@@ -14,18 +14,18 @@ namespace tests
 
     void simplest(App & app)
     {
-        auto encoder = app.device.create_command_encoder({});
+        auto recorder = app.device.create_command_recorder({});
 
-        // CommandEncoder can create ExecutableCommands from the currently recorded commands.
+        // CommandRecorder can create ExecutableCommandList from the currently recorded commands.
         // After calling complete_current_commands, the current commands are cleared.
-        // After calling complete_current_commands, you may record more commands and make new ExecutableCommands with the encoder.
-        auto executable_commands = encoder.complete_current_commands();
+        // After calling complete_current_commands, you may record more commands and make new ExecutableCommandList with the recorder.
+        auto executable_commands = recorder.complete_current_commands();
 
         app.device.submit_commands({
-            .commands = std::array{executable_commands},
+            .command_lists = std::array{executable_commands},
         });
 
-        /// WARNING:    ALL CommandEncoders from a device MUST be destroyed prior to calling collect_garbage or destroying the device!
+        /// WARNING:    ALL CommandRecorders from a device MUST be destroyed prior to calling collect_garbage or destroying the device!
         ///             This is because The device can only do the internal cleanup when no commands get recorded in parallel!
     }
 
@@ -34,7 +34,7 @@ namespace tests
 
     void copy(App & app)
     {
-        auto encoder = app.device.create_command_encoder({.name = "copy command list"});
+        auto recorder = app.device.create_command_recorder({.name = "copy command list"});
 
         constexpr u32 SIZE_X = 3;
         constexpr u32 SIZE_Y = 3;
@@ -138,63 +138,63 @@ namespace tests
 
         buffer_ptr = data;
 
-        encoder.reset_timestamps({
+        recorder.reset_timestamps({
             .query_pool = timeline_query_pool,
             .start_index = 0,
             .count = timeline_query_pool.info().query_count,
         });
 
-        encoder.write_timestamp({
+        recorder.write_timestamp({
             .query_pool = timeline_query_pool,
             .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
             .query_index = 0,
         });
 
-        encoder.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
-        encoder.copy_buffer_to_buffer({
+        recorder.copy_buffer_to_buffer({
             .src_buffer = staging_upload_buffer,
             .dst_buffer = device_local_buffer,
             .size = sizeof(decltype(data)),
         });
 
         // Barrier to make sure device_local_buffer is has no read after write hazard.
-        encoder.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_1,
         });
 
-        encoder.copy_buffer_to_image({
+        recorder.copy_buffer_to_image({
             .buffer = device_local_buffer,
             .image = image_1,
             .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
             .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_id = image_1,
         });
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_id = image_2,
         });
 
-        encoder.copy_image_to_image({
+        recorder.copy_image_to_image({
             .src_image = image_1,
             .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .dst_image = image_2,
@@ -202,7 +202,7 @@ namespace tests
             .extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
             .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
@@ -210,12 +210,12 @@ namespace tests
         });
 
         // Barrier to make sure device_local_buffer is has no write after read hazard.
-        encoder.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_READ,
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
         });
 
-        encoder.copy_image_to_buffer({
+        recorder.copy_image_to_buffer({
             .image = image_2,
             .image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
@@ -223,33 +223,33 @@ namespace tests
         });
 
         // Barrier to make sure device_local_buffer is has no read after write hazard.
-        encoder.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
-        encoder.copy_buffer_to_buffer({
+        recorder.copy_buffer_to_buffer({
             .src_buffer = device_local_buffer,
             .dst_buffer = staging_readback_buffer,
             .size = sizeof(decltype(data)),
         });
 
         // Barrier to make sure staging_readback_buffer is has no read after write hazard.
-        encoder.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::HOST_READ,
         });
 
-        encoder.write_timestamp({
+        recorder.write_timestamp({
             .query_pool = timeline_query_pool,
             .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
             .query_index = 1,
         });
 
-        auto executable_commands = encoder.complete_current_commands();
+        auto executable_commands = recorder.complete_current_commands();
 
         app.device.submit_commands({
-            .commands = std::array{executable_commands},
+            .command_lists = std::array{executable_commands},
         });
 
         app.device.wait_idle();
@@ -297,7 +297,7 @@ namespace tests
 
     void deferred_destruction(App & app)
     {
-        auto encoder = app.device.create_command_encoder({.name = "deferred_destruction command list"});
+        auto recorder = app.device.create_command_recorder({.name = "deferred_destruction command list"});
 
         daxa::BufferId const buffer = app.device.create_buffer({.size = 4});
         daxa::ImageId const image = app.device.create_image({
@@ -308,16 +308,16 @@ namespace tests
         daxa::SamplerId const sampler = app.device.create_sampler({});
 
         // The gpu resources are not destroyed here. Their destruction is deferred until the command list completes execution on the gpu.
-        encoder.destroy_buffer_deferred(buffer);
-        encoder.destroy_image_deferred(image);
-        encoder.destroy_image_view_deferred(image_view);
-        encoder.destroy_sampler_deferred(sampler);
+        recorder.destroy_buffer_deferred(buffer);
+        recorder.destroy_image_deferred(image);
+        recorder.destroy_image_view_deferred(image_view);
+        recorder.destroy_sampler_deferred(sampler);
 
-        auto executable_commands = encoder.complete_current_commands();
+        auto executable_commands = recorder.complete_current_commands();
 
         // Even after this call the resources will still be alive, as zombie resources are not checked to be dead in submit calls.
         app.device.submit_commands({
-            .commands = std::array{executable_commands},
+            .command_lists = std::array{executable_commands},
         });
     }
 
@@ -376,7 +376,7 @@ namespace tests
             double time_taken_per_call_1 = 0.0;
 
             {
-                auto encoder = app.device.create_command_encoder({});
+                auto recorder = app.device.create_command_recorder({});
                 auto buf = app.device.create_buffer({
                     .size = sizeof(daxa::u32),
                     .name = "buf",
@@ -389,13 +389,13 @@ namespace tests
                 std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
                 for (int i = 0; i < iterations; ++i)
                 {
-                    encoder.copy_image_to_buffer({
+                    recorder.copy_image_to_buffer({
                         .image = img,
                         .buffer = buf,
                     });
                 }
                 std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
-                auto executable_commands = encoder.complete_current_commands();
+                auto executable_commands = recorder.complete_current_commands();
                 app.device.destroy_buffer(buf);
                 app.device.destroy_image(img);
                 auto time_taken_mics = std::chrono::duration_cast<std::chrono::microseconds>(end_time_point - begin_time_point);
@@ -412,7 +412,7 @@ namespace tests
             }
 
             {
-                auto encoder = app.device.create_command_encoder({});
+                auto recorder = app.device.create_command_recorder({});
                 auto buf = app.device.create_buffer({
                     .size = sizeof(daxa::u32),
                     .name = "buf",
@@ -425,7 +425,7 @@ namespace tests
                 std::chrono::time_point begin_time_point = std::chrono::high_resolution_clock::now();
                 for (int i = 0; i < iterations; ++i)
                 {
-                    encoder.copy_buffer_to_image({
+                    recorder.copy_buffer_to_image({
                         .buffer = buf,
                         .image = img,
                     });

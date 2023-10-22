@@ -7,7 +7,7 @@
 - The destruction of any resource is deferred until all submits, currently running at the time of the destroy call, are finished. This makes it safe to call destroy on ressources in most cases.
 - Extensive debug checks for any number of cases with sensible error messages detailing what could have gone wrong.
 - Thread safety that can optionally be disabled via a preprocessor makro define.
-  - Calls to CommandEncoder from multiple threads is NOT threadsafe.
+  - Calls to CommandRecorder from multiple threads is NOT threadsafe.
   - Utils generally are not threadsafe.
   - All Other objects are generally threadsafe to access from multiple threads simultaneously.
 
@@ -26,18 +26,18 @@
 - This can be done very efficiently, daxa does not cache or lazy create anything for this behind the users back, as vulkan 1.3 has a feature mapping directly to this interface.
 - This drastically simplifies rendering and removes a lot of object coupling. Pipelines are completely decoupled of framebuffers or renderpass objects.
 
-## Powerful CommandEncoders:
+## Powerful CommandRecorders:
 - The vulkan command pool is abstracted. Daxa maintains a pool pool inside each device.
-- CommandEncoders make command buffers and command pools easier to use and much safer per design.
-- Each encoder is a pool + buffer. Command buffer can be completed at any time, a new command buffer is used with the same pool after completing current commands.
+- CommandRecorders make command buffers and command pools easier to use and much safer per design.
+- Each recorder is a pool + buffer. Command buffer can be completed at any time, a new command buffer is used with the same pool after completing current commands.
 - PipelineBarrier api is made more ergonomic:
-  - CommandEncoder does not take arrays of memory barriers and image memory barriers, it takes them individually.
+  - CommandRecorder does not take arrays of memory barriers and image memory barriers, it takes them individually.
   - As long as only pipeline barrier commands are recorded in sequence, they will be batched into arrays.
   - As soon as a non-pipeline barrier command is recorded, all memory barriers are recorded to the command buffer.
   - This effectively is mostly syntax suggar, but can be quite nice to reduce vulkan api calls if the barrier insertion is segmented into multiple functions.
-- As mentioned above in the lifetime section, CommandEncoders can record a list of shader resources to destroy after the command list has finished execution on the gpu.
-- CommandEncoder changes type in renderpasses to ensure correct command use by static typesafety!
-- CommandEncoders have a convenience function to defer the destruction of a shader resource until after the command list has finished execution on the gpu.
+- As mentioned above in the lifetime section, CommandRecorders can record a list of shader resources to destroy after the command list has finished execution on the gpu.
+- CommandRecorder changes type in renderpasses to ensure correct command use by static typesafety!
+- CommandRecorders have a convenience function to defer the destruction of a shader resource until after the command list has finished execution on the gpu.
   - Very helpful to destroy things like staging or scratch buffers.
   - Nessecary as it is not legal to destroy objects that are used in commands that are not yet submitted to the gpu.
 

@@ -16,7 +16,7 @@ namespace daxa
         ~Fsr2Context();
 
         void resize(UpscaleSizeInfo const & info);
-        void upscale(CommandEncoder & command_list, UpscaleInfo const & info);
+        void upscale(CommandRecorder & command_list, UpscaleInfo const & info);
         auto get_jitter(u64 index) const -> f32vec2;
     };
 } // namespace daxa

@@ -22,7 +22,7 @@ namespace daxa
         bool initialized = {};
 
         void resize(UpscaleSizeInfo const & resize_info);
-        void upscale(CommandEncoder & command_list, UpscaleInfo const & upscale_info);
+        void upscale(CommandRecorder & command_list, UpscaleInfo const & upscale_info);
 
         void create_resizable_resources();
         void destroy_resizable_resources();

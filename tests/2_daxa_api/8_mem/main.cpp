@@ -32,7 +32,7 @@ auto main() -> int
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
         gpu_timeline.wait_for_value(cpu_timeline - 1);
-        daxa::CommandEncoder cmd = device.create_command_encoder({});
+        daxa::CommandRecorder cmd = device.create_command_recorder({});
         cmd.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
@@ -65,22 +65,22 @@ auto main() -> int
             std::pair{tmem.timeline_semaphore(), tmem.timeline_value()},
         };
         device.submit_commands({
-            .commands = std::array{cmd.complete_current_commands()},
+            .command_lists = std::array{cmd.complete_current_commands()},
             .signal_timeline_semaphores = pairs,
         });
         cpu_timeline += 1;
     }
 
-    daxa::CommandEncoder cmd = device.create_command_encoder({});
+    daxa::CommandRecorder cmd = device.create_command_recorder({});
     cmd.pipeline_barrier({
         .src_access = daxa::AccessConsts::TRANSFER_WRITE,
         .dst_access = daxa::AccessConsts::HOST_READ,
     });
 
     device.submit_commands({
-        .commands = std::array{cmd.complete_current_commands()},
+        .command_lists = std::array{cmd.complete_current_commands()},
     });
-    cmd.~CommandEncoder();
+    cmd.~CommandRecorder();
 
     device.wait_idle();
 

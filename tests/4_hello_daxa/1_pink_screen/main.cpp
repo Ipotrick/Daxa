@@ -141,9 +141,9 @@ auto main() -> int
         // But for demonstration we show how to get the full slice and pass it to the barriers here.
         daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).value().slice;
 
-        daxa::CommandEncoder encoder = device.create_command_encoder({.name = "my command encoder"});
+        daxa::CommandRecorder recorder = device.create_command_recorder({.name = "my command recorder"});
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
             .src_layout = daxa::ImageLayout::UNDEFINED,
             .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -151,14 +151,14 @@ auto main() -> int
             .image_id = swapchain_image,
         });
 
-        encoder.clear_image({
+        recorder.clear_image({
             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .clear_value = std::array<daxa::f32, 4>{1.0f, 0.0f, 1.0f, 1.0f},
             .dst_image = swapchain_image,
             .dst_slice = swapchain_image_full_slice,
         });
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .dst_layout = daxa::ImageLayout::PRESENT_SRC,
@@ -166,12 +166,12 @@ auto main() -> int
             .image_id = swapchain_image,
         });
 
-        // Here we create executable commands from the currently recorded commands from the command encoder.
-        // After doing this the encoder is empty and can record and create new executable commands later.
-        auto executalbe_commands = encoder.complete_current_commands();
-        // But for now we only need this one executable commands blob, and we destroy the encoder.
+        // Here we create executable commands from the currently recorded commands from the command recorder.
+        // After doing this the recorder is empty and can record and create new executable commands later.
+        auto executalbe_commands = recorder.complete_current_commands();
+        // But for now we only need this one executable commands blob, and we destroy the recorder.
         // Encoders CAN NOT be keept over multiple frames. They are temporary objects and need to be destroyed before calling collect_garbage!
-        encoder.~CommandEncoder();
+        recorder.~CommandRecorder();
 
         auto const & acquire_semaphore = swapchain.get_acquire_semaphore();
         auto const & present_semaphore = swapchain.get_present_semaphore();
@@ -181,7 +181,7 @@ auto main() -> int
         // TODO(capi): How to make this syntax good?
         auto pair = std::pair{gpu_timeline, cpu_timeline};
         device.submit_commands(daxa::CommandSubmitInfo{
-            .commands = std::array{executalbe_commands},
+            .command_lists = std::array{executalbe_commands},
             .wait_binary_semaphores = std::array{acquire_semaphore},
             .signal_binary_semaphores = std::array{present_semaphore},
             .signal_timeline_semaphores = std::array{pair},

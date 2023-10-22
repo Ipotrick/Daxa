@@ -72,7 +72,7 @@ DAXA_CREATE_TEST(
     LIBS
 )
 DAXA_CREATE_TEST(
-    FOLDER 2_daxa_api 3_command_encoder
+    FOLDER 2_daxa_api 3_command_recorder
     LIBS
 )
 DAXA_CREATE_TEST(

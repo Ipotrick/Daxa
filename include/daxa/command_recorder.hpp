@@ -11,7 +11,7 @@ namespace daxa
 {
     static inline constexpr usize CONSTANT_BUFFER_BINDINGS_COUNT = 8;
 
-    struct CommandEncoderInfo
+    struct CommandRecorderInfo
     {
         std::string_view name = "";
     };
@@ -229,7 +229,7 @@ namespace daxa
         IndexType index_type = IndexType::uint32;
     };
 
-    struct ExecutableCommands : ManagedPtr<ExecutableCommands, daxa_ExecutableCommands>
+    struct ExecutableCommandList : ManagedPtr<ExecutableCommandList, daxa_ExecutableCommandList>
     {
       protected:
         template <typename T, typename H_T>
@@ -238,24 +238,24 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    struct CommandEncoder;
-    struct RenderCommandEncoder
+    struct CommandRecorder;
+    struct RenderCommandRecorder
     {
       private:
-        daxa_CommandEncoder internal = {};
-        friend struct CommandEncoder;
+        daxa_CommandRecorder internal = {};
+        friend struct CommandRecorder;
 
       public:
-        RenderCommandEncoder() = default;
-        ~RenderCommandEncoder();
-        RenderCommandEncoder(RenderCommandEncoder const &) = delete;
-        RenderCommandEncoder & operator=(RenderCommandEncoder const &) = delete;
-        RenderCommandEncoder(RenderCommandEncoder &&);
-        RenderCommandEncoder & operator=(RenderCommandEncoder &&);
+        RenderCommandRecorder() = default;
+        ~RenderCommandRecorder();
+        RenderCommandRecorder(RenderCommandRecorder const &) = delete;
+        RenderCommandRecorder & operator=(RenderCommandRecorder const &) = delete;
+        RenderCommandRecorder(RenderCommandRecorder &&);
+        RenderCommandRecorder & operator=(RenderCommandRecorder &&);
 
         /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
-        auto end_renderpass() && -> CommandEncoder;
+        auto end_renderpass() && -> CommandRecorder;
 
         void push_constant_vptr(void const * data, u32 size);
         template <typename T>
@@ -290,7 +290,7 @@ namespace daxa
 
     // TODO: Add software command list for more robust uncoupled command recording.
     /**
-     * @brief   CommandEncoder is used to encode commands into a VkCommandBuffer.
+     * @brief   CommandRecorder is used to encode commands into a VkCommandBuffer.
      *          In order to submit a command list one must complete it.
      *          Completing a command list does SIGNIFICANT driver cpu work,
      *          so do not always complete just before submitting.
@@ -307,19 +307,19 @@ namespace daxa
      * * using deferred destructions will make the completed command list not reusable,
      *   as resources can only be destroyed once
      */
-    struct CommandEncoder
+    struct CommandRecorder
     {
       private:
-        daxa_CommandEncoder internal = {};
-        friend struct RenderCommandEncoder;
+        daxa_CommandRecorder internal = {};
+        friend struct RenderCommandRecorder;
 
       public:
-        CommandEncoder() = default;
-        ~CommandEncoder();
-        CommandEncoder(CommandEncoder const &) = delete;
-        CommandEncoder & operator=(CommandEncoder const &) = delete;
-        CommandEncoder(CommandEncoder &&);
-        CommandEncoder & operator=(CommandEncoder &&);
+        CommandRecorder() = default;
+        ~CommandRecorder();
+        CommandRecorder(CommandRecorder const &) = delete;
+        CommandRecorder & operator=(CommandRecorder const &) = delete;
+        CommandRecorder(CommandRecorder &&);
+        CommandRecorder & operator=(CommandRecorder &&);
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopyInfo const & info);
@@ -386,7 +386,7 @@ namespace daxa
         /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
         /// @param info parameters.
-        auto begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandEncoder;
+        auto begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandRecorder;
         // void set_pipeline(RasterPipeline const & pipeline);
         // void set_viewport(ViewportInfo const & info);
         // void set_scissor(Rect2D const & info);
@@ -406,11 +406,11 @@ namespace daxa
         void begin_label(CommandLabelInfo const & info);
         void end_label();
 
-        [[nodiscard]] auto complete_current_commands() -> ExecutableCommands;
+        [[nodiscard]] auto complete_current_commands() -> ExecutableCommandList;
 
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
-        [[nodiscard]] auto info() const -> CommandEncoderInfo const &;
+        [[nodiscard]] auto info() const -> CommandRecorderInfo const &;
     };
 } // namespace daxa

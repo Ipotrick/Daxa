@@ -28,9 +28,9 @@ static const uint64_t DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
 static const uint32_t DAXA_ID_VERSION_OFFSTET = 20;
 
 typedef struct daxa_ImplDevice * daxa_Device;
-typedef struct daxa_ImplCommandEncoder * daxa_CommandEncoder;
-typedef struct daxa_ImplCommandEncoder * daxa_CommandEncoder;
-typedef struct daxa_ImplExecutableCommands * daxa_ExecutableCommands;
+typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
+typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
+typedef struct daxa_ImplExecutableCommandList * daxa_ExecutableCommandList;
 typedef struct daxa_ImplInstance * daxa_Instance;
 typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
 typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;

@@ -21,7 +21,7 @@ namespace daxa
 
         void recreate_vbuffer(usize vbuffer_new_size);
         void recreate_ibuffer(usize ibuffer_new_size);
-        void record_commands(ImDrawData * draw_data, CommandEncoder & encoder, ImageId target_image, u32 size_x, u32 size_y);
+        void record_commands(ImDrawData * draw_data, CommandRecorder & recorder, ImageId target_image, u32 size_x, u32 size_y);
 
         ImplImGuiRenderer(ImGuiRendererInfo a_info);
         ~ImplImGuiRenderer();

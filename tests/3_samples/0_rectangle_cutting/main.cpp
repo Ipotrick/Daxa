@@ -231,8 +231,8 @@ struct App : AppWindow<App>
 
         auto swapchain_image = swapchain.acquire_next_image();
 
-        auto encoder = device.create_command_encoder({
-            .name = ("encoder"),
+        auto recorder = device.create_command_recorder({
+            .name = ("recorder"),
         });
 
         auto vertex_staging_buffer = device.create_buffer({
@@ -240,35 +240,35 @@ struct App : AppWindow<App>
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = ("vertex_staging_buffer"),
         });
-        encoder.destroy_buffer_deferred(vertex_staging_buffer);
+        recorder.destroy_buffer_deferred(vertex_staging_buffer);
 
         auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
         construct_scene(buffer_ptr);
 
-        encoder.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
-        encoder.copy_buffer_to_buffer({
+        recorder.copy_buffer_to_buffer({
             .src_buffer = vertex_staging_buffer,
             .dst_buffer = vertex_buffer,
             .size = sizeof(DrawVertex) * vert_n,
         });
 
-        encoder.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::VERTEX_SHADER_READ,
         });
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
             .src_layout = daxa::ImageLayout::UNDEFINED,
             .dst_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .image_id = swapchain_image,
         });
 
-        auto render_encoder = std::move(encoder).begin_renderpass({
+        auto render_recorder = std::move(recorder).begin_renderpass({
             .color_attachments = std::array{
                 daxa::RenderAttachmentInfo{
                     .image_view = swapchain_image.default_view(),
@@ -278,16 +278,16 @@ struct App : AppWindow<App>
             },
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
-        render_encoder.set_pipeline(*raster_pipeline);
-        render_encoder.push_constant(DrawPush{
+        render_recorder.set_pipeline(*raster_pipeline);
+        render_recorder.push_constant(DrawPush{
             .face_buffer = this->device.get_device_address(vertex_buffer).value(),
         });
-        render_encoder.draw({.vertex_count = vert_n});
-        encoder = std::move(render_encoder).end_renderpass();
+        render_recorder.draw({.vertex_count = vert_n});
+        recorder = std::move(render_recorder).end_renderpass();
 
-        imgui_renderer.record_commands(ImGui::GetDrawData(), encoder, swapchain_image, size_x, size_y);
+        imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, swapchain_image, size_x, size_y);
 
-        encoder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
             .src_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .dst_layout = daxa::ImageLayout::PRESENT_SRC,
@@ -295,7 +295,7 @@ struct App : AppWindow<App>
         });
 
         device.submit_commands({
-            .commands = std::array{encoder.complete_current_commands()},
+            .command_lists = std::array{recorder.complete_current_commands()},
             .wait_binary_semaphores = std::array{swapchain.get_acquire_semaphore()},
             .signal_binary_semaphores = std::array{swapchain.get_present_semaphore()},
             .signal_timeline_semaphores = std::array{std::pair{
@@ -303,7 +303,7 @@ struct App : AppWindow<App>
                 swapchain.get_cpu_timeline_value(),
             }},
         });
-        encoder.~CommandEncoder();
+        recorder.~CommandRecorder();
         device.present_frame({
             .wait_binary_semaphores = std::array{swapchain.get_present_semaphore()},
             .swapchain = swapchain,

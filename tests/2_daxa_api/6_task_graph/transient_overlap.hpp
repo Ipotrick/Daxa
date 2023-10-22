@@ -12,7 +12,7 @@ namespace tests
 
     void set_initial_buffer_data(
         daxa::TaskInterface & ti,
-        daxa::CommandEncoder & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskBufferView buffer,
         u32 size,
         u32 value)
@@ -32,7 +32,7 @@ namespace tests
 
     void validate_buffer_data(
         daxa::TaskInterface & ti,
-        daxa::CommandEncoder & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskBufferView buffer,
         u32 size,
         u32 value,
@@ -49,7 +49,7 @@ namespace tests
 
     void set_initial_image_data(
         daxa::TaskInterface & ti,
-        daxa::CommandEncoder & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskImageView image,
         auto size,
         f32 value)
@@ -77,7 +77,7 @@ namespace tests
 
     void validate_image_data(
         daxa::TaskInterface & ti,
-        daxa::CommandEncoder & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskImageView image,
         auto size,
         f32 value,
@@ -182,7 +182,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
                     set_initial_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
                 },
@@ -196,7 +196,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
                     validate_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
                 },
@@ -210,7 +210,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE);
                     set_initial_image_data(ti, cmd, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE);
                 },
@@ -224,7 +224,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
                     validate_image_data(ti, cmd, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
                 },
@@ -313,7 +313,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE);
                 },
                 .name = "Task 0 - write base image value",
@@ -334,7 +334,7 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto& cmd = ti.get_encoder();
+                            auto& cmd = ti.get_recorder();
                             set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
                         },
                         .name = "Perm True - Task 1 - write image A",
@@ -346,7 +346,7 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto& cmd = ti.get_encoder();
+                            auto& cmd = ti.get_recorder();
                             validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
                         },
                         .name = "Perm True - Task 2 - check image A",
@@ -366,7 +366,7 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto& cmd = ti.get_encoder();
+                            auto& cmd = ti.get_recorder();
                             set_initial_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
                         },
                         .name = "Perm False - Task 1 - write image B",
@@ -378,7 +378,7 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto& cmd = ti.get_encoder();
+                            auto& cmd = ti.get_recorder();
                             validate_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
                         },
                         .name = "Perm False - Task 2 - check image B",
@@ -390,7 +390,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     validate_image_data(ti, cmd, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE, *test_image_pipeline);
                 },
                 .name = "Task 3 - validate base image data",
@@ -507,7 +507,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     set_initial_buffer_data(ti, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE);
                 },
                 .name = "populate long life buffer",
@@ -519,7 +519,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE);
                 },
                 .name = "populate medium life image",
@@ -533,7 +533,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE);
                     validate_image_data(ti, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE, *test_image_pipeline);
                     validate_buffer_data(ti, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE, *test_buffer_pipeline);
@@ -554,7 +554,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto& cmd = ti.get_encoder();
+                    auto& cmd = ti.get_recorder();
                     validate_image_data(ti, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE, *test_image_pipeline);
                 },
                 .name = "validate long life image, dummy access short life buffer",

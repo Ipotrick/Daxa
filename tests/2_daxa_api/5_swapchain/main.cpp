@@ -76,35 +76,35 @@ namespace tests
                 {
                     return;
                 }
-                auto encoder = device.create_command_encoder({
-                    .name = ("encoder (clearcolor)"),
+                auto recorder = device.create_command_recorder({
+                    .name = ("recorder (clearcolor)"),
                 });
 
-                encoder.pipeline_barrier_image_transition({
+                recorder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .image_id = swapchain_image,
                 });
 
-                encoder.clear_image({
+                recorder.clear_image({
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                     .dst_image = swapchain_image,
                 });
 
-                encoder.pipeline_barrier_image_transition({
+                recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
 
-                auto executalbe_commands = encoder.complete_current_commands();
-                encoder.~CommandEncoder();
+                auto executalbe_commands = recorder.complete_current_commands();
+                recorder.~CommandRecorder();
 
                 device.submit_commands({
-                    .commands = std::array{executalbe_commands},
+                    .command_lists = std::array{executalbe_commands},
                     .wait_binary_semaphores = std::array{swapchain.get_acquire_semaphore()},
                     .signal_binary_semaphores = std::array{swapchain.get_present_semaphore()},
                     .signal_timeline_semaphores = std::array{std::pair{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},

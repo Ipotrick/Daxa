@@ -4,8 +4,8 @@
 #include "impl_sync.hpp"
 #include "impl_pipeline.hpp"
 
-#include <daxa/c/command_list.h>
-#include <daxa/command_list.hpp>
+#include <daxa/c/command_recorder.h>
+#include <daxa/command_recorder.hpp>
 
 using namespace daxa;
 
@@ -34,12 +34,12 @@ struct CommandPoolPool
     std::vector<VkCommandPool> pools_and_buffers = {};
 };
 
-struct CommandEncoderZombie
+struct CommandRecorderZombie
 {
     VkCommandPool vk_cmd_pool = {};
 };
 
-struct ExecutableCommandsData
+struct ExecutableCommandListData
 {
     VkCommandBuffer vk_cmd_buffer = {};
     std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
@@ -54,10 +54,10 @@ struct ExecutableCommandsData
     std::vector<SamplerId> used_samplers = {};
 };
 
-struct daxa_ImplCommandEncoder final : ImplHandle
+struct daxa_ImplCommandRecorder final : ImplHandle
 {
     daxa_Device device = {};
-    daxa_CommandEncoderInfo info = {};
+    daxa_CommandRecorderInfo info = {};
     std::string info_name = {};
     VkCommandPool vk_cmd_pool = {};
     std::array<VkMemoryBarrier2, COMMAND_LIST_BARRIER_MAX_BATCH_SIZE> memory_barrier_batch = {};
@@ -66,7 +66,7 @@ struct daxa_ImplCommandEncoder final : ImplHandle
     usize memory_barrier_batch_count = {};
     usize split_barrier_batch_count = {};
 
-    ExecutableCommandsData current_command_data = {};
+    ExecutableCommandListData current_command_data = {};
 
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
     auto generate_new_current_command_data() -> daxa_Result;
@@ -74,10 +74,10 @@ struct daxa_ImplCommandEncoder final : ImplHandle
     static void zero_ref_callback(ImplHandle const * handle);
 };
 
-struct daxa_ImplExecutableCommands final : ImplHandle
+struct daxa_ImplExecutableCommandList final : ImplHandle
 {
-    daxa_CommandEncoder cmd_encoder = {};
-    ExecutableCommandsData data = {};
+    daxa_CommandRecorder cmd_recorder = {};
+    ExecutableCommandListData data = {};
 
     static void zero_ref_callback(ImplHandle const * handle);
 };
