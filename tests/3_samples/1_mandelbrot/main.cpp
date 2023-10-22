@@ -166,13 +166,13 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface runtime)
             {
-                auto cmd_list = runtime.get_encoder();
-                cmd_list.reset_timestamps({
+                auto& encoder = runtime.get_encoder();
+                encoder.reset_timestamps({
                     .query_pool = timeline_query_pool,
                     .start_index = 0,
                     .count = timeline_query_pool.info().query_count,
                 });
-                cmd_list.write_timestamp({
+                encoder.write_timestamp({
                     .query_pool = timeline_query_pool,
                     .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
                     .query_index = 0,
@@ -182,10 +182,10 @@ struct App : BaseApp<App>
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("staging_gpu_input_buffer"),
                 });
-                cmd_list.destroy_buffer_deferred(staging_gpu_input_buffer);
+                encoder.destroy_buffer_deferred(staging_gpu_input_buffer);
                 auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
                 *buffer_ptr = gpu_input;
-                cmd_list.copy_buffer_to_buffer({
+                encoder.copy_buffer_to_buffer({
                     .src_buffer = staging_gpu_input_buffer,
                     .dst_buffer = gpu_input_buffer,
                     .size = sizeof(GpuInput),
@@ -200,14 +200,14 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface runtime)
             {
-                auto cmd_list = runtime.get_encoder();
-                cmd_list.set_pipeline(*compute_pipeline);
-                cmd_list.push_constant(ComputePush{
+                auto& encoder = runtime.get_encoder();
+                encoder.set_pipeline(*compute_pipeline);
+                encoder.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
                     .frame_dim = {size_x, size_y},
                 });
-                cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
+                encoder.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
             },
             .name = ("Draw (Compute)"),
         });
@@ -218,8 +218,8 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_encoder();
-                cmd_list.blit_image_to_image({
+                auto& encoder = ti.get_encoder();
+                encoder.blit_image_to_image({
                     .src_image = ti.uses[task_render_image].image(),
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.uses[task_swapchain_image].image(),
@@ -228,7 +228,7 @@ struct App : BaseApp<App>
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
 
-                cmd_list.write_timestamp({
+                encoder.write_timestamp({
                     .query_pool = timeline_query_pool,
                     .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
                     .query_index = 1,

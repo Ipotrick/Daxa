@@ -2301,7 +2301,7 @@ namespace daxa
     void generate_persistent_resource_synch(
         ImplTaskGraph & impl,
         TaskGraphPermutation & permutation,
-        CommandEncoder & cmd_list)
+        CommandEncoder & encoder)
     {
         // Persistent resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not manageable.
@@ -2343,7 +2343,7 @@ namespace daxa
                     .src_access = persistent_data.latest_access,
                     .dst_access = permutation.buffer_infos[task_buffer_index].first_access,
                 };
-                cmd_list.pipeline_barrier(mem_barrier_info);
+                encoder.pipeline_barrier(mem_barrier_info);
                 if (impl.info.record_debug_information)
                 {
                     fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(mem_barrier_info));
@@ -2410,7 +2410,7 @@ namespace daxa
                                     .image_slice = intersection,
                                     .image_id = execution_image_id,
                                 };
-                                cmd_list.pipeline_barrier_image_transition(img_barrier_info);
+                                encoder.pipeline_barrier_image_transition(img_barrier_info);
                                 if (impl.info.record_debug_information)
                                 {
                                     fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
@@ -2472,7 +2472,7 @@ namespace daxa
                             .image_slice = remaining_first_accesses[remaining_first_uses_index].state.slice,
                             .image_id = execution_image_id,
                         };
-                        cmd_list.pipeline_barrier_image_transition(img_barrier_info);
+                        encoder.pipeline_barrier_image_transition(img_barrier_info);
                         if (impl.info.record_debug_information)
                         {
                             fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));

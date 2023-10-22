@@ -890,6 +890,7 @@ auto daxa_cmd_complete_current_commands(
     daxa_CommandEncoder self,
     daxa_ExecutableCommands * out_execble_cmds) -> daxa_Result
 {
+    daxa_cmd_flush_barriers(self);
     auto vk_result = vkEndCommandBuffer(self->current_command_data.vk_cmd_buffer);
     if (vk_result != VK_SUCCESS)
     {

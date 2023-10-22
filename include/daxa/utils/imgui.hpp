@@ -40,7 +40,7 @@ namespace daxa
 
         auto create_texture_id(ImGuiImageContext const & context) -> ImTextureID;
 
-        void record_commands(ImDrawData * draw_data, CommandEncoder & cmd_list, ImageId target_image, u32 size_x, u32 size_y);
+        void record_commands(ImDrawData * draw_data, CommandEncoder & encoder, ImageId target_image, u32 size_x, u32 size_y);
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
         void record_task(ImDrawData * draw_data, TaskGraph & task_graph, TaskImageView task_swapchain_image, u32 size_x, u32 size_y);
 #endif

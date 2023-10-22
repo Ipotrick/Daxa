@@ -103,7 +103,7 @@ If all swapchain images are used in queued submissions to the GPU, the present c
 To execute commands on the GPU, one needs to record them into a daxa::CommandEncoder and submit them to the GPU.
 
 ```cpp
-daxa::CommandEncoder command_list = device.create_command_list({.name = "my command list"});
+daxa::CommandEncoder command_list = device.create_command_encoder({.name = "my command list"});
 ```
 
 ## Sending commands to the GPU
@@ -131,7 +131,7 @@ Directly after, we define an image slice. As images can be made up of multiple l
 In Daxa, an image view of any image's full range can be retrieved with the `daxa::ImageId::default_view()` member function. From an image view, we can query the slice it represents. In the case of the default view, its slice is the whole image, which is what we want.
 
 ```cpp
-daxa::CommandEncoder command_list = device.create_command_list({.name = "my command list"});
+daxa::CommandEncoder command_list = device.create_command_encoder({.name = "my command list"});
 ```
 
 We then use the command list to record our commands. 
@@ -378,7 +378,7 @@ Renderpasses can clear the screen as a load operation, this means we do not need
 
 ```cpp
 // get a command list
-cmd_list.begin_renderpass({
+encoder.begin_renderpass({
     .color_attachments = {
         {
             .image_view = /* assign in the image view */,
@@ -388,12 +388,12 @@ cmd_list.begin_renderpass({
     },
     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
 });
-cmd_list.set_pipeline(*pipeline);
-cmd_list.push_constant(MyPushConstant{
+encoder.set_pipeline(*pipeline);
+encoder.push_constant(MyPushConstant{
     .my_vertex_ptr = /* and finally a GPU pointer to the vertex buffer */,
 });
-cmd_list.draw({.vertex_count = 3});
-cmd_list.end_renderpass();
+encoder.draw({.vertex_count = 3});
+encoder.end_renderpass();
 ```
 
 We begin a renderpass which clears the screen as a load op. We then set the pipeline to the raster pipeline we created earlier. Setting the push-constant uses the struct from the shared file. Finally we issue a draw-call and end the renderpass.
@@ -431,7 +431,7 @@ These declarations make it so that the resources assigned into them within the t
 Finally, in our task callback, we had some unfinished areas. We can get a command list from the Task interface. The resources are accessible from the uses struct, like so:
 ```cpp
 // Command list
-auto cmd_list = ti.get_encoder();
+auto encoder = ti.get_encoder();
 
 // Image view
 .image_view = uses.color_target.view(),
@@ -483,7 +483,7 @@ auto staging_buffer_id = ti.get_device().create_buffer({
 ```
 We can also ask the command list to destroy this temporary buffer, since we don't care about it living, but we DO need it to survive through its usage on the GPU (which won't happen until after these commands are submitted), so we tell the command list to destroy it in a deferred fashion.
 ```cpp
-cmd_list.destroy_buffer_deferred(staging_buffer_id);
+encoder.destroy_buffer_deferred(staging_buffer_id);
 ```
 
 > Note: Instead of doing this manually, we could use one of Daxa's other useful utilities, "Mem", but it's simple enough for now.
@@ -496,7 +496,7 @@ auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>
 
 And finally, we can just copy the data from the staging buffer to the actual buffer.
 ```cpp
-cmd_list.copy_buffer_to_buffer({
+encoder.copy_buffer_to_buffer({
     .src_buffer = staging_buffer_id,
     .dst_buffer = uses.vertex_buffer.buffer(),
     .size = sizeof(data),

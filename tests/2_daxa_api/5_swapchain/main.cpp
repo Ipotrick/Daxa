@@ -76,45 +76,42 @@ namespace tests
                 {
                     return;
                 }
-                auto cmd_list = device.create_command_list({
-                    .name = ("cmd_list (clearcolor)"),
+                auto encoder = device.create_command_encoder({
+                    .name = ("encoder (clearcolor)"),
                 });
 
-                cmd_list.pipeline_barrier_image_transition({
+                encoder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .image_id = swapchain_image,
                 });
 
-                cmd_list.clear_image({
+                encoder.clear_image({
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                     .dst_image = swapchain_image,
                 });
 
-                cmd_list.pipeline_barrier_image_transition({
+                encoder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
 
-                cmd_list.complete();
-
-                std::array timeline_signal_semas = {
-                    std::pair{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}
-                };
+                auto executalbe_commands = encoder.complete_current_commands();
+                encoder.~CommandEncoder();
 
                 device.submit_commands({
-                    .command_lists = {&cmd_list,1},
-                    .wait_binary_semaphores = {&swapchain.get_acquire_semaphore(), 1},
-                    .signal_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
-                    .signal_timeline_semaphores = {timeline_signal_semas.data(), timeline_signal_semas.size()},
+                    .commands = std::array{executalbe_commands},
+                    .wait_binary_semaphores = std::array{swapchain.get_acquire_semaphore()},
+                    .signal_binary_semaphores = std::array{swapchain.get_present_semaphore()},
+                    .signal_timeline_semaphores = std::array{std::pair{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
                 });
 
                 device.present_frame({
-                    .wait_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
+                    .wait_binary_semaphores = std::array{swapchain.get_present_semaphore()},
                     .swapchain = swapchain,
                 });
             }

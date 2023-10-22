@@ -93,13 +93,13 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_encoder();
-                cmd_list.set_pipeline(*compute_pipeline);
-                cmd_list.push_constant(ComputePush{
+                auto encoder = ti.get_encoder();
+                encoder.set_pipeline(*compute_pipeline);
+                encoder.push_constant(ComputePush{
                     .image = render_image.default_view(),
                     .frame_dim = {size_x, size_y},
                 });
-                cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
+                encoder.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
             },
             .name = APPNAME_PREFIX("Draw (Compute)"),
         });
@@ -110,8 +110,8 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_encoder();
-                cmd_list.blit_image_to_image({
+                auto encoder = ti.get_encoder();
+                encoder.blit_image_to_image({
                     .src_image = ti.uses[task_render_image].image(),
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.uses[task_swapchain_image].image(),

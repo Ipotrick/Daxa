@@ -167,18 +167,15 @@ struct App : AppWindow<App>
             daxa::BufferComputeShaderRead previous{};
         } uses = {};
         std::string_view name = "update boids";
-
         std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
         void callback(daxa::TaskInterface ti)
         {
             auto& encoder = ti.get_encoder();
             encoder.set_pipeline(*update_boids_pipeline);
-
             encoder.push_constant(UpdateBoidsPushConstant{
                 .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()).value(),
                 .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()).value(),
             });
-
             encoder.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
         }
     };
@@ -193,7 +190,6 @@ struct App : AppWindow<App>
             daxa::ImageColorAttachment<> render_image{};
         } uses = {};
         std::string_view name = "draw boids";
-
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
         u32 * size_x = {};
         u32 * size_y = {};
@@ -216,7 +212,6 @@ struct App : AppWindow<App>
                 },
             });
             render_encoder.set_pipeline(*draw_pipeline);
-
             render_encoder.push_constant(DrawPushConstant{
                 .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()).value(),
                 .axis_scaling = {
@@ -224,9 +219,7 @@ struct App : AppWindow<App>
                     std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
                 },
             });
-
             render_encoder.draw({.vertex_count = 3 * MAX_BOIDS});
-
             encoder = std::move(render_encoder).end_renderpass();
         }
     };
@@ -237,7 +230,6 @@ struct App : AppWindow<App>
         new_task_graph.use_persistent_image(task_swapchain_image);
         new_task_graph.use_persistent_buffer(task_boids_current);
         new_task_graph.use_persistent_buffer(task_boids_old);
-
         new_task_graph.add_task(UpdateBoidsTask{
             .uses = {
                 .current = {task_boids_current},
@@ -245,7 +237,6 @@ struct App : AppWindow<App>
             },
             .update_boids_pipeline = update_boids_pipeline,
         });
-
         new_task_graph.add_task(DrawBoidsTask{
             .uses = {
                 .boids = {task_boids_current},
@@ -255,11 +246,9 @@ struct App : AppWindow<App>
             .size_x = &size_x,
             .size_y = &size_y,
         });
-
         new_task_graph.submit({});
         new_task_graph.present({});
         new_task_graph.complete({});
-
         return new_task_graph;
     }
 
@@ -281,9 +270,9 @@ struct App : AppWindow<App>
             return;
         }
         task_graph.execute({});
-        device.collect_garbage();
         // Switch boids front and back buffers.
         task_boids_current.swap_buffers(task_boids_old);
+        device.collect_garbage();
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}

@@ -212,6 +212,7 @@ namespace daxa
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
 
+        // TODO: make move only. Return ExecutableTaskGraph.
         void complete(TaskCompleteInfo const & info);
 
         void execute(ExecutionInfo const & info);
