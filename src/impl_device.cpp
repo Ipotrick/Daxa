@@ -678,13 +678,14 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     {
         for (auto [id, index] : cmd_list->deferred_destructions)
         {
+            // TODO(lifetime): check these and report errors if these were destroyed too early.
+            [[maybe_unused]] daxa_Result _ignore = {};
             switch (index)
             {
-                // TODO(lifetime): check these and report errors if these were destroyed too early.
-            case DEFERRED_DESTRUCTION_BUFFER_INDEX: daxa_dvc_destroy_buffer(self, std::bit_cast<daxa_BufferId>(id)); break;
-            case DEFERRED_DESTRUCTION_IMAGE_INDEX: daxa_dvc_destroy_image(self, std::bit_cast<daxa_ImageId>(id)); break;
-            case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: daxa_dvc_destroy_image_view(self, std::bit_cast<daxa_ImageViewId>(id)); break;
-            case DEFERRED_DESTRUCTION_SAMPLER_INDEX: daxa_dvc_destroy_sampler(self, std::bit_cast<daxa_SamplerId>(id)); break;
+            case DEFERRED_DESTRUCTION_BUFFER_INDEX: _ignore = daxa_dvc_destroy_buffer(self, std::bit_cast<daxa_BufferId>(id)); break;
+            case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(self, std::bit_cast<daxa_ImageId>(id)); break;
+            case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(self, std::bit_cast<daxa_ImageViewId>(id)); break;
+            case DEFERRED_DESTRUCTION_SAMPLER_INDEX: _ignore = daxa_dvc_destroy_sampler(self, std::bit_cast<daxa_SamplerId>(id)); break;
             default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
             }
         }
@@ -1703,8 +1704,10 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
 {
     _DAXA_TEST_PRINT("daxa_ImplDevice::zero_ref_callback\n");
     auto self = rc_cast<daxa_Device>(handle);
-    daxa_dvc_wait_idle(self);
-    daxa_dvc_collect_garbage(self);
+    auto result = daxa_dvc_wait_idle(self);
+    DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to wait idle");
+    result = daxa_dvc_collect_garbage(self);
+    DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to wait idle");
     self->buffer_pool_pool.cleanup(self);
     vmaUnmapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation);
     vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);

@@ -20,10 +20,10 @@ static const daxa_InstanceInfo DAXA_DEFAULT_INSTANCE_INFO = {
     .app_name = {.data = "daxa app", .size = 8},
 };
 
-DAXA_EXPORT daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_instance);
 
-DAXA_EXPORT daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_instance_create_device(daxa_Instance instance, daxa_DeviceInfo const * info, daxa_Device * out_device);
 
 // Returns previous ref count.

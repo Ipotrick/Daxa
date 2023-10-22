@@ -73,6 +73,11 @@ typedef uint4 daxa_u32vec4;
 typedef uint4x2 daxa_u32mat4x2;
 typedef uint4x3 daxa_u32mat4x3;
 typedef uint4x4 daxa_u32mat4x4;
+typedef bool daxa_b32;
+typedef bool daxa_b32vec1;
+typedef bool2 daxa_b32vec2;
+typedef bool3 daxa_b32vec3;
+typedef bool4 daxa_b32vec4;
 
 namespace daxa
 {

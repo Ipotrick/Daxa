@@ -207,11 +207,11 @@ namespace daxa
 
             auto get() -> ImplPersistentTaskBuffer &
             {
-                return **r_cast<ImplPersistentTaskBuffer**>(&buffer);
+                return **r_cast<ImplPersistentTaskBuffer **>(&buffer);
             }
             auto get() const -> ImplPersistentTaskBuffer const &
             {
-                return **r_cast<ImplPersistentTaskBuffer const*const*>(&buffer);
+                return **r_cast<ImplPersistentTaskBuffer const * const *>(&buffer);
             }
         };
         struct Transient
@@ -253,11 +253,11 @@ namespace daxa
             TaskImage image = {};
             auto get() -> ImplPersistentTaskImage &
             {
-                return **r_cast<ImplPersistentTaskImage**>(&image);
+                return **r_cast<ImplPersistentTaskImage **>(&image);
             }
             auto get() const -> ImplPersistentTaskImage const &
             {
-                return **r_cast<ImplPersistentTaskImage const*const*>(&image);
+                return **r_cast<ImplPersistentTaskImage const * const *>(&image);
             }
         };
         struct Transient

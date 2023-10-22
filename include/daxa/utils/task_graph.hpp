@@ -24,6 +24,7 @@ namespace daxa
         auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
         auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
         auto get_uniform_buffer_info() const -> SetUniformBufferInfo;
+
       protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskGraph;
@@ -98,7 +99,7 @@ namespace daxa
         /// @brief  Task reordering can drastically improve performance,
         ///         yet is it also nice to have sequential callback execution.
         bool reorder_tasks = true;
-        /// @brief  Allows task graph to alias transient resources memory (ofc only when that wont break the program) 
+        /// @brief  Allows task graph to alias transient resources memory (ofc only when that wont break the program)
         bool alias_transients = {};
         /// @brief  Some drivers have bad implementations for split barriers.
         ///         If that is the case for you, you can turn off all use of split barriers.
@@ -176,7 +177,7 @@ namespace daxa
 
     struct ImplTaskGraph;
 
-    struct TaskGraph : ManagedPtr<TaskGraph, ImplTaskGraph*>
+    struct TaskGraph : ManagedPtr<TaskGraph, ImplTaskGraph *>
     {
         TaskGraph() = default;
 
@@ -219,7 +220,7 @@ namespace daxa
 
         auto get_debug_string() -> std::string;
         auto get_transient_memory_size() -> daxa::usize;
-        
+
       protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;

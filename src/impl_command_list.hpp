@@ -65,6 +65,6 @@ struct daxa_ImplCommandList final : ImplHandle
     std::vector<SamplerId> used_samplers = {};
 
     void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
-    
+
     static void zero_ref_callback(ImplHandle const * handle);
 };

@@ -393,7 +393,7 @@ auto daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline self) -> u64
 void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
 {
     _DAXA_TEST_PRINT("ImplPipeline::zero_ref_callback\n");
-    auto self = rc_cast<ImplPipeline*>(handle);
+    auto self = rc_cast<ImplPipeline *>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     self->device->main_queue_pipeline_zombies.push_front({
@@ -404,8 +404,7 @@ void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
     });
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
     delete self;
 }
 

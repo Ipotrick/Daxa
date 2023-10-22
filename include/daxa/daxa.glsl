@@ -68,6 +68,11 @@
 #define daxa_u64vec2 u64vec2
 #define daxa_u64vec3 u64vec3
 #define daxa_u64vec4 u64vec4
+#define daxa_b32 bool
+#define daxa_b32vec1 daxa_b32
+#define daxa_b32vec2 bvec2
+#define daxa_b32vec3 bvec3
+#define daxa_b32vec4 bvec4
 
 struct daxa_BufferId
 {

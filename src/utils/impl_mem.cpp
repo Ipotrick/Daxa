@@ -13,28 +13,28 @@ namespace daxa
           })},
           m_buffer{this->m_info.device.create_buffer({
               .size = this->m_info.capacity,
-              .allocate_info =  daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE | (a_info.use_bar_memory ? daxa::MemoryFlagBits::DEDICATED_MEMORY : daxa::MemoryFlagBits::NONE),
+              .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE | (a_info.use_bar_memory ? daxa::MemoryFlagBits::DEDICATED_MEMORY : daxa::MemoryFlagBits::NONE),
               .name = this->m_info.name,
           })},
           buffer_device_address{this->m_info.device.get_device_address(this->m_buffer).value()},
           buffer_host_address{this->m_info.device.get_host_address(this->m_buffer).value()}
     {
     }
-    
+
     TransferMemoryPool::TransferMemoryPool(TransferMemoryPool && other)
     {
         std::swap(this->m_info, other.m_info);
         std::swap(this->gpu_timeline, other.gpu_timeline);
-        std::swap(this->current_timeline_value, other.current_timeline_value); 
-        std::swap(this->live_allocations, other.live_allocations); 
-        std::swap(this->m_buffer, other.m_buffer); 
-        std::swap(this->buffer_device_address, other.buffer_device_address); 
-        std::swap(this->buffer_host_address, other.buffer_host_address); 
-        std::swap(this->claimed_start, other.claimed_start); 
-        std::swap(this->claimed_size, other.claimed_size); 
+        std::swap(this->current_timeline_value, other.current_timeline_value);
+        std::swap(this->live_allocations, other.live_allocations);
+        std::swap(this->m_buffer, other.m_buffer);
+        std::swap(this->buffer_device_address, other.buffer_device_address);
+        std::swap(this->buffer_host_address, other.buffer_host_address);
+        std::swap(this->claimed_start, other.claimed_start);
+        std::swap(this->claimed_size, other.claimed_size);
     }
 
-    TransferMemoryPool& TransferMemoryPool::operator=(TransferMemoryPool && other)
+    TransferMemoryPool & TransferMemoryPool::operator=(TransferMemoryPool && other)
     {
         if (!this->m_buffer.is_empty())
         {
@@ -42,13 +42,13 @@ namespace daxa
         }
         std::swap(this->m_info, other.m_info);
         std::swap(this->gpu_timeline, other.gpu_timeline);
-        std::swap(this->current_timeline_value, other.current_timeline_value); 
-        std::swap(this->live_allocations, other.live_allocations); 
-        std::swap(this->m_buffer, other.m_buffer); 
-        std::swap(this->buffer_device_address, other.buffer_device_address); 
-        std::swap(this->buffer_host_address, other.buffer_host_address); 
-        std::swap(this->claimed_start, other.claimed_start); 
-        std::swap(this->claimed_size, other.claimed_size); 
+        std::swap(this->current_timeline_value, other.current_timeline_value);
+        std::swap(this->live_allocations, other.live_allocations);
+        std::swap(this->m_buffer, other.m_buffer);
+        std::swap(this->buffer_device_address, other.buffer_device_address);
+        std::swap(this->buffer_host_address, other.buffer_host_address);
+        std::swap(this->claimed_start, other.claimed_start);
+        std::swap(this->claimed_size, other.claimed_size);
         return *this;
     }
 
@@ -63,7 +63,8 @@ namespace daxa
     auto TransferMemoryPool::allocate(u32 allocation_size, u32 alignment_requirement) -> std::optional<TransferMemoryPool::Allocation>
     {
         u32 const tail_alloc_offset = (this->claimed_start + this->claimed_size) % this->m_info.capacity;
-        auto upalign_offset = [](auto value, auto alignment){
+        auto upalign_offset = [](auto value, auto alignment)
+        {
             return (value + alignment - 1) / alignment * alignment;
         };
         u32 const tail_alloc_offset_aligned = upalign_offset(tail_alloc_offset, alignment_requirement);

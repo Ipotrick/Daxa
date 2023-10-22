@@ -37,7 +37,7 @@ auto main() -> int
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    auto *glfw_window_ptr = glfwCreateWindow(
+    auto * glfw_window_ptr = glfwCreateWindow(
         static_cast<daxa::i32>(window_info.width),
         static_cast<daxa::i32>(window_info.height),
         "Daxa sample window name", nullptr, nullptr);
@@ -52,7 +52,7 @@ auto main() -> int
             info.width = static_cast<daxa::u32>(width);
             info.height = static_cast<daxa::u32>(height);
         });
-    auto *native_window_handle = get_native_handle(glfw_window_ptr);
+    auto * native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     // First thing we do is create a Daxa instance. This essentially exists
@@ -136,8 +136,8 @@ auto main() -> int
         // Directly after, we define an image slice. As images can be made up of multiple
         // layers, memory planes, and mip levels, Daxa takes slices in many calls to
         // specify a slice of an image that should be operated upon.
-        // Technically the default value for slice in barriers is simply a 2d image. 
-        // So in this case we would not need to mention it in the barriers at all! 
+        // Technically the default value for slice in barriers is simply a 2d image.
+        // So in this case we would not need to mention it in the barriers at all!
         // But for demonstration we show how to get the full slice and pass it to the barriers here.
         daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).value().slice;
 

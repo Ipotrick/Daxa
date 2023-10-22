@@ -60,7 +60,7 @@ struct daxa_ImplSwapchain final : ImplHandle
     void full_cleanup();
     auto recreate_surface() -> daxa_Result;
     auto recreate() -> daxa_Result;
-    
+
     static auto create(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain swapchain) -> daxa_Result;
     static void zero_ref_callback(ImplHandle const * handle);
 };

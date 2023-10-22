@@ -227,16 +227,16 @@ namespace daxa
         BufferId id = {};
         usize offset = {};
         IndexType index_type = IndexType::uint32;
-    };  
+    };
 
     // TODO: Add software command list for more robust uncoupled command recording.
     /**
      * @brief   CommandList is used to encode commands into a VkCommandBuffer.
      *          In order to submit a command list one must complete it.
-     *          Completing a command list does SIGNIFICANT driver cpu work, 
-     *          so do not always complete just before submitting. 
-     * 
-     * THREADSAFETY: 
+     *          Completing a command list does SIGNIFICANT driver cpu work,
+     *          so do not always complete just before submitting.
+     *
+     * THREADSAFETY:
      * * must be externally synchronized
      * * can be passed between different threads
      * * may only be accessed by one thread at a time
@@ -247,7 +247,7 @@ namespace daxa
      * * most record commands can throw exceptions on invalid inputs such as invalid ids
      * * using deferred destructions will make the completed command list not reusable,
      *   as resources can only be destroyed once
-    */
+     */
     struct CommandList final : ManagedPtr<CommandList, daxa_CommandList>
     {
         CommandList() = default;

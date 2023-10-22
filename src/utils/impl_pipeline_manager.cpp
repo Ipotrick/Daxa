@@ -127,6 +127,7 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 #include <regex>
 #include <thread>
 #include <utility>
+#include <iostream>
 
 static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"regex(\s*#\s*pragma\s+once\s*)regex");
 static const std::regex REPLACE_REGEX = std::regex(R"regex(\W)regex");
@@ -188,16 +189,15 @@ namespace daxa
             {
                 return nullptr;
             }
+            if (shader_code_result.is_err())
+            {
+                return nullptr;
+            }
             impl_pipeline_manager->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
 
             std::string headerName = {};
             char const * headerData = nullptr;
             size_t headerLength = 0;
-
-            if (shader_code_result.is_err())
-            {
-                return nullptr;
-            }
 
             auto const & shader_code_str = shader_code_result.value().string;
             headerLength = shader_code_str.size();
@@ -760,7 +760,7 @@ namespace daxa
                     reload = true;
                 }
             }
-            else if (std::ifstream(path).good())
+            else // if (std::filesystem::exists(path))
             {
                 auto latest_write_time = get_last_file_write_time(path);
                 if (latest_write_time > recorded_write_time)
@@ -768,6 +768,10 @@ namespace daxa
                     reload = true;
                 }
             }
+            // else
+            // {
+            //     std::cout << "How?" << std::endl;
+            // }
         }
         if (reload)
         {
@@ -778,7 +782,7 @@ namespace daxa
                 {
                     pair.second = virtual_files[path_str].timestamp;
                 }
-                else if (std::ifstream(pair.first).good())
+                else if (std::filesystem::exists(pair.first))
                 {
                     pair.second = get_last_file_write_time(pair.first);
                 }

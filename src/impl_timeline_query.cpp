@@ -79,8 +79,7 @@ auto daxa_timeline_query_pool_dec_refcnt(daxa_TimelineQueryPool self) -> u64
 {
     return self->dec_refcnt(
         &daxa_ImplTimelineQueryPool::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
 }
 
 // --- End API Functions ---
@@ -99,8 +98,7 @@ void daxa_ImplTimelineQueryPool::zero_ref_callback(ImplHandle const * handle)
         });
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
     delete self;
 }
 

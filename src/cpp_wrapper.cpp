@@ -298,11 +298,11 @@ namespace daxa
 
     auto Device::get_host_address(BufferId id) const -> Optional<std::byte *>
     {
-        std::byte* ret;
+        std::byte * ret;
         auto result = daxa_dvc_buffer_host_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
-            r_cast<void* *>(&ret));
+            r_cast<void **>(&ret));
         if (result == DAXA_RESULT_SUCCESS)
         {
             return {ret};
@@ -339,7 +339,8 @@ namespace daxa
 
     void Device::wait_idle()
     {
-        daxa_dvc_wait_idle(r_cast<daxa_Device>(this->object));
+        auto result = daxa_dvc_wait_idle(r_cast<daxa_Device>(this->object));
+        check_result(result, "failed to wait idle device");
     }
 
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
@@ -753,15 +754,16 @@ namespace daxa
 #define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name) \
     void CommandList::destroy_##name##_deferred(Name##Id id)    \
     {                                                           \
-        daxa_cmd_destroy_##name##_deferred(                     \
+        auto result = daxa_cmd_destroy_##name##_deferred(       \
             r_cast<daxa_CommandList>(this->object),             \
             static_cast<daxa_##Name##Id>(id));                  \
+        check_result(result, "failed to destroy " #name);       \
     }
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_renderpass, RenderPassBeginInfo)
+    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(begin_renderpass, RenderPassBeginInfo)
 
     void CommandList::end_renderpass()
     {
@@ -808,7 +810,8 @@ namespace daxa
 
     void CommandList::complete()
     {
-        daxa_cmd_complete(r_cast<daxa_CommandList>(this->object));
+        auto result = daxa_cmd_complete(r_cast<daxa_CommandList>(this->object));
+        check_result(result, "failed to complete command list");
     }
 
     auto CommandList::is_complete() const -> bool
