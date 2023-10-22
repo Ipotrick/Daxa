@@ -1,6 +1,7 @@
 #ifndef __DAXA_GPU_RESOURCES_H__
 #define __DAXA_GPU_RESOURCES_H__
 
+#include "types.h"
 #include <vk_mem_alloc.h>
 
 #include <daxa/c/types.h>
@@ -104,7 +105,7 @@ typedef struct
 
 static const daxa_BufferInfo DAXA_DEFAULT_BUFFER_INFO = {
     .size = 0,
-    .allocate_info = {},
+    .allocate_info = DAXA_MEMORY_FLAG_NONE,
     .name = {.data = {}, .size = 0},
 };
 static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
@@ -116,7 +117,7 @@ static const daxa_ImageInfo DAXA_DEFAULT_IMAGE_INFO = {
     .array_layer_count = 1,
     .sample_count = 1,
     .usage = 0,
-    .allocate_info = {},
+    .allocate_info = DAXA_MEMORY_FLAG_NONE,
     .name = {.data = {}, .size = 0},
 };
 static const daxa_ImageViewInfo DAXA_DEFAULT_IMAGE_VIEW_INFO = {
