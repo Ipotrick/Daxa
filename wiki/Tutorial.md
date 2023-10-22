@@ -103,7 +103,7 @@ If all swapchain images are used in queued submissions to the GPU, the present c
 To execute commands on the GPU, one needs to record them into a daxa::CommandEncoder and submit them to the GPU.
 
 ```cpp
-daxa::CommandEncoder command_list = device.create_command_encoder({.name = "my command list"});
+daxa::CommandEncoder encoder = device.create_command_encoder({.name = "my command encoder"});
 ```
 
 ## Sending commands to the GPU
@@ -131,13 +131,13 @@ Directly after, we define an image slice. As images can be made up of multiple l
 In Daxa, an image view of any image's full range can be retrieved with the `daxa::ImageId::default_view()` member function. From an image view, we can query the slice it represents. In the case of the default view, its slice is the whole image, which is what we want.
 
 ```cpp
-daxa::CommandEncoder command_list = device.create_command_encoder({.name = "my command list"});
+daxa::CommandEncoder encoder = device.create_command_encoder({.name = "my command encoder"});
 ```
 
-We then use the command list to record our commands. 
+We then use the command encoder to record our commands. 
 
 ```cpp
-command_list.pipeline_barrier_image_transition({
+encoder.pipeline_barrier_image_transition({
     .waiting_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
     .before_layout = daxa::ImageLayout::UNDEFINED,
     .after_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -151,14 +151,14 @@ We insert a pipeline barrier that also performs an image layout transition. Pipe
 Also do not be concerned that barriers must be issued with multiple function calls. Daxa will queue all back to back pipeline barrier calls and do a single Vulkan pipeline barrier command. The idea here is that its simpler for the user to not group barriers manually and submit them once. Instead, Daxa does that automatically!
 
 ```cpp
-command_list.clear_image({
+encoder.clear_image({
     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
     .clear_value = std::array<daxa::f32, 4>{1.0f, 0.0f, 1.0f, 1.0f},
     .dst_image = swapchain_image,
     .dst_slice = swapchain_image_full_slice,
 });
 
-command_list.pipeline_barrier_image_transition({
+encoder.pipeline_barrier_image_transition({
     .awaited_pipeline_access = daxa::AccessConsts::TRANSFER_WRITE,
     .before_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
     .after_layout = daxa::ImageLayout::PRESENT_SRC,
@@ -166,12 +166,12 @@ command_list.pipeline_barrier_image_transition({
     .image_id = swapchain_image,
 });
 
-command_list.complete();
+daxa::ExecutableCommands executable_commands = encoder.complete_current_commands();
 ```
 
 We then issue an image clear. It is possible to also set the image layout in this command, but there is a default image layout, which is `TRANSFER_DST_OPTIMAL`, the one we transition the layout to earlier.
 After that, we transition the image layout to present optimal, as we will present the image after these commands are done.
-In the end we complete the command list. After this the command list is considered constant and no more commands can be recorded into that list. It is required that all submitted command lists are completed before submission.
+In the end create executable commands from the currently recorded commands in the encoder. Later we can submit these executable commands. 
 
 ```cpp
 auto const & acquire_semaphore = swapchain.get_acquire_semaphore();
@@ -180,15 +180,16 @@ auto const & gpu_timeline = swapchain.get_gpu_timeline_semaphore();
 auto const cpu_timeline = swapchain.get_cpu_timeline_value();
 
 device.submit_commands({
-    .command_lists = {command_list},
-    .wait_binary_semaphores = {acquire_semaphore},
-    .signal_binary_semaphores = {present_semaphore},
-    .signal_timeline_semaphores = {{gpu_timeline, cpu_timeline}},
+    .commands = std::array{executable_commands},
+    .wait_binary_semaphores = std::array{acquire_semaphore},
+    .signal_binary_semaphores = std::array{present_semaphore},
+    .signal_timeline_semaphores = std::array{std::pair{gpu_timeline, cpu_timeline}},
 });
 device.present_frame({
-    .wait_binary_semaphores = {present_semaphore},
+    .wait_binary_semaphores = std::array{present_semaphore},
     .swapchain = swapchain,
 });
+device.collect_garbage();
 ```
 
 In Daxa, the swapchain handles the number of frames in flight and related frame to frame image acquisition and present synchronization.
@@ -202,6 +203,8 @@ The last submit in a frame that uses the swapchain image MUST signal the present
 The CPU and GPU timeline values are used internally to limit the frames in flight. the GPU timeline value must be signaled with the last submission with the current CPU timeline value.
 
 Note that the acquire and present semaphores can change every frame, so do NOT store them once and reuse. You must call the get functions after each image acquisition.
+
+In the end of each frame we call `collect_garbage`. This is the housekeeping function of daxas devices. It should be called exactly once a frame. Note that this function will BLOCK and wait until ALL command encoders have been destroyed! This is because the housekeeping can only be properly done when its guaranteed that no commands are recorded at the same time.
 
 To see a full implementation go ahead to the Daxa samples and look into the 4_hello_Daxa folder. For every chapter in this tutorial there is a fully working encapsulated program with all the necessary code. This code is also fully commented out, so it can be used as an alternative to this tutorial entirely if preferred.
 
@@ -372,13 +375,11 @@ To learn more about this, I again refer to the shader integration wiki page.
 
 To use a raster pipeline, we need a renderpass. Within a renderpass, the user can bind pipelines and issue draw calls.
 
-Setting up a renderpass in Daxa is very simple. There is a command to begin a renderpass and one command to end it.
-
-Renderpasses can clear the screen as a load operation, this means we do not need the manual clear anymore.
+Setting up a renderpass in Daxa is very simple but daxa has a twist on this. As only certain commands are legal within and outside a renderpass, daxa has explicit types for encoders inside and outside of a renderpass.
 
 ```cpp
-// get a command list
-encoder.begin_renderpass({
+// Starting a renderpass changed the type of the encoder!
+daxa::RenderCommandEncoder render_encoder = std::move(encoder).begin_renderpass({
     .color_attachments = {
         {
             .image_view = /* assign in the image view */,
@@ -388,13 +389,16 @@ encoder.begin_renderpass({
     },
     .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
 });
-encoder.set_pipeline(*pipeline);
-encoder.push_constant(MyPushConstant{
+render_encoder.set_pipeline(*pipeline);
+render_encoder.push_constant(MyPushConstant{
     .my_vertex_ptr = /* and finally a GPU pointer to the vertex buffer */,
 });
-encoder.draw({.vertex_count = 3});
-encoder.end_renderpass();
+render_encoder.draw({.vertex_count = 3});
+// Ending a renderpass changes the type back!
+encoder = std::move(render_encoder).end_renderpass();
 ```
+
+Notice that the encoder is MOVED when creating the render encoder. This means it is consumed when creating the render encoder. Really it is just a type change of the object. Later we move the render command encoder back into its original type with `end_renderpass`.
 
 We begin a renderpass which clears the screen as a load op. We then set the pipeline to the raster pipeline we created earlier. Setting the push-constant uses the struct from the shared file. Finally we issue a draw-call and end the renderpass.
 
@@ -428,10 +432,10 @@ struct Uses
 ```
 These declarations make it so that the resources assigned into them within the task declaration will be properly synchronized.
 
-Finally, in our task callback, we had some unfinished areas. We can get a command list from the Task interface. The resources are accessible from the uses struct, like so:
+Finally, in our task callback, we had some unfinished areas. We can get a command encoder from the Task interface. The resources are accessible from the uses struct, like so:
 ```cpp
 // Command list
-auto encoder = ti.get_encoder();
+auto& encoder = ti.get_encoder();
 
 // Image view
 .image_view = uses.color_target.view(),
@@ -439,15 +443,16 @@ auto encoder = ti.get_encoder();
 // GPU pointer to vertex buffer
 ti.get_device().get_device_address(
     uses.vertex_buffer.buffer()
-),
+).value();
 ```
-We also use the task interface `ti` to get a reference to the device, in order to retrieve a GPU pointer to the buffer!
+We also use the task interface `ti` to get a reference to the device, in order to retrieve a GPU pointer to the buffer! 
+> `get_device_address()` returns an Optional. This is because daxa will check each id used and return an error or nullopt when the id is invalid. Do not be alarmed this is extramly efficient.
 
 ## Buffer upload
 
 We also need to upload the vertex buffer to the GPU. We could just hardcode the vertex positions and colors in the shader, but for demonstration we will upload the vertex buffer.
 
-The command list has functionality to make this easy.
+The command encoder has functionality to make this easy.
 
 Let's start by creating another pre-declared task which will upload the vertex data to a buffer:
 ```cpp
@@ -481,7 +486,7 @@ auto staging_buffer_id = ti.get_device().create_buffer({
     .name = "my staging buffer",
 });
 ```
-We can also ask the command list to destroy this temporary buffer, since we don't care about it living, but we DO need it to survive through its usage on the GPU (which won't happen until after these commands are submitted), so we tell the command list to destroy it in a deferred fashion.
+We can also ask the command encoder to destroy this temporary buffer, since we don't care about it living, but we DO need it to survive through its usage on the GPU (which won't happen until after these commands are submitted), so we tell the command encoder to destroy it in a deferred fashion.
 ```cpp
 encoder.destroy_buffer_deferred(staging_buffer_id);
 ```
@@ -490,7 +495,7 @@ encoder.destroy_buffer_deferred(staging_buffer_id);
 
 We then get the memory mapped pointer of the staging buffer, and write the data directly to it.
 ```cpp
-auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id);
+auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id).value();
 *buffer_ptr = data;
 ```
 
@@ -606,7 +611,7 @@ Before we run the `loop_task_graph`, we intend to use within the "game loop", we
 upload_task_graph.execute({});
 ```
 
-our "game loop" consists of the same stuff as the pink screen tutorial's, but instead of using a command list, we'll just execute our task graph - not forgetting to update the task swapchain image with the new swapchain that we acquired from the swapchain!
+our "game loop" consists of the same stuff as the pink screen tutorial's, but instead of using a command encoder, we'll just execute our task graph - not forgetting to update the task swapchain image with the new swapchain that we acquired from the swapchain!
 
 ```cpp
 auto swapchain_image = swapchain.acquire_next_image();

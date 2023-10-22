@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #define APPNAME "Daxa Sample: HelloTriangle Compute"
 #include <0_common/base_app.hpp>
 
@@ -93,7 +93,7 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto encoder = ti.get_encoder();
+                auto& encoder = ti.get_encoder();
                 encoder.set_pipeline(*compute_pipeline);
                 encoder.push_constant(ComputePush{
                     .image = render_image.default_view(),
@@ -110,7 +110,7 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto encoder = ti.get_encoder();
+                auto& encoder = ti.get_encoder();
                 encoder.blit_image_to_image({
                     .src_image = ti.uses[task_render_image].image(),
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,

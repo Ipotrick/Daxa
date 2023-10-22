@@ -55,7 +55,7 @@ struct UploadVertexDataTask
     std::string_view name = "upload vertices";
     void callback(daxa::TaskInterface ti)
     {
-        auto encoder = ti.get_encoder();
+        auto& encoder = ti.get_encoder();
         // This is the data we'll send to the GPU
         auto data = std::array{
             MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
@@ -110,10 +110,10 @@ struct DrawToSwapchainTask
     std::string_view name = "draw task";
     void callback(daxa::TaskInterface ti)
     {
-        auto encoder = ti.get_encoder();
+        auto& encoder = ti.get_encoder();
         auto const size_x = ti.get_device().info_image(uses.color_target.image()).value().size.x;
         auto const size_y = ti.get_device().info_image(uses.color_target.image()).value().size.y;
-        encoder.begin_renderpass({
+        auto render_encoder = std::move(encoder).begin_renderpass({
             .color_attachments = std::array{
                 daxa::RenderAttachmentInfo{
                     .image_view = uses.color_target.view(),
@@ -124,14 +124,14 @@ struct DrawToSwapchainTask
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         // Here, we'll bind the pipeline to be used in the draw call below
-        encoder.set_pipeline(*pipeline);
+        render_encoder.set_pipeline(*pipeline);
         // Set the push constant specifically for the following draw call...
-        encoder.push_constant(MyPushConstant{
-            .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()),
+        render_encoder.push_constant(MyPushConstant{
+            .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()).value(),
         });
         // and issue the draw call with the desired number of vertices.
-        encoder.draw({.vertex_count = 3});
-        encoder.end_renderpass();
+        render_encoder.draw({.vertex_count = 3});
+        encoder = std::move(render_encoder).end_renderpass();
     }
 };
 
