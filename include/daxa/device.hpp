@@ -316,12 +316,12 @@ namespace daxa
         auto get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>;
         auto get_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>
-        auto get_host_address_as(BufferId id) const -> T *
+        auto get_host_address_as(BufferId id) const -> Optional<T *>
         {
             auto opt = get_host_address(id);
             if (opt.has_value())
             {
-                return reinterpret_cast<T *>(opt.value());
+                return {reinterpret_cast<T *>(opt.value())};
             }
             return {};
         }

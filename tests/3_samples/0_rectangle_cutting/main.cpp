@@ -242,7 +242,7 @@ struct App : AppWindow<App>
         });
         recorder.destroy_buffer_deferred(vertex_staging_buffer);
 
-        auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
+        auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer).value();
         construct_scene(buffer_ptr);
 
         recorder.pipeline_barrier({

@@ -97,7 +97,7 @@ struct App : AppWindow<App>
         });
         recorder.destroy_buffer_deferred(upload_buffer_id);
 
-        auto * ptr = device.get_host_address_as<Boids>(upload_buffer_id);
+        auto * ptr = device.get_host_address_as<Boids>(upload_buffer_id).value();
 
         for (auto & boid : ptr->boids)
         {

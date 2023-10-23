@@ -205,7 +205,7 @@ namespace tests
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "staging_mipmapping_gpu_input_buffer",
                 });
-                MipmappingGpuInput * buffer_ptr = device.get_host_address_as<MipmappingGpuInput>(staging_buffer);
+                MipmappingGpuInput * buffer_ptr = device.get_host_address_as<MipmappingGpuInput>(staging_buffer).value();
                 *buffer_ptr = this->gpu_input;
                 this->gpu_input.p_mouse_x = this->gpu_input.mouse_x;
                 this->gpu_input.p_mouse_y = this->gpu_input.mouse_y;

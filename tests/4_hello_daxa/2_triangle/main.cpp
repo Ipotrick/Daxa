@@ -83,7 +83,7 @@ struct UploadVertexDataTask
 
         // We then get the memory mapped pointer of the staging buffer, and
         // write the data directly to it.
-        auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id);
+        auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id).value();
         *buffer_ptr = data;
 
         // And finally, we can just copy the data from the staging buffer
