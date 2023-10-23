@@ -205,6 +205,7 @@ namespace daxa
     struct TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBuffer *>
     {
         TaskBuffer() = default;
+        TaskBuffer(TaskBuffer const & tb) = default;
         TaskBuffer(TaskBufferInfo const & info);
 
         operator TaskBufferView() const;
@@ -244,6 +245,7 @@ namespace daxa
     struct TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {
         TaskImage() = default;
+        TaskImage(TaskImage const & ti) = default;
         TaskImage(TaskImageInfo const & info);
 
         operator TaskImageView() const;
