@@ -183,7 +183,7 @@ struct App : BaseApp<App>
                     .name = ("staging_gpu_input_buffer"),
                 });
                 recorder.destroy_buffer_deferred(staging_gpu_input_buffer);
-                auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
+                auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer).value();
                 *buffer_ptr = gpu_input;
                 recorder.copy_buffer_to_buffer({
                     .src_buffer = staging_gpu_input_buffer,

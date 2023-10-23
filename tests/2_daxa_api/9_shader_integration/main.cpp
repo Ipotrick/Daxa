@@ -88,7 +88,7 @@ namespace tests
             .i6 = {61, 62, 63},
             .i7 = 7,
         };
-        *device.get_host_address_as<TestU64Alignment>(src_buffer) = test_values;
+        *device.get_host_address_as<TestU64Alignment>(src_buffer).value() = test_values;
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
@@ -128,16 +128,15 @@ namespace tests
             .name = "align_test_dst",
         }};
         task_graph.use_persistent_buffer(dst);
-        TestShaderUses::Uses uses
-        {
-            .align_test_src = { src },
-            .align_test_dst = { dst },
+        TestShaderUses::Uses uses{
+            .align_test_src = {src},
+            .align_test_dst = {dst},
         };
         task_graph.add_task({
             .uses = daxa::detail::to_generic_uses(uses),
             .task = [&](daxa::TaskInterface const & ti)
             {
-                auto cmd = ti.get_recorder();
+                auto & cmd = ti.get_recorder();
                 cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
@@ -152,7 +151,7 @@ namespace tests
 
         device.wait_idle();
 
-        [[maybe_unused]] TestU64Alignment readback_data = *device.get_host_address_as<TestU64Alignment>(dst_buffer);
+        [[maybe_unused]] TestU64Alignment readback_data = *device.get_host_address_as<TestU64Alignment>(dst_buffer).value();
 
         std::cout << "test values before: \n";
         print_Testu6Alignment(test_values);
@@ -248,7 +247,7 @@ namespace tests
             },
             .task = [&](daxa::TaskInterface ti)
             {
-                auto cmd = ti.get_recorder();
+                auto & cmd = ti.get_recorder();
                 cmd.set_pipeline(*bindless_access);
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
@@ -271,7 +270,7 @@ namespace tests
             },
             .task = [&](daxa::TaskInterface const & ti)
             {
-                auto cmd = ti.get_recorder();
+                auto & cmd = ti.get_recorder();
                 cmd.set_pipeline(*bindless_access_followup);
                 cmd.push_constant(BindlessTestFollowPush{
                     .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),

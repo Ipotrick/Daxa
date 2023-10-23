@@ -315,7 +315,7 @@ namespace tests
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "underlying buffer",
         });
-        *app.device.get_host_address_as<float>(buffer) = 0.75f;
+        *app.device.get_host_address_as<float>(buffer).value() = 0.75f;
         auto task_buffer = daxa::TaskBuffer({
             .initial_buffers = {
                 .buffers = {&buffer, 1},

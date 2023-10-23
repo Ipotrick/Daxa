@@ -134,7 +134,7 @@ namespace tests
             .name = "timeline_query",
         });
 
-        auto & buffer_ptr = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_upload_buffer);
+        auto & buffer_ptr = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_upload_buffer).value();
 
         buffer_ptr = data;
 
@@ -260,7 +260,7 @@ namespace tests
             std::cout << "gpu execution took " << static_cast<f64>(query_results[2] - query_results[0]) / 1000000.0 << " ms" << std::endl;
         }
 
-        auto const & readback_data = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_readback_buffer);
+        auto const & readback_data = *app.device.get_host_address_as<ImageArray<SIZE_X, SIZE_Y, SIZE_Z>>(staging_readback_buffer).value();
 
         std::cout << "Original data: " << std::endl;
         {
@@ -382,7 +382,7 @@ namespace tests
                     .name = "buf",
                 });
                 auto img = app.device.create_image({
-                    .size = {1,1,1},
+                    .size = {1, 1, 1},
                     .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
                     .name = "img",
                 });
@@ -418,7 +418,7 @@ namespace tests
                     .name = "buf",
                 });
                 auto img = app.device.create_image({
-                    .size = {1,1,1},
+                    .size = {1, 1, 1},
                     .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
                     .name = "img",
                 });
@@ -453,6 +453,59 @@ namespace tests
                 << std::endl;
         }
     }
+
+    void multiple_ecl(App & app)
+    {
+        daxa::BufferId buf_a = app.device.create_buffer({.size = 4, .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, .name = "buf_a"});
+        daxa::BufferId buf_b = app.device.create_buffer({.size = 4, .name = "buf_b"});
+        daxa::BufferId buf_c = app.device.create_buffer({.size = 4, .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buf_c"});
+
+        constexpr daxa::u32 TEST_VALUE = 0xf0abf0ab;
+
+        *app.device.get_host_address_as<uint32_t>(buf_a).value() = TEST_VALUE;
+
+        daxa::CommandRecorder cmdr = app.device.create_command_recorder({});
+
+        // create first executable command list
+        cmdr.copy_buffer_to_buffer({
+            .src_buffer = buf_a,
+            .dst_buffer = buf_b,
+            .size = 4,
+        });
+        daxa::ExecutableCommandList exc_commands_0 = cmdr.complete_current_commands();
+
+        // create a second executable command list
+        cmdr.copy_buffer_to_buffer({
+            .src_buffer = buf_b,
+            .dst_buffer = buf_c,
+            .size = 4,
+        });
+        daxa::ExecutableCommandList exc_commands_1 = cmdr.complete_current_commands();
+
+        daxa::BinarySemaphore sema = app.device.create_binary_semaphore({});
+
+        // submit both executable command lists
+        // make it multiple submits to showcase that these really are two different VkCommandBuffers from a single VkCommandPool
+        app.device.submit_commands({
+            .command_lists = std::array{exc_commands_0},
+            .signal_binary_semaphores = std::array{sema},
+        });
+        app.device.submit_commands({
+            .wait_stages = daxa::PipelineStageFlagBits::TRANSFER,
+            .command_lists = std::array{exc_commands_1},
+            .wait_binary_semaphores = std::array{sema},
+        });
+
+        app.device.wait_idle();
+
+        daxa::u32 readback_value = *app.device.get_host_address_as<uint32_t>(buf_c).value();
+
+        DAXA_DBG_ASSERT_TRUE_M(readback_value == TEST_VALUE, "TEST VALUE DOES NOT MATCH READBACK VALUE");
+
+        app.device.destroy_buffer(buf_c);
+        app.device.destroy_buffer(buf_b);
+        app.device.destroy_buffer(buf_a);
+    }
 } // namespace tests
 
 auto main() -> int
@@ -468,6 +521,10 @@ auto main() -> int
     {
         App app = {};
         tests::deferred_destruction(app);
+    }
+    {
+        App app = {};
+        tests::multiple_ecl(app);
     }
     // Tests how long the version in ids can last for a single index.
     // {

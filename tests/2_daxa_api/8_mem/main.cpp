@@ -84,7 +84,7 @@ auto main() -> int
 
     device.wait_idle();
 
-    u32 const * elements = device.get_host_address_as<u32>(result_buffer);
+    u32 const * elements = device.get_host_address_as<u32>(result_buffer).value();
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
         for (u32 element = 0; element < ELEMENT_COUNT; ++element)

@@ -183,7 +183,7 @@ namespace daxa
                 .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count),
             });
-            auto * vtx_dst = info.device.get_host_address_as<ImDrawVert>(staging_vbuffer);
+            auto * vtx_dst = info.device.get_host_address_as<ImDrawVert>(staging_vbuffer).value();
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 ImDrawList const * draws = draw_data->CmdLists[n];
@@ -196,7 +196,7 @@ namespace daxa
                 .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count),
             });
-            auto * idx_dst = info.device.get_host_address_as<ImDrawIdx>(staging_ibuffer);
+            auto * idx_dst = info.device.get_host_address_as<ImDrawIdx>(staging_ibuffer).value();
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
             {
                 ImDrawList const * draws = draw_data->CmdLists[n];
@@ -345,7 +345,7 @@ namespace daxa
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         });
 
-        u8 * staging_buffer_data = this->info.device.get_host_address_as<u8>(texture_staging_buffer);
+        u8 * staging_buffer_data = this->info.device.get_host_address_as<u8>(texture_staging_buffer).value();
         std::memcpy(staging_buffer_data, pixels, upload_size);
 
         auto recorder = this->info.device.create_command_recorder({.name = "dear ImGui Font Sheet Upload"});
