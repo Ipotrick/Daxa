@@ -4,7 +4,7 @@
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
 #include <daxa/swapchain.hpp>
-#include <daxa/command_list.hpp>
+#include <daxa/command_recorder.hpp>
 #include <daxa/sync.hpp>
 
 namespace daxa
@@ -208,7 +208,7 @@ namespace daxa
     struct CommandSubmitInfo
     {
         PipelineStageFlags wait_stages = {};
-        std::span<CommandList const> command_lists = {};
+        std::span<ExecutableCommandList const> command_lists = {};
         std::span<BinarySemaphore const> wait_binary_semaphores = {};
         std::span<BinarySemaphore const> signal_binary_semaphores = {};
         std::span<std::pair<TimelineSemaphore, u64> const> wait_timeline_semaphores = {};
@@ -330,7 +330,7 @@ namespace daxa
         auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
 
         auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
-        auto create_command_list(CommandListInfo const & info) -> CommandList;
+        auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;
         auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
         auto create_event(EventInfo const & info) -> Event;
@@ -351,8 +351,8 @@ namespace daxa
         /// NOTE:
         /// * this function will block until it gains an exlusive resource lock
         /// * command lists may hold shared lifetime locks, those must all unlock before an exclusive lock can be made
-        /// * look at CommandList for more info on this
-        /// * SoftwareCommandList is excempt from this limitation,
+        /// * look at CommandRecorder for more info on this
+        /// * SoftwareCommandRecorder is excempt from this limitation,
         ///   you can freely record those in parallel with collect_garbage
         void collect_garbage();
 

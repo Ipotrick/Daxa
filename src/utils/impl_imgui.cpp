@@ -121,10 +121,10 @@ namespace daxa
         this->object = new ImplImGuiRenderer(info);
     }
 
-    void ImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
+    void ImGuiRenderer::record_commands(ImDrawData * draw_data, CommandRecorder & recorder, ImageId target_image, u32 size_x, u32 size_y)
     {
         auto & impl = *r_cast<ImplImGuiRenderer *>(this->object);
-        impl.record_commands(draw_data, cmd_list, target_image, size_x, size_y);
+        impl.record_commands(draw_data, recorder, target_image, size_x, size_y);
     }
 
     auto ImGuiRenderer::create_texture_id(ImGuiImageContext const & context) -> ImTextureID
@@ -155,7 +155,7 @@ namespace daxa
         });
     }
 
-    void ImplImGuiRenderer::record_commands(ImDrawData * draw_data, CommandList & cmd_list, ImageId target_image, u32 size_x, u32 size_y)
+    void ImplImGuiRenderer::record_commands(ImDrawData * draw_data, CommandRecorder & recorder, ImageId target_image, u32 size_x, u32 size_y)
     {
         ++frame_count;
         if ((draw_data != nullptr) && draw_data->TotalIdxCount > 0)
@@ -190,7 +190,7 @@ namespace daxa
                 std::memcpy(vtx_dst, draws->VtxBuffer.Data, static_cast<usize>(draws->VtxBuffer.Size) * sizeof(ImDrawVert));
                 vtx_dst += draws->VtxBuffer.Size;
             }
-            cmd_list.destroy_buffer_deferred(staging_vbuffer);
+            recorder.destroy_buffer_deferred(staging_vbuffer);
             auto staging_ibuffer = info.device.create_buffer({
                 .size = static_cast<u32>(ibuffer_needed_size),
                 .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
@@ -203,33 +203,34 @@ namespace daxa
                 std::memcpy(idx_dst, draws->IdxBuffer.Data, static_cast<usize>(draws->IdxBuffer.Size) * sizeof(ImDrawIdx));
                 idx_dst += draws->IdxBuffer.Size;
             }
-            cmd_list.destroy_buffer_deferred(staging_ibuffer);
-            cmd_list.pipeline_barrier({
+            recorder.destroy_buffer_deferred(staging_ibuffer);
+            recorder.pipeline_barrier({
                 .src_access = daxa::AccessConsts::HOST_WRITE,
                 .dst_access = daxa::AccessConsts::TRANSFER_READ,
             });
-            cmd_list.copy_buffer_to_buffer({
+            recorder.copy_buffer_to_buffer({
                 .src_buffer = staging_ibuffer,
                 .dst_buffer = ibuffer,
                 .size = ibuffer_needed_size,
             });
-            cmd_list.copy_buffer_to_buffer({
+            recorder.copy_buffer_to_buffer({
                 .src_buffer = staging_vbuffer,
                 .dst_buffer = vbuffer,
                 .size = vbuffer_needed_size,
             });
-            cmd_list.pipeline_barrier({
+            recorder.pipeline_barrier({
                 .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                 .dst_access = daxa::AccessConsts::VERTEX_SHADER_READ | daxa::AccessConsts::INDEX_INPUT_READ,
             });
 
-            cmd_list.set_pipeline(raster_pipeline);
-            cmd_list.begin_renderpass({
+            auto render_recorder = std::move(recorder).begin_renderpass({
                 .color_attachments = std::array{RenderAttachmentInfo{.image_view = target_image.default_view(), .load_op = AttachmentLoadOp::LOAD}},
                 .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
             });
 
-            cmd_list.set_index_buffer({
+            render_recorder.set_pipeline(raster_pipeline);
+
+            render_recorder.set_index_buffer({
                 .id = ibuffer,
                 .offset = 0,
                 .index_type = IndexType::uint16,
@@ -270,7 +271,7 @@ namespace daxa
                     scissor.y = static_cast<i32>(clip_min.y);
                     scissor.width = static_cast<u32>(clip_max.x - clip_min.x);
                     scissor.height = static_cast<u32>(clip_max.y - clip_min.y);
-                    cmd_list.set_scissor(scissor);
+                    render_recorder.set_scissor(scissor);
 
                     // Draw
                     auto const image_context = this->image_sampler_pairs.at(std::bit_cast<usize>(pcmd->TextureId));
@@ -280,8 +281,8 @@ namespace daxa
                     push.vbuffer_offset = pcmd->VtxOffset + static_cast<u32>(global_vtx_offset);
                     push.ibuffer_offset = pcmd->IdxOffset + static_cast<u32>(global_idx_offset);
 
-                    cmd_list.push_constant(push);
-                    cmd_list.draw_indexed({
+                    render_recorder.push_constant(push);
+                    render_recorder.draw_indexed({
                         .index_count = pcmd->ElemCount,
                         .first_index = pcmd->IdxOffset + static_cast<u32>(global_idx_offset),
                         .vertex_offset = static_cast<i32>(pcmd->VtxOffset) + global_vtx_offset,
@@ -291,7 +292,7 @@ namespace daxa
                 global_vtx_offset += draws->VtxBuffer.Size;
             }
 
-            cmd_list.end_renderpass();
+            recorder = std::move(render_recorder).end_renderpass();
         }
         this->image_sampler_pairs.resize(1);
     }
@@ -347,8 +348,8 @@ namespace daxa
         u8 * staging_buffer_data = this->info.device.get_host_address_as<u8>(texture_staging_buffer);
         std::memcpy(staging_buffer_data, pixels, upload_size);
 
-        auto cmd_list = this->info.device.create_command_list({.name = "dear ImGui Font Sheet Upload"});
-        cmd_list.pipeline_barrier_image_transition({
+        auto recorder = this->info.device.create_command_recorder({.name = "dear ImGui Font Sheet Upload"});
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
             .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -360,7 +361,7 @@ namespace daxa
             },
             .image_id = font_sheet,
         });
-        cmd_list.copy_buffer_to_image({
+        recorder.copy_buffer_to_image({
             .buffer = texture_staging_buffer,
             .image = font_sheet,
             .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -372,7 +373,7 @@ namespace daxa
             .image_offset = {0, 0, 0},
             .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
         });
-        cmd_list.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
             .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -385,9 +386,9 @@ namespace daxa
             },
             .image_id = font_sheet,
         });
-        cmd_list.complete();
+        auto executable_commands = recorder.complete_current_commands();
         this->info.device.submit_commands({
-            .command_lists = {&cmd_list, 1},
+            .command_lists = std::array{executable_commands},
         });
         this->info.device.destroy_buffer(texture_staging_buffer);
         this->font_sampler = this->info.device.create_sampler({.name = "ImGui Font Sampler"});

@@ -59,7 +59,7 @@ graph.add_task({
   },
   .task = [=](daxa::TaskInterface ti)
   {
-    auto cmd = ti.get_command_list();
+    auto cmd = ti.get_recorder();
     copy_image_to_image(ti.uses[src].image(), ti.uses[dst].image(), blur_width);
   },
   .name = "example task",
@@ -82,7 +82,7 @@ struct MyTask
   int blur_width = {};
   void callback(daxa::TaskInterface ti)
   {
-    auto cmd = ti.get_command_list();
+    auto cmd = ti.get_recorder();
     copy_image_to_image(uses.src.image(), uses.dst.image(), blur_width);
   }
 };

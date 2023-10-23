@@ -387,15 +387,15 @@ void daxa_ImplSwapchain::partial_cleanup()
 void daxa_ImplSwapchain::full_cleanup()
 {
     this->partial_cleanup();
-    if (this->vk_surface != VK_NULL_HANDLE)
-    {
-        vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
-    }
     if (this->vk_swapchain != VK_NULL_HANDLE)
     {
         // Due to wsi limitations we need to wait idle before destroying the swapchain.
         vkDeviceWaitIdle(this->device->vk_device);
         vkDestroySwapchainKHR(this->device->vk_device, this->vk_swapchain, nullptr);
+    }
+    if (this->vk_surface != VK_NULL_HANDLE)
+    {
+        vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
     }
     if (this->device != nullptr)
     {

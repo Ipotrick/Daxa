@@ -71,7 +71,7 @@ add_library(daxa STATIC
     "src/impl_core.cpp"
     "src/impl_pipeline.cpp"
     "src/impl_swapchain.cpp"
-    "src/impl_command_list.cpp"
+    "src/impl_command_recorder.cpp"
     "src/impl_gpu_resources.cpp"
     "src/impl_sync.cpp"
     "src/impl_dependencies.cpp"

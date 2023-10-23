@@ -11,7 +11,7 @@ namespace daxa
 {
     static inline constexpr usize CONSTANT_BUFFER_BINDINGS_COUNT = 8;
 
-    struct CommandListInfo
+    struct CommandRecorderInfo
     {
         std::string_view name = "";
     };
@@ -229,9 +229,68 @@ namespace daxa
         IndexType index_type = IndexType::uint32;
     };
 
+    struct ExecutableCommandList : ManagedPtr<ExecutableCommandList, daxa_ExecutableCommandList>
+    {
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
+    struct CommandRecorder;
+    struct RenderCommandRecorder
+    {
+      private:
+        daxa_CommandRecorder internal = {};
+        friend struct CommandRecorder;
+
+      public:
+        RenderCommandRecorder() = default;
+        ~RenderCommandRecorder();
+        RenderCommandRecorder(RenderCommandRecorder const &) = delete;
+        RenderCommandRecorder & operator=(RenderCommandRecorder const &) = delete;
+        RenderCommandRecorder(RenderCommandRecorder &&);
+        RenderCommandRecorder & operator=(RenderCommandRecorder &&);
+
+        /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
+        ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
+        auto end_renderpass() && -> CommandRecorder;
+
+        void push_constant_vptr(void const * data, u32 size);
+        template <typename T>
+        void push_constant(T const & constant)
+        {
+            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
+        }
+        /// @brief  Binds a buffer region to the uniform buffer slot.
+        ///         There are 8 uniform buffer slots (indices range from 0 to 7).
+        ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
+        ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
+        ///         This is in stark contrast to OpenGl like bindings wich are visible immediately to all commands after binding.
+        ///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
+        ///         Set uniform buffer slots are cleared after a pipeline is bound.
+        ///         Before setting another pipeline, they need to be set again.
+        /// @param info parameters.
+        void set_uniform_buffer(SetUniformBufferInfo const & info);
+        void set_pipeline(RasterPipeline const & pipeline);
+        void set_viewport(ViewportInfo const & info);
+        void set_scissor(Rect2D const & info);
+        void set_depth_bias(DepthBiasInfo const & info);
+        void set_index_buffer(SetIndexBufferInfo const & info);
+
+        void draw(DrawInfo const & info);
+        void draw_indexed(DrawIndexedInfo const & info);
+        void draw_indirect(DrawIndirectInfo const & info);
+        void draw_indirect_count(DrawIndirectCountInfo const & info);
+        void draw_mesh_tasks(u32 x, u32 y, u32 z);
+        void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
+        void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
+    };
+
     // TODO: Add software command list for more robust uncoupled command recording.
     /**
-     * @brief   CommandList is used to encode commands into a VkCommandBuffer.
+     * @brief   CommandRecorder is used to encode commands into a VkCommandBuffer.
      *          In order to submit a command list one must complete it.
      *          Completing a command list does SIGNIFICANT driver cpu work,
      *          so do not always complete just before submitting.
@@ -240,7 +299,7 @@ namespace daxa
      * * must be externally synchronized
      * * can be passed between different threads
      * * may only be accessed by one thread at a time
-     * NOTE:
+     * WARNING:
      * * creating a command list, it will LOCK resource lifetimes
      * * calling collect_garbage will BLOCK until all resource lifetime locks have been unlocked
      * * completing a command list will remove its lock on the resource lifetimes
@@ -248,9 +307,19 @@ namespace daxa
      * * using deferred destructions will make the completed command list not reusable,
      *   as resources can only be destroyed once
      */
-    struct CommandList final : ManagedPtr<CommandList, daxa_CommandList>
+    struct CommandRecorder
     {
-        CommandList() = default;
+      private:
+        daxa_CommandRecorder internal = {};
+        friend struct RenderCommandRecorder;
+
+      public:
+        CommandRecorder() = default;
+        ~CommandRecorder();
+        CommandRecorder(CommandRecorder const &) = delete;
+        CommandRecorder & operator=(CommandRecorder const &) = delete;
+        CommandRecorder(CommandRecorder &&);
+        CommandRecorder & operator=(CommandRecorder &&);
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopyInfo const & info);
@@ -290,7 +359,6 @@ namespace daxa
         /// @param info parameters.
         void set_uniform_buffer(SetUniformBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
-        void set_pipeline(RasterPipeline const & pipeline);
         void dispatch(u32 x, u32 y = 1, u32 z = 1);
         void dispatch_indirect(DispatchIndirectInfo const & info);
 
@@ -318,22 +386,19 @@ namespace daxa
         /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
         /// @param info parameters.
-        void begin_renderpass(RenderPassBeginInfo const & info);
-        /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
-        ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
-        void end_renderpass();
-        void set_viewport(ViewportInfo const & info);
-        void set_scissor(Rect2D const & info);
-        void set_depth_bias(DepthBiasInfo const & info);
-        void set_index_buffer(SetIndexBufferInfo const & info);
-
-        void draw(DrawInfo const & info);
-        void draw_indexed(DrawIndexedInfo const & info);
-        void draw_indirect(DrawIndirectInfo const & info);
-        void draw_indirect_count(DrawIndirectCountInfo const & info);
-        void draw_mesh_tasks(u32 x, u32 y, u32 z);
-        void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
-        void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
+        auto begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandRecorder;
+        // void set_pipeline(RasterPipeline const & pipeline);
+        // void set_viewport(ViewportInfo const & info);
+        // void set_scissor(Rect2D const & info);
+        // void set_depth_bias(DepthBiasInfo const & info);
+        // void set_index_buffer(SetIndexBufferInfo const & info);
+        // void draw(DrawInfo const & info);
+        // void draw_indexed(DrawIndexedInfo const & info);
+        // void draw_indirect(DrawIndirectInfo const & info);
+        // void draw_indirect_count(DrawIndirectCountInfo const & info);
+        // void draw_mesh_tasks(u32 x, u32 y, u32 z);
+        // void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
+        // void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);
@@ -341,18 +406,11 @@ namespace daxa
         void begin_label(CommandLabelInfo const & info);
         void end_label();
 
-        void complete();
-        auto is_complete() const -> bool;
+        [[nodiscard]] auto complete_current_commands() -> ExecutableCommandList;
 
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
-        auto info() const -> CommandListInfo const &;
-
-      protected:
-        template <typename T, typename H_T>
-        friend struct ManagedPtr;
-        static auto inc_refcnt(ImplHandle const * object) -> u64;
-        static auto dec_refcnt(ImplHandle const * object) -> u64;
+        [[nodiscard]] auto info() const -> CommandRecorderInfo const &;
     };
 } // namespace daxa

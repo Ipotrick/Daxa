@@ -5,7 +5,7 @@
 #include <daxa/c/sync.h>
 #include <daxa/c/gpu_resources.h>
 #include <daxa/c/pipeline.h>
-#include <daxa/c/command_list.h>
+#include <daxa/c/command_recorder.h>
 #include <daxa/c/swapchain.h>
 #include <daxa/c/sync.h>
 
@@ -184,7 +184,7 @@ typedef struct
 typedef struct
 {
     VkPipelineStageFlags wait_stages;
-    daxa_CommandList const * command_lists;
+    daxa_ExecutableCommandList const * command_lists;
     uint64_t command_list_count;
     daxa_BinarySemaphore const * wait_binary_semaphores;
     uint64_t wait_binary_semaphore_count;
@@ -296,7 +296,7 @@ daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo co
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_create_command_list(daxa_Device device, daxa_CommandListInfo const * info, daxa_CommandList * out_command_list);
+daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderInfo const * info, daxa_CommandRecorder * out_command_list);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

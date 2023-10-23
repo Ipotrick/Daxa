@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #define APPNAME "Daxa Sample: HelloTriangle Compute"
 #include <0_common/base_app.hpp>
 
@@ -93,13 +93,13 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_command_list();
-                cmd_list.set_pipeline(*compute_pipeline);
-                cmd_list.push_constant(ComputePush{
+                auto& recorder = ti.get_recorder();
+                recorder.set_pipeline(*compute_pipeline);
+                recorder.push_constant(ComputePush{
                     .image = render_image.default_view(),
                     .frame_dim = {size_x, size_y},
                 });
-                cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
+                recorder.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
             },
             .name = APPNAME_PREFIX("Draw (Compute)"),
         });
@@ -110,8 +110,8 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_command_list();
-                cmd_list.blit_image_to_image({
+                auto& recorder = ti.get_recorder();
+                recorder.blit_image_to_image({
                     .src_image = ti.uses[task_render_image].image(),
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.uses[task_swapchain_image].image(),
