@@ -172,7 +172,7 @@ static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
     .max_allowed_images = 10000,
     .max_allowed_buffers = 10000,
     .max_allowed_samplers = 400,
-    .name = {.data = {}, .size = 0},
+    .name = {.data = NULL, .size = 0},
 };
 
 typedef struct
@@ -257,7 +257,7 @@ daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
-DAXA_EXPORT  daxa_Result
+DAXA_EXPORT daxa_Result
 daxa_dvc_info_image(daxa_Device device, daxa_ImageId image, daxa_ImageInfo * out_info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageViewInfo * out_info);

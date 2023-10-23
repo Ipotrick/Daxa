@@ -23,7 +23,7 @@ namespace daxa
     {
         NativeWindowHandle native_window;
         NativeWindowPlatform native_window_platform;
-        i32(*surface_format_selector)(Format) = default_format_score;
+        i32 (*surface_format_selector)(Format) = default_format_score;
         PresentMode present_mode = PresentMode::FIFO;
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
@@ -34,12 +34,12 @@ namespace daxa
     /**
      * @brief   Swapchain represents the surface, swapchain and synch primives reguarding acquire and present operations.
      *          The swapchain has a cpu and gpu timeline in order to ensure proper frames in flight.
-     * 
-     * THREADSAFETY: 
+     *
+     * THREADSAFETY:
      * * must be externally synchronized
      * * can be passed between different threads
      * * may be accessed by only one thread at the same time
-    */
+     */
     struct Swapchain final : ManagedPtr<Swapchain, daxa_Swapchain>
     {
         Swapchain() = default;
@@ -69,7 +69,7 @@ namespace daxa
 
         /// @brief  When the window size changes the swapchain is in an invalid state for new commands.
         ///         Calling resize will recreate the swapchain with the proper window size.
-        /// WARNING: 
+        /// WARNING:
         /// * Due to wsi limitations this function will WAIT IDLE THE DEVICE.
         /// * If the function throws an error, The swapchain will be invalidated and unusable!
         void resize();
@@ -81,7 +81,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the swapchain is destroyed
         /// * reference is INVALIDATED after calling either resize OR set_present_mode
-        /// @return reference to the objects info 
+        /// @return reference to the objects info
         auto info() const -> SwapchainInfo const &;
         auto get_surface_extent() const -> Extent2D;
         auto get_format() const -> Format;

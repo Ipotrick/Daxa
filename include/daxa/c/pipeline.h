@@ -97,7 +97,6 @@ typedef struct
 } daxa_BlendInfo;
 _DAXA_DECL_OPTIONAL(daxa_BlendInfo)
 
-
 static const daxa_BlendInfo DAXA_DEFAULT_BLEND_INFO = {
     .src_color_blend_factor = VK_BLEND_FACTOR_ONE,
     .dst_color_blend_factor = VK_BLEND_FACTOR_ZERO,
@@ -121,7 +120,6 @@ typedef struct
     VkTessellationDomainOrigin origin;
 } daxa_TesselationInfo;
 _DAXA_DECL_OPTIONAL(daxa_TesselationInfo)
-
 
 typedef struct
 {

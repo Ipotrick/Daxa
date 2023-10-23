@@ -36,6 +36,7 @@ namespace daxa
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         auto info() const -> InstanceInfo const &;
+
       protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;

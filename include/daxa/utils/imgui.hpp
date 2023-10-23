@@ -32,7 +32,7 @@ namespace daxa
     };
 
     struct ImplImGuiRenderer;
-    struct ImGuiRenderer : ManagedPtr<ImGuiRenderer, ImplImGuiRenderer*>
+    struct ImGuiRenderer : ManagedPtr<ImGuiRenderer, ImplImGuiRenderer *>
     {
         ImGuiRenderer() = default;
 

@@ -155,6 +155,7 @@ namespace daxa
             {
                 m_data[i] = in_data[i];
             }
+            m_size = static_cast<FixedListSizeT>(in_size);
         }
         template <usize IN_SIZE>
             requires(IN_SIZE <= CAPACITY)
@@ -165,6 +166,21 @@ namespace daxa
                 m_data[i] = in[i];
             }
             m_size = IN_SIZE;
+        }
+        FixedList(std::initializer_list<T> const & in)
+        {
+            auto in_size = std::min<FixedListSizeT>(CAPACITY, static_cast<FixedListSizeT>(in.size()));
+            FixedListSizeT i = 0;
+            for (auto const & elem : in)
+            {
+                if (!(i < in_size))
+                {
+                    break;
+                }
+                m_data[i] = elem;
+                ++i;
+            }
+            m_size = in_size;
         }
         auto at(FixedListSizeT i) -> T &
         {
@@ -183,7 +199,7 @@ namespace daxa
         {
             return this->m_data[i];
         }
-        static auto capacity() -> FixedListSizeT
+        static constexpr auto capacity() -> FixedListSizeT
         {
             return CAPACITY;
         }
@@ -236,7 +252,7 @@ namespace daxa
             {
                 DAXA_DBG_ASSERT_TRUE_M(this->m_size < this->capacity(), "EXCEEDED CAPACITY");
                 this->m_data[this->m_size++] = *(c_str++);
-            };
+            }
         }
         constexpr SmallString(std::string_view sw)
         {

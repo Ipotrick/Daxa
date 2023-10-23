@@ -21,12 +21,12 @@ namespace daxa
 
     /**
      * @brief   Represents a pipeline state object, usable in recording commands.
-     * 
-     * THREADSAFETY: 
+     *
+     * THREADSAFETY:
      * * is internally synchronized
      * * may be passed to different threads
      * * may be used by multiple threads at the same time.
-    */
+     */
     struct ComputePipeline final : ManagedPtr<ComputePipeline, daxa_ComputePipeline>
     {
         ComputePipeline() = default;
@@ -105,12 +105,12 @@ namespace daxa
 
     /**
      * @brief   Represents a pipeline state object, usable in recording commands.
-     * 
-     * THREADSAFETY: 
+     *
+     * THREADSAFETY:
      * * is internally synchronized
      * * may be passed to different threads
      * * may be used by multiple threads at the same time.
-    */
+     */
     struct RasterPipeline final : ManagedPtr<RasterPipeline, daxa_RasterPipeline>
     {
         RasterPipeline() = default;

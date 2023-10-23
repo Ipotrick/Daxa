@@ -316,7 +316,7 @@ auto main() -> int
     {
         // Now we record a secondary task graph, that is only executed once.
         // This task graph uploads the vertex buffer.
-        // Task Graph resources automatically link between graphcs at runtime, 
+        // Task Graph resources automatically link between graphcs at runtime,
         // so you dont need to be concerned about sync of the vertex buffer between the two graphs.
         auto upload_task_graph = daxa::TaskGraph({
             .device = device,
@@ -327,7 +327,7 @@ auto main() -> int
 
         // Now we can record our tasks!
 
-        // First thing we'll do is record the upload task. 
+        // First thing we'll do is record the upload task.
         upload_task_graph.add_task(UploadVertexDataTask{
             .uses = {
                 .vertex_buffer = task_vertex_buffer.view(),
