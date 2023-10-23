@@ -186,5 +186,9 @@ namespace daxa
         {
             this->data[size++] = {VK_EXT_MESH_SHADER_EXTENSION_NAME};
         }
+        if (info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
+        {
+            this->data[size++] = {VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME};
+        }
     }
 } // namespace daxa

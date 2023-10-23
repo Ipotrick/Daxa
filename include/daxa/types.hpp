@@ -155,6 +155,7 @@ namespace daxa
             {
                 m_data[i] = in_data[i];
             }
+            m_size = static_cast<FixedListSizeT>(in_size);
         }
         template <usize IN_SIZE>
             requires(IN_SIZE <= CAPACITY)
