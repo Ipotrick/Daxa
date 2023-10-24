@@ -646,7 +646,7 @@ namespace daxa
 
     auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
-        DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<std::monostate>(a_info.shader_info.source), "must provide shader source");
+        DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
         auto pipe_result = create_compute_pipeline(a_info);
         if (pipe_result.is_err())
         {
