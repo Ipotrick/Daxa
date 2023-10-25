@@ -851,6 +851,9 @@ namespace daxa
         return daxa::get_if<Variant<Ts...>::template index_of<T>>(v);
     }
 
+    struct Monostate {
+    };
+
     #undef DXV_FWD
     #undef DXV_MOV
 

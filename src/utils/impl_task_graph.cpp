@@ -1337,7 +1337,7 @@ namespace daxa
         tl_new_access_slices.clear();
     }
 
-    using ShaderUseIdOffsetTable = std::vector<Variant<std::pair<TaskImageView, usize>, std::pair<TaskBufferView, usize>, std::monostate>>;
+    using ShaderUseIdOffsetTable = std::vector<Variant<std::pair<TaskImageView, usize>, std::pair<TaskBufferView, usize>, Monostate>>;
 
     void update_buffer_first_access(PerPermTaskBuffer & buffer, usize new_access_batch, usize new_access_submit, Access new_access)
     {
@@ -1457,7 +1457,7 @@ namespace daxa
                 // When the latest access  is a read that did not require a barrier before we also do not need a barrier now.
                 // So skip, if the latest access is read and there is no latest_access_read_barrier_index present.
                 bool const is_last_access_none = task_buffer.latest_access == AccessConsts::NONE;
-                if (!is_last_access_none && !(daxa::holds_alternative<std::monostate>(task_buffer.latest_access_read_barrier_index) && is_last_access_read))
+                if (!is_last_access_none && !(daxa::holds_alternative<Monostate>(task_buffer.latest_access_read_barrier_index) && is_last_access_read))
                 {
                     if (is_last_access_read && is_current_access_read)
                     {
@@ -1746,7 +1746,7 @@ namespace daxa
                                 }
                                 else
                                 {
-                                    ret_new_use_tracked_slice.latest_access_read_barrier_index = std::monostate{};
+                                    ret_new_use_tracked_slice.latest_access_read_barrier_index = Monostate{};
                                 }
                             }
                         }
