@@ -117,22 +117,22 @@ namespace daxa
             return *this;
         }
 
-        auto has_value() const -> bool
+        [[nodiscard]] auto has_value() const -> bool
         {
             return this->m_has_value;
         }
 
-        auto value() -> T &
+        [[nodiscard]] auto value() -> T &
         {
             return this->m_value;
         }
 
-        auto value() const -> T const &
+        [[nodiscard]] auto value() const -> T const &
         {
             return this->m_value;
         }
 
-        auto value_or(T const & v) const -> T const &
+        [[nodiscard]] auto value_or(T const & v) const -> T const &
         {
             return has_value() ? value() : v;
         }
@@ -182,40 +182,40 @@ namespace daxa
             }
             m_size = in_size;
         }
-        auto at(FixedListSizeT i) -> T &
+        [[nodiscard]] auto at(FixedListSizeT i) -> T &
         {
             DAXA_DBG_ASSERT_TRUE_M(i < m_size, "INDEX OUT OF RANGE");
             return this->m_data.at(i);
         }
-        auto at(FixedListSizeT i) const -> T const &
+        [[nodiscard]] auto at(FixedListSizeT i) const -> T const &
         {
             return this->m_data.at(i);
         }
-        auto operator[](FixedListSizeT i) -> T &
+        [[nodiscard]] auto operator[](FixedListSizeT i) -> T &
         {
             return this->m_data[i];
         }
-        auto operator[](FixedListSizeT i) const -> T const &
+        [[nodiscard]] auto operator[](FixedListSizeT i) const -> T const &
         {
             return this->m_data[i];
         }
-        static constexpr auto capacity() -> FixedListSizeT
+        [[nodiscard]] static constexpr auto capacity() -> FixedListSizeT
         {
             return CAPACITY;
         }
-        auto size() const -> FixedListSizeT
+        [[nodiscard]] auto size() const -> FixedListSizeT
         {
             return this->m_size;
         }
-        auto data() const -> T const *
+        [[nodiscard]] auto data() const -> T const *
         {
             return this->m_data.data();
         }
-        auto data() -> T *
+        [[nodiscard]] auto data() -> T *
         {
             return this->m_data.data();
         }
-        auto empty() const -> bool
+        [[nodiscard]] auto empty() const -> bool
         {
             return this->m_size == 0;
         }
@@ -229,16 +229,16 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "ALREADY EMPTY");
             this->m_data[this->m_size--].~T();
         }
-        auto back() -> T &
+        [[nodiscard]] auto back() -> T &
         {
             DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "EMPTY");
             return this->m_data[this->m_size - 1];
         }
-        auto span() -> std::span<T>
+        [[nodiscard]] auto span() -> std::span<T>
         {
             return {this->m_data.data(), static_cast<usize>(this->m_size)};
         }
-        auto span() const -> std::span<T const>
+        [[nodiscard]] auto span() const -> std::span<T const>
         {
             return {this->m_data.data(), static_cast<usize>(this->m_size)};
         }
@@ -274,11 +274,11 @@ namespace daxa
         }
         SmallString(SmallString const & other) = default;
         SmallString & operator=(SmallString const & other) = default;
-        auto view() const -> std::string_view
+        [[nodiscard]] auto view() const -> std::string_view
         {
             return {this->m_data.data(), static_cast<usize>(this->m_size)};
         }
-        auto c_str() const -> std::array<char, 40>
+        [[nodiscard]] auto c_str() const -> std::array<char, 40>
         {
             std::array<char, 40> ret;
             for (u8 i = 0; i < this->m_size; ++i)
@@ -1114,38 +1114,38 @@ namespace daxa
     struct Flags final
     {
         typename Properties::Data data;
-        inline constexpr auto operator|=(Flags const & other) -> Flags &
+        [[nodiscard]] inline constexpr auto operator|=(Flags const & other) -> Flags &
         {
             data |= other.data;
             return *this;
         }
-        inline constexpr auto operator&=(Flags const & other) -> Flags &
+        [[nodiscard]] inline constexpr auto operator&=(Flags const & other) -> Flags &
         {
             data &= other.data;
             return *this;
         }
-        inline constexpr auto operator^=(Flags const & other) -> Flags &
+        [[nodiscard]] inline constexpr auto operator^=(Flags const & other) -> Flags &
         {
             data ^= other.data;
             return *this;
         }
-        inline constexpr auto operator~() const -> Flags
+        [[nodiscard]] inline constexpr auto operator~() const -> Flags
         {
             return {~data};
         }
-        inline constexpr auto operator|(Flags const & other) const -> Flags
+        [[nodiscard]] inline constexpr auto operator|(Flags const & other) const -> Flags
         {
             return {data | other.data};
         }
-        inline constexpr auto operator&(Flags const & other) const -> Flags
+        [[nodiscard]] inline constexpr auto operator&(Flags const & other) const -> Flags
         {
             return {data & other.data};
         }
-        inline constexpr auto operator^(Flags const & other) const -> Flags
+        [[nodiscard]] inline constexpr auto operator^(Flags const & other) const -> Flags
         {
             return {data ^ other.data};
         }
-        inline constexpr auto operator<=>(Flags const & other) const = default;
+        [[nodiscard]] inline constexpr auto operator<=>(Flags const & other) const = default;
     };
 
     enum struct MsgSeverity
@@ -1207,7 +1207,7 @@ namespace daxa
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
     };
 
-    auto to_string(ImageUsageFlags const &) -> std::string;
+    [[nodiscard]] auto to_string(ImageUsageFlags const &) -> std::string;
 
     struct MemoryFlagsProperties
     {
@@ -1260,7 +1260,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(ImageLayout layout) -> std::string_view;
+    [[nodiscard]] auto to_string(ImageLayout layout) -> std::string_view;
 
     struct ImageMipArraySlice
     {
@@ -1271,13 +1271,13 @@ namespace daxa
 
         friend auto operator<=>(ImageMipArraySlice const &, ImageMipArraySlice const &) = default;
 
-        auto contains(ImageMipArraySlice const & slice) const -> bool;
-        auto intersects(ImageMipArraySlice const & slice) const -> bool;
-        auto intersect(ImageMipArraySlice const & slice) const -> ImageMipArraySlice;
-        auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
+        [[nodiscard]] auto contains(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto intersects(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto intersect(ImageMipArraySlice const & slice) const -> ImageMipArraySlice;
+        [[nodiscard]] auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
     };
 
-    auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
+    [[nodiscard]] auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
 
     struct ImageArraySlice
     {
@@ -1287,24 +1287,24 @@ namespace daxa
 
         friend auto operator<=>(ImageArraySlice const &, ImageArraySlice const &) = default;
 
-        static auto slice(ImageMipArraySlice const & mip_array_slice, u32 mip_level = 0) -> ImageArraySlice;
+        [[nodiscard]] static auto slice(ImageMipArraySlice const & mip_array_slice, u32 mip_level = 0) -> ImageArraySlice;
 
-        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 
-    auto to_string(ImageArraySlice image_array_slice) -> std::string;
+    [[nodiscard]] auto to_string(ImageArraySlice image_array_slice) -> std::string;
 
     struct ImageSlice
     {
         u32 mip_level = 0;
         u32 array_layer = 0;
 
-        friend auto operator<=>(ImageSlice const &, ImageSlice const &) = default;
+        [[nodiscard]] friend auto operator<=>(ImageSlice const &, ImageSlice const &) = default;
 
-        static auto slice(ImageArraySlice const & mip_array_slice, u32 array_layer = 0) -> ImageSlice;
+        [[nodiscard]] static auto slice(ImageArraySlice const & mip_array_slice, u32 array_layer = 0) -> ImageSlice;
 
-        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
-        auto contained_in(ImageArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto contained_in(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto contained_in(ImageArraySlice const & slice) const -> bool;
     };
 
     auto to_string(ImageSlice image_slice) -> std::string;
@@ -1374,7 +1374,7 @@ namespace daxa
         static inline constexpr AccessTypeFlags READ_WRITE = READ | WRITE;
     };
 
-    auto to_string(AccessTypeFlags flags) -> std::string;
+    [[nodiscard]] auto to_string(AccessTypeFlags flags) -> std::string;
 
     struct PipelineStageFlagsProperties
     {
@@ -1411,7 +1411,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags MESH_SHADER = {0x00100000ull};
     };
 
-    auto to_string(PipelineStageFlags flags) -> std::string;
+    [[nodiscard]] auto to_string(PipelineStageFlags flags) -> std::string;
 
     struct Access
     {
@@ -1421,10 +1421,10 @@ namespace daxa
         friend auto operator<=>(Access const &, Access const &) = default;
     };
 
-    auto operator|(Access const & a, Access const & b) -> Access;
-    auto operator&(Access const & a, Access const & b) -> Access;
+    [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
+    [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
 
-    auto to_string(Access access) -> std::string;
+    [[nodiscard]] auto to_string(Access access) -> std::string;
 
     namespace AccessConsts
     {
@@ -1712,7 +1712,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() -> MemoryBlockInfo const &;
+        [[nodiscard]] auto info() -> MemoryBlockInfo const &;
 
       protected:
         template <typename T, typename H_T>
@@ -1734,9 +1734,9 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TimelineQueryPoolInfo const &;
+        [[nodiscard]] auto info() const -> TimelineQueryPoolInfo const &;
 
-        auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;
+        [[nodiscard]] auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;
 
       protected:
         template <typename T, typename H_T>

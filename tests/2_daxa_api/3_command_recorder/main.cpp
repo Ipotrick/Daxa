@@ -462,7 +462,7 @@ namespace tests
 
         constexpr daxa::u32 TEST_VALUE = 0xf0abf0ab;
 
-        *app.device.get_host_address_as<uint32_t>(buf_a).value() = TEST_VALUE;
+        *app.device.get_host_address_as<daxa::u32>(buf_a).value() = TEST_VALUE;
 
         daxa::CommandRecorder cmdr = app.device.create_command_recorder({});
 
@@ -498,7 +498,7 @@ namespace tests
 
         app.device.wait_idle();
 
-        daxa::u32 readback_value = *app.device.get_host_address_as<uint32_t>(buf_c).value();
+        daxa::u32 readback_value = *app.device.get_host_address_as<daxa::u32>(buf_c).value();
 
         DAXA_DBG_ASSERT_TRUE_M(readback_value == TEST_VALUE, "TEST VALUE DOES NOT MATCH READBACK VALUE");
 

@@ -31,7 +31,7 @@ auto main() -> int
 
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
-        gpu_timeline.wait_for_value(cpu_timeline - 1);
+        [[maybe_unused]] auto _timeout = gpu_timeline.wait_for_value(cpu_timeline - 1);
         daxa::CommandRecorder cmd = device.create_command_recorder({});
         cmd.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,

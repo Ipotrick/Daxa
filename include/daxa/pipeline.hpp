@@ -34,7 +34,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> ComputePipelineInfo const &;
+        [[nodiscard]] auto info() const -> ComputePipelineInfo const &;
 
       protected:
         template <typename T, typename H_T>
@@ -118,7 +118,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> RasterPipelineInfo const &;
+        [[nodiscard]] auto info() const -> RasterPipelineInfo const &;
 
       protected:
         template <typename T, typename H_T>

@@ -57,6 +57,7 @@ struct ExecutableCommandListData
 struct daxa_ImplCommandRecorder final : ImplHandle
 {
     daxa_Device device = {};
+    bool in_renderpass = {};
     daxa_CommandRecorderInfo info = {};
     std::string info_name = {};
     VkCommandPool vk_cmd_pool = {};

@@ -676,6 +676,7 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     };
     vkCmdSetViewport(self->current_command_data.vk_cmd_buffer, 0, 1, &vk_viewport);
     vkCmdBeginRendering(self->current_command_data.vk_cmd_buffer, &vk_rendering_info);
+    self->in_renderpass = true;
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -683,6 +684,7 @@ void daxa_cmd_end_renderpass(daxa_CommandRecorder self)
 {
     daxa_cmd_flush_barriers(self);
     vkCmdEndRendering(self->current_command_data.vk_cmd_buffer);
+    self->in_renderpass = false;
 }
 
 void daxa_cmd_set_viewport(daxa_CommandRecorder self, VkViewport const * info)
