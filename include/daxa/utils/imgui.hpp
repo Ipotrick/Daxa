@@ -25,7 +25,7 @@ namespace daxa
     {
         Device device;
         Format format;
-        // NOTE: This is for backwards compatability. Though,
+        // NOTE: This is for backwards compatibility. Though,
         // I'm not sure the ImGui renderer util should set the
         // ImGui style. Something to bikeshed.
         bool use_custom_config = true;

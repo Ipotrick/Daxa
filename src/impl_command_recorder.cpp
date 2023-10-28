@@ -108,7 +108,10 @@ auto only_check_buffer(daxa_CommandRecorder self, T id) -> bool
     {
         return daxa_dvc_is_buffer_valid(self->device, id);
     }
-    return true;
+    else
+    {
+        return true;
+    }
 }
 template <typename T>
 auto only_check_image(daxa_CommandRecorder self, T id) -> bool
@@ -117,7 +120,10 @@ auto only_check_image(daxa_CommandRecorder self, T id) -> bool
     {
         return daxa_dvc_is_image_valid(self->device, id);
     }
-    return true;
+    else
+    {
+        return true;
+    }
 }
 template <typename T>
 auto only_check_image_view(daxa_CommandRecorder self, T id) -> bool
@@ -126,7 +132,10 @@ auto only_check_image_view(daxa_CommandRecorder self, T id) -> bool
     {
         return daxa_dvc_is_image_view_valid(self->device, id);
     }
-    return true;
+    else
+    {
+        return true;
+    }
 }
 template <typename T>
 auto only_check_sampler(daxa_CommandRecorder self, T id) -> bool
@@ -135,7 +144,10 @@ auto only_check_sampler(daxa_CommandRecorder self, T id) -> bool
     {
         return daxa_dvc_is_sampler_valid(self->device, id);
     }
-    return true;
+    else
+    {
+        return true;
+    }
 }
 template <typename T>
 void safe_id(daxa_CommandRecorder self, T id)
@@ -498,7 +510,7 @@ void daxa_cmd_push_constant(daxa_CommandRecorder self, void const * data, uint32
     daxa_cmd_flush_barriers(self);
     u64 layout_index = (size + sizeof(u32) - 1) / sizeof(u32);
     // TODO(general): The size can be smaller then the layouts size... Is that a problem? I remember renderdoc complaining sometimes.
-    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, self->device->gpusro_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
+    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, self->device->gpu_sro_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
 daxa_Result
@@ -526,7 +538,7 @@ void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeli
 {
     daxa_cmd_flush_barriers(self);
     self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout);
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpusro_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
 }
 
@@ -534,7 +546,7 @@ void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline
 {
     daxa_cmd_flush_barriers(self);
     self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout);
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpusro_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
 }
 
@@ -888,7 +900,7 @@ void daxa_cmd_flush_barriers(daxa_CommandRecorder self)
 
 auto daxa_cmd_complete_current_commands(
     daxa_CommandRecorder self,
-    daxa_ExecutableCommandList * out_execble_cmds) -> daxa_Result
+    daxa_ExecutableCommandList * out_executable_cmds) -> daxa_Result
 {
     daxa_cmd_flush_barriers(self);
     auto vk_result = vkEndCommandBuffer(self->current_command_data.vk_cmd_buffer);
@@ -903,7 +915,7 @@ auto daxa_cmd_complete_current_commands(
         self->current_command_data = std::move(cmd_data);
         return result;
     }
-    *out_execble_cmds = new daxa_ImplExecutableCommandList{
+    *out_executable_cmds = new daxa_ImplExecutableCommandList{
         .cmd_recorder = self,
         .data = std::move(cmd_data),
     };
@@ -928,7 +940,7 @@ auto daxa_cmd_get_vk_command_pool(daxa_CommandRecorder self) -> VkCommandPool
 
 void daxa_destroy_command_recorder(daxa_CommandRecorder self)
 {
-    self->device->gpusro_table.lifetime_lock.unlock_shared();
+    self->device->gpu_sro_table.lifetime_lock.unlock_shared();
     self->dec_refcnt(
         daxa_ImplCommandRecorder::zero_ref_callback,
         self->device->instance
@@ -970,7 +982,7 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
     // TODO(lifetime): Maybe we should have a try lock variant?
-    ret.device->gpusro_table.lifetime_lock.lock_shared();
+    ret.device->gpu_sro_table.lifetime_lock.lock_shared();
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_cmd_list = new daxa_ImplCommandRecorder{};

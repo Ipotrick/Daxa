@@ -39,11 +39,11 @@ So daxa also has an optional instance flag (`DAXA_INSTANCE_FLAG_PARENT_MUST_OUTL
 
 # Deferred destruction - Zombies??
 
-When an objects reference count drops to 0 or gets manually destroyed, it is not actually destroyed yet it is zombiefied.
+When an objects reference count drops to 0 or gets manually destroyed, it is not actually destroyed yet it is zombified.
 
 A zombie object is no longer usable on the user side. But zombies are still valid in daxas internals as well as on the gpu.
 
-Daxa defers the destruction of zombies until the gpu catches up with the cpu at the time of zombiefication.
+Daxa defers the destruction of zombies until the gpu catches up with the cpu at the time of zombification.
 
 The real object destructions exclusively happen in `Device::collect_garbage`. This function will check all zombies zombification time point, compare it with the gpu timeline and if the gpu cought up, it will destroy the zombie.
 

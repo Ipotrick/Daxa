@@ -63,11 +63,11 @@ namespace daxa
     auto TransferMemoryPool::allocate(u32 allocation_size, u32 alignment_requirement) -> std::optional<TransferMemoryPool::Allocation>
     {
         u32 const tail_alloc_offset = (this->claimed_start + this->claimed_size) % this->m_info.capacity;
-        auto upalign_offset = [](auto value, auto alignment)
+        auto up_align_offset = [](auto value, auto alignment)
         {
             return (value + alignment - 1) / alignment * alignment;
         };
-        u32 const tail_alloc_offset_aligned = upalign_offset(tail_alloc_offset, alignment_requirement);
+        u32 const tail_alloc_offset_aligned = up_align_offset(tail_alloc_offset, alignment_requirement);
         u32 const tail_alloc_align_padding = tail_alloc_offset_aligned - tail_alloc_offset;
         // Two allocations are possible:
         // Tail allocation is when the allocation is placed directly at the end of all other allocations.

@@ -13,7 +13,7 @@
 
 ## Ergonomic Swapchain:
 - Swapchain contains its own semaphores for timing:
-  - aquire semaphores, one for each frame in flight,
+  - acquire semaphores, one for each frame in flight,
   - present semaphores, one per swapchain image,
   - a timeline semaphore, used to limit frames in flight.
 - The correct set of seamphores can be queryied with member functions, they are changed after every acquire call.

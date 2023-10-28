@@ -263,13 +263,13 @@ namespace daxa
                 this->m_data[i] = sw[i];
             }
         }
-        constexpr SmallString(std::string const & stlstr)
+        constexpr SmallString(std::string const & stl_str)
         {
-            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(stlstr.size()) < this->capacity(), "EXCEEDED CAPACITY");
-            this->m_size = static_cast<FixedListSizeT>(stlstr.size());
-            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(stlstr.size()); ++i)
+            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(stl_str.size()) < this->capacity(), "EXCEEDED CAPACITY");
+            this->m_size = static_cast<FixedListSizeT>(stl_str.size());
+            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(stl_str.size()); ++i)
             {
-                this->m_data[i] = stlstr[i];
+                this->m_data[i] = stl_str[i];
             }
         }
         SmallString(SmallString const & other) = default;
@@ -477,7 +477,7 @@ namespace daxa
             #define SEQ400(N) SEQ200((N) + 0) SEQ200((N) + 200)
             #define CAT(M, N) M##N
             #define CAT2(M, N) CAT(M, N)
-            #define INJECTSEQ(N) CAT2(SEQ, N)(0)
+            #define INJECT_SEQ(N) CAT2(SEQ, N)(0)
             // single-visitation
             template <unsigned Offset, class Rtype, class Fn, class V>
             constexpr auto single_visit_tail(Fn &&fn, V &&v) -> Rtype {
@@ -488,18 +488,18 @@ namespace daxa
                             return static_cast<Fn &&>(fn)(static_cast<V &&>(v).template unsafe_get<(N) + Offset>()); \
                             break;                                                                                   \
                         } else { DeclareUnreachable(); }
-                #define SEQSIZE 200
+                #define SEQ_SIZE 200
                 switch (v.index()) {
-                    INJECTSEQ(SEQSIZE)
+                    INJECT_SEQ(SEQ_SIZE)
                 default:
-                    if constexpr (SEQSIZE < RemainingIndex) {
-                        return Variant_detail::single_visit_tail<Offset + SEQSIZE, Rtype>(static_cast<Fn &&>(fn), static_cast<V &&>(v));
+                    if constexpr (SEQ_SIZE < RemainingIndex) {
+                        return Variant_detail::single_visit_tail<Offset + SEQ_SIZE, Rtype>(static_cast<Fn &&>(fn), static_cast<V &&>(v));
                     } else {
                         DeclareUnreachable();
                     }
                 }
                 #undef X
-                #undef SEQSIZE
+                #undef SEQ_SIZE
             }
 
             template <unsigned Offset, class Rtype, class Fn, class V>
@@ -512,18 +512,18 @@ namespace daxa
                             break;                                                                                                                                     \
                         } else { DeclareUnreachable(); }
 
-                #define SEQSIZE 200
+                #define SEQ_SIZE 200
                 switch (v.index()) {
-                    INJECTSEQ(SEQSIZE)
+                    INJECT_SEQ(SEQ_SIZE)
                 default:
-                    if constexpr (SEQSIZE < RemainingIndex) {
-                        return Variant_detail::single_visit_w_index_tail<Offset + SEQSIZE, Rtype>(static_cast<Fn &&>(fn), static_cast<V &&>(v));
+                    if constexpr (SEQ_SIZE < RemainingIndex) {
+                        return Variant_detail::single_visit_w_index_tail<Offset + SEQ_SIZE, Rtype>(static_cast<Fn &&>(fn), static_cast<V &&>(v));
                     } else {
                         DeclareUnreachable();
                     }
                 }
                 #undef X
-                #undef SEQSIZE
+                #undef SEQ_SIZE
             }
             template <class Fn, class V>
             constexpr auto visit(Fn &&fn, V &&v) -> decltype(auto) {
@@ -557,7 +557,7 @@ namespace daxa
             #undef DeclareUnreachable
             #undef CAT
             #undef CAT2
-            #undef INJECTSEQ
+            #undef INJECT_SEQ
         } // namespace v1
 
         struct variant_npos_t {

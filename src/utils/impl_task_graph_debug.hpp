@@ -12,7 +12,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    void print_seperator_to(std::string & out, std::string & indent)
+    void print_separator_to(std::string & out, std::string & indent)
     {
         char const last = indent.back();
         indent.back() = '#';
@@ -28,7 +28,7 @@ namespace daxa
         indent.push_back(contained ? '|' : ' ');
         if (contained)
         {
-            print_seperator_to(out, indent);
+            print_separator_to(out, indent);
         }
     }
 

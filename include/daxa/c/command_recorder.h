@@ -25,14 +25,14 @@ typedef struct
 } daxa_ImageBlitInfo;
 
 static const daxa_ImageBlitInfo DAXA_DEFAULT_IMAGE_BLIT_INFO = {
-    .src_image = {},
+    .src_image = DAXA_ZERO_INIT,
     .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    .dst_image = {},
+    .dst_image = DAXA_ZERO_INIT,
     .dst_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    .src_slice = {},
-    .src_offsets = {},
-    .dst_slice = {},
-    .dst_offsets = {},
+    .src_slice = DAXA_ZERO_INIT,
+    .src_offsets = DAXA_ZERO_INIT,
+    .dst_slice = DAXA_ZERO_INIT,
+    .dst_offsets = DAXA_ZERO_INIT,
     .filter = VK_FILTER_NEAREST,
 };
 
@@ -45,7 +45,7 @@ typedef struct
     size_t size;
 } daxa_BufferCopyInfo;
 
-static const daxa_BufferCopyInfo DAXA_DEFAULT_BUFFER_COPY_INFO = {};
+static const daxa_BufferCopyInfo DAXA_DEFAULT_BUFFER_COPY_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -59,13 +59,13 @@ typedef struct
 } daxa_BufferImageCopyInfo;
 
 static const daxa_BufferImageCopyInfo DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
-    .buffer = {},
+    .buffer = DAXA_ZERO_INIT,
     .buffer_offset = 0,
-    .image = {},
+    .image = DAXA_ZERO_INIT,
     .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    .image_slice = {},
-    .image_offset = {},
-    .image_extent = {},
+    .image_slice = DAXA_ZERO_INIT,
+    .image_offset = DAXA_ZERO_INIT,
+    .image_extent = DAXA_ZERO_INIT,
 };
 
 typedef struct
@@ -80,12 +80,12 @@ typedef struct
 } daxa_ImageBufferCopyInfo;
 
 static const daxa_ImageBufferCopyInfo DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
-    .image = {},
+    .image = DAXA_ZERO_INIT,
     .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    .image_slice = {},
-    .image_offset = {},
-    .image_extent = {},
-    .buffer = {},
+    .image_slice = DAXA_ZERO_INIT,
+    .image_offset = DAXA_ZERO_INIT,
+    .image_extent = DAXA_ZERO_INIT,
+    .buffer = DAXA_ZERO_INIT,
     .buffer_offset = 0,
 };
 
@@ -103,15 +103,15 @@ typedef struct
 } daxa_ImageCopyInfo;
 
 static const daxa_ImageCopyInfo DAXA_DEFAULT_IMAGE_COPY_INFO = {
-    .src_image = {},
+    .src_image = DAXA_ZERO_INIT,
     .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-    .dst_image = {},
+    .dst_image = DAXA_ZERO_INIT,
     .dst_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    .src_slice = {},
-    .src_offset = {},
-    .dst_slice = {},
-    .dst_offset = {},
-    .extent = {},
+    .src_slice = DAXA_ZERO_INIT,
+    .src_offset = DAXA_ZERO_INIT,
+    .dst_slice = DAXA_ZERO_INIT,
+    .dst_offset = DAXA_ZERO_INIT,
+    .extent = DAXA_ZERO_INIT,
 };
 
 // Make sure this stays abi compatible with daxa::ClearValue
@@ -127,9 +127,9 @@ typedef struct
 
 static const daxa_ImageClearInfo DAXA_DEFAULT_IMAGE_CLEAR_INFO = {
     .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    .clear_value = {},
-    .image = {},
-    .dst_slice = {},
+    .clear_value = DAXA_ZERO_INIT,
+    .image = DAXA_ZERO_INIT,
+    .dst_slice = DAXA_ZERO_INIT,
 };
 
 typedef struct
@@ -140,7 +140,7 @@ typedef struct
     uint32_t clear_value;
 } daxa_BufferClearInfo;
 
-static const daxa_BufferClearInfo DAXA_DEFAULT_BUFFER_CLEAR_INFO = {};
+static const daxa_BufferClearInfo DAXA_DEFAULT_BUFFER_CLEAR_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -154,11 +154,11 @@ _DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
 _DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)
 
 static const daxa_RenderAttachmentInfo DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
-    .image_view = {},
+    .image_view = DAXA_ZERO_INIT,
     .layout = DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
     .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     .store_op = VK_ATTACHMENT_STORE_OP_STORE,
-    .clear_value = {},
+    .clear_value = DAXA_ZERO_INIT,
 };
 
 typedef struct
@@ -169,7 +169,7 @@ typedef struct
     VkRect2D render_area;
 } daxa_RenderPassBeginInfo;
 
-static const daxa_RenderPassBeginInfo DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = {};
+static const daxa_RenderPassBeginInfo DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -177,7 +177,7 @@ typedef struct
     size_t offset;
 } daxa_DispatchIndirectInfo;
 
-static const daxa_DispatchIndirectInfo DAXA_DEFAULT_DISPATCH_INDIRECT_INFO = {};
+static const daxa_DispatchIndirectInfo DAXA_DEFAULT_DISPATCH_INDIRECT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -188,7 +188,7 @@ typedef struct
 } daxa_DrawMeshTasksIndirectInfo;
 
 static const daxa_DrawMeshTasksIndirectInfo DAXA_DEFAULT_DRAW_MESH_TASKS_INDIRECT_INFO = {
-    .indirect_buffer = {},
+    .indirect_buffer = DAXA_ZERO_INIT,
     .offset = 0,
     .draw_count = 1,
     .stride = 12,
@@ -205,9 +205,9 @@ typedef struct
 } daxa_DrawMeshTasksIndirectCountInfo;
 
 static const daxa_DrawMeshTasksIndirectCountInfo DAXA_DRAW_MESH_TASKS_INDIRECT_COUNT_INFO = {
-    .indirect_buffer = {},
+    .indirect_buffer = DAXA_ZERO_INIT,
     .offset = 0,
-    .count_buffer = {},
+    .count_buffer = DAXA_ZERO_INIT,
     .count_offset = 0,
     .max_count = 0,
     .stride = 12,
@@ -255,7 +255,7 @@ typedef struct
 } daxa_DrawIndirectInfo;
 
 static const daxa_DrawIndirectInfo DAXA_DEFAULT_DRAW_INDIRECT_INFO = {
-    .indirect_buffer = {},
+    .indirect_buffer = DAXA_ZERO_INIT,
     .indirect_buffer_offset = 0,
     .draw_count = 1,
     .draw_command_stride = 0,
@@ -274,9 +274,9 @@ typedef struct
 } daxa_DrawIndirectCountInfo;
 
 static const daxa_DrawIndirectCountInfo DAXA_DEFAULT_DRAW_INDIRECT_COUNT_INFO = {
-    .indirect_buffer = {},
+    .indirect_buffer = DAXA_ZERO_INIT,
     .indirect_buffer_offset = 0,
-    .count_buffer = {},
+    .count_buffer = DAXA_ZERO_INIT,
     .count_buffer_offset = 0,
     .max_draw_count = ((1 << 16) - 1),
     .draw_command_stride = 0,
@@ -330,7 +330,7 @@ typedef struct
     size_t offset;
 } daxa_SetUniformBufferInfo;
 
-static const daxa_SetUniformBufferInfo DAXA_DEFAULT_SET_UNIFORM_BUFFER_INFO = {};
+static const daxa_SetUniformBufferInfo DAXA_DEFAULT_SET_UNIFORM_BUFFER_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -339,7 +339,7 @@ typedef struct
     float slope_factor;
 } daxa_DepthBiasInfo;
 
-static const daxa_DepthBiasInfo DAXA_DEFAULT_DEPTH_BIAS_INFO = {};
+static const daxa_DepthBiasInfo DAXA_DEFAULT_DEPTH_BIAS_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -349,7 +349,7 @@ typedef struct
 } daxa_SetIndexBufferInfo;
 
 static const daxa_SetIndexBufferInfo DAXA_DEFAULT_SET_INDEX_BUFFER_INFO = {
-    .buffer = {},
+    .buffer = DAXA_ZERO_INIT,
     .offset = 0,
     .index_type = VK_INDEX_TYPE_UINT32,
 };
@@ -479,7 +479,7 @@ daxa_cmd_end_label(daxa_CommandRecorder cmd_enc);
 DAXA_EXPORT void
 daxa_cmd_flush_barriers(daxa_CommandRecorder cmd_enc);
 DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
-daxa_cmd_complete_current_commands(daxa_CommandRecorder cmd_enc, daxa_ExecutableCommandList * out_execble_cmds);
+daxa_cmd_complete_current_commands(daxa_CommandRecorder cmd_enc, daxa_ExecutableCommandList * out_executable_cmds);
 DAXA_EXPORT daxa_CommandRecorderInfo const *
 daxa_cmd_info(daxa_CommandRecorder cmd_enc);
 DAXA_EXPORT VkCommandBuffer

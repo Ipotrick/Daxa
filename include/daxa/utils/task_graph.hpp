@@ -111,8 +111,8 @@ namespace daxa
         ///         The second option is enabled by using jit (just in time) compilation.
         bool jit_compile_permutations = {};
         /// @brief  Task graph can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
-        ///         This is usefull to create permutations of a task graph without having to create a seperate task graph.
-        ///         Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two seperate task graphs.
+        ///         This is useful to create permutations of a task graph without having to create a separate task graph.
+        ///         Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two separate task graphs.
         usize permutation_condition_count = {};
         /// @brief  Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
         bool enable_command_labels = true;

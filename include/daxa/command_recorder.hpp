@@ -267,7 +267,7 @@ namespace daxa
         ///         There are 8 uniform buffer slots (indices range from 0 to 7).
         ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
         ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
-        ///         This is in stark contrast to OpenGl like bindings wich are visible immediately to all commands after binding.
+        ///         This is in stark contrast to OpenGl like bindings which are visible immediately to all commands after binding.
         ///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
         ///         Set uniform buffer slots are cleared after a pipeline is bound.
         ///         Before setting another pipeline, they need to be set again.
@@ -352,7 +352,7 @@ namespace daxa
         ///         There are 8 uniform buffer slots (indices range from 0 to 7).
         ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
         ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
-        ///         This is in stark contrast to OpenGl like bindings wich are visible immediately to all commands after binding.
+        ///         This is in stark contrast to OpenGl like bindings which are visible immediately to all commands after binding.
         ///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
         ///         Set uniform buffer slots are cleared after a pipeline is bound.
         ///         Before setting another pipeline, they need to be set again.
@@ -362,23 +362,23 @@ namespace daxa
         void dispatch(u32 x, u32 y = 1, u32 z = 1);
         void dispatch_indirect(DispatchIndirectInfo const & info);
 
-        /// @brief  Destroyes the buffer AFTER the gpu is finished executing the command list.
-        ///         Zombiefies object after submitting the commands.
+        /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
+        ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id buffer to be destroyed after command list finishes.
         void destroy_buffer_deferred(BufferId id);
-        /// @brief  Destroyes the image AFTER the gpu is finished executing the command list.
-        ///         Zombiefies object after submitting the commands.
+        /// @brief  Destroys the image AFTER the gpu is finished executing the command list.
+        ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id image to be destroyed after command list finishes.
         void destroy_image_deferred(ImageId id);
-        /// @brief  Destroyes the image view AFTER the gpu is finished executing the command list.
-        ///         Zombiefies object after submitting the commands.
+        /// @brief  Destroys the image view AFTER the gpu is finished executing the command list.
+        ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id image view to be destroyed after command list finishes.
         void destroy_image_view_deferred(ImageViewId id);
-        /// @brief  Destroyes the sampler AFTER the gpu is finished executing the command list.
-        ///         Zombiefies object after submitting the commands.
+        /// @brief  Destroys the sampler AFTER the gpu is finished executing the command list.
+        ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
         /// @param id image sampler be destroyed after command list finishes.
         void destroy_sampler_deferred(SamplerId id);

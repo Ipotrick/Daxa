@@ -5,8 +5,10 @@
 
 #if defined(__cplusplus)
 #define DAXA_EXPORT extern "C"
+#define DAXA_ZERO_INIT {}
 #else
 #define DAXA_EXPORT
+#define DAXA_ZERO_INIT {0}
 #endif
 
 #if defined(__cplusplus)
@@ -22,10 +24,10 @@
 
 static const uint32_t DAXA_ID_INDEX_BITS = 20;
 static const uint32_t DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
-static const uint32_t DAXA_ID_INDEX_OFFSTET = 0;
+static const uint32_t DAXA_ID_INDEX_OFFSET = 0;
 static const uint32_t DAXA_ID_VERSION_BITS = 44;
 static const uint64_t DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
-static const uint32_t DAXA_ID_VERSION_OFFSTET = 20;
+static const uint32_t DAXA_ID_VERSION_OFFSET = 20;
 
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;

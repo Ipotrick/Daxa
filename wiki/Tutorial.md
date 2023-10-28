@@ -204,7 +204,7 @@ The CPU and GPU timeline values are used internally to limit the frames in fligh
 
 Note that the acquire and present semaphores can change every frame, so do NOT store them once and reuse. You must call the get functions after each image acquisition.
 
-In the end of each frame we call `collect_garbage`. This is the housekeeping function of daxas devices. It should be called exactly once a frame. Note that this function will BLOCK and wait until ALL command recorders have been destroyed! This is because the housekeeping can only be properly done when its guaranteed that no commands are recorded at the same time.
+In the end of each frame we call `collect_garbage`. This is the housekeeping function of Daxa's devices. It should be called exactly once a frame. Note that this function will BLOCK and wait until ALL command recorders have been destroyed! This is because the housekeeping can only be properly done when its guaranteed that no commands are recorded at the same time.
 
 To see a full implementation go ahead to the Daxa samples and look into the 4_hello_Daxa folder. For every chapter in this tutorial there is a fully working encapsulated program with all the necessary code. This code is also fully commented out, so it can be used as an alternative to this tutorial entirely if preferred.
 
@@ -446,7 +446,7 @@ ti.get_device().get_device_address(
 ).value();
 ```
 We also use the task interface `ti` to get a reference to the device, in order to retrieve a GPU pointer to the buffer! 
-> `get_device_address()` returns an Optional. This is because daxa will check each id used and return an error or nullopt when the id is invalid. Do not be alarmed this is extramly efficient.
+> `get_device_address()` returns an Optional. This is because daxa will check each id used and return an error or nullopt when the id is invalid. Do not be alarmed this is extremely efficient.
 
 ## Buffer upload
 

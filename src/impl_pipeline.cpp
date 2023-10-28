@@ -70,7 +70,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         _DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
     }
 
-    ret.vk_pipeline_layout = ret.device->gpusro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+    ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
     constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
         .pNext = nullptr,
@@ -167,7 +167,8 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .minDepthBounds = ret.info.depth_test.value_or(no_depth).min_depth_bounds,
         .maxDepthBounds = ret.info.depth_test.value_or(no_depth).max_depth_bounds,
     };
-    DAXA_DBG_ASSERT_TRUE_M(ret.info.color_attachments.size() < pipeline_manager_MAX_ATTACHMENTS, "too many color attachments, make pull request to bump max");
+    // TODO(capi): DO NOT THROW IN C FUNCTION
+    // DAXA_DBG_ASSERT_TRUE_M(ret.info.color_attachments.size() < pipeline_manager_MAX_ATTACHMENTS, "too many color attachments, make pull request to bump max");
     std::array<VkPipelineColorBlendAttachmentState, pipeline_manager_MAX_ATTACHMENTS> vk_pipeline_color_blend_attachment_blend_states = {};
     auto no_blend = BlendInfo{};
     for (FixedListSizeT i = 0; i < ret.info.color_attachments.size(); ++i)
@@ -321,7 +322,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     {
         return std::bit_cast<daxa_Result>(module_result);
     }
-    ret.vk_pipeline_layout = ret.device->gpusro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+    ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
     VkComputePipelineCreateInfo const vk_compute_pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
