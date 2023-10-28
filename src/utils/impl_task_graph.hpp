@@ -189,7 +189,7 @@ namespace daxa
         // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
         std::vector<ImageSliceState> latest_slice_states = {};
         // Only for swapchain images. Runtime data.
-        bool waited_on_aquire = {};
+        bool waited_on_acquire = {};
 
         // Used to allocate id - because all persistent resources have unique id we need a single point
         // from which they are generated

@@ -366,7 +366,7 @@ namespace tests
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
-            .constant_buffer_slot = ShaderIntegrationTask::CONSANT_BUFFER_SLOT,
+            .constant_buffer_slot = ShaderIntegrationTask::CONSTANT_BUFFER_SLOT,
             .name = "write image in compute",
         });
         task_graph.add_task({
@@ -384,7 +384,7 @@ namespace tests
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch(1, 1, 1);
             },
-            .constant_buffer_slot = ShaderIntegrationTask::CONSANT_BUFFER_SLOT,
+            .constant_buffer_slot = ShaderIntegrationTask::CONSTANT_BUFFER_SLOT,
             .name = "write image in compute 2",
         });
         task_graph.submit({});

@@ -498,7 +498,7 @@ namespace tests
 
         app.device.wait_idle();
 
-        daxa::u32 readback_value = *app.device.get_host_address_as<daxa::u32>(buf_c).value();
+        [[maybe_unused]] daxa::u32 readback_value = *app.device.get_host_address_as<daxa::u32>(buf_c).value();
 
         DAXA_DBG_ASSERT_TRUE_M(readback_value == TEST_VALUE, "TEST VALUE DOES NOT MATCH READBACK VALUE");
 

@@ -58,10 +58,10 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
 
     // --- End Parameter Validation ---
 
-    auto slot_opt = self->gpusro_table.buffer_slots.try_create_slot();
+    auto slot_opt = self->gpu_sro_table.buffer_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXEEDED_MAX_BUFFERS;
+        return DAXA_RESULT_EXCEEDED_MAX_BUFFERS;
     }
     auto [id, ret] = slot_opt.value();
 
@@ -156,20 +156,20 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE &&
         info->name.size != 0)
     {
-        auto cstrarr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_BUFFER,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_buffer),
-            .pObjectName = cstrarr.data(),
+            .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
     }
 
     write_descriptor_set_buffer(
         self->vk_device,
-        self->gpusro_table.vk_descriptor_set, ret.vk_buffer,
+        self->gpu_sro_table.vk_descriptor_set, ret.vk_buffer,
         0,
         static_cast<VkDeviceSize>(ret.info.size),
         id.index);
@@ -189,10 +189,10 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
 
     /// --- End Validation ---
 
-    auto slot_opt = self->gpusro_table.image_slots.try_create_slot();
+    auto slot_opt = self->gpu_sro_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXEEDED_MAX_IMAGES;
+        return DAXA_RESULT_EXCEEDED_MAX_IMAGES;
     }
     auto [id, ret] = slot_opt.value();
 
@@ -259,7 +259,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         auto result = vmaCreateImage(self->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr);
         if (result != VK_SUCCESS)
         {
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
 
@@ -268,7 +268,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         if (result != VK_SUCCESS)
         {
             vmaDestroyImage(self->vma_allocator, ret.vk_image, ret.vma_allocation);
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
         }
     }
@@ -281,7 +281,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         auto result = vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image);
         if (result != VK_SUCCESS)
         {
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
         result = vmaBindImageMemory2(
@@ -293,7 +293,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         if (result != VK_SUCCESS)
         {
             vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_IMAGE;
         }
 
@@ -303,7 +303,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         {
 
             vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
-            self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+            self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
             return DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW;
         }
     }
@@ -331,7 +331,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
 
     write_descriptor_set_image(
         self->vk_device,
-        self->gpusro_table.vk_descriptor_set,
+        self->gpu_sro_table.vk_descriptor_set,
         ret.view_slot.vk_image_view,
         std::bit_cast<ImageUsageFlags>(ret.info.usage),
         id.index);
@@ -429,10 +429,10 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
 
     /// --- End Validation ---
 
-    auto slot_opt = self->gpusro_table.image_slots.try_create_slot();
+    auto slot_opt = self->gpu_sro_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXEEDED_MAX_IMAGE_VIEWS;
+        return DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS;
     }
     auto [id, image_slot] = slot_opt.value();
 
@@ -460,24 +460,24 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     auto result = vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view);
     if (result != VK_SUCCESS)
     {
-        self->gpusro_table.image_slots.unsafe_destroy_zombie_slot(id);
+        self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
         return DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW;
     }
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto cstrarr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
-            .pObjectName = cstrarr.data(),
+            .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &name_info);
     }
     write_descriptor_set_image(
         self->vk_device,
-        self->gpusro_table.vk_descriptor_set,
+        self->gpu_sro_table.vk_descriptor_set,
         ret.vk_image_view,
         std::bit_cast<ImageUsageFlags>(parent_image_slot.info.usage),
         id.index);
@@ -495,10 +495,10 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }
 
     /// --- End Validation ---
-    auto slot_opt = self->gpusro_table.sampler_slots.try_create_slot();
+    auto slot_opt = self->gpu_sro_table.sampler_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXEEDED_MAX_SAMPLERS;
+        return DAXA_RESULT_EXCEEDED_MAX_SAMPLERS;
     }
     auto [id, ret] = slot_opt.value();
 
@@ -534,24 +534,24 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     auto result = vkCreateSampler(self->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler);
     if (result != VK_SUCCESS)
     {
-        self->gpusro_table.sampler_slots.unsafe_destroy_zombie_slot(id);
+        self->gpu_sro_table.sampler_slots.unsafe_destroy_zombie_slot(id);
         return DAXA_RESULT_FAILED_TO_CREATE_SAMPLER;
     }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto cstrarr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SAMPLER,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_sampler),
-            .pObjectName = cstrarr.data(),
+            .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &sampler_name_info);
     }
 
-    write_descriptor_set_sampler(self->vk_device, self->gpusro_table.vk_descriptor_set, ret.vk_sampler, id.index);
+    write_descriptor_set_sampler(self->vk_device, self->gpu_sro_table.vk_descriptor_set, ret.vk_sampler, id.index);
     *out_id = std::bit_cast<daxa_SamplerId>(id);
     return DAXA_RESULT_SUCCESS;
 }
@@ -560,10 +560,10 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                            \
     {                                                                                                          \
         _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                               \
-        auto success = self->gpusro_table.SLOT_NAME.try_zombiefy(std::bit_cast<GPUResourceId>(id));            \
+        auto success = self->gpu_sro_table.SLOT_NAME.try_zombify(std::bit_cast<GPUResourceId>(id));            \
         if (success)                                                                                           \
         {                                                                                                      \
-            self->zombiefy_##name(std::bit_cast<Name##Id>(id));                                                \
+            self->zombify_##name(std::bit_cast<Name##Id>(id));                                                \
             return DAXA_RESULT_SUCCESS;                                                                        \
         }                                                                                                      \
         return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
@@ -581,7 +581,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }                                                                                                          \
     auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                          \
     {                                                                                                          \
-        return std::bit_cast<daxa_Bool8>(self->gpusro_table.SLOT_NAME.is_id_valid(                             \
+        return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                             \
             std::bit_cast<daxa::GPUResourceId>(id)));                                                          \
     }                                                                                                          \
     auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                \
@@ -638,7 +638,7 @@ auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
 {
     _DAXA_TEST_PRINT("\n");
-    std::shared_lock lifetime_lock{self->gpusro_table.lifetime_lock};
+    std::shared_lock lifetime_lock{self->gpu_sro_table.lifetime_lock};
 
     for (daxa_ExecutableCommandList commands : std::span{info->command_lists, info->command_list_count})
     {
@@ -686,7 +686,8 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
             case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(self, std::bit_cast<daxa_ImageId>(id)); break;
             case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(self, std::bit_cast<daxa_ImageViewId>(id)); break;
             case DEFERRED_DESTRUCTION_SAMPLER_INDEX: _ignore = daxa_dvc_destroy_sampler(self, std::bit_cast<daxa_SamplerId>(id)); break;
-            default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+            // TODO(capi): DO NOT THROW FROM A C FUNCTION
+            // default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
             }
         }
     }
@@ -794,7 +795,7 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
 
 auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
 {
-    std::unique_lock lifetime_lock{self->gpusro_table.lifetime_lock};
+    std::unique_lock lifetime_lock{self->gpu_sro_table.lifetime_lock};
     std::unique_lock lock{self->main_queue_zombies_mtx};
 
     u64 gpu_timeline_value = std::numeric_limits<u64>::max();
@@ -1450,7 +1451,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
     }
 
-    self->gpusro_table.initialize(
+    self->gpu_sro_table.initialize(
         self->info.max_allowed_buffers,
         self->info.max_allowed_images,
         self->info.max_allowed_samplers,
@@ -1540,8 +1541,8 @@ auto daxa_ImplDevice::validate_image_slice(daxa_ImageMipArraySlice const & slice
 
 auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, ImageId>
 {
-    auto slot_opt = this->gpusro_table.image_slots.try_create_slot();
-    DAXA_DBG_ASSERT_TRUE_M(slot_opt.has_value(), "CRITICAL INTERNAL ERROR, EXCEEDED MAX IMAGES IN SAWPCHAIN CREATION");
+    auto slot_opt = this->gpu_sro_table.image_slots.try_create_slot();
+    DAXA_DBG_ASSERT_TRUE_M(slot_opt.has_value(), "CRITICAL INTERNAL ERROR, EXCEEDED MAX IMAGES IN SWAPCHAIN CREATION");
     auto [id, ret] = slot_opt.value();
 
     ret.vk_image = swapchain_image;
@@ -1591,13 +1592,13 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     if ((this->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !image_info.name.empty())
     {
-        auto cstrarr = image_info.name.c_str();
+        auto c_str_arr = image_info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
-            .pObjectName = cstrarr.data(),
+            .pObjectName = c_str_arr.data(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
@@ -1606,12 +1607,12 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
-            .pObjectName = cstrarr.data(),
+            .pObjectName = c_str_arr.data(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
     }
 
-    write_descriptor_set_image(this->vk_device, this->gpusro_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
+    write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
 
     return {DAXA_RESULT_SUCCESS, ImageId{id}};
 }
@@ -1619,9 +1620,9 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 void daxa_ImplDevice::cleanup_buffer(BufferId id)
 {
     auto gid = std::bit_cast<GPUResourceId>(id);
-    ImplBufferSlot const & buffer_slot = this->gpusro_table.buffer_slots.unsafe_get(gid);
+    ImplBufferSlot const & buffer_slot = this->gpu_sro_table.buffer_slots.unsafe_get(gid);
     this->buffer_device_address_buffer_host_ptr[gid.index] = 0;
-    write_descriptor_set_buffer(this->vk_device, this->gpusro_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
+    write_descriptor_set_buffer(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
     if (buffer_slot.opt_memory_block != nullptr)
     {
         vkDestroyBuffer(this->vk_device, buffer_slot.vk_buffer, {});
@@ -1630,17 +1631,17 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     {
         vmaDestroyBuffer(this->vma_allocator, buffer_slot.vk_buffer, buffer_slot.vma_allocation);
     }
-    gpusro_table.buffer_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_sro_table.buffer_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::cleanup_image(ImageId id)
 {
     _DAXA_TEST_PRINT("cleanup image\n");
     auto gid = std::bit_cast<GPUResourceId>(id);
-    ImplImageSlot const & image_slot = gpusro_table.image_slots.unsafe_get(gid);
+    ImplImageSlot const & image_slot = gpu_sro_table.image_slots.unsafe_get(gid);
     write_descriptor_set_image(
         this->vk_device,
-        this->gpusro_table.vk_descriptor_set,
+        this->gpu_sro_table.vk_descriptor_set,
         this->vk_null_image_view,
         std::bit_cast<ImageUsageFlags>(image_slot.info.usage),
         gid.index);
@@ -1656,44 +1657,44 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
             vmaDestroyImage(this->vma_allocator, image_slot.vk_image, image_slot.vma_allocation);
         }
     }
-    gpusro_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::cleanup_image_view(ImageViewId id)
 {
-    DAXA_DBG_ASSERT_TRUE_M(gpusro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id)).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
-    ImplImageViewSlot const & image_slot = gpusro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id)).view_slot;
-    write_descriptor_set_image(this->vk_device, this->gpusro_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
+    DAXA_DBG_ASSERT_TRUE_M(gpu_sro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id)).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
+    ImplImageViewSlot const & image_slot = gpu_sro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id)).view_slot;
+    write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
     vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
-    gpusro_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::cleanup_sampler(SamplerId id)
 {
-    ImplSamplerSlot const & sampler_slot = this->gpusro_table.sampler_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
-    write_descriptor_set_sampler(this->vk_device, this->gpusro_table.vk_descriptor_set, this->vk_null_sampler, std::bit_cast<GPUResourceId>(id).index);
+    ImplSamplerSlot const & sampler_slot = this->gpu_sro_table.sampler_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
+    write_descriptor_set_sampler(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_sampler, std::bit_cast<GPUResourceId>(id).index);
     vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
-    gpusro_table.sampler_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    gpu_sro_table.sampler_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 auto daxa_ImplDevice::slot(daxa_BufferId id) const -> ImplBufferSlot const &
 {
-    return gpusro_table.buffer_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
+    return gpu_sro_table.buffer_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
 auto daxa_ImplDevice::slot(daxa_ImageId id) const -> ImplImageSlot const &
 {
-    return gpusro_table.image_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
+    return gpu_sro_table.image_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
 auto daxa_ImplDevice::slot(daxa_ImageViewId id) const -> ImplImageViewSlot const &
 {
-    return gpusro_table.image_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id)).view_slot;
+    return gpu_sro_table.image_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id)).view_slot;
 }
 
 auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
 {
-    return gpusro_table.sampler_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
+    return gpu_sro_table.sampler_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
@@ -1707,7 +1708,7 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     self->buffer_pool_pool.cleanup(self);
     vmaUnmapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation);
     vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);
-    self->gpusro_table.cleanup(self->vk_device);
+    self->gpu_sro_table.cleanup(self->vk_device);
     vmaDestroyImage(self->vma_allocator, self->vk_null_image, self->vk_null_image_vma_allocation);
     vmaDestroyBuffer(self->vma_allocator, self->vk_null_buffer, self->vk_null_buffer_vma_allocation);
     vmaDestroyAllocator(self->vma_allocator);
@@ -1721,11 +1722,11 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     delete self;
 }
 
-void daxa_ImplDevice::zombiefy_buffer(BufferId id)
+void daxa_ImplDevice::zombify_buffer(BufferId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombiefy_buffer\n");
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_buffer\n");
     {
-        auto & slot = gpusro_table.buffer_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
+        auto & slot = gpu_sro_table.buffer_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
         if (slot.opt_memory_block != nullptr)
         {
             slot.opt_memory_block->dec_weak_refcnt(
@@ -1743,10 +1744,10 @@ void daxa_ImplDevice::zombiefy_buffer(BufferId id)
     }
 }
 
-void daxa_ImplDevice::zombiefy_image(ImageId id)
+void daxa_ImplDevice::zombify_image(ImageId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombiefy_image (%i,%i)\n", id.index, id.version);
-    auto & slot = gpusro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_image (%i,%i)\n", id.index, id.version);
+    auto & slot = gpu_sro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
     if (slot.opt_memory_block != nullptr)
     {
         slot.opt_memory_block->dec_weak_refcnt(
@@ -1763,9 +1764,9 @@ void daxa_ImplDevice::zombiefy_image(ImageId id)
     }
 }
 
-void daxa_ImplDevice::zombiefy_image_view(ImageViewId id)
+void daxa_ImplDevice::zombify_image_view(ImageViewId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombiefy_image_view\n");
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_image_view\n");
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     std::unique_lock const lock{this->main_queue_zombies_mtx};
     this->main_queue_image_view_zombies.push_front({
@@ -1774,9 +1775,9 @@ void daxa_ImplDevice::zombiefy_image_view(ImageViewId id)
     });
 }
 
-void daxa_ImplDevice::zombiefy_sampler(SamplerId id)
+void daxa_ImplDevice::zombify_sampler(SamplerId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombiefy_sampler\n");
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_sampler\n");
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     std::unique_lock const lock{this->main_queue_zombies_mtx};
     this->main_queue_sampler_zombies.push_front({

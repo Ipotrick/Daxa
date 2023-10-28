@@ -157,22 +157,22 @@ auto daxa_index_of_sampler(daxa_SamplerId id) -> u32
 
 auto daxa_version_of_buffer(daxa_BufferId id) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
 auto daxa_version_of_image(daxa_ImageId id) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
 auto daxa_version_of_image_view(daxa_ImageViewId id) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
 auto daxa_version_of_sampler(daxa_SamplerId id) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSTET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
 // --- End API Functions
@@ -209,14 +209,14 @@ auto ImplHandle::get_refcnt() const -> u64
     return std::atomic_ref{this->strong_count}.load(std::memory_order::relaxed);
 }
 
-auto ImplHandle::Minc_weak_refcnt([[maybe_unused]] char const * callsite) const -> u64
+auto ImplHandle::impl_inc_weak_refcnt([[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"inc_weak_refcnt\" in \"%s\"\n", callsite);
     auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::Mdec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance, [[maybe_unused]] char const * callsite) const -> u64
+auto ImplHandle::impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance, [[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
     auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
@@ -249,7 +249,8 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
 
     if (info->requirements.memoryTypeBits == 0)
     {
-        DAXA_DBG_ASSERT_TRUE_M(false, "memory_type_bits must be non zero");
+        // TODO(capi): This should not be here, the point is to return an error!
+        // DAXA_DBG_ASSERT_TRUE_M(false, "memory_type_bits must be non zero");
         return DAXA_RESULT_ERROR_UNKNOWN;
     }
 

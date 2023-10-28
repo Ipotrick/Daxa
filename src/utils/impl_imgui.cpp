@@ -533,14 +533,14 @@ auto main() -> int
     auto vert_file = std::ifstream{"./imgui_pipeline.vert.spv", std::ios::binary};
     auto vert_size = std::filesystem::file_size("./imgui_pipeline.vert.spv");
     auto vert_bytes = std::vector<uint32_t>(vert_size / sizeof(uint32_t));
-    vert_file.read(reinterpret_cast<char *>(vert_bytes.data()), vert_size);
+    vert_file.read(reinterpret_cast<char *>(vert_bytes.data()), static_cast<std::streamsize>(vert_size));
     vert_file.close();
     std::filesystem::remove("./imgui_pipeline.vert.spv");
 
     auto frag_file = std::ifstream{"./imgui_pipeline.frag.spv", std::ios::binary};
     auto frag_size = std::filesystem::file_size("./imgui_pipeline.frag.spv");
     auto frag_bytes = std::vector<uint32_t>(frag_size / sizeof(uint32_t));
-    frag_file.read(reinterpret_cast<char *>(frag_bytes.data()), frag_size);
+    frag_file.read(reinterpret_cast<char *>(frag_bytes.data()), static_cast<std::streamsize>(frag_size));
     frag_file.close();
     std::filesystem::remove("./imgui_pipeline.frag.spv");
 

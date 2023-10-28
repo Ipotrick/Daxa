@@ -110,13 +110,13 @@ namespace daxa
         //   public:
         //     ExclusiveAccess(GpuResourcePool<ResourceT> & pool) : self{pool}, l{pool.mut} {}
         //     /**
-        //      * @brief   Destroyes a slot.
+        //      * @brief   Destroys a slot.
         //      *          After calling this function, the id of the slot will be forever invalid.
         //      *          Index may be recycled but index + version pairs are always unique.
         //      *
         //      * Always threadsafe.
         //      * Calling this function with a non zombie id will result in undefined behavior.
-        //      * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombiefied resource causes slot leaking!
+        //      * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombified resource causes slot leaking!
         //      */
         //     void unsafe_destroy_zombie_slot(GPUResourceId id)
         //     {
@@ -147,13 +147,13 @@ namespace daxa
         // }
 
         /**
-         * @brief   Destroyes a slot.
+         * @brief   Destroys a slot.
          *          After calling this function, the id of the slot will be forever invalid.
          *          Index may be recycled but index + version pairs are always unique.
          *
          * Always threadsafe.
          * Calling this function with a non zombie id will result in undefined behavior.
-         * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombiefied resource causes slot leaking!
+         * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombified resource causes slot leaking!
          */
         void unsafe_destroy_zombie_slot(GPUResourceId id)
         {
@@ -216,7 +216,7 @@ namespace daxa
             return std::optional{std::pair<GPUResourceId, ResourceT &>(id, this->pages[page]->at(offset).first)};
         }
 
-        auto try_zombiefy(GPUResourceId id) -> bool
+        auto try_zombify(GPUResourceId id) -> bool
         {
             auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
             if (page >= this->valid_page_count.load(std::memory_order_relaxed))
@@ -233,7 +233,7 @@ namespace daxa
         }
 
         /**
-         * @brief   Checks if an id referes to a valid resource.
+         * @brief   Checks if an id refers to a valid resource.
          *
          * Always threadsafe.
          * @returns if the given id is valid.
@@ -251,7 +251,7 @@ namespace daxa
         }
 
         /**
-         * @brief   Checks if an id referes to a valid resource.
+         * @brief   Checks if an id refers to a valid resource.
          *          May return a random slot if the id is invalid.
          *
          * Only Threadsafe when:

@@ -345,14 +345,14 @@ namespace daxa
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
 
-        /// @brief  Actually destroyes all resources that are ready to be destroyed.
-        ///         When calling destroy, or removing all references to an object, it is zombiefied not really destroyed.
-        ///         A zombie lifes until the gpu catches up to the point of zombiefication.
+        /// @brief  Actually destroys all resources that are ready to be destroyed.
+        ///         When calling destroy, or removing all references to an object, it is zombified not really destroyed.
+        ///         A zombie lives until the gpu catches up to the point of zombification.
         /// NOTE:
-        /// * this function will block until it gains an exlusive resource lock
+        /// * this function will block until it gains an exclusive resource lock
         /// * command lists may hold shared lifetime locks, those must all unlock before an exclusive lock can be made
         /// * look at CommandRecorder for more info on this
-        /// * SoftwareCommandRecorder is excempt from this limitation,
+        /// * SoftwareCommandRecorder is exempt from this limitation,
         ///   you can freely record those in parallel with collect_garbage
         void collect_garbage();
 

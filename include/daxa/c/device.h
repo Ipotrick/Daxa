@@ -196,7 +196,7 @@ typedef struct
     uint64_t signal_timeline_semaphore_count;
 } daxa_CommandSubmitInfo;
 
-static const daxa_CommandSubmitInfo DAXA_DEFAULT_COMMAND_SUBMIT_INFO = {};
+static const daxa_CommandSubmitInfo DAXA_DEFAULT_COMMAND_SUBMIT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -212,7 +212,7 @@ typedef struct
     size_t offset;
 } daxa_MemoryBlockBufferInfo;
 
-static const daxa_MemoryBlockBufferInfo DAXA_DEFAULT_MEMORY_BLOCK_BUFFER_INFO = {};
+static const daxa_MemoryBlockBufferInfo DAXA_DEFAULT_MEMORY_BLOCK_BUFFER_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -221,9 +221,9 @@ typedef struct
     size_t offset;
 } daxa_MemoryBlockImageInfo;
 
-static const daxa_MemoryBlockImageInfo DAXA_DEFAULT_MEMORY_BLOCK_IMAGE_INFO = {};
+static const daxa_MemoryBlockImageInfo DAXA_DEFAULT_MEMORY_BLOCK_IMAGE_INFO = DAXA_ZERO_INIT;
 
-static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = {};
+static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);

@@ -62,8 +62,8 @@ struct daxa_ImplDevice final : public ImplHandle
     std::mutex main_queue_command_pool_buffer_recycle_mtx = {};
     CommandPoolPool buffer_pool_pool = {};
 
-    // Gpu resource table:
-    GPUShaderResourceTable gpusro_table = {};
+    // Gpu Shader Resource Object table:
+    GPUShaderResourceTable gpu_sro_table = {};
 
     // Main queue:
     VkQueue main_queue_vk_queue = {};
@@ -103,10 +103,10 @@ struct daxa_ImplDevice final : public ImplHandle
     void cleanup_image_view(ImageViewId id);
     void cleanup_sampler(SamplerId id);
 
-    void zombiefy_buffer(BufferId id);
-    void zombiefy_image(ImageId id);
-    void zombiefy_image_view(ImageViewId id);
-    void zombiefy_sampler(SamplerId id);
+    void zombify_buffer(BufferId id);
+    void zombify_image(ImageId id);
+    void zombify_image_view(ImageViewId id);
+    void zombify_sampler(SamplerId id);
 
     // TODO: Give physical device in info so that this function can be removed.
     // TODO: Better device selection.

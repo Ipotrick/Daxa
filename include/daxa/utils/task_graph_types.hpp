@@ -400,8 +400,8 @@ namespace daxa
 
         /// @brief  The layout of images is controlled and changed by task graph.
         ///         They can change between tasks at any time.
-        ///         Within each task callback the imagelayout for each used image is not changing.
-        ///         The stable layout of a used image can be queryed with this function.
+        ///         Within each task callback the image layout for each used image is not changing.
+        ///         The stable layout of a used image can be queried with this function.
         /// @return the image layout of the used image at the time of the task.
         auto layout() const -> ImageLayout
         {
@@ -540,9 +540,9 @@ namespace daxa
 
             virtual auto get_uses_constant_buffer_slot() const -> isize override
             {
-                if constexpr (requires { T_TASK::CONSANT_BUFFER_SLOT; })
+                if constexpr (requires { T_TASK::CONSTANT_BUFFER_SLOT; })
                 {
-                    return T_TASK::CONSANT_BUFFER_SLOT;
+                    return T_TASK::CONSTANT_BUFFER_SLOT;
                 }
                 else
                 {

@@ -32,7 +32,7 @@ namespace daxa
     };
 
     /**
-     * @brief   Swapchain represents the surface, swapchain and synch primives reguarding acquire and present operations.
+     * @brief   Swapchain represents the surface, swapchain and synch primitives regarding acquire and present operations.
      *          The swapchain has a cpu and gpu timeline in order to ensure proper frames in flight.
      *
      * THREADSAFETY:

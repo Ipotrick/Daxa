@@ -101,10 +101,10 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND: return "DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND";
     case DAXA_RESULT_RANGE_OUT_OF_BOUNDS: return "DAXA_RESULT_RANGE_OUT_OF_BOUNDS";
     case DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND: return "DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND";
-    case DAXA_RESULT_EXEEDED_MAX_BUFFERS: return "DAXA_RESULT_EXEEDED_MAX_BUFFERS";
-    case DAXA_RESULT_EXEEDED_MAX_IMAGES: return "DAXA_RESULT_EXEEDED_MAX_IMAGES";
-    case DAXA_RESULT_EXEEDED_MAX_IMAGE_VIEWS: return "DAXA_RESULT_EXEEDED_MAX_IMAGE_VIEWS";
-    case DAXA_RESULT_EXEEDED_MAX_SAMPLERS: return "DAXA_RESULT_EXEEDED_MAX_SAMPLERS";
+    case DAXA_RESULT_EXCEEDED_MAX_BUFFERS: return "DAXA_RESULT_EXCEEDED_MAX_BUFFERS";
+    case DAXA_RESULT_EXCEEDED_MAX_IMAGES: return "DAXA_RESULT_EXCEEDED_MAX_IMAGES";
+    case DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS: return "DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS";
+    case DAXA_RESULT_EXCEEDED_MAX_SAMPLERS: return "DAXA_RESULT_EXCEEDED_MAX_SAMPLERS";
     case DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE: return "DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE";
     case DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID";
     case DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID";
@@ -389,10 +389,10 @@ namespace daxa
 
     auto Device::get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>
     {
-        auto cdevice = rc_cast<daxa_Device>(object);
+        auto c_device = rc_cast<daxa_Device>(object);
         VkSurfaceKHR surface = {};
         auto result = create_surface(
-            cdevice->instance,
+            c_device->instance,
             std::bit_cast<daxa_NativeWindowHandle>(native_handle),
             std::bit_cast<daxa_NativeWindowPlatform>(native_platform),
             &surface);
@@ -400,28 +400,28 @@ namespace daxa
 
         u32 present_mode_count = {};
         auto vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-            cdevice->vk_physical_device,
+            c_device->vk_physical_device,
             surface,
             &present_mode_count,
             nullptr);
         if (vk_result != VK_SUCCESS)
         {
-            vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
+            vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
             check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
         }
         std::vector<PresentMode> ret = {};
         ret.resize(static_cast<usize>(present_mode_count));
         vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
-            cdevice->vk_physical_device,
+            c_device->vk_physical_device,
             surface,
             &present_mode_count,
             r_cast<VkPresentModeKHR *>(ret.data()));
         if (vk_result != VK_SUCCESS)
         {
-            vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
+            vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
             check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
         }
-        vkDestroySurfaceKHR(cdevice->instance->vk_instance, surface, nullptr);
+        vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
         return ret;
     }
 

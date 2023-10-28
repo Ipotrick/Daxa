@@ -107,16 +107,16 @@ namespace daxa
         // Used for internal reference count.
         u64 weak_count = {};
 
-#define inc_weak_refcnt() Minc_weak_refcnt(__FUNCTION__)
-#define dec_weak_refcnt(CB, IS) Mdec_weak_refcnt(CB, IS, __FUNCTION__)
+#define inc_weak_refcnt() impl_inc_weak_refcnt(__FUNCTION__)
+#define dec_weak_refcnt(CB, IS) impl_dec_weak_refcnt(CB, IS, __FUNCTION__)
 
         // For user side ref counting.
         auto inc_refcnt() const -> u64;
         auto dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64;
         auto get_refcnt() const -> u64;
         // For internal ref counting.
-        auto Minc_weak_refcnt(char const * callsite) const -> u64;
-        auto Mdec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance, char const * callsite) const -> u64;
+        auto impl_inc_weak_refcnt(char const * callsite) const -> u64;
+        auto impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance, char const * callsite) const -> u64;
         auto get_weak_refcnt() const -> u64;
     };
 } // namespace daxa
