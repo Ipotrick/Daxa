@@ -1108,6 +1108,7 @@ void daxa_ImplExecutableCommandList::zero_ref_callback(ImplHandle const * handle
         daxa_ImplCommandRecorder::zero_ref_callback,
         self->cmd_recorder->device->instance
     );
+    delete self;
 }
 
 // --- End Internals ---

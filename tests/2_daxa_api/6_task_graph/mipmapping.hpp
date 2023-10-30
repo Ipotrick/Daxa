@@ -431,6 +431,8 @@ namespace tests
                     .wait_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
                     .swapchain = swapchain,
                 });
+
+                device.collect_garbage();
             }
 
             auto record_tasks() -> daxa::TaskGraph

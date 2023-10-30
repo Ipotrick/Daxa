@@ -128,6 +128,7 @@ struct App : AppWindow<App>
         device.submit_commands({
             .command_lists = std::span{&executable_commands, 1},
         });
+        device.collect_garbage();
     }
 
     ~App()
