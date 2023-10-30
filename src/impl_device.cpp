@@ -897,14 +897,8 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             // TODO: reuse command buffers instead?
             // auto vk_result = vkResetCommandPool(self->vk_device, object.vk_cmd_pool, {});
 
-            vkDestroyCommandPool(self->vk_device, object.vk_cmd_pool, {});
-            VkCommandPoolCreateInfo const vk_command_pool_create_info{
-                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
-                .pNext = nullptr,
-                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-                .queueFamilyIndex = self->main_queue_family_index,
-            };
-            auto vk_result = vkCreateCommandPool(self->vk_device, &vk_command_pool_create_info, nullptr, &object.vk_cmd_pool);
+            vkFreeCommandBuffers(self->vk_device, object.vk_cmd_pool, object.allocated_command_buffers.size(), object.allocated_command_buffers.data());
+            auto vk_result = vkResetCommandPool(self->vk_device, object.vk_cmd_pool, {});
             if (vk_result != VK_SUCCESS)
             {
                 return std::bit_cast<daxa_Result>(vk_result);

@@ -37,6 +37,7 @@ struct CommandPoolPool
 struct CommandRecorderZombie
 {
     VkCommandPool vk_cmd_pool = {};
+    std::vector<VkCommandBuffer> allocated_command_buffers = {};
 };
 
 struct ExecutableCommandListData
@@ -61,6 +62,7 @@ struct daxa_ImplCommandRecorder final : ImplHandle
     daxa_CommandRecorderInfo info = {};
     std::string info_name = {};
     VkCommandPool vk_cmd_pool = {};
+    std::vector<VkCommandBuffer> allocated_command_buffers = {};
     std::array<VkMemoryBarrier2, COMMAND_LIST_BARRIER_MAX_BATCH_SIZE> memory_barrier_batch = {};
     std::array<VkImageMemoryBarrier2, COMMAND_LIST_BARRIER_MAX_BATCH_SIZE> image_barrier_batch = {};
     usize image_barrier_batch_count = {};

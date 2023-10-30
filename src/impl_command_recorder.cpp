@@ -1034,6 +1034,7 @@ auto daxa_ImplCommandRecorder::generate_new_current_command_data() -> daxa_Resul
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
+    this->allocated_command_buffers.push_back(this->current_command_data.vk_cmd_buffer);
     this->current_command_data.used_buffers.reserve(12);
     this->current_command_data.used_images.reserve(12);
     this->current_command_data.used_image_views.reserve(12);
@@ -1093,6 +1094,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
         main_queue_cpu_timeline,
         CommandRecorderZombie{
             .vk_cmd_pool = self->vk_cmd_pool,
+            .allocated_command_buffers = std::move(self->allocated_command_buffers),
         },
     });
     self->device->dec_weak_refcnt(
