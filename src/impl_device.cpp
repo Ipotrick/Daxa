@@ -563,7 +563,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
         auto success = self->gpu_sro_table.SLOT_NAME.try_zombify(std::bit_cast<GPUResourceId>(id));            \
         if (success)                                                                                           \
         {                                                                                                      \
-            self->zombify_##name(std::bit_cast<Name##Id>(id));                                                \
+            self->zombify_##name(std::bit_cast<Name##Id>(id));                                                 \
             return DAXA_RESULT_SUCCESS;                                                                        \
         }                                                                                                      \
         return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
@@ -581,7 +581,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }                                                                                                          \
     auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                          \
     {                                                                                                          \
-        return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                             \
+        return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                            \
             std::bit_cast<daxa::GPUResourceId>(id)));                                                          \
     }                                                                                                          \
     auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                \
@@ -685,9 +685,11 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
             case DEFERRED_DESTRUCTION_BUFFER_INDEX: _ignore = daxa_dvc_destroy_buffer(self, std::bit_cast<daxa_BufferId>(id)); break;
             case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(self, std::bit_cast<daxa_ImageId>(id)); break;
             case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(self, std::bit_cast<daxa_ImageViewId>(id)); break;
-            case DEFERRED_DESTRUCTION_SAMPLER_INDEX: _ignore = daxa_dvc_destroy_sampler(self, std::bit_cast<daxa_SamplerId>(id)); break;
-            // TODO(capi): DO NOT THROW FROM A C FUNCTION
-            // default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+            case DEFERRED_DESTRUCTION_SAMPLER_INDEX:
+                _ignore = daxa_dvc_destroy_sampler(self, std::bit_cast<daxa_SamplerId>(id));
+                break;
+                // TODO(capi): DO NOT THROW FROM A C FUNCTION
+                // default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
             }
         }
     }
@@ -891,11 +893,23 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
                 break;
             }
 
-            auto vk_result = vkResetCommandPool(self->vk_device, object.vk_cmd_pool, {});
+            // This apparently "leaks" in our current impl. Instead, we recreate below.
+            // TODO: reuse command buffers instead?
+            // auto vk_result = vkResetCommandPool(self->vk_device, object.vk_cmd_pool, {});
+
+            vkDestroyCommandPool(self->vk_device, object.vk_cmd_pool, {});
+            VkCommandPoolCreateInfo const vk_command_pool_create_info{
+                .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
+                .pNext = nullptr,
+                .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
+                .queueFamilyIndex = self->main_queue_family_index,
+            };
+            auto vk_result = vkCreateCommandPool(self->vk_device, &vk_command_pool_create_info, nullptr, &object.vk_cmd_pool);
             if (vk_result != VK_SUCCESS)
             {
                 return std::bit_cast<daxa_Result>(vk_result);
             }
+
             self->buffer_pool_pool.put_back(object.vk_cmd_pool);
             self->main_queue_command_list_zombies.pop_back();
         }
