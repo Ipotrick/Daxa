@@ -55,7 +55,7 @@ struct UploadVertexDataTask
     std::string_view name = "upload vertices";
     void callback(daxa::TaskInterface ti)
     {
-        auto& recorder = ti.get_recorder();
+        auto & recorder = ti.get_recorder();
         // This is the data we'll send to the GPU
         auto data = std::array{
             MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
@@ -110,7 +110,7 @@ struct DrawToSwapchainTask
     std::string_view name = "draw task";
     void callback(daxa::TaskInterface ti)
     {
-        auto& recorder = ti.get_recorder();
+        auto & recorder = ti.get_recorder();
         auto const size_x = ti.get_device().info_image(uses.color_target.image()).value().size.x;
         auto const size_y = ti.get_device().info_image(uses.color_target.image()).value().size.y;
         auto render_recorder = std::move(recorder).begin_renderpass({
@@ -364,6 +364,7 @@ auto main() -> int
 
         // So, now all we need to do is execute our task graph!
         loop_task_graph.execute({});
+        device.collect_garbage();
     }
 
     device.wait_idle();

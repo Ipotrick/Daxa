@@ -249,16 +249,16 @@ namespace daxa
     {
         Device() = default;
 
-        auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
-        auto get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
-        auto get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
+        [[nodiscard]] auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
+        [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
+        [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
 
-        auto create_buffer(BufferInfo const & info) -> BufferId;
-        auto create_image(ImageInfo const & info) -> ImageId;
-        auto create_buffer_from_block(MemoryBlockBufferInfo const & info) -> BufferId;
-        auto create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId;
-        auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
-        auto create_sampler(SamplerInfo const & info) -> SamplerId;
+        [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
+        [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;
+        [[nodiscard]] auto create_buffer_from_block(MemoryBlockBufferInfo const & info) -> BufferId;
+        [[nodiscard]] auto create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId;
+        [[nodiscard]] auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
+        [[nodiscard]] auto create_sampler(SamplerInfo const & info) -> SamplerId;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
@@ -269,54 +269,54 @@ namespace daxa
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
-        auto info_buffer(BufferId id) const -> Optional<BufferInfo>;
+        [[nodiscard]] auto info_buffer(BufferId id) const -> Optional<BufferInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
-        auto info_image(ImageId id) const -> Optional<ImageInfo>;
+        [[nodiscard]] auto info_image(ImageId id) const -> Optional<ImageInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
-        auto info_image_view(ImageViewId id) const -> Optional<ImageViewInfo>;
+        [[nodiscard]] auto info_image_view(ImageViewId id) const -> Optional<ImageViewInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
-        auto info_sampler(SamplerId id) const -> Optional<SamplerInfo>;
+        [[nodiscard]] auto info_sampler(SamplerId id) const -> Optional<SamplerInfo>;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id or the object.
         /// @return validity of id
-        auto is_id_valid(ImageId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(ImageId id) const -> bool;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id of the object.
         /// @return validity of id
-        auto is_id_valid(ImageViewId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(ImageViewId id) const -> bool;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id of the object.
         /// @return validity of id
-        auto is_id_valid(BufferId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(BufferId id) const -> bool;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id of the object.
         /// @return validity of id
-        auto is_id_valid(SamplerId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(SamplerId id) const -> bool;
 
-        auto get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>;
-        auto get_host_address(BufferId id) const -> Optional<std::byte *>;
+        [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>;
+        [[nodiscard]] auto get_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>
-        auto get_host_address_as(BufferId id) const -> Optional<T *>
+        [[nodiscard]] auto get_host_address_as(BufferId id) const -> Optional<T *>
         {
             auto opt = get_host_address(id);
             if (opt.has_value())
@@ -326,20 +326,20 @@ namespace daxa
             return {};
         }
 
-        auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
-        auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
+        [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
+        [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
 
-        auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
-        auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;
-        auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
-        auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
-        auto create_event(EventInfo const & info) -> Event;
-        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
+        [[nodiscard]] auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
+        [[nodiscard]] auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;
+        [[nodiscard]] auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
+        [[nodiscard]] auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
+        [[nodiscard]] auto create_event(EventInfo const & info) -> Event;
+        [[nodiscard]] auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
-        auto info() const -> DeviceInfo const &;
+        [[nodiscard]] auto info() const -> DeviceInfo const &;
         void wait_idle();
 
         void submit_commands(CommandSubmitInfo const & submit_info);
@@ -359,8 +359,8 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to device properties
-        auto properties() const -> DeviceProperties const &;
-        auto get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>;
+        [[nodiscard]] auto properties() const -> DeviceProperties const &;
+        [[nodiscard]] auto get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>;
 
       protected:
         template <typename T, typename H_T>

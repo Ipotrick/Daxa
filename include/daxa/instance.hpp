@@ -30,12 +30,12 @@ namespace daxa
     {
         Instance() = default;
 
-        auto create_device(DeviceInfo const & device_info) -> Device;
+        [[nodiscard]] auto create_device(DeviceInfo const & device_info) -> Device;
 
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> InstanceInfo const &;
+        [[nodiscard]] auto info() const -> InstanceInfo const &;
 
       protected:
         template <typename T, typename H_T>
@@ -44,5 +44,5 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    auto create_instance(InstanceInfo const & info) -> Instance;
+    [[nodiscard]] auto create_instance(InstanceInfo const & info) -> Instance;
 } // namespace daxa

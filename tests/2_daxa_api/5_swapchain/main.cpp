@@ -114,6 +114,8 @@ namespace tests
                     .wait_binary_semaphores = std::array{swapchain.get_present_semaphore()},
                     .swapchain = swapchain,
                 });
+
+                device.collect_garbage();
             }
 
             void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}

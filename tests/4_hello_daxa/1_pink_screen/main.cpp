@@ -190,6 +190,7 @@ auto main() -> int
             .wait_binary_semaphores = std::array{present_semaphore},
             .swapchain = swapchain,
         });
+        device.collect_garbage();
     }
 
     device.wait_idle();

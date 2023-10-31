@@ -13,7 +13,7 @@ namespace daxa
         Access dst_access = AccessConsts::NONE;
     };
 
-    auto to_string(MemoryBarrierInfo const & info) -> std::string;
+    [[nodiscard]] auto to_string(MemoryBarrierInfo const & info) -> std::string;
 
     struct ImageMemoryBarrierInfo
     {
@@ -25,7 +25,7 @@ namespace daxa
         ImageId image_id = {};
     };
 
-    auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
+    [[nodiscard]] auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
 
     struct BinarySemaphoreInfo
     {
@@ -39,7 +39,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
-        auto info() const -> BinarySemaphoreInfo const &;
+        [[nodiscard]] auto info() const -> BinarySemaphoreInfo const &;
 
       protected:
         template <typename T, typename H_T>
@@ -61,11 +61,11 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TimelineSemaphoreInfo const &;
+        [[nodiscard]] auto info() const -> TimelineSemaphoreInfo const &;
 
-        auto value() const -> u64;
+        [[nodiscard]] auto value() const -> u64;
         void set_value(u64 value);
-        auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
+        [[nodiscard]] auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
 
       protected:
         template <typename T, typename H_T>
@@ -86,7 +86,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> EventInfo const &;
+        [[nodiscard]] auto info() const -> EventInfo const &;
 
       protected:
         template <typename T, typename H_T>

@@ -355,7 +355,7 @@ namespace tests
         auto time_taken_til_wrap_64 = static_cast<double>(std::numeric_limits<uint64_t>::max()) * time_taken_per_recreation / 24.0 / 356.0;
         std::cout
             << "Recreation test measured "
-            << time_taken_mics
+            << time_taken_mics.count()
             << " time passed for "
             << outer_iterations * inner_iterations
             << " total iterations for image view recreation. It will take "
@@ -402,7 +402,7 @@ namespace tests
                 time_taken_per_call_0 = static_cast<double>(time_taken_mics.count()) / static_cast<double>(iterations);
                 std::cout
                     << "recording commands with unsafe calls took: "
-                    << time_taken_mics
+                    << time_taken_mics.count()
                     << " for "
                     << iterations
                     << " iterations. That is "
@@ -437,7 +437,7 @@ namespace tests
                 time_taken_per_call_1 = static_cast<double>(time_taken_mics.count()) / static_cast<double>(iterations);
                 std::cout
                     << "recording commands with safe calls took: "
-                    << time_taken_mics
+                    << time_taken_mics.count()
                     << " for "
                     << iterations
                     << " iterations. That is "
@@ -462,7 +462,7 @@ namespace tests
 
         constexpr daxa::u32 TEST_VALUE = 0xf0abf0ab;
 
-        *app.device.get_host_address_as<uint32_t>(buf_a).value() = TEST_VALUE;
+        *app.device.get_host_address_as<daxa::u32>(buf_a).value() = TEST_VALUE;
 
         daxa::CommandRecorder cmdr = app.device.create_command_recorder({});
 
@@ -498,7 +498,7 @@ namespace tests
 
         app.device.wait_idle();
 
-        [[maybe_unused]] daxa::u32 readback_value = *app.device.get_host_address_as<uint32_t>(buf_c).value();
+        [[maybe_unused]] daxa::u32 readback_value = *app.device.get_host_address_as<daxa::u32>(buf_c).value();
 
         DAXA_DBG_ASSERT_TRUE_M(readback_value == TEST_VALUE, "TEST VALUE DOES NOT MATCH READBACK VALUE");
 

@@ -19,7 +19,7 @@ namespace daxa
         std::string string;
     };
 
-    using ShaderSource = Variant<std::monostate, ShaderFile, ShaderCode>;
+    using ShaderSource = Variant<Monostate, ShaderFile, ShaderCode>;
 
     struct ShaderDefine
     {
@@ -54,7 +54,7 @@ namespace daxa
 
     struct ShaderCompileInfo
     {
-        ShaderSource source = std::monostate{};
+        ShaderSource source = Monostate{};
         ShaderCompileOptions compile_options = {};
     };
 
@@ -102,7 +102,7 @@ namespace daxa
     {
         std::string message;
     };
-    using NoPipelineChanged = std::monostate;
+    using NoPipelineChanged = Monostate;
 
     using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 

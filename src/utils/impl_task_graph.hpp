@@ -51,7 +51,7 @@ namespace daxa
         Access first_access = AccessConsts::NONE;
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
-        Variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
+        Variant<Monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = Monostate{};
         BufferId actual_buffer = {};
         ResourceLifetime lifetime = {};
         usize allocation_offset = {};
@@ -64,7 +64,7 @@ namespace daxa
         usize latest_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
-        Variant<std::monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = std::monostate{};
+        Variant<Monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = Monostate{};
     };
 
     struct PerPermTaskImage

@@ -58,6 +58,7 @@ struct App : BaseApp<App>
             return;
         }
         loop_task_graph.execute({});
+        device.collect_garbage();
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
@@ -93,7 +94,7 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto& recorder = ti.get_recorder();
+                auto & recorder = ti.get_recorder();
                 recorder.set_pipeline(*compute_pipeline);
                 recorder.push_constant(ComputePush{
                     .image = render_image.default_view(),
@@ -110,7 +111,7 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto& recorder = ti.get_recorder();
+                auto & recorder = ti.get_recorder();
                 recorder.blit_image_to_image({
                     .src_image = ti.uses[task_render_image].image(),
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,

@@ -255,7 +255,7 @@ namespace daxa
 
         /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
-        auto end_renderpass() && -> CommandRecorder;
+        [[nodiscard]] auto end_renderpass() && -> CommandRecorder;
 
         void push_constant_vptr(void const * data, u32 size);
         template <typename T>
@@ -386,7 +386,7 @@ namespace daxa
         /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
         /// @param info parameters.
-        auto begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandRecorder;
+        [[nodiscard]] auto begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandRecorder;
         // void set_pipeline(RasterPipeline const & pipeline);
         // void set_viewport(ViewportInfo const & info);
         // void set_scissor(Rect2D const & info);

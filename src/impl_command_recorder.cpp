@@ -688,6 +688,7 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     };
     vkCmdSetViewport(self->current_command_data.vk_cmd_buffer, 0, 1, &vk_viewport);
     vkCmdBeginRendering(self->current_command_data.vk_cmd_buffer, &vk_rendering_info);
+    self->in_renderpass = true;
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -695,6 +696,7 @@ void daxa_cmd_end_renderpass(daxa_CommandRecorder self)
 {
     daxa_cmd_flush_barriers(self);
     vkCmdEndRendering(self->current_command_data.vk_cmd_buffer);
+    self->in_renderpass = false;
 }
 
 void daxa_cmd_set_viewport(daxa_CommandRecorder self, VkViewport const * info)
@@ -1032,6 +1034,7 @@ auto daxa_ImplCommandRecorder::generate_new_current_command_data() -> daxa_Resul
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
+    this->allocated_command_buffers.push_back(this->current_command_data.vk_cmd_buffer);
     this->current_command_data.used_buffers.reserve(12);
     this->current_command_data.used_images.reserve(12);
     this->current_command_data.used_image_views.reserve(12);
@@ -1091,6 +1094,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
         main_queue_cpu_timeline,
         CommandRecorderZombie{
             .vk_cmd_pool = self->vk_cmd_pool,
+            .allocated_command_buffers = std::move(self->allocated_command_buffers),
         },
     });
     self->device->dec_weak_refcnt(
@@ -1106,6 +1110,7 @@ void daxa_ImplExecutableCommandList::zero_ref_callback(ImplHandle const * handle
         daxa_ImplCommandRecorder::zero_ref_callback,
         self->cmd_recorder->device->instance
     );
+    delete self;
 }
 
 // --- End Internals ---
