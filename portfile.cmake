@@ -1,6 +1,6 @@
 # Local-only code
 
-set(SOURCE_PATH "${CMAKE_CURRENT_LIST_DIR}/../../")
+set(SOURCE_PATH "${CMAKE_CURRENT_LIST_DIR}")
 
 # Standard vcpkg stuff
 
@@ -33,6 +33,7 @@ endif()
 if(WITH_UTILS_TASK_GRAPH)
     list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_TASK_GRAPH=true")
 endif()
+
 
 vcpkg_configure_cmake(
     SOURCE_PATH "${SOURCE_PATH}"
