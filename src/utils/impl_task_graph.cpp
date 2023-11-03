@@ -3074,8 +3074,8 @@ namespace daxa
         std::string out = {};
         std::string indent = {};
         fmt::format_to(std::back_inserter(out), "task graph name: {}, id: {}:\n", info.name, unique_index);
-        fmt::format_to(std::back_inserter(out), "device: {}\n", info.device.info().name);
-        fmt::format_to(std::back_inserter(out), "swapchain: {}\n", (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name : "-"));
+        fmt::format_to(std::back_inserter(out), "device: {}\n", info.device.info().name.view());
+        fmt::format_to(std::back_inserter(out), "swapchain: {}\n", (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name.view() : "-"));
         fmt::format_to(std::back_inserter(out), "reorder tasks: {}\n", info.reorder_tasks);
         fmt::format_to(std::back_inserter(out), "use split barriers: {}\n", info.use_split_barriers);
         fmt::format_to(std::back_inserter(out), "permutation_condition_count: {}\n", info.permutation_condition_count);

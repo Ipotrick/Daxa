@@ -28,7 +28,7 @@ namespace daxa
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
         usize max_allowed_frames_in_flight = 2;
-        std::string_view name = "";
+        SmallString name = "";
     };
 
     /**

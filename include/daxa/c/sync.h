@@ -104,7 +104,7 @@ typedef struct
 
 typedef struct
 {
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_BinarySemaphoreInfo;
 
 DAXA_EXPORT daxa_BinarySemaphoreInfo const *
@@ -121,7 +121,7 @@ daxa_binary_semaphore_dec_refcnt(daxa_BinarySemaphore binary_semaphore);
 typedef struct
 {
     uint64_t initial_value;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_TimelineSemaphoreInfo;
 
 DAXA_EXPORT daxa_TimelineSemaphoreInfo const *
@@ -146,7 +146,7 @@ daxa_timeline_semaphore_dec_refcnt(daxa_TimelineSemaphore timeline_semaphore);
 
 typedef struct
 {
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_EventInfo;
 
 typedef struct

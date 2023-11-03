@@ -8,7 +8,7 @@
 
 typedef struct
 {
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_CommandRecorderInfo;
 
 typedef struct
@@ -312,7 +312,7 @@ typedef struct
 typedef struct
 {
     daxa_f32vec4 label_color;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_CommandLabelInfo;
 
 typedef struct

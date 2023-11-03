@@ -7,7 +7,7 @@ typedef struct
 {
     uint32_t const * byte_code;
     uint32_t byte_code_size;
-    daxa_StringView entry_point;
+    daxa_SmallString entry_point;
 } daxa_ShaderInfo;
 _DAXA_DECL_OPTIONAL(daxa_ShaderInfo)
 
@@ -15,7 +15,7 @@ typedef struct
 {
     daxa_ShaderInfo shader_info;
     uint32_t push_constant_size;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_ComputePipelineInfo;
 
 DAXA_EXPORT daxa_ComputePipelineInfo const *
@@ -134,7 +134,7 @@ typedef struct
     daxa_Optional(daxa_TesselationInfo) tesselation;
     daxa_RasterizerInfo raster;
     uint32_t push_constant_size;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_RasterPipelineInfo;
 
 DAXA_EXPORT daxa_RasterPipelineInfo const *

@@ -13,7 +13,7 @@ namespace daxa
 
     struct CommandRecorderInfo
     {
-        std::string_view name = "";
+        SmallString name = "";
     };
 
     struct ImageBlitInfo

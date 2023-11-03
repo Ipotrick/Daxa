@@ -1727,7 +1727,7 @@ namespace daxa
     struct TimelineQueryPoolInfo
     {
         u32 query_count = {};
-        std::string_view name = "";
+        SmallString name = "";
     };
 
     struct TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>

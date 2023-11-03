@@ -8,8 +8,6 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
     auto ret = daxa_ImplBinarySemaphore{};
     ret.device = device;
     ret.info = *reinterpret_cast<BinarySemaphoreInfo const *>(info);
-    ret.info_name = {ret.info.name.data(), ret.info.name.size()};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     VkSemaphoreCreateInfo const vk_semaphore_create_info{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
         .pNext = nullptr,
@@ -65,8 +63,6 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
     auto ret = daxa_ImplTimelineSemaphore{};
     ret.device = device;
     ret.info = *reinterpret_cast<TimelineSemaphoreInfo const *>(info);
-    ret.info_name = {ret.info.name.data(), ret.info.name.size()};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     VkSemaphoreTypeCreateInfo timeline_vk_semaphore{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
         .pNext = nullptr,
@@ -160,8 +156,6 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
     auto ret = daxa_ImplEvent{};
     ret.device = device;
     ret.info = *reinterpret_cast<EventInfo const *>(info);
-    ret.info_name = {ret.info.name.data(), ret.info.name.size()};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     VkEventCreateInfo const vk_event_create_info{
         .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO,
         .pNext = nullptr,
