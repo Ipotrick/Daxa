@@ -372,7 +372,7 @@ namespace daxa
         };
         check_result(
             daxa_dvc_present(r_cast<daxa_Device>(this->object), &c_present_info),
-            "failed to present frame", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_ERROR_OUT_OF_DATE_KHR});
+            "failed to present frame", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_SUBOPTIMAL_KHR, DAXA_RESULT_ERROR_OUT_OF_DATE_KHR});
     }
 
     void Device::collect_garbage()

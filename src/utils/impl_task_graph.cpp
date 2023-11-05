@@ -1514,7 +1514,7 @@ namespace daxa
                                     .dst_access = current_buffer_access,
                                 },
                                 /* .split_barrier_state = */ task_graph_impl.info.device.create_event({
-                                    .name = std::string("TaskGraph \"") + task_graph_impl.info.name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
+                                    .name = std::string("tg \"") + task_graph_impl.info.name + "\" sb " + std::to_string(split_barrier_index),
                                 }),
                             });
                             // Now we give the src batch the index of this barrier to signal.
@@ -1729,7 +1729,7 @@ namespace daxa
                                         .dst_access = current_image_access,
                                     },
                                     /* .split_barrier_state = */ task_graph_impl.info.device.create_event({
-                                        .name = std::string("TaskGraph \"") + task_graph_impl.info.name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
+                                        .name = std::string("tg \"") + task_graph_impl.info.name + "\" sbi " + std::to_string(split_barrier_index),
                                     }),
                                 });
                                 // Now we give the src batch the index of this barrier to signal.
