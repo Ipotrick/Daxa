@@ -38,3 +38,13 @@
     std::string name = std::string(x::NAME);                             \
     x::Uses uses = {};
 #endif
+
+// DAXA 3.0 Task-Head-Shader interface:
+// #define DAXA_TASK_HEAD_BEGIN(...)
+// #define DAXA_TH_IMAGE(...)
+// #define DAXA_TH_IMAGE_ARRAY(..., SIZE)
+// #define DAXA_TH_BUFFER_ID(...)
+// #define DAXA_TH_BUFFER_ADDR(...)
+// #define DAXA_TH_BUFFER_ID_ARRAY(NAME, TASK_ACCESS, SIZE)
+// #define DAXA_TH_BUFFER_ADDR_ARRAY(NAME, TASK_ACCESS, SIZE)
+// #define DAXA_TASK_HEAD_END

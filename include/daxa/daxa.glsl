@@ -138,7 +138,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
 #define daxa_BufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(BufferPtr, STRUCT_TYPE)
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
-#define deref(BUFFER_PTR) BUFFER_PTR.value
+#define deref(BUFFER_PTR) (BUFFER_PTR).value
 
 /// @brief Defines the buffer reference used in all buffer references in daxa glsl. Can also be used to declare new buffer references.
 #define DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN) buffer
