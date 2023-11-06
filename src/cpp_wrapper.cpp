@@ -121,7 +121,7 @@ void check_result(daxa_Result result, char const * message, std::array<daxa_Resu
     bool result_allowed = false;
     for (auto allowed_code : allowed_codes)
     {
-        result_allowed = result_allowed || allowed_code == result;
+        result_allowed = (result_allowed || allowed_code == result);
     }
     if (!result_allowed)
     {
@@ -372,7 +372,7 @@ namespace daxa
         };
         check_result(
             daxa_dvc_present(r_cast<daxa_Device>(this->object), &c_present_info),
-            "failed to present frame");
+            "failed to present frame", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_SUBOPTIMAL_KHR, DAXA_RESULT_ERROR_OUT_OF_DATE_KHR});
     }
 
     void Device::collect_garbage()
@@ -570,7 +570,7 @@ namespace daxa
     {
         check_result(
             daxa_swp_resize(r_cast<daxa_Swapchain>(this->object)),
-            "failed to resize swapchain");
+            "failed to resize swapchain", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_ERROR_OUT_OF_DATE_KHR});
     }
 
     void Swapchain::set_present_mode(PresentMode present_mode)
@@ -699,14 +699,14 @@ namespace daxa
     /// --- Begin RenderCommandBuffer
 
 #define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(name, Info) \
-    void RenderCommandRecorder::name(Info const & info)     \
+    void RenderCommandRecorder::name(Info const & info)    \
     {                                                      \
         daxa_cmd_##name(                                   \
             this->internal,                                \
             r_cast<daxa_##Info const *>(&info));           \
     }
 #define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
-    void RenderCommandRecorder::name(Info const & info)                  \
+    void RenderCommandRecorder::name(Info const & info)                 \
     {                                                                   \
         auto result = daxa_cmd_##name(                                  \
             this->internal,                                             \
@@ -799,14 +799,14 @@ namespace daxa
     /// --- Begin CommandRecorder ---
 
 #define _DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
-    void CommandRecorder::name(Info const & info)    \
+    void CommandRecorder::name(Info const & info)   \
     {                                               \
         daxa_cmd_##name(                            \
             this->internal,                         \
             r_cast<daxa_##Info const *>(&info));    \
     }
 #define _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
-    void CommandRecorder::name(Info const & info)                 \
+    void CommandRecorder::name(Info const & info)                \
     {                                                            \
         auto result = daxa_cmd_##name(                           \
             this->internal,                                      \
@@ -858,13 +858,13 @@ namespace daxa
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)
 
-#define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name) \
+#define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name)  \
     void CommandRecorder::destroy_##name##_deferred(Name##Id id) \
-    {                                                           \
-        auto result = daxa_cmd_destroy_##name##_deferred(       \
-            this->internal,                                     \
-            static_cast<daxa_##Name##Id>(id));                  \
-        check_result(result, "failed to destroy " #name);       \
+    {                                                            \
+        auto result = daxa_cmd_destroy_##name##_deferred(        \
+            this->internal,                                      \
+            static_cast<daxa_##Name##Id>(id));                   \
+        check_result(result, "failed to destroy " #name);        \
     }
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
     _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)

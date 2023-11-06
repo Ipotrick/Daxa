@@ -22,8 +22,8 @@ namespace daxa
         InstanceFlags flags =
             InstanceFlagBits::DEBUG_UTILS |
             InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD;
-        std::string_view engine_name = "daxa";
-        std::string_view app_name = "daxa app";
+        SmallString engine_name = "daxa";
+        SmallString app_name = "daxa app";
     };
 
     struct Instance final : ManagedPtr<Instance, daxa_Instance>

@@ -16,7 +16,7 @@
 #define DAXA_DECL_TASK_USES_BEGIN(TASK_NAME, SLOT)           \
     struct TASK_NAME                                         \
     {                                                        \
-        static constexpr isize CONSTANT_BUFFER_SLOT = SLOT;   \
+        static constexpr daxa::isize CONSTANT_BUFFER_SLOT = SLOT;   \
         static constexpr std::string_view NAME = #TASK_NAME; \
         std::string name = #TASK_NAME;                       \
         struct Uses                                          \
@@ -33,7 +33,7 @@
 
 #if __cplusplus
 #define DAXA_USE_TASK_HEADER(x)                                          \
-    static constexpr isize CONSTANT_BUFFER_SLOT = x::CONSTANT_BUFFER_SLOT; \
+    static constexpr daxa::isize CONSTANT_BUFFER_SLOT = x::CONSTANT_BUFFER_SLOT; \
     static constexpr std::string_view NAME = x::NAME;                    \
     std::string name = std::string(x::NAME);                             \
     x::Uses uses = {};

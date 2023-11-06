@@ -15,7 +15,6 @@ struct PipelineZombie
 
 struct ImplPipeline : ImplHandle
 {
-    std::string info_name = {};
     daxa_Device device = {};
     VkPipeline vk_pipeline = {};
     VkPipelineLayout vk_pipeline_layout = {};

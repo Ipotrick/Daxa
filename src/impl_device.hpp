@@ -24,7 +24,6 @@ struct daxa_ImplDevice final : public ImplHandle
     // Properties and capabilities:
     daxa_Instance instance = {};
     DeviceInfo info = {};
-    std::string info_name = {};
     VkPhysicalDevice vk_physical_device = {};
     VkPhysicalDeviceProperties2 vk_physical_device_properties2;
     VkDevice vk_device = {};

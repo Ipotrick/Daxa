@@ -202,7 +202,7 @@ namespace daxa
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 400;
-        std::string_view name = "";
+        SmallString name = "";
     };
 
     struct CommandSubmitInfo

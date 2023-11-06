@@ -163,7 +163,7 @@ typedef struct
     uint32_t max_allowed_images;
     uint32_t max_allowed_buffers;
     uint32_t max_allowed_samplers;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_DeviceInfo;
 
 static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
@@ -172,7 +172,7 @@ static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
     .max_allowed_images = 10000,
     .max_allowed_buffers = 10000,
     .max_allowed_samplers = 400,
-    .name = {.data = NULL, .size = 0},
+    .name = DAXA_ZERO_INIT,
 };
 
 typedef struct

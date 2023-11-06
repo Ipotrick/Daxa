@@ -957,11 +957,9 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
         vk_cmd_pool = device->buffer_pool_pool.get(device);
     }
     auto ret = daxa_ImplCommandRecorder{};
-    ret.device = device,
-    ret.info = *info,
-    ret.vk_cmd_pool = vk_cmd_pool,
-    ret.info_name = {info->name.data, info->name.size};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
+    ret.device = device;
+    ret.info = *info;
+    ret.vk_cmd_pool = vk_cmd_pool;
     auto result = ret.generate_new_current_command_data();
     if (result != DAXA_RESULT_SUCCESS)
     {

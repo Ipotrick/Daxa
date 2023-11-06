@@ -178,10 +178,12 @@ namespace daxa
                 recreate_ibuffer(ibuffer_new_size);
             }
 
+            constexpr usize IMGUI_RESOURCE_NAME_MAX_NUMBER = 8;
+
             auto staging_vbuffer = info.device.create_buffer({
                 .size = static_cast<u32>(vbuffer_needed_size),
                 .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                .name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count),
+                .name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count % IMGUI_RESOURCE_NAME_MAX_NUMBER),
             });
             auto * vtx_dst = info.device.get_host_address_as<ImDrawVert>(staging_vbuffer).value();
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)
@@ -194,7 +196,7 @@ namespace daxa
             auto staging_ibuffer = info.device.create_buffer({
                 .size = static_cast<u32>(ibuffer_needed_size),
                 .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                .name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count),
+                .name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count % IMGUI_RESOURCE_NAME_MAX_NUMBER),
             });
             auto * idx_dst = info.device.get_host_address_as<ImDrawIdx>(staging_ibuffer).value();
             for (i32 n = 0; n < draw_data->CmdListsCount; n++)

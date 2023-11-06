@@ -10,8 +10,6 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     daxa_ImplRasterPipeline ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<RasterPipelineInfo const *>(info);
-    ret.info_name = {ret.info.name.begin(), ret.info.name.end()};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     std::vector<VkShaderModule> vk_shader_modules = {};
     // NOTE: Temporarily holds 0 terminated strings, incoming strings are data + size, not null terminated!
     std::vector<std::unique_ptr<std::string>> entry_point_names = {};
@@ -33,7 +31,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             return result;
         }
         vk_shader_modules.push_back(vk_shader_module);
-        entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.begin(), shader_info.entry_point.end()));
+        entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
             .pNext = nullptr,
@@ -269,12 +267,13 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
     {
+        auto name_cstr = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_PIPELINE,
             .objectHandle = std::bit_cast<u64>(ret.vk_pipeline),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = name_cstr.data(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
@@ -308,7 +307,6 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     daxa_ImplComputePipeline ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<ComputePipelineInfo const *>(info);
-    ret.info_name = {ret.info.name.data(), ret.info.name.size()};
     VkShaderModule vk_shader_module = {};
     VkShaderModuleCreateInfo const shader_module_ci{
         .sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -352,14 +350,15 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     {
         return std::bit_cast<daxa_Result>(pipeline_result);
     }
-    if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info_name.empty())
+    if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
     {
+        auto name_cstr = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_PIPELINE,
             .objectHandle = reinterpret_cast<uint64_t>(ret.vk_pipeline),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = name_cstr.data(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }

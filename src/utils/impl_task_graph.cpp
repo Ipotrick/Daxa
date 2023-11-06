@@ -1514,7 +1514,7 @@ namespace daxa
                                     .dst_access = current_buffer_access,
                                 },
                                 /* .split_barrier_state = */ task_graph_impl.info.device.create_event({
-                                    .name = std::string("TaskGraph \"") + task_graph_impl.info.name + "\" SplitBarrier Nr. " + std::to_string(split_barrier_index),
+                                    .name = std::string("tg \"") + task_graph_impl.info.name + "\" sb " + std::to_string(split_barrier_index),
                                 }),
                             });
                             // Now we give the src batch the index of this barrier to signal.
@@ -1729,7 +1729,7 @@ namespace daxa
                                         .dst_access = current_image_access,
                                     },
                                     /* .split_barrier_state = */ task_graph_impl.info.device.create_event({
-                                        .name = std::string("TaskGraph \"") + task_graph_impl.info.name + "\" SplitBarrier (Image) Nr. " + std::to_string(split_barrier_index),
+                                        .name = std::string("tg \"") + task_graph_impl.info.name + "\" sbi " + std::to_string(split_barrier_index),
                                     }),
                                 });
                                 // Now we give the src batch the index of this barrier to signal.
@@ -3074,8 +3074,8 @@ namespace daxa
         std::string out = {};
         std::string indent = {};
         fmt::format_to(std::back_inserter(out), "task graph name: {}, id: {}:\n", info.name, unique_index);
-        fmt::format_to(std::back_inserter(out), "device: {}\n", info.device.info().name);
-        fmt::format_to(std::back_inserter(out), "swapchain: {}\n", (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name : "-"));
+        fmt::format_to(std::back_inserter(out), "device: {}\n", info.device.info().name.view());
+        fmt::format_to(std::back_inserter(out), "swapchain: {}\n", (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name.view() : "-"));
         fmt::format_to(std::back_inserter(out), "reorder tasks: {}\n", info.reorder_tasks);
         fmt::format_to(std::back_inserter(out), "use split barriers: {}\n", info.use_split_barriers);
         fmt::format_to(std::back_inserter(out), "permutation_condition_count: {}\n", info.permutation_condition_count);

@@ -11,9 +11,9 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     auto ret = daxa_ImplInstance{};
     ret.info = *reinterpret_cast<InstanceInfo const *>(info);
     ret.engine_name = {ret.info.engine_name.data(), ret.info.engine_name.size()};
-    ret.info.engine_name = {ret.engine_name.data(), ret.engine_name.size()};
+    ret.info.engine_name = ret.engine_name;
     ret.app_name = {ret.info.app_name.data(), ret.info.app_name.size()};
-    ret.info.app_name = {ret.app_name.data(), ret.app_name.size()};
+    ret.info.app_name = ret.app_name;
     std::vector<char const *> required_extensions{};
     required_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     if ((ret.info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)

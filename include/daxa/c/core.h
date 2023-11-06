@@ -49,12 +49,6 @@ typedef char daxa_Bool8;
 
 typedef struct
 {
-    char const * data;
-    size_t size;
-} daxa_StringView;
-
-typedef struct
-{
     uint64_t value;
 } daxa_BufferId;
 

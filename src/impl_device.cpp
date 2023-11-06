@@ -944,8 +944,6 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     self->vk_physical_device = physical_device;
     self->instance = instance;
     self->info = *reinterpret_cast<DeviceInfo const *>(&info);
-    self->info_name = {info.name.data, info.name.size};
-    self->info.name = {self->info_name.c_str(), self->info_name.size()};
     self->vk_physical_device_properties2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
         .pNext = {},
@@ -1416,45 +1414,45 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         }
     }
 
-    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !self->info_name.empty())
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !self->info.name.view().empty())
     {
-        auto const device_name = self->info_name;
+        auto const device_name = self->info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const device_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_DEVICE,
             .objectHandle = reinterpret_cast<uint64_t>(self->vk_device),
-            .pObjectName = device_name.c_str(),
+            .pObjectName = device_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_name_info);
 
-        auto const queue_name = self->info_name;
+        auto const queue_name = self->info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const device_main_queue_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_QUEUE,
             .objectHandle = reinterpret_cast<uint64_t>(self->main_queue_vk_queue),
-            .pObjectName = queue_name.c_str(),
+            .pObjectName = queue_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_main_queue_name_info);
 
-        auto const semaphore_name = self->info_name;
+        auto const semaphore_name = self->info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const device_main_queue_timeline_semaphore_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
             .objectHandle = reinterpret_cast<uint64_t>(self->vk_main_queue_gpu_timeline_semaphore),
-            .pObjectName = semaphore_name.c_str(),
+            .pObjectName = semaphore_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_main_queue_timeline_semaphore_name_info);
 
-        auto const buffer_name = self->info_name;
+        auto const buffer_name = self->info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const device_main_queue_timeline_buffer_device_address_buffer_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_BUFFER,
             .objectHandle = reinterpret_cast<uint64_t>(self->buffer_device_address_buffer),
-            .pObjectName = buffer_name.c_str(),
+            .pObjectName = buffer_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
     }

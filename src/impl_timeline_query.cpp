@@ -11,8 +11,6 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
     auto ret = daxa_ImplTimelineQueryPool{};
     ret.device = device;
     ret.info = *reinterpret_cast<TimelineQueryPoolInfo const *>(info);
-    ret.info_name = {ret.info.name.data(), ret.info.name.size()};
-    ret.info.name = {ret.info_name.data(), ret.info_name.size()};
     // TODO(msakmary) Should Add a check for support of timeline queries
     //                here or earlier (during device creation/section) I'm not sure...
     VkQueryPoolCreateInfo const vk_query_pool_create_info{

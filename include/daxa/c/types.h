@@ -201,7 +201,7 @@ daxa_memory_block_dec_refcnt(daxa_MemoryBlock memory_block);
 typedef struct
 {
     uint32_t query_count;
-    daxa_StringView name;
+    daxa_SmallString name;
 } daxa_TimelineQueryPoolInfo;
 
 DAXA_EXPORT daxa_TimelineQueryPoolInfo const *

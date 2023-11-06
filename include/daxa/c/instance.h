@@ -10,8 +10,8 @@ static const daxa_InstanceFlags DAXA_INSTANCE_FLAG_PARENT_MUST_OUTLIVE_CHILD = 0
 typedef struct
 {
     daxa_InstanceFlags flags;
-    daxa_StringView engine_name;
-    daxa_StringView app_name;
+    daxa_SmallString engine_name;
+    daxa_SmallString app_name;
 } daxa_InstanceInfo;
 
 static const daxa_InstanceInfo DAXA_DEFAULT_INSTANCE_INFO = {

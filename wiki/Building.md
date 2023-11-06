@@ -82,7 +82,7 @@ cd vcpkg
 ```
 
 #### VCPKG_ROOT environment variable
-Then we need to add VCPKG_ROOT as an environment variable. We’ll do so by adding this line to either your `.profile` or `.bashrc` file in your home directory
+Then we need to add VCPKG_ROOT as an environment variable. We’ll do so by adding this line to your shell resource file (most likely `.profile`, `.zshrc`, or `.bashrc`) in your home directory
 
 ```
 export VCPKG_ROOT="$HOME/dev/utils/vcpkg"
@@ -93,7 +93,7 @@ export VCPKG_ROOT="$HOME/dev/utils/vcpkg"
 #### Download the archive
 Next we’ll install the Vulkan SDK. Download the tar.gz from [the lunarG site](https://vulkan.lunarg.com/sdk/home#linux) and extract it to some location (I recommend `~/dev/utils/vulkan-sdk/<sdk_version>`
 #### Setting up the environment
-Then we’ll just source the `setup-env.sh` script in the same bash file as before, by adding this line:
+Then we’ll just source the `setup-env.sh` script in the same bash file as before, by adding this line to your shell resource file:
 ```
 source "$HOME/dev/utils/vulkan-sdk/<sdk_version>/setup-env.sh"
 ```
