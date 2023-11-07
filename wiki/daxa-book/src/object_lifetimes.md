@@ -1,14 +1,4 @@
-# Objects
-
-Daxa splits all objects into two categories. shader resource objects and management objects.
-
-Shader resource objects are buffers, images, image views and samplers. 
-
-Shader resource objects are represented with 64bit ids in daxa. These ids can be used on the cpu AND gpu! The ids are similar to entity ids in an ecs.
-
-Any other obejct is reference counted. 
-
-# ids vs reference counting
+# Ids vs reference counting
 
 Why have two different lifetime systems in daxa?
 
