@@ -460,3 +460,5 @@ preprocessed_*
 vcpkg/
 
 .idea
+
+wiki/daxa-book/book/*
