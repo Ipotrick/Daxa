@@ -54,15 +54,21 @@ There is another big advantage of ids for SROs. As daxa uses descriptor indexing
 
 Examples of SROs:
 ```c++
-daxa::BufferId buffer_id = device.create_buffer({
+daxa::Device device = ...;
+
+daxa::BufferId buffer = device.create_buffer({
     .size = 64, 
     .name = "example buffer",
 });
 
+// For SROs the info is returned as a value to prevent race conditions.
 // Device also stores metadata about its SROs that can be queried:
-daxa::BufferInfo const & buffer_info = device.info_buffer(buffer_id);
+daxa::BufferInfo buffer_info = device.info_buffer(buffer).value();
 
-daxa::ImageId image_id = device.create_image({
+// Device can tell you if an id is valid or not:
+const bool id_valid = device.is_id_valid(buffer);
+
+daxa::ImageId image = device.create_image({
     .format = daxa::Format::R8G8B8A8_SRGB,
     .size = {1024, 1024, 1},
     .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | 
@@ -70,12 +76,18 @@ daxa::ImageId image_id = device.create_image({
     .name "example texture image",
 });
 
-daxa::ImageViewId image_view_id = device.create_image_view({
+daxa::ImageViewId image_view = device.create_image_view({
     .format = Format::R8G8B8A8_SRGB;
-    .image = image_id;
+    .image = image;
     .slice = {};
     .name = "example image view";
 });
 
-daxa::SamplerId sampler_id = device.create_image_sampler({});
+daxa::SamplerId sampler = device.create_image_sampler({});
+
+// Device is responsible for destroying SROs:
+device.destroy_buffer(buffer);
+device.destroy_image(immage);
+device.destroy_image_view(image_view);
+device.destroy_sampler(sampler);
 ```

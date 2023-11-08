@@ -1,5 +1,7 @@
 # Ids vs reference counting
 
+TODO UPDATE
+
 Why have two different lifetime systems in daxa?
 
 In the past daxa had only ref counted objects. This was a great convenience, ref counting is very simple, solves all lifetime tracking issues itself and makes use and implementation very easy.

@@ -28,3 +28,5 @@ struct InstanceInfo
 ```
 
 As you can see, all fields have default values. In the example above we only initialize app_name. This reduces the boilerplate of initialization. Daxa also infers as much as possible for vulkan object creation, making the info structs smaller and initialization easier.
+
+Also, every object in daxa has a `name` field in its info struct. These names are provided to vulkan via the debug utils extension. This allows the driver, the vulkan validation layers and tooling like RenderDoc to give each resource their given name in debugging and profiling. Daxa also uses these names internally for error messages.
