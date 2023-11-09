@@ -66,6 +66,11 @@ namespace daxa
         {
             operator daxa_SamplerId() const { return std::bit_cast<daxa_SamplerId>(*this); }
         };
+
+        struct AccelerationStructureId : public GPUResourceId
+        {
+            operator daxa_AccelerationStructureId() const { return std::bit_cast<daxa_AccelerationStructureId>(*this); }
+        };
     } // namespace types
 
     auto to_string(GPUResourceId const & id) -> std::string;
@@ -134,6 +139,20 @@ namespace daxa
         f32 max_lod = 1000.0f; // This value is the "VK_LOD_CLAMP_MODE_NONE" value
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
+        SmallString name = "";
+    };
+
+    enum struct AccelerationStructureType
+    {
+        TOP_LEVEL = 0,
+        BOTTOM_LEVEL = 1,
+        GENERIC = 2,
+    };
+
+    struct AccelerationStructureInfo
+    {
+        u64 size = {};
+        AccelerationStructureType type = AccelerationStructureType::GENERIC;
         SmallString name = "";
     };
 } // namespace daxa

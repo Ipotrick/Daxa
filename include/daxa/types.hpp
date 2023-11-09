@@ -244,7 +244,9 @@ namespace daxa
         }
     };
 
-    struct SmallString final : public FixedList<char, 39>
+    static constexpr inline usize SMALL_STRING_CHAR_MAX = 39;
+
+    struct SmallString final : public FixedList<char, SMALL_STRING_CHAR_MAX>
     {
         constexpr SmallString(char const * c_str)
         {

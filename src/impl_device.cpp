@@ -161,7 +161,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_BUFFER,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_buffer),
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_buffer),
             .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
@@ -310,12 +310,13 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
+        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
-            .pObjectName = info->name.data,
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_image),
+            .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
 
@@ -323,8 +324,8 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
-            .pObjectName = info->name.data,
+            .objectHandle = std::bit_cast<uint64_t>(ret.view_slot.vk_image_view),
+            .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_view_name_info);
     }
@@ -337,6 +338,94 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         id.index);
 
     *out_id = std::bit_cast<daxa_ImageId>(id);
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto create_acceleration_structure_helper(
+    daxa_Device self,
+    daxa_AccelerationStructureInfo const * info,
+    daxa_BufferId const * buffer,
+    u64 const * offset,
+    daxa_AccelerationStructureId * out_id) -> daxa_Result
+{
+    // --- Begin Parameter Validation ---
+
+    // --- End Parameter Validation ---
+
+    auto slot_opt = self->gpu_sro_table.acceleration_structure_slots.try_create_slot();
+    if (!slot_opt.has_value())
+    {
+        return DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES;
+    }
+    auto [id, ret] = slot_opt.value();
+
+    ret.info = *info;
+
+    if (buffer)
+    {
+        ret.buffer_id = *buffer;
+        ret.offset = *offset;
+    }
+    else
+    {
+        daxa::SmallString buffer_name{std::string_view{info->name.data, info->name.size}};
+        if (info->name.size < SMALL_STRING_CHAR_MAX)
+            buffer_name.push_back(' ');
+        if (info->name.size < SMALL_STRING_CHAR_MAX)
+            buffer_name.push_back('b');
+        if (info->name.size < SMALL_STRING_CHAR_MAX)
+            buffer_name.push_back('u');
+        if (info->name.size < SMALL_STRING_CHAR_MAX)
+            buffer_name.push_back('f');
+        auto cinfo = daxa_BufferInfo{
+            .name = std::bit_cast<daxa_SmallString>(buffer_name)};
+        auto result = daxa_dvc_create_buffer(self, &cinfo, &ret.buffer_id);
+        if (result != DAXA_RESULT_SUCCESS)
+        {
+            return result;
+        }
+        ret.offset = 0;
+    }
+    ret.vk_buffer = self->slot(ret.buffer_id).vk_buffer;
+
+    [[maybe_unused]] daxa_Result safely_ignorable = daxa_dvc_buffer_device_address(self, ret.buffer_id, &ret.bda);
+
+    VkAccelerationStructureCreateInfoKHR vk_create_info = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .createFlags = VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR,
+        .buffer = self->slot(ret.buffer_id).vk_buffer,
+        .offset = ret.offset,
+        .size = ret.info.size,
+        .type = std::bit_cast<VkAccelerationStructureTypeKHR>(ret.info.type),
+        .deviceAddress = std::bit_cast<VkDeviceAddress>(ret.bda),
+    };
+    auto vk_result = self->vkCreateAccelerationStructureKHR(self->vk_device, &vk_create_info, nullptr, &ret.vk_as);
+    if (vk_result != VK_SUCCESS)
+    {
+        return std::bit_cast<daxa_Result>(vk_result);
+    }
+
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
+    {
+        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR,
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_as),
+            .pObjectName = c_str_arr.data(),
+        };
+        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
+    }
+
+    write_descriptor_set_acceleration_structure(
+        self->vk_device,
+        self->gpu_sro_table.vk_descriptor_set,
+        ret.vk_as,
+        id.index);
+
+    *out_id = std::bit_cast<daxa_AccelerationStructureId>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -413,7 +502,7 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
     return create_image_helper(self, info, out_id, nullptr, 0);
 }
 
-auto daxa_dvc_create_buffer_from_block(daxa_Device self, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
+auto daxa_dvc_create_buffer_from_memory_block(daxa_Device self, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
 {
     return create_buffer_helper(self, &info->buffer_info, out_id, *info->memory_block, info->offset);
 }
@@ -421,6 +510,16 @@ auto daxa_dvc_create_buffer_from_block(daxa_Device self, daxa_MemoryBlockBufferI
 auto daxa_dvc_create_image_from_block(daxa_Device self, daxa_MemoryBlockImageInfo const * info, daxa_ImageId * out_id) -> daxa_Result
 {
     return create_image_helper(self, &info->image_info, out_id, *info->memory_block, info->offset);
+}
+
+auto daxa_dvc_create_acceleration_structure(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id) -> daxa_Result
+{
+    return create_acceleration_structure_helper(device, info, nullptr, nullptr, out_id);
+}
+
+auto daxa_dvc_create_acceleration_structure_from_buffer(daxa_Device device, daxa_BufferAccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id) -> daxa_Result
+{
+    return create_acceleration_structure_helper(device, &info->acceleration_structure_info, &info->buffer_id, &info->offset, out_id);
 }
 
 auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id) -> daxa_Result
@@ -470,7 +569,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image_view),
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_image_view),
             .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &name_info);
@@ -545,7 +644,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SAMPLER,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_sampler),
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_sampler),
             .pObjectName = c_str_arr.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &sampler_name_info);
@@ -556,37 +655,37 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     return DAXA_RESULT_SUCCESS;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                        \
-    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                            \
-    {                                                                                                          \
-        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                               \
-        auto success = self->gpu_sro_table.SLOT_NAME.try_zombify(std::bit_cast<GPUResourceId>(id));            \
-        if (success)                                                                                           \
-        {                                                                                                      \
-            self->zombify_##name(std::bit_cast<Name##Id>(id));                                                 \
-            return DAXA_RESULT_SUCCESS;                                                                        \
-        }                                                                                                      \
-        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
-    }                                                                                                          \
-    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id, daxa_##Name##Info * out_info)->daxa_Result \
-    {                                                                                                          \
-        /*NOTE: THIS CAN RACE. BUT IT IS OK AS ITS A POD AND WE CHECK IF ITS VALID AFTER THE COPY!*/           \
-        auto info_copy = self->slot(id).info;                                                                  \
-        if (daxa_dvc_is_##name##_valid(self, id))                                                              \
-        {                                                                                                      \
-            *out_info = info_copy;                                                                             \
-            return DAXA_RESULT_SUCCESS;                                                                        \
-        }                                                                                                      \
-        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
-    }                                                                                                          \
-    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                          \
-    {                                                                                                          \
-        return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                            \
-            std::bit_cast<daxa::GPUResourceId>(id)));                                                          \
-    }                                                                                                          \
-    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id)->Vk##Name                                \
-    {                                                                                                          \
-        return self->slot(id).vk_##name;                                                                       \
+#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME)                                          \
+    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id) -> daxa_Result                            \
+    {                                                                                                            \
+        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                 \
+        auto success = self->gpu_sro_table.SLOT_NAME.try_zombify(std::bit_cast<GPUResourceId>(id));              \
+        if (success)                                                                                             \
+        {                                                                                                        \
+            self->zombify_##name(std::bit_cast<Name##Id>(id));                                                   \
+            return DAXA_RESULT_SUCCESS;                                                                          \
+        }                                                                                                        \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
+    }                                                                                                            \
+    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id, daxa_##Name##Info * out_info) -> daxa_Result \
+    {                                                                                                            \
+        /*NOTE: THIS CAN RACE. BUT IT IS OK AS ITS A POD AND WE CHECK IF ITS VALID AFTER THE COPY!*/             \
+        auto info_copy = self->slot(id).info;                                                                    \
+        if (daxa_dvc_is_##name##_valid(self, id))                                                                \
+        {                                                                                                        \
+            *out_info = info_copy;                                                                               \
+            return DAXA_RESULT_SUCCESS;                                                                          \
+        }                                                                                                        \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
+    }                                                                                                            \
+    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id) -> daxa_Bool8                          \
+    {                                                                                                            \
+        return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                              \
+            std::bit_cast<daxa::GPUResourceId>(id)));                                                            \
+    }                                                                                                            \
+    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id) -> Vk##Name                                \
+    {                                                                                                            \
+        return self->slot(id).vk_##name;                                                                         \
     }
 
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots)
@@ -1421,7 +1520,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_DEVICE,
-            .objectHandle = reinterpret_cast<uint64_t>(self->vk_device),
+            .objectHandle = std::bit_cast<uint64_t>(self->vk_device),
             .pObjectName = device_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_name_info);
@@ -1431,7 +1530,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_QUEUE,
-            .objectHandle = reinterpret_cast<uint64_t>(self->main_queue_vk_queue),
+            .objectHandle = std::bit_cast<uint64_t>(self->main_queue_vk_queue),
             .pObjectName = queue_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_main_queue_name_info);
@@ -1441,7 +1540,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
-            .objectHandle = reinterpret_cast<uint64_t>(self->vk_main_queue_gpu_timeline_semaphore),
+            .objectHandle = std::bit_cast<uint64_t>(self->vk_main_queue_gpu_timeline_semaphore),
             .pObjectName = semaphore_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_main_queue_timeline_semaphore_name_info);
@@ -1451,7 +1550,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_BUFFER,
-            .objectHandle = reinterpret_cast<uint64_t>(self->buffer_device_address_buffer),
+            .objectHandle = std::bit_cast<uint64_t>(self->buffer_device_address_buffer),
             .pObjectName = buffer_name.data(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_main_queue_timeline_buffer_device_address_buffer_name_info);
@@ -1461,6 +1560,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         self->info.max_allowed_buffers,
         self->info.max_allowed_images,
         self->info.max_allowed_samplers,
+        self->info.max_allowed_acceleration_structures,
         self->vk_device,
         self->buffer_device_address_buffer,
         self->vkSetDebugUtilsObjectNameEXT);
@@ -1603,7 +1703,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_image),
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_image),
             .pObjectName = c_str_arr.data(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
@@ -1612,7 +1712,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.view_slot.vk_image_view),
+            .objectHandle = std::bit_cast<uint64_t>(ret.view_slot.vk_image_view),
             .pObjectName = c_str_arr.data(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);

@@ -254,11 +254,11 @@ namespace daxa
         return {};                                                    \
     }
 
-    auto Device::create_buffer_from_block(MemoryBlockBufferInfo const & info) -> BufferId
+    auto Device::create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId
     {
         BufferId id = {};
         check_result(
-            daxa_dvc_create_buffer_from_block(
+            daxa_dvc_create_buffer_from_memory_block(
                 r_cast<daxa_Device>(this->object),
                 r_cast<daxa_MemoryBlockBufferInfo const *>(&info),
                 r_cast<daxa_BufferId *>(&id)),

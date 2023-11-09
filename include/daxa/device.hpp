@@ -189,6 +189,23 @@ namespace daxa
         static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
         static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
         static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
+        static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
+    };
+
+    struct DeviceFlags2
+    {
+        u32 buffer_device_address_capture_replay_bit : 1 = 1;
+        u32 conservative_rasterization : 1 = {};
+        u32 mesh_shader_bit : 1 = {};
+        u32 shader_atomic64 : 1 = 1;
+        u32 image_atomic64 : 1 = 1;
+        u32 vk_memory_model : 1 = {};
+        u32 ray_tracing : 1 = {};
+
+        operator DeviceFlags()
+        {
+            return std::bit_cast<DeviceFlags>(*this);
+        }
     };
 
     struct DeviceInfo
@@ -202,6 +219,7 @@ namespace daxa
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 400;
+        u32 max_allowed_acceleration_structures = 10'000;
         SmallString name = "";
     };
 
@@ -235,6 +253,13 @@ namespace daxa
         usize offset = {};
     };
 
+    struct BufferAccelerationStructureInfo
+    {
+        AccelerationStructureInfo acceleration_structure_info = {};
+        BufferId buffer = {};
+        usize offset = {};
+    };
+
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
      *          Device manages all general gpu operations that are not handled by other objects.
@@ -255,39 +280,48 @@ namespace daxa
 
         [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
         [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;
-        [[nodiscard]] auto create_buffer_from_block(MemoryBlockBufferInfo const & info) -> BufferId;
+        [[nodiscard]] auto create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId;
         [[nodiscard]] auto create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId;
         [[nodiscard]] auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         [[nodiscard]] auto create_sampler(SamplerInfo const & info) -> SamplerId;
+        [[nodiscard]] auto create_acceleration_structure(AccelerationStructureInfo const & info) -> AccelerationStructureId;
+        [[nodiscard]] auto create_acceleration_structure_from_buffer(BufferAccelerationStructureInfo const & info) -> AccelerationStructureId;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
+        void destroy_acceleration_structure(AccelerationStructureId id);
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_buffer(BufferId id) const -> Optional<BufferInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_image(ImageId id) const -> Optional<ImageInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_image_view(ImageViewId id) const -> Optional<ImageViewInfo>;
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_sampler(SamplerId id) const -> Optional<SamplerInfo>;
+
+        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
+        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
+        /// @param id of the object.
+        /// @return a value copy of the info. Returns nullopt when the id is invalid.
+        [[nodiscard]] auto info_acceleration_structure(AccelerationStructureId id) const -> Optional<AccelerationStructureInfo>;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
@@ -312,6 +346,12 @@ namespace daxa
         /// @param id of the object.
         /// @return validity of id
         [[nodiscard]] auto is_id_valid(SamplerId id) const -> bool;
+
+        /// @brief  Will describe if a given id is valid.
+        ///         An id is valid as long as it was created by the device and not yet destroyed.
+        /// @param id of the object.
+        /// @return validity of id
+        [[nodiscard]] auto is_id_valid(AccelerationStructureId id) const -> bool;
 
         [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>;
         [[nodiscard]] auto get_host_address(BufferId id) const -> Optional<std::byte *>;

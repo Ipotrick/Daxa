@@ -41,6 +41,12 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT = {};
     VkPhysicalDeviceMeshShaderPropertiesEXT mesh_shader_properties = {};
 
+    // Ray tracing:
+    PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR = {};
+    PFN_vkCreateAccelerationStructureKHR vkCreateAccelerationStructureKHR = {};
+    PFN_vkCmdWriteAccelerationStructuresPropertiesKHR vkCmdWriteAccelerationStructuresPropertiesKHR = {};
+    PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR = {};
+
     VkBuffer buffer_device_address_buffer = {};
     u64 * buffer_device_address_buffer_host_ptr = {};
     VmaAllocation buffer_device_address_buffer_allocation = {};

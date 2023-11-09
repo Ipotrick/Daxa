@@ -148,4 +148,24 @@ static const daxa_SamplerInfo DAXA_DEFAULT_SAMPLER_INFO = {
 DAXA_EXPORT VmaAllocation
 daxa_memory_block_get_vma_allocation(daxa_MemoryBlock memory_block);
 
+typedef enum 
+{
+    DAXA_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL = 0,
+    DAXA_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL = 1,
+    DAXA_ACCELERATION_STRUCTURE_TYPE_GENERIC = 2,
+} daxa_AccelerationStructureType;
+
+typedef struct
+{
+    uint64_t size;
+    daxa_AccelerationStructureType type;
+    daxa_SmallString name;
+} daxa_AccelerationStructureInfo;
+
+static const daxa_AccelerationStructureInfo DAXA_DEFAULT_ACCELERATION_STRUCTURE_INFO = {
+    .size = 0,
+    .type = DAXA_ACCELERATION_STRUCTURE_TYPE_GENERIC,
+    .name = {.data = DAXA_ZERO_INIT, .size = 0},
+};
+
 #endif // #ifndef __DAXA_GPU_RESOURCES_H__

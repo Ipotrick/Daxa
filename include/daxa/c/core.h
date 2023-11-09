@@ -67,6 +67,11 @@ typedef struct
     uint64_t value;
 } daxa_SamplerId;
 
+typedef struct
+{
+    uint64_t value;
+} daxa_AccelerationStructureId;
+
 #define _DAXA_DECL_VEC2_TYPE(SCALAR_TYPE) \
     typedef struct                        \
     {                                     \

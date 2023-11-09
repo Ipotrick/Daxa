@@ -5,7 +5,7 @@
 struct App
 {
     daxa::Instance daxa_ctx = daxa::create_instance({.flags = daxa::InstanceFlagBits::DEBUG_UTILS});
-    daxa::Device device = daxa_ctx.create_device({});
+    daxa::Device device = daxa_ctx.create_device({.flags = daxa::DeviceFlags2{.ray_tracing = 1} });
 };
 
 namespace tests

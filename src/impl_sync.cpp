@@ -24,7 +24,7 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
-            .objectHandle = reinterpret_cast<u64>(ret.vk_semaphore),
+            .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
             .pObjectName = ret.info_name.c_str(),
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
@@ -85,7 +85,7 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
-            .objectHandle = reinterpret_cast<u64>(ret.vk_semaphore),
+            .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
             .pObjectName = ret.info_name.c_str(),
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);

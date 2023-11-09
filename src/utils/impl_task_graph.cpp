@@ -1860,7 +1860,7 @@ namespace daxa
             {
                 auto const & transient_info = daxa::get<PermIndepTaskBufferInfo::Transient>(glob_buffer.task_buffer_data);
 
-                perm_buffer.actual_buffer = info.device.create_buffer_from_block(MemoryBlockBufferInfo{
+                perm_buffer.actual_buffer = info.device.create_buffer_from_memory_block(MemoryBlockBufferInfo{
                     .buffer_info = BufferInfo{
                         .size = transient_info.info.size,
                         .name = transient_info.info.name,

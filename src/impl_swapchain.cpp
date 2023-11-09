@@ -363,7 +363,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-            .objectHandle = reinterpret_cast<u64>(this->vk_swapchain),
+            .objectHandle = std::bit_cast<u64>(this->vk_swapchain),
             .pObjectName = this->info_name.c_str(),
         };
         this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &swapchain_name_info);

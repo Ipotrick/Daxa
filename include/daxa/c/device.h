@@ -152,6 +152,7 @@ typedef enum
     DAXA_DEVICE_FLAG_SHADER_ATOMIC64 = 0x1 << 3,
     DAXA_DEVICE_FLAG_IMAGE_ATOMIC64 = 0x1 << 4,
     DAXA_DEVICE_FLAG_VK_MEMORY_MODEL = 0x1 << 5,
+    DAXA_DEVICE_FLAG_RAY_TRACING = 0x1 << 6,
 } daxa_DeviceFlagBits;
 
 typedef uint32_t daxa_DeviceFlags;
@@ -163,6 +164,7 @@ typedef struct
     uint32_t max_allowed_images;
     uint32_t max_allowed_buffers;
     uint32_t max_allowed_samplers;
+    uint32_t max_allowed_acceleration_structures;
     daxa_SmallString name;
 } daxa_DeviceInfo;
 
@@ -172,6 +174,7 @@ static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
     .max_allowed_images = 10000,
     .max_allowed_buffers = 10000,
     .max_allowed_samplers = 400,
+    .max_allowed_acceleration_structures = 10000,
     .name = DAXA_ZERO_INIT,
 };
 
@@ -205,6 +208,8 @@ typedef struct
     daxa_Swapchain swapchain;
 } daxa_PresentInfo;
 
+static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = DAXA_ZERO_INIT;
+
 typedef struct
 {
     daxa_BufferInfo buffer_info;
@@ -223,7 +228,14 @@ typedef struct
 
 static const daxa_MemoryBlockImageInfo DAXA_DEFAULT_MEMORY_BLOCK_IMAGE_INFO = DAXA_ZERO_INIT;
 
-static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = DAXA_ZERO_INIT;
+typedef struct
+{
+    daxa_AccelerationStructureInfo acceleration_structure_info;
+    daxa_BufferId buffer_id;
+    uint64_t offset;
+} daxa_BufferAccelerationStructureInfo;
+
+static const daxa_BufferAccelerationStructureInfo DAXA_DEFAULT_BUFFER_ACCELERATION_STRUCTURE_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);
@@ -237,14 +249,17 @@ daxa_dvc_create_buffer(daxa_Device device, daxa_BufferInfo const * info, daxa_Bu
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_image(daxa_Device device, daxa_ImageInfo const * info, daxa_ImageId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_buffer_from_memory_block(daxa_Device device, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_image_from_block(daxa_Device device, daxa_MemoryBlockImageInfo const * info, daxa_ImageId * out_id);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_image_view(daxa_Device device, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
-
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_create_buffer_from_block(daxa_Device device, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id);
+daxa_dvc_create_acceleration_structure(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_create_image_from_block(daxa_Device device, daxa_MemoryBlockImageInfo const * info, daxa_ImageId * out_id);
+daxa_dvc_create_acceleration_structure_from_buffer(daxa_Device device, daxa_BufferAccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
@@ -254,6 +269,8 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_destroy_image_view(daxa_Device device, daxa_ImageViewId id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_destroy_acceleration_structure(daxa_Device device, daxa_AccelerationStructureId sampler);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
@@ -263,6 +280,8 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageViewInfo * out_info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerInfo * out_info);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_info_acceleration_structure(daxa_Device device, daxa_AccelerationStructureId acceleration_structure, daxa_AccelerationStructureInfo * out_info);
 
 DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);
@@ -272,6 +291,8 @@ DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_image_view_valid(daxa_Device device, daxa_ImageViewId image_view);
 DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_sampler_valid(daxa_Device device, daxa_SamplerId sampler);
+DAXA_EXPORT daxa_Bool8
+daxa_dvc_is_acceleration_structure_valid(daxa_Device device, daxa_AccelerationStructureId acceleration_structure);
 
 DAXA_EXPORT VkBuffer
 daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer);

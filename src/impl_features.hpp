@@ -27,6 +27,9 @@ namespace daxa
         std::optional<VkPhysicalDeviceShaderAtomicInt64Features> shader_atomic64 = {};
         std::optional<VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT> image_atomic64 = {};
         std::optional<VkPhysicalDeviceMeshShaderFeaturesEXT> mesh_shader = {};
+        std::optional<VkPhysicalDeviceAccelerationStructureFeaturesKHR> acceleration_structure = {};
+        std::optional<VkPhysicalDeviceRayTracingPipelineFeaturesKHR> ray_tracing_pipeline = {};
+        std::optional<VkPhysicalDeviceRayQueryFeaturesKHR> ray_query = {};
         void * chain = {};
 
         void initialize(daxa_DeviceInfo info);

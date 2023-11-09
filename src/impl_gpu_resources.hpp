@@ -24,15 +24,8 @@ namespace daxa
         VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
         VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 
-    static inline constexpr u32 BUFFER_BINDING = 0;
-    static inline constexpr u32 STORAGE_IMAGE_BINDING = 1;
-    static inline constexpr u32 SAMPLED_IMAGE_BINDING = 2;
-    static inline constexpr u32 SAMPLER_BINDING = 3;
-    static inline constexpr u32 BUFFER_DEVICE_ADDRESS_BUFFER_BINDING = 4;
-
     struct ImplBufferSlot
     {
-        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_BufferInfo info = {};
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
@@ -45,7 +38,6 @@ namespace daxa
 
     struct ImplImageViewSlot
     {
-        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_ImageViewInfo info = {};
         VkImageView vk_image_view = {};
     };
@@ -53,7 +45,6 @@ namespace daxa
     struct ImplImageSlot
     {
         ImplImageViewSlot view_slot = {};
-        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_ImageInfo info = {};
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
@@ -64,9 +55,18 @@ namespace daxa
 
     struct ImplSamplerSlot
     {
-        // Must be c version as these have ref counted dependencies that must be manually managed inside of daxa.
         daxa_SamplerInfo info = {};
         VkSampler vk_sampler = {};
+    };
+
+    struct ImplAccelerationStructureSlot
+    {
+        daxa_AccelerationStructureInfo info = {};
+        VkAccelerationStructureKHR vk_as = {};
+        VkBuffer vk_buffer = {};
+        daxa_BufferId buffer_id = {};
+        u64 offset = {};
+        daxa_BufferDeviceAddress bda = {};
     };
 
     /**
@@ -101,50 +101,6 @@ namespace daxa
         std::mutex page_alloc_mtx = {};
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
         std::atomic_uint32_t valid_page_count = {};
-
-        // struct ExclusiveAccess
-        // {
-        //   private:
-        //     GpuResourcePool<ResourceT> & self;
-        //     std::lock_guard<std::shared_mutex> l;
-        //   public:
-        //     ExclusiveAccess(GpuResourcePool<ResourceT> & pool) : self{pool}, l{pool.mut} {}
-        //     /**
-        //      * @brief   Destroys a slot.
-        //      *          After calling this function, the id of the slot will be forever invalid.
-        //      *          Index may be recycled but index + version pairs are always unique.
-        //      *
-        //      * Always threadsafe.
-        //      * Calling this function with a non zombie id will result in undefined behavior.
-        //      * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombified resource causes slot leaking!
-        //      */
-        //     void unsafe_destroy_zombie_slot(GPUResourceId id)
-        //     {
-        //         auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-        //         auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-        //         auto const refcnt_version = std::atomic_ref{self.pages[page]->at(offset).second}.load(std::memory_order_relaxed);
-        //         u64 const version = refcnt_version & DAXA_ID_VERSION_MASK;
-        //         // Slots that reached max version CAN NOT be recycled.
-        //         // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
-        //         if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
-        //         {
-        //             self.free_index_stack.push_back(id.index);
-        //         }
-        //         // Clear slot:
-        //         self.pages[page]->at(offset).first = {};
-        //     }
-        // };
-
-        // /**
-        //  * @brief   Returns exclusive accessor.
-        //  *
-        //  * Always threadsafe.
-        //  * @return exclusive accessor.
-        //  */
-        // auto exclusive() -> ExclusiveAccess
-        // {
-        //     return ExclusiveAccess{*this};
-        // }
 
         /**
          * @brief   Destroys a slot.
@@ -276,6 +232,7 @@ namespace daxa
         GpuResourcePool<ImplBufferSlot> buffer_slots = {};
         GpuResourcePool<ImplImageSlot> image_slots = {};
         GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
+        GpuResourcePool<ImplAccelerationStructureSlot> acceleration_structure_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
         VkDescriptorSetLayout uniform_buffer_descriptor_set_layout = {};
@@ -286,7 +243,7 @@ namespace daxa
         // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
-        void initialize(u32 max_buffers, u32 max_images, u32 max_samplers, VkDevice device, VkBuffer device_address_buffer, PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT);
+        void initialize(u32 max_buffers, u32 max_images, u32 max_samplers, u32 max_acceleration_structures, VkDevice device, VkBuffer device_address_buffer, PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT);
         void cleanup(VkDevice device);
     };
 
@@ -295,4 +252,6 @@ namespace daxa
     void write_descriptor_set_buffer(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index);
 
     void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index);
+
+    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_as, u32 index);
 } // namespace daxa

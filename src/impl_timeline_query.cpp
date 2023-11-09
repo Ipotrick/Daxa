@@ -33,7 +33,7 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_QUERY_POOL,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_timeline_query_pool),
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_timeline_query_pool),
             .pObjectName = ret.info_name.c_str(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &query_pool_name_info);

@@ -976,7 +976,7 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_COMMAND_POOL,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_cmd_pool),
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_cmd_pool),
             .pObjectName = cmd_pool_name.data,
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
