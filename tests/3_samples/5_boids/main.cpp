@@ -125,6 +125,7 @@ struct App : AppWindow<App>
             .dst_access = daxa::AccessConsts::COMPUTE_SHADER_READ_WRITE | daxa::AccessConsts::VERTEX_SHADER_READ,
         });
         auto executable_commands = recorder.complete_current_commands();
+        recorder.~CommandRecorder();
         device.submit_commands({
             .command_lists = std::span{&executable_commands, 1},
         });
