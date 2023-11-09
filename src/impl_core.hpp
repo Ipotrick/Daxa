@@ -38,11 +38,11 @@
 #endif
 #endif
 
+// INCLUDE ORDER MUST STAY LIKE THIS:
+#include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
-
 #include <daxa/c/daxa.h>
-#include <daxa/daxa.hpp>
 
 using namespace daxa;
 
@@ -96,6 +96,20 @@ inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageA
 
 auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result;
 
+auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties;
+
+void daxa_as_build_info_to_vk(
+    daxa_Device device,
+    daxa_TlasBuildInfo const * tlas_infos,
+    usize tlas_count,
+    daxa_BlasBuildInfo const * blas_infos,
+    usize blas_count,
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> & vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureGeometryKHR> & vk_geometry_infos,
+    std::vector<u32> & primitive_counts,
+    std::vector<u32 const *> & primitive_counts_ptrs
+);
+
 // --- End Helpers ---
 
 namespace daxa
@@ -125,6 +139,7 @@ struct MemoryBlockZombie
 {
     VmaAllocation allocation = {};
 };
+
 struct daxa_ImplMemoryBlock final : ImplHandle
 {
     daxa_Device device = {};
@@ -134,3 +149,13 @@ struct daxa_ImplMemoryBlock final : ImplHandle
 
     static void zero_ref_callback(ImplHandle const * handle);
 };
+
+// Sorry Gabe, not sorry! -Patrick :)
+#ifndef defer
+struct defer_dummy {};
+template <class F> struct deferrer { F f; ~deferrer() { f(); } };
+template <class F> deferrer<F> operator*(defer_dummy, F f) { return {f}; }
+#define DEFER_(LINE) zz_defer##LINE
+#define DEFER(LINE) DEFER_(LINE)
+#define defer auto DEFER(__LINE__) = defer_dummy{} *[&]()
+#endif // defer

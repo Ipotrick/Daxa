@@ -173,18 +173,13 @@ auto main() -> int
         // Encoders CAN NOT be keept over multiple frames. They are temporary objects and need to be destroyed before calling collect_garbage!
         recorder.~CommandRecorder();
 
-        auto const & acquire_semaphore = swapchain.get_acquire_semaphore();
-        auto const & present_semaphore = swapchain.get_present_semaphore();
-        auto const & gpu_timeline = swapchain.get_gpu_timeline_semaphore();
-        auto const cpu_timeline = swapchain.get_cpu_timeline_value();
-
-        // TODO(capi): How to make this syntax good?
-        auto pair = std::pair{gpu_timeline, cpu_timeline};
+        auto const & acquire_semaphore = swapchain.current_acquire_semaphore();
+        auto const & present_semaphore = swapchain.current_present_semaphore();
         device.submit_commands(daxa::CommandSubmitInfo{
             .command_lists = std::array{executalbe_commands},
             .wait_binary_semaphores = std::array{acquire_semaphore},
             .signal_binary_semaphores = std::array{present_semaphore},
-            .signal_timeline_semaphores = std::array{pair},
+            .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
         });
         device.present_frame({
             .wait_binary_semaphores = std::array{present_semaphore},

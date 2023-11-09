@@ -1194,7 +1194,7 @@ namespace daxa
         auto messages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
         TBuiltInResource const resource = DAXA_DEFAULT_BUILTIN_RESOURCE;
 
-        static constexpr int SHADER_VERSION = 450;
+        static constexpr int SHADER_VERSION = 460;
 
         if (shader_info.compile_options.write_out_preprocessed_code.has_value())
         {

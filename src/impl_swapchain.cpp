@@ -176,7 +176,7 @@ auto daxa_swp_set_present_mode(daxa_Swapchain self, VkPresentModeKHR present_mod
 
 auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_id) -> daxa_Result
 {
-    self->gpu_frame_timeline.wait_for_value(
+    [[maybe_unused]] auto _ignored = self->gpu_frame_timeline.wait_for_value(
         static_cast<u64>(
             std::max<i64>(
                 0,
@@ -196,22 +196,22 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
     return std::bit_cast<daxa_Result>(result);
 }
 
-auto daxa_swp_get_acquire_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
+auto daxa_swp_current_acquire_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
 {
     return r_cast<daxa_BinarySemaphore *>(&self->acquire_semaphores[self->acquire_semaphore_index]);
 }
 
-auto daxa_swp_get_present_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
+auto daxa_swp_current_present_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
 {
     return r_cast<daxa_BinarySemaphore *>(&self->present_semaphores[self->current_image_index]);
 }
 
-auto daxa_swp_get_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaphore *
+auto daxa_swp_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaphore *
 {
     return r_cast<daxa_TimelineSemaphore *>(&self->gpu_frame_timeline);
 }
 
-auto daxa_swp_get_cpu_timeline_value(daxa_Swapchain self) -> usize
+auto daxa_swp_current_cpu_timeline_value(daxa_Swapchain self) -> u64
 {
     return self->cpu_frame_timeline;
 }
@@ -363,7 +363,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SWAPCHAIN_KHR,
-            .objectHandle = reinterpret_cast<u64>(this->vk_swapchain),
+            .objectHandle = std::bit_cast<u64>(this->vk_swapchain),
             .pObjectName = this->info_name.c_str(),
         };
         this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &swapchain_name_info);

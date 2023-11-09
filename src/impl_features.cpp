@@ -69,7 +69,7 @@ namespace daxa
             .bufferDeviceAddressCaptureReplay = static_cast<VkBool32>(info.flags & DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT),
             .bufferDeviceAddressMultiDevice = VK_FALSE,
         };
-        this->chain = reinterpret_cast<void *>(&this->buffer_device_address);
+        this->chain = r_cast<void *>(&this->buffer_device_address);
         this->descriptor_indexing = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DESCRIPTOR_INDEXING_FEATURES,
             .pNext = chain,
@@ -94,37 +94,37 @@ namespace daxa
             .descriptorBindingVariableDescriptorCount = VK_FALSE,           // No need for this, we have a static set.
             .runtimeDescriptorArray = VK_TRUE,                              // Allows shaders to not have a hardcoded descriptor maximum per table.
         };
-        this->chain = reinterpret_cast<void *>(&this->descriptor_indexing);
+        this->chain = r_cast<void *>(&this->descriptor_indexing);
         this->host_query_reset = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_QUERY_RESET_FEATURES,
             .pNext = this->chain,
             .hostQueryReset = VK_TRUE,
         };
-        this->chain = reinterpret_cast<void *>(&this->host_query_reset);
+        this->chain = r_cast<void *>(&this->host_query_reset);
         this->dynamic_rendering = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR,
             .pNext = this->chain,
             .dynamicRendering = VK_TRUE,
         };
-        this->chain = reinterpret_cast<void *>(&this->dynamic_rendering);
+        this->chain = r_cast<void *>(&this->dynamic_rendering);
         this->sync2 = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SYNCHRONIZATION_2_FEATURES_KHR,
             .pNext = this->chain,
             .synchronization2 = VK_TRUE,
         };
-        this->chain = reinterpret_cast<void *>(&this->sync2);
+        this->chain = r_cast<void *>(&this->sync2);
         this->timeline_semaphore = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES,
             .pNext = this->chain,
             .timelineSemaphore = VK_TRUE,
         };
-        this->chain = reinterpret_cast<void *>(&this->timeline_semaphore);
+        this->chain = r_cast<void *>(&this->timeline_semaphore);
         this->scalar_layout = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
             .pNext = this->chain,
             .scalarBlockLayout = VK_TRUE,
         };
-        this->chain = reinterpret_cast<void *>(&this->scalar_layout);
+        this->chain = r_cast<void *>(&this->scalar_layout);
         auto vk_memory_model = VkPhysicalDeviceVulkanMemoryModelFeatures{};
         if (info.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL)
         {
@@ -135,7 +135,7 @@ namespace daxa
                 .vulkanMemoryModelDeviceScope = VK_TRUE,
                 .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low general gpu support.
             };
-            this->chain = reinterpret_cast<void *>(&vk_memory_model);
+            this->chain = r_cast<void *>(&vk_memory_model);
         }
         if (info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64)
         {
@@ -145,7 +145,7 @@ namespace daxa
                 .shaderBufferInt64Atomics = VK_TRUE,
                 .shaderSharedInt64Atomics = VK_TRUE,
             };
-            this->chain = reinterpret_cast<void *>(&this->shader_atomic64);
+            this->chain = r_cast<void *>(&this->shader_atomic64);
         }
         if (info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
         {
@@ -155,7 +155,7 @@ namespace daxa
                 .shaderImageInt64Atomics = VK_TRUE,
                 .sparseImageInt64Atomics = VK_FALSE, // No sparse support in daxa.
             };
-            this->chain = reinterpret_cast<void *>(&this->image_atomic64);
+            this->chain = r_cast<void *>(&this->image_atomic64);
         }
         if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
         {
@@ -168,7 +168,41 @@ namespace daxa
                 .primitiveFragmentShadingRateMeshShader = VK_FALSE, // No vrs support.
                 .meshShaderQueries = VK_FALSE,                      // I dont even know what this is.
             };
-            this->chain = reinterpret_cast<void *>(&this->mesh_shader);
+            this->chain = r_cast<void *>(&this->mesh_shader.value());
+        }
+        if (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING)
+        {
+            /// NOTE:   
+            /// These settings have been derived by the minimum supported features of gpu architectures:
+            ///   * Ampeere
+            ///   * Ada Lovlace
+            ///   * rdna2
+            this->acceleration_structure = VkPhysicalDeviceAccelerationStructureFeaturesKHR{
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_FEATURES_KHR,
+                .pNext = this->chain,
+                .accelerationStructure = VK_TRUE,
+                .accelerationStructureCaptureReplay = VK_TRUE,
+                .accelerationStructureIndirectBuild = VK_FALSE,                   // Extremely low support.
+                .accelerationStructureHostCommands = VK_FALSE,                    // Extremely low support.
+                .descriptorBindingAccelerationStructureUpdateAfterBind = VK_TRUE, // Required for our descriptor set setup.
+            };
+            this->chain = r_cast<void *>(&this->acceleration_structure.value());
+            this->ray_tracing_pipeline = VkPhysicalDeviceRayTracingPipelineFeaturesKHR{
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_FEATURES_KHR,
+                .pNext = this->chain,
+                .rayTracingPipeline = VK_TRUE,
+                .rayTracingPipelineShaderGroupHandleCaptureReplay = VK_FALSE,
+                .rayTracingPipelineShaderGroupHandleCaptureReplayMixed = VK_FALSE,
+                .rayTracingPipelineTraceRaysIndirect = VK_TRUE,
+                .rayTraversalPrimitiveCulling = VK_TRUE,
+            };
+            this->chain = r_cast<void *>(&this->ray_tracing_pipeline.value());
+            this->ray_query = VkPhysicalDeviceRayQueryFeaturesKHR {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
+                .pNext = this->chain,
+                .rayQuery = VK_TRUE,
+            };
+            this->chain = r_cast<void *>(&this->ray_query.value());
         }
     }
 
@@ -186,9 +220,15 @@ namespace daxa
         {
             this->data[size++] = {VK_EXT_MESH_SHADER_EXTENSION_NAME};
         }
-        if (info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
+        if (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING)
         {
-            this->data[size++] = {VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME};
+            this->data[size++] = {VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME};
+            this->data[size++] = {VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME};
+            this->data[size++] = {VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME};
+            this->data[size++] = {VK_KHR_RAY_QUERY_EXTENSION_NAME};
+            // Maybe this should be enabled separately to raytracing:
+            this->data[size++] = {VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME};
+            this->data[size++] = {VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME};
         }
     }
 } // namespace daxa

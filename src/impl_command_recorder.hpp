@@ -21,7 +21,6 @@ static inline constexpr u8 DEFERRED_DESTRUCTION_TIMELINE_QUERY_POOL_INDEX = 4;
 
 static inline constexpr usize COMMAND_LIST_BARRIER_MAX_BATCH_SIZE = 16;
 static inline constexpr usize COMMAND_LIST_COLOR_ATTACHMENT_MAX = 16;
-static inline constexpr usize COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT = 8;
 
 struct CommandPoolPool
 {
@@ -44,7 +43,6 @@ struct ExecutableCommandListData
 {
     VkCommandBuffer vk_cmd_buffer = {};
     std::vector<std::pair<GPUResourceId, u8>> deferred_destructions = {};
-    std::array<daxa_SetUniformBufferInfo, COMMAND_LIST_UNIFORM_BUFFER_BINDINGS_COUNT> current_uniform_buffer_bindings = {};
     // TODO:    These vectors seem to be fast enough. overhead is around 1-4% in cmd recording.
     //          It might be cool to have some slab allocator for these.
     // If there is demand, we could make an instance or cmd list flag to disable the submit checks.
@@ -53,6 +51,8 @@ struct ExecutableCommandListData
     std::vector<ImageId> used_images = {};
     std::vector<ImageViewId> used_image_views = {};
     std::vector<SamplerId> used_samplers = {};
+    std::vector<TlasId> used_tlass = {};
+    std::vector<BlasId> used_blass = {};
 };
 
 struct daxa_ImplCommandRecorder final : ImplHandle
@@ -70,7 +70,6 @@ struct daxa_ImplCommandRecorder final : ImplHandle
 
     ExecutableCommandListData current_command_data = {};
 
-    void flush_uniform_buffer_bindings(VkPipelineBindPoint bind_point, VkPipelineLayout pipeline_layout);
     auto generate_new_current_command_data() -> daxa_Result;
     
     static void zero_ref_callback(ImplHandle const * handle);

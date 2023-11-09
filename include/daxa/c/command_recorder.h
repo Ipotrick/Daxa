@@ -24,7 +24,7 @@ typedef struct
     VkFilter filter;
 } daxa_ImageBlitInfo;
 
-static const daxa_ImageBlitInfo DAXA_DEFAULT_IMAGE_BLIT_INFO = {
+static daxa_ImageBlitInfo const DAXA_DEFAULT_IMAGE_BLIT_INFO = {
     .src_image = DAXA_ZERO_INIT,
     .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
     .dst_image = DAXA_ZERO_INIT,
@@ -45,7 +45,7 @@ typedef struct
     size_t size;
 } daxa_BufferCopyInfo;
 
-static const daxa_BufferCopyInfo DAXA_DEFAULT_BUFFER_COPY_INFO = DAXA_ZERO_INIT;
+static daxa_BufferCopyInfo const DAXA_DEFAULT_BUFFER_COPY_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -58,7 +58,7 @@ typedef struct
     VkExtent3D image_extent;
 } daxa_BufferImageCopyInfo;
 
-static const daxa_BufferImageCopyInfo DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
+static daxa_BufferImageCopyInfo const DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
     .buffer = DAXA_ZERO_INIT,
     .buffer_offset = 0,
     .image = DAXA_ZERO_INIT,
@@ -79,7 +79,7 @@ typedef struct
     size_t buffer_offset;
 } daxa_ImageBufferCopyInfo;
 
-static const daxa_ImageBufferCopyInfo DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
+static daxa_ImageBufferCopyInfo const DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
     .image = DAXA_ZERO_INIT,
     .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
     .image_slice = DAXA_ZERO_INIT,
@@ -102,7 +102,7 @@ typedef struct
     VkExtent3D extent;
 } daxa_ImageCopyInfo;
 
-static const daxa_ImageCopyInfo DAXA_DEFAULT_IMAGE_COPY_INFO = {
+static daxa_ImageCopyInfo const DAXA_DEFAULT_IMAGE_COPY_INFO = {
     .src_image = DAXA_ZERO_INIT,
     .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
     .dst_image = DAXA_ZERO_INIT,
@@ -125,7 +125,7 @@ typedef struct
     daxa_ImageMipArraySlice dst_slice;
 } daxa_ImageClearInfo;
 
-static const daxa_ImageClearInfo DAXA_DEFAULT_IMAGE_CLEAR_INFO = {
+static daxa_ImageClearInfo const DAXA_DEFAULT_IMAGE_CLEAR_INFO = {
     .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
     .clear_value = DAXA_ZERO_INIT,
     .image = DAXA_ZERO_INIT,
@@ -140,7 +140,7 @@ typedef struct
     uint32_t clear_value;
 } daxa_BufferClearInfo;
 
-static const daxa_BufferClearInfo DAXA_DEFAULT_BUFFER_CLEAR_INFO = DAXA_ZERO_INIT;
+static daxa_BufferClearInfo const DAXA_DEFAULT_BUFFER_CLEAR_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -153,7 +153,7 @@ typedef struct
 _DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
 _DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)
 
-static const daxa_RenderAttachmentInfo DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
+static daxa_RenderAttachmentInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .image_view = DAXA_ZERO_INIT,
     .layout = DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
     .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
@@ -169,7 +169,7 @@ typedef struct
     VkRect2D render_area;
 } daxa_RenderPassBeginInfo;
 
-static const daxa_RenderPassBeginInfo DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = DAXA_ZERO_INIT;
+static daxa_RenderPassBeginInfo const DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -178,7 +178,7 @@ typedef struct
     uint32_t z;
 } daxa_DispatchInfo;
 
-static const daxa_DispatchInfo DAXA_DEFAULT_DISPATCH_INFO = { 1, 1, 1 };
+static daxa_DispatchInfo const DAXA_DEFAULT_DISPATCH_INFO = {1, 1, 1};
 
 typedef struct
 {
@@ -186,7 +186,7 @@ typedef struct
     size_t offset;
 } daxa_DispatchIndirectInfo;
 
-static const daxa_DispatchIndirectInfo DAXA_DEFAULT_DISPATCH_INDIRECT_INFO = DAXA_ZERO_INIT;
+static daxa_DispatchIndirectInfo const DAXA_DEFAULT_DISPATCH_INDIRECT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -196,7 +196,7 @@ typedef struct
     uint32_t stride;
 } daxa_DrawMeshTasksIndirectInfo;
 
-static const daxa_DrawMeshTasksIndirectInfo DAXA_DEFAULT_DRAW_MESH_TASKS_INDIRECT_INFO = {
+static daxa_DrawMeshTasksIndirectInfo const DAXA_DEFAULT_DRAW_MESH_TASKS_INDIRECT_INFO = {
     .indirect_buffer = DAXA_ZERO_INIT,
     .offset = 0,
     .draw_count = 1,
@@ -213,7 +213,7 @@ typedef struct
     uint32_t stride;
 } daxa_DrawMeshTasksIndirectCountInfo;
 
-static const daxa_DrawMeshTasksIndirectCountInfo DAXA_DRAW_MESH_TASKS_INDIRECT_COUNT_INFO = {
+static daxa_DrawMeshTasksIndirectCountInfo const DAXA_DRAW_MESH_TASKS_INDIRECT_COUNT_INFO = {
     .indirect_buffer = DAXA_ZERO_INIT,
     .offset = 0,
     .count_buffer = DAXA_ZERO_INIT,
@@ -230,7 +230,7 @@ typedef struct
     uint32_t first_instance;
 } daxa_DrawInfo;
 
-static const daxa_DrawInfo DAXA_DEFAULT_DRAW_INFO = {
+static daxa_DrawInfo const DAXA_DEFAULT_DRAW_INFO = {
     .vertex_count = 0,
     .instance_count = 1,
     .first_vertex = 0,
@@ -246,7 +246,7 @@ typedef struct
     uint32_t first_instance;
 } daxa_DrawIndexedInfo;
 
-static const daxa_DrawIndexedInfo DAXA_DEFAULT_DRAW_INDEXED_INFO = {
+static daxa_DrawIndexedInfo const DAXA_DEFAULT_DRAW_INDEXED_INFO = {
     .index_count = 0,
     .instance_count = 1,
     .first_index = 0,
@@ -263,7 +263,7 @@ typedef struct
     daxa_Bool8 is_indexed;
 } daxa_DrawIndirectInfo;
 
-static const daxa_DrawIndirectInfo DAXA_DEFAULT_DRAW_INDIRECT_INFO = {
+static daxa_DrawIndirectInfo const DAXA_DEFAULT_DRAW_INDIRECT_INFO = {
     .indirect_buffer = DAXA_ZERO_INIT,
     .indirect_buffer_offset = 0,
     .draw_count = 1,
@@ -282,7 +282,7 @@ typedef struct
     daxa_Bool8 is_indexed;
 } daxa_DrawIndirectCountInfo;
 
-static const daxa_DrawIndirectCountInfo DAXA_DEFAULT_DRAW_INDIRECT_COUNT_INFO = {
+static daxa_DrawIndirectCountInfo const DAXA_DEFAULT_DRAW_INDIRECT_COUNT_INFO = {
     .indirect_buffer = DAXA_ZERO_INIT,
     .indirect_buffer_offset = 0,
     .count_buffer = DAXA_ZERO_INIT,
@@ -332,23 +332,12 @@ typedef struct
 
 typedef struct
 {
-    // Binding slot the buffer will be bound to.
-    uint32_t slot;
-    daxa_BufferId buffer;
-    size_t size;
-    size_t offset;
-} daxa_SetUniformBufferInfo;
-
-static const daxa_SetUniformBufferInfo DAXA_DEFAULT_SET_UNIFORM_BUFFER_INFO = DAXA_ZERO_INIT;
-
-typedef struct
-{
     float constant_factor;
     float clamp;
     float slope_factor;
 } daxa_DepthBiasInfo;
 
-static const daxa_DepthBiasInfo DAXA_DEFAULT_DEPTH_BIAS_INFO = DAXA_ZERO_INIT;
+static daxa_DepthBiasInfo const DAXA_DEFAULT_DEPTH_BIAS_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -357,11 +346,21 @@ typedef struct
     VkIndexType index_type;
 } daxa_SetIndexBufferInfo;
 
-static const daxa_SetIndexBufferInfo DAXA_DEFAULT_SET_INDEX_BUFFER_INFO = {
+static daxa_SetIndexBufferInfo const DAXA_DEFAULT_SET_INDEX_BUFFER_INFO = {
     .buffer = DAXA_ZERO_INIT,
     .offset = 0,
     .index_type = VK_INDEX_TYPE_UINT32,
 };
+
+typedef struct
+{
+    daxa_TlasBuildInfo const * tlas_build_infos;
+    size_t tlas_build_info_count;
+    daxa_BlasBuildInfo const * blas_build_infos;
+    size_t blas_build_info_count;
+} daxa_BuildAccelerationStucturesInfo;
+
+static daxa_BuildAccelerationStucturesInfo const DAXA_DEFAULT_BUILD_ACCELERATION_STRUCTURES_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder cmd_enc, daxa_BufferCopyInfo const * info);
@@ -373,10 +372,12 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_copy_image_to_image(daxa_CommandRecorder cmd_enc, daxa_ImageCopyInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_blit_image_to_image(daxa_CommandRecorder cmd_enc, daxa_ImageBlitInfo const * info);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_build_acceleration_structures(daxa_CommandRecorder cmd_rec, daxa_BuildAccelerationStucturesInfo const * info);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_clear_buffer(daxa_CommandRecorder cmd_enc, daxa_BufferClearInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_clear_image(daxa_CommandRecorder cmd_enc, daxa_ImageClearInfo const * info);
 
 /// @brief  Successive pipeline barrier calls are combined.
@@ -387,7 +388,7 @@ daxa_cmd_pipeline_barrier(daxa_CommandRecorder cmd_enc, daxa_MemoryBarrierInfo c
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder cmd_enc, daxa_ImageMemoryBarrierInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_signal_event(daxa_CommandRecorder cmd_enc, daxa_EventSignalInfo const * info);
@@ -400,51 +401,40 @@ daxa_cmd_reset_event(daxa_CommandRecorder cmd_enc, daxa_ResetEventInfo const * i
 
 DAXA_EXPORT void
 daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, void const * data, uint32_t size);
-/// @brief  Binds a buffer region to the uniform buffer slot.
-///         There are 8 uniform buffer slots (indices range from 0 to 7).
-///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
-///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
-///         This is in stark contrast to OpenGl like bindings which are visible immediately to all commands after binding.
-///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
-///         Set uniform buffer slots are cleared after a pipeline is bound.
-///         Before setting another pipeline, they need to be set again.
-/// @param info parameters.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
-daxa_cmd_set_uniform_buffer(daxa_CommandRecorder cmd_enc, daxa_SetUniformBufferInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline const * pipeline);
 DAXA_EXPORT void
 daxa_cmd_set_raster_pipeline(daxa_CommandRecorder cmd_enc, daxa_RasterPipeline pipeline);
 DAXA_EXPORT void
 daxa_cmd_dispatch(daxa_CommandRecorder cmd_enc, daxa_DispatchInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_dispatch_indirect(daxa_CommandRecorder cmd_enc, daxa_DispatchIndirectInfo const * info);
 
 /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id buffer to be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_buffer_deferred(daxa_CommandRecorder cmd_enc, daxa_BufferId id);
 /// @brief  Destroys the image AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image to be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_image_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageId id);
 /// @brief  Destroys the image view AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image view to be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_image_view_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageViewId id);
 /// @brief  Destroys the sampler AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image sampler be destroyed after command list finishes.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId id);
 
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
 /// @param info parameters.
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_begin_renderpass(daxa_CommandRecorder cmd_enc, daxa_RenderPassBeginInfo const * info);
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
@@ -456,22 +446,22 @@ DAXA_EXPORT void
 daxa_cmd_set_scissor(daxa_CommandRecorder cmd_enc, VkRect2D const * info);
 DAXA_EXPORT void
 daxa_cmd_set_depth_bias(daxa_CommandRecorder cmd_enc, daxa_DepthBiasInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_set_index_buffer(daxa_CommandRecorder cmd_enc, daxa_SetIndexBufferInfo const * info);
 
 DAXA_EXPORT void
 daxa_cmd_draw(daxa_CommandRecorder cmd_enc, daxa_DrawInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_draw_indexed(daxa_CommandRecorder cmd_enc, daxa_DrawIndexedInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_indirect(daxa_CommandRecorder cmd_enc, daxa_DrawIndirectInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_indirect_count(daxa_CommandRecorder cmd_enc, daxa_DrawIndirectCountInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_draw_mesh_tasks(daxa_CommandRecorder cmd_enc, uint32_t x, uint32_t y, uint32_t z);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandRecorder cmd_enc, daxa_DrawMeshTasksIndirectInfo const * info);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_mesh_tasks_indirect_count(daxa_CommandRecorder cmd_enc, daxa_DrawMeshTasksIndirectCountInfo const * info);
 
 DAXA_EXPORT void
@@ -487,7 +477,7 @@ daxa_cmd_end_label(daxa_CommandRecorder cmd_enc);
 // Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 DAXA_EXPORT void
 daxa_cmd_flush_barriers(daxa_CommandRecorder cmd_enc);
-DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_complete_current_commands(daxa_CommandRecorder cmd_enc, daxa_ExecutableCommandList * out_executable_cmds);
 DAXA_EXPORT daxa_CommandRecorderInfo const *
 daxa_cmd_info(daxa_CommandRecorder cmd_enc);

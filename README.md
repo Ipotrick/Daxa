@@ -35,6 +35,7 @@ If you prefer to interact in Discord over GitHub issues, Daxa has a [Discord ser
 ### List of biggest features:
 - defaulted, named parameters for most functions via c++20 designated struct initialization
 - ergonomic, simplified object creation
+- easy device selection and properties query
 - integrated debug utilities such as debug names and range labels
 - feature rich render-graph, handling automatic synchronization and more
 - shader integration for render-graph

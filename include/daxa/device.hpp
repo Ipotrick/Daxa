@@ -129,18 +129,6 @@ namespace daxa
         u64 non_coherent_atom_size;
     };
 
-    struct DeviceProperties
-    {
-        u32 vulkan_api_version = {};
-        u32 driver_version = {};
-        u32 vendor_id = {};
-        u32 device_id = {};
-        DeviceType device_type = {};
-        u8 device_name[256U] = {};
-        u8 pipeline_cache_uuid[16U] = {};
-        DeviceLimits limits = {};
-    };
-
     struct MeshShaderDeviceProperties
     {
         u32 max_task_work_group_total_count = {};
@@ -167,10 +155,49 @@ namespace daxa
         u32 mesh_output_per_primitive_granularity = {};
         u32 max_preferred_task_work_group_invocations = {};
         u32 max_preferred_mesh_work_group_invocations = {};
-        u32 prefers_local_invocation_vertex_output = {};
-        u32 prefers_local_invocation_primitive_output = {};
-        u32 prefers_compact_vertex_output = {};
-        u32 prefers_compact_primitive_output = {};
+        bool prefers_local_invocation_vertex_output = {};
+        bool prefers_local_invocation_primitive_output = {};
+        bool prefers_compact_vertex_output = {};
+        bool prefers_compact_primitive_output = {};
+    };
+
+    struct RayTracingPipelineProperties
+    {
+        u32 shader_group_handle_size = {};
+        u32 max_ray_recursion_depth = {};
+        u32 max_shader_group_stride = {};
+        u32 shader_group_base_alignment = {};
+        u32 shader_group_handle_capture_replay_size = {};
+        u32 max_ray_dispatch_invocation_count = {};
+        u32 shader_group_handle_alignment = {};
+        u32 max_ray_hit_attribute_size = {};
+    };
+
+    struct AccelerationStructureProperties
+    {
+        u64 max_geometry_count = {};
+        u64 max_instance_count = {};
+        u64 max_primitive_count = {};
+        u32 max_per_stage_descriptor_acceleration_structures = {};
+        u32 max_per_stage_descriptor_update_after_bind_acceleration_structures = {};
+        u32 max_descriptor_set_acceleration_structures = {};
+        u32 max_descriptor_set_update_after_bind_acceleration_structures = {};
+        u32 min_acceleration_structure_scratch_offset_alignment = {};
+    };
+
+    struct DeviceProperties
+    {
+        u32 vulkan_api_version = {};
+        u32 driver_version = {};
+        u32 vendor_id = {};
+        u32 device_id = {};
+        DeviceType device_type = {};
+        u8 device_name[256U] = {};
+        u8 pipeline_cache_uuid[16U] = {};
+        DeviceLimits limits = {};
+        Optional<MeshShaderDeviceProperties> mesh_shading_properties = {};
+        Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
+        Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
     };
 
     DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
@@ -185,10 +212,27 @@ namespace daxa
         static inline constexpr DeviceFlags NONE = {0x00000000};
         static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
         static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
-        static inline constexpr DeviceFlags MESH_SHADER_BIT = {0x1 << 2};
+        static inline constexpr DeviceFlags MESH_SHADER = {0x1 << 2};
         static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
         static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
         static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
+        static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
+    };
+
+    struct DeviceFlags2
+    {
+        u32 buffer_device_address_capture_replay_bit : 1 = 1;
+        u32 conservative_rasterization : 1 = {};
+        u32 mesh_shader_bit : 1 = {};
+        u32 shader_atomic64 : 1 = 1;
+        u32 image_atomic64 : 1 = 1;
+        u32 vk_memory_model : 1 = {};
+        u32 ray_tracing : 1 = {};
+
+        operator DeviceFlags()
+        {
+            return std::bit_cast<DeviceFlags>(*this);
+        }
     };
 
     struct DeviceInfo
@@ -202,6 +246,7 @@ namespace daxa
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 400;
+        u32 max_allowed_acceleration_structures = 10'000;
         SmallString name = "";
     };
 
@@ -234,6 +279,27 @@ namespace daxa
         MemoryBlock & memory_block;
         usize offset = {};
     };
+    
+    struct AccelerationStructureBuildSizesInfo
+    {
+        u64 acceleration_structure_size;
+        u64 update_scratch_size;
+        u64 build_scratch_size;
+    };
+
+    struct BufferTlasInfo
+    {
+        TlasInfo tlas_info = {};
+        BufferId buffer_id = {};
+        u64 offset = {};
+    };
+
+    struct BufferBlasInfo
+    {
+        BlasInfo blas_info = {};
+        BufferId buffer_id = {};
+        u64 offset = {};
+    };
 
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
@@ -252,68 +318,52 @@ namespace daxa
         [[nodiscard]] auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
         [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
         [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
+        [[nodiscard]] auto get_tlas_build_sizes(TlasBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
+        [[nodiscard]] auto get_blas_build_sizes(BlasBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
 
         [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
         [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;
-        [[nodiscard]] auto create_buffer_from_block(MemoryBlockBufferInfo const & info) -> BufferId;
-        [[nodiscard]] auto create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId;
+        [[nodiscard]] auto create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId;
+        [[nodiscard]] auto create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId;
         [[nodiscard]] auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         [[nodiscard]] auto create_sampler(SamplerInfo const & info) -> SamplerId;
+        [[nodiscard]] auto create_tlas(TlasInfo const & info) -> TlasId;
+        [[nodiscard]] auto create_blas(BlasInfo const & info) -> BlasId;
+        [[nodiscard]] auto create_tlas_from_buffer(BufferTlasInfo const & info) -> TlasId;
+        [[nodiscard]] auto create_blas_from_buffer(BufferBlasInfo const & info) -> BlasId;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
+        void destroy_tlas(TlasId id);
+        void destroy_blas(BlasId id);
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
+        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_buffer(BufferId id) const -> Optional<BufferInfo>;
-
-        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
-        /// @param id of the object.
-        /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_image(ImageId id) const -> Optional<ImageInfo>;
-
-        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
-        /// @param id of the object.
-        /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_image_view(ImageViewId id) const -> Optional<ImageViewInfo>;
-
-        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler).
-        /// @param id of the object.
-        /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_sampler(SamplerId id) const -> Optional<SamplerInfo>;
+        [[nodiscard]] auto info_tlas(TlasId id) const -> Optional<TlasInfo>;
+        [[nodiscard]] auto info_blas(BlasId id) const -> Optional<BlasInfo>;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id or the object.
         /// @return validity of id
         [[nodiscard]] auto is_id_valid(ImageId id) const -> bool;
-
-        /// @brief  Will describe if a given id is valid.
-        ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id of the object.
-        /// @return validity of id
         [[nodiscard]] auto is_id_valid(ImageViewId id) const -> bool;
-
-        /// @brief  Will describe if a given id is valid.
-        ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id of the object.
-        /// @return validity of id
         [[nodiscard]] auto is_id_valid(BufferId id) const -> bool;
-
-        /// @brief  Will describe if a given id is valid.
-        ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id of the object.
-        /// @return validity of id
         [[nodiscard]] auto is_id_valid(SamplerId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(TlasId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(BlasId id) const -> bool;
 
-        [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>;
+        [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto get_device_address(BlasId id) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto get_device_address(TlasId id) const -> Optional<DeviceAddress>;
         [[nodiscard]] auto get_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>
         [[nodiscard]] auto get_host_address_as(BufferId id) const -> Optional<T *>

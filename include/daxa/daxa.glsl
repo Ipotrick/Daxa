@@ -78,14 +78,23 @@ struct daxa_BufferId
 {
     uint64_t value;
 };
+
 struct daxa_ImageViewId
 {
     uint64_t value;
 };
+
 struct daxa_SamplerId
 {
     uint64_t value;
 };
+
+#if defined(DAXA_RAY_TRACING)
+struct daxa_TlasId
+{
+    uint64_t value;
+};
+#endif
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
 /// @param id The id the index is retrieved from.
@@ -111,11 +120,19 @@ daxa_u32 daxa_sampler_id_to_index(daxa_SamplerId id)
     return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }
 
+#if defined(DAXA_RAY_TRACING)
+/// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
+/// @param id The id the index is retrieved from.
+/// @return The index the id contains.
+daxa_u32 daxa_acceleration_structure_id_to_index(daxa_TlasId id)
+{
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
+}
+#endif
+
 // Daxa implementation detail begin
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) restrict readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
 daxa_buffer_device_address_buffer;
-layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
-layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_SamplerShadowTable[];
 // Daxa implementation detail end
 
 /// @brief Retrieves a buffer device address to the start of the buffer of the given buffer id.
@@ -147,12 +164,25 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @brief Defines the storage image layout used in all buffer references in daxa glsl with format specification.
 #define DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(FORMAT) layout(FORMAT, binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
 
-/// @brief Defines the storage image layout used in all buffer references in daxa glsl.
+/// @brief Defines the storage image layout used for all storage images in daxa glsl.
 #define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
-/// @brief Defines the sampled image layout used in all buffer references in daxa glsl.
+/// @brief Defines the sampled image layout used for all sampled images in daxa glsl.
 #define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 0)
-/// @brief Defines the sampler layout used in all buffer references in daxa glsl.
+/// @brief Defines the sampler layout used for all samplers in daxa glsl.
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
+#if defined(DAXA_RAY_TRACING)
+/// @brief Defines the acceleration structure layout used ifor all acceleration structures in daxa glsl.
+#define DAXA_ACCELERATION_STRUCTURE_LAYOUT layout(binding = DAXA_ACCELERATION_STRUCTURE_BINDING, set = 0)
+#endif
+
+// Daxa implementation detail begin
+DAXA_SAMPLER_LAYOUT uniform sampler daxa_SamplerTable[];
+DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_SamplerShadowTable[];
+#if defined(DAXA_RAY_TRACING)
+#error DING DONG
+DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_AccelerationStructureTable[];
+#endif 
+// Daxa implementation detail end
 
 /// @brief  Defines three buffer reference using daxa's buffer reference layout.
 ///         The three blocks are 1. read write, 2. read only, 3. read write coherent.
@@ -207,20 +237,6 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     {                                                         \
         STRUCT NAME;                                          \
     };
-
-/// @brief  Can be used to define a constant buffer in inline or shader files.
-///         Constant buffers are uniform buffers in glsl.
-///         They can be useful in some cases for example when the gpu has hardware acceleration for uniform buffer bindings.
-/// @param SLOT Represents the constant buffer binding slot used for the constant buffer.
-/// Usage example:
-///     DAXA_DECL_UNIFORM_BUFFER(0) ConstantBufferName { daxa_u32 value; };
-///     ...
-///     void main() {
-///         daxa_u32 v = value; // value is globaly available in the shader.
-///     }
-///
-#define DAXA_DECL_UNIFORM_BUFFER_ALIGN(SLOT, ALIGNMENT) layout(set = DAXA_DECL_UNIFORM_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = ALIGNMENT, scalar) uniform
-#define DAXA_DECL_UNIFORM_BUFFER(SLOT) DAXA_DECL_UNIFORM_BUFFER_ALIGN(SLOT, 4)
 
 /// @brief  Can be used to define a specialized way to access image views.
 ///         Daxa only provides default accessors with no annotations, meaning that there is no way to get the glsl functionality of restrict, readonly, etc..
@@ -280,6 +296,10 @@ DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_samplerShadowTable[];
 
 #define daxa_sampler(sampler_id) daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)]
 #define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)]
+
+#if defined(DAXA_RAY_TRACING)
+#define daxa_accelerationStructureEXT(as_id) daxa_AccelerationStructureTable[daxa_acceleration_structure_id_to_index(as_id)]
+#endif
 
 _DAXA_DECL_IMAGE(1D)
 #define daxa_image1D(image_view_id) _DAXA_GET_IMAGE(1D, image_view_id)

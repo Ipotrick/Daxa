@@ -58,15 +58,13 @@ auto main() -> int
 
         // Need to specify give every subnmit using the mme util timeline semaphore and its value on submission.
         // This is nessecary for internal tracking.
-        
-        // TODO(capi): How to make this syntax good?
-        auto pairs = std::array{
-            std::pair{gpu_timeline, cpu_timeline},
-            std::pair{tmem.timeline_semaphore(), tmem.timeline_value()},
-        };
+
         device.submit_commands({
             .command_lists = std::array{cmd.complete_current_commands()},
-            .signal_timeline_semaphores = pairs,
+            .signal_timeline_semaphores = std::array{
+                std::pair{gpu_timeline, cpu_timeline},
+                std::pair{tmem.timeline_semaphore(), tmem.timeline_value()},
+            },
         });
         cpu_timeline += 1;
     }

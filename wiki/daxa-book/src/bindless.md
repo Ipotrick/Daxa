@@ -136,7 +136,7 @@ Each buffer is created with a buffer device address and optionally a mapped host
 The host and device pointers can be retrieved:
 ```c++
 void* host_ptr                              = device.get_buffer_host_address(buffer_id).value();
-daxa::types::BufferDeviceAddress device_ptr = device.get_buffer_device_address(buffer_id).value();
+daxa::types::DeviceAddress device_ptr = device.get_buffer_device_address(buffer_id).value();
 ```
 
 ## Buffer References and Buffer Pointers GLSL
@@ -176,7 +176,7 @@ void main()
 }
 ```
 
-In c++ the `daxa_BufferPtr(x)` and `daxa_RWBufferPtr` makros simply become `daxa::types::BufferDeviceAddress`, so you can put them into structs, push constants and or buffer blocks. `DAXA_DECL_BUFFER_PTR_ALIGN` and `DAXA_DECL_BUFFER_PTR` become a blank line in c++. This makes them usable in shared files. 
+In c++ the `daxa_BufferPtr(x)` and `daxa_RWBufferPtr` makros simply become `daxa::types::DeviceAddress`, so you can put them into structs, push constants and or buffer blocks. `DAXA_DECL_BUFFER_PTR_ALIGN` and `DAXA_DECL_BUFFER_PTR` become a blank line in c++. This makes them usable in shared files. 
 
 So it is generally recommended to declare structs in shared files and then declare buffer pointers to the structs. Using structs and buffer pointers reduces redundancy and is less error prone. The pointer like syntax with structs is also quite convenient in general, as you gain value semantics to the pointee with the `deref(ptr)` makro.
 

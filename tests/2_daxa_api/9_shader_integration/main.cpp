@@ -41,7 +41,7 @@ namespace tests
             }
             std::cout << "i7: " << v.i7 << std::endl;
         };
-        auto are_same_Testu6Alignment = [](TestU64Alignment const & a, TestU64Alignment const & b)
+        [[maybe_unused]] auto are_same_Testu6Alignment = [](TestU64Alignment const & a, TestU64Alignment const & b)
         {
             bool same = true;
             same = same && a.i0 == b.i0;
@@ -108,6 +108,7 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
+            .push_constant_size = sizeof(TestShaderTaskHead),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -128,20 +129,20 @@ namespace tests
             .name = "align_test_dst",
         }};
         task_graph.use_persistent_buffer(dst);
-        TestShaderUses::Uses uses{
-            .align_test_src = {src},
-            .align_test_dst = {dst},
-        };
         task_graph.add_task({
-            .uses = daxa::detail::to_generic_uses(uses),
+            .uses = daxa::generic_uses_cast(TestShaderTaskHead::Uses{
+                .align_test_src = src.view(),
+                .align_test_dst = dst.view(),
+            }),
             .task = [&](daxa::TaskInterface const & ti)
             {
                 auto & cmd = ti.get_recorder();
-                cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
+                TestShaderTaskHead head;
+                ti.uses.copy_task_head_to(&head);
+                cmd.push_constant(head);
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch({1, 1, 1});
             },
-            .constant_buffer_slot = TestShaderUses::CONSTANT_BUFFER_SLOT,
             .name = "test alignment",
         });
         task_graph.submit({});

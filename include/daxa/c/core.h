@@ -23,12 +23,12 @@
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_HLSL 2
 
-static const uint32_t DAXA_ID_INDEX_BITS = 20;
-static const uint32_t DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
-static const uint32_t DAXA_ID_INDEX_OFFSET = 0;
-static const uint32_t DAXA_ID_VERSION_BITS = 44;
-static const uint64_t DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
-static const uint32_t DAXA_ID_VERSION_OFFSET = 20;
+static uint32_t const DAXA_ID_INDEX_BITS = 20;
+static uint32_t const DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
+static uint32_t const DAXA_ID_INDEX_OFFSET = 0;
+static uint32_t const DAXA_ID_VERSION_BITS = 44;
+static uint64_t const DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
+static uint32_t const DAXA_ID_VERSION_OFFSET = 20;
 
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
@@ -67,6 +67,16 @@ typedef struct
 {
     uint64_t value;
 } daxa_SamplerId;
+
+typedef struct
+{
+    uint64_t value;
+} daxa_TlasId;
+
+typedef struct
+{
+    uint64_t value;
+} daxa_BlasId;
 
 #define _DAXA_DECL_VEC2_TYPE(SCALAR_TYPE) \
     typedef struct                        \
@@ -134,76 +144,112 @@ _DAXA_DECL_VEC4_TYPE(daxa_i32)
 daxa_i32vec4;
 _DAXA_DECL_VEC2_TYPE(daxa_f32vec2)
 daxa_f32mat2x2;
+#define daxa_rowmaj_f32mat2x2 daxa_f32mat2x2
 _DAXA_DECL_VEC3_TYPE(daxa_f32vec2)
 daxa_f32mat2x3;
+#define daxa_rowmaj_f32mat3x2 daxa_f32mat2x3
 _DAXA_DECL_VEC4_TYPE(daxa_f32vec2)
 daxa_f32mat2x4;
+#define daxa_rowmaj_f32mat4x2 daxa_f32mat2x4
 _DAXA_DECL_VEC2_TYPE(daxa_f64vec2)
 daxa_f64mat2x2;
+#define daxa_rowmaj_f64mat2x2 daxa_f64mat2x2
 _DAXA_DECL_VEC3_TYPE(daxa_f64vec2)
 daxa_f64mat2x3;
+#define daxa_rowmaj_f64mat3x2 daxa_f64mat2x3
 _DAXA_DECL_VEC4_TYPE(daxa_f64vec2)
 daxa_f64mat2x4;
+#define daxa_rowmaj_f64mat4x2 daxa_f64mat2x4
 _DAXA_DECL_VEC2_TYPE(daxa_f32vec3)
 daxa_f32mat3x2;
+#define daxa_rowmaj_f32mat2x3 daxa_f32mat3x2
 _DAXA_DECL_VEC3_TYPE(daxa_f32vec3)
 daxa_f32mat3x3;
+#define daxa_rowmaj_f32mat3x3 daxa_f32mat3x3
 _DAXA_DECL_VEC4_TYPE(daxa_f32vec3)
 daxa_f32mat3x4;
+#define daxa_rowmaj_f32mat4x3 daxa_f32mat3x4
 _DAXA_DECL_VEC2_TYPE(daxa_f64vec3)
 daxa_f64mat3x2;
+#define daxa_rowmaj_f64mat2x3 daxa_f64mat3x2
 _DAXA_DECL_VEC3_TYPE(daxa_f64vec3)
 daxa_f64mat3x3;
+#define daxa_rowmaj_f64mat3x3 daxa_f64mat3x3
 _DAXA_DECL_VEC4_TYPE(daxa_f64vec3)
 daxa_f64mat3x4;
+#define daxa_rowmaj_f64mat4x3 daxa_f64mat3x4
 _DAXA_DECL_VEC2_TYPE(daxa_f32vec4)
 daxa_f32mat4x2;
+#define daxa_rowmaj_f32mat2x4 daxa_f32mat4x2
 _DAXA_DECL_VEC3_TYPE(daxa_f32vec4)
 daxa_f32mat4x3;
+#define daxa_rowmaj_f32mat3x4 daxa_f32mat4x3
 _DAXA_DECL_VEC4_TYPE(daxa_f32vec4)
 daxa_f32mat4x4;
+#define daxa_rowmaj_f32mat4x4 daxa_f32mat4x4
 _DAXA_DECL_VEC2_TYPE(daxa_f64vec4)
 daxa_f64mat4x2;
+#define daxa_rowmaj_f64mat2x4 daxa_f64mat4x2
 _DAXA_DECL_VEC3_TYPE(daxa_f64vec4)
 daxa_f64mat4x3;
+#define daxa_rowmaj_f64mat3x4 daxa_f64mat4x3
 _DAXA_DECL_VEC4_TYPE(daxa_f64vec4)
 daxa_f64mat4x4;
+#define daxa_rowmaj_f64mat4x4 daxa_f64mat4x4
 _DAXA_DECL_VEC2_TYPE(daxa_i32vec2)
 daxa_i32mat2x2;
+#define daxa_rowmaj_i32mat2x2 daxa_i32mat2x2
 _DAXA_DECL_VEC3_TYPE(daxa_i32vec2)
 daxa_i32mat2x3;
+#define daxa_rowmaj_i32mat3x2 daxa_i32mat2x3
 _DAXA_DECL_VEC4_TYPE(daxa_i32vec2)
 daxa_i32mat2x4;
+#define daxa_rowmaj_i32mat4x2 daxa_i32mat2x4
 _DAXA_DECL_VEC2_TYPE(daxa_u32vec2)
 daxa_u32mat2x2;
+#define daxa_rowmaj_u32mat2x2 daxa_u32mat2x2
 _DAXA_DECL_VEC3_TYPE(daxa_u32vec2)
 daxa_u32mat2x3;
+#define daxa_rowmaj_u32mat3x2 daxa_u32mat2x3
 _DAXA_DECL_VEC4_TYPE(daxa_u32vec2)
 daxa_u32mat2x4;
+#define daxa_rowmaj_u32mat4x2 daxa_u32mat2x4
 _DAXA_DECL_VEC2_TYPE(daxa_i32vec3)
 daxa_i32mat3x2;
+#define daxa_rowmaj_i32mat2x3 daxa_i32mat3x2
 _DAXA_DECL_VEC3_TYPE(daxa_i32vec3)
 daxa_i32mat3x3;
+#define daxa_rowmaj_i32mat3x3 daxa_i32mat3x3
 _DAXA_DECL_VEC4_TYPE(daxa_i32vec3)
 daxa_i32mat3x4;
+#define daxa_rowmaj_i32mat4x3 daxa_i32mat3x4
 _DAXA_DECL_VEC2_TYPE(daxa_u32vec3)
 daxa_u32mat3x2;
+#define daxa_rowmaj_u32mat2x3 daxa_u32mat3x2
 _DAXA_DECL_VEC3_TYPE(daxa_u32vec3)
 daxa_u32mat3x3;
+#define daxa_rowmaj_u32mat3x3 daxa_u32mat3x3
 _DAXA_DECL_VEC4_TYPE(daxa_u32vec3)
 daxa_u32mat3x4;
+#define daxa_rowmaj_u32mat4x3 daxa_u32mat3x4
 _DAXA_DECL_VEC2_TYPE(daxa_i32vec4)
 daxa_i32mat4x2;
+#define daxa_rowmaj_i32mat2x4 daxa_i32mat4x2
 _DAXA_DECL_VEC3_TYPE(daxa_i32vec4)
 daxa_i32mat4x3;
+#define daxa_rowmaj_i32mat3x4 daxa_i32mat4x3
 _DAXA_DECL_VEC4_TYPE(daxa_i32vec4)
 daxa_i32mat4x4;
+#define daxa_rowmaj_i32mat4x4 daxa_i32mat4x4
 _DAXA_DECL_VEC2_TYPE(daxa_u32vec4)
 daxa_u32mat4x2;
+#define daxa_rowmaj_u32mat2x4 daxa_u32mat4x2
 _DAXA_DECL_VEC3_TYPE(daxa_u32vec4)
 daxa_u32mat4x3;
+#define daxa_rowmaj_u32mat3x4 daxa_u32mat4x3
 _DAXA_DECL_VEC4_TYPE(daxa_u32vec4)
 daxa_u32mat4x4;
+#define daxa_rowmaj_u32mat4x4 daxa_u32mat4x4
 
 #define DAXA_SMALL_STRING_CAPACITY 63
 
@@ -212,5 +258,22 @@ daxa_u32mat4x4;
 #elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+// TODO(Raytracing): Should this say like this?
+static uint32_t const DAXA_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE = 0x00000001;
+static uint32_t const DAXA_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING = 0x00000002;
+static uint32_t const DAXA_GEOMETRY_INSTANCE_FORCE_OPAQUE = 0x00000004;
+static uint32_t const DAXA_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE = 0x00000008;
+
+/// ABI: Must stay compatible with 'VkAccelerationStructureInstanceKHR'
+typedef struct
+{
+    daxa_rowmaj_f32mat3x4 transform;
+    uint32_t instance_custom_index : 24;
+    uint32_t mask : 8;
+    uint32_t instance_shader_binding_table_record_offset : 24;
+    uint32_t flags : 8;
+    uint64_t blas_device_address;
+} daxa_BlasInstanceData;
 
 #endif

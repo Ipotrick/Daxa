@@ -64,21 +64,6 @@ void main()
 }
 ```
 
-### Uniform Buffers
-
-`DAXA_DECL_UNIFORM_BUFFER(SLOT)` defines the beginning of a uniform buffer declaration. Daxa allows up to 8 uniform buffer slots. 
-The following uniform buffer block becomes a struct with the same name in c++. This makro can be used in shared files.
-
-Example:
-```glsl
-DAXA_DECL_UNIFORM_BUFFER(0) BufferBlock
-{
-    daxa_u32 field;
-};
-```
-
-Very importantly, I note here that these bindings are updated and get visible on the GPU **ONLY** when a new pipeline is bound. So you can **NOT** change them between draw calls or similar. This is intentional as binding is slow and against Daxa's bindless philosophy. Yet some hardware really benefits from direct uniform buffer bindings like NVIDIA. In Daxa, uniform buffers are meant to be used **ONLY** for larger uniformly accessed data across all invocations in the shader. For any changes between dispatches and draws, use push constants!
-
 ## Relevant Always Enabled SPIR-V/GLSL Extensions:
 - [GL_KHR_memory_scope_semantics](https://github.com/KhronosGroup/GLSL/blob/master/extensions/khr/GL_KHR_memory_scope_semantics.txt)
   - removes/replaces coherent as a buffer and image decoration in spirv and glsl.

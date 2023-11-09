@@ -80,7 +80,6 @@ namespace daxa
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
-
     struct BufferClearInfo
     {
         BufferId buffer = {};
@@ -221,19 +220,17 @@ namespace daxa
         f32 slope_factor = {};
     };
 
-    enum struct IndexType
-    {
-        uint16 = 0,
-        uint32 = 1,
-        uint8 = 1000265000,
-        none = 1000165000,
-    };
-
     struct SetIndexBufferInfo
     {
         BufferId id = {};
         usize offset = {};
         IndexType index_type = IndexType::uint32;
+    };
+
+    struct BuildAccelerationStructuresInfo
+    {
+        std::span<TlasBuildInfo const> tlas_build_infos = {};
+        std::span<BlasBuildInfo const> blas_build_infos = {};
     };
 
     struct DAXA_EXPORT_CXX ExecutableCommandList : ManagedPtr<ExecutableCommandList, daxa_ExecutableCommandList>
@@ -270,16 +267,6 @@ namespace daxa
         {
             push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
         }
-        /// @brief  Binds a buffer region to the uniform buffer slot.
-        ///         There are 8 uniform buffer slots (indices range from 0 to 7).
-        ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
-        ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
-        ///         This is in stark contrast to OpenGl like bindings which are visible immediately to all commands after binding.
-        ///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
-        ///         Set uniform buffer slots are cleared after a pipeline is bound.
-        ///         Before setting another pipeline, they need to be set again.
-        /// @param info parameters.
-        void set_uniform_buffer(SetUniformBufferInfo const & info);
         void set_pipeline(RasterPipeline const & pipeline);
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
@@ -335,6 +322,7 @@ namespace daxa
         void blit_image_to_image(ImageBlitInfo const & info);
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
+        void build_acceleration_structures(BuildAccelerationStructuresInfo const & info);
 
         /// @brief  Successive pipeline barrier calls are combined.
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
@@ -355,16 +343,6 @@ namespace daxa
         {
             push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
         }
-        /// @brief  Binds a buffer region to the uniform buffer slot.
-        ///         There are 8 uniform buffer slots (indices range from 0 to 7).
-        ///         The buffer range is user managed, The buffer MUST not be destroyed before the command list is submitted!
-        ///         Changes to these bindings only become visible to commands AFTER a pipeline is bound!
-        ///         This is in stark contrast to OpenGl like bindings which are visible immediately to all commands after binding.
-        ///         This is deliberate to discourage overuse of uniform buffers over descriptor sets.
-        ///         Set uniform buffer slots are cleared after a pipeline is bound.
-        ///         Before setting another pipeline, they need to be set again.
-        /// @param info parameters.
-        void set_uniform_buffer(SetUniformBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
         void dispatch(DispatchInfo const & info);
         void dispatch_indirect(DispatchIndirectInfo const & info);

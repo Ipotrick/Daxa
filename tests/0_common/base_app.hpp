@@ -23,6 +23,7 @@ using Clock = std::chrono::high_resolution_clock;
 #define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #endif
 
+
 template <typename T>
 struct BaseApp : AppWindow<T>
 {

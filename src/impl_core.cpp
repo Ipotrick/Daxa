@@ -121,9 +121,236 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
 #endif
 }
 
+#define _DAXA_ASSIGN_ARRAY_3(SRC) \
+    & { SRC[0], SRC[1], SRC[3] }
+
+auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties
+{
+    daxa_DeviceProperties ret = {};
+
+    bool ray_tracing_pipeline_supported = false;
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR vk_physical_device_ray_tracing_pipeline_properties_khr = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
+        .pNext = nullptr,
+    };
+
+    bool acceleration_structure_supported = false;
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR vk_physical_device_acceleration_structure_properties_khr = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
+        .pNext = nullptr,
+    };
+
+    bool mesh_shader_supported = false;
+    VkPhysicalDeviceMeshShaderPropertiesEXT vk_physical_device_mesh_shader_properties_ext = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT,
+        .pNext = nullptr,
+    };
+
+    void * pNextChain = nullptr;
+
+    u32 count = 0;
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &count, nullptr);
+    std::vector<VkExtensionProperties> extensions(count);
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &count, extensions.data());
+    for (auto & extension : extensions)
+    {
+        if (std::strcmp(extension.extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
+        {
+            ray_tracing_pipeline_supported = true;
+            vk_physical_device_ray_tracing_pipeline_properties_khr.pNext = pNextChain;
+            pNextChain = &vk_physical_device_ray_tracing_pipeline_properties_khr;
+        }
+        if (std::strcmp(extension.extensionName, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0)
+        {
+            acceleration_structure_supported = true;
+            vk_physical_device_acceleration_structure_properties_khr.pNext = pNextChain;
+            pNextChain = &vk_physical_device_acceleration_structure_properties_khr;
+        }
+        if (std::strcmp(extension.extensionName, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
+        {
+            mesh_shader_supported = true;
+            vk_physical_device_mesh_shader_properties_ext.pNext = pNextChain;
+            pNextChain = &vk_physical_device_mesh_shader_properties_ext;
+        }
+    }
+
+    VkPhysicalDeviceProperties2 vk_physical_device_properties2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+        .pNext = pNextChain,
+    };
+
+    vkGetPhysicalDeviceProperties2(physical_device, &vk_physical_device_properties2);
+    // physical device properties are ABI compatible UP TO the mesh_shader_properties field.
+    std::memcpy(
+        &ret,
+        r_cast<std::byte const *>(&vk_physical_device_properties2) + sizeof(void *) * 2 /* skip sType and pNext */,
+        offsetof(daxa_DeviceProperties, mesh_shader_properties));
+    if (ray_tracing_pipeline_supported)
+    {
+        ret.ray_tracing_pipeline_properties.has_value = true;
+        std::memcpy(
+            &ret.ray_tracing_pipeline_properties.value,
+            r_cast<std::byte const *>(&vk_physical_device_ray_tracing_pipeline_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_RayTracingPipelineProperties));
+    }
+    if (acceleration_structure_supported)
+    {
+        ret.acceleration_structure_properties.has_value = true;
+        std::memcpy(
+            &ret.acceleration_structure_properties.value,
+            r_cast<std::byte const *>(&vk_physical_device_acceleration_structure_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_AccelerationStructureProperties));
+    }
+    if (mesh_shader_supported)
+    {
+        ret.mesh_shader_properties.has_value = true;
+        std::memcpy(
+            &ret.mesh_shader_properties.value,
+            r_cast<std::byte const *>(&vk_physical_device_mesh_shader_properties_ext) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_MeshShaderProperties));
+        ret.mesh_shader_properties.value.prefers_local_invocation_vertex_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersLocalInvocationVertexOutput);
+        ret.mesh_shader_properties.value.prefers_local_invocation_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersLocalInvocationPrimitiveOutput);
+        ret.mesh_shader_properties.value.prefers_compact_vertex_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactVertexOutput);
+        ret.mesh_shader_properties.value.prefers_compact_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactPrimitiveOutput);
+    }
+    return ret;
+}
+
 auto mask_from_bit_count(u64 bits) -> u64
 {
     return (1ull << bits) - 1;
+}
+
+void daxa_as_build_info_to_vk(
+    daxa_Device device,
+    daxa_TlasBuildInfo const * tlas_infos,
+    usize tlas_count,
+    daxa_BlasBuildInfo const * blas_infos,
+    usize blas_count,
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> & vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureGeometryKHR> & vk_geometry_infos,
+    std::vector<u32> & primitive_counts,
+    std::vector<u32 const *> & primitive_counts_ptrs)
+{
+    vk_build_geometry_infos.reserve(tlas_count + blas_count);
+    primitive_counts.reserve(tlas_count + blas_count);
+    u32 geo_infos_count = 0;
+    for (u32 tlas_i = 0; tlas_i < tlas_count; ++tlas_i)
+    {
+        geo_infos_count += tlas_infos[tlas_i].instance_count;
+    }
+    for (u32 blas_i = 0; blas_i < blas_count; ++blas_i)
+    {
+        // As both variants are spans and ABI compatible, we can just unconditionaally read one of the variants here.
+        geo_infos_count += blas_infos[blas_i].geometries.values.triangles.count;
+    }
+    vk_geometry_infos.reserve(geo_infos_count);
+    primitive_counts.reserve(geo_infos_count);
+    for (u32 tlas_i = 0; tlas_i < tlas_count; ++tlas_i)
+    {
+        daxa_TlasBuildInfo const & info = tlas_infos[tlas_i];
+        VkAccelerationStructureGeometryKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
+        u32 const * primitive_counts_ptr = primitive_counts.data() + primitive_counts.size();
+        for (u32 inst_i = 0; inst_i < info.instance_count; ++inst_i)
+        {
+            daxa_TlasInstanceInfo const & inst_info = info.instances[inst_i];
+            VkAccelerationStructureGeometryInstancesDataKHR vk_inst_data = {
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+                .pNext = nullptr,
+                .arrayOfPointers = static_cast<VkBool32>(inst_info.is_data_array_of_pointers),
+                .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(inst_info.data),
+            };
+            vk_geometry_infos.push_back(VkAccelerationStructureGeometryKHR{
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+                .pNext = nullptr,
+                .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
+                .geometry = VkAccelerationStructureGeometryDataKHR{
+                    .instances = vk_inst_data,
+                },
+                .flags = std::bit_cast<VkGeometryFlagsKHR>(inst_info.flags),
+            });
+            primitive_counts.push_back(info.instance_count);
+        }
+        vk_build_geometry_infos.push_back({
+            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+            .pNext = nullptr,
+            .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+            .flags = static_cast<VkBuildAccelerationStructureFlagsKHR>(info.flags),
+            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+            .srcAccelerationStructure = {}, // TODO(Raytracing)
+            .dstAccelerationStructure =
+                info.dst_tlas.value != 0
+                    ? device->slot(info.dst_tlas).vk_acceleration_structure
+                    : 0,
+            .geometryCount = info.instance_count,
+            .pGeometries = vk_geo_array_ptr,
+            .ppGeometries = nullptr,
+            .scratchData = std::bit_cast<VkDeviceOrHostAddressKHR>(info.scratch_data),
+        });
+        primitive_counts_ptrs.push_back(primitive_counts_ptr);
+    }
+    for (u32 blas_i = 0; blas_i < blas_count; ++blas_i)
+    {
+        daxa_BlasBuildInfo const & info = blas_infos[blas_i];
+        VkAccelerationStructureGeometryKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
+        u32 const * primitive_counts_ptr = primitive_counts.data() + primitive_counts.size();
+        // As both variants are spans and ABI compatible, we can just unconditionally read one of the variants here.
+        u32 const geo_count = static_cast<u32>(info.geometries.values.triangles.count);
+        for (u32 geo_i = 0; geo_i < geo_count; ++geo_i)
+        {
+            auto geo_info = VkAccelerationStructureGeometryKHR{
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+                .pNext = nullptr,
+            };
+            if (info.geometries.index == 0) // triangles
+            {
+                geo_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
+                geo_info.flags = std::bit_cast<VkGeometryTypeKHR>(info.geometries.values.triangles.triangles[geo_i].flags);
+                geo_info.geometry.triangles = VkAccelerationStructureGeometryTrianglesDataKHR{
+                    .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                    .pNext = nullptr,
+                    .vertexFormat = info.geometries.values.triangles.triangles[geo_i].vertex_format,
+                    .vertexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles.triangles[geo_i].vertex_data),
+                    .vertexStride = info.geometries.values.triangles.triangles[geo_i].vertex_stride,
+                    .maxVertex = info.geometries.values.triangles.triangles[geo_i].max_vertex,
+                    .indexType = info.geometries.values.triangles.triangles[geo_i].index_type,
+                    .indexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles.triangles[geo_i].index_data),
+                    .transformData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles.triangles[geo_i].transform_data),
+                };
+                primitive_counts.push_back(info.geometries.values.triangles.triangles[geo_i].count);
+            }
+            else // aabbs
+            {
+                geo_info.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR,
+                geo_info.flags = static_cast<VkGeometryFlagsKHR>(info.geometries.values.aabbs.aabbs[geo_i].flags);
+                geo_info.geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR{
+                    .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
+                    .pNext = nullptr,
+                    .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.aabbs.aabbs[geo_i].data),
+                    .stride = info.geometries.values.aabbs.aabbs[geo_i].stride,
+                };
+                primitive_counts.push_back(info.geometries.values.aabbs.aabbs[geo_i].count);
+            }
+            vk_geometry_infos.push_back(geo_info);
+        }
+        vk_build_geometry_infos.push_back({
+            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+            .pNext = nullptr,
+            .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+            .flags = static_cast<VkBuildAccelerationStructureFlagsKHR>(info.flags),
+            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
+            .srcAccelerationStructure = {}, // TODO(Raytracing)
+            .dstAccelerationStructure =
+                info.dst_blas.value != 0
+                    ? device->slot(info.dst_blas).vk_acceleration_structure
+                    : 0,
+            .geometryCount = geo_count,
+            .pGeometries = vk_geo_array_ptr,
+            .ppGeometries = nullptr,
+            .scratchData = std::bit_cast<VkDeviceOrHostAddressKHR>(info.scratch_data),
+        });
+        primitive_counts_ptrs.push_back(primitive_counts_ptr);
+    }
 }
 
 // --- End Helpers ---

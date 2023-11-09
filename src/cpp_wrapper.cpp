@@ -97,7 +97,6 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS: return "DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS";
     case DAXA_RESULT_INVALID_BUFFER_RANGE: return "DAXA_RESULT_INVALID_BUFFER_RANGE";
     case DAXA_RESULT_INVALID_BUFFER_OFFSET: return "DAXA_RESULT_INVALID_BUFFER_OFFSET";
-    case DAXA_RESULT_INVALID_UNIFORM_BUFFER_SLOT: return "DAXA_RESULT_INVALID_UNIFORM_BUFFER_SLOT";
     case DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND: return "DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND";
     case DAXA_RESULT_RANGE_OUT_OF_BOUNDS: return "DAXA_RESULT_RANGE_OUT_OF_BOUNDS";
     case DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND: return "DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND";
@@ -110,6 +109,13 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID";
     case DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID";
     case DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID";
+    case DAXA_RESULT_INVALID_ACCELERATION_STRUCTURE_ID: return "DAXA_RESULT_INVALID_ACCELERATION_STRUCTURE_ID";
+    case DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES: return "DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES";
+    case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_RAYTRACING: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_RAYTRACING";
+    case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_MESH_SHADER: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_MESH_SHADER";
+    case DAXA_RESULT_INVALID_TLAS_ID: return "DAXA_RESULT_INVALID_TLAS_ID";
+    case DAXA_RESULT_INVALID_BLAS_ID: return "DAXA_RESULT_INVALID_BLAS_ID";
+    case DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING: return "DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING";
     case DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
     default: return "UNIMPLEMENTED";
     }
@@ -215,57 +221,81 @@ namespace daxa
                 r_cast<daxa_ImageInfo const *>(&info)));
     }
 
-#define _DAXA_DECL_GPU_RES_FN(Name, name)                             \
-    auto Device::create_##name(Name##Info const & info)->Name##Id     \
-    {                                                                 \
-        Name##Id id = {};                                             \
-        check_result(                                                 \
-            daxa_dvc_create_##name(                                   \
-                r_cast<daxa_Device>(this->object),                    \
-                r_cast<daxa_##Name##Info const *>(&info),             \
-                r_cast<daxa_##Name##Id *>(&id)),                      \
-            "failed to create " #name);                               \
-        return id;                                                    \
-    }                                                                 \
-    void Device::destroy_##name(Name##Id id)                          \
-    {                                                                 \
-        auto result = daxa_dvc_destroy_##name(                        \
-            r_cast<daxa_Device>(this->object),                        \
-            static_cast<daxa_##Name##Id>(id));                        \
-        check_result(result, "invalid resource id");                  \
-    }                                                                 \
-    auto Device::is_id_valid(Name##Id id) const->bool                 \
-    {                                                                 \
-        return daxa_dvc_is_##name##_valid(                            \
-            rc_cast<daxa_Device>(this->object),                       \
-            static_cast<daxa_##Name##Id>(id));                        \
-    }                                                                 \
-    auto Device::info_##name(Name##Id id) const->Optional<Name##Info> \
-    {                                                                 \
-        Name##Info info = {};                                         \
-        auto result = daxa_dvc_info_##name(                           \
-            rc_cast<daxa_Device>(this->object),                       \
-            static_cast<daxa_##Name##Id>(id),                         \
-            r_cast<daxa_##Name##Info *>(&info));                      \
-        if (result == DAXA_RESULT_SUCCESS)                            \
-        {                                                             \
-            return {info};                                            \
-        }                                                             \
-        return {};                                                    \
+    auto Device::get_tlas_build_sizes(TlasBuildInfo const & info)
+        -> AccelerationStructureBuildSizesInfo
+    {
+        AccelerationStructureBuildSizesInfo ret = {};
+        check_result(daxa_dvc_get_tlas_build_sizes(
+                         rc_cast<daxa_Device>(this->object),
+                         r_cast<daxa_TlasBuildInfo const *>(&info),
+                         r_cast<daxa_AccelerationStructureBuildSizesInfo *>(&ret)),
+                     "failed to get tlas build sizes");
+        return ret;
     }
 
-    auto Device::create_buffer_from_block(MemoryBlockBufferInfo const & info) -> BufferId
+    auto Device::get_blas_build_sizes(BlasBuildInfo const & info)
+        -> AccelerationStructureBuildSizesInfo
+    {
+        AccelerationStructureBuildSizesInfo ret = {};
+        check_result(daxa_dvc_get_blas_build_sizes(
+                         rc_cast<daxa_Device>(this->object),
+                         r_cast<daxa_BlasBuildInfo const *>(&info),
+                         r_cast<daxa_AccelerationStructureBuildSizesInfo *>(&ret)),
+                     "failed to get blas build sizes");
+        return ret;
+    }
+
+#define _DAXA_DECL_GPU_RES_FN(Name, name)                               \
+    auto Device::create_##name(Name##Info const & info) -> Name##Id     \
+    {                                                                   \
+        Name##Id id = {};                                               \
+        check_result(                                                   \
+            daxa_dvc_create_##name(                                     \
+                r_cast<daxa_Device>(this->object),                      \
+                r_cast<daxa_##Name##Info const *>(&info),               \
+                r_cast<daxa_##Name##Id *>(&id)),                        \
+            "failed to create " #name);                                 \
+        return id;                                                      \
+    }                                                                   \
+    void Device::destroy_##name(Name##Id id)                            \
+    {                                                                   \
+        auto result = daxa_dvc_destroy_##name(                          \
+            r_cast<daxa_Device>(this->object),                          \
+            static_cast<daxa_##Name##Id>(id));                          \
+        check_result(result, "invalid resource id");                    \
+    }                                                                   \
+    auto Device::is_id_valid(Name##Id id) const -> bool                 \
+    {                                                                   \
+        return daxa_dvc_is_##name##_valid(                              \
+            rc_cast<daxa_Device>(this->object),                         \
+            static_cast<daxa_##Name##Id>(id));                          \
+    }                                                                   \
+    auto Device::info_##name(Name##Id id) const -> Optional<Name##Info> \
+    {                                                                   \
+        Name##Info info = {};                                           \
+        auto result = daxa_dvc_info_##name(                             \
+            rc_cast<daxa_Device>(this->object),                         \
+            static_cast<daxa_##Name##Id>(id),                           \
+            r_cast<daxa_##Name##Info *>(&info));                        \
+        if (result == DAXA_RESULT_SUCCESS)                              \
+        {                                                               \
+            return {info};                                              \
+        }                                                               \
+        return {};                                                      \
+    }
+
+    auto Device::create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId
     {
         BufferId id = {};
         check_result(
-            daxa_dvc_create_buffer_from_block(
+            daxa_dvc_create_buffer_from_memory_block(
                 r_cast<daxa_Device>(this->object),
                 r_cast<daxa_MemoryBlockBufferInfo const *>(&info),
                 r_cast<daxa_BufferId *>(&id)),
             "failed to create buffer from memory block");
         return id;
     }
-    auto Device::create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId
+    auto Device::create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId
     {
         ImageId id = {};
         check_result(
@@ -276,23 +306,77 @@ namespace daxa
             "failed to create image from memory block");
         return id;
     }
+    auto Device::create_tlas_from_buffer(BufferTlasInfo const & info) -> TlasId
+    {
+        TlasId id = {};
+        check_result(
+            daxa_dvc_create_tlas_from_buffer(
+                r_cast<daxa_Device>(this->object),
+                r_cast<daxa_BufferTlasInfo const *>(&info),
+                r_cast<daxa_TlasId *>(&id)),
+            "failed to create tlas from buffer");
+        return id;
+    }
+    auto Device::create_blas_from_buffer(BufferBlasInfo const & info) -> BlasId
+    {
+        BlasId id = {};
+        check_result(
+            daxa_dvc_create_blas_from_buffer(
+                r_cast<daxa_Device>(this->object),
+                r_cast<daxa_BufferBlasInfo const *>(&info),
+                r_cast<daxa_BlasId *>(&id)),
+            "failed to create blas from buffer");
+        return id;
+    }
     _DAXA_DECL_GPU_RES_FN(Buffer, buffer)
     _DAXA_DECL_GPU_RES_FN(Image, image)
     _DAXA_DECL_GPU_RES_FN(ImageView, image_view)
     _DAXA_DECL_GPU_RES_FN(Sampler, sampler)
+    _DAXA_DECL_GPU_RES_FN(Tlas, tlas)
+    _DAXA_DECL_GPU_RES_FN(Blas, blas)
 
-    auto Device::get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>
+    auto Device::get_device_address(BufferId id) const -> Optional<DeviceAddress>
     {
-        BufferDeviceAddress ret;
+        DeviceAddress ret;
         auto result = daxa_dvc_buffer_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
-            r_cast<daxa_BufferDeviceAddress *>(&ret));
+            r_cast<daxa_DeviceAddress *>(&ret));
         if (result == DAXA_RESULT_SUCCESS)
         {
             return {ret};
         }
         check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BUFFER_ID});
+        return {};
+    }
+
+    auto Device::get_device_address(TlasId id) const -> Optional<DeviceAddress>
+    {
+        DeviceAddress ret;
+        auto result = daxa_dvc_tlas_device_address(
+            rc_cast<daxa_Device>(this->object),
+            static_cast<daxa_TlasId>(id),
+            r_cast<daxa_DeviceAddress *>(&ret));
+        if (result == DAXA_RESULT_SUCCESS)
+        {
+            return {ret};
+        }
+        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_TLAS_ID});
+        return {};
+    }
+
+    auto Device::get_device_address(BlasId id) const -> Optional<DeviceAddress>
+    {
+        DeviceAddress ret;
+        auto result = daxa_dvc_blas_device_address(
+            rc_cast<daxa_Device>(this->object),
+            static_cast<daxa_BlasId>(id),
+            r_cast<daxa_DeviceAddress *>(&ret));
+        if (result == DAXA_RESULT_SUCCESS)
+        {
+            return {ret};
+        }
+        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BLAS_ID});
         return {};
     }
 
@@ -312,7 +396,7 @@ namespace daxa
     }
 
 #define _DAXA_DECL_DVC_CREATE_FN(Name, name)                       \
-    auto Device::create_##name(Name##Info const & info)->Name      \
+    auto Device::create_##name(Name##Info const & info) -> Name    \
     {                                                              \
         Name ret = {};                                             \
         check_result(daxa_dvc_create_##name(                       \
@@ -601,24 +685,31 @@ namespace daxa
         return {};
     }
 
-    auto Swapchain::get_acquire_semaphore() const -> BinarySemaphore const &
+    auto Swapchain::current_acquire_semaphore() const -> BinarySemaphore const &
     {
-        return *rc_cast<BinarySemaphore *>(daxa_swp_get_acquire_semaphore(rc_cast<daxa_Swapchain>(this->object)));
+        return *rc_cast<BinarySemaphore *>(daxa_swp_current_acquire_semaphore(rc_cast<daxa_Swapchain>(this->object)));
     }
 
-    auto Swapchain::get_present_semaphore() const -> BinarySemaphore const &
+    auto Swapchain::current_present_semaphore() const -> BinarySemaphore const &
     {
-        return *rc_cast<BinarySemaphore *>(daxa_swp_get_present_semaphore(rc_cast<daxa_Swapchain>(this->object)));
+        return *rc_cast<BinarySemaphore *>(daxa_swp_current_present_semaphore(rc_cast<daxa_Swapchain>(this->object)));
     }
 
-    auto Swapchain::get_gpu_timeline_semaphore() const -> TimelineSemaphore const &
+    auto Swapchain::current_cpu_timeline_value() const -> u64
     {
-        return *rc_cast<TimelineSemaphore *>(daxa_swp_get_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
+        return daxa_swp_current_cpu_timeline_value(rc_cast<daxa_Swapchain>(this->object));
     }
 
-    auto Swapchain::get_cpu_timeline_value() const -> usize
+    auto Swapchain::gpu_timeline_semaphore() const -> TimelineSemaphore const &
     {
-        return daxa_swp_get_cpu_timeline_value(rc_cast<daxa_Swapchain>(this->object));
+        return *rc_cast<TimelineSemaphore *>(daxa_swp_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
+    }
+
+    auto Swapchain::current_timeline_pair() const -> std::pair<TimelineSemaphore, u64>
+    {
+        auto gpu_value = *r_cast<TimelineSemaphore const*>(daxa_swp_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
+        auto cpu_value = daxa_swp_current_cpu_timeline_value(rc_cast<daxa_Swapchain>(this->object));
+        return std::pair{gpu_value, cpu_value};
     }
 
     auto Swapchain::info() const -> SwapchainInfo const &
@@ -792,8 +883,6 @@ namespace daxa
             this->internal, data, size);
     }
 
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_uniform_buffer, SetUniformBufferInfo)
-
     /// --- End RenderCommandBuffer
 
     /// --- Begin CommandRecorder ---
@@ -821,6 +910,13 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
+    void CommandRecorder::build_acceleration_structures(BuildAccelerationStructuresInfo const & info)
+    {
+        auto result = daxa_cmd_build_acceleration_structures(
+            this->internal,
+            r_cast<daxa_BuildAccelerationStucturesInfo const *>(&info));
+        check_result(result, "failed to build acceleration structures");
+    }
     _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
@@ -840,8 +936,6 @@ namespace daxa
             this->internal, data, size);
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_uniform_buffer, SetUniformBufferInfo)
-
     void CommandRecorder::set_pipeline(ComputePipeline const & pipeline)
     {
         daxa_cmd_set_compute_pipeline(
@@ -853,7 +947,7 @@ namespace daxa
     {
         daxa_cmd_dispatch(
             this->internal,
-            r_cast<daxa_DispatchInfo const*>(&info));
+            r_cast<daxa_DispatchInfo const *>(&info));
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)

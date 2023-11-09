@@ -102,8 +102,6 @@ namespace daxa
     struct ImplTask
     {
         std::unique_ptr<detail::BaseTask> base_task = {};
-        u32 constant_buffer_size = {};
-        std::vector<u32> use_offsets = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
     };
 
@@ -299,8 +297,7 @@ namespace daxa
         TaskGraphPermutation & permutation;
         CommandRecorder & recorder;
         ImplTask * current_task = {};
-        Optional<SetUniformBufferInfo> set_uniform_buffer_info = {};
-        types::BufferDeviceAddress device_address = {};
+        types::DeviceAddress device_address = {};
         bool reuse_last_command_list = true;
         std::optional<BinarySemaphore> last_submit_semaphore = {};
     };

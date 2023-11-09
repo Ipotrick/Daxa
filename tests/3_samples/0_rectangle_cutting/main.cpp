@@ -296,16 +296,13 @@ struct App : AppWindow<App>
 
         device.submit_commands({
             .command_lists = std::array{recorder.complete_current_commands()},
-            .wait_binary_semaphores = std::array{swapchain.get_acquire_semaphore()},
-            .signal_binary_semaphores = std::array{swapchain.get_present_semaphore()},
-            .signal_timeline_semaphores = std::array{std::pair{
-                swapchain.get_gpu_timeline_semaphore(),
-                swapchain.get_cpu_timeline_value(),
-            }},
+            .wait_binary_semaphores = std::array{swapchain.current_acquire_semaphore()},
+            .signal_binary_semaphores = std::array{swapchain.current_present_semaphore()},
+            .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
         });
         recorder.~CommandRecorder();
         device.present_frame({
-            .wait_binary_semaphores = std::array{swapchain.get_present_semaphore()},
+            .wait_binary_semaphores = std::array{swapchain.current_present_semaphore()},
             .swapchain = swapchain,
         });
         device.collect_garbage();

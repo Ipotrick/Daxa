@@ -127,7 +127,7 @@ struct App : AppWindow<App>
         auto executable_commands = recorder.complete_current_commands();
         recorder.~CommandRecorder();
         device.submit_commands({
-            .command_lists = std::span{&executable_commands, 1},
+            .command_lists = std::array{executable_commands},
         });
         device.collect_garbage();
     }

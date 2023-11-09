@@ -23,7 +23,14 @@ namespace daxa
     {
         auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
         auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
-        auto get_uniform_buffer_info() const -> SetUniformBufferInfo;
+        void copy_task_head_to(void * dst) const;
+        template<typename T>
+        auto get_task_head_as() -> T
+        {
+            T ret;
+            copy_task_head_to(&ret);
+            return ret;
+        }
 
       protected:
         friend struct ImplTaskRuntimeInterface;
@@ -171,7 +178,6 @@ namespace daxa
     {
         std::vector<GenericTaskResourceUse> uses = {};
         TaskCallback task = {};
-        isize constant_buffer_slot = -1;
         std::string name = {};
     };
 
@@ -202,8 +208,7 @@ namespace daxa
             std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::InlineTask>(
                 std::move(info.uses),
                 std::move(info.task),
-                std::move(info.name),
-                info.constant_buffer_slot);
+                std::move(info.name));
             add_task(std::move(base_task));
         }
 

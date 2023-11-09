@@ -18,36 +18,6 @@ namespace daxa
         return fmt::format("tg idx: {}, index: {}", id.task_graph_index, id.index);
     }
 
-    namespace detail
-    {
-        auto get_task_arg_shader_alignment([[maybe_unused]] TaskResourceUseType type) -> u32
-        {
-            // previously IDS were only 32bit large.
-            // if (type == TaskResourceUseType::BUFFER)
-            // {
-            //     return 8;
-            // }
-            // return 4;
-            return 8;
-        }
-
-        auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>
-        {
-            std::vector<u32> ret = {};
-            ret.reserve(args.size());
-            u32 offset = 0;
-            for (auto const & arg : args)
-            {
-                auto const align = get_task_arg_shader_alignment(arg.type);
-                offset = (offset + align - 1) / align * align;
-                ret.push_back(offset);
-                offset += align;
-            }
-            // Final offset is equal to total size.
-            return {ret, offset};
-        }
-    } // namespace detail
-
     using namespace daxa::detail;
 
     auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
@@ -377,11 +347,39 @@ namespace daxa
         return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[image_use_index]);
     }
 
-    auto TaskInterfaceUses::get_uniform_buffer_info() const -> SetUniformBufferInfo
+    void TaskInterfaceUses::copy_task_head_to(void * dst) const
     {
+        // NOTE:    At this point, all the uses should have already been verified.
+        //          We should not need to check here!
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        DAXA_DBG_ASSERT_TRUE_M(impl.set_uniform_buffer_info.has_value(), "task must have been created with a constant buffer slot in order to use task graph provided constant buffer memory for uses.");
-        return impl.set_uniform_buffer_info.value();
+        std::byte * dst_bytes = r_cast<std::byte *>(dst);
+        u32 byte_offset = 0;
+        for_each(
+            impl.current_task->base_task->get_generic_uses(),
+            [&](u32, TaskBufferUse<> & buffer_use)
+            {
+                for (u32 shader_array_i = 0; shader_array_i < buffer_use.m_shader_array_size; ++shader_array_i)
+                {
+                    if (buffer_use.m_shader_as_address)
+                    {
+                        BufferId buf_id = buffer_use.buffer(shader_array_i);
+                        *r_cast<DeviceAddress *>(dst_bytes + byte_offset) = impl.task_graph.info.device.get_device_address(buf_id).value();
+                    }
+                    else
+                    {
+                        *r_cast<BufferId *>(dst_bytes + byte_offset) = buffer_use.buffer(shader_array_i);
+                    }
+                    byte_offset += 8;
+                }
+            },
+            [&](u32, TaskImageUse<> & image_use)
+            {
+                for (u32 shader_array_i = 0; shader_array_i < image_use.m_shader_array_size; ++shader_array_i)
+                {
+                    *r_cast<ImageViewId *>(dst_bytes + byte_offset) = image_use.view(shader_array_i);
+                    byte_offset += 8;
+                }
+            });
     }
 
     TaskInterface::TaskInterface(void * a_backend)
@@ -951,43 +949,23 @@ namespace daxa
         update_image_view_cache(task, permutation);
         for_each(
             task.base_task->get_generic_uses(),
-            [&](u32, TaskBufferUse<> & arg)
+            [&]([[maybe_unused]] u32 index, TaskBufferUse<> & arg)
             {
-                arg.buffers = this->get_actual_buffers(arg.handle, permutation);
+                arg.buffers.span() = this->get_actual_buffers(arg.handle, permutation);
+                DAXA_DBG_ASSERT_TRUE_M(
+                    arg.m_shader_array_size <= arg.buffers.span().size(),
+                    fmt::format("buffer use (index {}) in task \"{}\" requires {} runtime buffer, but only {} runtime buffer are present when executing",
+                                index, task.base_task->get_name(), arg.m_shader_array_size, arg.buffers.span().size()));
             },
-            [&](u32 input_index, TaskImageUse<> & arg)
+            [&]([[maybe_unused]] u32 index, TaskImageUse<> & arg)
             {
-                arg.images = this->get_actual_images(arg.handle, permutation);
-                arg.views = std::span{task.image_view_cache[input_index].data(), task.image_view_cache[input_index].size()};
+                arg.images.span() = this->get_actual_images(arg.handle, permutation);
+                arg.views.span() = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
+                DAXA_DBG_ASSERT_TRUE_M(
+                    arg.m_shader_array_size <= arg.images.span().size(),
+                    fmt::format("image use (index {}) in task \"{}\" requires {} runtime image, but only {} runtime image are present when executing",
+                                index, task.base_task->get_name(), arg.m_shader_array_size, arg.images.span().size()));
             });
-        bool const upload_args_to_constant_buffer = task.base_task->get_uses_constant_buffer_slot() != -1;
-        if (upload_args_to_constant_buffer)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(staging_memory.has_value(), "transient memory pool must have a size > 0 when shader integration is used");
-            u32 const alignment = static_cast<u32>(info.device.properties().limits.min_uniform_buffer_offset_alignment);
-            auto constant_buffer_alloc = staging_memory->allocate(task.constant_buffer_size, alignment).value();
-            u8 * host_constant_buffer_ptr = reinterpret_cast<u8 *>(constant_buffer_alloc.host_address);
-            for_each(
-                task.base_task->get_generic_uses(),
-                [&](u32 arg_i, TaskBufferUse<> & arg)
-                {
-                    auto adr = (host_constant_buffer_ptr + task.use_offsets[arg_i]);
-                    *reinterpret_cast<types::BufferDeviceAddress *>(adr) = info.device.get_device_address(arg.buffers[0]).value();
-                },
-                [&](u32 arg_i, TaskImageUse<> & arg)
-                {
-                    auto adr = (host_constant_buffer_ptr + task.use_offsets[arg_i]);
-                    auto ptr = reinterpret_cast<types::ImageViewId *>(adr);
-                    *ptr = arg.views[0];
-                });
-            impl_runtime.device_address = constant_buffer_alloc.device_address;
-            impl_runtime.set_uniform_buffer_info = SetUniformBufferInfo{
-                .slot = static_cast<u32>(task.base_task->get_uses_constant_buffer_slot()),
-                .buffer = staging_memory->buffer(),
-                .size = constant_buffer_alloc.size,
-                .offset = constant_buffer_alloc.buffer_offset,
-            };
-        }
         impl_runtime.current_task = &task;
         impl_runtime.recorder.begin_label({
             .label_color = info.task_label_color,
@@ -1223,21 +1201,10 @@ namespace daxa
             permutation->add_task(task_id, impl, *base_task);
         }
 
-        std::vector<u32> constant_buffer_use_offsets = {};
-        u32 constant_buffer_size = {};
-        if (base_task->get_uses_constant_buffer_slot() != -1)
-        {
-            auto offsets_size = get_task_arg_shader_offsets_size(base_task->get_generic_uses());
-            constant_buffer_use_offsets = std::move(offsets_size.first);
-            constant_buffer_size = offsets_size.second;
-        }
-
         std::vector<std::vector<ImageViewId>> view_cache = {};
         view_cache.resize(base_task->get_generic_uses().size(), {});
         impl.tasks.emplace_back(ImplTask{
             .base_task = std::move(base_task),
-            .constant_buffer_size = constant_buffer_size,
-            .use_offsets = std::move(constant_buffer_use_offsets),
             .image_view_cache = std::move(view_cache),
         });
     }
@@ -1396,7 +1363,7 @@ namespace daxa
         // A submit scopes contains a group of batches between two submits.
         // At first, we find the batch we need to insert the new task into.
         // To optimize for optimal overlap and minimal pipeline barriers, we try to insert the task as early as possible.
-        const usize batch_index = schedule_task(
+        usize const batch_index = schedule_task(
             task_graph_impl,
             *this,
             current_submit_scope,
@@ -1860,7 +1827,7 @@ namespace daxa
             {
                 auto const & transient_info = daxa::get<PermIndepTaskBufferInfo::Transient>(glob_buffer.task_buffer_data);
 
-                perm_buffer.actual_buffer = info.device.create_buffer_from_block(MemoryBlockBufferInfo{
+                perm_buffer.actual_buffer = info.device.create_buffer_from_memory_block(MemoryBlockBufferInfo{
                     .buffer_info = BufferInfo{
                         .size = transient_info.info.size,
                         .name = transient_info.info.name,
@@ -1886,7 +1853,7 @@ namespace daxa
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
                                            std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
                 auto const & transient_image_info = daxa::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
-                perm_image.actual_image = info.device.create_image_from_block(
+                perm_image.actual_image = info.device.create_image_from_memory_block(
                     MemoryBlockImageInfo{
                         .image_info = ImageInfo{
                             .flags = daxa::ImageCreateFlagBits::ALLOW_ALIAS,
@@ -2101,7 +2068,7 @@ namespace daxa
                                            .memory_requirements;
                 }
                 // Go through all memory block states in which this resource is alive and try to find a spot for it
-                const u8 resource_lifetime_duration = static_cast<u8>(resource_lifetime.end_batch - resource_lifetime.start_batch + 1);
+                u8 const resource_lifetime_duration = static_cast<u8>(resource_lifetime.end_batch - resource_lifetime.start_batch + 1);
                 Allocation new_allocation = Allocation{
                     .offset = 0,
                     .size = mem_requirements.size,
@@ -2722,15 +2689,15 @@ namespace daxa
                         if (!swapchain_image.waited_on_acquire)
                         {
                             swapchain_image.waited_on_acquire = true;
-                            wait_binary_semaphores.push_back(swapchain.get_acquire_semaphore());
+                            wait_binary_semaphores.push_back(swapchain.current_acquire_semaphore());
                         }
                     }
                     if (submit_scope_index == permutation.swapchain_image_last_use_submit_scope_index)
                     {
-                        signal_binary_semaphores.push_back(swapchain.get_present_semaphore());
+                        signal_binary_semaphores.push_back(swapchain.current_present_semaphore());
                         signal_timeline_semaphores.emplace_back(
-                            swapchain.get_gpu_timeline_semaphore(),
-                            swapchain.get_cpu_timeline_value());
+                            swapchain.gpu_timeline_semaphore(),
+                            swapchain.current_cpu_timeline_value());
                     }
                     if (permutation.swapchain_image_first_use_submit_scope_index == std::numeric_limits<u64>::max() &&
                         submit_scope.present_info.has_value())
@@ -2740,12 +2707,12 @@ namespace daxa
                         // TODO: this is a hack until we get timeline semaphores for presenting.
                         // TODO: im not sure about this design, maybe just remove this explicit signaling completely.
                         signal_timeline_semaphores.emplace_back(
-                            swapchain.get_gpu_timeline_semaphore(),
-                            swapchain.get_cpu_timeline_value());
+                            swapchain.gpu_timeline_semaphore(),
+                            swapchain.current_cpu_timeline_value());
                         ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_persistent();
                         swapchain_image.waited_on_acquire = true;
-                        wait_binary_semaphores.push_back(impl.info.swapchain.value().get_acquire_semaphore());
-                        signal_binary_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
+                        wait_binary_semaphores.push_back(impl.info.swapchain.value().current_acquire_semaphore());
+                        signal_binary_semaphores.push_back(impl.info.swapchain.value().current_present_semaphore());
                     }
                 }
                 if (submit_scope.user_submit_info.additional_command_lists != nullptr)
@@ -2787,7 +2754,7 @@ namespace daxa
                     ImplPresentInfo & impl_present_info = submit_scope.present_info.value();
                     std::vector<BinarySemaphore> present_wait_semaphores = impl_present_info.binary_semaphores;
                     DAXA_DBG_ASSERT_TRUE_M(impl.info.swapchain.has_value(), "must have swapchain registered in info on creation in order to use present.");
-                    present_wait_semaphores.push_back(impl.info.swapchain.value().get_present_semaphore());
+                    present_wait_semaphores.push_back(impl.info.swapchain.value().current_present_semaphore());
                     if (impl_present_info.additional_binary_semaphores != nullptr)
                     {
                         present_wait_semaphores.insert(

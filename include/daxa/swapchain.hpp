@@ -34,6 +34,9 @@ namespace daxa
     /**
      * @brief   Swapchain represents the surface, swapchain and synch primitives regarding acquire and present operations.
      *          The swapchain has a cpu and gpu timeline in order to ensure proper frames in flight.
+     * 
+     * NOTE:
+     * * functions that contain 'current' in their name might return different values between calling acquire_next_image
      *
      * THREADSAFETY:
      * * must be externally synchronized
@@ -51,21 +54,28 @@ namespace daxa
         /// @return A swapchain image, that will be ready to render to when the acquire semaphore is signaled. This may return an empty image id if the swapchain is out of date.
         [[nodiscard]] auto acquire_next_image() -> ImageId;
         /// The acquire semaphore must be waited on in the first submission that uses the last acquired image.
-        /// This semaphore may change between acquires, so it needs to be re-queried after every get_acquire_semaphore call.
+        /// This semaphore may change between acquires, so it needs to be re-queried after every current_acquire_semaphore call.
         /// @return The binary semaphore that is signaled when the last acquired image is ready to be used.
-        [[nodiscard]] auto get_acquire_semaphore() const -> BinarySemaphore const &;
+        [[nodiscard]] auto current_acquire_semaphore() const -> BinarySemaphore const &;
         /// @brief The present semaphore must be signaled in the last submission that uses the last acquired swapchain image.
         /// The present semaphore must be waited on in the present of the last acquired image.
-        /// This semaphore may change between acquires, so it needs to be re-queried after every get_acquire_semaphore call.
+        /// This semaphore may change between acquires, so it needs to be re-queried after every current_acquire_semaphore call.
         /// @return The present semaphore that needs to be signaled and waited on for present of the last acquired image.
-        [[nodiscard]] auto get_present_semaphore() const -> BinarySemaphore const &;
+        [[nodiscard]] auto current_present_semaphore() const -> BinarySemaphore const &;
+        /// @brief The last submission that uses the swapchain image needs to signal the timeline with the cpu value.
+        /// @return The cpu frame timeline value.
+        [[nodiscard]] auto current_cpu_timeline_value() const -> u64;
         /// @brief The swapchain needs to know when the last use of the swapchain happens to limit the frames in flight.
         /// In the last submission that uses the swapchain image, signal this timeline semaphore with the cpu timeline value.
         /// @return the gpu timeline semaphore that needs to be signaled.
-        [[nodiscard]] auto get_gpu_timeline_semaphore() const -> TimelineSemaphore const &;
-        /// @brief The last submission that uses the swapchain image needs to signal the timeline with the cpu value.
-        /// @return The cpu frame timeline value.
-        [[nodiscard]] auto get_cpu_timeline_value() const -> usize;
+        [[nodiscard]] auto gpu_timeline_semaphore() const -> TimelineSemaphore const &;
+        /// @brief  The swapchain needs to know when the last use of the swapchain happens to limit the frames in flight.
+        ///         In the last submission that uses the swapchain image, signal this timeline semaphore with the cpu timeline value.
+        ///         The cpu value timeline is incremented whenever acquire is called.
+        ///         The gpu timeline must be manually incremented by the user via a submit.
+        ///         The difference between cpu and gpu timeline describes how many frames in flight the gpu is behind the cpu.
+        /// @return Returns pair of a gpu timeline and cpu timeline value.
+        [[nodiscard]] auto current_timeline_pair() const -> std::pair<TimelineSemaphore, u64>;
 
         /// @brief  When the window size changes the swapchain is in an invalid state for new commands.
         ///         Calling resize will recreate the swapchain with the proper window size.

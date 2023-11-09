@@ -58,7 +58,7 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
             return DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT;
         }
     }
-    const VkApplicationInfo app_info = {
+    VkApplicationInfo const app_info = {
         .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
         .pNext = nullptr,
         .pApplicationName = ret.app_name.c_str(),
@@ -106,15 +106,23 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
 
     auto device_score = [&](VkPhysicalDevice physical_device) -> int32_t
     {
-        VkPhysicalDeviceProperties vk_device_properties;
-        vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-        if (vk_device_properties.apiVersion < VK_API_VERSION_1_3)
+        auto props = construct_daxa_physical_device_properties(physical_device);
+        if (props.vulkan_api_version < VK_API_VERSION_1_3)
         {
-            // NOTE: Found device with incompatible API version. Skipping this device...
-            return 0;
+            return -1;
         }
-        auto props = r_cast<daxa_DeviceProperties const *>(&vk_device_properties);
-        return info->selector(props);
+        if (((info->flags & DAXA_DEVICE_FLAG_RAY_TRACING) != 0) &&
+            !(props.acceleration_structure_properties.has_value ||
+              props.ray_tracing_pipeline_properties.has_value))
+        {
+            return -1;
+        }
+        if (((info->flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0) &&
+            !(props.mesh_shader_properties.has_value))
+        {
+            return -1;
+        }
+        return info->selector(&props);
     };
 
     auto device_comparator = [&](auto const & a, auto const & b) -> bool

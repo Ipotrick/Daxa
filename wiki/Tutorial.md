@@ -174,16 +174,14 @@ After that, we transition the image layout to present optimal, as we will presen
 In the end create executable commands from the currently recorded commands in the recorder. Later we can submit these executable commands. 
 
 ```cpp
-auto const & acquire_semaphore = swapchain.get_acquire_semaphore();
-auto const & present_semaphore = swapchain.get_present_semaphore();
-auto const & gpu_timeline = swapchain.get_gpu_timeline_semaphore();
-auto const cpu_timeline = swapchain.get_cpu_timeline_value();
+auto const & acquire_semaphore = swapchain.current_acquire_semaphore();
+auto const & present_semaphore = swapchain.current_present_semaphore();
 
 device.submit_commands({
     .commands = std::array{executable_commands},
     .wait_binary_semaphores = std::array{acquire_semaphore},
     .signal_binary_semaphores = std::array{present_semaphore},
-    .signal_timeline_semaphores = std::array{std::pair{gpu_timeline, cpu_timeline}},
+    .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
 });
 device.present_frame({
     .wait_binary_semaphores = std::array{present_semaphore},
@@ -367,7 +365,7 @@ In this instance the shared file allows us to define the vertex and push constan
 
 In the shared file we declare the MyVertex struct and enable buffer pointers to it via `DAXA_DECL_BUFFER_PTR`. We also use the Daxa provided type `daxa_f32vec4` here which will translate to a `vec4` in GLSL and `daxa::f32vec4` in C++.
 
-Then lastly we declare a strut for the push constant. This struct contains a buffer pointer. This buffer pointer will become a `daxa::BufferDeviceAddress` in C++.
+Then lastly we declare a strut for the push constant. This struct contains a buffer pointer. This buffer pointer will become a `daxa::DeviceAddress` in C++.
 
 To learn more about this, I again refer to the shader integration wiki page.
 

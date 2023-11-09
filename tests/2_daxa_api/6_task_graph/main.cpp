@@ -355,36 +355,35 @@ namespace tests
         task_graph.use_persistent_buffer(task_buffer);
 
         task_graph.add_task({
-            .uses = daxa::detail::to_generic_uses(ShaderIntegrationTask::Uses{
-                .settings = {task_buffer},
-                .image = {task_image},
+            .uses = daxa::generic_uses_cast(ShaderIntegrationTaskHead::Uses{
+                .settings = task_buffer.view(),
+                .image = task_image.view(),
             }),
             .task = [&](daxa::TaskInterface ti)
             {
                 auto& cmd = ti.get_recorder();
-                cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
+                // Write TaskHead shader blob to the push constant.
+                cmd.push_constant(ti.uses.get_task_head_as<ShaderIntegrationTaskHead>());
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch({1, 1, 1});
             },
-            .constant_buffer_slot = ShaderIntegrationTask::CONSTANT_BUFFER_SLOT,
             .name = "write image in compute",
         });
         task_graph.add_task({
-            .uses = daxa::detail::to_generic_uses(ShaderIntegrationTask::Uses{
-                .settings = {task_buffer},
-                .image = {task_image},
+            .uses = daxa::generic_uses_cast(ShaderIntegrationTaskHead::Uses{
+                .settings = task_buffer.view(),
+                .image = task_image.view(),
             }),
             .task = [&](daxa::TaskInterface ti)
             {
                 auto& cmd = ti.get_recorder();
                 // Optionally, the shader uses can still be accessed with the usual task interface for immediate tasks. 
                 [[maybe_unused]] auto img = ti.uses[task_image].image();
-                // Get a constant buffer set info, ready to use for the next pipelines constants.
-                cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
+                // Write TaskHead shader blob to the push constant.
+                cmd.push_constant(ti.uses.get_task_head_as<ShaderIntegrationTaskHead>());
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch({1, 1, 1});
             },
-            .constant_buffer_slot = ShaderIntegrationTask::CONSTANT_BUFFER_SLOT,
             .name = "write image in compute 2",
         });
         task_graph.submit({});
@@ -484,18 +483,18 @@ namespace tests
 
 auto main() -> i32
 {
-    // tests::simplest();
-    // tests::execution();
-    // tests::write_read_image();
-    // tests::write_read_image_layer();
-    // tests::create_transfer_read_buffer();
-    // tests::initial_layout_access();
-    // tests::tracked_slice_barrier_collapsing();
-    // tests::correct_read_buffer_task_ordering();
-    // tests::sharing_persistent_image();
-    // tests::sharing_persistent_buffer();
-    // tests::transient_write_aliasing();
-    // tests::transient_resources();
-    // tests::shader_integration_inl_use();
+    tests::simplest();
+    tests::execution();
+    tests::write_read_image();
+    tests::write_read_image_layer();
+    tests::create_transfer_read_buffer();
+    tests::initial_layout_access();
+    tests::tracked_slice_barrier_collapsing();
+    tests::correct_read_buffer_task_ordering();
+    tests::sharing_persistent_image();
+    tests::sharing_persistent_buffer();
+    tests::transient_write_aliasing();
+    tests::transient_resources();
+    tests::shader_integration_inl_use();
     tests::mipmapping();
 }

@@ -420,15 +420,14 @@ namespace tests
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
-                std::array timeline_semas = {std::pair{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}};
                 device.submit_commands({
                     .command_lists = std::array{recorder.complete_current_commands()},
-                    .wait_binary_semaphores = {&swapchain.get_acquire_semaphore(), 1},
-                    .signal_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
-                    .signal_timeline_semaphores = {timeline_semas.data(), timeline_semas.size()},
+                    .wait_binary_semaphores = std::array{swapchain.current_acquire_semaphore()},
+                    .signal_binary_semaphores = std::array{swapchain.current_present_semaphore()},
+                    .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
                 });
                 device.present_frame({
-                    .wait_binary_semaphores = {&swapchain.get_present_semaphore(), 1},
+                    .wait_binary_semaphores = std::array{swapchain.current_present_semaphore()},
                     .swapchain = swapchain,
                 });
 

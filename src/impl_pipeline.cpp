@@ -62,7 +62,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     _DAXA_DECL_TRY_CREATE_MODULE(tesselation_control, TESSELLATION_CONTROL_BIT)
     _DAXA_DECL_TRY_CREATE_MODULE(tesselation_evaluation, TESSELLATION_EVALUATION_BIT)
     _DAXA_DECL_TRY_CREATE_MODULE(fragment, FRAGMENT_BIT)
-    if ((ret.device->info.flags & DeviceFlagBits::MESH_SHADER_BIT) != DeviceFlagBits::NONE)
+    if ((ret.device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
     {
         _DAXA_DECL_TRY_CREATE_MODULE(task, TASK_BIT_EXT)
         _DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
@@ -357,7 +357,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_PIPELINE,
-            .objectHandle = reinterpret_cast<uint64_t>(ret.vk_pipeline),
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_pipeline),
             .pObjectName = name_cstr.data(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
