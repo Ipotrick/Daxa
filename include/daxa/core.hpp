@@ -2,6 +2,7 @@
 
 #include <daxa/c/core.h>
 #include <optional>
+#include <string>
 
 #if !defined(DAXA_VALIDATION)
 #if defined(NDEBUG)
