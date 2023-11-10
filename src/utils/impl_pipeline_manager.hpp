@@ -114,6 +114,7 @@ namespace daxa
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & virtual_info);
         auto reload_all() -> PipelineReloadResult;
+        auto all_pipelines_valid() const -> bool;
 
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
