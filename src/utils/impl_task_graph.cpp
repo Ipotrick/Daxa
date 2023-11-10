@@ -2551,7 +2551,7 @@ namespace daxa
                 {
                     impl_runtime.recorder.begin_label({
                         .label_color = impl.info.task_batch_label_color,
-                        .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index) + std::string(", batch ") + std::to_string(batch_index),
+                        .name = impl.info.name + std::string(", s ") + std::to_string(submit_scope_index) + std::string(", b ") + std::to_string(batch_index),
                     });
                 }
                 batch_index += 1;
