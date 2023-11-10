@@ -2,7 +2,7 @@
 
 As Vulkan and Daxa require manual synchronization, using Daxa and Vulkan can become quite complex and error prone.
 
-A common way to abstract and improve synchronization with low level APIs is the use of a render graph. Daxa provides a render graph called TaskGraph.
+A common way to abstract and improve synchronization with low level APIs is the use of a render-graph. Daxa provides a render-graph called TaskGraph.
 
 With TaskGraph you can create task resource handles and names for the resources you have in your program. You can then list a series of tasks.
 Each task contains a list of used resources, as well as a callback to the operations the task should perform.
@@ -36,7 +36,7 @@ All Tasks take in views instead of the resources themselves. Resources implicitl
 
 # Task
 
-The core part about any render graph is the nodes in the graph. In the case of Daxa these nodes are called tasks.
+The core part about any render-graph is the nodes in the graph. In the case of Daxa these nodes are called tasks.
 
 A task is a unit of work. It mainly consists of the used task resources (akin to parameters in a function) and a callback (akin to a function body). So one could think of a task as a meta function inside the graph.
 

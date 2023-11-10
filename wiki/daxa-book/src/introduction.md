@@ -17,7 +17,7 @@ Compared to most of these apis daxa has some unique abstractions and design that
 > It is made sure that the validation overhead over the plain vulkan function calls stays below 5% in release builds!
 
 Apart from these, daxa provides important common vulkan abstraction features:
-- Powerful and flexible render graph. While manual sync is exposed in Daxa for best control, it also provides an optional render graph. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
+- Powerful and flexible render-graph. While manual sync is exposed in Daxa for best control, it also provides an optional render-graph. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
 - Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
 - Greatly simplified API surface compared to Vulkan. Daxa is only surfacing those concepts that are crucial for good control and performance. [No more 1k LOC files to get a triangle](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md)
 - Simplified and semi managed object lifetimes to prevent destroying objects still in use on the gpu.
@@ -30,7 +30,7 @@ Daxa is not "high" or "low" level. Some vulkan concepts are explicit and others 
 
 For example sync is fully explicit in daxa as there are many cases where manual sync can be very important for performance. On the other side daxa FULLY abstracts `VkDescriptorSet`, `VkDescriptorSetLayout`, `VkDescriptorPool` and all the related functions. This is because there is no gain in the user manually managing these as modern GPUs prefer [bindless](LINK ME).
 
-> Dont worry you DO NOT have to write manual sync in daxa! Daxa has a very powerful render graph utility (called Task Graph). It will handle all resource transition and synchronization between user defined actions. Additionally Task Graph also attemps to optimize the order of task submission to minimize the barriers and resource transitions.
+> Dont worry you DO NOT have to write manual sync in daxa! Daxa has a very powerful render-graph utility (called Task Graph). It will handle all resource transition and synchronization between user defined actions. Additionally Task Graph also attemps to optimize the order of task submission to minimize the barriers and resource transitions.
 
 In general you can expect writing daxa code is much easier and more productive then raw vulkan and simpler then other apis like OpenGL. 
 

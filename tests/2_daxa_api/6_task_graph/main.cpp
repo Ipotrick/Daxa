@@ -411,7 +411,7 @@ namespace tests
         //  5) Execute task graph and check the ordering of tasks in batches
         //  Expected result:
         //      NOTE(msakmary): This does something different currently (task 3 is in batch 2)
-        //                      - this is due to limitations of what task graph can do without having a proper render graph
+        //                      - this is due to limitations of what task graph can do without having a proper render-graph
         //                      - will be fixed in the future by adding JIRA
         //      Batch 1:
         //          Task 1
