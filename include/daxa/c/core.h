@@ -204,6 +204,8 @@ daxa_u32mat4x3;
 _DAXA_DECL_VEC4_TYPE(daxa_u32vec4)
 daxa_u32mat4x4;
 
+#define DAXA_SMALL_STRING_CAPACITY 63
+
 #if defined(__GNUC__) || defined(__clang__)
 #pragma GCC diagnostic pop
 #elif defined(_MSC_VER)
