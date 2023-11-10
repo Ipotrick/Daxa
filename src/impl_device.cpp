@@ -156,7 +156,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE &&
         info->name.size != 0)
     {
-        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
@@ -227,7 +227,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         .flags = {},
         // .image = ret.vk_image, // FILL THIS LATER!
         .viewType = vk_image_view_type,
-        .format = *reinterpret_cast<VkFormat const *>(&info->format),
+        .format = *r_cast<VkFormat const *>(&info->format),
         .components = VkComponentMapping{
             .r = VK_COMPONENT_SWIZZLE_IDENTITY,
             .g = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -310,7 +310,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
@@ -408,7 +408,7 @@ auto create_acceleration_structure_helper(
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
@@ -547,7 +547,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         .flags = {},
         .image = parent_image_slot.vk_image,
         .viewType = static_cast<VkImageViewType>(ret.info.type),
-        .format = *reinterpret_cast<VkFormat const *>(&ret.info.format),
+        .format = *r_cast<VkFormat const *>(&ret.info.format),
         .components = VkComponentMapping{
             .r = VK_COMPONENT_SWIZZLE_IDENTITY,
             .g = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -564,7 +564,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     }
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
@@ -611,7 +611,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 
     VkSamplerCreateInfo const vk_sampler_create_info{
         .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
-        .pNext = reinterpret_cast<void *>(&vk_sampler_reduction_mode_create_info),
+        .pNext = r_cast<void *>(&vk_sampler_reduction_mode_create_info),
         .flags = {},
         .magFilter = static_cast<VkFilter>(ret.info.magnification_filter),
         .minFilter = static_cast<VkFilter>(ret.info.minification_filter),
@@ -639,7 +639,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto c_str_arr = reinterpret_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
@@ -715,7 +715,7 @@ auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId id, void ** ou
 
 auto daxa_dvc_info(daxa_Device self) -> daxa_DeviceInfo const *
 {
-    return reinterpret_cast<daxa_DeviceInfo const *>(&self->info);
+    return r_cast<daxa_DeviceInfo const *>(&self->info);
 }
 
 auto daxa_dvc_get_vk_device(daxa_Device self) -> VkDevice
@@ -848,7 +848,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     VkSubmitInfo const vk_submit_info{
         .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
-        .pNext = reinterpret_cast<void *>(&timeline_info),
+        .pNext = r_cast<void *>(&timeline_info),
         .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
         .pWaitSemaphores = submit_semaphore_waits.data(),
         .pWaitDstStageMask = submit_semaphore_wait_stage_masks.data(),
@@ -1042,7 +1042,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     auto self = out_device;
     self->vk_physical_device = physical_device;
     self->instance = instance;
-    self->info = *reinterpret_cast<DeviceInfo const *>(&info);
+    self->info = *r_cast<DeviceInfo const *>(&info);
     self->vk_physical_device_properties2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
         .pNext = {},
@@ -1093,7 +1093,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
 
     VkDeviceCreateInfo const device_ci = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-        .pNext = reinterpret_cast<void const *>(&physical_device_features_2),
+        .pNext = r_cast<void const *>(&physical_device_features_2),
         .flags = {},
         .queueCreateInfoCount = static_cast<u32>(1),
         .pQueueCreateInfos = &queue_ci,
@@ -1111,26 +1111,34 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
     {
-        self->vkSetDebugUtilsObjectNameEXT = reinterpret_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(self->vk_device, "vkSetDebugUtilsObjectNameEXT"));
-        self->vkCmdBeginDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
-        self->vkCmdEndDebugUtilsLabelEXT = reinterpret_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
+        self->vkSetDebugUtilsObjectNameEXT = r_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(self->vk_device, "vkSetDebugUtilsObjectNameEXT"));
+        self->vkCmdBeginDebugUtilsLabelEXT = r_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
+        self->vkCmdEndDebugUtilsLabelEXT = r_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
     }
-    self->vkCmdPushDescriptorSetKHR = reinterpret_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdPushDescriptorSetKHR"));
+    self->vkCmdPushDescriptorSetKHR = r_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdPushDescriptorSetKHR"));
 
-    if ((self->info.flags & DeviceFlagBits::MESH_SHADER_BIT) != DeviceFlagBits::NONE)
+    if ((self->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
     {
-        self->vkCmdDrawMeshTasksEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksEXT"));
-        self->vkCmdDrawMeshTasksIndirectEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
-        self->vkCmdDrawMeshTasksIndirectCountEXT = reinterpret_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
-        auto * out_struct = reinterpret_cast<VkBaseOutStructure *>(&self->vk_physical_device_properties2);
+        self->vkCmdDrawMeshTasksEXT = r_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksEXT"));
+        self->vkCmdDrawMeshTasksIndirectEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
+        self->vkCmdDrawMeshTasksIndirectCountEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
+        auto * out_struct = r_cast<VkBaseOutStructure *>(&self->vk_physical_device_properties2);
         while (out_struct != nullptr)
         {
             if (out_struct->sType == VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT)
             {
-                self->mesh_shader_properties = *reinterpret_cast<VkPhysicalDeviceMeshShaderPropertiesEXT *>(out_struct);
+                self->mesh_shader_properties = *r_cast<VkPhysicalDeviceMeshShaderPropertiesEXT *>(out_struct);
             }
             out_struct = out_struct->pNext;
         }
+    }
+
+    if ((self->info.flags & DeviceFlagBits::RAY_TRACING) != DeviceFlagBits::NONE)
+    {
+        self->vkGetAccelerationStructureBuildSizesKHR = r_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetAccelerationStructureBuildSizesKHR"));
+        self->vkCreateAccelerationStructureKHR = r_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCreateAccelerationStructureKHR"));
+        self->vkCmdWriteAccelerationStructuresPropertiesKHR = r_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdWriteAccelerationStructuresPropertiesKHR"));
+        self->vkCmdBuildAccelerationStructuresKHR = r_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBuildAccelerationStructuresKHR"));
     }
 
     vkGetDeviceQueue(self->vk_device, self->main_queue_family_index, 0, &self->main_queue_vk_queue);
@@ -1190,7 +1198,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
 
     VkSemaphoreCreateInfo const vk_semaphore_create_info{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
-        .pNext = reinterpret_cast<void *>(&timeline_ci),
+        .pNext = r_cast<void *>(&timeline_ci),
         .flags = {},
     };
 
@@ -1334,7 +1342,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
         };
         VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(
-            *reinterpret_cast<daxa_ImageInfo const *>(&image_info), &self->main_queue_family_index);
+            *r_cast<daxa_ImageInfo const *>(&image_info), &self->main_queue_family_index);
 
         VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
@@ -1364,7 +1372,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             .flags = {},
             .image = self->vk_null_image,
             .viewType = VK_IMAGE_VIEW_TYPE_2D,
-            .format = *reinterpret_cast<VkFormat const *>(&image_info.format),
+            .format = *r_cast<VkFormat const *>(&image_info.format),
             .components = VkComponentMapping{
                 .r = VK_COMPONENT_SWIZZLE_IDENTITY,
                 .g = VK_COMPONENT_SWIZZLE_IDENTITY,
@@ -1498,7 +1506,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         };
 
         result = vmaCreateBuffer(self->vma_allocator, &vk_buffer_create_info, &vma_allocation_create_info, &self->buffer_device_address_buffer, &self->buffer_device_address_buffer_allocation, nullptr);
-        vmaMapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation, reinterpret_cast<void **>(&self->buffer_device_address_buffer_host_ptr));
+        vmaMapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation, r_cast<void **>(&self->buffer_device_address_buffer_host_ptr));
         if (result != VK_SUCCESS)
         {
             vkDestroySampler(self->vk_device, self->vk_null_sampler, nullptr);
@@ -1560,7 +1568,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         self->info.max_allowed_buffers,
         self->info.max_allowed_images,
         self->info.max_allowed_samplers,
-        self->info.max_allowed_acceleration_structures,
+        (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING) ? self->info.max_allowed_acceleration_structures : (~0),
         self->vk_device,
         self->buffer_device_address_buffer,
         self->vkSetDebugUtilsObjectNameEXT);

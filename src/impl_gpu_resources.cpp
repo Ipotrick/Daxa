@@ -38,43 +38,50 @@ namespace daxa
                                             VkDevice device, VkBuffer device_address_buffer,
                                             PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT)
     {
+        bool const ray_tracing_enabled = max_acceleration_structures != (~0);
+
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
         sampler_slots.max_resources = max_samplers;
-        acceleration_structure_slots.max_resources = max_acceleration_structures;
+        if (ray_tracing_enabled)
+        {
+            acceleration_structure_slots.max_resources = max_acceleration_structures;
+        }
 
         VkDescriptorPoolSize const buffer_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
-            .descriptorCount = static_cast<u32>(buffer_slots.max_resources + 1),
+            .descriptorCount = buffer_slots.max_resources + 1,
         };
 
         VkDescriptorPoolSize const storage_image_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_STORAGE_IMAGE,
-            .descriptorCount = static_cast<u32>(image_slots.max_resources),
+            .descriptorCount = image_slots.max_resources,
         };
 
         VkDescriptorPoolSize const sampled_image_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE,
-            .descriptorCount = static_cast<u32>(image_slots.max_resources),
+            .descriptorCount = image_slots.max_resources,
         };
 
         VkDescriptorPoolSize const sampler_descriptor_pool_size{
             .type = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = static_cast<u32>(sampler_slots.max_resources),
+            .descriptorCount = sampler_slots.max_resources,
         };
 
-        VkDescriptorPoolSize const as_descriptor_pool_size{
-            .type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-            .descriptorCount = static_cast<u32>(acceleration_structure_slots.max_resources),
-        };
-
-        auto const pool_sizes = std::array{
+        auto pool_sizes = std::vector{
             buffer_descriptor_pool_size,
             storage_image_descriptor_pool_size,
             sampled_image_descriptor_pool_size,
             sampler_descriptor_pool_size,
-            as_descriptor_pool_size
         };
+        if (ray_tracing_enabled)
+        {
+            VkDescriptorPoolSize const as_descriptor_pool_size{
+                .type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
+                .descriptorCount = acceleration_structure_slots.max_resources,
+            };
+            pool_sizes.push_back(as_descriptor_pool_size);
+        }
 
         VkDescriptorPoolCreateInfo const vk_descriptor_pool_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO,
@@ -131,14 +138,6 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        VkDescriptorSetLayoutBinding const as_descriptor_set_layout_binding{
-            .binding = DAXA_ACCELERATION_STRUCTURE_BINDING,
-            .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
-            .descriptorCount = static_cast<u32>(acceleration_structure_slots.max_resources),
-            .stageFlags = VK_SHADER_STAGE_ALL,
-            .pImmutableSamplers = nullptr,
-        };
-
         VkDescriptorSetLayoutBinding const buffer_address_buffer_descriptor_set_layout_binding{
             .binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING,
             .descriptorType = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -147,24 +146,38 @@ namespace daxa
             .pImmutableSamplers = nullptr,
         };
 
-        auto const descriptor_set_layout_bindings = std::array{
+        auto descriptor_set_layout_bindings = std::vector{
             buffer_descriptor_set_layout_binding,
             storage_image_descriptor_set_layout_binding,
             sampled_image_descriptor_set_layout_binding,
             sampler_descriptor_set_layout_binding,
-            as_descriptor_set_layout_binding,
             buffer_address_buffer_descriptor_set_layout_binding,
         };
 
-        auto const vk_descriptor_binding_flags = std::array{
-            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
-            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
-            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
-            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
-            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
-            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
+        if (ray_tracing_enabled)
+        {
+            VkDescriptorSetLayoutBinding const as_descriptor_set_layout_binding{
+                .binding = DAXA_ACCELERATION_STRUCTURE_BINDING,
+                .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+                .descriptorCount = static_cast<u32>(acceleration_structure_slots.max_resources),
+                .stageFlags = VK_SHADER_STAGE_ALL,
+                .pImmutableSamplers = nullptr,
+            };
+            descriptor_set_layout_bindings.push_back(as_descriptor_set_layout_binding);
+        }
 
+        auto vk_descriptor_binding_flags = std::vector{
+            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
+            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
+            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
+            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
+            VkDescriptorBindingFlags{VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT},
         };
+        if (ray_tracing_enabled)
+        {
+            vk_descriptor_binding_flags.push_back({VK_DESCRIPTOR_BINDING_PARTIALLY_BOUND_BIT | VK_DESCRIPTOR_BINDING_UPDATE_AFTER_BIND_BIT});
+        }
+
         VkDescriptorSetLayoutBindingFlagsCreateInfo vk_descriptor_set_layout_binding_flags_create_info{
             .sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_BINDING_FLAGS_CREATE_INFO,
             .pNext = nullptr,

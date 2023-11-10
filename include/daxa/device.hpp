@@ -185,7 +185,7 @@ namespace daxa
         static inline constexpr DeviceFlags NONE = {0x00000000};
         static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
         static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
-        static inline constexpr DeviceFlags MESH_SHADER_BIT = {0x1 << 2};
+        static inline constexpr DeviceFlags MESH_SHADER = {0x1 << 2};
         static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
         static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
         static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
