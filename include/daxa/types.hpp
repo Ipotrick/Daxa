@@ -250,24 +250,25 @@ namespace daxa
         {
             while (c_str != nullptr && *c_str != 0)
             {
-                DAXA_DBG_ASSERT_TRUE_M(this->m_size < this->capacity(), "EXCEEDED CAPACITY");
+                if (this->m_size >= this->capacity())
+                {
+                    break;
+                }
                 this->m_data[this->m_size++] = *(c_str++);
             }
         }
         constexpr SmallString(std::string_view sw)
         {
-            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(sw.size()) < this->capacity(), "EXCEEDED CAPACITY");
             this->m_size = static_cast<FixedListSizeT>(sw.size());
-            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(sw.size()); ++i)
+            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()); ++i)
             {
                 this->m_data[i] = sw[i];
             }
         }
         constexpr SmallString(std::string const & stl_str)
         {
-            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(stl_str.size()) < this->capacity(), "EXCEEDED CAPACITY");
             this->m_size = static_cast<FixedListSizeT>(stl_str.size());
-            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(stl_str.size()); ++i)
+            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()); ++i)
             {
                 this->m_data[i] = stl_str[i];
             }
