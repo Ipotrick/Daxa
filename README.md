@@ -1,6 +1,6 @@
 <p align="center">
   <!-- <a href="https://github.com/Ipotrick/Daxa"> -->
-	<img src="misc/daxa-logo.png" width="800" alt="Daxa logo">
+	<img src="misc/Daxa-logo.png" width="800" alt="Daxa logo">
   <!-- </a> -->
 </p>
 
@@ -8,56 +8,59 @@
 
 Daxa is my opinionated GPU API abstraction over Vulkan.
 
-Daxa's interface is quite close to Vulkan, but much simpler. Some central abstractions make Daxa much more convenient to use.
+Why would you want to use Daxa? These are some of the aspects of Daxa that set it apart from most other Vulkan abstractions:
 
-The feature that sets Daxa apart from other abstractions is its fully bindless shader resources. At this point in time, in my opinion, it is clear that bindless is the future and binding-based models will only be used to support low-end mobile GPUs going forward. Bindless is simpler, easier, more powerful, and sometimes much more performant than conventional approaches like the "normal" descriptor set workflow in Vulkan or other abstractions like WebGPU.
+- Specifically designed for GPGPU programming and GPU driven rendering. Daxa makes writing modern renderers simple and easy. It does not compromise for old hardware or old API concepts. Modern GPUs are the target (for Nvidia this is >=Turing, for amd this is >=GCN3).
 
-Daxa’s goal is to be as convenient to use as OpenGL while being very modern. Daxa gives access to the latest features and trends, while not being held down by years of tech debt.
-I am happy to say that for me (and others) it achieves that goal. 
+- Very high convenience with near zero boilerplate. Daxa makes the simple things as easy as possible. It abstracts over unnecessarily explicit parts of Vulkan. Tons of default values and common abstractions for renderers such as a render-graph and shader build system are provided by Daxa.
 
-> Daxa focuses on desktop gpus. Mobile (and to some extent intergrated) gpu concerns are usually neglected for a simpler interface with less compromise.
+- Shader utilities and shader feature integration. Daxa provides custom GLSL and HLSL headers, host/shader code sharing utilities and even a shader build system featureing hot reloading and include management. Especially the shader integration for many features is very convenient.
 
-## Biggest features and abstractions:
-- [x] Greatly simplified API surface compared to Vulkan. Daxa is only surfacing those concepts that are crucial for good control and performance. [No more 1k LOC files to get a triangle](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md)
-- [x] Bindless shader resource model. Resources are exclusively accessed via an ID (or address) instead of descriptor set bindings in shaders. This drastically simplifies the API while also being a very powerful tool for GPU-driven rendering. (https://github.com/Ipotrick/Daxa/tree/master/wiki/Bindless.md)
-- [x] Powerful and flexible render graph. While manual sync is exposed in Daxa for best control, it also provides an optional render graph. (https://github.com/Ipotrick/Daxa/tree/master/wiki/TaskGraph.md)
-- [x] C++ and shader code sharing utilities. This, combined with other simplifications, means you will never need shader reflection for convenience. (https://github.com/Ipotrick/Daxa/tree/master/wiki/ShaderIntegration.md)
-- [x] Shader build system, including features like `#include` management and shader hot-reloading. (https://github.com/Ipotrick/Daxa/tree/master/wiki/PipelineManager.md)
-- [x] A full c api. The c++ api and all functionality is implemented in a c api. The c++ api fully abstracts over this c api. The c api also has full direct vulkan interop and binary compatibility with all daxa c++ objects. Be free to use the c api to create bindigns to other langauges!
+- Efficient safety checks. An often neglected part of RHIs and rendering libraries is safety and debugging validation. Daxa performs many validation checks at very low overhead. Especially the render-graph has very detailed error messages detailing misuse.
 
-List of other noteworthy features: [Other Features](https://github.com/Ipotrick/Daxa/tree/master/wiki/Features.md)
+- Effective abstractions with predictable performance. In contrast to many other abstractions, core Daxa never caches or lazily created pipelines, layouts or other objects. It should have performance as predictable as Vulkan. This makes profiling intuitive.
 
-## Getting started
+### Getting started
 
-Daxa has a wiki explaining how to get set up compiling [here](https://github.com/Ipotrick/Daxa/tree/master/wiki/Building.md).
+The GitHub [wiki](https://github.com/Ipotrick/Daxa/tree/master/wiki) contains pages on all bigger Daxa features, like TaskGraph (the render-graph), PipelineManager (shader build system) and shader integration.
 
-The GitHub wiki also contains pages on all bigger Daxa features, like TaskGraph and the shader integration.
+Building and including Daxa in your project is explained [here](https://github.com/Ipotrick/Daxa/tree/master/wiki/Building.md).
 
 Daxa also has a [tutorial page](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md) detailing the basics of the API.
 
-In addition to that, the Daxa repository has a set of example projects using Daxa in the tests folder.
+Additionally, the Daxa repository has a set of example projects in the tests folder.
 
 If you prefer to interact in Discord over GitHub issues, Daxa has a [Discord server](https://discord.gg/MJPJvZ4FK5).
 
-For more detailed information on the abstractions and features of Daxa, take a look at the [wiki](https://github.com/Ipotrick/Daxa/tree/master/wiki).
-
-## Design Philosophy
-
-### No Boilerplate!
-Daxa has defaults for every parameter, all simple things should be easy and straightforward to do. Anything small and simple should be super easy and quick to implement with daxa. Utilities should provide great convenience and "battieries included"-style experience. Setup should be very easy.
-
-### Future looking, gpgpu inspired API
-Daxa is meant to be used on modern desktop gpus. These gpus are getting increasingly generalized and support more and more convenient gpgpu features. Daxa is inspired by cudas ease of use and api in many aspects. Anything that does not present a significant performance advantage on these gpus is NOT exposed in daxa. Any new powerful concepts like bindless or gpu device pointers are the default in the api and not an afterthought.
-
-### Features on demand
-As the daxa team is quite small, we need to focus on what is implemented and what is not. If there is no demand for a feature of anyone, daxa will not have it. The internals of daxa are to be keept very tidy, so that outside contribution stays reasonable.
-
-### Simple, readable and close to Vulkan.
-Daxa should be as close as possible to vulkan naming wise if the concept fits. Structure objects and their use should be close to vulkan. This should make use of daxa much easier for anyone already knowing vulkan. Daxa will not overabstract or rename things, as that can cause confusion and lack of intent.
-
-### Safe and debuggable
-Daxa should try to prevent most direct misuse of its internals such as data backing a resource id. Daxa should also validate most common errors that could occur with vulkan one the cpu side.
-Debugging should be straight forward and daxa should be very clear and catch as many mistakes as possible. 
-It should be hard to missuse daxa directly.
-Usage errors that may lead to misbehavior on the gpu is not nessecarily checked by daxa as gpu driven makes this near impossible. Daxa should only aim to validate driver and its own integrety on the cpu side.
-The safety overhead should NEVER exceed ~5%.
+### List of biggest features:
+- defaulted, named parameters for most functions via c++20 designated struct initialization
+- ergonomic, simplified object creation
+- integrated debug utilities such as debug names and range labels
+- feature rich render-graph, handling automatic synchronization and more
+- shader integration for render-graph
+- shader/host code shading utilities
+- fully abstracted descriptor sets
+- automated, deeply integrated bindless system
+- shader bindless integration
+- a shader build system featuring hot reloading and include handling
+- designed for threading, each object has its threadsafety described
+- no concept of render-pass or frame-buffer
+- typesafe simplified command recording and submission
+- automated memory allocation for buffers and images using VMA (manual allocation also possible)
+- swapchain that handles frames in flight pacing and wsi problems like resizing
+- always enabled dynamic state for any option that is cost free on target hardware
+- simpler pipelines, no pipeline layout and no descriptor set layouts
+- a full C API, may be used to create API wrappers for other languages
+- extensive low overhead validation checks
+- integrates most commonly used Vulkan extensions
+- integration of modern API features, such as: `BufferDeviceAddress, MeshShaders, RayTracing, DescriptorIndexing, DynamicRendering`
+- ergonomic explicit synchronization (optional, you can also use the render-graph instead)
+- stores queriable metadata for all objects, similar to dx11
+- simplified, semi-managed resource lifetimes
+- resource destruction deferred until all currently submitted commands finish execution
+- unified IDs in host and shader code for buffers, images etc.
+- automatic default image view integrated into all images
+- controllable parent-child lifetime semantics
+- fully abstracts Vulkan, allows Daxa to have more control and be more convenient
+- deadImGui backend
+- transient memory pool utility object

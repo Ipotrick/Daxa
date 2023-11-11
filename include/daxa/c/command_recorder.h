@@ -173,6 +173,15 @@ static const daxa_RenderPassBeginInfo DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = DAXA_
 
 typedef struct
 {
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
+} daxa_DispatchInfo;
+
+static const daxa_DispatchInfo DAXA_DEFAULT_DISPATCH_INFO = { 1, 1, 1 };
+
+typedef struct
+{
     daxa_BufferId indirect_buffer;
     size_t offset;
 } daxa_DispatchIndirectInfo;
@@ -403,11 +412,11 @@ daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, void const * data, uint32_t
 DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
 daxa_cmd_set_uniform_buffer(daxa_CommandRecorder cmd_enc, daxa_SetUniformBufferInfo const * info);
 DAXA_EXPORT void
-daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline pipeline);
+daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline const * pipeline);
 DAXA_EXPORT void
 daxa_cmd_set_raster_pipeline(daxa_CommandRecorder cmd_enc, daxa_RasterPipeline pipeline);
 DAXA_EXPORT void
-daxa_cmd_dispatch(daxa_CommandRecorder cmd_enc, uint32_t x, uint32_t y, uint32_t z);
+daxa_cmd_dispatch(daxa_CommandRecorder cmd_enc, daxa_DispatchInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD  daxa_Result
 daxa_cmd_dispatch_indirect(daxa_CommandRecorder cmd_enc, daxa_DispatchIndirectInfo const * info);
 

@@ -153,8 +153,8 @@ typedef enum
 
 #define daxa_Variant(UNION) daxa_Variant##UNION
 
-_DAXA_DECL_FIXED_LIST(char, 39)
-typedef daxa_FixedList(char, 39) daxa_SmallString;
+_DAXA_DECL_FIXED_LIST(char, DAXA_SMALL_STRING_CAPACITY)
+typedef daxa_FixedList(char, DAXA_SMALL_STRING_CAPACITY) daxa_SmallString;
 
 typedef struct
 {

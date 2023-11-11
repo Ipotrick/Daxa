@@ -846,14 +846,14 @@ namespace daxa
     {
         daxa_cmd_set_compute_pipeline(
             this->internal,
-            *r_cast<daxa_ComputePipeline const *>(&pipeline));
+            r_cast<daxa_ComputePipeline const *>(&pipeline));
     }
 
-    void CommandRecorder::dispatch(u32 x, u32 y, u32 z)
+    void CommandRecorder::dispatch(DispatchInfo const & info)
     {
         daxa_cmd_dispatch(
             this->internal,
-            x, y, z);
+            r_cast<daxa_DispatchInfo const*>(&info));
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)

@@ -119,6 +119,7 @@ namespace daxa
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & info);
         auto reload_all() -> PipelineReloadResult;
+        auto all_pipelines_valid() const -> bool;
 
       protected:
         template <typename T, typename H_T>

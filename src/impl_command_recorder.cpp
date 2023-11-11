@@ -534,12 +534,12 @@ daxa_cmd_set_uniform_buffer(daxa_CommandRecorder self, daxa_SetUniformBufferInfo
     return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline pipeline)
+void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline const * pipeline)
 {
     daxa_cmd_flush_barriers(self);
-    self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout);
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
-    vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
+    self->flush_uniform_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, (**pipeline).vk_pipeline_layout);
+    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (**pipeline).vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (**pipeline).vk_pipeline);
 }
 
 void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline pipeline)
@@ -550,9 +550,9 @@ void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
 }
 
-void daxa_cmd_dispatch(daxa_CommandRecorder self, uint32_t x, uint32_t y, uint32_t z)
+void daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info)
 {
-    vkCmdDispatch(self->current_command_data.vk_cmd_buffer, x, y, z);
+    vkCmdDispatch(self->current_command_data.vk_cmd_buffer, info->x, info->y, info->z);
 }
 
 auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirectInfo const * info) -> daxa_Result

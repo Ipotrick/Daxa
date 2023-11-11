@@ -1,4 +1,5 @@
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG || DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
+#include "daxa/utils/pipeline_manager.hpp"
 
 #include "../impl_core.hpp"
 #include "impl_pipeline_manager.hpp"
@@ -448,6 +449,12 @@ namespace daxa
         return impl.reload_all();
     }
 
+    auto PipelineManager::all_pipelines_valid() const -> bool
+    {
+        auto const & impl = *r_cast<ImplPipelineManager *>(this->object);
+        return impl.all_pipelines_valid();
+    }
+
     static std::mutex glslang_init_mtx;
     static i32 pipeline_manager_count = 0;
 
@@ -857,6 +864,26 @@ namespace daxa
         {
             return NoPipelineChanged{};
         }
+    }
+
+    auto ImplPipelineManager::all_pipelines_valid() const -> bool
+    {
+        for (RasterPipelineState const & raster_pipeline_state : this->raster_pipelines)
+        {
+            if(!raster_pipeline_state.pipeline_ptr->is_valid())
+            {
+                return false;
+            }
+        }
+
+        for (ComputePipelineState const & compute_pipeline_state : this->compute_pipelines)
+        {
+            if(!compute_pipeline_state.pipeline_ptr->is_valid())
+            {
+                return false;
+            }
+        }
+        return true;
     }
 
     auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>

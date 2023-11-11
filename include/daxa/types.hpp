@@ -1,8 +1,8 @@
 #pragma once
 
+#include "daxa/c/core.h"
 #include <memory>
 #include <optional>
-#include <string>
 #include <string_view>
 #include <vector>
 #include <filesystem>
@@ -252,24 +252,25 @@ namespace daxa
         {
             while (c_str != nullptr && *c_str != 0)
             {
-                DAXA_DBG_ASSERT_TRUE_M(this->m_size < this->capacity(), "EXCEEDED CAPACITY");
+                if (this->m_size >= this->capacity())
+                {
+                    break;
+                }
                 this->m_data[this->m_size++] = *(c_str++);
             }
         }
         constexpr SmallString(std::string_view sw)
         {
-            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(sw.size()) < this->capacity(), "EXCEEDED CAPACITY");
             this->m_size = static_cast<FixedListSizeT>(sw.size());
-            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(sw.size()); ++i)
+            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()); ++i)
             {
                 this->m_data[i] = sw[i];
             }
         }
         constexpr SmallString(std::string const & stl_str)
         {
-            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(stl_str.size()) < this->capacity(), "EXCEEDED CAPACITY");
             this->m_size = static_cast<FixedListSizeT>(stl_str.size());
-            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(stl_str.size()); ++i)
+            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()); ++i)
             {
                 this->m_data[i] = stl_str[i];
             }
@@ -280,21 +281,21 @@ namespace daxa
         {
             return {this->m_data.data(), static_cast<usize>(this->m_size)};
         }
-        [[nodiscard]] auto c_str() const -> std::array<char, 40>
+        [[nodiscard]] auto c_str() const -> std::array<char, DAXA_SMALL_STRING_CAPACITY + 1>
         {
-            std::array<char, 40> ret;
+            std::array<char, DAXA_SMALL_STRING_CAPACITY + 1> ret;
             for (u8 i = 0; i < this->m_size; ++i)
             {
                 ret[i] = this->m_data[i];
             }
-            for (u8 i = this->m_size; i < 40; ++i)
+            for (u8 i = this->m_size; i < DAXA_SMALL_STRING_CAPACITY + 1; ++i)
             {
                 ret[i] = 0;
             }
             return ret;
         }
     };
-    static_assert(sizeof(SmallString) == 40);
+    static_assert(sizeof(SmallString) == 64);
 
     // clang-format off
 
