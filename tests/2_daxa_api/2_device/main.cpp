@@ -132,10 +132,9 @@ namespace tests
             }
             catch (std::runtime_error error)
             {
-                std::cout << "Test skipped. Device does not support raytracing!" << std::endl;
+                std::cout << "Test skipped. No present device supports raytracing!" << std::endl;
                 return;
             }
-            std::cout << "Device supports raytracing!" << std::endl;
 
             auto test_as = device.create_acceleration_structure(test_acceleration_structure_info);
             device.destroy_acceleration_structure(test_as);
