@@ -106,6 +106,13 @@ namespace daxa
         Rect2D render_area = {};
     };
 
+    struct DispatchInfo
+    {
+        u32 x = 1;
+        u32 y = 1;
+        u32 z = 1;
+    };
+
     struct DispatchIndirectInfo
     {
         BufferId indirect_buffer = {};
@@ -359,7 +366,7 @@ namespace daxa
         /// @param info parameters.
         void set_uniform_buffer(SetUniformBufferInfo const & info);
         void set_pipeline(ComputePipeline const & pipeline);
-        void dispatch(u32 x, u32 y = 1, u32 z = 1);
+        void dispatch(DispatchInfo const & info);
         void dispatch_indirect(DispatchIndirectInfo const & info);
 
         /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
