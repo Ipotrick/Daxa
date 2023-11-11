@@ -1152,6 +1152,10 @@ namespace daxa
             return {data ^ other.data};
         }
         [[nodiscard]] inline constexpr auto operator<=>(Flags const & other) const = default;
+
+        operator bool() const {
+            return data != 0;
+        }
     };
 
     enum struct MsgSeverity

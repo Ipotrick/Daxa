@@ -379,7 +379,9 @@ auto create_acceleration_structure_helper(
         if (info->name.size < SMALL_STRING_CHAR_MAX)
             buffer_name.push_back('f');
         auto cinfo = daxa_BufferInfo{
-            .name = std::bit_cast<daxa_SmallString>(buffer_name)};
+            .size = info->size,
+            .name = std::bit_cast<daxa_SmallString>(buffer_name),
+        };
         auto result = daxa_dvc_create_buffer(self, &cinfo, r_cast<daxa_BufferId *>(&ret.buffer_id));
         if (result != DAXA_RESULT_SUCCESS)
         {
@@ -954,6 +956,12 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             self->cleanup_sampler(id);
         });
     check_and_cleanup_gpu_resources(
+        self->main_queue_acceleration_structure_zombies,
+        [&](auto id)
+        {
+            self->cleanup_acceleration_structure(id);
+        });
+    check_and_cleanup_gpu_resources(
         self->main_queue_pipeline_zombies,
         [&](auto & pipeline_zombie)
         {
@@ -983,7 +991,6 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
         {
             vmaFreeMemory(self->vma_allocator, memory_block_zombie.allocation);
         });
-
     {
         std::unique_lock const l_lock{self->main_queue_command_pool_buffer_recycle_mtx};
         while (!self->main_queue_command_list_zombies.empty())
@@ -994,10 +1001,6 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             {
                 break;
             }
-
-            // This apparently "leaks" in our current impl. Instead, we recreate below.
-            // TODO: reuse command buffers instead?
-            // auto vk_result = vkResetCommandPool(self->vk_device, object.vk_cmd_pool, {});
 
             vkFreeCommandBuffers(self->vk_device, object.vk_cmd_pool, static_cast<u32>(object.allocated_command_buffers.size()), object.allocated_command_buffers.data());
             auto vk_result = vkResetCommandPool(self->vk_device, object.vk_cmd_pool, {});
@@ -1047,6 +1050,15 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     self->instance = instance;
     self->info = *r_cast<DeviceInfo const *>(&info);
     self->physical_device_properties = construct_daxa_physical_device_properties(physical_device);
+
+    if ((self->info.flags & daxa::DeviceFlagBits::RAY_TRACING) && !self->physical_device_properties.ray_tracing_pipeline_properties.has_value)
+    {
+        return DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_RAYTRACING;
+    }
+    if ((self->info.flags & daxa::DeviceFlagBits::MESH_SHADER) && !self->physical_device_properties.mesh_shader_properties.has_value)
+    {
+        return DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_MESH_SHADER;
+    }
 
     // SELECT QUEUE
 
@@ -1558,7 +1570,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         self->info.max_allowed_buffers,
         self->info.max_allowed_images,
         self->info.max_allowed_samplers,
-        (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING) ? self->info.max_allowed_acceleration_structures : (~0u),
+        (self->info.flags & daxa::DeviceFlagBits::RAY_TRACING) ? self->info.max_allowed_acceleration_structures : (~0u),
         self->vk_device,
         self->buffer_device_address_buffer,
         self->vkSetDebugUtilsObjectNameEXT);

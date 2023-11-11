@@ -51,11 +51,16 @@ namespace tests
         .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
         .name = "test image",
     };
+    constexpr daxa::AccelerationStructureInfo test_acceleration_structure_info = {
+        .type = daxa::AccelerationStructureType::GENERIC,
+        .size = 256,
+        .name = "test acceleration structure",
+    };
     void sro_creation(daxa::Instance & instance)
     {
         try
         {
-            auto device = instance.create_device({.flags = daxa::DeviceFlags2{.ray_tracing = 1}});
+            auto device = instance.create_device({});
             auto test_buffer = device.create_buffer(test_buffer_info);
             auto test_image = device.create_image(test_image_info);
             auto test_image_view = device.create_image_view({
@@ -81,7 +86,7 @@ namespace tests
     {
         try
         {
-            auto device = instance.create_device({.flags = daxa::DeviceFlags2{.ray_tracing = 1}});
+            auto device = instance.create_device({});
             auto test_buffer_mem_req = device.get_memory_requirements(test_buffer_info);
             auto test_image_mem_req = device.get_memory_requirements(test_image_info);
             auto pessimised_mem_req = daxa::MemoryRequirements{
@@ -114,43 +119,26 @@ namespace tests
         try
         {
             daxa::Device device;
-            try{
+            try
+            {
                 device = instance.create_device({
-                    .flags = daxa::DeviceFlags2{.ray_tracing = 1},
                     .selector = [](daxa::DeviceProperties const & prop) -> i32
                     {
                         auto default_value = daxa::default_device_score(prop);
                         return prop.ray_tracing_properties.has_value() ? default_value : -1;
-                    }
+                    },
+                    .flags = daxa::DeviceFlagBits::RAY_TRACING,
                 });
             }
-            catch(std::runtime_error error)
+            catch (std::runtime_error error)
             {
                 std::cout << "Test skipped. Device does not support raytracing!" << std::endl;
                 return;
             }
             std::cout << "Device supports raytracing!" << std::endl;
 
-            auto test_buffer_mem_req = device.get_memory_requirements(test_buffer_info);
-            auto test_image_mem_req = device.get_memory_requirements(test_image_info);
-            auto pessimised_mem_req = daxa::MemoryRequirements{
-                .size = std::max(test_buffer_mem_req.size, test_image_mem_req.size),
-                .alignment = std::max(test_buffer_mem_req.alignment, test_image_mem_req.alignment),
-                .memory_type_bits = test_buffer_mem_req.memory_type_bits & test_image_mem_req.memory_type_bits,
-            };
-            auto test_memory_block = device.create_memory({
-                .requirements = pessimised_mem_req,
-            });
-            auto memory_block_test_buffer = device.create_buffer_from_memory_block({
-                .buffer_info = test_buffer_info,
-                .memory_block = test_memory_block,
-            });
-            auto memory_block_test_image = device.create_image_from_memory_block({
-                .image_info = test_image_info,
-                .memory_block = test_memory_block,
-            });
-            device.destroy_image(memory_block_test_image);
-            device.destroy_buffer(memory_block_test_buffer);
+            auto test_as = device.create_acceleration_structure(test_acceleration_structure_info);
+            device.destroy_acceleration_structure(test_as);
         }
         catch (std::runtime_error error)
         {

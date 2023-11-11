@@ -158,7 +158,7 @@ namespace daxa
         {
             VkDescriptorSetLayoutBinding const as_descriptor_set_layout_binding{
                 .binding = DAXA_ACCELERATION_STRUCTURE_BINDING,
-                .descriptorType = VK_DESCRIPTOR_TYPE_SAMPLER,
+                .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
                 .descriptorCount = static_cast<u32>(acceleration_structure_slots.max_resources),
                 .stageFlags = VK_SHADER_STAGE_ALL,
                 .pImmutableSamplers = nullptr,
@@ -508,7 +508,7 @@ namespace daxa
     void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index)
     {
         VkWriteDescriptorSetAccelerationStructureKHR vk_write_descriptor_set_as = {
-            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+            .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
             .pNext = nullptr,
             .accelerationStructureCount = 1,
             .pAccelerationStructures = &vk_acceleration_structure,
@@ -516,7 +516,7 @@ namespace daxa
 
         VkWriteDescriptorSet const vk_write_descriptor_set{
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-            .pNext = r_cast<void *>(&vk_write_descriptor_set_as),
+            .pNext = &vk_write_descriptor_set_as,
             .dstSet = vk_descriptor_set,
             .dstBinding = DAXA_ACCELERATION_STRUCTURE_BINDING,
             .dstArrayElement = index,
