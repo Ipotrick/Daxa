@@ -121,6 +121,101 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
 #endif
 }
 
+#define _DAXA_ASSIGN_ARRAY_3(SRC) \
+    & { SRC[0], SRC[1], SRC[3] }
+
+auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties
+{
+    daxa_DeviceProperties ret = {};
+
+    bool ray_tracing_pipeline_supported = false;
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR vk_physical_device_ray_tracing_pipeline_properties_khr = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
+        .pNext = nullptr,
+    };
+
+    bool acceleration_structure_supported = false;
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR vk_physical_device_acceleration_structure_properties_khr = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
+        .pNext = nullptr,
+    };
+
+    bool mesh_shader_supported = false;
+    VkPhysicalDeviceMeshShaderPropertiesEXT vk_physical_device_mesh_shader_properties_ext = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT,
+        .pNext = nullptr,
+    };
+
+    void * pNextChain = nullptr;
+
+    u32 count = 0;
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &count, nullptr);
+    std::vector<VkExtensionProperties> extensions(count);
+    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &count, extensions.data());
+    for (auto & extension : extensions)
+    {
+        if (std::strcmp(extension.extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
+        {
+            ray_tracing_pipeline_supported = true;
+            vk_physical_device_ray_tracing_pipeline_properties_khr.pNext = pNextChain;
+            pNextChain = &vk_physical_device_ray_tracing_pipeline_properties_khr;
+        }
+        if (std::strcmp(extension.extensionName, VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME) == 0)
+        {
+            acceleration_structure_supported = true;
+            vk_physical_device_acceleration_structure_properties_khr.pNext = pNextChain;
+            pNextChain = &vk_physical_device_acceleration_structure_properties_khr;
+        }
+        if (std::strcmp(extension.extensionName, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
+        {
+            mesh_shader_supported = true;
+            vk_physical_device_mesh_shader_properties_ext.pNext = pNextChain;
+            pNextChain = &vk_physical_device_mesh_shader_properties_ext;
+        }
+    }
+
+    VkPhysicalDeviceProperties2 vk_physical_device_properties2 = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
+        .pNext = pNextChain,
+    };
+
+    vkGetPhysicalDeviceProperties2(physical_device, &vk_physical_device_properties2);
+    // physical device properties are ABI compatible UP TO the mesh_shader_properties field.
+    std::memcpy(
+        &ret,
+        r_cast<std::byte const *>(&vk_physical_device_properties2) + sizeof(void *) * 2 /* skip sType and pNext */,
+        offsetof(daxa_DeviceProperties, mesh_shader_properties));
+    if (ray_tracing_pipeline_supported)
+    {
+        ret.ray_tracing_pipeline_properties.has_value = true;
+        std::memcpy(
+            &ret.ray_tracing_pipeline_properties.value,
+            r_cast<std::byte const *>(&vk_physical_device_ray_tracing_pipeline_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_RayTracingPipelineProperties));
+    }
+    if (acceleration_structure_supported)
+    {
+        ret.acceleration_structure_properties.has_value = true;
+        std::memcpy(
+            &ret.acceleration_structure_properties.value,
+            r_cast<std::byte const *>(&vk_physical_device_acceleration_structure_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_AccelerationStructureProperties));
+    }
+    if (mesh_shader_supported)
+    {
+        ret.mesh_shader_properties.has_value = true;
+        std::memcpy(
+            &ret.mesh_shader_properties.value,
+            r_cast<std::byte const *>(&vk_physical_device_mesh_shader_properties_ext) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_MeshShaderProperties));
+        ret.mesh_shader_properties.value.prefers_local_invocation_vertex_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersLocalInvocationVertexOutput);
+        ret.mesh_shader_properties.value.prefers_local_invocation_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersLocalInvocationPrimitiveOutput);
+        ret.mesh_shader_properties.value.prefers_compact_vertex_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactVertexOutput);
+        ret.mesh_shader_properties.value.prefers_compact_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactPrimitiveOutput);
+    }
+    return ret;
+}
+
 auto mask_from_bit_count(u64 bits) -> u64
 {
     return (1ull << bits) - 1;

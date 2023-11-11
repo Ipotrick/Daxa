@@ -38,7 +38,7 @@ namespace daxa
                                             VkDevice device, VkBuffer device_address_buffer,
                                             PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT)
     {
-        bool const ray_tracing_enabled = max_acceleration_structures != (~0);
+        bool const ray_tracing_enabled = max_acceleration_structures != (~0u);
 
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;
@@ -505,13 +505,13 @@ namespace daxa
         vkUpdateDescriptorSets(vk_device, descriptor_set_write_count, descriptor_set_writes.data(), 0, nullptr);
     }
 
-    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_as, u32 index)
+    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index)
     {
         VkWriteDescriptorSetAccelerationStructureKHR vk_write_descriptor_set_as = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
             .pNext = nullptr,
             .accelerationStructureCount = 1,
-            .pAccelerationStructures = &vk_as,
+            .pAccelerationStructures = &vk_acceleration_structure,
         };
 
         VkWriteDescriptorSet const vk_write_descriptor_set{

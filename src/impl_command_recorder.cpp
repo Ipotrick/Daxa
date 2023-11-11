@@ -522,7 +522,7 @@ daxa_cmd_set_uniform_buffer(daxa_CommandRecorder self, daxa_SetUniformBufferInfo
     {
         return DAXA_RESULT_INVALID_BUFFER_RANGE;
     }
-    if (info->offset % self->device->vk_physical_device_properties2.properties.limits.minUniformBufferOffsetAlignment != 0)
+    if (info->offset % self->device->physical_device_properties.limits.min_uniform_buffer_offset_alignment != 0)
     {
         return DAXA_RESULT_INVALID_BUFFER_OFFSET;
     }

@@ -176,7 +176,7 @@ auto daxa_swp_set_present_mode(daxa_Swapchain self, VkPresentModeKHR present_mod
 
 auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_id) -> daxa_Result
 {
-    self->gpu_frame_timeline.wait_for_value(
+    [[maybe_unused]] auto _ignored = self->gpu_frame_timeline.wait_for_value(
         static_cast<u64>(
             std::max<i64>(
                 0,

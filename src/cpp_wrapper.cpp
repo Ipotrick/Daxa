@@ -265,7 +265,7 @@ namespace daxa
             "failed to create buffer from memory block");
         return id;
     }
-    auto Device::create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId
+    auto Device::create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId
     {
         ImageId id = {};
         check_result(
@@ -280,6 +280,7 @@ namespace daxa
     _DAXA_DECL_GPU_RES_FN(Image, image)
     _DAXA_DECL_GPU_RES_FN(ImageView, image_view)
     _DAXA_DECL_GPU_RES_FN(Sampler, sampler)
+    _DAXA_DECL_GPU_RES_FN(AccelerationStructure, acceleration_structure)
 
     auto Device::get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>
     {

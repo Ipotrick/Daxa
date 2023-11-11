@@ -62,11 +62,12 @@ namespace daxa
     struct ImplAccelerationStructureSlot
     {
         daxa_AccelerationStructureInfo info = {};
-        VkAccelerationStructureKHR vk_as = {};
+        VkAccelerationStructureKHR vk_acceleration_structure = {};
         VkBuffer vk_buffer = {};
-        daxa_BufferId buffer_id = {};
+        BufferId buffer_id = {};
         u64 offset = {};
         daxa_BufferDeviceAddress bda = {};
+        bool owns_buffer = {};
     };
 
     /**
@@ -253,5 +254,5 @@ namespace daxa
 
     void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index);
 
-    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_as, u32 index);
+    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index);
 } // namespace daxa

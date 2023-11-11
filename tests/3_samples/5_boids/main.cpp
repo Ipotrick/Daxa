@@ -178,7 +178,7 @@ struct App : AppWindow<App>
                 .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()).value(),
                 .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()).value(),
             });
-            recorder.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
+            recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
         }
     };
 

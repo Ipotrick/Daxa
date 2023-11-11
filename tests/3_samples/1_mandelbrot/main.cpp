@@ -207,7 +207,7 @@ struct App : BaseApp<App>
                     .input_buffer_id = gpu_input_buffer,
                     .frame_dim = {size_x, size_y},
                 });
-                recorder.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
+                recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
             },
             .name = ("Draw (Compute)"),
         });

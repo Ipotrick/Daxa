@@ -41,7 +41,7 @@ namespace tests
             }
             std::cout << "i7: " << v.i7 << std::endl;
         };
-        auto are_same_Testu6Alignment = [](TestU64Alignment const & a, TestU64Alignment const & b)
+        [[maybe_unused]] auto are_same_Testu6Alignment = [](TestU64Alignment const & a, TestU64Alignment const & b)
         {
             bool same = true;
             same = same && a.i0 == b.i0;
@@ -139,7 +139,7 @@ namespace tests
                 auto & cmd = ti.get_recorder();
                 cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
                 cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
             .constant_buffer_slot = TestShaderUses::CONSTANT_BUFFER_SLOT,
             .name = "test alignment",
@@ -258,7 +258,7 @@ namespace tests
                     },
                     .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
                 });
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
             .name = "bindless access",
         });
@@ -275,7 +275,7 @@ namespace tests
                 cmd.push_constant(BindlessTestFollowPush{
                     .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
                 });
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
             .name = "bindless access",
         });

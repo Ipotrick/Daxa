@@ -1886,7 +1886,7 @@ namespace daxa
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
                                            std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
                 auto const & transient_image_info = daxa::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
-                perm_image.actual_image = info.device.create_image_from_block(
+                perm_image.actual_image = info.device.create_image_from_memory_block(
                     MemoryBlockImageInfo{
                         .image_info = ImageInfo{
                             .flags = daxa::ImageCreateFlagBits::ALLOW_ALIAS,

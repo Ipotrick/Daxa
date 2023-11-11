@@ -96,6 +96,8 @@ inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageA
 
 auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result;
 
+auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties;
+
 // --- End Helpers ---
 
 namespace daxa
@@ -125,6 +127,7 @@ struct MemoryBlockZombie
 {
     VmaAllocation allocation = {};
 };
+
 struct daxa_ImplMemoryBlock final : ImplHandle
 {
     daxa_Device device = {};

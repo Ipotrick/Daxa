@@ -129,18 +129,6 @@ namespace daxa
         u64 non_coherent_atom_size;
     };
 
-    struct DeviceProperties
-    {
-        u32 vulkan_api_version = {};
-        u32 driver_version = {};
-        u32 vendor_id = {};
-        u32 device_id = {};
-        DeviceType device_type = {};
-        u8 device_name[256U] = {};
-        u8 pipeline_cache_uuid[16U] = {};
-        DeviceLimits limits = {};
-    };
-
     struct MeshShaderDeviceProperties
     {
         u32 max_task_work_group_total_count = {};
@@ -167,10 +155,49 @@ namespace daxa
         u32 mesh_output_per_primitive_granularity = {};
         u32 max_preferred_task_work_group_invocations = {};
         u32 max_preferred_mesh_work_group_invocations = {};
-        u32 prefers_local_invocation_vertex_output = {};
-        u32 prefers_local_invocation_primitive_output = {};
-        u32 prefers_compact_vertex_output = {};
-        u32 prefers_compact_primitive_output = {};
+        bool prefers_local_invocation_vertex_output = {};
+        bool prefers_local_invocation_primitive_output = {};
+        bool prefers_compact_vertex_output = {};
+        bool prefers_compact_primitive_output = {};
+    };
+
+    struct RayTracingPipelineProperties
+    {
+        u32 shader_group_handle_size = {};
+        u32 max_ray_recursion_depth = {};
+        u32 max_shader_group_stride = {};
+        u32 shader_group_base_alignment = {};
+        u32 shader_group_handle_capture_replay_size = {};
+        u32 max_ray_dispatch_invocation_count = {};
+        u32 shader_group_handle_alignment = {};
+        u32 max_ray_hit_attribute_size = {};
+    };
+
+    struct AccelerationStructureProperties
+    {
+        u64 max_geometry_count = {};
+        u64 max_instance_count = {};
+        u64 max_primitive_count = {};
+        u32 max_per_stage_descriptor_acceleration_structures = {};
+        u32 max_per_stage_descriptor_update_after_bind_acceleration_structures = {};
+        u32 max_descriptor_set_acceleration_structures = {};
+        u32 max_descriptor_set_update_after_bind_acceleration_structures = {};
+        u32 min_acceleration_structure_scratch_offset_alignment = {};
+    };
+
+    struct DeviceProperties
+    {
+        u32 vulkan_api_version = {};
+        u32 driver_version = {};
+        u32 vendor_id = {};
+        u32 device_id = {};
+        DeviceType device_type = {};
+        u8 device_name[256U] = {};
+        u8 pipeline_cache_uuid[16U] = {};
+        DeviceLimits limits = {};
+        Optional<MeshShaderDeviceProperties> mesh_shading_properties = {};
+        Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
+        Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
     };
 
     auto default_device_score(DeviceProperties const & device_props) -> i32;
@@ -281,7 +308,7 @@ namespace daxa
         [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
         [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;
         [[nodiscard]] auto create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId;
-        [[nodiscard]] auto create_image_from_block(MemoryBlockImageInfo const & info) -> ImageId;
+        [[nodiscard]] auto create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId;
         [[nodiscard]] auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         [[nodiscard]] auto create_sampler(SamplerInfo const & info) -> SamplerId;
         [[nodiscard]] auto create_acceleration_structure(AccelerationStructureInfo const & info) -> AccelerationStructureId;

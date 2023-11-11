@@ -106,15 +106,13 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
 
     auto device_score = [&](VkPhysicalDevice physical_device) -> int32_t
     {
-        VkPhysicalDeviceProperties vk_device_properties;
-        vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-        if (vk_device_properties.apiVersion < VK_API_VERSION_1_3)
+        auto props = construct_daxa_physical_device_properties(physical_device);
+        if (props.vulkan_api_version < VK_API_VERSION_1_3)
         {
             // NOTE: Found device with incompatible API version. Skipping this device...
             return 0;
         }
-        auto props = r_cast<daxa_DeviceProperties const *>(&vk_device_properties);
-        return info->selector(props);
+        return info->selector(&props);
     };
 
     auto device_comparator = [&](auto const & a, auto const & b) -> bool

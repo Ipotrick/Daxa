@@ -129,6 +129,68 @@ typedef struct
     uint64_t non_coherent_atom_size;
 } daxa_DeviceLimits;
 
+// MUST BE ABI COMPATIBLE WITH VkPhysicalDeviceRayTracingPipelinePropertiesKHR!
+typedef struct
+{
+    uint32_t shader_group_handle_size;
+    uint32_t max_ray_recursion_depth;
+    uint32_t max_shader_group_stride;
+    uint32_t shader_group_base_alignment;
+    uint32_t shader_group_handle_capture_replay_size;
+    uint32_t max_ray_dispatch_invocation_count;
+    uint32_t shader_group_handle_alignment;
+    uint32_t max_ray_hit_attribute_size;
+} daxa_RayTracingPipelineProperties;
+_DAXA_DECL_OPTIONAL(daxa_RayTracingPipelineProperties)
+
+// MUST BE ABI COMPATIBLE WITH VkPhysicalDeviceAccelerationStructurePropertiesKHR!
+typedef struct
+{
+    uint64_t max_geometry_count;
+    uint64_t max_instance_count;
+    uint64_t max_primitive_count;
+    uint32_t max_per_stage_descriptor_acceleration_structures;
+    uint32_t max_per_stage_descriptor_update_after_bind_acceleration_structures;
+    uint32_t max_descriptor_set_acceleration_structures;
+    uint32_t max_descriptor_set_update_after_bind_acceleration_structures;
+    uint32_t min_acceleration_structure_scratch_offset_alignment;
+} daxa_AccelerationStructureProperties;
+_DAXA_DECL_OPTIONAL(daxa_AccelerationStructureProperties)
+
+// Is NOT ABI Compatible with VkPhysicalDeviceMeshShaderPropertiesEXT!
+typedef struct
+{
+    uint32_t max_task_work_group_total_count;
+    uint32_t max_task_work_group_count[3];
+    uint32_t max_task_work_group_invocations;
+    uint32_t max_task_work_group_size[3];
+    uint32_t max_task_payload_size;
+    uint32_t max_task_shared_memory_size;
+    uint32_t max_task_payload_and_shared_memory_size;
+    uint32_t max_mesh_work_group_total_count;
+    uint32_t max_mesh_work_group_count[3];
+    uint32_t max_mesh_work_group_invocations;
+    uint32_t max_mesh_work_group_size[3];
+    uint32_t max_mesh_shared_memory_size;
+    uint32_t max_mesh_payload_and_shared_memory_size;
+    uint32_t max_mesh_output_memory_size;
+    uint32_t max_mesh_payload_and_output_memory_size;
+    uint32_t max_mesh_output_components;
+    uint32_t max_mesh_output_vertices;
+    uint32_t max_mesh_output_primitives;
+    uint32_t max_mesh_output_layers;
+    uint32_t max_mesh_multiview_view_count;
+    uint32_t mesh_output_per_vertex_granularity;
+    uint32_t mesh_output_per_primitive_granularity;
+    uint32_t max_preferred_task_work_group_invocations;
+    uint32_t max_preferred_mesh_work_group_invocations;
+    daxa_Bool8 prefers_local_invocation_vertex_output;
+    daxa_Bool8 prefers_local_invocation_primitive_output;
+    daxa_Bool8 prefers_compact_vertex_output;
+    daxa_Bool8 prefers_compact_primitive_output;
+} daxa_MeshShaderProperties;
+_DAXA_DECL_OPTIONAL(daxa_MeshShaderProperties)
+
 typedef struct
 {
     uint32_t vulkan_api_version;
@@ -139,6 +201,9 @@ typedef struct
     char device_name[256U];
     char pipeline_cache_uuid[16U];
     daxa_DeviceLimits limits;
+    daxa_Optional(daxa_MeshShaderProperties) mesh_shader_properties;
+    daxa_Optional(daxa_RayTracingPipelineProperties) ray_tracing_pipeline_properties;
+    daxa_Optional(daxa_AccelerationStructureProperties) acceleration_structure_properties;
 } daxa_DeviceProperties;
 
 DAXA_EXPORT int32_t
@@ -168,7 +233,7 @@ typedef struct
     daxa_SmallString name;
 } daxa_DeviceInfo;
 
-static const daxa_DeviceInfo DAXA_DEFAULT_DEVICE_INFO = {
+static daxa_DeviceInfo const DAXA_DEFAULT_DEVICE_INFO = {
     .selector = &daxa_default_device_score,
     .flags = DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT,
     .max_allowed_images = 10000,
@@ -199,7 +264,7 @@ typedef struct
     uint64_t signal_timeline_semaphore_count;
 } daxa_CommandSubmitInfo;
 
-static const daxa_CommandSubmitInfo DAXA_DEFAULT_COMMAND_SUBMIT_INFO = DAXA_ZERO_INIT;
+static daxa_CommandSubmitInfo const DAXA_DEFAULT_COMMAND_SUBMIT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -208,7 +273,7 @@ typedef struct
     daxa_Swapchain swapchain;
 } daxa_PresentInfo;
 
-static const daxa_PresentInfo DAXA_DEFAULT_PRESENT_INFO = DAXA_ZERO_INIT;
+static daxa_PresentInfo const DAXA_DEFAULT_PRESENT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -217,7 +282,7 @@ typedef struct
     size_t offset;
 } daxa_MemoryBlockBufferInfo;
 
-static const daxa_MemoryBlockBufferInfo DAXA_DEFAULT_MEMORY_BLOCK_BUFFER_INFO = DAXA_ZERO_INIT;
+static daxa_MemoryBlockBufferInfo const DAXA_DEFAULT_MEMORY_BLOCK_BUFFER_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -226,7 +291,7 @@ typedef struct
     size_t offset;
 } daxa_MemoryBlockImageInfo;
 
-static const daxa_MemoryBlockImageInfo DAXA_DEFAULT_MEMORY_BLOCK_IMAGE_INFO = DAXA_ZERO_INIT;
+static daxa_MemoryBlockImageInfo const DAXA_DEFAULT_MEMORY_BLOCK_IMAGE_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -235,7 +300,7 @@ typedef struct
     uint64_t offset;
 } daxa_BufferAccelerationStructureInfo;
 
-static const daxa_BufferAccelerationStructureInfo DAXA_DEFAULT_BUFFER_ACCELERATION_STRUCTURE_INFO = DAXA_ZERO_INIT;
+static daxa_BufferAccelerationStructureInfo const DAXA_DEFAULT_BUFFER_ACCELERATION_STRUCTURE_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);

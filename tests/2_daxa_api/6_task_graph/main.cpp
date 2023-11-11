@@ -364,7 +364,7 @@ namespace tests
                 auto& cmd = ti.get_recorder();
                 cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
                 cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
             .constant_buffer_slot = ShaderIntegrationTask::CONSTANT_BUFFER_SLOT,
             .name = "write image in compute",
@@ -382,7 +382,7 @@ namespace tests
                 // Get a constant buffer set info, ready to use for the next pipelines constants.
                 cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
                 cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
             .constant_buffer_slot = ShaderIntegrationTask::CONSTANT_BUFFER_SLOT,
             .name = "write image in compute 2",
