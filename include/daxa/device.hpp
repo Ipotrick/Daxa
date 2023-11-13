@@ -286,6 +286,13 @@ namespace daxa
         BufferId buffer = {};
         usize offset = {};
     };
+    
+    struct AccelerationStructureBuildSizesInfo
+    {
+        u64 acceleration_structure_size;
+        u64 update_scratch_size;
+        u64 build_scratch_size;
+    };
 
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
@@ -304,6 +311,7 @@ namespace daxa
         [[nodiscard]] auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
         [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
         [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
+        [[nodiscard]] auto get_acceleration_structure_build_sizes(AccelerationStructureBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
 
         [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
         [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;

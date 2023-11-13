@@ -219,6 +219,18 @@ namespace daxa
                 r_cast<daxa_ImageInfo const *>(&info)));
     }
 
+    auto Device::get_acceleration_structure_build_sizes(AccelerationStructureBuildInfo const & info)
+        -> AccelerationStructureBuildSizesInfo
+    {
+        AccelerationStructureBuildSizesInfo ret = {};
+        check_result(daxa_dvc_get_acceleration_structure_build_sizes(
+                         rc_cast<daxa_Device>(this->object),
+                         r_cast<daxa_AccelerationStructureBuildInfo const *>(&info),
+                         r_cast<daxa_AccelerationStructureBuildSizesInfo *>(&ret)),
+                     "failed to get acceleration structure build sizes");
+        return ret;
+    }
+
 #define _DAXA_DECL_GPU_RES_FN(Name, name)                               \
     auto Device::create_##name(Name##Info const & info) -> Name##Id     \
     {                                                                   \
@@ -826,6 +838,14 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
+    void CommandRecorder::build_acceleration_structure(std::span<AccelerationStructureBuildInfo const> const & infos)
+    {
+        auto result = daxa_cmd_build_acceleration_structure(
+            this->internal,
+            r_cast<daxa_AccelerationStructureBuildInfo const *>(infos.data()),
+            static_cast<u32>(infos.size()));
+        check_result(result, "failed to build acceleration structure");
+    }
     _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)

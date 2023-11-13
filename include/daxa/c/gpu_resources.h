@@ -6,6 +6,8 @@
 
 #include <daxa/c/types.h>
 
+_DAXA_DECL_OPTIONAL(daxa_AccelerationStructureId)
+
 DAXA_EXPORT daxa_ImageViewId
 daxa_default_view(daxa_ImageId image);
 
@@ -167,5 +169,63 @@ static const daxa_AccelerationStructureInfo DAXA_DEFAULT_ACCELERATION_STRUCTURE_
     .type = DAXA_ACCELERATION_STRUCTURE_TYPE_GENERIC,
     .name = {.data = DAXA_ZERO_INIT, .size = 0},
 };
+
+typedef struct
+{
+    VkFormat vertex_format;
+    daxa_BufferDeviceAddress vertex_data;
+    uint64_t vertex_stride;
+    uint32_t max_vertex;
+    VkIndexType index_type;
+    daxa_BufferDeviceAddress index_data;
+    daxa_BufferDeviceAddress transform_data;
+    uint32_t primitive_count;
+} daxa_AccelerationStructureGerometryTriangleData;
+
+typedef struct
+{
+    daxa_BufferDeviceAddress data;
+    uint64_t stride;
+    uint32_t count;
+} daxa_AccelerationStructureGerometryAABBData;
+
+/// Instances are defines as VkAccelerationStructureInstanceKHR;
+typedef struct
+{
+    daxa_BufferDeviceAddress data;
+    uint32_t count;
+    daxa_Bool8 is_data_array_of_pointers;
+} daxa_AccelerationStructureGerometryInstanceData;
+
+typedef union
+{
+    daxa_AccelerationStructureGerometryTriangleData triangles;
+    daxa_AccelerationStructureGerometryAABBData aabbs;
+    daxa_AccelerationStructureGerometryInstanceData instances;
+} daxa_AccelerationStructureGeometryInfoDataUnion;
+_DAXA_DECL_VARIANT(daxa_AccelerationStructureGeometryInfoDataUnion)
+
+typedef enum
+{
+    DAXA_GEOMETRY_OPAQUE = 0x1 << 0,
+    DAXA_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION = 0x1 << 1,
+} daxa_GeometryFlagBits;
+
+typedef int32_t daxa_GeometryFlags;
+
+typedef struct
+{
+    daxa_Variant(daxa_AccelerationStructureGeometryInfoDataUnion) geometry;
+    daxa_GeometryFlags flags;
+} daxa_AccelerationStructureGeometryInfo;
+
+typedef struct
+{
+    VkAccelerationStructureTypeKHR type;
+    daxa_AccelerationStructureId dst_acceleration_structure;
+    daxa_AccelerationStructureGeometryInfo const * geometries;
+    uint32_t geometry_count;
+    daxa_BufferDeviceAddress scratch_data;
+} daxa_AccelerationStructureBuildInfo;
 
 #endif // #ifndef __DAXA_GPU_RESOURCES_H__

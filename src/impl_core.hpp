@@ -38,11 +38,11 @@
 #endif
 #endif
 
+// INCLUDE ORDER MUST STAY LIKE THIS:
+#include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
-
 #include <daxa/c/daxa.h>
-#include <daxa/daxa.hpp>
 
 using namespace daxa;
 
@@ -97,6 +97,16 @@ inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageA
 auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result;
 
 auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties;
+
+void daxa_to_vk_accel_build_geo_info(
+    daxa_Device device,
+    daxa_AccelerationStructureBuildInfo const * infos,
+    u32 info_count,
+    std::vector<VkAccelerationStructureBuildInfoKHR> &vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR const *> &vk_build_ranges_start_ptrs,
+    std::vector<VkAccelerationStructureGeometryInfoKHR> &vk_geometry_infos,
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR> &vk_build_ranges
+);
 
 // --- End Helpers ---
 

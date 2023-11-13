@@ -80,7 +80,6 @@ namespace daxa
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
-
     struct BufferClearInfo
     {
         BufferId buffer = {};
@@ -221,14 +220,6 @@ namespace daxa
         f32 slope_factor = {};
     };
 
-    enum struct IndexType
-    {
-        uint16 = 0,
-        uint32 = 1,
-        uint8 = 1000265000,
-        none = 1000165000,
-    };
-
     struct SetIndexBufferInfo
     {
         BufferId id = {};
@@ -335,6 +326,7 @@ namespace daxa
         void blit_image_to_image(ImageBlitInfo const & info);
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
+        void build_acceleration_structure(std::span<AccelerationStructureBuildInfo const> const & infos);
 
         /// @brief  Successive pipeline barrier calls are combined.
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.

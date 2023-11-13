@@ -302,12 +302,21 @@ typedef struct
 
 static daxa_BufferAccelerationStructureInfo const DAXA_DEFAULT_BUFFER_ACCELERATION_STRUCTURE_INFO = DAXA_ZERO_INIT;
 
+typedef struct
+{
+    uint64_t acceleration_structure_size;
+    uint64_t update_scratch_size;
+    uint64_t build_scratch_size;
+} daxa_AccelerationStructureBuildSizesInfo;
+
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_image_memory_requirements(daxa_Device device, daxa_ImageInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_memory(daxa_Device device, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_acceleration_structure_build_sizes(daxa_Device device, daxa_AccelerationStructureBuildInfo const * build_info, daxa_AccelerationStructureBuildSizesInfo * out);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_buffer(daxa_Device device, daxa_BufferInfo const * info, daxa_BufferId * out_id);

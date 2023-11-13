@@ -316,6 +316,31 @@ auto daxa_cmd_blit_image_to_image(daxa_CommandRecorder self, daxa_ImageBlitInfo 
     return DAXA_RESULT_SUCCESS;
 }
 
+auto daxa_cmd_build_acceleration_structure(daxa_CommandRecorder self, daxa_AccelerationStructureBuildInfo const * infos, uint32_t info_count) -> daxa_Result
+{
+    // TODO(Raytracing): Id validation!
+    // TODO(Raytracing): Error handling!
+    // TODO(Raytracing): properties validation!
+    // TODO(Raytracing): input validation!
+    std::vector<VkAccelerationStructureBuildInfoKHR> vk_build_geometry_infos;
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR const *> vk_build_ranges_start_ptrs;
+    std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos;
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR> vk_build_ranges;
+    daxa_to_vk_accel_build_geo_info(
+        self->device,
+        infos,
+        info_count,
+        vk_build_geometry_infos,
+        vk_build_ranges_start_ptrs,
+        vk_geometry_infos, vk_build_ranges);
+    self->device->vkCmdBuildAccelerationStructuresKHR(
+        self->current_command_data.vk_cmd_buffer,
+        info_count,
+        vk_build_geometry_infos.data(),
+        vk_build_ranges_start_ptrs.data());
+    return DAXA_RESULT_SUCCESS;
+}
+
 auto daxa_cmd_clear_buffer(daxa_CommandRecorder self, daxa_BufferClearInfo const * info) -> daxa_Result
 {
     daxa_cmd_flush_barriers(self);
@@ -945,8 +970,7 @@ void daxa_destroy_command_recorder(daxa_CommandRecorder self)
     self->device->gpu_sro_table.lifetime_lock.unlock_shared();
     self->dec_refcnt(
         daxa_ImplCommandRecorder::zero_ref_callback,
-        self->device->instance
-    );
+        self->device->instance);
 }
 
 auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderInfo const * info, daxa_CommandRecorder * out_cmd_list) -> daxa_Result
@@ -999,8 +1023,7 @@ auto daxa_executable_commands_dec_refcnt(daxa_ExecutableCommandList self) -> u64
 {
     return self->dec_refcnt(
         daxa_ImplExecutableCommandList::zero_ref_callback,
-        self->cmd_recorder->device->instance
-    );
+        self->cmd_recorder->device->instance);
 }
 
 /// --- End API Functions ---
@@ -1106,8 +1129,7 @@ void daxa_ImplExecutableCommandList::zero_ref_callback(ImplHandle const * handle
     auto self = rc_cast<daxa_ExecutableCommandList>(handle);
     self->cmd_recorder->dec_refcnt(
         daxa_ImplCommandRecorder::zero_ref_callback,
-        self->cmd_recorder->device->instance
-    );
+        self->cmd_recorder->device->instance);
     delete self;
 }
 

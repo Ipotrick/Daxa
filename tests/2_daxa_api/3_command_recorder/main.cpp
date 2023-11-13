@@ -1,6 +1,7 @@
 #include <daxa/daxa.hpp>
 #include <iostream>
 #include <fmt/format.h>
+#include "../../0_common/shared.hpp"
 
 struct App
 {
@@ -506,6 +507,119 @@ namespace tests
         app.device.destroy_buffer(buf_b);
         app.device.destroy_buffer(buf_a);
     }
+    void build_acceleration_structure(App & app)
+    {
+        try
+        {
+            daxa::Device device;
+            try
+            {
+                device = app.daxa_ctx.create_device({
+                    .selector = [](daxa::DeviceProperties const & prop) -> i32
+                    {
+                        auto default_value = daxa::default_device_score(prop);
+                        return prop.ray_tracing_properties.has_value() ? default_value : -1;
+                    },
+                    .flags = daxa::DeviceFlagBits::RAY_TRACING,
+                });
+            }
+            catch (std::runtime_error error)
+            {
+                std::cout << "Test skipped. No present device supports raytracing!" << std::endl;
+                return;
+            }
+            /// Prepare mesh data:
+            auto vertices = std::array{
+                std::array{0.25, 0.75, 0.5},
+                std::array{0.5, 0.25, 0.5},
+                std::array{0.75, 0.75, 0.5},
+            };
+            auto vertex_buffer = device.create_buffer({
+                .size = sizeof(decltype(vertices)),
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .name = "vertex buffer",
+            });
+            defer { device.destroy_buffer(vertex_buffer); };
+            std::memcpy(device.get_host_address(vertex_buffer).value(), &vertices, sizeof(decltype(vertices)));
+            auto indices = std::array{0, 1, 2};
+            auto index_buffer = device.create_buffer({
+                .size = sizeof(decltype(indices)),
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .name = "index buffer",
+            });
+            defer { device.destroy_buffer(index_buffer); };
+            std::memcpy(device.get_host_address(index_buffer).value(), &indices, sizeof(decltype(indices)));
+            auto transform = daxa_f32mat3x4{
+                {1, 0, 0},
+                {0, 1, 0},
+                {0, 0, 1},
+                {0, 0, 0},
+            };
+            auto transform_buffer = device.create_buffer({
+                .size = sizeof(daxa_f32mat3x4),
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .name = "transform buffer",
+            });
+            defer { device.destroy_buffer(transform_buffer); };
+            std::memcpy(device.get_host_address(transform_buffer).value(), &transform, sizeof(daxa_f32mat3x4));
+            /// Write As description data:
+            auto geometries = std::array{
+                daxa::AccelerationStructureGeometryInfo{
+                    .geometry = daxa::AccelerationStructureGerometryTriangleData{
+                        .vertex_format = daxa::Format::R32G32B32_SFLOAT,
+                        .vertex_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                        .vertex_stride = sizeof(daxa_f32vec3),
+                        .max_vertex = static_cast<u32>(vertices.size() - 1),
+                        .index_type = daxa::IndexType::uint32,
+                        .index_data = {},     // Ignored in get_acceleration_structure_build_sizes.
+                        .transform_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                        .primitive_count = 1,
+                    },
+                    .flags = {},
+                }};
+            auto build_info = daxa::AccelerationStructureBuildInfo{
+                .type = daxa::AccelerationStructureType::BOTTOM_LEVEL,
+                .dst_acceleration_structure = {}, // Ignored in get_acceleration_structure_build_sizes.
+                .geometries = geometries,
+                .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+            };
+            /// Query As sizes:
+            daxa::AccelerationStructureBuildSizesInfo build_size_info = device.get_acceleration_structure_build_sizes(build_info);
+            /// Create Scratch buffer and As:
+            auto scratch_buffer = device.create_buffer({
+                .size = build_size_info.build_scratch_size,
+                .name = "scratch buffer",
+            });
+            defer { device.destroy_buffer(scratch_buffer); };
+            daxa::AccelerationStructureId acceleration_structure = device.create_acceleration_structure({
+                .size = build_size_info.acceleration_structure_size,
+                .type = daxa::AccelerationStructureType::BOTTOM_LEVEL,
+                .name = "test acceleration structure",
+            });
+            defer { device.destroy_acceleration_structure(acceleration_structure); };
+            /// Fill the remaining fields of the build info:
+            auto & tri_geom = daxa::get<daxa::AccelerationStructureGerometryTriangleData>(geometries[0].geometry);
+            tri_geom.vertex_data = device.get_device_address(vertex_buffer).value();
+            tri_geom.index_data = device.get_device_address(index_buffer).value();
+            tri_geom.transform_data = device.get_device_address(transform_buffer).value();
+            build_info.dst_acceleration_structure = acceleration_structure;
+            build_info.scratch_data = device.get_device_address(scratch_buffer).value();
+            /// Record build commands:
+            auto exec_cmds = [&]()
+            {
+                auto recorder = device.create_command_recorder({});
+                recorder.build_acceleration_structure(std::array{build_info});
+                return recorder.complete_current_commands();
+            }();
+            device.submit_commands({.command_lists = std::array{exec_cmds}});
+            device.wait_idle();
+        }
+        catch (std::runtime_error error)
+        {
+            std::cout << "failed test \"acceleration_structure_creation\": " << error.what() << std::endl;
+            exit(-1);
+        }
+    }
 } // namespace tests
 
 auto main() -> int
@@ -525,6 +639,10 @@ auto main() -> int
     {
         App app = {};
         tests::multiple_ecl(app);
+    }
+    {
+        App app = {};
+        tests::build_acceleration_structure(app);
     }
     // Tests how long the version in ids can last for a single index.
     // {

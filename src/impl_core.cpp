@@ -221,6 +221,110 @@ auto mask_from_bit_count(u64 bits) -> u64
     return (1ull << bits) - 1;
 }
 
+void daxa_to_vk_accel_build_geo_info(
+    daxa_Device device,
+    daxa_AccelerationStructureBuildInfo const * infos,
+    u32 info_count,
+    std::vector<VkAccelerationStructureBuildInfoKHR> &vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR const *> &vk_build_ranges_start_ptrs,
+    std::vector<VkAccelerationStructureGeometryInfoKHR> &vk_geometry_infos,
+    std::vector<VkAccelerationStructureBuildRangeInfoKHR> &vk_build_ranges
+)
+{
+    vk_build_geometry_infos.resize(info_count);
+    vk_build_ranges_start_ptrs.resize(info_count);
+    u32 geo_infos_count = 0;
+    for (u32 i = 0; i < info_count; ++i)
+    {
+        geo_infos_count += infos[i].geometry_count;
+    }
+    vk_geometry_infos.reserve(geo_infos_count);
+    vk_build_ranges.reserve(geo_infos_count);
+    for (u32 info_i = 0; info_i < info_count; ++info_i)
+    {
+        daxa_AccelerationStructureBuildInfo const & info = infos[info_i];
+        VkAccelerationStructureGeometryInfoKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
+        VkAccelerationStructureBuildRangeInfoKHR const * vk_range_array_ptr = vk_build_ranges.data() + vk_build_ranges.size();
+        for (u32 geo_i = 0; geo_i < info.geometry_count; ++geo_i)
+        {
+            daxa_AccelerationStructureGeometryInfo const & geo = info.geometries[geo_i];
+            auto vk_geo_type = static_cast<VkGeometryTypeKHR>(geo.geometry.index);
+            auto daxa_to_vk_geometry_data = [&](daxa_Variant(daxa_AccelerationStructureGeometryInfoDataUnion) geo)
+            {
+                VkAccelerationStructureGeometryInfoDataKHR ret0 = {};
+                VkAccelerationStructureBuildRangeInfoKHR ret1 = {};
+                switch (static_cast<VkGeometryTypeKHR>(geo.index))
+                {
+                case VK_GEOMETRY_TYPE_TRIANGLES_KHR:
+                {
+                    ret0.triangles = VkAccelerationStructureGeometryInfoTrianglesDataKHR{
+                        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
+                        .pNext = nullptr,
+                        .vertexFormat = geo.values.triangles.vertex_format,
+                        .vertexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(geo.values.triangles.vertex_data),
+                        .vertexStride = geo.values.triangles.vertex_stride,
+                        .maxVertex = geo.values.triangles.max_vertex,
+                        .indexType = geo.values.triangles.index_type,
+                        .indexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(geo.values.triangles.index_data),
+                        .transformData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(geo.values.triangles.transform_data),
+                    };
+                    ret1.primitiveCount = geo.values.triangles.primitive_count;
+                    break;
+                }
+                case VK_GEOMETRY_TYPE_AABBS_KHR:
+                {
+                    ret0.aabbs = VkAccelerationStructureGeometryInfoAabbsDataKHR{
+                        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
+                        .pNext = nullptr,
+                        .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(geo.values.aabbs.data),
+                        .stride = geo.values.aabbs.stride,
+                    };
+                    ret1.primitiveCount = geo.values.aabbs.count;
+                    break;
+                }
+                case VK_GEOMETRY_TYPE_INSTANCES_KHR:
+                {
+                    ret0.instances = VkAccelerationStructureGeometryInfoInstancesDataKHR{
+                        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
+                        .pNext = nullptr,
+                        .arrayOfPointers = static_cast<VkBool32>(geo.values.instances.is_data_array_of_pointers),
+                        .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(geo.values.instances.data),
+                    };
+                    ret1.primitiveCount = geo.values.instances.count;
+                    break;
+                }
+                default:
+                    DAXA_DBG_ASSERT_TRUE_M(false, "FATAL INTERNAL ERROR");
+                }
+                return std::pair{ret0, ret1};
+            };
+            auto geo_data_build_range_pair = daxa_to_vk_geometry_data(geo.geometry);
+            vk_geometry_infos.push_back(VkAccelerationStructureGeometryInfoKHR{
+                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
+                .pNext = nullptr,
+                .geometryType = vk_geo_type,
+                .geometry = geo_data_build_range_pair.first,
+                .flags = {}, // TODO(Raytracing)
+            });
+            vk_build_ranges.push_back(geo_data_build_range_pair.second);
+        }
+        vk_build_geometry_infos[info_i] = VkAccelerationStructureBuildInfoKHR{
+            .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
+            .pNext = nullptr,
+            .type = info.type,
+            .flags = {},                    // TODO(Raytracing)
+            .mode = {},                     // TODO(Raytracing)
+            .srcAccelerationStructure = {}, // TODO(Raytracing)
+            .dstAccelerationStructure = daxa_dvc_is_acceleration_structure_valid(device, info.dst_acceleration_structure) ? device->slot(info.dst_acceleration_structure).vk_acceleration_structure : 0,
+            .geometryCount = info.geometry_count,
+            .pGeometries = vk_geo_array_ptr,
+            .ppGeometries = nullptr,
+            .scratchData = std::bit_cast<VkDeviceOrHostAddressKHR>(info.scratch_data),
+        };
+        vk_build_ranges_start_ptrs[info_i] = vk_range_array_ptr;
+    }
+}
+
 // --- End Helpers ---
 
 // --- Begin API Functions

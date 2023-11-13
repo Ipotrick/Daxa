@@ -1754,4 +1754,12 @@ namespace daxa
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
+
+    enum struct IndexType
+    {
+        uint16 = 0,
+        uint32 = 1,
+        uint8 = 1000265000,
+        none = 1000165000,
+    };
 } // namespace daxa

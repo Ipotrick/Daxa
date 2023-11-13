@@ -52,8 +52,8 @@ namespace tests
         .name = "test image",
     };
     constexpr daxa::AccelerationStructureInfo test_acceleration_structure_info = {
-        .type = daxa::AccelerationStructureType::GENERIC,
         .size = 256,
+        .type = daxa::AccelerationStructureType::GENERIC,
         .name = "test acceleration structure",
     };
     void sro_creation(daxa::Instance & instance)

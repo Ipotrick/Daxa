@@ -155,4 +155,61 @@ namespace daxa
         AccelerationStructureType type = AccelerationStructureType::GENERIC;
         SmallString name = "";
     };
+
+    struct AccelerationStructureGerometryTriangleData
+    {
+        Format vertex_format;
+        BufferDeviceAddress vertex_data;
+        u64 vertex_stride;
+        u32 max_vertex;
+        IndexType index_type;
+        BufferDeviceAddress index_data;
+        BufferDeviceAddress transform_data;
+        u32 primitive_count;
+    };
+
+    struct AccelerationStructureGerometryAABBData
+    {
+        BufferDeviceAddress data;
+        u64 stride;
+        u32 count;
+    } ;
+
+    /// Instances are defines as VkAccelerationStructureInstanceKHR;
+    struct AccelerationStructureGerometryInstanceData
+    {
+        BufferDeviceAddress data;
+        u32 count;
+        bool is_data_array_of_pointers;
+    } ;
+
+    struct GeometryFlagProperties
+    {
+        using Data = u32;
+    };
+    using GeometryFlags = Flags<GeometryFlagProperties>;
+    struct GeometryFlagBits
+    {
+        static inline constexpr GeometryFlags OPAQUE = {0x1 << 0};
+        static inline constexpr GeometryFlags NO_DUPLICATE_ANY_HIT_INVOCATION = {0x1 << 1};
+    };
+
+    using GeometryDataVariant = Variant<
+        AccelerationStructureGerometryTriangleData,
+        AccelerationStructureGerometryAABBData,
+        AccelerationStructureGerometryInstanceData>;
+
+    struct AccelerationStructureGeometryInfo
+    {
+        GeometryDataVariant geometry = {};
+        GeometryFlags flags = {};
+    };
+
+    struct AccelerationStructureBuildInfo
+    {
+        AccelerationStructureType type = AccelerationStructureType::GENERIC;
+        AccelerationStructureId dst_acceleration_structure = {};
+        std::span<AccelerationStructureGeometryInfo const> geometries = {};
+        BufferDeviceAddress scratch_data = {};
+    };
 } // namespace daxa
