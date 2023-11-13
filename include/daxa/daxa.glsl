@@ -94,7 +94,7 @@ struct daxa_SamplerId
 };
 
 #if defined(DAXA_RAY_TRACING)
-struct daxa_AccelerationStructureId
+struct daxa_TlasId
 {
     uint64_t value;
 };
@@ -128,7 +128,7 @@ daxa_u32 daxa_sampler_id_to_index(daxa_SamplerId id)
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
 /// @param id The id the index is retrieved from.
 /// @return The index the id contains.
-daxa_u32 daxa_acceleration_structure_id_to_index(daxa_AccelerationStructureId id)
+daxa_u32 daxa_acceleration_structure_id_to_index(daxa_TlasId id)
 {
     return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }

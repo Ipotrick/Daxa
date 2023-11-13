@@ -304,6 +304,24 @@ static daxa_BufferAccelerationStructureInfo const DAXA_DEFAULT_BUFFER_ACCELERATI
 
 typedef struct
 {
+    daxa_TlasInfo tlas_info;
+    daxa_BufferId buffer_id;
+    uint64_t offset;
+} daxa_BufferTlasInfo;
+
+static daxa_BufferTlasInfo const DAXA_DEFAULT_BUFFER_TLAS_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
+    daxa_BlasInfo blas_info;
+    daxa_BufferId buffer_id;
+    uint64_t offset;
+} daxa_BufferBlasInfo;
+
+static daxa_BufferBlasInfo const DAXA_DEFAULT_BUFFER_BLAS_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
     uint64_t acceleration_structure_size;
     uint64_t update_scratch_size;
     uint64_t build_scratch_size;
@@ -316,7 +334,9 @@ daxa_dvc_image_memory_requirements(daxa_Device device, daxa_ImageInfo const * in
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_memory(daxa_Device device, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_get_acceleration_structure_build_sizes(daxa_Device device, daxa_AccelerationStructureBuildInfo const * build_info, daxa_AccelerationStructureBuildSizesInfo * out);
+daxa_dvc_get_tlas_build_sizes(daxa_Device device, daxa_TlasBuildInfo const * build_info, daxa_AccelerationStructureBuildSizesInfo * out);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_blas_build_sizes(daxa_Device device, daxa_BlasBuildInfo const * build_info, daxa_AccelerationStructureBuildSizesInfo * out);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_buffer(daxa_Device device, daxa_BufferInfo const * info, daxa_BufferId * out_id);
@@ -331,9 +351,13 @@ daxa_dvc_create_image_view(daxa_Device device, daxa_ImageViewInfo const * info, 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_create_acceleration_structure(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id);
+daxa_dvc_create_tlas(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_TlasId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_create_acceleration_structure_from_buffer(daxa_Device device, daxa_BufferAccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id);
+daxa_dvc_create_blas(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_TlasId * out_id);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_tlas_from_buffer(daxa_Device device, daxa_BufferTlasInfo const * info, daxa_TlasId * out_id);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_blas_from_buffer(daxa_Device device, daxa_BufferBlasInfo const * info, daxa_BlasId * out_id);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
@@ -344,7 +368,9 @@ daxa_dvc_destroy_image_view(daxa_Device device, daxa_ImageViewId id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_destroy_acceleration_structure(daxa_Device device, daxa_AccelerationStructureId sampler);
+daxa_dvc_destroy_tlas(daxa_Device device, daxa_TlasId tlas);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_destroy_blas(daxa_Device device, daxa_TlasId blas);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
@@ -355,7 +381,9 @@ daxa_dvc_info_image_view(daxa_Device device, daxa_ImageViewId id, daxa_ImageView
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerInfo * out_info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_info_acceleration_structure(daxa_Device device, daxa_AccelerationStructureId acceleration_structure, daxa_AccelerationStructureInfo * out_info);
+daxa_dvc_info_tlas(daxa_Device device, daxa_TlasId acceleration_structure, daxa_TlasInfo * out_info);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_info_blas(daxa_Device device, daxa_TlasId acceleration_structure, daxa_BlasInfo * out_info);
 
 DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);
@@ -366,23 +394,32 @@ daxa_dvc_is_image_view_valid(daxa_Device device, daxa_ImageViewId image_view);
 DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_sampler_valid(daxa_Device device, daxa_SamplerId sampler);
 DAXA_EXPORT daxa_Bool8
-daxa_dvc_is_acceleration_structure_valid(daxa_Device device, daxa_AccelerationStructureId acceleration_structure);
+daxa_dvc_is_tlas_valid(daxa_Device device, daxa_TlasId tlas);
+DAXA_EXPORT daxa_Bool8
+daxa_dvc_is_blas_valid(daxa_Device device, daxa_BlasId blas);
 
-DAXA_EXPORT VkBuffer
-daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer);
-DAXA_EXPORT VkImage
-daxa_dvc_get_vk_image(daxa_Device device, daxa_ImageId image);
-DAXA_EXPORT VkImageView
-daxa_dvc_get_default_vk_image_view(daxa_Device device, daxa_ImageId image);
-DAXA_EXPORT VkImageView
-daxa_dvc_get_vk_image_view(daxa_Device device, daxa_ImageViewId image_view);
-DAXA_EXPORT VkSampler
-daxa_dvc_get_vk_sampler(daxa_Device device, daxa_SamplerId sampler);
+// TODO: Overhaul these:
+// DAXA_EXPORT VkBuffer
+// daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer);
+// DAXA_EXPORT VkImage
+// daxa_dvc_get_vk_image(daxa_Device device, daxa_ImageId image);
+// DAXA_EXPORT VkImageView
+// daxa_dvc_get_default_vk_image_view(daxa_Device device, daxa_ImageId image);
+// DAXA_EXPORT VkImageView
+// daxa_dvc_get_vk_image_view(daxa_Device device, daxa_ImageViewId image_view);
+// DAXA_EXPORT VkSampler
+// daxa_dvc_get_vk_sampler(daxa_Device device, daxa_SamplerId sampler);
+// DAXA_EXPORT VkSampler
+// daxa_dvc_get_tlas_vk_acceleraion_structure(daxa_Device device, daxa_SamplerId sampler);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_buffer_device_address(daxa_Device device, daxa_BufferId buffer, daxa_BufferDeviceAddress * out_bda);
+daxa_dvc_buffer_device_address(daxa_Device device, daxa_BufferId buffer, daxa_DeviceAddress * out_addr);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_buffer_host_address(daxa_Device device, daxa_BufferId buffer, void ** out_ptr);
+daxa_dvc_buffer_host_address(daxa_Device device, daxa_BufferId buffer, void ** out_addr);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_tlas_device_address(daxa_Device device, daxa_TlasId tlas, daxa_DeviceAddress * out_addr);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_blas_device_address(daxa_Device device, daxa_BlasId blas, daxa_DeviceAddress * out_addr);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline);

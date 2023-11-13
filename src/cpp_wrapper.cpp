@@ -304,7 +304,7 @@ namespace daxa
         auto result = daxa_dvc_buffer_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
-            r_cast<daxa_BufferDeviceAddress *>(&ret));
+            r_cast<daxa_DeviceAddress *>(&ret));
         if (result == DAXA_RESULT_SUCCESS)
         {
             return {ret};

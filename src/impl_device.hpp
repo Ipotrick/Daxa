@@ -104,7 +104,7 @@ struct daxa_ImplDevice final : public ImplHandle
     auto slot(daxa_ImageId id) const -> ImplImageSlot const &;
     auto slot(daxa_ImageViewId id) const -> ImplImageViewSlot const &;
     auto slot(daxa_SamplerId id) const -> ImplSamplerSlot const &;
-    auto slot(daxa_AccelerationStructureId id) const -> ImplAccelerationStructureSlot const &;
+    auto slot(daxa_TlasId id) const -> ImplAccelerationStructureSlot const &;
 
     void cleanup_buffer(BufferId id);
     void cleanup_image(ImageId id);

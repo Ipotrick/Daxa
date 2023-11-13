@@ -69,7 +69,7 @@ namespace daxa
 
         struct AccelerationStructureId : public GPUResourceId
         {
-            operator daxa_AccelerationStructureId() const { return std::bit_cast<daxa_AccelerationStructureId>(*this); }
+            operator daxa_TlasId() const { return std::bit_cast<daxa_TlasId>(*this); }
         };
     } // namespace types
 

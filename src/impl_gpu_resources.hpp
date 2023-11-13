@@ -66,7 +66,7 @@ namespace daxa
         VkBuffer vk_buffer = {};
         BufferId buffer_id = {};
         u64 offset = {};
-        daxa_BufferDeviceAddress bda = {};
+        daxa_DeviceAddress bda = {};
         bool owns_buffer = {};
     };
 

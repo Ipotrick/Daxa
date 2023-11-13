@@ -98,14 +98,16 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, daxa
 
 auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties;
 
-void daxa_to_vk_accel_build_geo_info(
+void daxa_as_build_info_to_vk(
     daxa_Device device,
-    daxa_AccelerationStructureBuildInfo const * infos,
-    u32 info_count,
-    std::vector<VkAccelerationStructureBuildInfoKHR> &vk_build_geometry_infos,
-    std::vector<VkAccelerationStructureBuildRangeInfoKHR const *> &vk_build_ranges_start_ptrs,
-    std::vector<VkAccelerationStructureGeometryInfoKHR> &vk_geometry_infos,
-    std::vector<VkAccelerationStructureBuildRangeInfoKHR> &vk_build_ranges
+    daxa_TlasBuildInfo const * tlas_infos,
+    u32 tlas_count,
+    daxa_BlasBuildInfo const * blas_infos,
+    u32 blas_count,
+    std::vector<VkAccelerationStructureBuildInfoKHR> & vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureGeometryInfoKHR> & vk_geometry_infos,
+    std::vector<u32> & primitive_counts,
+    std::vector<u32 const *> & primitive_counts_ptrs
 );
 
 // --- End Helpers ---

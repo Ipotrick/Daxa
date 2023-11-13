@@ -70,7 +70,12 @@ typedef struct
 typedef struct
 {
     uint64_t value;
-} daxa_AccelerationStructureId;
+} daxa_TlasId;
+
+typedef struct
+{
+    uint64_t value;
+} daxa_BlasId;
 
 #define _DAXA_DECL_VEC2_TYPE(SCALAR_TYPE) \
     typedef struct                        \

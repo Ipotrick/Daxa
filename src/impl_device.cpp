@@ -346,7 +346,7 @@ auto create_acceleration_structure_helper(
     daxa_AccelerationStructureInfo const * info,
     daxa_BufferId const * buffer,
     u64 const * offset,
-    daxa_AccelerationStructureId * out_id) -> daxa_Result
+    daxa_TlasId * out_id) -> daxa_Result
 {
     // --- Begin Parameter Validation ---
 
@@ -433,7 +433,7 @@ auto create_acceleration_structure_helper(
             id.index);
     }
 
-    *out_id = std::bit_cast<daxa_AccelerationStructureId>(id);
+    *out_id = std::bit_cast<daxa_TlasId>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -500,29 +500,26 @@ auto daxa_dvc_image_memory_requirements(daxa_Device self, daxa_ImageInfo const *
     return mem_requirements.memoryRequirements;
 }
 
-auto daxa_dvc_get_acceleration_structure_build_sizes(
+auto daxa_dvc_get_tlas_build_sizes(
     daxa_Device self,
-    daxa_AccelerationStructureBuildInfo const * build_info,
+    daxa_TlasBuildInfo const * build_info,
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
-    std::vector<VkAccelerationStructureBuildInfoKHR> vk_build_geometry_infos;
-    std::vector<VkAccelerationStructureBuildRangeInfoKHR const *> vk_build_ranges_start_ptrs;
-    std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos;
-    std::vector<VkAccelerationStructureBuildRangeInfoKHR> vk_build_ranges;
-    daxa_to_vk_accel_build_geo_info(
+    std::vector<VkAccelerationStructureBuildInfoKHR> vk_build_geometry_infos = {};
+    std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos = {};
+    std::vector<u32> primitive_counts = {};
+    std::vector<u32 const *> primitive_counts_ptrs = {};
+    daxa_as_build_info_to_vk(
         self,
-        build_info,
-        1,
+        build_info, // tlas array
+        1,          // tlas array size
+        nullptr,    // blas array
+        0,          // blas array size
         vk_build_geometry_infos,
-        vk_build_ranges_start_ptrs,
-        vk_geometry_infos, vk_build_ranges);
-    std::vector<u32> primitive_counts;
-    primitive_counts.resize(vk_build_ranges.size());
-    for (u32 i = 0; i < primitive_counts.size(); ++i)
-    {
-        primitive_counts[i] = vk_build_ranges[i].primitiveCount;
-    }
+        vk_geometry_infos,
+        primitive_counts,
+        primitive_counts_ptrs);
     VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
         .pNext = nullptr,
@@ -532,8 +529,43 @@ auto daxa_dvc_get_acceleration_structure_build_sizes(
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
         vk_build_geometry_infos.data(),
         primitive_counts.data(),
-        &vk_acceleration_structure_build_sizes_info_khr
-    );
+        &vk_acceleration_structure_build_sizes_info_khr);
+    out->acceleration_structure_size = vk_acceleration_structure_build_sizes_info_khr.accelerationStructureSize;
+    out->build_scratch_size = vk_acceleration_structure_build_sizes_info_khr.buildScratchSize;
+    out->update_scratch_size = vk_acceleration_structure_build_sizes_info_khr.updateScratchSize;
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_get_blas_build_sizes(
+    daxa_Device self,
+    daxa_BlasBuildInfo const * build_info,
+    daxa_AccelerationStructureBuildSizesInfo * out)
+    -> daxa_Result
+{
+    std::vector<VkAccelerationStructureBuildInfoKHR> vk_build_geometry_infos = {};
+    std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos = {};
+    std::vector<u32> primitive_counts = {};
+    std::vector<u32 const *> primitive_counts_ptrs = {};
+    daxa_as_build_info_to_vk(
+        self,
+        nullptr,    // tlas array
+        0,          // tlas array size
+        build_info, // blas array
+        1,          // blas array size
+        vk_build_geometry_infos,
+        vk_geometry_infos,
+        primitive_counts,
+        primitive_counts_ptrs);
+    VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
+        .pNext = nullptr,
+    };
+    self->vkGetAccelerationStructureBuildSizesKHR(
+        self->vk_device,
+        VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
+        vk_build_geometry_infos.data(),
+        primitive_counts.data(),
+        &vk_acceleration_structure_build_sizes_info_khr);
     out->acceleration_structure_size = vk_acceleration_structure_build_sizes_info_khr.accelerationStructureSize;
     out->build_scratch_size = vk_acceleration_structure_build_sizes_info_khr.buildScratchSize;
     out->update_scratch_size = vk_acceleration_structure_build_sizes_info_khr.updateScratchSize;
@@ -560,12 +592,12 @@ auto daxa_dvc_create_image_from_block(daxa_Device self, daxa_MemoryBlockImageInf
     return create_image_helper(self, &info->image_info, out_id, *info->memory_block, info->offset);
 }
 
-auto daxa_dvc_create_acceleration_structure(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id) -> daxa_Result
+auto daxa_dvc_create_acceleration_structure(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_TlasId * out_id) -> daxa_Result
 {
     return create_acceleration_structure_helper(device, info, nullptr, nullptr, out_id);
 }
 
-auto daxa_dvc_create_acceleration_structure_from_buffer(daxa_Device device, daxa_BufferAccelerationStructureInfo const * info, daxa_AccelerationStructureId * out_id) -> daxa_Result
+auto daxa_dvc_create_acceleration_structure_from_buffer(daxa_Device device, daxa_BufferAccelerationStructureInfo const * info, daxa_TlasId * out_id) -> daxa_Result
 {
     return create_acceleration_structure_helper(device, &info->acceleration_structure_info, &info->buffer_id, &info->offset, out_id);
 }
@@ -742,13 +774,13 @@ _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image_view, ImageView, IMAGE_VIEW, image_slot
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots, )
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(acceleration_structure, AccelerationStructure, ACCELERATION_STRUCTURE, acceleration_structure_slots, KHR)
 
-auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_BufferDeviceAddress * out_bda) -> daxa_Result
+auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_DeviceAddress * out_bda) -> daxa_Result
 {
     if (self->slot(std::bit_cast<BufferId>(id)).device_address == 0)
     {
         return DAXA_RESULT_BUFFER_NOT_DEVICE_VISIBLE;
     }
-    *out_bda = static_cast<daxa_BufferDeviceAddress>(self->slot(std::bit_cast<BufferId>(id)).device_address);
+    *out_bda = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<BufferId>(id)).device_address);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1866,7 +1898,7 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
     return gpu_sro_table.sampler_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
-auto daxa_ImplDevice::slot(daxa_AccelerationStructureId id) const -> ImplAccelerationStructureSlot const &
+auto daxa_ImplDevice::slot(daxa_TlasId id) const -> ImplAccelerationStructureSlot const &
 {
     return gpu_sro_table.acceleration_structure_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
 }

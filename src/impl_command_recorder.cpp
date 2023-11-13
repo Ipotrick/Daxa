@@ -326,7 +326,7 @@ auto daxa_cmd_build_acceleration_structure(daxa_CommandRecorder self, daxa_Accel
     std::vector<VkAccelerationStructureBuildRangeInfoKHR const *> vk_build_ranges_start_ptrs;
     std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos;
     std::vector<VkAccelerationStructureBuildRangeInfoKHR> vk_build_ranges;
-    daxa_to_vk_accel_build_geo_info(
+    daxa_tlas_build_info_to_vk(
         self->device,
         infos,
         info_count,
