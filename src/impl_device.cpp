@@ -343,23 +343,25 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
 
 auto create_acceleration_structure_helper(
     daxa_Device self,
-    daxa_AccelerationStructureInfo const * info,
+    auto & table,
+    VkAccelerationStructureTypeKHR vk_as_type,
+    auto const & info,
     daxa_BufferId const * buffer,
     u64 const * offset,
-    daxa_TlasId * out_id) -> daxa_Result
+    auto * out_id) -> daxa_Result
 {
     // --- Begin Parameter Validation ---
 
     // --- End Parameter Validation ---
 
-    auto slot_opt = self->gpu_sro_table.acceleration_structure_slots.try_create_slot();
+    auto slot_opt = table.try_create_slot();
     if (!slot_opt.has_value())
     {
         return DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES;
     }
     auto [id, ret] = slot_opt.value();
 
-    ret.info = *info;
+    ret.info = info;
 
     if (buffer)
     {
@@ -369,22 +371,23 @@ auto create_acceleration_structure_helper(
     }
     else
     {
-        daxa::SmallString buffer_name{std::string_view{info->name.data, info->name.size}};
-        if (info->name.size < SMALL_STRING_CHAR_MAX)
+        daxa::SmallString buffer_name{std::string_view{ret.info.name.data, ret.info.name.size}};
+        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
             buffer_name.push_back(' ');
-        if (info->name.size < SMALL_STRING_CHAR_MAX)
+        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
             buffer_name.push_back('b');
-        if (info->name.size < SMALL_STRING_CHAR_MAX)
+        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
             buffer_name.push_back('u');
-        if (info->name.size < SMALL_STRING_CHAR_MAX)
+        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
             buffer_name.push_back('f');
         auto cinfo = daxa_BufferInfo{
-            .size = info->size,
+            .size = ret.info.size,
             .name = std::bit_cast<daxa_SmallString>(buffer_name),
         };
         auto result = daxa_dvc_create_buffer(self, &cinfo, r_cast<daxa_BufferId *>(&ret.buffer_id));
         if (result != DAXA_RESULT_SUCCESS)
         {
+            table.unsafe_destroy_zombie_slot(id);
             return result;
         }
         ret.offset = 0;
@@ -392,7 +395,7 @@ auto create_acceleration_structure_helper(
     }
     ret.vk_buffer = self->slot(ret.buffer_id).vk_buffer;
 
-    [[maybe_unused]] daxa_Result safely_ignorable = daxa_dvc_buffer_device_address(self, ret.buffer_id, &ret.bda);
+    [[maybe_unused]] daxa_Result safely_ignorable = daxa_dvc_buffer_device_address(self, ret.buffer_id, &ret.address);
 
     VkAccelerationStructureCreateInfoKHR vk_create_info = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
@@ -401,18 +404,20 @@ auto create_acceleration_structure_helper(
         .buffer = self->slot(ret.buffer_id).vk_buffer,
         .offset = ret.offset,
         .size = ret.info.size,
-        .type = std::bit_cast<VkAccelerationStructureTypeKHR>(ret.info.type),
-        .deviceAddress = std::bit_cast<VkDeviceAddress>(ret.bda),
+        .type = vk_as_type,
+        .deviceAddress = std::bit_cast<VkDeviceAddress>(ret.address),
     };
     auto vk_result = self->vkCreateAccelerationStructureKHR(self->vk_device, &vk_create_info, nullptr, &ret.vk_acceleration_structure);
     if (vk_result != VK_SUCCESS)
     {
+        table.unsafe_destroy_zombie_slot(id);
+        [[maybe_unused]] auto const _ignore =  daxa_dvc_destroy_buffer(self, ret.buffer_id);
         return std::bit_cast<daxa_Result>(vk_result);
     }
 
-    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
+    if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
-        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
+        auto c_str_arr = r_cast<SmallString const *>(&ret.info.name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
@@ -424,7 +429,7 @@ auto create_acceleration_structure_helper(
     }
 
     // TODO(Raytracing): improve handling.
-    if (info->type == DAXA_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL)
+    if (vk_as_type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
     {
         write_descriptor_set_acceleration_structure(
             self->vk_device,
@@ -433,7 +438,7 @@ auto create_acceleration_structure_helper(
             id.index);
     }
 
-    *out_id = std::bit_cast<daxa_TlasId>(id);
+    *out_id = std::bit_cast<typename std::remove_pointer<decltype(out_id)>::type>(id);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -592,14 +597,28 @@ auto daxa_dvc_create_image_from_block(daxa_Device self, daxa_MemoryBlockImageInf
     return create_image_helper(self, &info->image_info, out_id, *info->memory_block, info->offset);
 }
 
-auto daxa_dvc_create_acceleration_structure(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_TlasId * out_id) -> daxa_Result
+auto daxa_dvc_create_tlas(daxa_Device self, daxa_TlasInfo const * info, daxa_TlasId * out_id) -> daxa_Result
 {
-    return create_acceleration_structure_helper(device, info, nullptr, nullptr, out_id);
+    return create_acceleration_structure_helper(
+        self,
+        self->gpu_sro_table.tlas_slots,
+        VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+        *info,
+        nullptr,
+        nullptr,
+        out_id);
 }
 
-auto daxa_dvc_create_acceleration_structure_from_buffer(daxa_Device device, daxa_BufferAccelerationStructureInfo const * info, daxa_TlasId * out_id) -> daxa_Result
+auto daxa_dvc_create_blas(daxa_Device self, daxa_BlasInfo const * info, daxa_BlasId * out_id) -> daxa_Result
 {
-    return create_acceleration_structure_helper(device, &info->acceleration_structure_info, &info->buffer_id, &info->offset, out_id);
+    return create_acceleration_structure_helper(
+        self,
+        self->gpu_sro_table.blas_slots,
+        VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
+        *info,
+        nullptr,
+        nullptr,
+        out_id);
 }
 
 auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id) -> daxa_Result
@@ -735,7 +754,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     return DAXA_RESULT_SUCCESS;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME, POSTFIX)                                 \
+#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME, VK_NAME)                                 \
     auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id) -> daxa_Result                            \
     {                                                                                                            \
         _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                 \
@@ -762,17 +781,14 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     {                                                                                                            \
         return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                              \
             std::bit_cast<daxa::GPUResourceId>(id)));                                                            \
-    }                                                                                                            \
-    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id) -> Vk##Name##POSTFIX                       \
-    {                                                                                                            \
-        return self->slot(id).vk_##name;                                                                         \
     }
 
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots, )
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image, Image, IMAGE, image_slots, )
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image_view, ImageView, IMAGE_VIEW, image_slots, )
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots, )
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(acceleration_structure, AccelerationStructure, ACCELERATION_STRUCTURE, acceleration_structure_slots, KHR)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots, VkBuffer)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image, Image, IMAGE, image_slots, VkImage)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image_view, ImageView, IMAGE_VIEW, image_slots, VkImageView)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots, VkSampler)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(tlas, Tlas, TLAS, tlas_slots, VkAccelerationStructureKHR)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(blas, Blas, BLAS, blas_slots, VkAccelerationStructureKHR)
 
 auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_DeviceAddress * out_bda) -> daxa_Result
 {
@@ -1032,10 +1048,16 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             self->cleanup_sampler(id);
         });
     check_and_cleanup_gpu_resources(
-        self->main_queue_acceleration_structure_zombies,
+        self->main_queue_tlas_zombies,
         [&](auto id)
         {
-            self->cleanup_acceleration_structure(id);
+            self->cleanup_tlas(id);
+        });
+    check_and_cleanup_gpu_resources(
+        self->main_queue_blas_zombies,
+        [&](auto id)
+        {
+            self->cleanup_blas(id);
         });
     check_and_cleanup_gpu_resources(
         self->main_queue_pipeline_zombies,
@@ -1869,13 +1891,20 @@ void daxa_ImplDevice::cleanup_sampler(SamplerId id)
     gpu_sro_table.sampler_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
-void daxa_ImplDevice::cleanup_acceleration_structure(AccelerationStructureId id)
+void daxa_ImplDevice::cleanup_tlas(TlasId id)
 {
-    ImplAccelerationStructureSlot const & acceleration_strucutre_slot = this->gpu_sro_table.acceleration_structure_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
+    ImplTlasSlot const & tlas_slot = this->gpu_sro_table.tlas_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
     // TODO(Raytracing): Add null acceleration structure:
     // write_descriptor_set_acceleration_structure(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_acceleration_structure, std::bit_cast<GPUResourceId>(id).index);
-    this->vkDestroyAccelerationStructureKHR(this->vk_device, acceleration_strucutre_slot.vk_acceleration_structure, nullptr);
-    gpu_sro_table.acceleration_structure_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+    this->vkDestroyAccelerationStructureKHR(this->vk_device, tlas_slot.vk_acceleration_structure, nullptr);
+    gpu_sro_table.tlas_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
+}
+
+void daxa_ImplDevice::cleanup_blas(BlasId id)
+{
+    ImplBlasSlot const & blas_slot = this->gpu_sro_table.blas_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
+    this->vkDestroyAccelerationStructureKHR(this->vk_device, blas_slot.vk_acceleration_structure, nullptr);
+    gpu_sro_table.blas_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 auto daxa_ImplDevice::slot(daxa_BufferId id) const -> ImplBufferSlot const &
@@ -1898,9 +1927,14 @@ auto daxa_ImplDevice::slot(daxa_SamplerId id) const -> ImplSamplerSlot const &
     return gpu_sro_table.sampler_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
-auto daxa_ImplDevice::slot(daxa_TlasId id) const -> ImplAccelerationStructureSlot const &
+auto daxa_ImplDevice::slot(daxa_TlasId id) const -> ImplTlasSlot const &
 {
-    return gpu_sro_table.acceleration_structure_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
+    return gpu_sro_table.tlas_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
+}
+
+auto daxa_ImplDevice::slot(daxa_BlasId id) const -> ImplBlasSlot const &
+{
+    return gpu_sro_table.blas_slots.unsafe_get(std::bit_cast<daxa::GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
@@ -1992,19 +2026,35 @@ void daxa_ImplDevice::zombify_sampler(SamplerId id)
     });
 }
 
-void daxa_ImplDevice::zombify_acceleration_structure(AccelerationStructureId id)
+void daxa_ImplDevice::zombify_tlas(TlasId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_acceleration_structure\n");
-    auto & slot = gpu_sro_table.acceleration_structure_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_tlas\n");
+    auto & slot = gpu_sro_table.tlas_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
     if (slot.owns_buffer)
     {
         this->zombify_buffer(slot.buffer_id);
     }
     u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     std::unique_lock const lock{this->main_queue_zombies_mtx};
-    this->main_queue_acceleration_structure_zombies.push_front({
+    this->main_queue_tlas_zombies.push_front({
         main_queue_cpu_timeline_value,
-        std::bit_cast<AccelerationStructureId>(id),
+        std::bit_cast<TlasId>(id),
+    });
+}
+
+void daxa_ImplDevice::zombify_blas(BlasId id)
+{
+    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_blas\n");
+    auto & slot = gpu_sro_table.blas_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
+    if (slot.owns_buffer)
+    {
+        this->zombify_buffer(slot.buffer_id);
+    }
+    u64 const main_queue_cpu_timeline_value = this->main_queue_cpu_timeline.load(std::memory_order::relaxed);
+    std::unique_lock const lock{this->main_queue_zombies_mtx};
+    this->main_queue_blas_zombies.push_front({
+        main_queue_cpu_timeline_value,
+        std::bit_cast<BlasId>(id),
     });
 }
 

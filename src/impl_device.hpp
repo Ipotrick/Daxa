@@ -89,7 +89,8 @@ struct daxa_ImplDevice final : public ImplHandle
     std::deque<std::pair<u64, ImageId>> main_queue_image_zombies = {};
     std::deque<std::pair<u64, ImageViewId>> main_queue_image_view_zombies = {};
     std::deque<std::pair<u64, SamplerId>> main_queue_sampler_zombies = {};
-    std::deque<std::pair<u64, AccelerationStructureId>> main_queue_acceleration_structure_zombies = {};
+    std::deque<std::pair<u64, TlasId>> main_queue_tlas_zombies = {};
+    std::deque<std::pair<u64, BlasId>> main_queue_blas_zombies = {};
     std::deque<std::pair<u64, SemaphoreZombie>> main_queue_semaphore_zombies = {};
     std::deque<std::pair<u64, EventZombie>> main_queue_split_barrier_zombies = {};
     std::deque<std::pair<u64, PipelineZombie>> main_queue_pipeline_zombies = {};
@@ -104,19 +105,22 @@ struct daxa_ImplDevice final : public ImplHandle
     auto slot(daxa_ImageId id) const -> ImplImageSlot const &;
     auto slot(daxa_ImageViewId id) const -> ImplImageViewSlot const &;
     auto slot(daxa_SamplerId id) const -> ImplSamplerSlot const &;
-    auto slot(daxa_TlasId id) const -> ImplAccelerationStructureSlot const &;
+    auto slot(daxa_TlasId id) const -> ImplTlasSlot const &;
+    auto slot(daxa_BlasId id) const -> ImplBlasSlot const &;
 
     void cleanup_buffer(BufferId id);
     void cleanup_image(ImageId id);
     void cleanup_image_view(ImageViewId id);
     void cleanup_sampler(SamplerId id);
-    void cleanup_acceleration_structure(AccelerationStructureId id);
+    void cleanup_tlas(TlasId id);
+    void cleanup_blas(BlasId id);
 
     void zombify_buffer(BufferId id);
     void zombify_image(ImageId id);
     void zombify_image_view(ImageViewId id);
     void zombify_sampler(SamplerId id);
-    void zombify_acceleration_structure(AccelerationStructureId id);
+    void zombify_tlas(TlasId id);
+    void zombify_blas(BlasId id);
 
     // TODO: Give physical device in info so that this function can be removed.
     // TODO: Better device selection.

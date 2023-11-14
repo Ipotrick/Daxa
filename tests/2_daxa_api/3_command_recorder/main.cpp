@@ -564,51 +564,49 @@ namespace tests
             std::memcpy(device.get_host_address(transform_buffer).value(), &transform, sizeof(daxa_f32mat3x4));
             /// Write As description data:
             auto geometries = std::array{
-                daxa::AccelerationStructureGeometryInfo{
-                    .geometry = daxa::AccelerationStructureGerometryTriangleData{
-                        .vertex_format = daxa::Format::R32G32B32_SFLOAT,
-                        .vertex_data = {}, // Ignored in get_acceleration_structure_build_sizes.
-                        .vertex_stride = sizeof(daxa_f32vec3),
-                        .max_vertex = static_cast<u32>(vertices.size() - 1),
-                        .index_type = daxa::IndexType::uint32,
-                        .index_data = {},     // Ignored in get_acceleration_structure_build_sizes.
-                        .transform_data = {}, // Ignored in get_acceleration_structure_build_sizes.
-                        .primitive_count = 1,
-                    },
+                daxa::BlasTriangleGeometryInfo{
+                    .vertex_format = daxa::Format::R32G32B32_SFLOAT,
+                    .vertex_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                    .vertex_stride = sizeof(daxa_f32vec3),
+                    .max_vertex = static_cast<u32>(vertices.size() - 1),
+                    .index_type = daxa::IndexType::uint32,
+                    .index_data = {},     // Ignored in get_acceleration_structure_build_sizes.
+                    .transform_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                    .count = 1,
                     .flags = {},
                 }};
-            auto build_info = daxa::AccelerationStructureBuildInfo{
-                .type = daxa::AccelerationStructureType::BOTTOM_LEVEL,
-                .dst_acceleration_structure = {}, // Ignored in get_acceleration_structure_build_sizes.
+            auto build_info = daxa::BlasBuildInfo{
+                .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.
                 .geometries = geometries,
                 .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.
             };
             /// Query As sizes:
-            daxa::AccelerationStructureBuildSizesInfo build_size_info = device.get_acceleration_structure_build_sizes(build_info);
+            daxa::AccelerationStructureBuildSizesInfo build_size_info = device.get_blas_build_sizes(build_info);
             /// Create Scratch buffer and As:
             auto scratch_buffer = device.create_buffer({
                 .size = build_size_info.build_scratch_size,
                 .name = "scratch buffer",
             });
             defer { device.destroy_buffer(scratch_buffer); };
-            daxa::AccelerationStructureId acceleration_structure = device.create_acceleration_structure({
+            daxa::BlasId blas = device.create_blas({
                 .size = build_size_info.acceleration_structure_size,
-                .type = daxa::AccelerationStructureType::BOTTOM_LEVEL,
-                .name = "test acceleration structure",
+                .name = "test blas",
             });
-            defer { device.destroy_acceleration_structure(acceleration_structure); };
+            defer { device.destroy_blas(blas); };
             /// Fill the remaining fields of the build info:
-            auto & tri_geom = daxa::get<daxa::AccelerationStructureGerometryTriangleData>(geometries[0].geometry);
+            auto & tri_geom = geometries[0];
             tri_geom.vertex_data = device.get_device_address(vertex_buffer).value();
             tri_geom.index_data = device.get_device_address(index_buffer).value();
             tri_geom.transform_data = device.get_device_address(transform_buffer).value();
-            build_info.dst_acceleration_structure = acceleration_structure;
+            build_info.dst_blas = blas;
             build_info.scratch_data = device.get_device_address(scratch_buffer).value();
             /// Record build commands:
             auto exec_cmds = [&]()
             {
                 auto recorder = device.create_command_recorder({});
-                recorder.build_acceleration_structure(std::array{build_info});
+                recorder.build_acceleration_structures({
+                    .blas_build_infos = std::array{build_info},
+                });
                 return recorder.complete_current_commands();
             }();
             device.submit_commands({.command_lists = std::array{exec_cmds}});

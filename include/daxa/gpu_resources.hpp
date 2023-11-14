@@ -67,9 +67,14 @@ namespace daxa
             operator daxa_SamplerId() const { return std::bit_cast<daxa_SamplerId>(*this); }
         };
 
-        struct AccelerationStructureId : public GPUResourceId
+        struct TlasId : public GPUResourceId
         {
             operator daxa_TlasId() const { return std::bit_cast<daxa_TlasId>(*this); }
+        };
+
+        struct BlasId : public GPUResourceId
+        {
+            operator daxa_BlasId() const { return std::bit_cast<daxa_BlasId>(*this); }
         };
     } // namespace types
 
@@ -142,74 +147,73 @@ namespace daxa
         SmallString name = "";
     };
 
-    enum struct AccelerationStructureType
-    {
-        TOP_LEVEL = 0,
-        BOTTOM_LEVEL = 1,
-        GENERIC = 2,
-    };
-
-    struct AccelerationStructureInfo
-    {
-        u64 size = {};
-        AccelerationStructureType type = AccelerationStructureType::GENERIC;
-        SmallString name = "";
-    };
-
-    struct AccelerationStructureGerometryTriangleData
-    {
-        Format vertex_format;
-        BufferDeviceAddress vertex_data;
-        u64 vertex_stride;
-        u32 max_vertex;
-        IndexType index_type;
-        BufferDeviceAddress index_data;
-        BufferDeviceAddress transform_data;
-        u32 primitive_count;
-    };
-
-    struct AccelerationStructureGerometryAABBData
-    {
-        BufferDeviceAddress data;
-        u64 stride;
-        u32 count;
-    } ;
-
-    /// Instances are defines as VkAccelerationStructureInstanceKHR;
-    struct AccelerationStructureGerometryInstanceData
-    {
-        BufferDeviceAddress data;
-        u32 count;
-        bool is_data_array_of_pointers;
-    } ;
-
-    struct GeometryFlagProperties
+    struct GeometryFlagsProperties
     {
         using Data = u32;
     };
-    using GeometryFlags = Flags<GeometryFlagProperties>;
+    using GeometryFlags = Flags<GeometryFlagsProperties>;
     struct GeometryFlagBits
     {
         static inline constexpr GeometryFlags OPAQUE = {0x1 << 0};
         static inline constexpr GeometryFlags NO_DUPLICATE_ANY_HIT_INVOCATION = {0x1 << 1};
     };
 
-    using GeometryDataVariant = Variant<
-        AccelerationStructureGerometryTriangleData,
-        AccelerationStructureGerometryAABBData,
-        AccelerationStructureGerometryInstanceData>;
-
-    struct AccelerationStructureGeometryInfo
+    struct BlasTriangleGeometryInfo
     {
-        GeometryDataVariant geometry = {};
-        GeometryFlags flags = {};
+        Format vertex_format = daxa::Format::R32G32B32_SFLOAT;
+        DeviceAddress vertex_data = {};
+        u64 vertex_stride = 12;
+        u32 max_vertex = {};
+        IndexType index_type = IndexType::uint32;
+        DeviceAddress index_data = {};
+        DeviceAddress transform_data = {};
+        u32 count = {};
+        GeometryFlags flags = GeometryFlagBits::OPAQUE;
     };
 
-    struct AccelerationStructureBuildInfo
+    struct BlasAabbGeometryInfo
     {
-        AccelerationStructureType type = AccelerationStructureType::GENERIC;
-        AccelerationStructureId dst_acceleration_structure = {};
-        std::span<AccelerationStructureGeometryInfo const> geometries = {};
-        BufferDeviceAddress scratch_data = {};
+        DeviceAddress data = {};
+        u64 stride = {};
+        u32 count = {};
+        GeometryFlags flags = GeometryFlagBits::OPAQUE;
+    };
+
+    /// Instances are defines as VkAccelerationStructureInstanceKHR;
+    struct TlasInstanceInfo
+    {
+        DeviceAddress data = {};
+        u32 count = {};
+        daxa_Bool8 is_data_array_of_pointers = {};
+        GeometryFlags flags = GeometryFlagBits::OPAQUE;
+    };
+
+    struct TlasBuildInfo
+    {
+        daxa_TlasId dst_tlas = {};
+        std::span<TlasInstanceInfo const> instances = {};
+        DeviceAddress scratch_data = {};
+    };
+
+    struct BlasBuildInfo
+    {
+        daxa_BlasId dst_blas = {};
+        Variant<
+            std::span<BlasTriangleGeometryInfo const>,
+            std::span<BlasAabbGeometryInfo const>>
+            geometries;
+        DeviceAddress scratch_data = {};
+    };
+
+    struct TlasInfo
+    {
+        u64 size = {};
+        SmallString name = "";
+    };
+
+    struct BlasInfo
+    {
+        u64 size = {};
+        SmallString name = "";
     };
 } // namespace daxa

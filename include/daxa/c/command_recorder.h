@@ -363,6 +363,16 @@ static daxa_SetIndexBufferInfo const DAXA_DEFAULT_SET_INDEX_BUFFER_INFO = {
     .index_type = VK_INDEX_TYPE_UINT32,
 };
 
+typedef struct
+{
+    daxa_TlasBuildInfo const * tlas_build_infos;
+    size_t tlas_build_info_count;
+    daxa_BlasBuildInfo const * blas_build_infos;
+    size_t blas_build_info_count;
+} daxa_BuildAccelerationStucturesInfo;
+
+static daxa_BuildAccelerationStucturesInfo const DAXA_DEFAULT_BUILD_ACCELERATION_STRUCTURES_INFO = DAXA_ZERO_INIT;
+
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder cmd_enc, daxa_BufferCopyInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
@@ -374,7 +384,7 @@ daxa_cmd_copy_image_to_image(daxa_CommandRecorder cmd_enc, daxa_ImageCopyInfo co
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_blit_image_to_image(daxa_CommandRecorder cmd_enc, daxa_ImageBlitInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_build_acceleration_structure(daxa_CommandRecorder cmd_rec, daxa_AccelerationStructureBuildInfo const * infos, uint32_t info_count);
+daxa_cmd_build_acceleration_structures(daxa_CommandRecorder cmd_rec, daxa_BuildAccelerationStucturesInfo const * info);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_clear_buffer(daxa_CommandRecorder cmd_enc, daxa_BufferClearInfo const * info);

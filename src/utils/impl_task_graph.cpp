@@ -972,7 +972,7 @@ namespace daxa
                 [&](u32 arg_i, TaskBufferUse<> & arg)
                 {
                     auto adr = (host_constant_buffer_ptr + task.use_offsets[arg_i]);
-                    *reinterpret_cast<types::BufferDeviceAddress *>(adr) = info.device.get_device_address(arg.buffers[0]).value();
+                    *reinterpret_cast<types::DeviceAddress *>(adr) = info.device.get_device_address(arg.buffers[0]).value();
                 },
                 [&](u32 arg_i, TaskImageUse<> & arg)
                 {

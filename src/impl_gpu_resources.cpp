@@ -45,7 +45,8 @@ namespace daxa
         sampler_slots.max_resources = max_samplers;
         if (ray_tracing_enabled)
         {
-            acceleration_structure_slots.max_resources = max_acceleration_structures;
+            tlas_slots.max_resources = max_acceleration_structures;
+            blas_slots.max_resources = 1'000'000; // TODO(Raytracing): Should we have a smarter limit?
         }
 
         VkDescriptorPoolSize const buffer_descriptor_pool_size{
@@ -78,7 +79,7 @@ namespace daxa
         {
             VkDescriptorPoolSize const as_descriptor_pool_size{
                 .type = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-                .descriptorCount = acceleration_structure_slots.max_resources,
+                .descriptorCount = tlas_slots.max_resources,
             };
             pool_sizes.push_back(as_descriptor_pool_size);
         }
@@ -159,7 +160,7 @@ namespace daxa
             VkDescriptorSetLayoutBinding const as_descriptor_set_layout_binding{
                 .binding = DAXA_ACCELERATION_STRUCTURE_BINDING,
                 .descriptorType = VK_DESCRIPTOR_TYPE_ACCELERATION_STRUCTURE_KHR,
-                .descriptorCount = static_cast<u32>(acceleration_structure_slots.max_resources),
+                .descriptorCount = static_cast<u32>(tlas_slots.max_resources),
                 .stageFlags = VK_SHADER_STAGE_ALL,
                 .pImmutableSamplers = nullptr,
             };

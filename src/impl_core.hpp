@@ -101,9 +101,9 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
 void daxa_as_build_info_to_vk(
     daxa_Device device,
     daxa_TlasBuildInfo const * tlas_infos,
-    u32 tlas_count,
+    usize tlas_count,
     daxa_BlasBuildInfo const * blas_infos,
-    u32 blas_count,
+    usize blas_count,
     std::vector<VkAccelerationStructureBuildInfoKHR> & vk_build_geometry_infos,
     std::vector<VkAccelerationStructureGeometryInfoKHR> & vk_geometry_infos,
     std::vector<u32> & primitive_counts,
@@ -149,3 +149,13 @@ struct daxa_ImplMemoryBlock final : ImplHandle
 
     static void zero_ref_callback(ImplHandle const * handle);
 };
+
+// Sorry Gabe, not sorry! -Patrick :)
+#ifndef defer
+struct defer_dummy {};
+template <class F> struct deferrer { F f; ~deferrer() { f(); } };
+template <class F> deferrer<F> operator*(defer_dummy, F f) { return {f}; }
+#define DEFER_(LINE) zz_defer##LINE
+#define DEFER(LINE) DEFER_(LINE)
+#define defer auto DEFER(__LINE__) = defer_dummy{} *[&]()
+#endif // defer

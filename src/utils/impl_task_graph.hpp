@@ -300,7 +300,7 @@ namespace daxa
         CommandRecorder & recorder;
         ImplTask * current_task = {};
         Optional<SetUniformBufferInfo> set_uniform_buffer_info = {};
-        types::BufferDeviceAddress device_address = {};
+        types::DeviceAddress device_address = {};
         bool reuse_last_command_list = true;
         std::optional<BinarySemaphore> last_submit_semaphore = {};
     };

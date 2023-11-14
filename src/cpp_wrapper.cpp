@@ -219,15 +219,27 @@ namespace daxa
                 r_cast<daxa_ImageInfo const *>(&info)));
     }
 
-    auto Device::get_acceleration_structure_build_sizes(AccelerationStructureBuildInfo const & info)
+    auto Device::get_tlas_build_sizes(TlasBuildInfo const & info)
         -> AccelerationStructureBuildSizesInfo
     {
         AccelerationStructureBuildSizesInfo ret = {};
-        check_result(daxa_dvc_get_acceleration_structure_build_sizes(
+        check_result(daxa_dvc_get_tlas_build_sizes(
                          rc_cast<daxa_Device>(this->object),
-                         r_cast<daxa_AccelerationStructureBuildInfo const *>(&info),
+                         r_cast<daxa_TlasBuildInfo const *>(&info),
                          r_cast<daxa_AccelerationStructureBuildSizesInfo *>(&ret)),
-                     "failed to get acceleration structure build sizes");
+                     "failed to get tlas build sizes");
+        return ret;
+    }
+
+    auto Device::get_blas_build_sizes(BlasBuildInfo const & info)
+        -> AccelerationStructureBuildSizesInfo
+    {
+        AccelerationStructureBuildSizesInfo ret = {};
+        check_result(daxa_dvc_get_blas_build_sizes(
+                         rc_cast<daxa_Device>(this->object),
+                         r_cast<daxa_BlasBuildInfo const *>(&info),
+                         r_cast<daxa_AccelerationStructureBuildSizesInfo *>(&ret)),
+                     "failed to get blas build sizes");
         return ret;
     }
 
@@ -296,11 +308,12 @@ namespace daxa
     _DAXA_DECL_GPU_RES_FN(Image, image)
     _DAXA_DECL_GPU_RES_FN(ImageView, image_view)
     _DAXA_DECL_GPU_RES_FN(Sampler, sampler)
-    _DAXA_DECL_GPU_RES_FN(AccelerationStructure, acceleration_structure)
+    _DAXA_DECL_GPU_RES_FN(Tlas, tlas)
+    _DAXA_DECL_GPU_RES_FN(Blas, blas)
 
-    auto Device::get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>
+    auto Device::get_device_address(BufferId id) const -> Optional<DeviceAddress>
     {
-        BufferDeviceAddress ret;
+        DeviceAddress ret;
         auto result = daxa_dvc_buffer_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
@@ -838,13 +851,12 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
-    void CommandRecorder::build_acceleration_structure(std::span<AccelerationStructureBuildInfo const> const & infos)
+    void CommandRecorder::build_acceleration_structures(BuildAccelerationStructuresInfo const & info)
     {
-        auto result = daxa_cmd_build_acceleration_structure(
+        auto result = daxa_cmd_build_acceleration_structures(
             this->internal,
-            r_cast<daxa_AccelerationStructureBuildInfo const *>(infos.data()),
-            static_cast<u32>(infos.size()));
-        check_result(result, "failed to build acceleration structure");
+            r_cast<daxa_BuildAccelerationStucturesInfo const *>(&info));
+        check_result(result, "failed to build acceleration structures");
     }
     _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)

@@ -295,15 +295,6 @@ static daxa_MemoryBlockImageInfo const DAXA_DEFAULT_MEMORY_BLOCK_IMAGE_INFO = DA
 
 typedef struct
 {
-    daxa_AccelerationStructureInfo acceleration_structure_info;
-    daxa_BufferId buffer_id;
-    uint64_t offset;
-} daxa_BufferAccelerationStructureInfo;
-
-static daxa_BufferAccelerationStructureInfo const DAXA_DEFAULT_BUFFER_ACCELERATION_STRUCTURE_INFO = DAXA_ZERO_INIT;
-
-typedef struct
-{
     daxa_TlasInfo tlas_info;
     daxa_BufferId buffer_id;
     uint64_t offset;
@@ -351,9 +342,9 @@ daxa_dvc_create_image_view(daxa_Device device, daxa_ImageViewInfo const * info, 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_sampler(daxa_Device device, daxa_SamplerInfo const * info, daxa_SamplerId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_create_tlas(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_TlasId * out_id);
+daxa_dvc_create_tlas(daxa_Device device, daxa_TlasInfo const * info, daxa_TlasId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_create_blas(daxa_Device device, daxa_AccelerationStructureInfo const * info, daxa_TlasId * out_id);
+daxa_dvc_create_blas(daxa_Device device, daxa_BlasInfo const * info, daxa_BlasId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_tlas_from_buffer(daxa_Device device, daxa_BufferTlasInfo const * info, daxa_TlasId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
@@ -370,7 +361,7 @@ daxa_dvc_destroy_sampler(daxa_Device device, daxa_SamplerId sampler);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_destroy_tlas(daxa_Device device, daxa_TlasId tlas);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_destroy_blas(daxa_Device device, daxa_TlasId blas);
+daxa_dvc_destroy_blas(daxa_Device device, daxa_BlasId blas);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_buffer(daxa_Device device, daxa_BufferId buffer, daxa_BufferInfo * out_info);
@@ -383,7 +374,7 @@ daxa_dvc_info_sampler(daxa_Device device, daxa_SamplerId sampler, daxa_SamplerIn
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_info_tlas(daxa_Device device, daxa_TlasId acceleration_structure, daxa_TlasInfo * out_info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_info_blas(daxa_Device device, daxa_TlasId acceleration_structure, daxa_BlasInfo * out_info);
+daxa_dvc_info_blas(daxa_Device device, daxa_BlasId acceleration_structure, daxa_BlasInfo * out_info);
 
 DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_buffer_valid(daxa_Device device, daxa_BufferId buffer);

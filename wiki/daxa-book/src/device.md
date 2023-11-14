@@ -65,7 +65,7 @@ auto daxa_cmd_copy_buffer_to_buffer(
 {
     ...
     // We check the validity of the ids here.
-    _DAXA_CHECK_AND_ENQUEUE_IDS(self, info->src_buffer, info->dst_buffer)            
+    _DAXA_CHECK_AND_REMEMBER_IDS(self, info->src_buffer, info->dst_buffer)            
     // After we checked the ids another thread could destroy the used buffers
     // and call collect garbage, fully deleting the data for the buffers internally.
     // This would cause the ids to dangle, we would read garbage past here.

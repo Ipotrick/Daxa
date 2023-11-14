@@ -29,7 +29,7 @@ namespace daxa
 
         struct Allocation
         {
-            daxa::BufferDeviceAddress device_address = {};
+            daxa::DeviceAddress device_address = {};
             void * host_address = {};
             u32 buffer_offset = {};
             usize size = {};
@@ -65,7 +65,7 @@ namespace daxa
         u64 current_timeline_value = {};
         std::deque<TrackedAllocation> live_allocations = {};
         BufferId m_buffer = {};
-        daxa::BufferDeviceAddress buffer_device_address = {};
+        daxa::DeviceAddress buffer_device_address = {};
         void * buffer_host_address = {};
         u32 claimed_start = {};
         u32 claimed_size = {};

@@ -152,26 +152,6 @@ daxa_memory_block_get_vma_allocation(daxa_MemoryBlock memory_block);
 
 typedef enum
 {
-    DAXA_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL = 0,
-    DAXA_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL = 1,
-    DAXA_ACCELERATION_STRUCTURE_TYPE_GENERIC = 2,
-} daxa_AccelerationStructureType;
-
-typedef struct
-{
-    uint64_t size;
-    daxa_AccelerationStructureType type;
-    daxa_SmallString name;
-} daxa_AccelerationStructureInfo;
-
-static daxa_AccelerationStructureInfo const DAXA_DEFAULT_ACCELERATION_STRUCTURE_INFO = {
-    .size = 0,
-    .type = DAXA_ACCELERATION_STRUCTURE_TYPE_GENERIC,
-    .name = {.data = DAXA_ZERO_INIT, .size = 0},
-};
-
-typedef enum
-{
     DAXA_GEOMETRY_OPAQUE = 0x1 << 0,
     DAXA_GEOMETRY_NO_DUPLICATE_ANY_HIT_INVOCATION = 0x1 << 1,
 } daxa_GeometryFlagBits;
@@ -187,7 +167,7 @@ typedef struct
     VkIndexType index_type;
     daxa_DeviceAddress index_data;
     daxa_DeviceAddress transform_data;
-    uint32_t primitive_count;
+    uint32_t count;
     daxa_GeometryFlags flags;
 } daxa_BlasTriangleGeometryInfo;
 
@@ -208,28 +188,39 @@ typedef struct
     daxa_GeometryFlags flags;
 } daxa_TlasInstanceInfo;
 
-typedef union
+typedef struct 
 {
     daxa_BlasTriangleGeometryInfo const * triangles;
+    size_t count;
+} daxa_BlasTriangleGeometryInfoSpan;
+
+typedef struct 
+{
     daxa_BlasAabbGeometryInfo const * aabbs;
-} daxa_BlasGeometryInfosUnion;
-_DAXA_DECL_VARIANT(daxa_BlasGeometryInfosUnion)
+    size_t count;
+} daxa_BlasAabbsGeometryInfoSpan;
+
+typedef union
+{
+    daxa_BlasTriangleGeometryInfoSpan triangles;
+    daxa_BlasAabbsGeometryInfoSpan aabbs;
+} daxa_BlasGeometryInfoSpansUnion;
+_DAXA_DECL_VARIANT(daxa_BlasGeometryInfoSpansUnion)
 
 typedef struct
 {
-    daxa_BlasId dst_acceleration_structure;
-    daxa_Variant(daxa_BlasGeometryInfosUnion) geometries;
-    uint32_t geometry_count;
-    daxa_DeviceAddress scratch_data;
-} daxa_BlasBuildInfo;
-
-typedef struct
-{
-    daxa_TlasId dst_acceleration_structure;
+    daxa_TlasId dst_tlas;
     daxa_TlasInstanceInfo const * instances;
     uint32_t instance_count;
     daxa_DeviceAddress scratch_data;
 } daxa_TlasBuildInfo;
+
+typedef struct
+{
+    daxa_BlasId dst_blas;
+    daxa_Variant(daxa_BlasGeometryInfoSpansUnion) geometries;
+    daxa_DeviceAddress scratch_data;
+} daxa_BlasBuildInfo;
 
 typedef struct
 {

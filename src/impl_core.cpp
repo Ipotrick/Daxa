@@ -224,9 +224,9 @@ auto mask_from_bit_count(u64 bits) -> u64
 void daxa_as_build_info_to_vk(
     daxa_Device device,
     daxa_TlasBuildInfo const * tlas_infos,
-    u32 tlas_count,
+    usize tlas_count,
     daxa_BlasBuildInfo const * blas_infos,
-    u32 blas_count,
+    usize blas_count,
     std::vector<VkAccelerationStructureBuildInfoKHR> & vk_build_geometry_infos,
     std::vector<VkAccelerationStructureGeometryInfoKHR> & vk_geometry_infos,
     std::vector<u32> & primitive_counts,
@@ -241,7 +241,8 @@ void daxa_as_build_info_to_vk(
     }
     for (u32 blas_i = 0; blas_i < blas_count; ++blas_i)
     {
-        geo_infos_count += blas_infos[blas_i].geometry_count;
+        // As both variants are spans and ABI compatible, we can just unconditionaally read one of the variants here.
+        geo_infos_count += blas_infos[blas_i].geometries.values.triangles.count;
     }
     vk_geometry_infos.reserve(geo_infos_count);
     primitive_counts.reserve(geo_infos_count);
@@ -278,8 +279,8 @@ void daxa_as_build_info_to_vk(
             .mode = {},                     // TODO(Raytracing)
             .srcAccelerationStructure = {}, // TODO(Raytracing)
             .dstAccelerationStructure =
-                info.dst_acceleration_structure.value != 0
-                    ? device->slot(info.dst_acceleration_structure).vk_acceleration_structure
+                info.dst_tlas.value != 0
+                    ? device->slot(info.dst_tlas).vk_acceleration_structure
                     : 0,
             .geometryCount = info.instance_count,
             .pGeometries = vk_geo_array_ptr,
@@ -293,7 +294,9 @@ void daxa_as_build_info_to_vk(
         daxa_BlasBuildInfo const & info = blas_infos[blas_i];
         VkAccelerationStructureGeometryInfoKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
         u32 const * primitive_counts_ptr = primitive_counts.data() + primitive_counts.size();
-        for (u32 geo_i = 0; geo_i < info.geometry_count; ++geo_i)
+        // As both variants are spans and ABI compatible, we can just unconditionaally read one of the variants here.
+        u32 const geo_count = static_cast<u32>(info.geometries.values.triangles.count);
+        for (u32 geo_i = 0; geo_i < geo_count; ++geo_i)
         {
             auto geo_info = VkAccelerationStructureGeometryInfoKHR{
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
@@ -302,31 +305,32 @@ void daxa_as_build_info_to_vk(
             if (info.geometries.index == 0) // triangles
             {
                 geo_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
-                geo_info.flags = info.geometries.values.triangles[geo_i].flags;
+                geo_info.flags = std::bit_cast<VkGeometryTypeKHR>(info.geometries.values.triangles.triangles[geo_i].flags);
                 geo_info.geometry.triangles = VkAccelerationStructureGeometryInfoTrianglesDataKHR{
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
                     .pNext = nullptr,
-                    .vertexFormat = info.geometries.values.triangles[geo_i].vertex_format,
-                    .vertexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles[geo_i].vertex_data),
-                    .vertexStride = info.geometries.values.triangles[geo_i].vertex_stride,
-                    .maxVertex = info.geometries.values.triangles[geo_i].max_vertex,
-                    .indexType = info.geometries.values.triangles[geo_i].index_type,
-                    .indexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles[geo_i].index_data),
-                    .transformData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles[geo_i].transform_data),
+                    .vertexFormat = info.geometries.values.triangles.triangles[geo_i].vertex_format,
+                    .vertexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles.triangles[geo_i].vertex_data),
+                    .vertexStride = info.geometries.values.triangles.triangles[geo_i].vertex_stride,
+                    .maxVertex = info.geometries.values.triangles.triangles[geo_i].max_vertex,
+                    .indexType = info.geometries.values.triangles.triangles[geo_i].index_type,
+                    .indexData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles.triangles[geo_i].index_data),
+                    .transformData = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.triangles.triangles[geo_i].transform_data),
                 };
+                primitive_counts.push_back(info.geometries.values.triangles.triangles[geo_i].count);
             }
             else // aabbs
             {
                 geo_info.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR,
-                geo_info.flags = info.geometries.values.aabbs[geo_i].flags;
+                geo_info.flags = info.geometries.values.aabbs.aabbs[geo_i].flags;
                 geo_info.geometry.aabbs = VkAccelerationStructureGeometryInfoAabbsDataKHR{
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
                     .pNext = nullptr,
-                    .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.aabbs[geo_i].data),
-                    .stride = info.geometries.values.aabbs[geo_i].stride,
+                    .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.aabbs.aabbs[geo_i].data),
+                    .stride = info.geometries.values.aabbs.aabbs[geo_i].stride,
                 };
+                primitive_counts.push_back(info.geometries.values.aabbs.aabbs[geo_i].count);
             }
-            primitive_counts.push_back(info.geometry_count);
             vk_geometry_infos.push_back(geo_info);
         }
         vk_build_geometry_infos.push_back(VkAccelerationStructureBuildInfoKHR{
@@ -337,11 +341,10 @@ void daxa_as_build_info_to_vk(
             .mode = {},                     // TODO(Raytracing)
             .srcAccelerationStructure = {}, // TODO(Raytracing)
             .dstAccelerationStructure =
-                // info.dst_acceleration_structure.value != 0
-                //     ? device->slot(info.dst_acceleration_structure).vk_acceleration_structure
-                //     : 0,
-            0,
-            .geometryCount = info.geometry_count,
+                info.dst_blas.value != 0
+                    ? device->slot(info.dst_blas).vk_acceleration_structure
+                    : 0,
+            .geometryCount = geo_count,
             .pGeometries = vk_geo_array_ptr,
             .ppGeometries = nullptr,
             .scratchData = std::bit_cast<VkDeviceOrHostAddressKHR>(info.scratch_data),

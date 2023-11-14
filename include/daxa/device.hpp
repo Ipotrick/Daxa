@@ -279,13 +279,6 @@ namespace daxa
         MemoryBlock & memory_block;
         usize offset = {};
     };
-
-    struct BufferAccelerationStructureInfo
-    {
-        AccelerationStructureInfo acceleration_structure_info = {};
-        BufferId buffer = {};
-        usize offset = {};
-    };
     
     struct AccelerationStructureBuildSizesInfo
     {
@@ -311,7 +304,8 @@ namespace daxa
         [[nodiscard]] auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
         [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
         [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
-        [[nodiscard]] auto get_acceleration_structure_build_sizes(AccelerationStructureBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
+        [[nodiscard]] auto get_tlas_build_sizes(TlasBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
+        [[nodiscard]] auto get_blas_build_sizes(BlasBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
 
         [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
         [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;
@@ -319,76 +313,39 @@ namespace daxa
         [[nodiscard]] auto create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId;
         [[nodiscard]] auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         [[nodiscard]] auto create_sampler(SamplerInfo const & info) -> SamplerId;
-        [[nodiscard]] auto create_acceleration_structure(AccelerationStructureInfo const & info) -> AccelerationStructureId;
-        [[nodiscard]] auto create_acceleration_structure_from_buffer(BufferAccelerationStructureInfo const & info) -> AccelerationStructureId;
+        [[nodiscard]] auto create_tlas(TlasInfo const & info) -> TlasId;
+        [[nodiscard]] auto create_blas(BlasInfo const & info) -> BlasId;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
-        void destroy_acceleration_structure(AccelerationStructureId id);
+        void destroy_tlas(TlasId id);
+        void destroy_blas(BlasId id);
 
         /// @brief  Daxa stores each create info and keeps it up to date if the object changes
         ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_buffer(BufferId id) const -> Optional<BufferInfo>;
-
-        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
-        /// @param id of the object.
-        /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_image(ImageId id) const -> Optional<ImageInfo>;
-
-        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
-        /// @param id of the object.
-        /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_image_view(ImageViewId id) const -> Optional<ImageViewInfo>;
-
-        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
-        /// @param id of the object.
-        /// @return a value copy of the info. Returns nullopt when the id is invalid.
         [[nodiscard]] auto info_sampler(SamplerId id) const -> Optional<SamplerInfo>;
-
-        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
-        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
-        /// @param id of the object.
-        /// @return a value copy of the info. Returns nullopt when the id is invalid.
-        [[nodiscard]] auto info_acceleration_structure(AccelerationStructureId id) const -> Optional<AccelerationStructureInfo>;
+        [[nodiscard]] auto info_tlas(TlasId id) const -> Optional<TlasInfo>;
+        [[nodiscard]] auto info_blas(BlasId id) const -> Optional<BlasInfo>;
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id or the object.
         /// @return validity of id
         [[nodiscard]] auto is_id_valid(ImageId id) const -> bool;
-
-        /// @brief  Will describe if a given id is valid.
-        ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id of the object.
-        /// @return validity of id
         [[nodiscard]] auto is_id_valid(ImageViewId id) const -> bool;
-
-        /// @brief  Will describe if a given id is valid.
-        ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id of the object.
-        /// @return validity of id
         [[nodiscard]] auto is_id_valid(BufferId id) const -> bool;
-
-        /// @brief  Will describe if a given id is valid.
-        ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id of the object.
-        /// @return validity of id
         [[nodiscard]] auto is_id_valid(SamplerId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(TlasId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(BlasId id) const -> bool;
 
-        /// @brief  Will describe if a given id is valid.
-        ///         An id is valid as long as it was created by the device and not yet destroyed.
-        /// @param id of the object.
-        /// @return validity of id
-        [[nodiscard]] auto is_id_valid(AccelerationStructureId id) const -> bool;
-
-        [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<BufferDeviceAddress>;
+        [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<DeviceAddress>;
         [[nodiscard]] auto get_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>
         [[nodiscard]] auto get_host_address_as(BufferId id) const -> Optional<T *>

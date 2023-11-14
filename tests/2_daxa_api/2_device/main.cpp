@@ -51,10 +51,13 @@ namespace tests
         .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
         .name = "test image",
     };
-    constexpr daxa::AccelerationStructureInfo test_acceleration_structure_info = {
+    constexpr daxa::TlasInfo test_tlas_info = {
         .size = 256,
-        .type = daxa::AccelerationStructureType::GENERIC,
-        .name = "test acceleration structure",
+        .name = "test tlas",
+    };
+    constexpr daxa::BlasInfo test_blas_info = {
+        .size = 256,
+        .name = "test blas",
     };
     void sro_creation(daxa::Instance & instance)
     {
@@ -136,8 +139,10 @@ namespace tests
                 return;
             }
 
-            auto test_as = device.create_acceleration_structure(test_acceleration_structure_info);
-            device.destroy_acceleration_structure(test_as);
+            auto test_tlas = device.create_tlas(test_tlas_info);
+            auto test_blas = device.create_blas(test_blas_info);
+            device.destroy_blas(test_blas);
+            device.destroy_tlas(test_tlas);
         }
         catch (std::runtime_error error)
         {

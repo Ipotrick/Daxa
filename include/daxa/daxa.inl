@@ -69,9 +69,9 @@
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
-#define daxa_RWBufferPtr(x) daxa::types::BufferDeviceAddress
+#define daxa_RWBufferPtr(x) daxa::types::DeviceAddress
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
-#define daxa_BufferPtr(x) daxa::types::BufferDeviceAddress
+#define daxa_BufferPtr(x) daxa::types::DeviceAddress
 
 #endif
 #endif

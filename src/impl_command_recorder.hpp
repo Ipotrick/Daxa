@@ -53,6 +53,8 @@ struct ExecutableCommandListData
     std::vector<ImageId> used_images = {};
     std::vector<ImageViewId> used_image_views = {};
     std::vector<SamplerId> used_samplers = {};
+    std::vector<TlasId> used_tlass = {};
+    std::vector<BlasId> used_blass = {};
 };
 
 struct daxa_ImplCommandRecorder final : ImplHandle

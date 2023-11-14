@@ -367,7 +367,7 @@ In this instance the shared file allows us to define the vertex and push constan
 
 In the shared file we declare the MyVertex struct and enable buffer pointers to it via `DAXA_DECL_BUFFER_PTR`. We also use the Daxa provided type `daxa_f32vec4` here which will translate to a `vec4` in GLSL and `daxa::f32vec4` in C++.
 
-Then lastly we declare a strut for the push constant. This struct contains a buffer pointer. This buffer pointer will become a `daxa::BufferDeviceAddress` in C++.
+Then lastly we declare a strut for the push constant. This struct contains a buffer pointer. This buffer pointer will become a `daxa::DeviceAddress` in C++.
 
 To learn more about this, I again refer to the shader integration wiki page.
 

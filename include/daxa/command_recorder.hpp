@@ -227,6 +227,12 @@ namespace daxa
         IndexType index_type = IndexType::uint32;
     };
 
+    struct BuildAccelerationStructuresInfo
+    {
+        std::span<TlasBuildInfo const> tlas_build_infos = {};
+        std::span<BlasBuildInfo const> blas_build_infos = {};
+    };
+
     struct ExecutableCommandList : ManagedPtr<ExecutableCommandList, daxa_ExecutableCommandList>
     {
       protected:
@@ -326,7 +332,7 @@ namespace daxa
         void blit_image_to_image(ImageBlitInfo const & info);
         void clear_buffer(BufferClearInfo const & info);
         void clear_image(ImageClearInfo const & info);
-        void build_acceleration_structure(std::span<AccelerationStructureBuildInfo const> const & infos);
+        void build_acceleration_structures(BuildAccelerationStructuresInfo const & info);
 
         /// @brief  Successive pipeline barrier calls are combined.
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.

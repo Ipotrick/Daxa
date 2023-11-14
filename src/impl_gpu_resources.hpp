@@ -59,14 +59,25 @@ namespace daxa
         VkSampler vk_sampler = {};
     };
 
-    struct ImplAccelerationStructureSlot
+    struct ImplTlasSlot
     {
-        daxa_AccelerationStructureInfo info = {};
+        daxa_TlasInfo info = {};
         VkAccelerationStructureKHR vk_acceleration_structure = {};
         VkBuffer vk_buffer = {};
         BufferId buffer_id = {};
         u64 offset = {};
-        daxa_DeviceAddress bda = {};
+        daxa_DeviceAddress address = {};
+        bool owns_buffer = {};
+    };
+
+    struct ImplBlasSlot
+    {
+        daxa_BlasInfo info = {};
+        VkAccelerationStructureKHR vk_acceleration_structure = {};
+        VkBuffer vk_buffer = {};
+        BufferId buffer_id = {};
+        u64 offset = {};
+        daxa_DeviceAddress address = {};
         bool owns_buffer = {};
     };
 
@@ -233,7 +244,8 @@ namespace daxa
         GpuResourcePool<ImplBufferSlot> buffer_slots = {};
         GpuResourcePool<ImplImageSlot> image_slots = {};
         GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
-        GpuResourcePool<ImplAccelerationStructureSlot> acceleration_structure_slots = {};
+        GpuResourcePool<ImplTlasSlot> tlas_slots = {};
+        GpuResourcePool<ImplBlasSlot> blas_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
         VkDescriptorSetLayout uniform_buffer_descriptor_set_layout = {};
