@@ -227,7 +227,7 @@ namespace tests
                     .frame_dim = {render_target_size.x, render_target_size.y},
                 };
                 recorder.push_constant(push);
-                recorder.dispatch((render_target_size.x + 7) / 8, (render_target_size.y + 7) / 8);
+                recorder.dispatch({(render_target_size.x + 7) / 8, (render_target_size.y + 7) / 8});
             }
             void draw_ui(daxa::CommandRecorder & recorder, daxa::ImageId render_target_id)
             {
