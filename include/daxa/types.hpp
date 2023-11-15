@@ -80,11 +80,6 @@ namespace daxa
             return this->object != nullptr;
         }
 
-        operator bool() const
-        {
-            return this->is_valid();
-        }
-
       protected:
         HANDLE_T object = {};
 
