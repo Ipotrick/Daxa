@@ -326,6 +326,36 @@ namespace daxa
         return {};
     }
 
+    auto Device::get_device_address(TlasId id) const -> Optional<DeviceAddress>
+    {
+        DeviceAddress ret;
+        auto result = daxa_dvc_tlas_device_address(
+            rc_cast<daxa_Device>(this->object),
+            static_cast<daxa_TlasId>(id),
+            r_cast<daxa_DeviceAddress *>(&ret));
+        if (result == DAXA_RESULT_SUCCESS)
+        {
+            return {ret};
+        }
+        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_TLAS_ID});
+        return {};
+    }
+
+    auto Device::get_device_address(BlasId id) const -> Optional<DeviceAddress>
+    {
+        DeviceAddress ret;
+        auto result = daxa_dvc_blas_device_address(
+            rc_cast<daxa_Device>(this->object),
+            static_cast<daxa_BlasId>(id),
+            r_cast<daxa_DeviceAddress *>(&ret));
+        if (result == DAXA_RESULT_SUCCESS)
+        {
+            return {ret};
+        }
+        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BLAS_ID});
+        return {};
+    }
+
     auto Device::get_host_address(BufferId id) const -> Optional<std::byte *>
     {
         std::byte * ret;

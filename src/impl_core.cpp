@@ -227,8 +227,8 @@ void daxa_as_build_info_to_vk(
     usize tlas_count,
     daxa_BlasBuildInfo const * blas_infos,
     usize blas_count,
-    std::vector<VkAccelerationStructureBuildInfoKHR> & vk_build_geometry_infos,
-    std::vector<VkAccelerationStructureGeometryInfoKHR> & vk_geometry_infos,
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR > & vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureGeometryKHR> & vk_geometry_infos,
     std::vector<u32> & primitive_counts,
     std::vector<u32 const *> & primitive_counts_ptrs)
 {
@@ -249,29 +249,29 @@ void daxa_as_build_info_to_vk(
     for (u32 tlas_i = 0; tlas_i < tlas_count; ++tlas_i)
     {
         daxa_TlasBuildInfo const & info = tlas_infos[tlas_i];
-        VkAccelerationStructureGeometryInfoKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
+        VkAccelerationStructureGeometryKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
         u32 const * primitive_counts_ptr = primitive_counts.data() + primitive_counts.size();
         for (u32 inst_i = 0; inst_i < info.instance_count; ++inst_i)
         {
             daxa_TlasInstanceInfo const & inst_info = info.instances[inst_i];
-            VkAccelerationStructureGeometryInfoInstancesDataKHR vk_inst_data = {
+            VkAccelerationStructureGeometryInstancesDataKHR vk_inst_data = {
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
                 .pNext = nullptr,
                 .arrayOfPointers = static_cast<VkBool32>(inst_info.is_data_array_of_pointers),
                 .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(inst_info.data),
             };
-            vk_geometry_infos.push_back(VkAccelerationStructureGeometryInfoKHR{
+            vk_geometry_infos.push_back(VkAccelerationStructureGeometryKHR{
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
                 .pNext = nullptr,
                 .geometryType = VK_GEOMETRY_TYPE_INSTANCES_KHR,
-                .geometry = VkAccelerationStructureGeometryInfoDataKHR{
+                .geometry = VkAccelerationStructureGeometryDataKHR{
                     .instances = vk_inst_data,
                 },
                 .flags = std::bit_cast<VkGeometryFlagsKHR>(inst_info.flags),
             });
             primitive_counts.push_back(info.instance_count);
         }
-        vk_build_geometry_infos.push_back(VkAccelerationStructureBuildInfoKHR{
+        vk_build_geometry_infos.push_back({
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
             .pNext = nullptr,
             .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
@@ -292,13 +292,13 @@ void daxa_as_build_info_to_vk(
     for (u32 blas_i = 0; blas_i < blas_count; ++blas_i)
     {
         daxa_BlasBuildInfo const & info = blas_infos[blas_i];
-        VkAccelerationStructureGeometryInfoKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
+        VkAccelerationStructureGeometryKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
         u32 const * primitive_counts_ptr = primitive_counts.data() + primitive_counts.size();
         // As both variants are spans and ABI compatible, we can just unconditionaally read one of the variants here.
         u32 const geo_count = static_cast<u32>(info.geometries.values.triangles.count);
         for (u32 geo_i = 0; geo_i < geo_count; ++geo_i)
         {
-            auto geo_info = VkAccelerationStructureGeometryInfoKHR{
+            auto geo_info = VkAccelerationStructureGeometryKHR{
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
                 .pNext = nullptr,
             };
@@ -306,7 +306,7 @@ void daxa_as_build_info_to_vk(
             {
                 geo_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,
                 geo_info.flags = std::bit_cast<VkGeometryTypeKHR>(info.geometries.values.triangles.triangles[geo_i].flags);
-                geo_info.geometry.triangles = VkAccelerationStructureGeometryInfoTrianglesDataKHR{
+                geo_info.geometry.triangles = VkAccelerationStructureGeometryTrianglesDataKHR{
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_TRIANGLES_DATA_KHR,
                     .pNext = nullptr,
                     .vertexFormat = info.geometries.values.triangles.triangles[geo_i].vertex_format,
@@ -323,7 +323,7 @@ void daxa_as_build_info_to_vk(
             {
                 geo_info.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR,
                 geo_info.flags = info.geometries.values.aabbs.aabbs[geo_i].flags;
-                geo_info.geometry.aabbs = VkAccelerationStructureGeometryInfoAabbsDataKHR{
+                geo_info.geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR{
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
                     .pNext = nullptr,
                     .data = std::bit_cast<VkDeviceOrHostAddressConstKHR>(info.geometries.values.aabbs.aabbs[geo_i].data),
@@ -333,7 +333,7 @@ void daxa_as_build_info_to_vk(
             }
             vk_geometry_infos.push_back(geo_info);
         }
-        vk_build_geometry_infos.push_back(VkAccelerationStructureBuildInfoKHR{
+        vk_build_geometry_infos.push_back({
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
             .pNext = nullptr,
             .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,

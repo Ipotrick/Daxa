@@ -346,6 +346,8 @@ namespace daxa
         [[nodiscard]] auto is_id_valid(BlasId id) const -> bool;
 
         [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto get_device_address(BlasId id) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto get_device_address(TlasId id) const -> Optional<DeviceAddress>;
         [[nodiscard]] auto get_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>
         [[nodiscard]] auto get_host_address_as(BufferId id) const -> Optional<T *>

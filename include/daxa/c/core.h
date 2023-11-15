@@ -5,10 +5,15 @@
 
 #if defined(__cplusplus)
 #define DAXA_EXPORT extern "C"
-#define DAXA_ZERO_INIT {}
+#define DAXA_ZERO_INIT \
+    {                  \
+    }
 #else
 #define DAXA_EXPORT
-#define DAXA_ZERO_INIT {0}
+#define DAXA_ZERO_INIT \
+    {                  \
+        0              \
+    }
 #endif
 
 #if defined(__cplusplus)
@@ -22,12 +27,12 @@
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_HLSL 2
 
-static const uint32_t DAXA_ID_INDEX_BITS = 20;
-static const uint32_t DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
-static const uint32_t DAXA_ID_INDEX_OFFSET = 0;
-static const uint32_t DAXA_ID_VERSION_BITS = 44;
-static const uint64_t DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
-static const uint32_t DAXA_ID_VERSION_OFFSET = 20;
+static uint32_t const DAXA_ID_INDEX_BITS = 20;
+static uint32_t const DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
+static uint32_t const DAXA_ID_INDEX_OFFSET = 0;
+static uint32_t const DAXA_ID_VERSION_BITS = 44;
+static uint64_t const DAXA_ID_VERSION_MASK = (1ull << 44) - 1ull;
+static uint32_t const DAXA_ID_VERSION_OFFSET = 20;
 
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
@@ -221,5 +226,22 @@ daxa_u32mat4x4;
 #elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+// TODO(Raytracing): Should this say like this?
+static uint32_t const DAXA_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE_BIT_KHR = 0x00000001;
+static uint32_t const DAXA_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING_BIT_KHR = 0x00000002;
+static uint32_t const DAXA_GEOMETRY_INSTANCE_FORCE_OPAQUE_BIT_KHR = 0x00000004;
+static uint32_t const DAXA_GEOMETRY_INSTANCE_FORCE_NO_OPAQUE_BIT_KHR = 0x00000008;
+
+/// ABI: Must stay compatible with 'VkAccelerationStructureInstanceKHR'
+typedef struct
+{
+    daxa_f32mat3x4 transform;
+    uint32_t instance_custom_index : 24;
+    uint32_t mask : 8;
+    uint32_t instance_shader_binding_table_record_offset : 24;
+    uint32_t flags : 8;
+    uint64_t blas_device_address;
+} daxa_BlasInstanceData;
 
 #endif

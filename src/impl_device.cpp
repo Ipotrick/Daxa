@@ -395,8 +395,6 @@ auto create_acceleration_structure_helper(
     }
     ret.vk_buffer = self->slot(ret.buffer_id).vk_buffer;
 
-    [[maybe_unused]] daxa_Result safely_ignorable = daxa_dvc_buffer_device_address(self, ret.buffer_id, &ret.address);
-
     VkAccelerationStructureCreateInfoKHR vk_create_info = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
         .pNext = nullptr,
@@ -405,7 +403,7 @@ auto create_acceleration_structure_helper(
         .offset = ret.offset,
         .size = ret.info.size,
         .type = vk_as_type,
-        .deviceAddress = std::bit_cast<VkDeviceAddress>(ret.address),
+        // .deviceAddress = std::bit_cast<VkDeviceAddress>(ret.device_address), // TODO(Raytracing): I guess this is set by debug tooling?
     };
     auto vk_result = self->vkCreateAccelerationStructureKHR(self->vk_device, &vk_create_info, nullptr, &ret.vk_acceleration_structure);
     if (vk_result != VK_SUCCESS)
@@ -414,6 +412,16 @@ auto create_acceleration_structure_helper(
         [[maybe_unused]] auto const _ignore =  daxa_dvc_destroy_buffer(self, ret.buffer_id);
         return std::bit_cast<daxa_Result>(vk_result);
     }
+
+    auto vk_acceleration_structure_device_address_info_khr = VkAccelerationStructureDeviceAddressInfoKHR{
+        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_DEVICE_ADDRESS_INFO_KHR,
+        .pNext = nullptr,
+        .accelerationStructure = ret.vk_acceleration_structure,
+    };
+    ret.device_address = self->vkGetAccelerationStructureDeviceAddressKHR(
+        self->vk_device,
+        &vk_acceleration_structure_device_address_info_khr
+    );
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
@@ -511,8 +519,8 @@ auto daxa_dvc_get_tlas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
-    std::vector<VkAccelerationStructureBuildInfoKHR> vk_build_geometry_infos = {};
-    std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos = {};
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> vk_build_geometry_infos = {};
+    std::vector<VkAccelerationStructureGeometryKHR> vk_geometry_infos = {};
     std::vector<u32> primitive_counts = {};
     std::vector<u32 const *> primitive_counts_ptrs = {};
     daxa_as_build_info_to_vk(
@@ -547,8 +555,8 @@ auto daxa_dvc_get_blas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
-    std::vector<VkAccelerationStructureBuildInfoKHR> vk_build_geometry_infos = {};
-    std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos = {};
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> vk_build_geometry_infos = {};
+    std::vector<VkAccelerationStructureGeometryKHR> vk_geometry_infos = {};
     std::vector<u32> primitive_counts = {};
     std::vector<u32 const *> primitive_counts_ptrs = {};
     daxa_as_build_info_to_vk(
@@ -790,23 +798,47 @@ _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots, VkS
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(tlas, Tlas, TLAS, tlas_slots, VkAccelerationStructureKHR)
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(blas, Blas, BLAS, blas_slots, VkAccelerationStructureKHR)
 
-auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_DeviceAddress * out_bda) -> daxa_Result
+auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_DeviceAddress * out_addr) -> daxa_Result
 {
-    if (self->slot(std::bit_cast<BufferId>(id)).device_address == 0)
+    if (!daxa_dvc_is_buffer_valid(self, id))
     {
-        return DAXA_RESULT_BUFFER_NOT_DEVICE_VISIBLE;
+        return DAXA_RESULT_INVALID_BUFFER_ID;
     }
-    *out_bda = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<BufferId>(id)).device_address);
+    *out_addr = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<BufferId>(id)).device_address);
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId id, void ** out_ptr) -> daxa_Result
+auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId id, void ** out_addr) -> daxa_Result
 {
+    if (!daxa_dvc_is_buffer_valid(self, id))
+    {
+        return DAXA_RESULT_INVALID_BUFFER_ID;
+    }
     if (self->slot(std::bit_cast<BufferId>(id)).host_address == 0)
     {
         return DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE;
     }
-    *out_ptr = self->slot(std::bit_cast<BufferId>(id)).host_address;
+    *out_addr = self->slot(std::bit_cast<BufferId>(id)).host_address;
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_tlas_device_address(daxa_Device self, daxa_TlasId id, daxa_DeviceAddress * out_addr) -> daxa_Result
+{
+    if (!daxa_dvc_is_tlas_valid(self, id))
+    {
+        return DAXA_RESULT_INVALID_TLAS_ID;
+    }
+    *out_addr = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<TlasId>(id)).device_address);
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_blas_device_address(daxa_Device self, daxa_BlasId id, daxa_DeviceAddress * out_addr) -> daxa_Result
+{
+    if (!daxa_dvc_is_blas_valid(self, id))
+    {
+        return DAXA_RESULT_INVALID_BLAS_ID;
+    }
+    *out_addr = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<BlasId>(id)).device_address);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1239,6 +1271,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         self->vkDestroyAccelerationStructureKHR = r_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(self->vk_device, "vkDestroyAccelerationStructureKHR"));
         self->vkCmdWriteAccelerationStructuresPropertiesKHR = r_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdWriteAccelerationStructuresPropertiesKHR"));
         self->vkCmdBuildAccelerationStructuresKHR = r_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBuildAccelerationStructuresKHR"));
+        self->vkGetAccelerationStructureDeviceAddressKHR = r_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetAccelerationStructureDeviceAddressKHR"));
     }
 
     vkGetDeviceQueue(self->vk_device, self->main_queue_family_index, 0, &self->main_queue_vk_queue);

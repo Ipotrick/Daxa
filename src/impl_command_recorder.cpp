@@ -386,8 +386,8 @@ auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_Buil
         _DAXA_REMEMBER_IDS(self, bb_info.dst_blas)
     }
     // TODO(Raytracing): properties validation!
-    std::vector<VkAccelerationStructureBuildInfoKHR> vk_build_geometry_infos;
-    std::vector<VkAccelerationStructureGeometryInfoKHR> vk_geometry_infos;
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> vk_build_geometry_infos;
+    std::vector<VkAccelerationStructureGeometryKHR> vk_geometry_infos;
     std::vector<u32> primitive_counts;
     std::vector<u32 const *> primitive_counts_ptrs;
     daxa_as_build_info_to_vk(

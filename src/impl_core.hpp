@@ -104,8 +104,8 @@ void daxa_as_build_info_to_vk(
     usize tlas_count,
     daxa_BlasBuildInfo const * blas_infos,
     usize blas_count,
-    std::vector<VkAccelerationStructureBuildInfoKHR> & vk_build_geometry_infos,
-    std::vector<VkAccelerationStructureGeometryInfoKHR> & vk_geometry_infos,
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> & vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureGeometryKHR> & vk_geometry_infos,
     std::vector<u32> & primitive_counts,
     std::vector<u32 const *> & primitive_counts_ptrs
 );
