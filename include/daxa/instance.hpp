@@ -26,7 +26,7 @@ namespace daxa
         SmallString app_name = "daxa app";
     };
 
-    struct Instance final : ManagedPtr<Instance, daxa_Instance>
+    struct DAXA_EXPORT_CXX Instance final : ManagedPtr<Instance, daxa_Instance>
     {
         Instance() = default;
 
@@ -44,5 +44,5 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    [[nodiscard]] auto create_instance(InstanceInfo const & info) -> Instance;
+    DAXA_EXPORT_CXX [[nodiscard]] auto create_instance(InstanceInfo const & info) -> Instance;
 } // namespace daxa

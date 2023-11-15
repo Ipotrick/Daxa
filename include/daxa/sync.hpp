@@ -25,14 +25,14 @@ namespace daxa
         ImageId image_id = {};
     };
 
-    [[nodiscard]] auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
+    DAXA_EXPORT_CXX [[nodiscard]] auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
 
     struct BinarySemaphoreInfo
     {
         SmallString name = "";
     };
 
-    struct BinarySemaphore final : ManagedPtr<BinarySemaphore, daxa_BinarySemaphore>
+    struct DAXA_EXPORT_CXX BinarySemaphore final : ManagedPtr<BinarySemaphore, daxa_BinarySemaphore>
     {
         BinarySemaphore() = default;
 
@@ -54,7 +54,7 @@ namespace daxa
         SmallString name = "";
     };
 
-    struct TimelineSemaphore final : ManagedPtr<TimelineSemaphore, daxa_TimelineSemaphore>
+    struct DAXA_EXPORT_CXX TimelineSemaphore final : ManagedPtr<TimelineSemaphore, daxa_TimelineSemaphore>
     {
         TimelineSemaphore() = default;
 
@@ -79,7 +79,7 @@ namespace daxa
         SmallString name = "";
     };
 
-    struct Event final : ManagedPtr<Event, daxa_Event>
+    struct DAXA_EXPORT_CXX Event final : ManagedPtr<Event, daxa_Event>
     {
         Event() = default;
 

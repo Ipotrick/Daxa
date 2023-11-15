@@ -173,7 +173,7 @@ namespace daxa
         u32 prefers_compact_primitive_output = {};
     };
 
-    auto default_device_score(DeviceProperties const & device_props) -> i32;
+    DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
 
     struct DeviceFlagsProperties
     {
@@ -245,7 +245,7 @@ namespace daxa
      * * can be passed between different threads
      * * may be accessed by multiple threads at the same time
      */
-    struct Device final : ManagedPtr<Device, daxa_Device>
+    struct DAXA_EXPORT_CXX Device final : ManagedPtr<Device, daxa_Device>
     {
         Device() = default;
 

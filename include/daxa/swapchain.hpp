@@ -40,7 +40,7 @@ namespace daxa
      * * can be passed between different threads
      * * may be accessed by only one thread at the same time
      */
-    struct Swapchain final : ManagedPtr<Swapchain, daxa_Swapchain>
+    struct DAXA_EXPORT_CXX Swapchain final : ManagedPtr<Swapchain, daxa_Swapchain>
     {
         Swapchain() = default;
 

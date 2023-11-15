@@ -107,7 +107,7 @@ namespace daxa
     using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
     struct ImplPipelineManager;
-    struct PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
+    struct DAXA_EXPORT_CXX PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
     {
         PipelineManager() = default;
 

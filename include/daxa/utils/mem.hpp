@@ -22,10 +22,10 @@ namespace daxa
     /// @brief Ring buffer based transfer memory allocator for easy and efficient cpu gpu communication.
     struct TransferMemoryPool
     {
-        TransferMemoryPool(TransferMemoryPoolInfo a_info);
-        TransferMemoryPool(TransferMemoryPool && other);
-        TransferMemoryPool & operator=(TransferMemoryPool && other);
-        ~TransferMemoryPool();
+        DAXA_EXPORT_CXX TransferMemoryPool(TransferMemoryPoolInfo a_info);
+        DAXA_EXPORT_CXX TransferMemoryPool(TransferMemoryPool && other);
+        DAXA_EXPORT_CXX TransferMemoryPool & operator=(TransferMemoryPool && other);
+        DAXA_EXPORT_CXX ~TransferMemoryPool();
 
         struct Allocation
         {
@@ -36,21 +36,21 @@ namespace daxa
             u64 timeline_index = {};
         };
         // Returns nullopt if the allocation fails.
-        auto allocate(u32 size, u32 alignment_requirement = 1) -> std::optional<Allocation>;
+        DAXA_EXPORT_CXX auto allocate(u32 size, u32 alignment_requirement = 1) -> std::optional<Allocation>;
         // Returns current timeline index.
-        auto timeline_value() const -> usize;
+        DAXA_EXPORT_CXX auto timeline_value() const -> usize;
         // Returns timeline semaphore that needs to be signaled with the latest timeline value,
         // on a queue that uses memory from this pool.
-        auto timeline_semaphore() -> TimelineSemaphore;
-        auto buffer() const -> daxa::BufferId;
+        DAXA_EXPORT_CXX auto timeline_semaphore() -> TimelineSemaphore;
+        DAXA_EXPORT_CXX auto buffer() const -> daxa::BufferId;
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TransferMemoryPoolInfo const &;
+        DAXA_EXPORT_CXX auto info() const -> TransferMemoryPoolInfo const &;
 
       private:
         // Reclaim expired memory allocations.
-        void reclaim_unused_memory();
+        DAXA_EXPORT_CXX void reclaim_unused_memory();
         struct TrackedAllocation
         {
             usize timeline_index = {};

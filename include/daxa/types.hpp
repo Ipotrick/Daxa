@@ -80,11 +80,6 @@ namespace daxa
             return this->object != nullptr;
         }
 
-        operator bool() const
-        {
-            return this->is_valid();
-        }
-
       protected:
         HANDLE_T object = {};
 
@@ -1266,7 +1261,7 @@ namespace daxa
 
     [[nodiscard]] auto to_string(ImageLayout layout) -> std::string_view;
 
-    struct ImageMipArraySlice
+    struct DAXA_EXPORT_CXX ImageMipArraySlice
     {
         u32 base_mip_level = 0;
         u32 level_count = 1;
@@ -1283,7 +1278,7 @@ namespace daxa
 
     [[nodiscard]] auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
 
-    struct ImageArraySlice
+    struct DAXA_EXPORT_CXX ImageArraySlice
     {
         u32 mip_level = 0;
         u32 base_array_layer = 0;
@@ -1298,7 +1293,7 @@ namespace daxa
 
     [[nodiscard]] auto to_string(ImageArraySlice image_array_slice) -> std::string;
 
-    struct ImageSlice
+    struct DAXA_EXPORT_CXX ImageSlice
     {
         u32 mip_level = 0;
         u32 array_layer = 0;
@@ -1425,10 +1420,10 @@ namespace daxa
         friend auto operator<=>(Access const &, Access const &) = default;
     };
 
-    [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
-    [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
+    DAXA_EXPORT_CXX [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
+    DAXA_EXPORT_CXX [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
 
-    [[nodiscard]] auto to_string(Access access) -> std::string;
+    DAXA_EXPORT_CXX [[nodiscard]] auto to_string(Access access) -> std::string;
 
     namespace AccessConsts
     {
@@ -1709,7 +1704,7 @@ namespace daxa
         MemoryFlags flags = {};
     };
 
-    struct MemoryBlock : ManagedPtr<MemoryBlock, daxa_MemoryBlock>
+    struct DAXA_EXPORT_CXX MemoryBlock : ManagedPtr<MemoryBlock, daxa_MemoryBlock>
     {
         MemoryBlock() = default;
 
@@ -1731,7 +1726,7 @@ namespace daxa
         SmallString name = "";
     };
 
-    struct TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>
+    struct DAXA_EXPORT_CXX TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>
     {
         TimelineQueryPool() = default;
 

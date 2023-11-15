@@ -19,7 +19,7 @@ namespace daxa
 
     using TaskInputDefaultT = std::span<GenericTaskResourceUse>;
 
-    struct TaskInterfaceUses
+    struct DAXA_EXPORT_CXX TaskInterfaceUses
     {
         auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
         auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
@@ -34,7 +34,7 @@ namespace daxa
         void * backend = {};
     };
 
-    struct TaskInterface
+    struct DAXA_EXPORT_CXX TaskInterface
     {
         auto get_device() const -> Device &;
         auto get_recorder() const -> CommandRecorder &;
@@ -181,14 +181,14 @@ namespace daxa
     {
         TaskGraph() = default;
 
-        TaskGraph(TaskGraphInfo const & info);
-        ~TaskGraph();
+        DAXA_EXPORT_CXX TaskGraph(TaskGraphInfo const & info);
+        DAXA_EXPORT_CXX ~TaskGraph();
 
-        void use_persistent_buffer(TaskBuffer const & buffer);
-        void use_persistent_image(TaskImage const & image);
+        DAXA_EXPORT_CXX void use_persistent_buffer(TaskBuffer const & buffer);
+        DAXA_EXPORT_CXX void use_persistent_image(TaskImage const & image);
 
-        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
-        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
+        DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
+        DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
 
         template <typename Task>
         void add_task(Task const & task)
@@ -197,7 +197,7 @@ namespace daxa
             add_task(std::move(base_task));
         }
 
-        void add_task(InlineTaskInfo && info)
+        inline void add_task(InlineTaskInfo && info)
         {
             std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::InlineTask>(
                 std::move(info.uses),
@@ -207,29 +207,29 @@ namespace daxa
             add_task(std::move(base_task));
         }
 
-        void add_preamble(TaskCallback callback);
+        DAXA_EXPORT_CXX void add_preamble(TaskCallback callback);
 
-        void conditional(TaskGraphConditionalInfo const & conditional_info);
-        void submit(TaskSubmitInfo const & info);
-        void present(TaskPresentInfo const & info);
+        DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
+        DAXA_EXPORT_CXX void submit(TaskSubmitInfo const & info);
+        DAXA_EXPORT_CXX void present(TaskPresentInfo const & info);
 
         // TODO: make move only. Return ExecutableTaskGraph.
-        void complete(TaskCompleteInfo const & info);
+        DAXA_EXPORT_CXX void complete(TaskCompleteInfo const & info);
 
-        void execute(ExecutionInfo const & info);
+        DAXA_EXPORT_CXX void execute(ExecutionInfo const & info);
         // TODO: Reimplement in another way.
         // auto get_command_lists() -> std::vector<CommandRecorder>;
 
-        auto get_debug_string() -> std::string;
-        auto get_transient_memory_size() -> daxa::usize;
+        DAXA_EXPORT_CXX auto get_debug_string() -> std::string;
+        DAXA_EXPORT_CXX auto get_transient_memory_size() -> daxa::usize;
 
       protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;
-        static auto inc_refcnt(ImplHandle const * object) -> u64;
-        static auto dec_refcnt(ImplHandle const * object) -> u64;
+        DAXA_EXPORT_CXX static auto inc_refcnt(ImplHandle const * object) -> u64;
+        DAXA_EXPORT_CXX static auto dec_refcnt(ImplHandle const * object) -> u64;
 
       private:
-        void add_task(std::unique_ptr<detail::BaseTask> && base_task);
+        DAXA_EXPORT_CXX void add_task(std::unique_ptr<detail::BaseTask> && base_task);
     };
 } // namespace daxa

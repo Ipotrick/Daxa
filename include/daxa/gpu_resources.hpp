@@ -17,9 +17,9 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(ImageViewType const & type) -> std::string_view;
+    DAXA_EXPORT_CXX auto to_string(ImageViewType const & type) -> std::string_view;
 
-    struct GPUResourceId
+    struct DAXA_EXPORT_CXX GPUResourceId
     {
         u64 index : 20 = {};
         u64 version : 44 = {};
@@ -42,12 +42,12 @@ namespace daxa
     {
         struct BufferId : public GPUResourceId
         {
-            operator daxa_BufferId() const { return std::bit_cast<daxa_BufferId>(*this); }
+            constexpr operator daxa_BufferId() const { return std::bit_cast<daxa_BufferId>(*this); }
         };
 
         struct ImageViewId : public GPUResourceId
         {
-            operator daxa_ImageViewId() const { return std::bit_cast<daxa_ImageViewId>(*this); }
+            constexpr operator daxa_ImageViewId() const { return std::bit_cast<daxa_ImageViewId>(*this); }
         };
 
         template <ImageViewType VIEW_TYPE>
@@ -58,17 +58,17 @@ namespace daxa
 
         struct ImageId : public GPUResourceId
         {
-            operator daxa_ImageId() const { return std::bit_cast<daxa_ImageId>(*this); }
-            auto default_view() const -> ImageViewId;
+            constexpr operator daxa_ImageId() const { return std::bit_cast<daxa_ImageId>(*this); }
+            DAXA_EXPORT_CXX auto default_view() const -> ImageViewId;
         };
 
         struct SamplerId : public GPUResourceId
         {
-            operator daxa_SamplerId() const { return std::bit_cast<daxa_SamplerId>(*this); }
+            constexpr operator daxa_SamplerId() const { return std::bit_cast<daxa_SamplerId>(*this); }
         };
     } // namespace types
 
-    auto to_string(GPUResourceId const & id) -> std::string;
+    DAXA_EXPORT_CXX auto to_string(GPUResourceId const & id) -> std::string;
 
     struct BufferInfo
     {
@@ -78,7 +78,7 @@ namespace daxa
         SmallString name = "";
     };
 
-    struct ImageCreateFlagsProperties
+    struct DAXA_EXPORT_CXX ImageCreateFlagsProperties
     {
         using Data = u32;
     };

@@ -236,7 +236,7 @@ namespace daxa
         IndexType index_type = IndexType::uint32;
     };
 
-    struct ExecutableCommandList : ManagedPtr<ExecutableCommandList, daxa_ExecutableCommandList>
+    struct DAXA_EXPORT_CXX ExecutableCommandList : ManagedPtr<ExecutableCommandList, daxa_ExecutableCommandList>
     {
       protected:
         template <typename T, typename H_T>
@@ -246,7 +246,7 @@ namespace daxa
     };
 
     struct CommandRecorder;
-    struct RenderCommandRecorder
+    struct DAXA_EXPORT_CXX RenderCommandRecorder
     {
       private:
         daxa_CommandRecorder internal = {};
@@ -314,7 +314,7 @@ namespace daxa
      * * using deferred destructions will make the completed command list not reusable,
      *   as resources can only be destroyed once
      */
-    struct CommandRecorder
+    struct DAXA_EXPORT_CXX CommandRecorder
     {
       private:
         daxa_CommandRecorder internal = {};
