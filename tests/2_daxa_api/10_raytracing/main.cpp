@@ -18,6 +18,8 @@ namespace tests
             daxa::Instance daxa_ctx = {};
             daxa::Device device = {};
             daxa::Swapchain swapchain = {};
+            daxa::PipelineManager pipeline_manager = {};
+            std::shared_ptr<daxa::ComputePipeline> comp_pipeline = {};
             daxa::TlasId tlas = {};
             daxa::BlasId blas = {};
 
@@ -49,7 +51,15 @@ namespace tests
                 swapchain = device.create_swapchain({
                     .native_window = get_native_handle(),
                     .native_window_platform = get_native_platform(),
-                    .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
+                    .surface_format_selector = [](daxa::Format format) -> i32
+                    {
+                        if (format == daxa::Format::B8G8R8A8_UNORM)
+                        {
+                            return 1000;
+                        }
+                        return 1;
+                    },
+                    .image_usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
                 });
 
                 /// Prepare mesh data:
@@ -124,8 +134,8 @@ namespace tests
                 blas_build_info.dst_blas = blas;
                 blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value();
                 auto blas_instances_buffer = device.create_buffer({
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .size = sizeof(daxa_BlasInstanceData),
+                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "blas instances array buffer",
                 });
                 defer { device.destroy_buffer(blas_instances_buffer); };
@@ -187,11 +197,33 @@ namespace tests
                     recorder.build_acceleration_structures({
                         .tlas_build_infos = std::array{tlas_build_info},
                     });
+                    recorder.pipeline_barrier({
+                        .src_access = daxa::AccessConsts::ACCELERATION_STRUCTURE_BUILD_WRITE,
+                        .dst_access = daxa::AccessConsts::READ_WRITE,
+                    });
                     return recorder.complete_current_commands();
-
                 }();
                 device.submit_commands({.command_lists = std::array{exec_cmds}});
                 device.wait_idle();
+
+                pipeline_manager = daxa::PipelineManager{daxa::PipelineManagerInfo{
+                    .device = device,
+                    .shader_compile_options = {
+                        .root_paths = {
+                            DAXA_SHADER_INCLUDE_DIR,
+                            "tests/2_daxa_api/10_raytracing/shaders",
+                        },
+                    },
+                }};
+                comp_pipeline = pipeline_manager.add_compute_pipeline(
+                                                    daxa::ComputePipelineCompileInfo{
+                                                        .shader_info = daxa::ShaderCompileInfo{
+                                                            .source = daxa::ShaderFile{"shaders.glsl"},
+                                                        },
+                                                        .push_constant_size = sizeof(PushConstant),
+                                                        .name = "ray qery comp shader",
+                                                    })
+                                    .value();
             }
 
             auto update() -> bool
@@ -227,21 +259,27 @@ namespace tests
                 });
 
                 recorder.pipeline_barrier_image_transition({
-                    .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
-                    .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .dst_layout = daxa::ImageLayout::GENERAL,
                     .image_id = swapchain_image,
                 });
 
-                recorder.clear_image({
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                    .dst_image = swapchain_image,
+                recorder.set_pipeline(*comp_pipeline);
+                daxa::u32 width = device.info_image(swapchain_image).value().size.x;
+                daxa::u32 height = device.info_image(swapchain_image).value().size.y;
+                recorder.push_constant(PushConstant{
+                    .size = {width, height},
+                    .tlas = tlas,
+                    .swapchain = swapchain_image.default_view(),
                 });
+                daxa::u32 block_count_x = (width + 8 - 1) / 8;
+                daxa::u32 block_count_y = (height + 8 - 1) / 8;
+                recorder.dispatch({block_count_x, block_count_y, 1});
 
                 recorder.pipeline_barrier_image_transition({
-                    .src_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .src_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                    .src_layout = daxa::ImageLayout::GENERAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
@@ -288,7 +326,7 @@ namespace tests
         }
         catch (std::runtime_error err)
         {
-            std::cout << "No Raytracing capable gpu found. Skipped ray query test." << std::endl;
+            std::cout << "Failed initialization: \"" << err.what() << "\"" << std::endl;
             return;
         }
         while (true)
