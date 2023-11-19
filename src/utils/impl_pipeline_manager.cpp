@@ -130,8 +130,8 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 #include <utility>
 #include <iostream>
 
-static const std::regex PRAGMA_ONCE_REGEX = std::regex(R"regex(\s*#\s*pragma\s+once\s*)regex");
-static const std::regex REPLACE_REGEX = std::regex(R"regex(\W)regex");
+static std::regex const PRAGMA_ONCE_REGEX = std::regex(R"regex(\s*#\s*pragma\s+once\s*)regex");
+static std::regex const REPLACE_REGEX = std::regex(R"regex(\W)regex");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
 {
     std::smatch matches = {};
@@ -802,6 +802,10 @@ namespace daxa
             .timestamp = std::chrono::file_clock::now(),
         };
         auto & virtual_file = virtual_files.at(virtual_info.name);
+        if (this->info.custom_preprocessor)
+        {
+            this->info.custom_preprocessor(virtual_file.contents, virtual_info.name);
+        }
         shader_preprocess(virtual_file.contents, virtual_info.name);
     }
 
@@ -1069,6 +1073,10 @@ namespace daxa
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 continue;
+            }
+            if (this->info.custom_preprocessor)
+            {
+                this->info.custom_preprocessor(str, path);
             }
             shader_preprocess(str, path);
             return Result(ShaderCode{.string = str});
