@@ -254,16 +254,16 @@ namespace daxa
         }
         constexpr SmallString(std::string_view sw)
         {
-            this->m_size = static_cast<FixedListSizeT>(sw.size());
-            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()); ++i)
+            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()));
+            for (FixedListSizeT i = 0; i < this->m_size; ++i)
             {
                 this->m_data[i] = sw[i];
             }
         }
         constexpr SmallString(std::string const & stl_str)
         {
-            this->m_size = static_cast<FixedListSizeT>(stl_str.size());
-            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()); ++i)
+            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()));
+            for (FixedListSizeT i = 0; i < this->m_size; ++i)
             {
                 this->m_data[i] = stl_str[i];
             }
