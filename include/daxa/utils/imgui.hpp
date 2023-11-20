@@ -25,6 +25,7 @@ namespace daxa
     {
         Device device;
         Format format;
+        ImGuiContext * context = {};
         // NOTE: This is for backwards compatibility. Though,
         // I'm not sure the ImGui renderer util should set the
         // ImGui style. Something to bikeshed.
