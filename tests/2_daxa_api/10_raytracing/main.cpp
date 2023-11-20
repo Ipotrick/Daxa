@@ -64,9 +64,9 @@ namespace tests
 
                 /// Prepare mesh data:
                 auto vertices = std::array{
-                    std::array{0.25, 0.75, 0.5},
-                    std::array{0.5, 0.25, 0.5},
-                    std::array{0.75, 0.75, 0.5},
+                    std::array{0.25f, 0.75f, 0.5f},
+                    std::array{0.5f, 0.25f, 0.5f},
+                    std::array{0.75f, 0.75f, 0.5f},
                 };
                 auto vertex_buffer = device.create_buffer({
                     .size = sizeof(decltype(vertices)),
@@ -83,19 +83,17 @@ namespace tests
                 });
                 defer { device.destroy_buffer(index_buffer); };
                 std::memcpy(device.get_host_address(index_buffer).value(), &indices, sizeof(decltype(indices)));
-                auto transform = daxa_f32mat3x4{
-                    {1, 0, 0},
-                    {0, 1, 0},
-                    {0, 0, 1},
-                    {0, 0, 0},
-                };
                 auto transform_buffer = device.create_buffer({
-                    .size = sizeof(daxa_f32mat3x4),
+                    .size = sizeof(daxa_rowmaj_f32mat3x4),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "transform buffer",
                 });
                 defer { device.destroy_buffer(transform_buffer); };
-                std::memcpy(device.get_host_address(transform_buffer).value(), &transform, sizeof(daxa_f32mat3x4));
+                *device.get_host_address_as<daxa_rowmaj_f32mat3x4>(transform_buffer).value() = daxa_rowmaj_f32mat3x4{
+                    {1, 0, 0, 0},
+                    {0, 1, 0, 0},
+                    {0, 0, 1, 0},
+                };
                 /// Write As description data:
                 auto geometries = std::array{
                     daxa::BlasTriangleGeometryInfo{
@@ -141,15 +139,14 @@ namespace tests
                 defer { device.destroy_buffer(blas_instances_buffer); };
                 *device.get_host_address_as<daxa_BlasInstanceData>(blas_instances_buffer).value() = daxa_BlasInstanceData{
                     .transform = {
-                        {1, 0, 0},
-                        {0, 1, 0},
-                        {1, 0, 1},
-                        {0, 0, 0},
+                        {1, 0, 0, 0},
+                        {0, 1, 0, 0},
+                        {0, 0, 1, 0},
                     },
-                    .instance_custom_index = 5, // Set in order to show use later.
+                    .instance_custom_index = 0,
                     .mask = 0xFF,
-                    .instance_shader_binding_table_record_offset = {}, // Not Used.
-                    .flags = {},                                       // Not used.
+                    .instance_shader_binding_table_record_offset = {},      // Not Used.
+                    .flags = {}, // Not used.
                     .blas_device_address = device.get_device_address(blas).value(),
                 };
                 /// Build tlas:
@@ -228,6 +225,14 @@ namespace tests
 
             auto update() -> bool
             {
+                auto reload_result = pipeline_manager.reload_all();
+
+                if (auto * reload_err = daxa::get_if<daxa::PipelineReloadError>(&reload_result))
+                    std::cout << reload_err->message << std::endl;
+                else if (daxa::get_if<daxa::PipelineReloadSuccess>(&reload_result))
+                    std::cout << "reload success" << std::endl;
+                using namespace std::literals;
+                std::this_thread::sleep_for(1ms);
                 glfwPollEvents();
                 if (glfwWindowShouldClose(glfw_window_ptr) != 0)
                 {

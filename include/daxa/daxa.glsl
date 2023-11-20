@@ -176,7 +176,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
 #if defined(DAXA_RAY_TRACING)
 /// @brief Defines the acceleration structure layout used ifor all acceleration structures in daxa glsl.
-#define DAXA_ACCELERATION_STRUCTURE_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
+#define DAXA_ACCELERATION_STRUCTURE_LAYOUT layout(binding = DAXA_ACCELERATION_STRUCTURE_BINDING, set = 0)
 #endif
 
 // Daxa implementation detail begin
@@ -315,7 +315,7 @@ DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_samplerShadowTable[];
 #define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)]
 
 #if defined(DAXA_RAY_TRACING)
-#define daxa_acceleration_structure(as_id) daxa_AccelerationStructureTable[daxa_acceleration_strcuture_id_to_index(as_id)]
+#define daxa_accelerationStructureEXT(as_id) daxa_AccelerationStructureTable[daxa_acceleration_structure_id_to_index(as_id)]
 #endif
 
 _DAXA_DECL_IMAGE(1D)
