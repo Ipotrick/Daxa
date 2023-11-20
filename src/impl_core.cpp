@@ -227,7 +227,7 @@ void daxa_as_build_info_to_vk(
     usize tlas_count,
     daxa_BlasBuildInfo const * blas_infos,
     usize blas_count,
-    std::vector<VkAccelerationStructureBuildGeometryInfoKHR > & vk_build_geometry_infos,
+    std::vector<VkAccelerationStructureBuildGeometryInfoKHR> & vk_build_geometry_infos,
     std::vector<VkAccelerationStructureGeometryKHR> & vk_geometry_infos,
     std::vector<u32> & primitive_counts,
     std::vector<u32 const *> & primitive_counts_ptrs)
@@ -275,8 +275,8 @@ void daxa_as_build_info_to_vk(
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
             .pNext = nullptr,
             .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
-            .flags = {},                    // TODO(Raytracing)
-            .mode = {},                     // TODO(Raytracing)
+            .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR, // TODO(Raytracing)
+            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
             .srcAccelerationStructure = {}, // TODO(Raytracing)
             .dstAccelerationStructure =
                 info.dst_tlas.value != 0
@@ -294,7 +294,7 @@ void daxa_as_build_info_to_vk(
         daxa_BlasBuildInfo const & info = blas_infos[blas_i];
         VkAccelerationStructureGeometryKHR const * vk_geo_array_ptr = vk_geometry_infos.data() + vk_geometry_infos.size();
         u32 const * primitive_counts_ptr = primitive_counts.data() + primitive_counts.size();
-        // As both variants are spans and ABI compatible, we can just unconditionaally read one of the variants here.
+        // As both variants are spans and ABI compatible, we can just unconditionally read one of the variants here.
         u32 const geo_count = static_cast<u32>(info.geometries.values.triangles.count);
         for (u32 geo_i = 0; geo_i < geo_count; ++geo_i)
         {
@@ -337,8 +337,8 @@ void daxa_as_build_info_to_vk(
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
             .pNext = nullptr,
             .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-            .flags = {},                    // TODO(Raytracing)
-            .mode = {},                     // TODO(Raytracing)
+            .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR, // TODO(Raytracing)
+            .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
             .srcAccelerationStructure = {}, // TODO(Raytracing)
             .dstAccelerationStructure =
                 info.dst_blas.value != 0

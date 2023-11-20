@@ -398,12 +398,12 @@ auto create_acceleration_structure_helper(
     VkAccelerationStructureCreateInfoKHR vk_create_info = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_CREATE_INFO_KHR,
         .pNext = nullptr,
-        .createFlags = VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR,
+        .createFlags = {}, // VK_ACCELERATION_STRUCTURE_CREATE_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT_KHR,
         .buffer = self->slot(ret.buffer_id).vk_buffer,
         .offset = ret.offset,
         .size = ret.info.size,
         .type = vk_as_type,
-        // .deviceAddress = std::bit_cast<VkDeviceAddress>(ret.device_address), // TODO(Raytracing): I guess this is set by debug tooling?
+        .deviceAddress = {},
     };
     auto vk_result = self->vkCreateAccelerationStructureKHR(self->vk_device, &vk_create_info, nullptr, &ret.vk_acceleration_structure);
     if (vk_result != VK_SUCCESS)

@@ -105,7 +105,7 @@ namespace tests
                         .index_data = {},     // Ignored in get_acceleration_structure_build_sizes.
                         .transform_data = {}, // Ignored in get_acceleration_structure_build_sizes.
                         .count = 1,
-                        .flags = {},
+                        .flags = daxa::GeometryFlagBits::OPAQUE,
                     }};
                 auto blas_build_info = daxa::BlasBuildInfo{
                     .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.
@@ -145,8 +145,8 @@ namespace tests
                     },
                     .instance_custom_index = 0,
                     .mask = 0xFF,
-                    .instance_shader_binding_table_record_offset = {},      // Not Used.
-                    .flags = {}, // Not used.
+                    .instance_shader_binding_table_record_offset = {},            // Not Used.
+                    .flags = DAXA_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE, // Not used.
                     .blas_device_address = device.get_device_address(blas).value(),
                 };
                 /// Build tlas:
@@ -156,7 +156,7 @@ namespace tests
                         .data = {}, // Ignored for now.
                         .count = 1,
                         .is_data_array_of_pointers = false, // Buffer contains flat array of instances, not an array of pointers to instances.
-                        .flags = {},                        // Unused,
+                        .flags = daxa::GeometryFlagBits::OPAQUE,                        // Unused,
                     },
                 };
                 auto tlas_build_info = daxa::TlasBuildInfo{
@@ -172,7 +172,7 @@ namespace tests
                 });
                 /// Create Build Scratch buffer
                 auto tlas_scratch_buffer = device.create_buffer({
-                    .size = build_size_info.build_scratch_size,
+                    .size = tlas_build_sizes.build_scratch_size,
                     .name = "tlas scratch buffer",
                 });
                 defer { device.destroy_buffer(tlas_scratch_buffer); };

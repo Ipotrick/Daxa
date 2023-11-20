@@ -369,6 +369,7 @@ auto daxa_cmd_blit_image_to_image(daxa_CommandRecorder self, daxa_ImageBlitInfo 
 
 auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_BuildAccelerationStucturesInfo const * info) -> daxa_Result
 {
+    daxa_cmd_flush_barriers(self);
     for (auto const & tb_info : std::span{info->tlas_build_infos, info->tlas_build_info_count})
     {
         _DAXA_CHECK_IDS(self, tb_info.dst_tlas)
