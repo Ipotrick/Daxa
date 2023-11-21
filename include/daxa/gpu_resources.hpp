@@ -174,7 +174,7 @@ namespace daxa
     struct BlasAabbGeometryInfo
     {
         DeviceAddress data = {};
-        u64 stride = {};
+        u64 stride = 24;    // TODO: This is user data dependent
         u32 count = {};
         GeometryFlags flags = GeometryFlagBits::OPAQUE;
     };
