@@ -22,15 +22,14 @@ void main()
         (float(index.y) + 0.5f) / float(p.size.y),
         0
     );
-    float t_min = 0.001;
+    float t_min = 0.0f;
     vec3 direction = vec3(0,0,1);
-    float t_max = 100.0;
+    float t_max = 1.0f;
     rayQueryEXT ray_query;
-    rayQueryInitializeEXT(ray_query, daxa_AccelerationStructureTable[0],
+    rayQueryInitializeEXT(ray_query, daxa_accelerationStructureEXT(p.tlas),
                         gl_RayFlagsOpaqueEXT,
                         cull_mask, origin, t_min, direction, t_max);
 
-    rayQueryProceedEXT(ray_query);
     while(rayQueryProceedEXT(ray_query)) {
         if (rayQueryGetIntersectionTypeEXT(ray_query, false) ==
             gl_RayQueryCandidateIntersectionTriangleEXT)
@@ -38,10 +37,11 @@ void main()
             rayQueryConfirmIntersectionEXT(ray_query);
         }
     }
+
     if (rayQueryGetIntersectionTypeEXT(ray_query, true) ==
         gl_RayQueryCommittedIntersectionTriangleEXT )
     {
-        imageStore(daxa_image2D(p.swapchain), index, vec4(0,1,1,0));
+        imageStore(daxa_image2D(p.swapchain), index, vec4(1,0,0,0));
     } else {
         imageStore(daxa_image2D(p.swapchain), index, vec4(0,0,0,0));
     }
