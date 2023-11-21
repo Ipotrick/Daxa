@@ -7,6 +7,7 @@
 
 DAXA_DECL_PUSH_CONSTANT(PushConstant, p)
 
+// Credit: https://gamedev.stackexchange.com/questions/92015/optimized-linear-to-srgb-glsl
 vec4 fromLinear(vec4 linearRGB)
 {
     bvec4 cutoff = lessThan(linearRGB, vec4(0.0031308));
