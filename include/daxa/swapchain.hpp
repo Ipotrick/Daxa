@@ -11,10 +11,10 @@ namespace daxa
     {
         switch (format)
         {
-        case Format::R8G8B8A8_SRGB: return 90;
+        case Format::B8G8R8A8_UNORM: return 90;
         case Format::R8G8B8A8_UNORM: return 80;
         case Format::B8G8R8A8_SRGB: return 70;
-        case Format::B8G8R8A8_UNORM: return 60;
+        case Format::R8G8B8A8_SRGB: return 60;
         default: return 0;
         }
     }

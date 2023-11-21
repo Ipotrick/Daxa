@@ -348,6 +348,9 @@ auto daxa_default_device_score(daxa_DeviceProperties const * c_properties) -> i3
 {
     DeviceProperties const * properties = r_cast<DeviceProperties const *>(c_properties);
     i32 score = 0;
+    // TODO: Maybe just return an unconditional score of 1 to make it so the
+    // first GPU is selected. In `daxa_instance_create_device`, incompatible
+    // devices should be discarded.
     switch (properties->device_type)
     {
     case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
