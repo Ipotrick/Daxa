@@ -4,16 +4,12 @@
 #include <stdint.h>
 
 #if defined(__cplusplus)
-#define DAXA_EXPORT extern "C"
-#define DAXA_ZERO_INIT \
-    {                  \
-    }
+#define DAXA_EXPORT extern "C" DAXA_CMAKE_EXPORT
+#define DAXA_EXPORT_CXX DAXA_CMAKE_EXPORT
+#define DAXA_ZERO_INIT {}
 #else
 #define DAXA_EXPORT
-#define DAXA_ZERO_INIT \
-    {                  \
-        0              \
-    }
+#define DAXA_ZERO_INIT {0}
 #endif
 
 #if defined(__cplusplus)

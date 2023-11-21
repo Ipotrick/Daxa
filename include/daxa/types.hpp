@@ -256,16 +256,16 @@ namespace daxa
         }
         constexpr SmallString(std::string_view sw)
         {
-            this->m_size = static_cast<FixedListSizeT>(sw.size());
-            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()); ++i)
+            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()));
+            for (FixedListSizeT i = 0; i < this->m_size; ++i)
             {
                 this->m_data[i] = sw[i];
             }
         }
         constexpr SmallString(std::string const & stl_str)
         {
-            this->m_size = static_cast<FixedListSizeT>(stl_str.size());
-            for (FixedListSizeT i = 0; i < std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()); ++i)
+            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()));
+            for (FixedListSizeT i = 0; i < this->m_size; ++i)
             {
                 this->m_data[i] = stl_str[i];
             }
@@ -1267,7 +1267,7 @@ namespace daxa
 
     [[nodiscard]] auto to_string(ImageLayout layout) -> std::string_view;
 
-    struct ImageMipArraySlice
+    struct DAXA_EXPORT_CXX ImageMipArraySlice
     {
         u32 base_mip_level = 0;
         u32 level_count = 1;
@@ -1284,7 +1284,7 @@ namespace daxa
 
     [[nodiscard]] auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
 
-    struct ImageArraySlice
+    struct DAXA_EXPORT_CXX ImageArraySlice
     {
         u32 mip_level = 0;
         u32 base_array_layer = 0;
@@ -1299,7 +1299,7 @@ namespace daxa
 
     [[nodiscard]] auto to_string(ImageArraySlice image_array_slice) -> std::string;
 
-    struct ImageSlice
+    struct DAXA_EXPORT_CXX ImageSlice
     {
         u32 mip_level = 0;
         u32 array_layer = 0;
@@ -1427,10 +1427,10 @@ namespace daxa
         friend auto operator<=>(Access const &, Access const &) = default;
     };
 
-    [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
-    [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
+    DAXA_EXPORT_CXX [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
+    DAXA_EXPORT_CXX [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
 
-    [[nodiscard]] auto to_string(Access access) -> std::string;
+    DAXA_EXPORT_CXX [[nodiscard]] auto to_string(Access access) -> std::string;
 
     namespace AccessConsts
     {
@@ -1714,7 +1714,7 @@ namespace daxa
         MemoryFlags flags = {};
     };
 
-    struct MemoryBlock : ManagedPtr<MemoryBlock, daxa_MemoryBlock>
+    struct DAXA_EXPORT_CXX MemoryBlock : ManagedPtr<MemoryBlock, daxa_MemoryBlock>
     {
         MemoryBlock() = default;
 
@@ -1736,7 +1736,7 @@ namespace daxa
         SmallString name = "";
     };
 
-    struct TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>
+    struct DAXA_EXPORT_CXX TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>
     {
         TimelineQueryPool() = default;
 

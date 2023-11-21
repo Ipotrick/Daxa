@@ -25,6 +25,7 @@ namespace daxa
     {
         Device device;
         Format format;
+        ImGuiContext * context = {};
         // NOTE: This is for backwards compatibility. Though,
         // I'm not sure the ImGui renderer util should set the
         // ImGui style. Something to bikeshed.
@@ -32,7 +33,7 @@ namespace daxa
     };
 
     struct ImplImGuiRenderer;
-    struct ImGuiRenderer : ManagedPtr<ImGuiRenderer, ImplImGuiRenderer *>
+    struct DAXA_EXPORT_CXX ImGuiRenderer : ManagedPtr<ImGuiRenderer, ImplImGuiRenderer *>
     {
         ImGuiRenderer() = default;
 

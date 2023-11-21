@@ -134,7 +134,7 @@ namespace daxa
 
     using TaskResourceIndex = u32;
 
-    struct TaskGPUResourceView
+    struct DAXA_EXPORT_CXX TaskGPUResourceView
     {
         TaskResourceIndex task_graph_index = {};
         TaskResourceIndex index = {};
@@ -147,11 +147,11 @@ namespace daxa
 
     auto to_string(TaskGPUResourceView const & id) -> std::string;
 
-    struct TaskBufferView : public TaskGPUResourceView
+    struct DAXA_EXPORT_CXX TaskBufferView : public TaskGPUResourceView
     {
     };
 
-    struct TaskImageView : public TaskGPUResourceView
+    struct DAXA_EXPORT_CXX TaskImageView : public TaskGPUResourceView
     {
         daxa::ImageMipArraySlice slice = {};
         auto view(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageView
@@ -202,10 +202,10 @@ namespace daxa
     };
 
     struct ImplPersistentTaskBuffer;
-    struct TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBuffer *>
+    struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBuffer *>
     {
         TaskBuffer() = default;
-        TaskBuffer(TaskBuffer const & tb) = default;
+        // TaskBuffer(TaskBuffer const & tb) = default;
         TaskBuffer(TaskBufferInfo const & info);
 
         operator TaskBufferView() const;
@@ -242,10 +242,10 @@ namespace daxa
     };
 
     struct ImplPersistentTaskImage;
-    struct TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
+    struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {
         TaskImage() = default;
-        TaskImage(TaskImage const & ti) = default;
+        // TaskImage(TaskImage const & ti) = default;
         TaskImage(TaskImageInfo const & info);
 
         operator TaskImageView() const;
@@ -286,7 +286,7 @@ namespace daxa
         {
         }
 
-        TaskBufferUse(TaskBuffer const & a_handle)
+        inline TaskBufferUse(TaskBuffer const & a_handle)
             : handle{a_handle}
         {
         }

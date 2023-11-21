@@ -62,7 +62,7 @@ else()
     set(CMAKE_UNITY_BUILD true)
 endif()
 
-add_library(daxa STATIC
+add_library(daxa
     "src/cpp_wrapper.cpp"
 
     "src/impl_device.cpp"
@@ -85,6 +85,20 @@ add_library(daxa STATIC
 )
 
 add_library(daxa::daxa ALIAS daxa)
+
+if(BUILD_SHARED_LIBS)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        target_compile_definitions(${PROJECT_NAME}
+            PRIVATE "$<IF:$<CXX_COMPILER_ID:Clang>,DAXA_CMAKE_EXPORT=[[gnu::dllexport]],DAXA_CMAKE_EXPORT=__declspec(dllexport)>"
+            INTERFACE "$<IF:$<CXX_COMPILER_ID:Clang>,DAXA_CMAKE_EXPORT=[[gnu::dllimport]],DAXA_CMAKE_EXPORT=__declspec(dllimport)>")
+    else()
+        target_compile_definitions(${PROJECT_NAME}
+            PUBLIC "DAXA_CMAKE_EXPORT=")
+    endif()
+else()
+    target_compile_definitions(${PROJECT_NAME}
+        PUBLIC "DAXA_CMAKE_EXPORT=")
+endif()
 
 target_compile_features(daxa PUBLIC cxx_std_20)
 

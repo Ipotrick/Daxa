@@ -337,6 +337,10 @@ namespace daxa
                   return this->info.device.create_raster_pipeline(create_info);
               }()}
     {
+        if (this->info.context != nullptr)
+        {
+            ImGui::SetCurrentContext(info.context);
+        }
         if (this->info.use_custom_config)
         {
             set_imgui_style();

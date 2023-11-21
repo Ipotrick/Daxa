@@ -86,6 +86,7 @@ namespace daxa
         Device device;
         ShaderCompileOptions shader_compile_options = {};
         bool register_null_pipelines_when_first_compile_fails = false;
+        std::function<void(std::string &, std::filesystem::path const & path)> custom_preprocessor = {};
         std::string name = {};
     };
 
@@ -107,7 +108,7 @@ namespace daxa
     using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
     struct ImplPipelineManager;
-    struct PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
+    struct DAXA_EXPORT_CXX PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
     {
         PipelineManager() = default;
 

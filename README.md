@@ -1,6 +1,6 @@
 <p align="center">
   <!-- <a href="https://github.com/Ipotrick/Daxa"> -->
-	<img src="misc/Daxa-logo.png" width="800" alt="Daxa logo">
+	<img src="misc/daxa-logo.png" width="800" alt="Daxa logo">
   <!-- </a> -->
 </p>
 

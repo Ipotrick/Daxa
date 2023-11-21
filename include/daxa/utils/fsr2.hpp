@@ -8,7 +8,7 @@
 
 namespace daxa
 {
-    struct Fsr2Context : ManagedPtr
+    struct DAXA_EXPORT_CXX Fsr2Context : ManagedPtr
     {
         Fsr2Context() = default;
 

@@ -27,7 +27,7 @@ namespace daxa
      * * may be passed to different threads
      * * may be used by multiple threads at the same time.
      */
-    struct ComputePipeline final : ManagedPtr<ComputePipeline, daxa_ComputePipeline>
+    struct DAXA_EXPORT_CXX ComputePipeline final : ManagedPtr<ComputePipeline, daxa_ComputePipeline>
     {
         ComputePipeline() = default;
 
@@ -111,7 +111,7 @@ namespace daxa
      * * may be passed to different threads
      * * may be used by multiple threads at the same time.
      */
-    struct RasterPipeline final : ManagedPtr<RasterPipeline, daxa_RasterPipeline>
+    struct DAXA_EXPORT_CXX RasterPipeline final : ManagedPtr<RasterPipeline, daxa_RasterPipeline>
     {
         RasterPipeline() = default;
 
