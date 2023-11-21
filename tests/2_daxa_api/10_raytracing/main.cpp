@@ -62,7 +62,7 @@ namespace tests
                     .image_usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
                 });
 
-                /// Prepare mesh data:
+                /// Vertices:
                 auto vertices = std::array{
                     std::array{0.25f, 0.75f, 0.5f},
                     std::array{0.5f, 0.25f, 0.5f},
@@ -74,7 +74,8 @@ namespace tests
                     .name = "vertex buffer",
                 });
                 defer { device.destroy_buffer(vertex_buffer); };
-                std::memcpy(device.get_host_address(vertex_buffer).value(), &vertices, sizeof(decltype(vertices)));
+                *device.get_host_address_as<decltype(vertices)>(vertex_buffer).value() = vertices;
+                /// Indices:
                 auto indices = std::array{0, 1, 2};
                 auto index_buffer = device.create_buffer({
                     .size = sizeof(decltype(indices)),
@@ -82,7 +83,8 @@ namespace tests
                     .name = "index buffer",
                 });
                 defer { device.destroy_buffer(index_buffer); };
-                std::memcpy(device.get_host_address(index_buffer).value(), &indices, sizeof(decltype(indices)));
+                *device.get_host_address_as<decltype(indices)>(index_buffer).value() = indices;
+                /// Transforms:
                 auto transform_buffer = device.create_buffer({
                     .size = sizeof(daxa_rowmaj_f32mat3x4),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
@@ -94,7 +96,7 @@ namespace tests
                     {0, 1, 0, 0},
                     {0, 0, 1, 0},
                 };
-                /// Write As description data:
+                /// Triangle Geometry Info:
                 auto geometries = std::array{
                     daxa::BlasTriangleGeometryInfo{
                         .vertex_format = daxa::Format::R32G32B32_SFLOAT,
@@ -107,14 +109,13 @@ namespace tests
                         .count = 1,
                         .flags = daxa::GeometryFlagBits::OPAQUE,
                     }};
+                /// Create Blas:
                 auto blas_build_info = daxa::BlasBuildInfo{
                     .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.
                     .geometries = geometries,
                     .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.
                 };
-                /// Query As sizes:
                 daxa::AccelerationStructureBuildSizesInfo build_size_info = device.get_blas_build_sizes(blas_build_info);
-                /// Create Scratch buffer and As:
                 auto blas_scratch_buffer = device.create_buffer({
                     .size = build_size_info.build_scratch_size,
                     .name = "blas scratch buffer",
@@ -131,6 +132,7 @@ namespace tests
                 tri_geom.transform_data = device.get_device_address(transform_buffer).value();
                 blas_build_info.dst_blas = blas;
                 blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value();
+                /// create blas instances for tlas:
                 auto blas_instances_buffer = device.create_buffer({
                     .size = sizeof(daxa_BlasInstanceData),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
@@ -149,14 +151,12 @@ namespace tests
                     .flags = DAXA_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE, // Not used.
                     .blas_device_address = device.get_device_address(blas).value(),
                 };
-                /// Build tlas:
-                /// Get build sizes:
                 auto blas_instances = std::array{
                     daxa::TlasInstanceInfo{
-                        .data = {}, // Ignored for now.
+                        .data = {}, // Ignored in get_acceleration_structure_build_sizes.
                         .count = 1,
-                        .is_data_array_of_pointers = false, // Buffer contains flat array of instances, not an array of pointers to instances.
-                        .flags = daxa::GeometryFlagBits::OPAQUE,                        // Unused,
+                        .is_data_array_of_pointers = false,      // Buffer contains flat array of instances, not an array of pointers to instances.
+                        .flags = daxa::GeometryFlagBits::OPAQUE, // Unused,
                     },
                 };
                 auto tlas_build_info = daxa::TlasBuildInfo{
@@ -201,7 +201,9 @@ namespace tests
                     return recorder.complete_current_commands();
                 }();
                 device.submit_commands({.command_lists = std::array{exec_cmds}});
-                device.wait_idle();
+                /// NOTE:
+                /// No need to wait idle here.
+                /// Daxa will defer all the destructions of the buffers until the submitted as build commands are complete.
 
                 pipeline_manager = daxa::PipelineManager{daxa::PipelineManagerInfo{
                     .device = device,
@@ -212,15 +214,14 @@ namespace tests
                         },
                     },
                 }};
-                comp_pipeline = pipeline_manager.add_compute_pipeline(
-                                                    daxa::ComputePipelineCompileInfo{
-                                                        .shader_info = daxa::ShaderCompileInfo{
-                                                            .source = daxa::ShaderFile{"shaders.glsl"},
-                                                        },
-                                                        .push_constant_size = sizeof(PushConstant),
-                                                        .name = "ray qery comp shader",
-                                                    })
-                                    .value();
+                auto const compute_pipe_info = daxa::ComputePipelineCompileInfo{
+                    .shader_info = daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"shaders.glsl"},
+                    },
+                    .push_constant_size = sizeof(PushConstant),
+                    .name = "ray qery comp shader",
+                };
+                comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
             }
 
             auto update() -> bool
@@ -290,6 +291,8 @@ namespace tests
                 });
 
                 auto executalbe_commands = recorder.complete_current_commands();
+                /// NOTE:
+                /// Must destroy the command recorder here as we call collect_garbage later in this scope!
                 recorder.~CommandRecorder();
 
                 device.submit_commands({

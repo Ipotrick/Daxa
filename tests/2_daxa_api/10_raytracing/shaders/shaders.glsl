@@ -7,6 +7,15 @@
 
 DAXA_DECL_PUSH_CONSTANT(PushConstant, p)
 
+vec4 fromLinear(vec4 linearRGB)
+{
+    bvec4 cutoff = lessThan(linearRGB, vec4(0.0031308));
+    vec4 higher = vec4(1.055)*pow(linearRGB, vec4(1.0/2.4)) - vec4(0.055);
+    vec4 lower = linearRGB * vec4(12.92);
+
+    return mix(higher, lower, cutoff);
+}
+
 layout(local_size_x = 8, local_size_y = 8) in;
 void main()
 {
@@ -38,11 +47,12 @@ void main()
         }
     }
 
+    vec3 out_colour = vec3(0.0, 0.0, 0.0);
     if (rayQueryGetIntersectionTypeEXT(ray_query, true) ==
         gl_RayQueryCommittedIntersectionTriangleEXT )
     {
-        imageStore(daxa_image2D(p.swapchain), index, vec4(1,0,0,0));
-    } else {
-        imageStore(daxa_image2D(p.swapchain), index, vec4(0,0,0,0));
+        vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(ray_query, true);
+        out_colour = vec3(barycentrics.x, barycentrics.y, 1.0 - barycentrics.x - barycentrics.y);
     }
+    imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(out_colour,1)));
 }
