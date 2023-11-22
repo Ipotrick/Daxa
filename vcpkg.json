@@ -33,12 +33,14 @@
     "utils-pipeline-manager-glslang": {
       "description": "Build with glslang",
       "dependencies": [
+        "re2",
         "glslang"
       ]
     },
     "utils-pipeline-manager-dxc": {
       "description": "Build with dxc",
       "dependencies": [
+        "re2",
         "dxc"
       ]
     },

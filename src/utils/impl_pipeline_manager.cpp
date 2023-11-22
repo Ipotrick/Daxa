@@ -125,16 +125,14 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 };
 #endif
 
-#include <regex>
+#include <re2/re2.h>
 #include <thread>
 #include <utility>
 #include <iostream>
 
-static std::regex const PRAGMA_ONCE_REGEX = std::regex(R"regex(\s*#\s*pragma\s+once\s*)regex");
-static std::regex const REPLACE_REGEX = std::regex(R"regex(\W)regex");
+static auto const PRAGMA_ONCE_REGEX = RE2(R"regex(\s*#\s*pragma\s+once\s*)regex");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
 {
-    std::smatch matches = {};
     std::string line = {};
     std::stringstream file_ss{file_str};
     std::stringstream result_ss = {};
@@ -144,13 +142,22 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     {
         abs_path_str = std::filesystem::absolute(path).string();
     }
+    auto remove_iter = std::remove_if(
+        abs_path_str.begin(), abs_path_str.end(),
+        [](char c)
+        {
+            return !((c >= 'a' && c <= 'z') ||
+                     (c >= 'A' && c <= 'Z') ||
+                     (c >= '0' && c <= '9') ||
+                     c == '_');
+        });
+    abs_path_str.erase(remove_iter, abs_path_str.end());
+
     while (std::getline(file_ss, line))
     {
-        if (std::regex_match(line, matches, PRAGMA_ONCE_REGEX))
+        if (!has_pragma_once && RE2::FullMatch(line, PRAGMA_ONCE_REGEX))
         {
-            result_ss << "#if !defined(";
-            std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abs_path_str.begin(), abs_path_str.end(), REPLACE_REGEX, "");
-            result_ss << ")\n";
+            result_ss << "#if !defined(" << abs_path_str << ")\n";
             has_pragma_once = true;
         }
         else
@@ -160,9 +167,7 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
     }
     if (has_pragma_once)
     {
-        result_ss << "\n#define ";
-        std::regex_replace(std::ostreambuf_iterator<char>(result_ss), abs_path_str.begin(), abs_path_str.end(), REPLACE_REGEX, "");
-        result_ss << "\n#endif\n";
+        result_ss << "\n#define " << abs_path_str << "\n#endif\n";
     }
     file_str = result_ss.str();
 }
@@ -874,7 +879,7 @@ namespace daxa
     {
         for (RasterPipelineState const & raster_pipeline_state : this->raster_pipelines)
         {
-            if(!raster_pipeline_state.pipeline_ptr->is_valid())
+            if (!raster_pipeline_state.pipeline_ptr->is_valid())
             {
                 return false;
             }
@@ -882,7 +887,7 @@ namespace daxa
 
         for (ComputePipelineState const & compute_pipeline_state : this->compute_pipelines)
         {
-            if(!compute_pipeline_state.pipeline_ptr->is_valid())
+            if (!compute_pipeline_state.pipeline_ptr->is_valid())
             {
                 return false;
             }

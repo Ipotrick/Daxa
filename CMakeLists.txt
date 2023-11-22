@@ -124,7 +124,7 @@ if(DAXA_ENABLE_UTILS_FSR2)
     )
     find_package(fsr2 CONFIG REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         fsr2::ffx_fsr2_api
         fsr2::ffx_fsr2_api_vk
     )
@@ -146,6 +146,45 @@ if(DAXA_ENABLE_UTILS_MEM)
         DAXA_BUILT_WITH_UTILS_MEM=true
     )
 endif()
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG OR DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
+    find_package(re2 CONFIG REQUIRED)
+    if(CMAKE_CXX_COMPILER_ID MATCHES Clang)
+        # Cope to remove broken `-ignore:4221` option, despite it being fixed with a patch in
+        # vcpkg, that patch was removed a month later. See https://github.com/microsoft/vcpkg/issues/13945
+        function(get_link_libraries OUTPUT_LIST TARGET)
+            get_target_property(IMPORTED ${TARGET} IMPORTED)
+            list(APPEND VISITED_TARGETS ${TARGET})
+            if (IMPORTED)
+                get_target_property(LIBS ${TARGET} INTERFACE_LINK_LIBRARIES)
+            else()
+                get_target_property(LIBS ${TARGET} LINK_LIBRARIES)
+            endif()
+            set(LIB_FILES "")
+            foreach(LIB ${LIBS})
+                if (TARGET ${LIB})
+                    list(FIND VISITED_TARGETS ${LIB} VISITED)
+                    if (${VISITED} EQUAL -1)
+                        get_target_property(LIB_FILE ${LIB} LOCATION)
+                        get_link_libraries(LINK_LIB_FILES ${LIB})
+                        list(APPEND LIB_FILES ${LIB_FILE} ${LINK_LIB_FILES})
+                    endif()
+                endif()
+            endforeach()
+            set(VISITED_TARGETS ${VISITED_TARGETS} PARENT_SCOPE)
+            set(${OUTPUT_LIST} ${LIB_FILES} PARENT_SCOPE)
+        endfunction()
+        get_link_libraries(A_LIBRARIES re2::re2)
+        foreach(TARGET_NAME ${VISITED_TARGETS})
+            get_property(A_OPTIONS0 TARGET ${TARGET_NAME} PROPERTY INTERFACE_LINK_LIBRARIES)
+            string(REPLACE "-ignore:4221" "" A_OPTIONS0 "")
+            set_property(TARGET ${TARGET_NAME} PROPERTY INTERFACE_LINK_LIBRARIES "${A_OPTIONS0}")
+        endforeach()
+    endif()
+    target_link_libraries(daxa
+        PRIVATE
+        re2::re2
+    )
+endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
     target_compile_definitions(daxa
         PUBLIC
@@ -154,7 +193,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
     find_package(glslang CONFIG REQUIRED)
     find_package(Threads REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         glslang::glslang
         glslang::SPIRV
         glslang::HLSL
@@ -167,7 +206,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
     )
     find_package(dxc CONFIG REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         dxc::dxc
     )
 endif()
@@ -178,7 +217,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     )
     find_package(SPIRV-Tools CONFIG REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         SPIRV-Tools-static
     )
 endif()
@@ -190,7 +229,7 @@ if(DAXA_ENABLE_UTILS_TASK_GRAPH)
 endif()
 
 target_link_libraries(daxa
-    PUBLIC
+    PRIVATE
     GPUOpen::VulkanMemoryAllocator
     Vulkan::Vulkan
     fmt::fmt
@@ -210,7 +249,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             DAXA_BUILT_WITH_X11=true
         )
         target_link_libraries(daxa
-            PUBLIC
+            PRIVATE
             ${X11_LIBRARIES}
         )
     endif()
@@ -222,7 +261,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             DAXA_BUILT_WITH_WAYLAND=true
         )
         target_link_libraries(daxa
-            PUBLIC
+            PRIVATE
             ${Wayland_LIBRARIES}
         )
     endif()
@@ -237,7 +276,7 @@ endif()
 if(DAXA_ENABLE_TOOLS)
     add_executable(daxa_tools_compile_imgui_shaders "src/utils/impl_imgui.cpp")
     target_compile_definitions(daxa_tools_compile_imgui_shaders PRIVATE DAXA_COMPILE_IMGUI_SHADERS=true)
-    target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa)
+    target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa fmt::fmt)
 endif()
 
 # Packaging
@@ -251,45 +290,14 @@ get_target_property(DAXA_PREV_DEFINITIONS daxa::daxa INTERFACE_COMPILE_DEFINITIO
 set_target_properties(daxa::daxa PROPERTIES
   INTERFACE_COMPILE_DEFINITIONS "${DAXA_PREV_DEFINITIONS};DAXA_SHADER_INCLUDE_DIR=\"${PACKAGE_PREFIX_DIR}/include\""
 )
-
-find_package(Vulkan REQUIRED)
-find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 ]=])
 
-if(DAXA_ENABLE_UTILS_FSR2)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(fsr2 CONFIG REQUIRED)
-]=])
 endif()
 if(DAXA_ENABLE_UTILS_IMGUI)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(imgui CONFIG REQUIRED)
 ]=])
 endif()
-if(DAXA_ENABLE_UTILS_MEM)
-# No package management work to do
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(glslang CONFIG REQUIRED)
-find_package(Threads REQUIRED)
-]=])
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(dxc CONFIG REQUIRED)
-]=])
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(SPIRV-Tools CONFIG REQUIRED)
-]=])
-endif()
-if(DAXA_ENABLE_UTILS_TASK_GRAPH)
-# No package management work to do
-endif()
-
 configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa
@@ -305,5 +313,6 @@ install(
     DESTINATION
     ${CMAKE_INSTALL_DATADIR}/daxa)
 install(TARGETS daxa EXPORT daxa-targets)
+install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION bin OPTIONAL)
 install(EXPORT daxa-targets DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa NAMESPACE daxa::)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ TYPE INCLUDE)
