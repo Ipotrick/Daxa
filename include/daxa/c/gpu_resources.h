@@ -171,6 +171,18 @@ typedef struct
     daxa_GeometryFlags flags;
 } daxa_BlasTriangleGeometryInfo;
 
+static daxa_BlasTriangleGeometryInfo const DAXA_DEFAULT_BLAS_TRIANGLE_GEPMETRY_INFO = {
+    .vertex_format = VK_FORMAT_R32G32B32_SFLOAT,
+    .vertex_data = {},
+    .vertex_stride = 24,
+    .max_vertex = 0,
+    .index_type = VK_INDEX_TYPE_UINT32,
+    .index_data = {},
+    .transform_data = {},
+    .count = 0,
+    .flags = DAXA_GEOMETRY_OPAQUE,
+};
+
 typedef struct
 {
     daxa_DeviceAddress data;
@@ -178,6 +190,13 @@ typedef struct
     uint32_t count;
     daxa_GeometryFlags flags;
 } daxa_BlasAabbGeometryInfo;
+
+static daxa_BlasAabbGeometryInfo const DAXA_DEFAULT_BLAS_AABB_GEOMETRY_INFO = {
+    .data = {},
+    .stride = 24,
+    .count = 0,
+    .flags = DAXA_GEOMETRY_OPAQUE,
+};
 
 /// Instances are defines as VkAccelerationStructureInstanceKHR;
 typedef struct
@@ -188,13 +207,20 @@ typedef struct
     daxa_GeometryFlags flags;
 } daxa_TlasInstanceInfo;
 
-typedef struct 
+static daxa_TlasInstanceInfo const DAXA_DEFAULT_TLAS_INSTANCE_INFO = {
+    .data = {},
+    .count = 0,
+    .is_data_array_of_pointers = 0,
+    .flags = DAXA_GEOMETRY_OPAQUE,
+};
+
+typedef struct
 {
     daxa_BlasTriangleGeometryInfo const * triangles;
     size_t count;
 } daxa_BlasTriangleGeometryInfoSpan;
 
-typedef struct 
+typedef struct
 {
     daxa_BlasAabbGeometryInfo const * aabbs;
     size_t count;
@@ -207,20 +233,47 @@ typedef union
 } daxa_BlasGeometryInfoSpansUnion;
 _DAXA_DECL_VARIANT(daxa_BlasGeometryInfoSpansUnion)
 
+typedef enum
+{
+    DAXA_BUILD_ACCELERATION_STRUCTURE_ALLOW_UPDATE = 0x00000001,
+    DAXA_BUILD_ACCELERATION_STRUCTURE_ALLOW_COMPACTION = 0x00000002,
+    DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE = 0x00000004,
+    DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_BUILD = 0x00000008,
+    DAXA_BUILD_ACCELERATION_STRUCTURE_LOW_MEMORY = 0x00000010,
+} daxa_BuildAccelerationStructureFlagBits;
+typedef uint32_t daxa_BuildAcclelerationStructureFlags;
+
 typedef struct
 {
+    daxa_BuildAcclelerationStructureFlags flags;
     daxa_TlasId dst_tlas;
     daxa_TlasInstanceInfo const * instances;
     uint32_t instance_count;
     daxa_DeviceAddress scratch_data;
 } daxa_TlasBuildInfo;
 
+static daxa_TlasBuildInfo const DAXA_DEFAULT_TLAS_BUILD_INFO = {
+    .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
+    .dst_tlas = {},
+    .instances = {},
+    .instance_count = {},
+    .scratch_data = {},
+};
+
 typedef struct
 {
+    daxa_BuildAcclelerationStructureFlags flags;
     daxa_BlasId dst_blas;
     daxa_Variant(daxa_BlasGeometryInfoSpansUnion) geometries;
     daxa_DeviceAddress scratch_data;
 } daxa_BlasBuildInfo;
+
+static daxa_BlasBuildInfo const DAXA_DEFAULT_BLAS_BUILD_INFO = {
+    .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
+    .dst_blas = {},
+    .geometries = {},
+    .scratch_data = {},
+};
 
 typedef struct
 {
@@ -228,10 +281,26 @@ typedef struct
     daxa_SmallString name;
 } daxa_TlasInfo;
 
+static daxa_TlasInfo const DAXA_DEFAULT_TLAS_INFO = {
+    .size = {},
+    .name = {
+        .data = {},
+        .size = 0,
+    },
+};
+
 typedef struct
 {
     uint64_t size;
     daxa_SmallString name;
 } daxa_BlasInfo;
+
+static daxa_BlasInfo const DAXA_DEFAULT_BLAS_INFO = {
+    .size = {},
+    .name = {
+        .data = {},
+        .size = 0,
+    },
+};
 
 #endif // #ifndef __DAXA_GPU_RESOURCES_H__

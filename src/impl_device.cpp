@@ -352,6 +352,11 @@ auto create_acceleration_structure_helper(
 {
     // --- Begin Parameter Validation ---
 
+    if ((self->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    {
+        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+    }
+
     // --- End Parameter Validation ---
 
     auto slot_opt = table.try_create_slot();
@@ -519,6 +524,10 @@ auto daxa_dvc_get_tlas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
+    if ((self->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    {
+        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+    }
     std::vector<VkAccelerationStructureBuildGeometryInfoKHR> vk_build_geometry_infos = {};
     std::vector<VkAccelerationStructureGeometryKHR> vk_geometry_infos = {};
     std::vector<u32> primitive_counts = {};
@@ -555,6 +564,10 @@ auto daxa_dvc_get_blas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
+    if ((self->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    {
+        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+    }
     std::vector<VkAccelerationStructureBuildGeometryInfoKHR> vk_build_geometry_infos = {};
     std::vector<VkAccelerationStructureGeometryKHR> vk_geometry_infos = {};
     std::vector<u32> primitive_counts = {};

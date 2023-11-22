@@ -275,7 +275,7 @@ void daxa_as_build_info_to_vk(
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
             .pNext = nullptr,
             .type = VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
-            .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR, // TODO(Raytracing)
+            .flags = static_cast<VkBuildAccelerationStructureFlagsKHR>(info.flags),
             .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
             .srcAccelerationStructure = {}, // TODO(Raytracing)
             .dstAccelerationStructure =
@@ -322,7 +322,7 @@ void daxa_as_build_info_to_vk(
             else // aabbs
             {
                 geo_info.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR,
-                geo_info.flags = info.geometries.values.aabbs.aabbs[geo_i].flags;
+                geo_info.flags = static_cast<VkGeometryFlagsKHR>(info.geometries.values.aabbs.aabbs[geo_i].flags);
                 geo_info.geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR{
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
                     .pNext = nullptr,
@@ -337,7 +337,7 @@ void daxa_as_build_info_to_vk(
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,
             .pNext = nullptr,
             .type = VK_ACCELERATION_STRUCTURE_TYPE_BOTTOM_LEVEL_KHR,
-            .flags = VK_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE_BIT_KHR, // TODO(Raytracing)
+            .flags = static_cast<VkBuildAccelerationStructureFlagsKHR>(info.flags),
             .mode = VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
             .srcAccelerationStructure = {}, // TODO(Raytracing)
             .dstAccelerationStructure =

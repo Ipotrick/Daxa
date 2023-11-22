@@ -369,6 +369,10 @@ auto daxa_cmd_blit_image_to_image(daxa_CommandRecorder self, daxa_ImageBlitInfo 
 
 auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_BuildAccelerationStucturesInfo const * info) -> daxa_Result
 {
+    if ((self->device->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    {
+        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+    }
     daxa_cmd_flush_barriers(self);
     for (auto const & tb_info : std::span{info->tlas_build_infos, info->tlas_build_info_count})
     {

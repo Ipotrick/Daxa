@@ -188,8 +188,23 @@ namespace daxa
         GeometryFlags flags = GeometryFlagBits::OPAQUE;
     };
 
+    struct DAXA_EXPORT_CXX AccelerationStructureBuildFlagsProperties
+    {
+        using Data = u32;
+    };
+    using AccelerationStructureBuildFlags = Flags<AccelerationStructureBuildFlagsProperties>;
+    struct AccelerationStructureBuildFlagBits
+    {
+        static inline constexpr AccelerationStructureBuildFlags ALLOW_UPDATE = {0x00000001};
+        static inline constexpr AccelerationStructureBuildFlags ALLOW_COMPACTION = {0x00000002};
+        static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_TRACE = {0x00000004};
+        static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_BUILD = {0x00000008};
+        static inline constexpr AccelerationStructureBuildFlags LOW_MEMORY =  {0x00000010};
+    };
+
     struct TlasBuildInfo
     {
+        AccelerationStructureBuildFlags flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE;
         daxa_TlasId dst_tlas = {};
         std::span<TlasInstanceInfo const> instances = {};
         DeviceAddress scratch_data = {};
@@ -197,6 +212,7 @@ namespace daxa
 
     struct BlasBuildInfo
     {
+        AccelerationStructureBuildFlags flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE;
         daxa_BlasId dst_blas = {};
         Variant<
             std::span<BlasTriangleGeometryInfo const>,

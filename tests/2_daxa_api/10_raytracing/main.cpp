@@ -27,12 +27,9 @@ namespace tests
 
             ~App()
             {
-                if (device.is_valid() && device.is_id_valid(tlas))
+                if (device.is_valid())
                 {
                     device.destroy_tlas(tlas);
-                }
-                if (device.is_valid() && device.is_id_valid(blas))
-                {
                     device.destroy_blas(blas);
                 }
             }
@@ -43,11 +40,12 @@ namespace tests
                 device = daxa_ctx.create_device({
                     .selector = [](daxa::DeviceProperties const & prop) -> i32
                     {
-                        auto default_value = daxa::default_device_score(prop);
-                        return prop.ray_tracing_properties.has_value() ? default_value : -1;
+                        auto value = daxa::default_device_score(prop);
+                        return prop.ray_tracing_properties.has_value() ? value : -1;
                     },
                     .flags = daxa::DeviceFlagBits::RAY_TRACING,
                 });
+                std::cout << "Choosen Device: " << device.properties().device_name << std::endl;
                 swapchain = device.create_swapchain({
                     .native_window = get_native_handle(),
                     .native_window_platform = get_native_platform(),
@@ -99,26 +97,28 @@ namespace tests
                 /// Triangle Geometry Info:
                 auto geometries = std::array{
                     daxa::BlasTriangleGeometryInfo{
-                        .vertex_format = daxa::Format::R32G32B32_SFLOAT,
-                        .vertex_data = {}, // Ignored in get_acceleration_structure_build_sizes.
-                        .vertex_stride = sizeof(daxa_f32vec3),
+                        .vertex_format = daxa::Format::R32G32B32_SFLOAT,                            // Is also default
+                        .vertex_data = {}, // Ignored in get_acceleration_structure_build_sizes.    // Is also default
+                        .vertex_stride = sizeof(daxa_f32vec3),                                      // Is also default
                         .max_vertex = static_cast<u32>(vertices.size() - 1),
-                        .index_type = daxa::IndexType::uint32,
-                        .index_data = {},     // Ignored in get_acceleration_structure_build_sizes.
-                        .transform_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                        .index_type = daxa::IndexType::uint32,                                      // Is also default
+                        .index_data = {},     // Ignored in get_acceleration_structure_build_sizes. // Is also default
+                        .transform_data = {}, // Ignored in get_acceleration_structure_build_sizes. // Is also default
                         .count = 1,
-                        .flags = daxa::GeometryFlagBits::OPAQUE,
+                        .flags = daxa::GeometryFlagBits::OPAQUE,                                    // Is also default
                     }};
                 /// Create Blas:
+                /// TODO(Raytracing): create aabb data, buffers, BlasAabbGeometryInfo and blas for it.
                 auto blas_build_info = daxa::BlasBuildInfo{
-                    .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.
+                    .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,       // Is also default
+                    .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.       // Is also default
                     .geometries = geometries,
-                    .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                    .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
                 };
                 daxa::AccelerationStructureBuildSizesInfo build_size_info = device.get_blas_build_sizes(blas_build_info);
                 auto blas_scratch_buffer = device.create_buffer({
                     .size = build_size_info.build_scratch_size,
-                    .name = "blas scratch buffer",
+                    .name = "blas build scratch buffer",
                 });
                 defer { device.destroy_buffer(blas_scratch_buffer); };
                 this->blas = device.create_blas({
@@ -133,33 +133,36 @@ namespace tests
                 blas_build_info.dst_blas = blas;
                 blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value();
                 /// create blas instances for tlas:
+                /// TODO(Raytracing): add instance of blas for aabb.
                 auto blas_instances_buffer = device.create_buffer({
                     .size = sizeof(daxa_BlasInstanceData),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "blas instances array buffer",
                 });
                 defer { device.destroy_buffer(blas_instances_buffer); };
+                /// TODO(Raytracing): add instance of blas for aabb.
                 *device.get_host_address_as<daxa_BlasInstanceData>(blas_instances_buffer).value() = daxa_BlasInstanceData{
                     .transform = {
                         {1, 0, 0, 0},
                         {0, 1, 0, 0},
                         {0, 0, 1, 0},
                     },
-                    .instance_custom_index = 0,
+                    .instance_custom_index = 0,                                     // Is also default
                     .mask = 0xFF,
-                    .instance_shader_binding_table_record_offset = {},            // Not Used.
-                    .flags = DAXA_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE, // Not used.
+                    .instance_shader_binding_table_record_offset = {},              // Is also default
+                    .flags = {},                                                    // Is also default
                     .blas_device_address = device.get_device_address(blas).value(),
                 };
                 auto blas_instances = std::array{
                     daxa::TlasInstanceInfo{
-                        .data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                        .data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
                         .count = 1,
-                        .is_data_array_of_pointers = false,      // Buffer contains flat array of instances, not an array of pointers to instances.
-                        .flags = daxa::GeometryFlagBits::OPAQUE, // Unused,
+                        .is_data_array_of_pointers = false, // Buffer contains flat array of instances, not an array of pointers to instances.
+                        .flags = daxa::GeometryFlagBits::OPAQUE,
                     },
                 };
                 auto tlas_build_info = daxa::TlasBuildInfo{
+                    .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,
                     .dst_tlas = {}, // Ignored in get_acceleration_structure_build_sizes.
                     .instances = blas_instances,
                     .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.
@@ -173,7 +176,7 @@ namespace tests
                 /// Create Build Scratch buffer
                 auto tlas_scratch_buffer = device.create_buffer({
                     .size = tlas_build_sizes.build_scratch_size,
-                    .name = "tlas scratch buffer",
+                    .name = "tlas build scratch buffer",
                 });
                 defer { device.destroy_buffer(tlas_scratch_buffer); };
                 /// Update build info:
