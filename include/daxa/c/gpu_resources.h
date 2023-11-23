@@ -224,12 +224,12 @@ typedef struct
 {
     daxa_BlasAabbGeometryInfo const * aabbs;
     size_t count;
-} daxa_BlasAabbsGeometryInfoSpan;
+} daxa_BlasAabbGeometryInfoSpan;
 
 typedef union
 {
     daxa_BlasTriangleGeometryInfoSpan triangles;
-    daxa_BlasAabbsGeometryInfoSpan aabbs;
+    daxa_BlasAabbGeometryInfoSpan aabbs;
 } daxa_BlasGeometryInfoSpansUnion;
 _DAXA_DECL_VARIANT(daxa_BlasGeometryInfoSpansUnion)
 

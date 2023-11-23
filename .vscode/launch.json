@@ -5,7 +5,7 @@
             "name": "Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${workspaceFolder}/build/cl-x86_64-windows-msvc/tests/Debug/daxa_test_2_daxa_api_10_raytracing.exe",
+            "program": "${workspaceFolder}/",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",

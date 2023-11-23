@@ -322,7 +322,7 @@ void daxa_as_build_info_to_vk(
             else // aabbs
             {
                 geo_info.geometryType = VK_GEOMETRY_TYPE_AABBS_KHR,
-                geo_info.flags = static_cast<VkGeometryFlagsKHR>(info.geometries.values.aabbs.aabbs[geo_i].flags);
+                geo_info.flags = std::bit_cast<VkGeometryTypeKHR>(info.geometries.values.aabbs.aabbs[geo_i].flags);
                 geo_info.geometry.aabbs = VkAccelerationStructureGeometryAabbsDataKHR{
                     .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_AABBS_DATA_KHR,
                     .pNext = nullptr,
