@@ -5,7 +5,7 @@
             "name": "Launch",
             "type": "cppdbg",
             "request": "launch",
-            "program": "${command:cmake.launchTargetPath}",
+            "program": "${workspaceFolder}/build/cl-x86_64-windows-msvc/tests/Debug/daxa_test_2_daxa_api_10_raytracing.exe",
             "args": [],
             "stopAtEntry": false,
             "cwd": "${workspaceFolder}",
