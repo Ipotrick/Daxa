@@ -269,7 +269,7 @@ void daxa_as_build_info_to_vk(
                 },
                 .flags = std::bit_cast<VkGeometryFlagsKHR>(inst_info.flags),
             });
-            primitive_counts.push_back(info.instance_count);
+            primitive_counts.push_back(inst_info.count);
         }
         vk_build_geometry_infos.push_back({
             .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_GEOMETRY_INFO_KHR,

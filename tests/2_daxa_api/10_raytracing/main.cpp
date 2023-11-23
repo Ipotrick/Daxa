@@ -22,6 +22,7 @@ namespace tests
             std::shared_ptr<daxa::ComputePipeline> comp_pipeline = {};
             daxa::TlasId tlas = {};
             daxa::BlasId blas = {};
+            daxa::BlasId proc_blas = {};
 
             App() : AppWindow<App>("ray query test") {}
 
@@ -31,6 +32,7 @@ namespace tests
                 {
                     device.destroy_tlas(tlas);
                     device.destroy_blas(blas);
+                    device.destroy_blas(proc_blas);
                 }
             }
 
@@ -103,7 +105,7 @@ namespace tests
                         .count = 1,
                         .flags = daxa::GeometryFlagBits::OPAQUE,                                    // Is also default
                     }};
-                /// Create Blas:
+                /// Create Triangle Blas:
                 /// TODO(Raytracing): create aabb data, buffers, BlasAabbGeometryInfo and blas for it.
                 auto blas_build_info = daxa::BlasBuildInfo{
                     .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,       // Is also default
@@ -128,31 +130,101 @@ namespace tests
                 tri_geom.transform_data = device.get_device_address(transform_buffer).value();
                 blas_build_info.dst_blas = blas;
                 blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value();
+
+
+                
+// https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#VUID-VkAccelerationStructureBuildGeometryInfoKHR-type-03792
+// GeometryType of each element of pGeometries must be the same
+                
+                /// aabb data:
+                auto min_max = std::array{
+                    std::array{-0.15f, -0.15f, -0.15f},
+                    std::array{0.15f, 0.15f, 0.15f},
+                };
+                auto aabb_buffer = device.create_buffer({
+                    .size = sizeof(decltype(min_max)),
+                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .name = "aabb buffer",
+                });
+                defer { device.destroy_buffer(aabb_buffer); };
+                *device.get_host_address_as<decltype(min_max)>(aabb_buffer).value() = min_max;
+                /// Procedural Geometry Info:
+                auto proc_geometries = std::array{
+                    daxa::BlasAabbGeometryInfo{
+                        .data = device.get_device_address(aabb_buffer).value(),
+                        .stride = sizeof(daxa_f32mat3x2),
+                        .count = 1,
+                        .flags = daxa::GeometryFlagBits::OPAQUE,                                    // Is also default
+                    }};
+                /// Create Procedural Blas:
+                auto proc_blas_build_info = daxa::BlasBuildInfo{
+                    .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,       // Is also default
+                    .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.       // Is also default
+                    .geometries = proc_geometries,
+                    .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
+                };
+                daxa::AccelerationStructureBuildSizesInfo proc_build_size_info = device.get_blas_build_sizes(proc_blas_build_info);
+                auto proc_blas_scratch_buffer = device.create_buffer({
+                    .size = proc_build_size_info.build_scratch_size,
+                    .name = "proc blas build scratch buffer",
+                });
+                defer { device.destroy_buffer(proc_blas_scratch_buffer); };
+                this->proc_blas = device.create_blas({
+                    .size = build_size_info.acceleration_structure_size,
+                    .name = "test procedural blas",
+                });
+                proc_blas_build_info.dst_blas = proc_blas;
+                proc_blas_build_info.scratch_data = device.get_device_address(proc_blas_scratch_buffer).value();
+
+
+
+
                 /// create blas instances for tlas:
                 /// TODO(Raytracing): add instance of blas for aabb.
                 auto blas_instances_buffer = device.create_buffer({
-                    .size = sizeof(daxa_BlasInstanceData),
+                    .size = sizeof(daxa_BlasInstanceData) * 2,
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "blas instances array buffer",
                 });
                 defer { device.destroy_buffer(blas_instances_buffer); };
-                /// TODO(Raytracing): add instance of blas for aabb.
-                *device.get_host_address_as<daxa_BlasInstanceData>(blas_instances_buffer).value() = daxa_BlasInstanceData{
-                    .transform = {
-                        {1, 0, 0, 0},
-                        {0, 1, 0, 0},
-                        {0, 0, 1, 0},
+
+
+                auto blas_instance_array = std::array{
+                    daxa_BlasInstanceData{
+                        .transform = {
+                            {1, 0, 0, 0.15f},
+                            {0, 1, 0, -0.15f},
+                            {0, 0, 1, 0.25f},
+                        },
+                        .instance_custom_index = 0, // Is also default
+                        .mask = 0xFF,
+                        .instance_shader_binding_table_record_offset = {}, // Is also default
+                        .flags = {},                                       // Is also default
+                        .blas_device_address = device.get_device_address(blas).value(),
                     },
-                    .instance_custom_index = 0,                                     // Is also default
-                    .mask = 0xFF,
-                    .instance_shader_binding_table_record_offset = {},              // Is also default
-                    .flags = {},                                                    // Is also default
-                    .blas_device_address = device.get_device_address(blas).value(),
+                    daxa_BlasInstanceData{
+                        .transform = {
+                            {1, 0, 0, 0.25f},
+                            {0, 1, 0, 0.25f},
+                            {0, 0, 1, 0.5f},
+                        },
+                        .instance_custom_index = 1, // Is also default
+                        .mask = 0xFF,
+                        .instance_shader_binding_table_record_offset = {}, // Is also default
+                        .flags = {},                                       // Is also default
+                        .blas_device_address = device.get_device_address(proc_blas).value(),
+                    }
                 };
+                std::memcpy(device.get_host_address_as<daxa_BlasInstanceData>(blas_instances_buffer).value(), 
+                    blas_instance_array.data(), 
+                    blas_instance_array.size() * sizeof(daxa_BlasInstanceData));
+
+
+                /// TODO(Raytracing): add instance of blas for aabb.
                 auto blas_instances = std::array{
                     daxa::TlasInstanceInfo{
                         .data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
-                        .count = 1,
+                        .count = 2,
                         .is_data_array_of_pointers = false, // Buffer contains flat array of instances, not an array of pointers to instances.
                         .flags = daxa::GeometryFlagBits::OPAQUE,                            // Is also default
                     },
@@ -184,7 +256,7 @@ namespace tests
                 {
                     auto recorder = device.create_command_recorder({});
                     recorder.build_acceleration_structures({
-                        .blas_build_infos = std::array{blas_build_info},
+                        .blas_build_infos = std::array{blas_build_info, proc_blas_build_info},
                     });
                     recorder.pipeline_barrier({
                         .src_access = daxa::AccessConsts::ACCELERATION_STRUCTURE_BUILD_WRITE,
