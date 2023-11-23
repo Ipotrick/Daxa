@@ -179,9 +179,8 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 DAXA_SAMPLER_LAYOUT uniform sampler daxa_SamplerTable[];
 DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_SamplerShadowTable[];
 #if defined(DAXA_RAY_TRACING)
-#error DING DONG
 DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_AccelerationStructureTable[];
-#endif 
+#endif
 // Daxa implementation detail end
 
 /// @brief  Defines three buffer reference using daxa's buffer reference layout.

@@ -14,12 +14,6 @@
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) PTR_TYPE NAME;
 #define DAXA_TH_BUFFER_ID_ARRAY(TASK_ACCESS, NAME, SIZE) daxa_BufferId NAME[SIZE];
 #define DAXA_TH_BUFFER_PTR_ARRAY(TASK_ACCESS, PTR_TYPE, NAME, SIZE) PTR_TYPE NAME[SIZE];
-#define DAXA_TH_TLAS_NO_SHADER(TASK_ACCESS, NAME)
-#define DAXA_TH_BLAS_NO_SHADER(TASK_ACCESS, NAME)
-#define DAXA_TH_TLAS(TASK_ACCESS, NAME) daxa_TlasId NAME;
-#define DAXA_TH_TLAS_ARRAY(TASK_ACCESS, NAME, SIZE) daxa_TlasId NAME[SIZE];
-#define DAXA_TH_TLAS_ADDR(TASK_ACCESS, NAME) daxa_u64 NAME;
-#define DAXA_TH_TLAS_ADDR_ARRAY(TASK_ACCESS, NAME, SIZE) daxa_u64 NAME[SIZE];
 #define DAXA_DECL_TASK_HEAD_END \
     }                           \
     ;
@@ -39,17 +33,11 @@
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_ACCESS, 1, true> NAME;
 #define DAXA_TH_BUFFER_ID_ARRAY(TASK_ACCESS, NAME, SIZE) daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_ACCESS, SIZE> NAME;
 #define DAXA_TH_BUFFER_PTR_ARRAY(TASK_ACCESS, PTR_TYPE, NAME, SIZE) daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_ACCESS, SIZE, true> NAME;
-#define DAXA_TH_TLAS_NO_SHADER(TASK_ACCESS, NAME) TODO
-#define DAXA_TH_BLAS_NO_SHADER(TASK_ACCESS, NAME) TODO
-#define DAXA_TH_TLAS(TASK_ACCESS, NAME) TODO
-#define DAXA_TH_TLAS_ARRAY(TASK_ACCESS, NAME, SIZE) TODO
-#define DAXA_TH_TLAS_ADDR(TASK_ACCESS, NAME) TODO
-#define DAXA_TH_TLAS_ADDR_ARRAY(TASK_ACCESS, NAME, SIZE) TODO
-#define DAXA_DECL_TASK_HEAD_END                                                                \
-    }                                                                                          \
-    ;                                                                                          \
+#define DAXA_DECL_TASK_HEAD_END                                                                        \
+    }                                                                                                  \
+    ;                                                                                                  \
     std::array<std::byte, daxa::detail::get_task_head_shader_blob_size<Uses>()> shader_byte_blob = {}; \
-    }                                                                                          \
+    }                                                                                                  \
     ;
 
 #else // C

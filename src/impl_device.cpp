@@ -377,13 +377,13 @@ auto create_acceleration_structure_helper(
     else
     {
         daxa::SmallString buffer_name{std::string_view{ret.info.name.data, ret.info.name.size}};
-        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
+        if (ret.info.name.size < DAXA_SMALL_STRING_CAPACITY)
             buffer_name.push_back(' ');
-        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
+        if (ret.info.name.size < DAXA_SMALL_STRING_CAPACITY)
             buffer_name.push_back('b');
-        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
+        if (ret.info.name.size < DAXA_SMALL_STRING_CAPACITY)
             buffer_name.push_back('u');
-        if (ret.info.name.size < SMALL_STRING_CHAR_MAX)
+        if (ret.info.name.size < DAXA_SMALL_STRING_CAPACITY)
             buffer_name.push_back('f');
         auto cinfo = daxa_BufferInfo{
             .size = ret.info.size,

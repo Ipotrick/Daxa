@@ -211,7 +211,6 @@ namespace daxa
         // NOTE(pahrens): Make sure to never exceed EXTENSION_LIST_MAX!
         this->size = 0;
         this->data[size++] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-        this->data[size++] = {VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME};
         if (info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION)
         {
             this->data[size++] = {VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME};

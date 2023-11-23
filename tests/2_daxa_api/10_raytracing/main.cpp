@@ -416,21 +416,11 @@ namespace tests
             }
         }
     }
-
-    void update_copy_task_graph()
-    {
-        
-    }
 } // namespace tests
 
 auto main() -> int
 {
-    // Tests device initialization with raytracing enabled.
-    // Tests triangle Blas build.
-    // Tests Tlas build.
-    // Tests required functions for building Tlas/Blas.
-    // Tests using Tlas with ray query in compute shader.
+    // TODO(Raytracing): Add acceleration structure updates.
     tests::ray_querry_triangle();
-    tests::update_copy_task_graph();
     return 0;
 }
