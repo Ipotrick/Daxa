@@ -23,14 +23,6 @@ namespace daxa
     {
         auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
         auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
-        void copy_task_head_to(void * dst) const;
-        template<typename T>
-        auto get_task_head_as() -> T
-        {
-            T ret;
-            copy_task_head_to(&ret);
-            return ret;
-        }
 
       protected:
         friend struct ImplTaskRuntimeInterface;
@@ -46,6 +38,9 @@ namespace daxa
         auto get_device() const -> Device &;
         auto get_recorder() const -> CommandRecorder &;
         auto get_allocator() const -> TransferMemoryPool &;
+
+        void copy_task_head_to(void * dst) const;
+        auto allocate_task_head() -> std::optional<TransferMemoryPool::Allocation>;
 
         TaskInterfaceUses uses;
 

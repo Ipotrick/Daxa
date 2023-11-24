@@ -347,7 +347,7 @@ namespace daxa
         return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[image_use_index]);
     }
 
-    void TaskInterfaceUses::copy_task_head_to(void * dst) const
+    void TaskInterface::copy_task_head_to(void * dst) const
     {
         // NOTE:    At this point, all the uses should have already been verified.
         //          We should not need to check here!
@@ -380,6 +380,21 @@ namespace daxa
                     byte_offset += 8;
                 }
             });
+    }
+    
+    auto TaskInterface::allocate_task_head() -> std::optional<TransferMemoryPool::Allocation>
+    {
+        // NOTE:    At this point, all the uses should have already been verified.
+        //          We should not need to check here!
+        auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
+        usize const size = sizeof(GenericTaskResourceUse) * impl.current_task->base_task->get_generic_uses().size();
+        auto alloc_opt = impl.task_graph.staging_memory.value().allocate(size);
+        if (!alloc_opt.has_value())
+        {
+            return std::nullopt;
+        }
+        this->copy_task_head_to(alloc_opt->host_address);
+        return alloc_opt;
     }
 
     TaskInterface::TaskInterface(void * a_backend)

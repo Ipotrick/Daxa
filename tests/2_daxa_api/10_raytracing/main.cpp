@@ -82,12 +82,12 @@ namespace tests
                 *device.get_host_address_as<decltype(indices)>(index_buffer).value() = indices;
                 /// Transforms:
                 auto transform_buffer = device.create_buffer({
-                    .size = sizeof(daxa_rowmaj_f32mat3x4),
+                    .size = sizeof(daxa_f32mat3x4),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "transform buffer",
                 });
                 defer { device.destroy_buffer(transform_buffer); };
-                *device.get_host_address_as<daxa_rowmaj_f32mat3x4>(transform_buffer).value() = daxa_rowmaj_f32mat3x4{
+                *device.get_host_address_as<daxa_f32mat3x4>(transform_buffer).value() = daxa_f32mat3x4{
                     {1, 0, 0, 0},
                     {0, 1, 0, 0},
                     {0, 0, 1, 0},
@@ -231,7 +231,7 @@ namespace tests
                 };
                 auto tlas_build_info = daxa::TlasBuildInfo{
                     .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,
-                    .dst_tlas = {}, // Ignored in get_acceleration_structure_build_sizes.
+                    .dst_tlas = {},     // Ignored in get_acceleration_structure_build_sizes.
                     .instances = blas_instances,
                     .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.
                 };

@@ -138,7 +138,7 @@ namespace tests
             {
                 auto & cmd = ti.get_recorder();
                 TestShaderTaskHead head;
-                ti.uses.copy_task_head_to(&head);
+                ti.copy_task_head_to(&head);
                 cmd.push_constant(head);
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch({1, 1, 1});

@@ -363,7 +363,9 @@ namespace tests
             {
                 auto& cmd = ti.get_recorder();
                 // Write TaskHead shader blob to the push constant.
-                cmd.push_constant(ti.uses.get_task_head_as<ShaderIntegrationTaskHead>());
+                ShaderIntegrationTaskHead push;
+                ti.copy_task_head_to(&push);
+                cmd.push_constant(push);
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch({1, 1, 1});
             },
@@ -380,7 +382,9 @@ namespace tests
                 // Optionally, the shader uses can still be accessed with the usual task interface for immediate tasks. 
                 [[maybe_unused]] auto img = ti.uses[task_image].image();
                 // Write TaskHead shader blob to the push constant.
-                cmd.push_constant(ti.uses.get_task_head_as<ShaderIntegrationTaskHead>());
+                ShaderIntegrationTaskHead push;
+                ti.copy_task_head_to(&push);
+                cmd.push_constant(push);
                 cmd.set_pipeline(*compute_pipeline);
                 cmd.dispatch({1, 1, 1});
             },

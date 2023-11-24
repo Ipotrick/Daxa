@@ -550,10 +550,9 @@ namespace tests
             defer { device.destroy_buffer(index_buffer); };
             std::memcpy(device.get_host_address(index_buffer).value(), &indices, sizeof(decltype(indices)));
             auto transform = daxa_f32mat3x4{
-                {1, 0, 0},
-                {0, 1, 0},
-                {0, 0, 1},
-                {0, 0, 0},
+                {1, 0, 0, 0},
+                {0, 1, 0, 0},
+                {0, 0, 1, 0},
             };
             auto transform_buffer = device.create_buffer({
                 .size = sizeof(daxa_f32mat3x4),

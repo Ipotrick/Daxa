@@ -289,6 +289,7 @@ namespace daxa
       private:
         friend struct ImplTaskGraph;
         friend struct TaskInterfaceUses;
+        friend struct TaskInterface;
         TaskResourceUseType const type = TaskResourceUseType::BUFFER;
         u32 m_shader_array_size = T_SHADER_ARRAY_SIZE;
         OpaqueSpan<BufferId const> buffers = {};
@@ -357,6 +358,7 @@ namespace daxa
         friend struct ImplTaskGraph;
         friend struct TaskGraphPermutation;
         friend struct TaskInterfaceUses;
+        friend struct TaskInterface;
         TaskResourceUseType type = TaskResourceUseType::IMAGE;
         u32 m_shader_array_size = T_SHADER_ARRAY_SIZE;
         TaskImageAccess m_access = T_ACCESS;
