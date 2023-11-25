@@ -40,7 +40,7 @@ namespace daxa
         /// @brief  Allocates a section of a buffer with the size of T, writes the given T to the allocation.
         /// @return allocation. 
         template<typename T>
-        DAXA_EXPORT_CXX auto allocate_fill(T const & value, u32 alignment_requirement = 1) -> std::optional<Allocation>
+        auto allocate_fill(T const & value, u32 alignment_requirement = 1) -> std::optional<Allocation>
         {
             auto allocation_o = allocate(sizeof(T), alignment_requirement);
             if (allocation_o.has_value())
