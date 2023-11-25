@@ -148,6 +148,151 @@ It provides access to task uses, command lists, a linear memory allocator, and a
 
 ```
 
+## TaskHead
+
+The resource uses are duplicated in c++ and in the shaders/shared files. 
+This is because in c++ there is a declaration of a struct of uses and in shader/shared files there is a declaration of the ids/pointers to those used resources.
+The ids/pointers to the resources must also be manually written to some shared struct and pushed to the gpu.
+
+Task heads improve this workflow. They are a unified declaration of uses and a shared struct of ids/pointers. The task graph can also analyze these and reduce the boilerplate of uploading ids.
+
+Task heads are declared within shader or shared files. Thes list the resource uses with makros. They holds the nessecary information for both the c++ and shader side of each resouce use. 
+* in shaders it will declare a struct of ids/pointers for the given uses. 
+* in c++ it declares a struct that is an opaque blob of bytes, this blob is the same size as the shader struct. This is useful for declaring shared structs.
+* in c++ it also declares an associated `Uses` struct within the task head struct. This is usable direclty as uses for a task.
+
+Example:
+```c
+// within shared file
+DAXA_DECL_TASK_HEAD_BEGIN(MyTaskHead)
+DAXA_TH_IMAGE_ID( COMPUTE_SHADER_READ,  daxa_BufferPtr(daxa_u32), src_buffer)
+DAXA_TH_BUFFER_ID(COMPUTE_SHADER_WRITE, REGULAR_2D,               dst_image)
+DAXA_DECL_TASK_HEAD_END
+```
+Is translated to the following in glsl:
+```c
+struct MyTaskHead
+{
+    daxa_BufferPtr(daxa_u32)  src_buffer;
+    daxa_ImageViewId          dst_buffer;
+};
+```
+Is translated to the following in c++:
+```c++
+struct MyTaskHead
+{
+    static inline constexpr std::string_view NAME = "MyTaskHead";
+    struct Uses
+    {
+        daxa::TaskBufferUse<daxa::TaskBufferAccess::COMPUTE_SHADER_READ> src_buffer;
+        daxa::TaskImageUse<
+            daxa::TaskImageAccess::COMPUTE_SHADER_WRITE, 
+            daxa::ImageViewType::REGULAR_2D
+        > dst_image;
+    };
+    // daxa::detail::get_task_head_shader_blob_size<Uses>()> performs simple 
+    /// static reflection on the uses to determine the size of this array.
+    // As this struct should be abi compatible, the array is made up 
+    // of u64's to match the alignment of ids and ptrs in shader files.
+    std::array<
+        daxa::u64, 
+        daxa::detail::get_task_head_shader_blob_size<Uses>()
+    > shader_byte_blob = {};
+};
+```
+
+The example task head above is now usable like this:
+```c
+// within shared file
+DAXA_DECL_TASK_HEAD_BEGIN(MyTaskHead)
+DAXA_TH_IMAGE_ID( COMPUTE_SHADER_READ,  daxa_BufferPtr(daxa_u32), src_buffer)
+DAXA_TH_BUFFER_ID(COMPUTE_SHADER_WRITE, REGULAR_2D,               dst_image)
+DAXA_DECL_TASK_HEAD_END
+
+struct MyPushStruct
+{
+    daxa_u32vec2 size;
+    daxa_u32 settings_bitfield;
+    // Head struct can be used within shared structs:
+    MyTaskHead head;
+};
+```
+```c++
+// within c++
+task_graph.add_task({          
+    // Head contains Uses struct usable within inline AND static tasks:  
+    .uses = daxa::generic_uses_cast(TestShaderTaskHead::Uses{
+        .src_buffer = src_view,
+        .dst_image = dst_view,
+    }),
+    .task = [](daxa::TaskInterface ti)
+    {
+        auto rec = ti.get_command_recorder();
+        rec.set_pipeline(...);
+        auto push = MyPushStruct{
+            .size = ...,
+            .settings_bitfield = ...,
+        };
+        // TaskInterface has function to copy the head shader struct to any memory:
+        ti.copy_task_head_to(&push.head);
+        // Alternatively, allocate and write the head shader struct to a buffer section:
+        // This might be nessecary when the head shader struct is too large.
+        // auto alloc = ti.allocate_task_head().value();
+        rec.push_constant(push);
+    },
+    // The string-ified name of the head is also immediately available:
+    .name = TestShaderTaskHead::NAME,
+});
+
+// Alternatively the head can be used to declare a static task:
+struct MyTask
+{
+    TestShaderTaskHead::Uses uses;
+    static inline constexpr std::string_view NAME = TestShaderTaskHead::NAME;
+    daxa_u32vec2 size;
+    daxa_u32 settings_bitfield;
+    std::shared_ptr<daxa::ComputePipeline> pipeline;
+    void callback(daxa::TaskInterface ti)
+    {
+        auto rec = ti.get_command_recorder();
+        rec.set_pipeline(*pipeline);
+        auto push = MyPushStruct{
+            .size = size
+            .settings_bitfield = settings_bitfield,
+        };
+        // TaskInterface has function to copy the head shader struct to any memory:
+        ti.copy_task_head_to(&push.head);
+        rec.push_constant(push);
+        // Alternatively, allocate and write the head shader struct to a buffer section:
+        // This might be nessecary when the head shader struct is too large.
+        [[maybe_unused]] auto alloc = ti.allocate_task_head().value();
+        // The uses work just as manually declared uses:
+        [[maybe_unused]] daxa::BufferId = ti.uses.src_buffer.buffer();
+        [[maybe_unused]] daxa::ImageViewId = ti.uses.dst_image.view();
+    }
+};
+```
+
+Due to c++ language and preprocessor limitations its not easily possible to also declare a real struct of ids/ptrs within c++. The head in c++ is just a byteblob, so the ids/ptrs can not directly be set by name. The task interface has a quick way to write the ids/ptrs to some memory location like above. 
+
+### Specifics:
+
+There are multiple ways to declare how a resource is used within the shader:
+```c
+DAXA_TH_IMAGE_NO_SHADER(    TASK_ACCESS,            NAME)
+DAXA_TH_IMAGE_ID(           TASK_ACCESS, VIEW_TYPE, NAME)
+DAXA_TH_IMAGE_ID_ARRAY(     TASK_ACCESS, VIEW_TYPE, NAME, SIZE)
+DAXA_TH_BUFFER_NO_SHADER(   TASK_ACCESS,            NAME)
+DAXA_TH_BUFFER_ID(          TASK_ACCESS,            NAME)
+DAXA_TH_BUFFER_PTR(         TASK_ACCESS, PTR_TYPE,  NAME)
+DAXA_TH_BUFFER_ID_ARRAY(    TASK_ACCESS,            NAME, SIZE)
+DAXA_TH_BUFFER_PTR_ARRAY(   TASK_ACCESS, PTR_TYPE,  NAME, SIZE)
+```
+* `_ID` postfix delcares that the resource is represented as id in the head shader struct.
+* `_PTR` postfix declares the resource is represented as a pointer in the head shader struct.
+* `_ARRAY` postfix declares the resource is represented as an array of ids/ptrs. Each array slot is matching a runtime resource within the runtime array of images/buffers of the TaskImage/TaskBuffer.
+* `_NO_SHADER` postfix declares that the resource is not accessable within the shader at all. This can be useful for example when declaring a use of `COLOR_ATTACHMENT` in rasterization.
+
 ## Task Graph Valid Use Rules
 - A task may use the same image multiple times, as long as the TaskImagView's slices dont overlap.
 - A task may only ever have one use of a TaskBuffer
