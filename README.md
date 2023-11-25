@@ -22,9 +22,10 @@ Why would you want to use Daxa? These are some of the aspects of Daxa that set i
 
 ### Getting started
 
-The GitHub [wiki](https://github.com/Ipotrick/Daxa/tree/master/wiki) contains pages on all bigger Daxa features, like TaskGraph (the render-graph), PipelineManager (shader build system) and shader integration.
+The [md book](https://github.com/Ipotrick/Daxa/tree/master/wiki/daxa-book) contains pages on all bigger Daxa features, like TaskGraph (the render-graph), PipelineManager (shader build system) and shader integration. 
+> The md book is WIP, there might be errors and it is not hosted as a website yet. To navigate it, take a look at SUMMARY.md within daxa-book.
 
-Building and including Daxa in your project is explained [here](https://github.com/Ipotrick/Daxa/tree/master/wiki/Building.md).
+Building and including Daxa in your project is explained [here](https://github.com/Ipotrick/Daxa/tree/master/wiki/daxa-book/src/building.md).
 
 Daxa also has a [tutorial page](https://github.com/Ipotrick/Daxa/tree/master/wiki/Tutorial.md) detailing the basics of the API.
 
