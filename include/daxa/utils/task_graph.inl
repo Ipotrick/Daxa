@@ -19,12 +19,12 @@
     ;
 #elif __cplusplus
 #include "task_graph_types.hpp"
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) \
-    struct HEAD_NAME                         \
-    {                                        \
-        struct Uses                          \
-        {                                    \
-            static constexpr inline std::string_view NAME = #HEAD_NAME;
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                        \
+    struct HEAD_NAME                                                \
+    {                                                               \
+        static constexpr inline std::string_view NAME = #HEAD_NAME; \
+        struct Uses                                                 \
+        {
 #define DAXA_TH_IMAGE_NO_SHADER(TASK_ACCESS, NAME) daxa::TaskImageUse<daxa::TaskImageAccess::TASK_ACCESS, daxa::ImageViewType::MAX_ENUM, 0> NAME;
 #define DAXA_TH_IMAGE_ID(TASK_ACCESS, VIEW_TYPE, NAME) daxa::TaskImageUse<daxa::TaskImageAccess::TASK_ACCESS, daxa::ImageViewType::VIEW_TYPE> NAME;
 #define DAXA_TH_IMAGE_ID_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) daxa::TaskImageUse<daxa::TaskImageAccess::TASK_ACCESS, daxa::ImageViewType::VIEW_TYPE, SIZE> NAME;
