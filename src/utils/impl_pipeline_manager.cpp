@@ -125,12 +125,13 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 };
 #endif
 
-#include <re2/re2.h>
+// #include <re2/re2.h>
 #include <thread>
 #include <utility>
+#include <sstream>
 #include <iostream>
 
-static auto const PRAGMA_ONCE_REGEX = RE2(R"regex(\s*#\s*pragma\s+once\s*)regex");
+// static auto const PRAGMA_ONCE_REGEX = RE2(R"regex(\s*#\s*pragma\s+once\s*)regex");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
 {
     std::string line = {};
@@ -153,9 +154,16 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
         });
     abs_path_str.erase(remove_iter, abs_path_str.end());
 
+    auto check_for_pragma_once = [](std::string const &line) {
+        auto pragma_pos = line.find("#pragma");
+        auto once_pos = line.find("once");
+        return pragma_pos != std::string::npos && once_pos != std::string::npos && once_pos > pragma_pos;
+        // return RE2::FullMatch(line, PRAGMA_ONCE_REGEX);
+    };
+
     while (std::getline(file_ss, line))
     {
-        if (!has_pragma_once && RE2::FullMatch(line, PRAGMA_ONCE_REGEX))
+        if (!has_pragma_once && check_for_pragma_once(line))
         {
             result_ss << "#if !defined(" << abs_path_str << ")\n";
             has_pragma_once = true;
