@@ -4,39 +4,30 @@
 
 #include "impl_core.hpp"
 
-namespace daxa
+using namespace daxa;
+
+static inline constexpr usize pipeline_manager_MAX_ATTACHMENTS = 16;
+
+struct PipelineZombie
 {
-    struct ImplDevice;
+    VkPipeline vk_pipeline = {};
+};
 
-    static inline constexpr usize pipeline_manager_MAX_ATTACHMENTS = 16;
+struct ImplPipeline : ImplHandle
+{
+    daxa_Device device = {};
+    VkPipeline vk_pipeline = {};
+    VkPipelineLayout vk_pipeline_layout = {};
 
-    struct PipelineZombie
-    {
-        VkPipeline vk_pipeline = {};
-    };
+    static void zero_ref_callback(ImplHandle const * handle);
+};
 
-    struct ImplPipeline : ManagedSharedState
-    {
-        explicit ImplPipeline(ManagedWeakPtr a_impl_device);
+struct daxa_ImplRasterPipeline final : ImplPipeline
+{
+    RasterPipelineInfo info = {};
+};
 
-        ManagedWeakPtr impl_device;
-        VkPipeline vk_pipeline = {};
-        VkPipelineLayout vk_pipeline_layout = {};
-
-        virtual ~ImplPipeline() override;
-    };
-
-    struct ImplRasterPipeline final : ImplPipeline
-    {
-        RasterPipelineInfo info;
-
-        ImplRasterPipeline(ManagedWeakPtr a_impl_device, RasterPipelineInfo a_info);
-    };
-
-    struct ImplComputePipeline final : ImplPipeline
-    {
-        ComputePipelineInfo info;
-
-        ImplComputePipeline(ManagedWeakPtr a_impl_device, ComputePipelineInfo a_info);
-    };
-} // namespace daxa
+struct daxa_ImplComputePipeline final : ImplPipeline
+{
+    ComputePipelineInfo info = {};
+};

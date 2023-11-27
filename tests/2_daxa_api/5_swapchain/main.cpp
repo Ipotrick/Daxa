@@ -1,9 +1,6 @@
 #include <0_common/window.hpp>
 #include <thread>
 
-#define APPNAME "Daxa API Sample: Swapchain"
-#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
 namespace tests
 {
     void simple_creation()
@@ -12,7 +9,7 @@ namespace tests
         {
             daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
-                .name = APPNAME_PREFIX("device (simple_creation)"),
+                .name = ("device (simple_creation)"),
             });
 
             daxa::Swapchain swapchain = device.create_swapchain({
@@ -20,10 +17,10 @@ namespace tests
                 .native_window_platform = get_native_platform(),
                 .present_mode = daxa::PresentMode::FIFO,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-                .name = APPNAME_PREFIX("swapchain (simple_creation)"),
+                .name = ("swapchain (simple_creation)"),
             });
 
-            App() : AppWindow<App>(APPNAME " (simple_creation)") {}
+            App() : AppWindow<App>(" (simple_creation)") {}
 
             void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
             void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
@@ -39,17 +36,17 @@ namespace tests
         {
             daxa::Instance daxa_ctx = daxa::create_instance({});
             daxa::Device device = daxa_ctx.create_device({
-                .name = APPNAME_PREFIX("device (clearcolor)"),
+                .name = ("device (clearcolor)"),
             });
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = get_native_handle(),
                 .native_window_platform = get_native_platform(),
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-                .name = APPNAME_PREFIX("swapchain (clearcolor)"),
+                .name = ("swapchain (clearcolor)"),
             });
 
-            App() : AppWindow<App>(APPNAME " (clearcolor)") {}
+            App() : AppWindow<App>(" (clearcolor)") {}
 
             auto update() -> bool
             {
@@ -79,43 +76,46 @@ namespace tests
                 {
                     return;
                 }
-                auto cmd_list = device.create_command_list({
-                    .name = APPNAME_PREFIX("cmd_list (clearcolor)"),
+                auto recorder = device.create_command_recorder({
+                    .name = ("recorder (clearcolor)"),
                 });
 
-                cmd_list.pipeline_barrier_image_transition({
+                recorder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .image_id = swapchain_image,
                 });
 
-                cmd_list.clear_image({
+                recorder.clear_image({
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                     .dst_image = swapchain_image,
                 });
 
-                cmd_list.pipeline_barrier_image_transition({
+                recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
 
-                cmd_list.complete();
+                auto executalbe_commands = recorder.complete_current_commands();
+                recorder.~CommandRecorder();
 
                 device.submit_commands({
-                    .command_lists = {std::move(cmd_list)},
-                    .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
-                    .signal_binary_semaphores = {swapchain.get_present_semaphore()},
-                    .signal_timeline_semaphores = {{swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
+                    .command_lists = std::array{executalbe_commands},
+                    .wait_binary_semaphores = std::array{swapchain.current_acquire_semaphore()},
+                    .signal_binary_semaphores = std::array{swapchain.current_present_semaphore()},
+                    .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
                 });
 
                 device.present_frame({
-                    .wait_binary_semaphores = {swapchain.get_present_semaphore()},
+                    .wait_binary_semaphores = std::array{swapchain.current_present_semaphore()},
                     .swapchain = swapchain,
                 });
+
+                device.collect_garbage();
             }
 
             void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}

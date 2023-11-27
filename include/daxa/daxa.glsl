@@ -13,10 +13,18 @@
 #extension GL_KHR_shader_subgroup_clustered : enable
 #extension GL_KHR_shader_subgroup_quad : enable
 #extension GL_EXT_scalar_block_layout : require
+// __APPLE__ needs this disabled
 // #extension GL_EXT_shader_image_load_formatted : require
 #extension GL_EXT_control_flow_attributes : require
 #extension GL_EXT_shader_image_int64 : require
 #extension GL_EXT_samplerless_texture_functions : require
+
+#define DAXA_ID_INDEX_BITS 20
+#define DAXA_ID_INDEX_MASK ((uint64_t(1) << DAXA_ID_INDEX_BITS) - uint64_t(1))
+#define DAXA_ID_INDEX_OFFSTET 0
+#define DAXA_ID_VERSION_BITS 44
+#define DAXA_ID_VERSION_MASK ((uint64_t(1) << DAXA_ID_VERSION_BITS) - uint64_t(1))
+#define DAXA_ID_VERSION_OFFSTET DAXA_ID_INDEX_BITS
 
 #define DAXA_SHADER_STAGE_COMPUTE 0
 #define DAXA_SHADER_STAGE_VERTEX 1
@@ -27,11 +35,6 @@
 #define DAXA_SHADER_STAGE_MESH 6
 
 // Daxa inl file type definitions:
-#define daxa_b32 bool
-#define daxa_b32vec1 daxa_b32
-#define daxa_b32vec2 bvec2
-#define daxa_b32vec3 bvec3
-#define daxa_b32vec4 bvec4
 #define daxa_f32 float
 #define daxa_f32vec1 daxa_f32
 #define daxa_f32vec2 vec2
@@ -66,32 +69,40 @@
 #define daxa_u64vec2 u64vec2
 #define daxa_u64vec3 u64vec3
 #define daxa_u64vec4 u64vec4
+#define daxa_b32 bool
+#define daxa_b32vec1 daxa_b32
+#define daxa_b32vec2 bvec2
+#define daxa_b32vec3 bvec3
+#define daxa_b32vec4 bvec4
 
 struct daxa_BufferId
 {
-    // Upper 8 bits contain the version.
-    // Lower 24 bits contain the index.
-    daxa_u32 value;
+    uint64_t value;
 };
+
 struct daxa_ImageViewId
 {
-    // Upper 8 bits contain the version.
-    // Lower 24 bits contain the index.
-    daxa_u32 value;
+    uint64_t value;
 };
+
 struct daxa_SamplerId
 {
-    // Upper 8 bits contain the version.
-    // Lower 24 bits contain the index.
-    daxa_u32 value;
+    uint64_t value;
 };
+
+#if defined(DAXA_RAY_TRACING)
+struct daxa_TlasId
+{
+    uint64_t value;
+};
+#endif
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
 /// @param id The id the index is retrieved from.
 /// @return The index the id contains.
 daxa_u32 daxa_buffer_id_to_index(daxa_BufferId id)
 {
-    return (DAXA_ID_INDEX_MASK & id.value);
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
@@ -99,7 +110,7 @@ daxa_u32 daxa_buffer_id_to_index(daxa_BufferId id)
 /// @return The index the id contains.
 daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewId id)
 {
-    return (DAXA_ID_INDEX_MASK & id.value);
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
@@ -107,14 +118,22 @@ daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewId id)
 /// @return The index the id contains.
 daxa_u32 daxa_sampler_id_to_index(daxa_SamplerId id)
 {
-    return (DAXA_ID_INDEX_MASK & id.value);
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
 }
+
+#if defined(DAXA_RAY_TRACING)
+/// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
+/// @param id The id the index is retrieved from.
+/// @return The index the id contains.
+daxa_u32 daxa_acceleration_structure_id_to_index(daxa_TlasId id)
+{
+    return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
+}
+#endif
 
 // Daxa implementation detail begin
 layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 1) restrict readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
 daxa_buffer_device_address_buffer;
-layout(binding = DAXA_SAMPLER_BINDING, set = 1) uniform sampler daxa_SamplerTable[];
-layout(binding = DAXA_SAMPLER_BINDING, set = 1) uniform samplerShadow daxa_SamplerShadowTable[];
 // Daxa implementation detail end
 
 /// @brief Retrieves a buffer device address to the start of the buffer of the given buffer id.
@@ -137,7 +156,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
 #define daxa_BufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(BufferPtr, STRUCT_TYPE)
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
-#define deref(BUFFER_PTR) BUFFER_PTR.value
+#define deref(BUFFER_PTR) (BUFFER_PTR).value
 
 /// @brief Defines the buffer reference used in all buffer references in daxa glsl. Can also be used to declare new buffer references.
 #define DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN) buffer
@@ -152,6 +171,18 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 1)
 /// @brief Defines the sampler layout used in all buffer references in daxa glsl.
 #define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 1)
+#if defined(DAXA_RAY_TRACING)
+/// @brief Defines the acceleration structure layout used ifor all acceleration structures in daxa glsl.
+#define DAXA_ACCELERATION_STRUCTURE_LAYOUT layout(binding = DAXA_ACCELERATION_STRUCTURE_BINDING, set = 1)
+#endif
+
+// Daxa implementation detail begin
+DAXA_SAMPLER_LAYOUT uniform sampler daxa_SamplerTable[];
+DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_SamplerShadowTable[];
+#if defined(DAXA_RAY_TRACING)
+DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_AccelerationStructureTable[];
+#endif
+// Daxa implementation detail end
 
 /// @brief  Defines three buffer reference using daxa's buffer reference layout.
 ///         The three blocks are 1. read write, 2. read only, 3. read write coherent.
@@ -206,20 +237,6 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     {                                                         \
         STRUCT NAME;                                          \
     };
-
-/// @brief  Can be used to define a constant buffer in inline or shader files.
-///         Constant buffers are uniform buffers in glsl.
-///         They can be useful in some cases for example when the gpu has hardware acceleration for uniform buffer bindings.
-/// @param SLOT Represents the constant buffer binding slot used for the constant buffer.
-/// Usage example:
-///     DAXA_DECL_UNIFORM_BUFFER(0) ConstantBufferName { daxa_u32 value; };
-///     ...
-///     void main() {
-///         daxa_u32 v = value; // value is globaly available in the shader.
-///     }
-///
-#define DAXA_DECL_UNIFORM_BUFFER_ALIGN(SLOT, ALIGNMENT) layout(set = DAXA_DECL_UNIFORM_BUFFER_BINDING_SET, binding = SLOT, buffer_reference_align = ALIGNMENT, scalar) uniform
-#define DAXA_DECL_UNIFORM_BUFFER(SLOT) DAXA_DECL_UNIFORM_BUFFER_ALIGN(SLOT, 4)
 
 /// @brief  Can be used to define a specialized way to access image views.
 ///         Daxa only provides default accessors with no annotations, meaning that there is no way to get the glsl functionality of restrict, readonly, etc..
@@ -277,6 +294,10 @@ DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_samplerShadowTable[];
 
 #define daxa_sampler(sampler_id) daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)]
 #define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)]
+
+#if defined(DAXA_RAY_TRACING)
+#define daxa_accelerationStructureEXT(as_id) daxa_AccelerationStructureTable[daxa_acceleration_structure_id_to_index(as_id)]
+#endif
 
 _DAXA_DECL_IMAGE(1D)
 #define daxa_image1D(image_view_id) _DAXA_GET_IMAGE(1D, image_view_id)
@@ -424,11 +445,6 @@ _DAXA_DECL_IMAGE(2DArray)
 #define daxa_isampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 #define daxa_usampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 
-DAXA_DECL_BUFFER_PTR(daxa_b32)
-// DAXA_DECL_BUFFER_PTR(daxa_b32vec1) // covered by daxa_b32
-DAXA_DECL_BUFFER_PTR(daxa_b32vec2)
-DAXA_DECL_BUFFER_PTR(daxa_b32vec3)
-DAXA_DECL_BUFFER_PTR(daxa_b32vec4)
 DAXA_DECL_BUFFER_PTR(daxa_f32)
 // DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32
 DAXA_DECL_BUFFER_PTR(daxa_f32vec2)
@@ -466,58 +482,3 @@ DAXA_DECL_BUFFER_PTR(daxa_u64vec3)
 DAXA_DECL_BUFFER_PTR(daxa_BufferId)
 DAXA_DECL_BUFFER_PTR(daxa_ImageViewId)
 DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
-
-#if DAXA_ENABLE_SHADER_NO_NAMESPACE
-
-#define DECL_BUFFER_REFERENCE DAXA_DECL_BUFFER_REFERENCE
-#define DECL_BUFFER_REFERENCE_ALIGN DAXA_DECL_BUFFER_REFERENCE_ALIGN
-#define STORAGE_IMAGE_LAYOUT DAXA_STORAGE_IMAGE_LAYOUT
-#define SAMPLED_IMAGE_LAYOUT DAXA_SAMPLED_IMAGE_LAYOUT
-#define SAMPLER_LAYOUT DAXA_SAMPLER_LAYOUT
-
-#define BufferId daxa_BufferId
-#define ImageViewId daxa_ImageViewId
-#define SamplerId daxa_SamplerId
-
-#define RWBufferPtr(STRUCT) daxa_RWBufferPtr##STRUCT
-#define BufferPtr(STRUCT) daxa_BufferPtr##STRUCT
-
-#define id_to_address daxa_id_to_address
-#define buffer_id_to_index daxa_buffer_id_to_index
-#define image_view_id_to_index daxa_image_view_id_to_index
-#define sampler_id_to_index daxa_sampler_id_to_index
-
-#define b32 daxa_b32
-#define b32vec1 daxa_b32vec1
-#define b32vec2 daxa_b32vec2
-#define b32vec3 daxa_b32vec3
-#define b32vec4 daxa_b32vec4
-#define f32 daxa_f32
-#define f32vec1 daxa_f32vec1
-#define f32vec2 daxa_f32vec2
-#define f32mat2x2 daxa_f32mat2x2
-#define f32mat2x3 daxa_f32mat2x3
-#define f32mat2x4 daxa_f32mat2x4
-#define f32vec3 daxa_f32vec3
-#define f32mat3x2 daxa_f32mat3x2
-#define f32mat3x3 daxa_f32mat3x3
-#define f32mat3x4 daxa_f32mat3x4
-#define f32vec4 daxa_f32vec4
-#define f32mat4x2 daxa_f32mat4x2
-#define f32mat4x3 daxa_f32mat4x3
-#define f32mat4x4 daxa_f32mat4x4
-#define i32 daxa_i32
-#define i32vec1 daxa_i32vec1
-#define i32vec2 daxa_i32vec2
-#define i32vec3 daxa_i32vec3
-#define i32vec4 daxa_i32vec4
-#define u32 daxa_u32
-#define u32vec1 daxa_u32vec1
-#define u32vec2 daxa_u32vec2
-#define u32vec3 daxa_u32vec3
-#define u32vec4 daxa_u32vec4
-#define i64 daxa_i64
-#define i64vec1 daxa_i64vec1
-#define u64 daxa_u64
-#define u64vec1 daxa_u64vec1
-#endif

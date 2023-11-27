@@ -1,23 +1,24 @@
 #pragma once
 
-#if !defined(DAXA_STORAGE_BUFFER_BINDING)
 #define DAXA_STORAGE_BUFFER_BINDING 0
 #define DAXA_STORAGE_IMAGE_BINDING 1
 #define DAXA_SAMPLED_IMAGE_BINDING 2
 #define DAXA_SAMPLER_BINDING 3
 #define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
-#define DAXA_ID_INDEX_MASK (0x00FFFFFF)
-#endif
+#define DAXA_ACCELERATION_STRUCTURE_BINDING 5
+#define DAXA_ID_INDEX_BITS 20
+#define DAXA_ID_INDEX_MASK ((uint64_t(1) << DAXA_ID_INDEX_BITS) - uint64_t(1))
+#define DAXA_ID_INDEX_OFFSTET 0
+#define DAXA_ID_VERSION_BITS 44
+#define DAXA_ID_VERSION_MASK ((uint64_t(1) << DAXA_ID_VERSION_BITS) - uint64_t(1))
+#define DAXA_ID_VERSION_OFFSTET DAXA_ID_INDEX_BITS
 
 typedef uint daxa_u32;
-typedef bool daxa_b32;
 typedef int daxa_i32;
+typedef uint64_t daxa_u64;
+typedef int64_t daxa_i64;
 typedef float daxa_f32;
 typedef double daxa_f64;
-typedef bool daxa_b32;
-typedef bool2 daxa_b32vec2;
-typedef bool3 daxa_b32vec3;
-typedef bool4 daxa_b32vec4;
 typedef float daxa_f32;
 typedef double daxa_f64;
 typedef float2 daxa_f32vec2;
@@ -73,45 +74,50 @@ typedef uint4 daxa_u32vec4;
 typedef uint4x2 daxa_u32mat4x2;
 typedef uint4x3 daxa_u32mat4x3;
 typedef uint4x4 daxa_u32mat4x4;
+typedef bool daxa_b32;
+typedef bool daxa_b32vec1;
+typedef bool2 daxa_b32vec2;
+typedef bool3 daxa_b32vec3;
+typedef bool4 daxa_b32vec4;
 
 namespace daxa
 {
     struct BufferId
     {
-        daxa_u32 value;
+        daxa_u64 value;
         daxa_u32 index()
         {
-            return (DAXA_ID_INDEX_MASK & value);
+            return daxa_u32(DAXA_ID_INDEX_MASK & value);
         }
-        daxa_u32 version()
+        daxa_u64 version()
         {
-            return (value >> 24);
+            return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
 
     struct ImageViewId
     {
-        daxa_u32 value;
+        daxa_u64 value;
         daxa_u32 index()
         {
-            return (DAXA_ID_INDEX_MASK & value);
+            return daxa_u32(DAXA_ID_INDEX_MASK & value);
         }
-        daxa_u32 version()
+        daxa_u64 version()
         {
-            return (value >> 24);
+            return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
 
     struct SamplerId
     {
-        daxa_u32 value;
+        daxa_u64 value;
         daxa_u32 index()
         {
-            return (DAXA_ID_INDEX_MASK & value);
+            return daxa_u32(DAXA_ID_INDEX_MASK & value);
         }
-        daxa_u32 version()
+        daxa_u64 version()
         {
-            return (value >> 24);
+            return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
 } // namespace daxa
@@ -179,38 +185,3 @@ namespace daxa
 #define daxa_Texture2DMSArray(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2DMSArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
 #define daxa_TextureCube(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCube##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
 #define daxa_TextureCubeArray(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCubeArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-
-#if DAXA_ENABLE_SHADER_NO_NAMESPACE
-#define b32vec1 daxa_b32vec1
-#define b32vec2 daxa_b32vec2
-#define b32vec3 daxa_b32vec3
-#define b32vec4 daxa_b32vec4
-#define f32 daxa_f32
-#define f32vec1 daxa_f32vec1
-#define f32vec2 daxa_f32vec2
-#define f32mat2x2 daxa_f32mat2x2
-#define f32mat2x3 daxa_f32mat2x3
-#define f32mat2x4 daxa_f32mat2x4
-#define f32vec3 daxa_f32vec3
-#define f32mat3x2 daxa_f32mat3x2
-#define f32mat3x3 daxa_f32mat3x3
-#define f32mat3x4 daxa_f32mat3x4
-#define f32vec4 daxa_f32vec4
-#define f32mat4x2 daxa_f32mat4x2
-#define f32mat4x3 daxa_f32mat4x3
-#define f32mat4x4 daxa_f32mat4x4
-#define i32 daxa_i32
-#define i32vec1 daxa_i32vec1
-#define i32vec2 daxa_i32vec2
-#define i32vec3 daxa_i32vec3
-#define i32vec4 daxa_i32vec4
-#define u32 daxa_u32
-#define u32vec1 daxa_u32vec1
-#define u32vec2 daxa_u32vec2
-#define u32vec3 daxa_u32vec3
-#define u32vec4 daxa_u32vec4
-#define i64 daxa_i64
-#define i64vec1 daxa_i64vec1
-#define u64 daxa_u64
-#define u64vec1 daxa_u64
-#endif

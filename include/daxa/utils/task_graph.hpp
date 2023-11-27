@@ -19,11 +19,11 @@ namespace daxa
 
     using TaskInputDefaultT = std::span<GenericTaskResourceUse>;
 
-    struct TaskInterfaceUses
+    struct DAXA_EXPORT_CXX TaskInterfaceUses
     {
         auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
         auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
-        auto get_uniform_buffer_info() const -> SetConstantBufferInfo;
+
       protected:
         friend struct ImplTaskRuntimeInterface;
         friend struct TaskGraph;
@@ -33,11 +33,14 @@ namespace daxa
         void * backend = {};
     };
 
-    struct TaskInterface
+    struct DAXA_EXPORT_CXX TaskInterface
     {
         auto get_device() const -> Device &;
-        auto get_command_list() const -> CommandList;
+        auto get_recorder() const -> CommandRecorder &;
         auto get_allocator() const -> TransferMemoryPool &;
+
+        void copy_task_head_to(void * dst) const;
+        auto allocate_task_head() -> std::optional<TransferMemoryPool::Allocation>;
 
         TaskInterfaceUses uses;
 
@@ -71,7 +74,7 @@ namespace daxa
     struct TaskImageAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskImageView, std::string> aliased_image = {};
+        Variant<TaskImageView, std::string> aliased_image = {};
         u32 base_mip_level_offset = {};
         u32 base_array_layer_offset = {};
     };
@@ -79,7 +82,7 @@ namespace daxa
     struct TaskBufferAliasInfo
     {
         std::string alias = {};
-        std::variant<TaskBufferView, std::string> aliased_buffer = {};
+        Variant<TaskBufferView, std::string> aliased_buffer = {};
     };
 
     template <typename TaskArgs>
@@ -92,13 +95,13 @@ namespace daxa
 
     struct TaskGraphInfo
     {
-        Device device;
+        Device device = {};
         /// @brief  Optionally the user can provide a swapchain. This enables the use of present.
         std::optional<Swapchain> swapchain = {};
         /// @brief  Task reordering can drastically improve performance,
         ///         yet is it also nice to have sequential callback execution.
         bool reorder_tasks = true;
-        /// @brief  Allows task graph to alias transient resources memory (ofc only when that wont break the program) 
+        /// @brief  Allows task graph to alias transient resources memory (ofc only when that wont break the program)
         bool alias_transients = {};
         /// @brief  Some drivers have bad implementations for split barriers.
         ///         If that is the case for you, you can turn off all use of split barriers.
@@ -110,8 +113,8 @@ namespace daxa
         ///         The second option is enabled by using jit (just in time) compilation.
         bool jit_compile_permutations = {};
         /// @brief  Task graph can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
-        ///         This is usefull to create permutations of a task graph without having to create a seperate task graph.
-        ///         Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two seperate task graphs.
+        ///         This is useful to create permutations of a task graph without having to create a separate task graph.
+        ///         Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two separate task graphs.
         usize permutation_condition_count = {};
         /// @brief  Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
         bool enable_command_labels = true;
@@ -130,7 +133,7 @@ namespace daxa
     struct TaskSubmitInfo
     {
         PipelineStageFlags * additional_src_stages = {};
-        std::vector<CommandList> * additional_command_lists = {};
+        std::vector<ExecutableCommandList> * additional_command_lists = {};
         std::vector<BinarySemaphore> * additional_wait_binary_semaphores = {};
         std::vector<BinarySemaphore> * additional_signal_binary_semaphores = {};
         std::vector<std::pair<TimelineSemaphore, u64>> * additional_wait_timeline_semaphores = {};
@@ -170,22 +173,23 @@ namespace daxa
     {
         std::vector<GenericTaskResourceUse> uses = {};
         TaskCallback task = {};
-        isize constant_buffer_slot = -1;
         std::string name = {};
     };
 
-    struct TaskGraph : ManagedPtr
+    struct ImplTaskGraph;
+
+    struct TaskGraph : ManagedPtr<TaskGraph, ImplTaskGraph *>
     {
         TaskGraph() = default;
 
-        TaskGraph(TaskGraphInfo const & info);
-        ~TaskGraph();
+        DAXA_EXPORT_CXX TaskGraph(TaskGraphInfo const & info);
+        DAXA_EXPORT_CXX ~TaskGraph();
 
-        void use_persistent_buffer(TaskBuffer const & buffer);
-        void use_persistent_image(TaskImage const & image);
+        DAXA_EXPORT_CXX void use_persistent_buffer(TaskBuffer const & buffer);
+        DAXA_EXPORT_CXX void use_persistent_image(TaskImage const & image);
 
-        auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
-        auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
+        DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
+        DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
 
         template <typename Task>
         void add_task(Task const & task)
@@ -194,31 +198,38 @@ namespace daxa
             add_task(std::move(base_task));
         }
 
-        void add_task(InlineTaskInfo && info)
+        inline void add_task(InlineTaskInfo && info)
         {
             std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::InlineTask>(
                 std::move(info.uses),
                 std::move(info.task),
-                std::move(info.name),
-                info.constant_buffer_slot);
+                std::move(info.name));
             add_task(std::move(base_task));
         }
 
-        void add_preamble(TaskCallback callback);
+        DAXA_EXPORT_CXX void add_preamble(TaskCallback callback);
 
-        void conditional(TaskGraphConditionalInfo const & conditional_info);
-        void submit(TaskSubmitInfo const & info);
-        void present(TaskPresentInfo const & info);
+        DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
+        DAXA_EXPORT_CXX void submit(TaskSubmitInfo const & info);
+        DAXA_EXPORT_CXX void present(TaskPresentInfo const & info);
 
-        void complete(TaskCompleteInfo const & info);
+        // TODO: make move only. Return ExecutableTaskGraph.
+        DAXA_EXPORT_CXX void complete(TaskCompleteInfo const & info);
 
-        void execute(ExecutionInfo const & info);
-        auto get_command_lists() -> std::vector<CommandList>;
+        DAXA_EXPORT_CXX void execute(ExecutionInfo const & info);
+        // TODO: Reimplement in another way.
+        // auto get_command_lists() -> std::vector<CommandRecorder>;
 
-        auto get_debug_string() -> std::string;
-        auto get_transient_memory_size() -> daxa::usize;
+        DAXA_EXPORT_CXX auto get_debug_string() -> std::string;
+        DAXA_EXPORT_CXX auto get_transient_memory_size() -> daxa::usize;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        DAXA_EXPORT_CXX static auto inc_refcnt(ImplHandle const * object) -> u64;
+        DAXA_EXPORT_CXX static auto dec_refcnt(ImplHandle const * object) -> u64;
 
       private:
-        void add_task(std::unique_ptr<detail::BaseTask> && base_task);
+        DAXA_EXPORT_CXX void add_task(std::unique_ptr<detail::BaseTask> && base_task);
     };
 } // namespace daxa

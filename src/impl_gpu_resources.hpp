@@ -6,50 +6,76 @@
 
 namespace daxa
 {
-    static inline constexpr u32 BUFFER_BINDING = 0;
-    static inline constexpr u32 STORAGE_IMAGE_BINDING = 1;
-    static inline constexpr u32 SAMPLED_IMAGE_BINDING = 2;
-    static inline constexpr u32 SAMPLER_BINDING = 3;
-    static inline constexpr u32 BUFFER_DEVICE_ADDRESS_BUFFER_BINDING = 4;
+    static const inline VkBufferUsageFlags BUFFER_USE_FLAGS =
+        VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+        VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+        VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+        VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+        VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+        VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT |
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+        VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+        VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
 
     struct ImplBufferSlot
     {
-        BufferInfo info = {};
+        daxa_BufferInfo info = {};
         VkBuffer vk_buffer = {};
         VmaAllocation vma_allocation = {};
+        daxa_MemoryBlock opt_memory_block = {};
         VkDeviceAddress device_address = {};
         void * host_address = {};
-        bool zombie = {};
     };
 
     static inline constexpr i32 NOT_OWNED_BY_SWAPCHAIN = -1;
 
     struct ImplImageViewSlot
     {
-        ImageViewInfo info = {};
+        daxa_ImageViewInfo info = {};
         VkImageView vk_image_view = {};
     };
 
     struct ImplImageSlot
     {
         ImplImageViewSlot view_slot = {};
-        ImageInfo info = {};
+        daxa_ImageInfo info = {};
         VkImage vk_image = {};
         VmaAllocation vma_allocation = {};
+        daxa_MemoryBlock opt_memory_block = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;
         VkImageAspectFlags aspect_flags = {}; // Inferred from format.
-        bool zombie = {};
     };
 
     struct ImplSamplerSlot
     {
-        SamplerInfo info = {};
+        daxa_SamplerInfo info = {};
         VkSampler vk_sampler = {};
-        bool zombie = {};
+    };
+
+    struct ImplTlasSlot
+    {
+        daxa_TlasInfo info = {};
+        VkAccelerationStructureKHR vk_acceleration_structure = {};
+        VkBuffer vk_buffer = {};
+        BufferId buffer_id = {};
+        u64 offset = {};
+        VkDeviceAddress device_address = {};
+        bool owns_buffer = {};
+    };
+
+    struct ImplBlasSlot
+    {
+        daxa_BlasInfo info = {};
+        VkAccelerationStructureKHR vk_acceleration_structure = {};
+        VkBuffer vk_buffer = {};
+        BufferId buffer_id = {};
+        u64 offset = {};
+        VkDeviceAddress device_address = {};
+        bool owns_buffer = {};
     };
 
     /**
-     * @brief GpuShaderResourcePool is intended to be used akin to a specialized memory allocator, specific to gpu resource types (like image views).
+     * @brief GpuResourcePool is intended to be used akin to a specialized memory allocator, specific to gpu resource types (like image views).
      *
      * This struct is threadsafe if the following assumptions are met:
      * * never dereference a deleted resource
@@ -59,151 +85,162 @@ namespace daxa
      * To check if these assumptions are met at runtime, the debug define DAXA_GPU_ID_VALIDATION can be enabled.
      * The define enables runtime checking to detect use after free and double free at the cost of performance.
      */
-    template <typename ResourceT, usize MAX_RESOURCE_COUNT = 1u << 20u>
-    struct GpuShaderResourcePool
+    template <typename ResourceT>
+    struct GpuResourcePool
     {
-        static constexpr inline usize PAGE_BITS = 12u;
+        static constexpr inline usize MAX_RESOURCE_COUNT = 1u << 20u;
+        static constexpr inline usize PAGE_BITS = 10u;
         static constexpr inline usize PAGE_SIZE = 1u << PAGE_BITS;
         static constexpr inline usize PAGE_MASK = PAGE_SIZE - 1u;
         static constexpr inline usize PAGE_COUNT = MAX_RESOURCE_COUNT / PAGE_SIZE;
+        using VersionAndRefcntT = std::atomic_uint64_t;
+        // TODO: split up slots into hot and cold data.
+        using PageT = std::array<std::pair<ResourceT, VersionAndRefcntT>, PAGE_SIZE>;
 
-        using PageT = std::array<std::pair<ResourceT, u8>, PAGE_SIZE>;
-
+        // TODO: replace with lockless queue.
         std::vector<u32> free_index_stack = {};
         u32 next_index = {};
-        usize max_resources = {};
+        u32 max_resources = {};
 
-        DAXA_ONLY_IF_THREADSAFETY(std::mutex page_alloc_mtx = {});
-#if DAXA_GPU_ID_VALIDATION
-        mutable std::mutex use_after_free_check_mtx = {};
-#endif // #if DAXA_GPU_ID_VALIDATION
+        mutable std::mutex mut = {};
+        std::mutex page_alloc_mtx = {};
         std::array<std::unique_ptr<PageT>, PAGE_COUNT> pages = {};
+        std::atomic_uint32_t valid_page_count = {};
 
-#if DAXA_GPU_ID_VALIDATION
-        void verify_resource_id(GPUResourceId id) const
+        /**
+         * @brief   Destroys a slot.
+         *          After calling this function, the id of the slot will be forever invalid.
+         *          Index may be recycled but index + version pairs are always unique.
+         *
+         * Always threadsafe.
+         * Calling this function with a non zombie id will result in undefined behavior.
+         * WARNING: Not calling unsafe_destroy_zombie_slot at some point on a zombified resource causes slot leaking!
+         */
+        void unsafe_destroy_zombie_slot(GPUResourceId id)
         {
-            usize page = id.index >> PAGE_BITS;
-            DAXA_DBG_ASSERT_TRUE_M(page < pages.size(), "detected invalid resource id");
-            DAXA_DBG_ASSERT_TRUE_M(pages[page] != nullptr, "detected invalid resource id");
-            DAXA_DBG_ASSERT_TRUE_M(id.version != 0, "detected invalid resource id");
-        }
-#endif // #if DAXA_GPU_ID_VALIDATION
-
-        auto new_slot() -> std::pair<GPUResourceId, ResourceT &>
-        {
-#if DAXA_GPU_ID_VALIDATION
-            std::unique_lock use_after_free_check_lock{use_after_free_check_mtx};
-#endif // #if DAXA_GPU_ID_VALIDATION
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
-            u32 index;
-            if (free_index_stack.empty())
+            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
+            auto const version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
+            // Slots that reached max version CAN NOT be recycled.
+            // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
+            if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
             {
-                index = next_index++;
-                DAXA_DBG_ASSERT_TRUE_M(index < MAX_RESOURCE_COUNT, "exceeded max resource count");
-                DAXA_DBG_ASSERT_TRUE_M(index < max_resources, "exceeded max resource count");
+                this->free_index_stack.push_back(id.index);
+            }
+            // Clear slot:
+            this->pages[page]->at(offset).first = {};
+        }
+
+        /**
+         * @brief   Creates a slot for a resource in the pool.
+         *          Returned slots may be recycled but are guaranteed to have a unique index + version.
+         *
+         * Only Threadsafe when:
+         * * mutable ptr to resource is only used in parallel
+         *
+         * @return The new resource slot and its id. Can fail if max resources is exceeded.
+         */
+        auto try_create_slot() -> std::optional<std::pair<GPUResourceId, ResourceT &>>
+        {
+            u32 index;
+            if (this->free_index_stack.empty())
+            {
+                index = this->next_index++;
+                if (index == this->max_resources || index == MAX_RESOURCE_COUNT)
+                {
+                    return std::nullopt;
+                }
             }
             else
             {
-                index = free_index_stack.back();
-                free_index_stack.pop_back();
+                index = this->free_index_stack.back();
+                this->free_index_stack.pop_back();
             }
 
-            usize page = index >> PAGE_BITS;
-            usize offset = index & PAGE_MASK;
+            auto const page = static_cast<usize>(index) >> PAGE_BITS;
+            auto const offset = static_cast<usize>(index) & PAGE_MASK;
 
-            if (!pages[page])
+            if (!this->pages[page])
             {
-                pages[page] = std::make_unique<PageT>();
+                this->pages[page] = std::make_unique<PageT>();
                 for (u32 i = 0; i < PAGE_SIZE; ++i)
                 {
-                    pages[page]->at(i).second = 0; // set all version numbers to 0 (invalid)
+                    this->pages[page]->at(i).second.store(1ull, std::memory_order_relaxed);
                 }
+                // Needs to be sequential, so that the 0 writes to the versions are visible before the atomic op.
+                this->valid_page_count.fetch_add(1, std::memory_order_seq_cst);
             }
 
-            pages[page]->at(offset).second = std::max<u8>(pages[page]->at(offset).second, 1); // make sure the version is at least one
+            u64 version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
 
-            u8 version = pages[page]->at(offset).second;
-#if defined(__GNUG__)
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wconversion"
-#endif
-            return {GPUResourceId{.index = index, .version = version}, pages[page]->at(offset).first};
-#if defined(__GNUG__)
-#pragma GCC diagnostic pop
-#endif
+            auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = version};
+            return std::optional{std::pair<GPUResourceId, ResourceT &>(id, this->pages[page]->at(offset).first)};
         }
 
-        auto return_slot(GPUResourceId id)
+        auto try_zombify(GPUResourceId id) -> bool
         {
-            usize page = id.index >> PAGE_BITS;
-            usize offset = id.index & PAGE_MASK;
-
-#if DAXA_GPU_ID_VALIDATION
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
-            verify_resource_id(id);
-            DAXA_DBG_ASSERT_TRUE_M(pages[page]->at(offset).second == id.version, "detected double delete for a resource id");
-#endif // #if DAXA_GPU_ID_VALIDATION
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock page_alloc_lock{page_alloc_mtx});
-
-            pages[page]->at(offset).second = std::max<u8>(pages[page]->at(offset).second + 1, 1); // the max is needed, as version = 0 is invalid
-
-            free_index_stack.push_back(id.index);
+            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+            if (page >= this->valid_page_count.load(std::memory_order_relaxed))
+            {
+                return false;
+            }
+            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
+            u64 version = id.version;
+            u64 const new_version = version + 1;
+            return (*this->pages[page])[offset].second.compare_exchange_strong(
+                version, new_version,
+                std::memory_order_relaxed,
+                std::memory_order_relaxed);
         }
 
+        /**
+         * @brief   Checks if an id refers to a valid resource.
+         *
+         * Always threadsafe.
+         * @returns if the given id is valid.
+         */
         auto is_id_valid(GPUResourceId id) const -> bool
         {
-            usize page = id.index >> PAGE_BITS;
-            usize offset = id.index & PAGE_MASK;
-
-            if (!(page < pages.size()) || !(pages[page] != nullptr) || !(id.version != 0))
+            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
+            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
+            if (id.version == 0 || page >= this->valid_page_count.load(std::memory_order_relaxed))
             {
                 return false;
             }
-            u8 version = pages[page]->at(offset).second;
-            if (!(version == id.version) || pages[page]->at(offset).first.zombie)
-            {
-                return false;
-            }
-            return true;
+            u64 const slot_version = (*this->pages[page])[offset].second.load(std::memory_order_relaxed);
+            return slot_version == id.version;
         }
 
-        auto dereference_id(GPUResourceId id) -> ResourceT &
+        /**
+         * @brief   Checks if an id refers to a valid resource.
+         *          May return a random slot if the id is invalid.
+         *
+         * Only Threadsafe when:
+         * * resource is not destroyed before the reference is used for the last time.
+         *
+         * @returns resource.
+         */
+        auto unsafe_get(GPUResourceId id) const -> ResourceT const &
         {
-            usize page = id.index >> PAGE_BITS;
-            usize offset = id.index & PAGE_MASK;
-
-#if DAXA_GPU_ID_VALIDATION
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
-            verify_resource_id(id);
-            u8 version = pages[page]->at(offset).second;
-            DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
-#endif // #if DAXA_GPU_ID_VALIDATION
-            return pages[page]->at(offset).first;
-        }
-
-        auto dereference_id(GPUResourceId id) const -> ResourceT const &
-        {
-            usize page = id.index >> PAGE_BITS;
-            usize offset = id.index & PAGE_MASK;
-
-#if DAXA_GPU_ID_VALIDATION
-            DAXA_ONLY_IF_THREADSAFETY(std::unique_lock use_after_free_check_lock{use_after_free_check_mtx});
-            verify_resource_id(id);
-            u8 version = pages[page]->at(offset).second;
-            DAXA_DBG_ASSERT_TRUE_M(version == id.version, "detected use after free for a resource id");
-#endif // #if DAXA_GPU_ID_VALIDATION
+            auto page = static_cast<usize>(id.index) >> PAGE_BITS;
+            // Even in an unsafe read we never want to read memory we do not own!
+            // Clamp so we get some random slot in error case but never invalid memory!
+            page = std::min(static_cast<usize>(this->valid_page_count.load(std::memory_order_relaxed)) - 1, page);
+            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
             return pages[page]->at(offset).first;
         }
     };
 
     struct GPUShaderResourceTable
     {
-        GpuShaderResourcePool<ImplBufferSlot> buffer_slots = {};
-        GpuShaderResourcePool<ImplImageSlot> image_slots = {};
-        GpuShaderResourcePool<ImplSamplerSlot> sampler_slots = {};
+        std::shared_mutex lifetime_lock = {};
+        GpuResourcePool<ImplBufferSlot> buffer_slots = {};
+        GpuResourcePool<ImplImageSlot> image_slots = {};
+        GpuResourcePool<ImplSamplerSlot> sampler_slots = {};
+        GpuResourcePool<ImplTlasSlot> tlas_slots = {};
+        GpuResourcePool<ImplBlasSlot> blas_slots = {};
 
         VkDescriptorSetLayout vk_descriptor_set_layout = {};
-        VkDescriptorSetLayout uniform_buffer_descriptor_set_layout = {};
         VkDescriptorSet vk_descriptor_set = {};
         VkDescriptorPool vk_descriptor_pool = {};
 
@@ -211,7 +248,7 @@ namespace daxa
         // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
-        void initialize(usize max_buffers, usize max_images, usize max_samplers, VkDevice device, VkBuffer device_address_buffer, PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT);
+        void initialize(u32 max_buffers, u32 max_images, u32 max_samplers, u32 max_acceleration_structures, VkDevice device, VkBuffer device_address_buffer, PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT);
         void cleanup(VkDevice device);
     };
 
@@ -220,4 +257,6 @@ namespace daxa
     void write_descriptor_set_buffer(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index);
 
     void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index);
+
+    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index);
 } // namespace daxa

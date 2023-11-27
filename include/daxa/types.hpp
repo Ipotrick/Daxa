@@ -1,19 +1,22 @@
 #pragma once
 
+#include "daxa/c/core.h"
 #include <memory>
 #include <optional>
-#include <string>
 #include <string_view>
 #include <vector>
 #include <filesystem>
 #include <functional>
 #include <chrono>
-#include <variant>
 #include <cstdint>
 #include <cstddef>
 #include <array>
+#include <atomic>
 #include <concepts>
 #include <span>
+#include <bit>
+
+#include <daxa/core.hpp>
 
 namespace daxa
 {
@@ -35,155 +38,822 @@ namespace daxa
         using f32 = float;
         using f64 = double;
 
-        using BufferDeviceAddress = u64;
+        using DeviceAddress = u64;
+    } // namespace types
+
+    struct ImplHandle;
+
+    template <typename CRTP_CHILD_T, typename HANDLE_T = ImplHandle *>
+    struct ManagedPtr
+    {
+        ManagedPtr() = default;
+
+        ~ManagedPtr()
+        {
+            cleanup();
+        }
+
+        ManagedPtr(ManagedPtr const & other) { *this = other; }
+
+        ManagedPtr(ManagedPtr && other) noexcept { *this = std::move(other); }
+
+        auto operator=(ManagedPtr const & other) -> ManagedPtr &
+        {
+            cleanup();
+            this->object = other.object;
+            if (this->object != nullptr)
+            {
+                CRTP_CHILD_T::inc_refcnt(reinterpret_cast<ImplHandle *>(object));
+            }
+            return *this;
+        }
+
+        auto operator=(ManagedPtr && other) noexcept -> ManagedPtr &
+        {
+            cleanup();
+            std::swap(this->object, other.object);
+            return *this;
+        }
+
+        auto is_valid() const -> bool
+        {
+            return this->object != nullptr;
+        }
+
+      protected:
+        HANDLE_T object = {};
+
+        void cleanup()
+        {
+            if (this->object != nullptr)
+            {
+                CRTP_CHILD_T::dec_refcnt(reinterpret_cast<ImplHandle *>(object));
+                this->object = {};
+            }
+        }
+    };
+
+    template <typename T>
+    struct Optional
+    {
+      private:
+        T m_value = {};
+        bool m_has_value = {};
+
+      public:
+        Optional() : m_value{}, m_has_value{false} {}
+        Optional(Optional<T> const &) = default;
+        Optional(T const & v) : m_value{v}, m_has_value{true} {}
+        Optional<T> & operator=(Optional<T> const &) = default;
+        Optional<T> & operator=(T const & v)
+        {
+            this->m_value = v;
+            this->m_has_value = true;
+            return *this;
+        }
+
+        [[nodiscard]] auto has_value() const -> bool
+        {
+            return this->m_has_value;
+        }
+
+        [[nodiscard]] auto value() -> T &
+        {
+            return this->m_value;
+        }
+
+        [[nodiscard]] auto value() const -> T const &
+        {
+            return this->m_value;
+        }
+
+        [[nodiscard]] auto value_or(T const & v) const -> T const &
+        {
+            return has_value() ? value() : v;
+        }
+    };
+
+    /// NOTE: We never need more then 255 elements in a fixed list.
+    using FixedListSizeT = u8;
+
+    template <typename T, FixedListSizeT CAPACITY>
+    struct FixedList
+    {
+        std::array<T, CAPACITY> m_data = {};
+        FixedListSizeT m_size = {};
+
+        FixedList() = default;
+        FixedList(T const * in_data, usize in_size)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(static_cast<FixedListSizeT>(in_size) < CAPACITY, "EXCEEDED CAPACITY");
+            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(in_size); ++i)
+            {
+                m_data[i] = in_data[i];
+            }
+            m_size = static_cast<FixedListSizeT>(in_size);
+        }
+        template <usize IN_SIZE>
+            requires(IN_SIZE <= CAPACITY)
+        FixedList(std::array<T, IN_SIZE> const & in)
+        {
+            for (FixedListSizeT i = 0; i < static_cast<FixedListSizeT>(IN_SIZE); ++i)
+            {
+                m_data[i] = in[i];
+            }
+            m_size = IN_SIZE;
+        }
+        FixedList(std::initializer_list<T> const & in)
+        {
+            auto in_size = std::min<FixedListSizeT>(CAPACITY, static_cast<FixedListSizeT>(in.size()));
+            FixedListSizeT i = 0;
+            for (auto const & elem : in)
+            {
+                if (!(i < in_size))
+                {
+                    break;
+                }
+                m_data[i] = elem;
+                ++i;
+            }
+            m_size = in_size;
+        }
+        [[nodiscard]] auto at(FixedListSizeT i) -> T &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(i < m_size, "INDEX OUT OF RANGE");
+            return this->m_data.at(i);
+        }
+        [[nodiscard]] auto at(FixedListSizeT i) const -> T const &
+        {
+            return this->m_data.at(i);
+        }
+        [[nodiscard]] auto operator[](FixedListSizeT i) -> T &
+        {
+            return this->m_data[i];
+        }
+        [[nodiscard]] auto operator[](FixedListSizeT i) const -> T const &
+        {
+            return this->m_data[i];
+        }
+        [[nodiscard]] static constexpr auto capacity() -> FixedListSizeT
+        {
+            return CAPACITY;
+        }
+        [[nodiscard]] auto size() const -> FixedListSizeT
+        {
+            return this->m_size;
+        }
+        [[nodiscard]] auto data() const -> T const *
+        {
+            return this->m_data.data();
+        }
+        [[nodiscard]] auto data() -> T *
+        {
+            return this->m_data.data();
+        }
+        [[nodiscard]] auto empty() const -> bool
+        {
+            return this->m_size == 0;
+        }
+        void push_back(T v)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size < CAPACITY, "EXCEEDED CAPACITY");
+            this->m_data[this->m_size++] = v;
+        }
+        void pop_back()
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "ALREADY EMPTY");
+            this->m_data[this->m_size--].~T();
+        }
+        [[nodiscard]] auto back() -> T &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "EMPTY");
+            return this->m_data[this->m_size - 1];
+        }
+        [[nodiscard]] auto span() -> std::span<T>
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
+        [[nodiscard]] auto span() const -> std::span<T const>
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
+    };
+
+    struct SmallString final : public FixedList<char, DAXA_SMALL_STRING_CAPACITY>
+    {
+        constexpr SmallString(char const * c_str)
+        {
+            while (c_str != nullptr && *c_str != 0)
+            {
+                if (this->m_size >= this->capacity())
+                {
+                    break;
+                }
+                this->m_data[this->m_size++] = *(c_str++);
+            }
+        }
+        constexpr SmallString(std::string_view sw)
+        {
+            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()));
+            for (FixedListSizeT i = 0; i < this->m_size; ++i)
+            {
+                this->m_data[i] = sw[i];
+            }
+        }
+        constexpr SmallString(std::string const & stl_str)
+        {
+            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()));
+            for (FixedListSizeT i = 0; i < this->m_size; ++i)
+            {
+                this->m_data[i] = stl_str[i];
+            }
+        }
+        SmallString(SmallString const & other) = default;
+        SmallString & operator=(SmallString const & other) = default;
+        [[nodiscard]] auto view() const -> std::string_view
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
+        [[nodiscard]] auto c_str() const -> std::array<char, DAXA_SMALL_STRING_CAPACITY + 1>
+        {
+            std::array<char, DAXA_SMALL_STRING_CAPACITY + 1> ret;
+            for (u8 i = 0; i < this->m_size; ++i)
+            {
+                ret[i] = this->m_data[i];
+            }
+            for (u8 i = this->m_size; i < DAXA_SMALL_STRING_CAPACITY + 1; ++i)
+            {
+                ret[i] = 0;
+            }
+            return ret;
+        }
+    };
+    static_assert(sizeof(SmallString) == 64);
+
+    // clang-format off
+
+    #define DXV_FWD(x) static_cast<decltype(x) &&>(x)
+    #define DXV_MOV(x) static_cast<std::remove_reference_t<decltype(x)> &&>(x)
+
+    namespace Variant_detail {
+        struct variant_tag {};
+        struct emplacer_tag {};
+    } // namespace Variant_detail
+
+    template <class T> struct in_place_type_t : private Variant_detail::emplacer_tag {};
+    template <std::size_t Index> struct in_place_index_t : private Variant_detail::emplacer_tag {};
+    template <std::size_t Index> inline static constexpr in_place_index_t<Index> in_place_index;
+    template <class T> inline static constexpr in_place_type_t<T> in_place_type;
+
+    namespace Variant_detail {
+        template <int N>
+        constexpr auto find_first_true(bool (&&arr)[N]) -> int {
+            for (int k = 0; k < N; ++k) { if (arr[k]) { return k; } }
+            return -1;
+        }
+        template <class T, class... Ts>
+        inline constexpr bool appears_exactly_once = (static_cast<unsigned short>(std::is_same_v<T, Ts>) + ...) == 1;
+
+        // ============= type pack element
+
+        template <unsigned char = 1> struct find_type_i;
+        template <> struct find_type_i<1> {
+            template <std::size_t Idx, class T, class... Ts> using f = typename find_type_i<(Idx != 1)>::template f<Idx - 1, Ts...>;
+        };
+        template <> struct find_type_i<0> {
+            template <std::size_t, class T, class... Ts> using f = T;
+        };
+
+        // ============= overload match detector. to be used for Variant generic assignment
+
+        template <class T> using arr1 = T[1];
+        template <std::size_t N, class A> struct overload_frag {
+            using type = A;
+            template <class T> requires requires { arr1<A>{std::declval<T>()}; } auto operator()(A, T &&) -> overload_frag<N, A>;
+        };
+        template <class Seq, class... Args> struct make_overload;
+        template <std::size_t... Idx, class... Args> struct make_overload<std::integer_sequence<std::size_t, Idx...>, Args...> : overload_frag<Idx, Args>... {
+            using overload_frag<Idx, Args>::operator()...;
+        };
+        template <class T, class... Ts> using best_overload_match = typename decltype(make_overload<std::make_index_sequence<sizeof...(Ts)>, Ts...>{}(std::declval<T>(), std::declval<T>()))::type;
+        template <class T, class... Ts> concept has_non_ambiguous_match = requires { typename best_overload_match<T, Ts...>; };
+        template <class A> struct emplace_no_dtor_from_elem {
+            template <class T> constexpr void operator()(T &&elem, auto index_) const {
+                a.template emplace_no_dtor<index_>(static_cast<T &&>(elem));
+            }
+            A &a;
+        };
+        template <class E, class T>
+        constexpr void destruct(T &obj) {
+            if constexpr (not std::is_trivially_destructible_v<E>) { obj.~E(); }
+        }
+
+        // =============================== Variant union types
+
+        // =================== base Variant storage type
+        // this type is used to build a N-ary tree of union.
+        struct dummy_type {
+            static constexpr int elem_size = 0;
+        }; // used to fill the back of union nodes
+        using union_index_t = unsigned;
+
+        template <bool IsLeaf> struct node_trait;
+        template <> struct node_trait<true> {
+            template <class A, class B>
+            static constexpr auto elem_size = not(std::is_same_v<B, dummy_type>) ? 2 : 1;
+            template <std::size_t, class>
+            static constexpr char ctor_branch = 0;
+        };
+        template <> struct node_trait<false> {
+            template <class A, class B>
+            static constexpr auto elem_size = A::elem_size + B::elem_size;
+            template <std::size_t Index, class A>
+            static constexpr char ctor_branch = (Index < A::elem_size) ? 1 : 2;
+        };
+
+        #define TRAIT(trait) (std::is_##trait##_v<A> && std::is_##trait##_v<B>)
+        #define SFM(signature, trait)                                            \
+            signature = default;                                                 \
+            signature requires(TRAIT(trait) and not TRAIT(trivially_##trait)) {} \
+        // given the two members of type A and B of an union X
+        // this create the proper conditionally trivial special members functions
+        #define INJECT_UNION_SFM(X)                                                   \
+            SFM(constexpr X(const X &), copy_constructible)                           \
+            SFM(constexpr X(X &&), move_constructible)                                \
+            SFM(constexpr auto operator=(const X &) noexcept -> X &, copy_assignable) \
+            SFM(constexpr auto operator=(X &&) noexcept -> X &, move_assignable)      \
+            SFM(constexpr ~X(), destructible)
+
+        template <bool IsLeaf, class A, class B> struct union_node {
+            union {
+                A a;
+                B b;
+            };
+            static constexpr auto elem_size = node_trait<IsLeaf>::template elem_size<A, B>; constexpr union_node() = default;
+            template <std::size_t Index, class... Args> requires(node_trait<IsLeaf>::template ctor_branch<Index, A> == 1) constexpr explicit union_node(in_place_index_t<Index> /*unused*/, Args &&...args) : a{in_place_index<Index>, static_cast<Args &&>(args)...} {}
+            template <std::size_t Index, class... Args> requires(node_trait<IsLeaf>::template ctor_branch<Index, A> == 2) constexpr explicit union_node(in_place_index_t<Index> /*unused*/, Args &&...args) : b{in_place_index<Index - A::elem_size>, static_cast<Args &&>(args)...} {}
+            template <class... Args> requires(IsLeaf) constexpr explicit union_node(in_place_index_t<0> /*unused*/, Args &&...args) : a{static_cast<Args &&>(args)...} {}
+            template <class... Args> requires(IsLeaf) constexpr explicit union_node(in_place_index_t<1> /*unused*/, Args &&...args) : b{static_cast<Args &&>(args)...} {}
+            constexpr explicit union_node(dummy_type /*unused*/) requires(std::is_same_v<dummy_type, B>) : b{} {}
+            template <union_index_t Index>
+            constexpr auto get() -> auto & {
+                if constexpr (IsLeaf) {
+                    if constexpr (Index == 0) { return a; } else { return b; }
+                } else {
+                    if constexpr (Index < A::elem_size) { return a.template get<Index>(); } else { return b.template get<Index - A::elem_size>(); }
+                }
+            }
+            // NOTE(grundlett) This intentionally does not implement copy/move correctly, since it must
+            // be implemented by Variant instead
+            INJECT_UNION_SFM(union_node)
+        };
+        #undef INJECT_UNION_SFM
+        #undef SFM
+        #undef TRAIT
+        // =================== algorithm to build the tree of unions
+        // take a sequence of types and perform an order preserving fold until only one type is left
+        // the first parameter is the numbers of types remaining for the current pass
+        constexpr auto pick_next(unsigned remaining) -> unsigned char {
+            return remaining >= 2 ? 2 : static_cast<unsigned char>(remaining);
+        }
+        template <unsigned char Pick, unsigned char GoOn, bool FirstPass> struct make_tree;
+        template <bool IsFirstPass> struct make_tree<2, 1, IsFirstPass> {
+            template <unsigned Remaining, class A, class B, class... Ts>
+            using f = typename make_tree<
+                pick_next(Remaining - 2),
+                static_cast<unsigned char>(sizeof...(Ts) != 0),
+                IsFirstPass>::template f<Remaining - 2, Ts..., union_node<IsFirstPass, A, B>>;
+        };
+
+        // only one type left, stop
+        template <bool F> struct make_tree<0, 0, F> {
+            template <unsigned, class A> using f = A;
+        };
+
+        // end of one pass, restart
+        template <bool IsFirstPass> struct make_tree<0, 1, IsFirstPass> {
+            template <unsigned Remaining, class... Ts>
+            using f = typename make_tree<
+                pick_next(sizeof...(Ts)),
+                static_cast<unsigned char>(sizeof...(Ts) != 1),
+                false // <- both first pass and tail call recurse into a tail call
+                >::template f<sizeof...(Ts), Ts...>;
+        };
+
+        // one odd type left in the pass, put it at the back to preserve the order
+        template <> struct make_tree<1, 1, false> {
+            template <unsigned Remaining, class A, class... Ts>
+            using f = typename make_tree<0, static_cast<unsigned char>(sizeof...(Ts) != 0), false>::template f<0, Ts..., A>;
+        };
+        // one odd type left in the first pass, wrap it in an union
+        template <> struct make_tree<1, 1, true> {
+            template <unsigned, class A, class... Ts> using f = typename make_tree<0, static_cast<unsigned char>(sizeof...(Ts) != 0), false>::template f<0, Ts..., union_node<true, A, dummy_type>>;
+        };
+        template <class... Ts> using make_tree_union = typename make_tree<pick_next(sizeof...(Ts)), 1, true>::template f<sizeof...(Ts), Ts...>;
+
+        // ============================================================
+        // Ts... must be sorted in ascending size
+        template <std::size_t Num, class... Ts> using smallest_suitable_integer_type = uint8_t;
+        // ========================= visit dispatcher
+        template <class Fn, class... Vars> using rtype_visit = decltype((std::declval<Fn>()(std::declval<Vars>().template unsafe_get<0>()...)));
+        template <class Fn, class Var> using rtype_index_visit = decltype((std::declval<Fn>()(std::declval<Var>().template unsafe_get<0>(), std::integral_constant<std::size_t, 0>{})));
+
+        inline namespace v1 {
+            #if defined(__GNUC__) || defined(__clang__) || defined(__INTEL_COMPILER)
+            #define DeclareUnreachable() __builtin_unreachable()
+            #elif defined(_MSC_VER)
+            #define DeclareUnreachable() __assume(false)
+            #else
+            #error "Compiler not supported, please file an issue."
+            #endif
+            #define DEC(N) X((N)) X((N) + 1) X((N) + 2) X((N) + 3) X((N) + 4) X((N) + 5) X((N) + 6) X((N) + 7) X((N) + 8) X((N) + 9)
+            #define SEQ30(N) DEC((N) + 0) DEC((N) + 10) DEC((N) + 20)
+            #define SEQ100(N) SEQ30((N) + 0) SEQ30((N) + 30) SEQ30((N) + 60) DEC((N) + 90)
+            #define SEQ200(N) SEQ100((N) + 0) SEQ100((N) + 100)
+            #define SEQ400(N) SEQ200((N) + 0) SEQ200((N) + 200)
+            #define CAT(M, N) M##N
+            #define CAT2(M, N) CAT(M, N)
+            #define INJECT_SEQ(N) CAT2(SEQ, N)(0)
+            // single-visitation
+            template <unsigned Offset, class Rtype, class Fn, class V>
+            constexpr auto single_visit_tail(Fn &&fn, V &&v) -> Rtype {
+                constexpr auto RemainingIndex = std::decay_t<V>::size - Offset;
+                #define X(N)                                                                                         \
+                    case ((N) + Offset):                                                                             \
+                        if constexpr ((N) < RemainingIndex) {                                                        \
+                            return static_cast<Fn &&>(fn)(static_cast<V &&>(v).template unsafe_get<(N) + Offset>()); \
+                            break;                                                                                   \
+                        } else { DeclareUnreachable(); }
+                #define SEQ_SIZE 200
+                switch (v.index()) {
+                    INJECT_SEQ(SEQ_SIZE)
+                default:
+                    if constexpr (SEQ_SIZE < RemainingIndex) {
+                        return Variant_detail::single_visit_tail<Offset + SEQ_SIZE, Rtype>(static_cast<Fn &&>(fn), static_cast<V &&>(v));
+                    } else {
+                        DeclareUnreachable();
+                    }
+                }
+                #undef X
+                #undef SEQ_SIZE
+            }
+
+            template <unsigned Offset, class Rtype, class Fn, class V>
+            constexpr auto single_visit_w_index_tail(Fn &&fn, V &&v) -> Rtype {
+                constexpr auto RemainingIndex = std::decay_t<V>::size - Offset;
+                #define X(N)                                                                                                                                           \
+                    case ((N) + Offset):                                                                                                                               \
+                        if constexpr ((N) < RemainingIndex) {                                                                                                          \
+                            return static_cast<Fn &&>(fn)(static_cast<V &&>(v).template unsafe_get<(N) + Offset>(), std::integral_constant<unsigned, (N) + Offset>{}); \
+                            break;                                                                                                                                     \
+                        } else { DeclareUnreachable(); }
+
+                #define SEQ_SIZE 200
+                switch (v.index()) {
+                    INJECT_SEQ(SEQ_SIZE)
+                default:
+                    if constexpr (SEQ_SIZE < RemainingIndex) {
+                        return Variant_detail::single_visit_w_index_tail<Offset + SEQ_SIZE, Rtype>(static_cast<Fn &&>(fn), static_cast<V &&>(v));
+                    } else {
+                        DeclareUnreachable();
+                    }
+                }
+                #undef X
+                #undef SEQ_SIZE
+            }
+            template <class Fn, class V>
+            constexpr auto visit(Fn &&fn, V &&v) -> decltype(auto) {
+                return Variant_detail::single_visit_tail<0, rtype_visit<Fn &&, V &&>>(DXV_FWD(fn), DXV_FWD(v));
+            }
+            // unlike other visit functions, this takes the Variant first!
+            // this is confusing, but make the client code easier to read
+            template <class Fn, class V>
+            constexpr auto visit_with_index(V &&v, Fn &&fn) -> decltype(auto) {
+                return Variant_detail::single_visit_w_index_tail<0, rtype_index_visit<Fn &&, V &&>>(DXV_FWD(fn), DXV_FWD(v));
+            }
+            template <class Fn, class Head, class... Tail>
+            constexpr auto multi_visit(Fn &&fn, Head &&head, Tail &&...tail) -> decltype(auto) {
+                // visit them one by one, starting with the last
+                auto vis = [&fn, &head](auto &&...args) -> decltype(auto) {
+                    return Variant_detail::visit([&fn, &args...](auto &&elem) -> decltype(auto) { return DXV_FWD(fn)(DXV_FWD(elem), DXV_FWD(args)...); }, DXV_FWD(head));
+                };
+                if constexpr (sizeof...(tail) == 0) {
+                    return DXV_FWD(vis)();
+                } else if constexpr (sizeof...(tail) == 1) {
+                    return Variant_detail::visit(DXV_FWD(vis), DXV_FWD(tail)...);
+                } else {
+                    return Variant_detail::multi_visit(DXV_FWD(vis), DXV_FWD(tail)...);
+                }
+            }
+            #undef DEC
+            #undef SEQ30
+            #undef SEQ100
+            #undef SEQ200
+            #undef SEQ400
+            #undef DeclareUnreachable
+            #undef CAT
+            #undef CAT2
+            #undef INJECT_SEQ
+        } // namespace v1
+
+        struct variant_npos_t {
+            template <class T> constexpr auto operator==(T idx) const noexcept -> bool { return idx == std::numeric_limits<T>::max(); }
+        };
+
+        template <class T>
+        inline constexpr T* addressof( T& obj ) noexcept {
+            #if defined(__GNUC__) || defined(__clang__)
+                return __builtin_addressof(obj);
+            #else
+                // if & is overloaded, use the ugly version
+                // if constexpr (requires { obj.operator&(); }) {
+                //     return reinterpret_cast<T*> (&const_cast<char&>(reinterpret_cast<const volatile char&>(obj)));
+                // } else {
+                //     return &obj;
+                // }
+                return std::addressof(obj);
+            #endif
+        }
+    } // namespace Variant_detail
+
+    template <class T> inline constexpr bool is_variant = std::is_base_of_v<Variant_detail::variant_tag, std::decay_t<T>>;
+    inline static constexpr Variant_detail::variant_npos_t variant_npos;
+
+    template <class... Ts> class Variant;
+
+    // ill-formed Variant, an empty specialization prevents some really bad errors messages on gcc
+    template <class... Ts> requires((std::is_array_v<Ts> || ...) || (std::is_reference_v<Ts> || ...) || (std::is_void_v<Ts> || ...) || sizeof...(Ts) == 0)
+    class Variant<Ts...> {
+        static_assert(sizeof...(Ts) > 0, "A Variant cannot be empty.");
+        static_assert(not(std::is_reference_v<Ts> || ...), "A Variant cannot contain references, consider using reference wrappers instead.");
+        static_assert(not(std::is_void_v<Ts> || ...), "A Variant cannot contains void.");
+        static_assert(not(std::is_array_v<Ts> || ...), "A Variant cannot contain a raw array type, consider using std::array instead.");
+    };
+
+    template <class... Ts>
+    class Variant : private Variant_detail::variant_tag {
+        using storage_t = Variant_detail::union_node<false, Variant_detail::make_tree_union<Ts...>, Variant_detail::dummy_type>;
+        static constexpr bool is_trivial = std::is_trivial_v<storage_t>;
+        static constexpr bool has_copy_ctor = std::is_copy_constructible_v<storage_t>;
+        static constexpr bool trivial_copy_ctor = is_trivial || std::is_trivially_copy_constructible_v<storage_t>;
+        static constexpr bool has_copy_assign = std::is_copy_constructible_v<storage_t>;
+        static constexpr bool trivial_copy_assign = is_trivial || std::is_trivially_copy_assignable_v<storage_t>;
+        static constexpr bool has_move_ctor = std::is_move_constructible_v<storage_t>;
+        static constexpr bool trivial_move_ctor = is_trivial || std::is_trivially_move_constructible_v<storage_t>;
+        static constexpr bool has_move_assign = std::is_move_assignable_v<storage_t>;
+        static constexpr bool trivial_move_assign = is_trivial || std::is_trivially_move_assignable_v<storage_t>;
+        static constexpr bool trivial_dtor = std::is_trivially_destructible_v<storage_t>;
+
+      public:
+        template <std::size_t Idx>
+        using alternative = std::remove_reference_t<decltype(std::declval<storage_t &>().template get<Idx>())>;
+        static constexpr bool can_be_valueless = not is_trivial;
+        static constexpr unsigned size = sizeof...(Ts);
+        using index_type = Variant_detail::smallest_suitable_integer_type<sizeof...(Ts) + static_cast<size_t>(can_be_valueless), unsigned char, unsigned short, unsigned>;
+        static constexpr index_type npos = std::numeric_limits<index_type>::max();
+        template <class T>
+        static constexpr int index_of = Variant_detail::find_first_true({std::is_same_v<T, Ts>...});
+
+        // ============================================= constructors (20.7.3.2)
+
+        // default constructor
+        constexpr Variant() noexcept(std::is_nothrow_default_constructible_v<alternative<0>>) requires std::is_default_constructible_v<alternative<0>> : storage{in_place_index<0>} {}
+        // copy constructor (trivial)
+        constexpr Variant(const Variant &) requires trivial_copy_ctor = default;
+        // note : both the copy and move constructor cannot be meaningfully constexpr without std::construct_at copy constructor
+        constexpr Variant(const Variant &o) requires(has_copy_ctor and not trivial_copy_ctor) : storage{Variant_detail::dummy_type{}} { construct_from(o); }
+        // move constructor (trivial)
+        constexpr Variant(Variant &&) noexcept requires trivial_move_ctor = default;
+        // move constructor
+        constexpr Variant(Variant &&o) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...)) requires(has_move_ctor and not trivial_move_ctor) : storage{Variant_detail::dummy_type{}} { construct_from(static_cast<Variant &&>(o)); }
+        // generic constructor
+        template <class T, class M = Variant_detail::best_overload_match<T &&, Ts...>, class D = std::decay_t<T>>
+        constexpr Variant(T &&t) noexcept(std::is_nothrow_constructible_v<M, T &&>)
+            requires(not std::is_same_v<D, Variant> and not std::is_base_of_v<Variant_detail::emplacer_tag, D>)
+            : Variant{in_place_index<index_of<M>>, static_cast<T &&>(t)} {}
+        // construct at index
+        template <std::size_t Index, class... Args> requires(Index < size && std::is_constructible_v<alternative<Index>, Args && ...>)
+        explicit constexpr Variant(in_place_index_t<Index> tag, Args &&...args) : storage{tag, static_cast<Args &&>(args)...}, current(Index) {}
+        // construct a given type
+        template <class T, class... Args> requires(Variant_detail::appears_exactly_once<T, Ts...> && std::is_constructible_v<T, Args && ...>)
+        explicit constexpr Variant(in_place_type_t<T>, Args &&...args) : Variant{in_place_index<index_of<T>>, static_cast<Args &&>(args)...} {}
+        // initializer-list constructors
+        template <std::size_t Index, class U, class... Args> requires((Index < size) and std::is_constructible_v<alternative<Index>, std::initializer_list<U> &, Args && ...>)
+        explicit constexpr Variant(in_place_index_t<Index> tag, std::initializer_list<U> list, Args &&...args) : storage{tag, list, DXV_FWD(args)...}, current{Index} {}
+        template <class T, class U, class... Args> requires(Variant_detail::appears_exactly_once<T, Ts...> && std::is_constructible_v<T, std::initializer_list<U> &, Args && ...>)
+        explicit constexpr Variant(in_place_type_t<T>, std::initializer_list<U> list, Args &&...args) : storage{in_place_index<index_of<T>>, list, DXV_FWD(args)...}, current{index_of<T>} {}
+
+        // ================================ destructors (20.7.3.3)
+
+        constexpr ~Variant() requires trivial_dtor = default;
+        constexpr ~Variant() requires(not trivial_dtor) { reset(); }
+
+        // ================================ assignment (20.7.3.4)
+
+        // copy assignment (trivial)
+        constexpr auto operator=(const Variant &o) -> Variant &
+            requires trivial_copy_assign &&trivial_copy_ctor
+        = default;
+        // copy assignment
+        constexpr auto operator=(const Variant &rhs) -> Variant &requires(has_copy_assign and not(trivial_copy_assign && trivial_copy_ctor)) {
+            assign_from(rhs, [this](const auto &elem, auto index_cst) {
+                if (index() == index_cst) {
+                    unsafe_get<index_cst>() = elem;
+                } else {
+                    using type = alternative<index_cst>;
+                    if constexpr (std::is_nothrow_copy_constructible_v<type> or not std::is_nothrow_move_constructible_v<type>) {
+                        this->emplace<index_cst>(elem);
+                    } else {
+                        alternative<index_cst> tmp = elem;
+                        this->emplace<index_cst>(DXV_MOV(tmp));
+                    }
+                }
+            });
+            return *this;
+        }
+        // move assignment (trivial)
+        constexpr auto operator=(Variant &&o) noexcept -> Variant &requires(trivial_move_assign and trivial_move_ctor and trivial_dtor) = default;
+        // move assignment
+        constexpr auto operator=(Variant &&o) noexcept((std::is_nothrow_move_constructible_v<Ts> && ...) && (std::is_nothrow_move_assignable_v<Ts> && ...))
+             -> Variant &requires(has_move_assign &&has_move_ctor and not(trivial_move_assign and trivial_move_ctor and trivial_dtor)) {
+            this->assign_from(DXV_FWD(o), [this](auto &&elem, auto index_cst) {
+                if (index() == index_cst) { this->template unsafe_get<index_cst>() = DXV_MOV(elem); } else { this->emplace<index_cst>(DXV_MOV(elem)); }
+            });
+            return *this;
+        }
+        // generic assignment
+        template <class T>
+            requires Variant_detail::has_non_ambiguous_match<T, Ts...>
+        constexpr auto operator=(T &&t) noexcept(std::is_nothrow_assignable_v<Variant_detail::best_overload_match<T &&, Ts...>, T &&> &&std::is_nothrow_constructible_v<Variant_detail::best_overload_match<T &&, Ts...>, T &&>) -> Variant & {
+            using related_type = Variant_detail::best_overload_match<T &&, Ts...>;
+            constexpr auto new_index = index_of<related_type>;
+            if (this->current == new_index) {
+                this->template unsafe_get<new_index>() = DXV_FWD(t);
+            } else {
+                constexpr bool do_simple_emplace = std::is_nothrow_constructible_v<related_type, T> or not std::is_nothrow_move_constructible_v<related_type>;
+                if constexpr (do_simple_emplace) {
+                    this->emplace<new_index>(DXV_FWD(t));
+                } else {
+                    related_type tmp = t;
+                    this->emplace<new_index>(DXV_MOV(tmp));
+                }
+            }
+            return *this;
+        }
+
+        // ================================== modifiers (20.7.3.5)
+        template <class T, class... Args> requires (std::is_constructible_v<T, Args&&...> && Variant_detail::appears_exactly_once<T, Ts...>)
+        constexpr T& emplace(Args&&... args) { return emplace<index_of<T>>(static_cast<Args&&>(args)...); }
+        template <std::size_t Idx, class... Args> requires (Idx < size and std::is_constructible_v<alternative<Idx>, Args&&...>  )
+        constexpr auto& emplace(Args&&... args) { return emplace_impl<Idx>(DXV_FWD(args)...); }
+
+        // emplace with initializer-lists
+        template <std::size_t Idx, class U, class... Args> requires (Idx < size && std::is_constructible_v<alternative<Idx>, std::initializer_list<U>&, Args&&...>)
+        constexpr auto& emplace(std::initializer_list<U> list, Args&&... args) { return emplace_impl<Idx>(list, DXV_FWD(args)...); }
+        template <class T, class U, class... Args> requires (std::is_constructible_v<T, std::initializer_list<U>&, Args&&...> && Variant_detail::appears_exactly_once<T, Ts...>)
+        constexpr T& emplace(std::initializer_list<U> list, Args&&... args) { return emplace_impl<index_of<T>>( list, DXV_FWD(args)... ); }
+
+        // +================================== methods for internal use
+        // these methods performs no errors checking at all
+
+        template <Variant_detail::union_index_t Idx>
+        constexpr auto unsafe_get() & noexcept -> auto & {
+            static_assert(Idx < size); return storage.template get<Idx>();
+        }
+        template <Variant_detail::union_index_t Idx>
+        constexpr auto unsafe_get() && noexcept -> auto && {
+            static_assert(Idx < size); return DXV_MOV(storage.template get<Idx>());
+        }
+        template <Variant_detail::union_index_t Idx>
+        [[nodiscard]] constexpr auto unsafe_get() const & noexcept -> const auto & {
+            static_assert(Idx < size); return const_cast<Variant &>(*this).unsafe_get<Idx>();
+        }
+        template <Variant_detail::union_index_t Idx>
+        [[nodiscard]] constexpr auto unsafe_get() const && noexcept -> const auto && {
+            static_assert(Idx < size); return DXV_MOV(unsafe_get<Idx>());
+        }
+
+        // ==================================== value status (20.7.3.6)
+
+        [[nodiscard]] constexpr auto valueless_by_exception() const noexcept -> bool {
+            if constexpr (can_be_valueless) { return current == npos; } else { return false; }
+        }
+        [[nodiscard]] constexpr auto index() const noexcept -> index_type { return current; }
+
+      private:
+        template <unsigned Idx, class... Args> constexpr auto &emplace_impl(Args &&...args) {
+            reset();
+            emplace_no_dtor<Idx>(DXV_FWD(args)...);
+            return unsafe_get<Idx>();
+        }
+        // can be used directly only when the Variant is in a known empty state
+        template <unsigned Idx, class... Args> constexpr void emplace_no_dtor(Args &&...args) {
+            using T = alternative<Idx>;
+            if constexpr (not std::is_nothrow_constructible_v<T, Args &&...>) {
+                if constexpr (std::is_nothrow_move_constructible_v<T>) {
+                    do_emplace_no_dtor<Idx>(T{DXV_FWD(args)...});
+                } else if constexpr (std::is_nothrow_copy_constructible_v<T>) {
+                    T tmp{DXV_FWD(args)...};
+                    do_emplace_no_dtor<Idx>(tmp);
+                } else {
+                    static_assert(can_be_valueless && (Idx == Idx), "Internal error : the possibly valueless branch of emplace was taken despite |can_be_valueless| being false");
+                    current = npos;
+                    do_emplace_no_dtor<Idx>(DXV_FWD(args)...);
+                }
+            } else {
+                do_emplace_no_dtor<Idx>(DXV_FWD(args)...);
+            }
+        }
+        template <unsigned Idx, class... Args> constexpr void do_emplace_no_dtor(Args &&...args) {
+            auto *ptr = Variant_detail::addressof(unsafe_get<Idx>());
+            using T = alternative<Idx>;
+            new (static_cast<void*>(ptr)) T(DXV_FWD(args)...);
+            current = static_cast<index_type>(Idx);
+        }
+
+        // assign from another Variant
+        template <class Other, class Fn>
+        constexpr void assign_from(Other &&o, Fn &&fn) {
+            if constexpr (can_be_valueless) {
+                if (o.index() == npos) {
+                    if (current != npos) { reset_no_check(); current = npos; }
+                    return;
+                }
+            }
+            Variant_detail::visit_with_index(DXV_FWD(o), DXV_FWD(fn));
+        }
+        // destroy the current elem IFF not valueless
+        constexpr void reset() {
+            if constexpr (can_be_valueless) {
+                if (valueless_by_exception()) { return; }
+            }
+            reset_no_check();
+        }
+        // destroy the current element without checking for valueless
+        constexpr void reset_no_check() {
+            if constexpr (not trivial_dtor) {
+                Variant_detail::visit_with_index(*this, [](auto &elem, auto index_) { Variant_detail::destruct<alternative<index_>>(elem); });
+            }
+        }
+        // construct this from another variant, for constructors only
+        template <class Other> constexpr void construct_from(Other &&o) {
+            if constexpr (can_be_valueless) if (o.valueless_by_exception()) { current = npos; return; }
+            Variant_detail::visit_with_index(DXV_FWD(o), Variant_detail::emplace_no_dtor_from_elem<Variant &>{*this});
+        }
+        template <class T> friend struct Variant_detail::emplace_no_dtor_from_elem;
+        storage_t storage;
+        index_type current{};
+    };
+
+    template <class T, class... Ts>
+    constexpr auto holds_alternative(const Variant<Ts...> &v) noexcept -> bool {
+        static_assert((std::is_same_v<T, Ts> || ...), "Requested type is not contained in the Variant");
+        constexpr auto Index = Variant<Ts...>::template index_of<T>;
+        return v.index() == Index;
     }
 
-    namespace detail
-    {
-        template <typename T, usize N>
-        struct GenericVector
-        {
-            std::array<T, N> array;
-            constexpr T & operator[](usize i) noexcept { return array[i]; }
-            constexpr T const & operator[](usize i) const noexcept { return array[i]; }
-            auto operator==(GenericVector<T,N> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,N> const & other) const -> bool = default;
-        };
+    // ========= get by index
+    template <std::size_t Idx, class... Ts>
+    constexpr auto &get(Variant<Ts...> &v) {
+        static_assert(Idx < sizeof...(Ts), "Index exceeds the Variant size. ");
+        DAXA_DBG_ASSERT_TRUE_M(v.index() == Idx, "Bad Variant access in get");
+        return (v.template unsafe_get<Idx>());
+    }
+    template <std::size_t Idx, class... Ts> constexpr const auto &get(const Variant<Ts...> &v) { return daxa::get<Idx>(const_cast<Variant<Ts...> &>(v)); }
+    template <std::size_t Idx, class... Ts> constexpr auto &&get(Variant<Ts...> &&v) { return SWL_MOV(daxa::get<Idx>(v)); }
+    template <std::size_t Idx, class... Ts> constexpr const auto &&get(const Variant<Ts...> &&v) { return SWL_MOV(daxa::get<Idx>(v)); }
+    // ========= get by type
+    template <class T, class... Ts> constexpr T &get(Variant<Ts...> &v) { return daxa::get<Variant<Ts...>::template index_of<T>>(v); }
+    template <class T, class... Ts> constexpr const T &get(const Variant<Ts...> &v) { return daxa::get<Variant<Ts...>::template index_of<T>>(v); }
+    template <class T, class... Ts> constexpr T &&get(Variant<Ts...> &&v) { return daxa::get<Variant<Ts...>::template index_of<T>>(DXV_FWD(v)); }
+    template <class T, class... Ts> constexpr const T &&get(const Variant<Ts...> &&v) { return daxa::get<Variant<Ts...>::template index_of<T>>(DXV_FWD(v)); }
+    // ===== get_if by index
+    template <std::size_t Idx, class... Ts> constexpr const auto *get_if(const Variant<Ts...> *v) noexcept {
+        using rtype = typename Variant<Ts...>::template alternative<Idx> *;
+        if (v == nullptr || v->index() != Idx) { return rtype{nullptr}; }
+        else { return Variant_detail::addressof(v->template unsafe_get<Idx>()); }
+    }
+    template <std::size_t Idx, class... Ts> constexpr auto *get_if(Variant<Ts...> *v) noexcept {
+        using rtype = typename Variant<Ts...>::template alternative<Idx>;
+        return const_cast<rtype *>(daxa::get_if<Idx>(static_cast<const Variant<Ts...> *>(v)));
+    }
+    // ====== get_if by type
+    template <class T, class... Ts> constexpr T *get_if(Variant<Ts...> *v) noexcept {
+        static_assert((std::is_same_v<T, Ts> || ...), "Requested type is not contained in the Variant");
+        return daxa::get_if<Variant<Ts...>::template index_of<T>>(v);
+    }
+    template <class T, class... Ts> constexpr const T *get_if(const Variant<Ts...> *v) noexcept {
+        static_assert((std::is_same_v<T, Ts> || ...), "Requested type is not contained in the Variant");
+        return daxa::get_if<Variant<Ts...>::template index_of<T>>(v);
+    }
 
-        template <typename T>
-        struct GenericVector<T, 2>
-        {
-            T x, y;
-            constexpr T & operator[](usize i) noexcept
-            {
-                switch (i)
-                {
-                case 1: return y;
-                default: return x;
-                }
-            }
-            constexpr T const & operator[](usize i) const noexcept
-            {
-                switch (i)
-                {
-                case 1: return y;
-                default: return x;
-                }
-            }
-            auto operator==(GenericVector<T,2> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,2> const & other) const -> bool = default;
-        };
-        template <typename T>
-        struct GenericVector<T, 3>
-        {
-            T x, y, z;
-            constexpr T & operator[](usize i) noexcept
-            {
-                switch (i)
-                {
-                case 1: return y;
-                case 2: return z;
-                default: return x;
-                }
-            }
-            constexpr T const & operator[](usize i) const noexcept
-            {
-                switch (i)
-                {
-                case 1: return y;
-                case 2: return z;
-                default: return x;
-                }
-            }
-            auto operator==(GenericVector<T,3> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,3> const & other) const -> bool = default;
-        };
-        template <typename T>
-        struct GenericVector<T, 4>
-        {
-            T x, y, z, w;
-            constexpr T & operator[](usize i) noexcept
-            {
-                switch (i)
-                {
-                case 1: return y;
-                case 2: return z;
-                case 3: return w;
-                default: return x;
-                }
-            }
-            constexpr T const & operator[](usize i) const noexcept
-            {
-                switch (i)
-                {
-                case 1: return y;
-                case 2: return z;
-                case 3: return w;
-                default: return x;
-                }
-            }
-            auto operator==(GenericVector<T,4> const & other) const -> bool = default;
-            auto operator!=(GenericVector<T,4> const & other) const -> bool = default;
-        };
+    struct Monostate {
+    };
 
-        template <typename T, usize M, usize N>
-        struct GenericMatrix : GenericVector<GenericVector<T, N>, M> {};
-    } // namespace detail
+    #undef DXV_FWD
+    #undef DXV_MOV
 
-    inline namespace types {
-
-        using b32vec2 = detail::GenericVector<b32, 2>;
-        using b32vec3 = detail::GenericVector<b32, 3>;
-        using b32vec4 = detail::GenericVector<b32, 4>;
-        using f32vec2 = detail::GenericVector<f32, 2>;
-        using f32mat2x2 = detail::GenericMatrix<f32, 2, 2>;
-        using f32mat2x3 = detail::GenericMatrix<f32, 2, 3>;
-        using f32mat2x4 = detail::GenericMatrix<f32, 2, 4>;
-        using f64vec2 = detail::GenericVector<f64, 2>;
-        using f64mat2x2 = detail::GenericMatrix<f64, 2, 2>;
-        using f64mat2x3 = detail::GenericMatrix<f64, 2, 3>;
-        using f64mat2x4 = detail::GenericMatrix<f64, 2, 4>;
-        using f32vec3 = detail::GenericVector<f32, 3>;
-        using f32mat3x2 = detail::GenericMatrix<f32, 3, 2>;
-        using f32mat3x3 = detail::GenericMatrix<f32, 3, 3>;
-        using f32mat3x4 = detail::GenericMatrix<f32, 3, 4>;
-        using f64vec3 = detail::GenericVector<f64, 3>;
-        using f64mat3x2 = detail::GenericMatrix<f64, 3, 2>;
-        using f64mat3x3 = detail::GenericMatrix<f64, 3, 3>;
-        using f64mat3x4 = detail::GenericMatrix<f64, 3, 4>;
-        using f32vec4 = detail::GenericVector<f32, 4>;
-        using f32mat4x2 = detail::GenericMatrix<f32, 4, 2>;
-        using f32mat4x3 = detail::GenericMatrix<f32, 4, 3>;
-        using f32mat4x4 = detail::GenericMatrix<f32, 4, 4>;
-        using f64vec4 = detail::GenericVector<f64, 4>;
-        using f64mat4x2 = detail::GenericMatrix<f64, 4, 2>;
-        using f64mat4x3 = detail::GenericMatrix<f64, 4, 3>;
-        using f64mat4x4 = detail::GenericMatrix<f64, 4, 4>;
-        using i32vec2 = detail::GenericVector<i32, 2>;
-        using i32mat2x2 = detail::GenericMatrix<i32, 2, 2>;
-        using i32mat2x3 = detail::GenericMatrix<i32, 2, 3>;
-        using i32mat2x4 = detail::GenericMatrix<i32, 2, 4>;
-        using u32vec2 = detail::GenericVector<u32, 2>;
-        using u32mat2x2 = detail::GenericMatrix<u32, 2, 2>;
-        using u32mat2x3 = detail::GenericMatrix<u32, 2, 3>;
-        using u32mat2x4 = detail::GenericMatrix<u32, 2, 4>;
-        using i32vec3 = detail::GenericVector<i32, 3>;
-        using i32mat3x2 = detail::GenericMatrix<i32, 3, 2>;
-        using i32mat3x3 = detail::GenericMatrix<i32, 3, 3>;
-        using i32mat3x4 = detail::GenericMatrix<i32, 3, 4>;
-        using u32vec3 = detail::GenericVector<u32, 3>;
-        using u32mat3x2 = detail::GenericMatrix<u32, 3, 2>;
-        using u32mat3x3 = detail::GenericMatrix<u32, 3, 3>;
-        using u32mat3x4 = detail::GenericMatrix<u32, 3, 4>;
-        using i32vec4 = detail::GenericVector<i32, 4>;
-        using i32mat4x2 = detail::GenericMatrix<i32, 4, 2>;
-        using i32mat4x3 = detail::GenericMatrix<i32, 4, 3>;
-        using i32mat4x4 = detail::GenericMatrix<i32, 4, 4>;
-        using u32vec4 = detail::GenericVector<u32, 4>;
-        using u32mat4x2 = detail::GenericMatrix<u32, 4, 2>;
-        using u32mat4x3 = detail::GenericMatrix<u32, 4, 3>;
-        using u32mat4x4 = detail::GenericMatrix<u32, 4, 4>;
-    } // namespace types
+    // clang-format on
 
     enum struct Format
     {
@@ -443,38 +1113,42 @@ namespace daxa
     struct Flags final
     {
         typename Properties::Data data;
-        inline constexpr auto operator|=(Flags const & other) -> Flags &
+        [[nodiscard]] inline constexpr auto operator|=(Flags const & other) -> Flags &
         {
             data |= other.data;
             return *this;
         }
-        inline constexpr auto operator&=(Flags const & other) -> Flags &
+        [[nodiscard]] inline constexpr auto operator&=(Flags const & other) -> Flags &
         {
             data &= other.data;
             return *this;
         }
-        inline constexpr auto operator^=(Flags const & other) -> Flags &
+        [[nodiscard]] inline constexpr auto operator^=(Flags const & other) -> Flags &
         {
             data ^= other.data;
             return *this;
         }
-        inline constexpr auto operator~() const -> Flags
+        [[nodiscard]] inline constexpr auto operator~() const -> Flags
         {
             return {~data};
         }
-        inline constexpr auto operator|(Flags const & other) const -> Flags
+        [[nodiscard]] inline constexpr auto operator|(Flags const & other) const -> Flags
         {
             return {data | other.data};
         }
-        inline constexpr auto operator&(Flags const & other) const -> Flags
+        [[nodiscard]] inline constexpr auto operator&(Flags const & other) const -> Flags
         {
             return {data & other.data};
         }
-        inline constexpr auto operator^(Flags const & other) const -> Flags
+        [[nodiscard]] inline constexpr auto operator^(Flags const & other) const -> Flags
         {
             return {data ^ other.data};
         }
-        inline constexpr auto operator<=>(Flags const & other) const = default;
+        [[nodiscard]] inline constexpr auto operator<=>(Flags const & other) const = default;
+
+        operator bool() const {
+            return data != 0;
+        }
     };
 
     enum struct MsgSeverity
@@ -536,7 +1210,7 @@ namespace daxa
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
     };
 
-    auto to_string(ImageUsageFlags const &) -> std::string;
+    [[nodiscard]] auto to_string(ImageUsageFlags const &) -> std::string;
 
     struct MemoryFlagsProperties
     {
@@ -589,9 +1263,9 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(ImageLayout layout) -> std::string_view;
+    [[nodiscard]] auto to_string(ImageLayout layout) -> std::string_view;
 
-    struct ImageMipArraySlice
+    struct DAXA_EXPORT_CXX ImageMipArraySlice
     {
         u32 base_mip_level = 0;
         u32 level_count = 1;
@@ -600,15 +1274,15 @@ namespace daxa
 
         friend auto operator<=>(ImageMipArraySlice const &, ImageMipArraySlice const &) = default;
 
-        auto contains(ImageMipArraySlice const & slice) const -> bool;
-        auto intersects(ImageMipArraySlice const & slice) const -> bool;
-        auto intersect(ImageMipArraySlice const & slice) const -> ImageMipArraySlice;
-        auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
+        [[nodiscard]] auto contains(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto intersects(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto intersect(ImageMipArraySlice const & slice) const -> ImageMipArraySlice;
+        [[nodiscard]] auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
     };
 
-    auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
+    [[nodiscard]] auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
 
-    struct ImageArraySlice
+    struct DAXA_EXPORT_CXX ImageArraySlice
     {
         u32 mip_level = 0;
         u32 base_array_layer = 0;
@@ -616,24 +1290,24 @@ namespace daxa
 
         friend auto operator<=>(ImageArraySlice const &, ImageArraySlice const &) = default;
 
-        static auto slice(ImageMipArraySlice const & mip_array_slice, u32 mip_level = 0) -> ImageArraySlice;
+        [[nodiscard]] static auto slice(ImageMipArraySlice const & mip_array_slice, u32 mip_level = 0) -> ImageArraySlice;
 
-        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 
-    auto to_string(ImageArraySlice image_array_slice) -> std::string;
+    [[nodiscard]] auto to_string(ImageArraySlice image_array_slice) -> std::string;
 
-    struct ImageSlice
+    struct DAXA_EXPORT_CXX ImageSlice
     {
         u32 mip_level = 0;
         u32 array_layer = 0;
 
-        friend auto operator<=>(ImageSlice const &, ImageSlice const &) = default;
+        [[nodiscard]] friend auto operator<=>(ImageSlice const &, ImageSlice const &) = default;
 
-        static auto slice(ImageArraySlice const & mip_array_slice, u32 array_layer = 0) -> ImageSlice;
+        [[nodiscard]] static auto slice(ImageArraySlice const & mip_array_slice, u32 array_layer = 0) -> ImageSlice;
 
-        auto contained_in(ImageMipArraySlice const & slice) const -> bool;
-        auto contained_in(ImageArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto contained_in(ImageMipArraySlice const & slice) const -> bool;
+        [[nodiscard]] auto contained_in(ImageArraySlice const & slice) const -> bool;
     };
 
     auto to_string(ImageSlice image_slice) -> std::string;
@@ -688,11 +1362,11 @@ namespace daxa
         friend auto operator<=>(DepthValue const &, DepthValue const &) = default;
     };
 
-    using ClearValue = std::variant<std::array<f32, 4>, std::array<i32, 4>, std::array<u32, 4>, DepthValue>;
+    using ClearValue = Variant<std::array<f32, 4>, std::array<i32, 4>, std::array<u32, 4>, DepthValue>;
 
     struct AccessTypeFlagsProperties
     {
-        using Data = u32;
+        using Data = u64;
     };
     using AccessTypeFlags = Flags<AccessTypeFlagsProperties>;
     struct AccessTypeFlagBits
@@ -703,7 +1377,7 @@ namespace daxa
         static inline constexpr AccessTypeFlags READ_WRITE = READ | WRITE;
     };
 
-    auto to_string(AccessTypeFlags flags) -> std::string;
+    [[nodiscard]] auto to_string(AccessTypeFlags flags) -> std::string;
 
     struct PipelineStageFlagsProperties
     {
@@ -738,9 +1412,10 @@ namespace daxa
         static inline constexpr PipelineStageFlags PRE_RASTERIZATION_SHADERS = {0x4000000000ull};
         static inline constexpr PipelineStageFlags TASK_SHADER = {0x00080000ull};
         static inline constexpr PipelineStageFlags MESH_SHADER = {0x00100000ull};
+        static inline constexpr PipelineStageFlags ACCELERATION_STRUCTURE_BUILD = {0x02000000ull};
     };
 
-    auto to_string(PipelineStageFlags flags) -> std::string;
+    [[nodiscard]] auto to_string(PipelineStageFlags flags) -> std::string;
 
     struct Access
     {
@@ -750,10 +1425,10 @@ namespace daxa
         friend auto operator<=>(Access const &, Access const &) = default;
     };
 
-    auto operator|(Access const & a, Access const & b) -> Access;
-    auto operator&(Access const & a, Access const & b) -> Access;
+    DAXA_EXPORT_CXX [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
+    DAXA_EXPORT_CXX [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
 
-    auto to_string(Access access) -> std::string;
+    DAXA_EXPORT_CXX [[nodiscard]] auto to_string(Access access) -> std::string;
 
     namespace AccessConsts
     {
@@ -783,6 +1458,7 @@ namespace daxa
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access TASK_SHADER_READ = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access MESH_SHADER_READ = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_READ = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::READ};
 
         static inline constexpr Access TOP_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access DRAW_INDIRECT_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::WRITE};
@@ -808,6 +1484,7 @@ namespace daxa
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_WRITE = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access TASK_SHADER_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access MESH_SHADER_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_WRITE = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::WRITE};
 
         static inline constexpr Access TOP_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access DRAW_INDIRECT_READ_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ_WRITE};
@@ -833,6 +1510,7 @@ namespace daxa
         static inline constexpr Access PRE_RASTERIZATION_SHADERS_READ_WRITE = {.stages = PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access TASK_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access MESH_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_READ_WRITE = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::READ_WRITE};
     } // namespace AccessConsts
 
     enum struct SamplerAddressMode
@@ -919,7 +1597,6 @@ namespace daxa
 
     struct BlendInfo
     {
-        u32 blend_enable = false;
         BlendFactor src_color_blend_factor = BlendFactor::ONE;
         BlendFactor dst_color_blend_factor = BlendFactor::ZERO;
         BlendOp color_blend_op = BlendOp::ADD;
@@ -1021,5 +1698,65 @@ namespace daxa
         i32 y = {};
         u32 width = {};
         u32 height = {};
+    };
+    struct MemoryRequirements
+    {
+        u64 size = {};
+        u64 alignment = {};
+        u32 memory_type_bits = {};
+    };
+
+    struct MemoryBlockInfo
+    {
+        MemoryRequirements requirements = {};
+        MemoryFlags flags = {};
+    };
+
+    struct DAXA_EXPORT_CXX MemoryBlock : ManagedPtr<MemoryBlock, daxa_MemoryBlock>
+    {
+        MemoryBlock() = default;
+
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() -> MemoryBlockInfo const &;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
+    struct TimelineQueryPoolInfo
+    {
+        u32 query_count = {};
+        SmallString name = "";
+    };
+
+    struct DAXA_EXPORT_CXX TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>
+    {
+        TimelineQueryPool() = default;
+
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() const -> TimelineQueryPoolInfo const &;
+
+        [[nodiscard]] auto get_query_results(u32 start_index, u32 count) -> std::vector<u64>;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
+    enum struct IndexType
+    {
+        uint16 = 0,
+        uint32 = 1,
+        uint8 = 1000265000,
+        none = 1000165000,
     };
 } // namespace daxa

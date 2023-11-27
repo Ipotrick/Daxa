@@ -25,7 +25,39 @@ function(DAXA_CREATE_TEST)
     endif()
 endfunction()
 
+function(DAXA_CREATE_TEST_C)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+        # MSVC literally can't compile C properly.
+        return()
+    endif()
+
+    set(OPT_ARGS BRUH)
+    set(SNG_ARGS BRUH2)
+    set(MUL_ARGS FOLDER LIBS)
+    cmake_parse_arguments(PARSE_ARGV 0 DCT "${OPT_ARGS}" "${SNG_ARGS}" "${MUL_ARGS}")
+
+    list(JOIN DCT_FOLDER "_" FOLDER_NAME)
+    list(JOIN DCT_FOLDER "/" FOLDER_PATH)
+
+    add_executable(
+        daxa_test_c_${FOLDER_NAME}
+        "${FOLDER_PATH}/main.c"
+    )
+    target_link_libraries(daxa_test_c_${FOLDER_NAME} PRIVATE daxa::daxa ${DCT_LIBS})
+    target_include_directories(daxa_test_c_${FOLDER_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}" "${CMAKE_CURRENT_LIST_DIR}/0_common/shared")
+    target_compile_definitions(daxa_test_c_${FOLDER_NAME} PRIVATE DAXA_SAMPLE_PATH="${CMAKE_CURRENT_LIST_DIR}/${FOLDER_PATH}")
+
+    if(DAXA_TESTS_DISABLE_WINDOWS_CONSOLE)
+        if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+            target_link_options(daxa_test_c_${FOLDER_NAME}
+                PRIVATE "-Wl,/ENTRY:mainCRTStartup,/SUBSYSTEM:WINDOWS"
+            )
+        endif()
+    endif()
+endfunction()
+
 find_package(glfw3 CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
 
 DAXA_CREATE_TEST(
     FOLDER 1_setup 1_window
@@ -41,8 +73,8 @@ DAXA_CREATE_TEST(
     LIBS
 )
 DAXA_CREATE_TEST(
-    FOLDER 2_daxa_api 3_command_list
-    LIBS
+    FOLDER 2_daxa_api 3_command_recorder
+    LIBS fmt::fmt
 )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 4_synchronization
@@ -66,6 +98,10 @@ DAXA_CREATE_TEST(
 )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 9_shader_integration
+    LIBS glfw
+)
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 10_raytracing
     LIBS glfw
 )
 
@@ -93,5 +129,10 @@ DAXA_CREATE_TEST(
 
 DAXA_CREATE_TEST(
     FOLDER 4_hello_daxa 2_triangle
+    LIBS glfw
+)
+
+DAXA_CREATE_TEST_C(
+    FOLDER 4_hello_daxa 0_c_api
     LIBS glfw
 )

@@ -12,17 +12,12 @@ namespace tests
 
     void binary_semaphore(App & app)
     {
-        auto cmd_list1 = app.device.create_command_list({});
-        cmd_list1.complete();
-
-        auto cmd_list2 = app.device.create_command_list({});
-        cmd_list2.complete();
-
-        auto cmd_list3 = app.device.create_command_list({});
-        cmd_list3.complete();
-
-        auto cmd_list4 = app.device.create_command_list({});
-        cmd_list4.complete();
+        auto recorder = app.device.create_command_recorder({});
+        auto commands1 = recorder.complete_current_commands();
+        auto commands2 = recorder.complete_current_commands();
+        auto commands3 = recorder.complete_current_commands();
+        auto commands4 = recorder.complete_current_commands();
+        recorder.~CommandRecorder();
 
         auto binary_semaphore_1 = app.device.create_binary_semaphore({});
         auto binary_semaphore_2 = app.device.create_binary_semaphore({});
@@ -30,43 +25,37 @@ namespace tests
         // This semaphore is useful in the future, it can be used to make submits wait on each other,
         // or to make a present wait for a submit to finish
         app.device.submit_commands({
-            .command_lists = {cmd_list1},
-            .signal_binary_semaphores = {binary_semaphore_1},
+            .command_lists = std::array{commands1},
+            .signal_binary_semaphores = std::array{binary_semaphore_1},
         });
 
         app.device.submit_commands({
-            .command_lists = {cmd_list2},
-            .wait_binary_semaphores = {binary_semaphore_1},
-            .signal_binary_semaphores = {binary_semaphore_2},
+            .command_lists = std::array{commands2},
+            .wait_binary_semaphores = std::array{binary_semaphore_1},
+            .signal_binary_semaphores = std::array{binary_semaphore_2},
         });
 
         // Binary semaphores can be reused ONLY after they have been signaled.
         app.device.submit_commands({
-            .command_lists = {cmd_list3},
-            .wait_binary_semaphores = {binary_semaphore_2},
-            .signal_binary_semaphores = {binary_semaphore_1},
+            .command_lists = std::array{commands3},
+            .wait_binary_semaphores = std::array{binary_semaphore_2},
+            .signal_binary_semaphores = std::array{binary_semaphore_1},
         });
 
         app.device.submit_commands({
-            .command_lists = {cmd_list4},
-            .wait_binary_semaphores = {binary_semaphore_1},
+            .command_lists = std::array{commands4},
+            .wait_binary_semaphores = std::array{binary_semaphore_1},
         });
-
-        app.device.wait_idle();
-        app.device.collect_garbage();
     }
 
     void memory_barriers(App & app)
     {
-        auto cmd_list = app.device.create_command_list({});
-        cmd_list.complete();
+        auto recorder = app.device.create_command_recorder({});
+        auto commands = recorder.complete_current_commands();
 
         app.device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = std::array{commands},
         });
-
-        app.device.wait_idle();
-        app.device.collect_garbage();
     }
 } // namespace tests
 

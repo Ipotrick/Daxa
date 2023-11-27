@@ -9,10 +9,7 @@
 #include <daxa/utils/imgui.hpp>
 #include <imgui_impl_glfw.h>
 
-#define APPNAME "Daxa Sample: Rectangle Cutting"
-#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
-#include <daxa/utils/math_operators.hpp>
+// #include <daxa/utils/math_operators.hpp>
 
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
@@ -29,7 +26,7 @@ struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
-        .name = APPNAME_PREFIX("device"),
+        .name = ("device"),
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -37,7 +34,7 @@ struct App : AppWindow<App>
         .native_window_platform = get_native_platform(),
         .present_mode = daxa::PresentMode::IMMEDIATE,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .name = APPNAME_PREFIX("swapchain"),
+        .name = ("swapchain"),
     });
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -49,7 +46,7 @@ struct App : AppWindow<App>
             },
             .language = daxa::ShaderLanguage::GLSL,
         },
-        .name = APPNAME_PREFIX("pipeline_manager"),
+        .name = ("pipeline_manager"),
     });
 
     daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -67,10 +64,9 @@ struct App : AppWindow<App>
     std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
         .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
         .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
-        .color_attachments = {{
+        .color_attachments = std::vector{daxa::RenderAttachment{
             .format = swapchain.get_format(),
-            .blend = {
-                .blend_enable = 1u,
+            .blend = daxa::BlendInfo{
                 .src_color_blend_factor = daxa::BlendFactor::SRC_ALPHA,
                 .dst_color_blend_factor = daxa::BlendFactor::ONE_MINUS_SRC_ALPHA,
                 .src_alpha_blend_factor = daxa::BlendFactor::ONE,
@@ -79,13 +75,13 @@ struct App : AppWindow<App>
         }},
         .raster = {},
         .push_constant_size = sizeof(DrawPush),
-        .name = APPNAME_PREFIX("raster_pipeline"),
+        .name = ("raster_pipeline"),
     }).value();
     // clang-format on
 
     daxa::BufferId vertex_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(DrawVertex) * MAX_VERTS,
-        .name = APPNAME_PREFIX("vertex_buffer"),
+        .name = ("vertex_buffer"),
     });
     u32 vert_n = 0;
 
@@ -102,7 +98,7 @@ struct App : AppWindow<App>
         .layer_count = 4,
     };
 
-    App() : AppWindow<App>(APPNAME, 1600, 1200) {}
+    App() : AppWindow<App>("Rectangle Cutting", 1600, 1200) {}
 
     ~App()
     {
@@ -133,7 +129,7 @@ struct App : AppWindow<App>
         return false;
     }
 
-    void add_rect(DrawVertex *& buffer_ptr, f32vec2 p0, f32vec2 p1, f32vec4 col)
+    void add_rect(DrawVertex *& buffer_ptr, daxa_f32vec2 p0, daxa_f32vec2 p1, daxa_f32vec4 col)
     {
         // clang-format off
         *buffer_ptr = DrawVertex{{p0.x, p0.y, 0.0f, 0.0f}, col}; ++buffer_ptr;
@@ -184,16 +180,16 @@ struct App : AppWindow<App>
     void construct_scene(DrawVertex *& buffer_ptr)
     {
         vert_n = 0;
-        using namespace daxa::math_operators;
+        // using namespace daxa::math_operators;
 
         auto view_transform = [](auto v)
         {
-            return (v / f32vec2{static_cast<f32>(max_levels), static_cast<f32>(max_layers)}) * 2.0f - 1.0f;
+            return (daxa_f32vec2{v.x / static_cast<f32>(max_levels) * 2.0f - 1.0f, v.y / static_cast<f32>(max_layers) * 2.0f - 1.0f});
         };
-        auto add_int_rect = [&](auto xi, auto yi, auto sx, auto sy, f32 scl, f32vec4 col)
+        auto add_int_rect = [&](auto xi, auto yi, auto sx, auto sy, f32 scl, daxa_f32vec4 col)
         {
-            f32vec2 const p0 = f32vec2{static_cast<f32>(xi), static_cast<f32>(yi)} + scl * 0.5f;
-            f32vec2 const p1 = p0 + f32vec2{static_cast<f32>(sx), static_cast<f32>(sy)} - scl;
+            daxa_f32vec2 const p0 = daxa_f32vec2{static_cast<f32>(xi) + scl * 0.5f, static_cast<f32>(yi) + scl * 0.5f};
+            daxa_f32vec2 const p1 = daxa_f32vec2{p0.x + static_cast<f32>(sx) - scl, p0.y + static_cast<f32>(sy) - scl};
             add_rect(buffer_ptr, view_transform(p0), view_transform(p1), col);
         };
 
@@ -209,7 +205,7 @@ struct App : AppWindow<App>
         add_int_rect(s1.base_mip_level, s1.base_array_layer, s1.level_count, s1.layer_count, 0.0f, {0.9f, 0.3f, 0.3f, 0.9f});
 
         auto [s2_rects, s2_rect_n] = s0.subtract(s1);
-        f32vec4 const s2_colors[4] = {
+        daxa_f32vec4 const s2_colors[4] = {
             {0.1f, 0.1f, 0.1f, 0.5f},
             {0.1f, 0.1f, 0.1f, 0.5f},
             {0.1f, 0.1f, 0.1f, 0.5f},
@@ -228,83 +224,88 @@ struct App : AppWindow<App>
         ui_update();
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
             std::cout << "Failed to reload " << reload_err->message << '\n';
-        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
             std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();
 
-        auto cmd_list = device.create_command_list({
-            .name = APPNAME_PREFIX("cmd_list"),
+        auto recorder = device.create_command_recorder({
+            .name = ("recorder"),
         });
 
         auto vertex_staging_buffer = device.create_buffer({
             .size = sizeof(DrawVertex) * MAX_VERTS,
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .name = APPNAME_PREFIX("vertex_staging_buffer"),
+            .name = ("vertex_staging_buffer"),
         });
-        cmd_list.destroy_buffer_deferred(vertex_staging_buffer);
+        recorder.destroy_buffer_deferred(vertex_staging_buffer);
 
-        auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer);
+        auto * buffer_ptr = device.get_host_address_as<DrawVertex>(vertex_staging_buffer).value();
         construct_scene(buffer_ptr);
 
-        cmd_list.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
-        cmd_list.copy_buffer_to_buffer({
+        recorder.copy_buffer_to_buffer({
             .src_buffer = vertex_staging_buffer,
             .dst_buffer = vertex_buffer,
             .size = sizeof(DrawVertex) * vert_n,
         });
 
-        cmd_list.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::VERTEX_SHADER_READ,
         });
 
-        cmd_list.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
             .src_layout = daxa::ImageLayout::UNDEFINED,
             .dst_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .image_id = swapchain_image,
         });
 
-        cmd_list.begin_renderpass({
-            .color_attachments = {{.image_view = swapchain_image.default_view(), .load_op = daxa::AttachmentLoadOp::CLEAR, .clear_value = std::array<f32, 4>{0.5f, 0.5f, 0.5f, 1.0f}}},
+        auto render_recorder = std::move(recorder).begin_renderpass({
+            .color_attachments = std::array{
+                daxa::RenderAttachmentInfo{
+                    .image_view = swapchain_image.default_view(),
+                    .load_op = daxa::AttachmentLoadOp::CLEAR,
+                    .clear_value = std::array<f32, 4>{0.5f, 0.5f, 0.5f, 1.0f},
+                },
+            },
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
-        cmd_list.set_pipeline(*raster_pipeline);
-        cmd_list.push_constant(DrawPush{
-            .face_buffer = this->device.get_device_address(vertex_buffer),
+        render_recorder.set_pipeline(*raster_pipeline);
+        render_recorder.push_constant(DrawPush{
+            .face_buffer = this->device.get_device_address(vertex_buffer).value(),
         });
-        cmd_list.draw({.vertex_count = vert_n});
-        cmd_list.end_renderpass();
+        render_recorder.draw({.vertex_count = vert_n});
+        recorder = std::move(render_recorder).end_renderpass();
 
-        imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, swapchain_image, size_x, size_y);
+        imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, swapchain_image, size_x, size_y);
 
-        cmd_list.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
             .src_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
             .dst_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });
 
-        cmd_list.complete();
-
         device.submit_commands({
-            .command_lists = {std::move(cmd_list)},
-            .wait_binary_semaphores = {swapchain.get_acquire_semaphore()},
-            .signal_binary_semaphores = {swapchain.get_present_semaphore()},
-            .signal_timeline_semaphores = {
-                {swapchain.get_gpu_timeline_semaphore(), swapchain.get_cpu_timeline_value()}},
+            .command_lists = std::array{recorder.complete_current_commands()},
+            .wait_binary_semaphores = std::array{swapchain.current_acquire_semaphore()},
+            .signal_binary_semaphores = std::array{swapchain.current_present_semaphore()},
+            .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
         });
+        recorder.~CommandRecorder();
         device.present_frame({
-            .wait_binary_semaphores = {swapchain.get_present_semaphore()},
+            .wait_binary_semaphores = std::array{swapchain.current_present_semaphore()},
             .swapchain = swapchain,
         });
+        device.collect_garbage();
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}

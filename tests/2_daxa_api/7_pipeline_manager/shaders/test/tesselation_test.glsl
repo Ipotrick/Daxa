@@ -1,13 +1,12 @@
-#define DAXA_ENABLE_SHADER_NO_NAMESPACE 1
 #include "daxa/daxa.inl"
 
 #if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
 void main()
 {
-    gl_Position = f32vec4(1.0, 1.0, 1.0, 1.0);
+    gl_Position = vec4(1.0, 1.0, 1.0, 1.0);
 }
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_TESSELATION_CONTROL
-layout (vertices = 3) out;
+layout(vertices = 3) out;
 
 void main(void)
 {
@@ -23,7 +22,7 @@ void main(void)
 }
 
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_TESSELATION_EVALUATION
-layout (triangles, fractional_odd_spacing, cw) in;
+layout(triangles, fractional_odd_spacing, cw) in;
 
 void main()
 {
@@ -32,9 +31,9 @@ void main()
                   (gl_TessCoord.z * gl_in[2].gl_Position);
 }
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_FRAGMENT
-layout (location = 0) out f32vec4 outFragColor;
+layout(location = 0) out vec4 outFragColor;
 void main()
 {
-    outFragColor = f32vec4(1.0, 0.0, 0.0, 1.0);
+    outFragColor = vec4(1.0, 0.0, 0.0, 1.0);
 }
 #endif

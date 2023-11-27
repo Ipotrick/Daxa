@@ -20,7 +20,7 @@ namespace daxa
         impl.resize(info);
     }
 
-    void Fsr2Context::upscale(CommandList & command_list, UpscaleInfo const & info)
+    void Fsr2Context::upscale(CommandRecorder & command_list, UpscaleInfo const & info)
     {
         auto & impl = *as<ImplFsr2Context>();
         impl.upscale(command_list, info);
@@ -92,9 +92,9 @@ namespace daxa
         create_resizable_resources();
     }
 
-    void ImplFsr2Context::upscale(CommandList & command_list, UpscaleInfo const & upscale_info)
+    void ImplFsr2Context::upscale(CommandRecorder & command_list, UpscaleInfo const & upscale_info)
     {
-        auto & impl_command_list = *command_list.as<ImplCommandList>();
+        auto & impl_command_list = *command_list.as<ImplCommandRecorder>();
         auto & impl_device = *this->info.device.as<ImplDevice>();
         impl_command_list.flush_barriers();
 
@@ -114,7 +114,7 @@ namespace daxa
         wchar_t fsr_outputupscaledcolor[] = L"FSR2_OutputUpscaledColor";
 
         FfxFsr2DispatchDescription dispatch_description = {};
-        dispatch_description.commandList = ffxGetCommandListVK(impl_command_list.vk_cmd_buffer);
+        dispatch_description.commandList = ffxGetCommandRecorderVK(impl_command_list.vk_cmd_buffer);
         dispatch_description.color = ffxGetTextureResourceVK(
             &fsr2_context, color_slot.vk_image, color_view_slot.vk_image_view,
             this->info.size_info.render_size_x, this->info.size_info.render_size_y,

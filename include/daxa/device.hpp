@@ -4,11 +4,8 @@
 #include <daxa/gpu_resources.hpp>
 #include <daxa/pipeline.hpp>
 #include <daxa/swapchain.hpp>
-#include <daxa/command_list.hpp>
-#include <daxa/semaphore.hpp>
-#include <daxa/split_barrier.hpp>
-#include <daxa/timeline_query.hpp>
-#include <daxa/memory_block.hpp>
+#include <daxa/command_recorder.hpp>
+#include <daxa/sync.hpp>
 
 namespace daxa
 {
@@ -132,19 +129,8 @@ namespace daxa
         u64 non_coherent_atom_size;
     };
 
-    struct DeviceProperties
+    struct MeshShaderDeviceProperties
     {
-        u32 vulkan_api_version = {};
-        u32 driver_version = {};
-        u32 vendor_id = {};
-        u32 device_id = {};
-        DeviceType device_type = {};
-        u8 device_name[256U] = {};
-        u8 pipeline_cache_uuid[16U] = {};
-        DeviceLimits limits = {};
-    };
-
-    struct MeshShaderDeviceProperties {
         u32 max_task_work_group_total_count = {};
         u32 max_task_work_group_count[3] = {};
         u32 max_task_work_group_invocations = {};
@@ -169,114 +155,275 @@ namespace daxa
         u32 mesh_output_per_primitive_granularity = {};
         u32 max_preferred_task_work_group_invocations = {};
         u32 max_preferred_mesh_work_group_invocations = {};
-        u32 prefers_local_invocation_vertex_output = {};
-        u32 prefers_local_invocation_primitive_output = {};
-        u32 prefers_compact_vertex_output = {};
-        u32 prefers_compact_primitive_output = {};
+        bool prefers_local_invocation_vertex_output = {};
+        bool prefers_local_invocation_primitive_output = {};
+        bool prefers_compact_vertex_output = {};
+        bool prefers_compact_primitive_output = {};
     };
 
-    static inline auto default_device_score(DeviceProperties const & device_props) -> i32
+    struct RayTracingPipelineProperties
     {
-        i32 score = 0;
-        switch (device_props.device_type)
+        u32 shader_group_handle_size = {};
+        u32 max_ray_recursion_depth = {};
+        u32 max_shader_group_stride = {};
+        u32 shader_group_base_alignment = {};
+        u32 shader_group_handle_capture_replay_size = {};
+        u32 max_ray_dispatch_invocation_count = {};
+        u32 shader_group_handle_alignment = {};
+        u32 max_ray_hit_attribute_size = {};
+    };
+
+    struct AccelerationStructureProperties
+    {
+        u64 max_geometry_count = {};
+        u64 max_instance_count = {};
+        u64 max_primitive_count = {};
+        u32 max_per_stage_descriptor_acceleration_structures = {};
+        u32 max_per_stage_descriptor_update_after_bind_acceleration_structures = {};
+        u32 max_descriptor_set_acceleration_structures = {};
+        u32 max_descriptor_set_update_after_bind_acceleration_structures = {};
+        u32 min_acceleration_structure_scratch_offset_alignment = {};
+    };
+
+    struct DeviceProperties
+    {
+        u32 vulkan_api_version = {};
+        u32 driver_version = {};
+        u32 vendor_id = {};
+        u32 device_id = {};
+        DeviceType device_type = {};
+        u8 device_name[256U] = {};
+        u8 pipeline_cache_uuid[16U] = {};
+        DeviceLimits limits = {};
+        Optional<MeshShaderDeviceProperties> mesh_shading_properties = {};
+        Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
+        Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
+    };
+
+    DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
+
+    struct DeviceFlagsProperties
+    {
+        using Data = u32;
+    };
+    using DeviceFlags = Flags<DeviceFlagsProperties>;
+    struct DeviceFlagBits
+    {
+        static inline constexpr DeviceFlags NONE = {0x00000000};
+        static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
+        static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
+        static inline constexpr DeviceFlags MESH_SHADER = {0x1 << 2};
+        static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
+        static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
+        static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
+        static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
+    };
+
+    struct DeviceFlags2
+    {
+        u32 buffer_device_address_capture_replay_bit : 1 = 1;
+        u32 conservative_rasterization : 1 = {};
+        u32 mesh_shader_bit : 1 = {};
+        u32 shader_atomic64 : 1 = 1;
+        u32 image_atomic64 : 1 = 1;
+        u32 vk_memory_model : 1 = {};
+        u32 ray_tracing : 1 = {};
+
+        operator DeviceFlags()
         {
-        case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
-        case daxa::DeviceType::VIRTUAL_GPU: score += 1000; break;
-        case daxa::DeviceType::INTEGRATED_GPU: score += 100; break;
-        default: break;
+            return std::bit_cast<DeviceFlags>(*this);
         }
-        return score;
-    }
+    };
 
     struct DeviceInfo
     {
-        std::function<i32(DeviceProperties const &)> selector = default_device_score;
-
-        // TODO(grundlett): Remove these in favor of a more general solution
-        bool enable_buffer_device_address_capture_replay = true;
-        bool enable_conservative_rasterization = false;
-        bool enable_shader_atomic_int64 = false;
-        bool enable_mesh_shader = false;
+        i32 (*selector)(DeviceProperties const & properties) = default_device_score;
+#if defined(__APPLE__)
+        DeviceFlags flags = {};
+        u32 max_allowed_images = 8;
+        u32 max_allowed_buffers = 30;
+        u32 max_allowed_samplers = 16;
+        u32 max_allowed_acceleration_structures = 8;
+#else
+        DeviceFlags flags =
+            DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT |
+            DeviceFlagBits::SHADER_ATOMIC64 |
+            DeviceFlagBits::IMAGE_ATOMIC64;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
-        u32 max_allowed_images = 8; // 10'000;
-        u32 max_allowed_buffers = 30; // 10'000;
-        u32 max_allowed_samplers = 16; // 1'000;
-        std::string name = {};
+        u32 max_allowed_images = 10'000;
+        u32 max_allowed_buffers = 10'000;
+        u32 max_allowed_samplers = 400;
+        u32 max_allowed_acceleration_structures = 10'000;
+#endif
+        SmallString name = "";
     };
 
     struct CommandSubmitInfo
     {
-        PipelineStageFlags src_stages = {};
-        std::vector<CommandList> command_lists = {};
-        std::vector<BinarySemaphore> wait_binary_semaphores = {};
-        std::vector<BinarySemaphore> signal_binary_semaphores = {};
-        std::vector<std::pair<TimelineSemaphore, u64>> wait_timeline_semaphores = {};
-        std::vector<std::pair<TimelineSemaphore, u64>> signal_timeline_semaphores = {};
+        PipelineStageFlags wait_stages = {};
+        std::span<ExecutableCommandList const> command_lists = {};
+        std::span<BinarySemaphore const> wait_binary_semaphores = {};
+        std::span<BinarySemaphore const> signal_binary_semaphores = {};
+        std::span<std::pair<TimelineSemaphore, u64> const> wait_timeline_semaphores = {};
+        std::span<std::pair<TimelineSemaphore, u64> const> signal_timeline_semaphores = {};
     };
 
     struct PresentInfo
     {
-        std::vector<BinarySemaphore> wait_binary_semaphores = {};
+        std::span<BinarySemaphore const> wait_binary_semaphores = {};
         Swapchain swapchain;
     };
 
-    struct Device : ManagedPtr
+    struct MemoryBlockBufferInfo
+    {
+        BufferInfo buffer_info = {};
+        MemoryBlock & memory_block;
+        usize offset = {};
+    };
+
+    struct MemoryBlockImageInfo
+    {
+        ImageInfo image_info = {};
+        MemoryBlock & memory_block;
+        usize offset = {};
+    };
+
+    struct AccelerationStructureBuildSizesInfo
+    {
+        u64 acceleration_structure_size;
+        u64 update_scratch_size;
+        u64 build_scratch_size;
+    };
+
+    struct BufferTlasInfo
+    {
+        TlasInfo tlas_info = {};
+        BufferId buffer_id = {};
+        u64 offset = {};
+    };
+
+    struct BufferBlasInfo
+    {
+        BlasInfo blas_info = {};
+        BufferId buffer_id = {};
+        u64 offset = {};
+    };
+
+    /**
+     * @brief   Device represents a logical device that may be a virtual or physical gpu.
+     *          Device manages all general gpu operations that are not handled by other objects.
+     *          All objects connected to the device are created by it.
+     *
+     * THREADSAFETY:
+     * * is internally synchronized
+     * * can be passed between different threads
+     * * may be accessed by multiple threads at the same time
+     */
+    struct DAXA_EXPORT_CXX Device final : ManagedPtr<Device, daxa_Device>
     {
         Device() = default;
 
-        auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
-        auto get_memory_requirements(BufferInfo const & info) -> MemoryRequirements;
-        auto get_memory_requirements(ImageInfo const & info) -> MemoryRequirements;
+        [[nodiscard]] auto create_memory(MemoryBlockInfo const & info) -> MemoryBlock;
+        [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
+        [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
+        [[nodiscard]] auto get_tlas_build_sizes(TlasBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
+        [[nodiscard]] auto get_blas_build_sizes(BlasBuildInfo const & info) -> AccelerationStructureBuildSizesInfo;
 
-        auto create_buffer(BufferInfo const & info) -> BufferId;
-        auto create_image(ImageInfo const & info) -> ImageId;
-        auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
-        auto create_sampler(SamplerInfo const & info) -> SamplerId;
+        [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
+        [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;
+        [[nodiscard]] auto create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId;
+        [[nodiscard]] auto create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId;
+        [[nodiscard]] auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
+        [[nodiscard]] auto create_sampler(SamplerInfo const & info) -> SamplerId;
+        [[nodiscard]] auto create_tlas(TlasInfo const & info) -> TlasId;
+        [[nodiscard]] auto create_blas(BlasInfo const & info) -> BlasId;
+        [[nodiscard]] auto create_tlas_from_buffer(BufferTlasInfo const & info) -> TlasId;
+        [[nodiscard]] auto create_blas_from_buffer(BufferBlasInfo const & info) -> BlasId;
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
         void destroy_image_view(ImageViewId id);
         void destroy_sampler(SamplerId id);
-        
-        auto info_buffer(BufferId id) const -> BufferInfo;
-        auto info_image(ImageId id) const -> ImageInfo;
-        auto info_image_view(ImageViewId id) const -> ImageViewInfo;
-        auto info_sampler(SamplerId id) const -> SamplerInfo;
+        void destroy_tlas(TlasId id);
+        void destroy_blas(BlasId id);
 
-        auto is_id_valid(ImageId id) const -> bool;
-        auto is_id_valid(ImageViewId id) const -> bool;
-        auto is_id_valid(BufferId id) const -> bool;
-        auto is_id_valid(SamplerId id) const -> bool;
+        /// @brief  Daxa stores each create info and keeps it up to date if the object changes
+        ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
+        /// @param id of the object.
+        /// @return a value copy of the info. Returns nullopt when the id is invalid.
+        [[nodiscard]] auto info_buffer(BufferId id) const -> Optional<BufferInfo>;
+        [[nodiscard]] auto info_image(ImageId id) const -> Optional<ImageInfo>;
+        [[nodiscard]] auto info_image_view(ImageViewId id) const -> Optional<ImageViewInfo>;
+        [[nodiscard]] auto info_sampler(SamplerId id) const -> Optional<SamplerInfo>;
+        [[nodiscard]] auto info_tlas(TlasId id) const -> Optional<TlasInfo>;
+        [[nodiscard]] auto info_blas(BlasId id) const -> Optional<BlasInfo>;
 
-        auto get_device_address(BufferId id) const -> BufferDeviceAddress;
-        auto get_host_address(BufferId id) const -> void *;
+        /// @brief  Will describe if a given id is valid.
+        ///         An id is valid as long as it was created by the device and not yet destroyed.
+        /// @param id or the object.
+        /// @return validity of id
+        [[nodiscard]] auto is_id_valid(ImageId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(ImageViewId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(BufferId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(SamplerId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(TlasId id) const -> bool;
+        [[nodiscard]] auto is_id_valid(BlasId id) const -> bool;
+
+        [[nodiscard]] auto get_device_address(BufferId id) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto get_device_address(BlasId id) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto get_device_address(TlasId id) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto get_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>
-        auto get_host_address_as(BufferId id) const -> T *
+        [[nodiscard]] auto get_host_address_as(BufferId id) const -> Optional<T *>
         {
-            return static_cast<T *>(get_host_address(id));
+            auto opt = get_host_address(id);
+            if (opt.has_value())
+            {
+                return {reinterpret_cast<T *>(opt.value())};
+            }
+            return {};
         }
 
-        auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
-        auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
+        [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
+        [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
 
-        auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
-        auto create_command_list(CommandListInfo const & info) -> CommandList;
-        auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
-        auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
-        auto create_split_barrier(SplitBarrierInfo const & info) -> SplitBarrierState;
-        auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
+        [[nodiscard]] auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
+        [[nodiscard]] auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;
+        [[nodiscard]] auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
+        [[nodiscard]] auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
+        [[nodiscard]] auto create_event(EventInfo const & info) -> Event;
+        [[nodiscard]] auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
-        auto info() const -> DeviceInfo const &;
-        auto properties() const -> DeviceProperties const &;
-        auto mesh_shader_properties() const -> MeshShaderDeviceProperties const &;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the device is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() const -> DeviceInfo const &;
         void wait_idle();
 
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
+
+        /// @brief  Actually destroys all resources that are ready to be destroyed.
+        ///         When calling destroy, or removing all references to an object, it is zombified not really destroyed.
+        ///         A zombie lives until the gpu catches up to the point of zombification.
+        /// NOTE:
+        /// * this function will block until it gains an exclusive resource lock
+        /// * command lists may hold shared lifetime locks, those must all unlock before an exclusive lock can be made
+        /// * look at CommandRecorder for more info on this
+        /// * SoftwareCommandRecorder is exempt from this limitation,
+        ///   you can freely record those in parallel with collect_garbage
         void collect_garbage();
 
-      private:
-        friend struct Instance;
-        Device(ManagedPtr impl);
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the device is destroyed.
+        /// @return reference to device properties
+        [[nodiscard]] auto properties() const -> DeviceProperties const &;
+        [[nodiscard]] auto get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

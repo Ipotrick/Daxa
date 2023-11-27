@@ -134,7 +134,7 @@ namespace daxa
 
     using TaskResourceIndex = u32;
 
-    struct TaskGPUResourceView
+    struct DAXA_EXPORT_CXX TaskGPUResourceView
     {
         TaskResourceIndex task_graph_index = {};
         TaskResourceIndex index = {};
@@ -147,11 +147,11 @@ namespace daxa
 
     auto to_string(TaskGPUResourceView const & id) -> std::string;
 
-    struct TaskBufferView : public TaskGPUResourceView
+    struct DAXA_EXPORT_CXX TaskBufferView : public TaskGPUResourceView
     {
     };
 
-    struct TaskImageView : public TaskGPUResourceView
+    struct DAXA_EXPORT_CXX TaskImageView : public TaskGPUResourceView
     {
         daxa::ImageMipArraySlice slice = {};
         auto view(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageView
@@ -185,8 +185,9 @@ namespace daxa
     struct GenericTaskResourceUse
     {
         TaskResourceUseType type;
+        u32 m_shader_array_size;
         // This is necessary for c++ to properly generate copy and move operators.
-        u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType)];
+        u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType) - sizeof(u32)];
     };
 
     struct TrackedBuffers
@@ -201,19 +202,30 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskBuffer : ManagedPtr
+    struct ImplPersistentTaskBuffer;
+    struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBuffer *>
     {
         TaskBuffer() = default;
+        // TaskBuffer(TaskBuffer const & tb) = default;
         TaskBuffer(TaskBufferInfo const & info);
 
         operator TaskBufferView() const;
 
         auto view() const -> TaskBufferView;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
         auto info() const -> TaskBufferInfo const &;
         auto get_state() const -> TrackedBuffers;
 
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
     struct TrackedImages
@@ -230,29 +242,59 @@ namespace daxa
         std::string name = {};
     };
 
-    struct TaskImage : ManagedPtr
+    struct ImplPersistentTaskImage;
+    struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {
         TaskImage() = default;
+        // TaskImage(TaskImage const & ti) = default;
         TaskImage(TaskImageInfo const & info);
 
         operator TaskImageView() const;
 
         auto view() const -> TaskImageView;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
         auto info() const -> TaskImageInfo const &;
         auto get_state() const -> TrackedImages;
 
         void set_images(TrackedImages const & images);
         void swap_images(TaskImage & other);
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    template <TaskBufferAccess T_ACCESS = TaskBufferAccess::NONE>
+    // Needed to shut up compilers. Its not possible to bitcast spans otherwise.
+    template<typename T>
+    struct OpaqueSpan
+    {
+        std::array<u64, 2> data = {};
+        auto span() const -> std::span<T> const &
+        {
+            return *reinterpret_cast<std::span<T> const *>(this);
+        }
+        auto span() -> std::span<T> &
+        {
+            return *reinterpret_cast<std::span<T> *>(this);
+        }
+    };
+
+    template <TaskBufferAccess T_ACCESS = TaskBufferAccess::NONE, u32 T_SHADER_ARRAY_SIZE = 1, bool T_SHADER_AS_ADDRESS = false>
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskBufferUse
     {
       private:
         friend struct ImplTaskGraph;
+        friend struct TaskInterfaceUses;
+        friend struct TaskInterface;
         TaskResourceUseType const type = TaskResourceUseType::BUFFER;
-        std::span<BufferId const> buffers = {};
+        u32 m_shader_array_size = T_SHADER_ARRAY_SIZE;
+        OpaqueSpan<BufferId const> buffers = {};
         TaskBufferAccess m_access = T_ACCESS;
+        bool m_shader_as_address = T_SHADER_AS_ADDRESS;
 
       public:
         TaskBufferView handle = {};
@@ -264,7 +306,7 @@ namespace daxa
         {
         }
 
-        TaskBufferUse(TaskBuffer const & a_handle)
+        inline TaskBufferUse(TaskBuffer const & a_handle)
             : handle{a_handle}
         {
         }
@@ -294,8 +336,8 @@ namespace daxa
 
         auto buffer(usize index = 0) const -> BufferId
         {
-            DAXA_DBG_ASSERT_TRUE_M(buffers.size() > 0, "this function is only allowed to be called within a task callback");
-            return buffers[index];
+            DAXA_DBG_ASSERT_TRUE_M(buffers.span().size() > 0, "this function is only allowed to be called within a task callback");
+            return buffers.span()[index];
         }
 
         auto to_generic() const -> GenericTaskResourceUse const &
@@ -309,17 +351,20 @@ namespace daxa
         }
     };
 
-    template <TaskImageAccess T_ACCESS = TaskImageAccess::NONE, ImageViewType T_VIEW_TYPE = ImageViewType::MAX_ENUM>
+    template <TaskImageAccess T_ACCESS = TaskImageAccess::NONE, ImageViewType T_VIEW_TYPE = ImageViewType::MAX_ENUM, u32 T_SHADER_ARRAY_SIZE = 1u>
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageUse
     {
       private:
         friend struct ImplTaskGraph;
         friend struct TaskGraphPermutation;
+        friend struct TaskInterfaceUses;
+        friend struct TaskInterface;
         TaskResourceUseType type = TaskResourceUseType::IMAGE;
+        u32 m_shader_array_size = T_SHADER_ARRAY_SIZE;
         TaskImageAccess m_access = T_ACCESS;
         ImageViewType m_view_type = T_VIEW_TYPE;
-        std::span<ImageId const> images = {};
-        std::span<ImageViewId const> views = {};
+        OpaqueSpan<ImageId const> images = {};
+        OpaqueSpan<ImageViewId const> views = {};
         ImageLayout m_layout = {};
 
       public:
@@ -376,13 +421,14 @@ namespace daxa
             return m_access;
         }
 
-        /// @brief  The layout of images is controlled and changed by task graph. 
-        ///         They can change between tasks at any time. 
-        ///         Within each task callback the imagelayout for each used image is not changing.
-        ///         The stable layout of a used image can be queryed with this function.
+        /// @brief  The layout of images is controlled and changed by task graph.
+        ///         They can change between tasks at any time.
+        ///         Within each task callback the image layout for each used image is not changing.
+        ///         The stable layout of a used image can be queried with this function.
         /// @return the image layout of the used image at the time of the task.
         auto layout() const -> ImageLayout
         {
+            DAXA_DBG_ASSERT_TRUE_M(images.span().size() > 0, "this function is only allowed to be called within a task callback");
             return m_layout;
         }
 
@@ -400,8 +446,8 @@ namespace daxa
         /// @return Backed image at given index
         auto image(u32 index = 0) const -> ImageId
         {
-            DAXA_DBG_ASSERT_TRUE_M(images.size() > 0, "this function is only allowed to be called within a task callback");
-            return images[index];
+            DAXA_DBG_ASSERT_TRUE_M(images.span().size() > 0, "this function is only allowed to be called within a task callback");
+            return images.span()[index];
         }
 
         /// @brief  If the use is not the default slice and view type, daxa creates new image views and caches them.
@@ -410,15 +456,15 @@ namespace daxa
         /// @return A cached image view that fits the uses slice and view type at the given image index.
         auto view(u32 index = 0) const -> ImageViewId
         {
-            DAXA_DBG_ASSERT_TRUE_M(views.size() > 0, "this function is only allowed to be called within a task callback");
-            return views[index];
+            DAXA_DBG_ASSERT_TRUE_M(views.span().size() > 0, "this function is only allowed to be called within a task callback");
+            return views.span()[index];
         }
     };
 
     static inline constexpr size_t TASK_BUFFER_INPUT_SIZE = sizeof(TaskBufferUse<>);
     static inline constexpr size_t TASK_IMAGE_INPUT_SIZE = sizeof(TaskImageUse<>);
-    static_assert(TASK_BUFFER_INPUT_SIZE == TASK_IMAGE_INPUT_SIZE, "should be impossible! contact Ipotrick");
-    static_assert(TASK_BUFFER_INPUT_SIZE == TASK_INPUT_FIELD_SIZE, "should be impossible! contact Ipotrick");
+    static_assert(TASK_BUFFER_INPUT_SIZE == TASK_IMAGE_INPUT_SIZE, "ABI Size Incompatilibity In Task Uses! Contact Ipotrick!");
+    static_assert(TASK_BUFFER_INPUT_SIZE == TASK_INPUT_FIELD_SIZE, "ABI Size Incompatilibity In Task Uses! Contact Ipotrick!");
 
     template <typename BufFn, typename ImgFn>
     void for_each(std::span<GenericTaskResourceUse> uses, BufFn && buf_fn, ImgFn && img_fn)
@@ -471,7 +517,7 @@ namespace daxa
     }
 
     struct TaskInterface;
-    
+
     // Namespace containing implementation details
     namespace detail
     {
@@ -479,7 +525,6 @@ namespace daxa
         {
             virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> = 0;
             virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> = 0;
-            virtual auto get_uses_constant_buffer_slot() const -> isize = 0;
             virtual auto get_name() const -> std::string = 0;
             virtual void callback(TaskInterface const & ti) = 0;
             virtual ~BaseTask() {}
@@ -516,18 +561,6 @@ namespace daxa
                 return std::span{reinterpret_cast<GenericTaskResourceUse const *>(&task.uses), USE_COUNT};
             }
 
-            virtual auto get_uses_constant_buffer_slot() const -> isize override
-            {
-                if constexpr (requires { T_TASK::CONSANT_BUFFER_SLOT; })
-                {
-                    return T_TASK::CONSANT_BUFFER_SLOT;
-                }
-                else
-                {
-                    return -1;
-                }
-            }
-
             virtual auto get_name() const -> std::string override
             {
                 if constexpr (requires { task.name; })
@@ -551,13 +584,12 @@ namespace daxa
             std::vector<GenericTaskResourceUse> uses = {};
             std::function<void(daxa::TaskInterface const &)> callback_lambda = {};
             std::string name = {};
-            isize constant_buffer_slot = -1;
 
             InlineTask(
                 std::vector<GenericTaskResourceUse> && a_uses,
                 std::function<void(daxa::TaskInterface const &)> && a_callback_lambda,
-                std::string && a_name, isize a_constant_buffer_slot)
-                : uses{a_uses}, callback_lambda{a_callback_lambda}, name{a_name}, constant_buffer_slot{a_constant_buffer_slot}
+                std::string && a_name)
+                : uses{a_uses}, callback_lambda{a_callback_lambda}, name{a_name}
             {
             }
 
@@ -573,11 +605,6 @@ namespace daxa
                 return std::span{uses.data(), uses.size()};
             }
 
-            virtual auto get_uses_constant_buffer_slot() const -> isize override
-            {
-                return constant_buffer_slot;
-            }
-
             virtual auto get_name() const -> std::string override
             {
                 return name;
@@ -588,19 +615,29 @@ namespace daxa
                 callback_lambda(ti);
             }
         };
+        
 
-        template <UserUses T>
-        auto to_generic_uses(T const & uses_struct) -> std::vector<GenericTaskResourceUse>
+        template<typename T>
+        consteval usize get_task_head_shader_blob_size()
         {
-            std::vector<GenericTaskResourceUse> uses = {};
-            uses.resize(sizeof(T) / sizeof(GenericTaskResourceUse), {});
-            std::memcpy(uses.data(), &uses_struct, sizeof(T));
-            return uses;
+            usize constexpr array_size = sizeof(T) / sizeof(GenericTaskResourceUse);
+            auto const generic_uses = std::bit_cast<std::array<GenericTaskResourceUse, array_size>>(T{});
+            usize byte_size = 0;
+            for (auto const & guse: generic_uses)
+            {
+                byte_size += 8 * guse.m_shader_array_size;
+            }
+            return byte_size;
         }
+    } // namespace detail
 
-        auto get_task_arg_shader_alignment(TaskResourceUseType type) -> u32;
-
-        auto get_task_arg_shader_offsets_size(std::span<GenericTaskResourceUse> args) -> std::pair<std::vector<u32>, u32>;
+    template <detail::UserUses T>
+    auto generic_uses_cast(T const & uses_struct) -> std::vector<GenericTaskResourceUse>
+    {
+        std::vector<GenericTaskResourceUse> uses = {};
+        uses.resize(sizeof(T) / sizeof(GenericTaskResourceUse), {});
+        std::memcpy(uses.data(), &uses_struct, sizeof(T));
+        return uses;
     }
 
     inline namespace task_resource_uses

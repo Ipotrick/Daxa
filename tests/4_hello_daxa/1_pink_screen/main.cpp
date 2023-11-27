@@ -48,7 +48,7 @@ auto main() -> int
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    auto *glfw_window_ptr = glfwCreateWindow(
+    auto * glfw_window_ptr = glfwCreateWindow(
         static_cast<daxa::i32>(window_info.width),
         static_cast<daxa::i32>(window_info.height),
         "Daxa sample window name", nullptr, nullptr);
@@ -63,7 +63,7 @@ auto main() -> int
             info.width = static_cast<daxa::u32>(width);
             info.height = static_cast<daxa::u32>(height);
         });
-    auto *native_window_handle = get_native_handle(glfw_window_ptr);
+    auto * native_window_handle = get_native_handle(glfw_window_ptr);
     auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     // First thing we do is create a Daxa instance. This essentially exists
@@ -147,14 +147,14 @@ auto main() -> int
         // Directly after, we define an image slice. As images can be made up of multiple
         // layers, memory planes, and mip levels, Daxa takes slices in many calls to
         // specify a slice of an image that should be operated upon.
-        // Technically the default value for slice in barriers is simply a 2d image. 
-        // So in this case we would not need to mention it in the barriers at all! 
+        // Technically the default value for slice in barriers is simply a 2d image.
+        // So in this case we would not need to mention it in the barriers at all!
         // But for demonstration we show how to get the full slice and pass it to the barriers here.
-        daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).slice;
+        daxa::ImageMipArraySlice const swapchain_image_full_slice = device.info_image_view(swapchain_image.default_view()).value().slice;
 
-        daxa::CommandList command_list = device.create_command_list({.name = "my command list"});
+        daxa::CommandRecorder recorder = device.create_command_recorder({.name = "my command recorder"});
 
-        command_list.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
             .src_layout = daxa::ImageLayout::UNDEFINED,
             .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
@@ -162,14 +162,14 @@ auto main() -> int
             .image_id = swapchain_image,
         });
 
-        command_list.clear_image({
+        recorder.clear_image({
             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .clear_value = std::array<daxa::f32, 4>{1.0f, 0.0f, 1.0f, 1.0f},
             .dst_image = swapchain_image,
             .dst_slice = swapchain_image_full_slice,
         });
 
-        command_list.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .dst_layout = daxa::ImageLayout::PRESENT_SRC,
@@ -177,23 +177,26 @@ auto main() -> int
             .image_id = swapchain_image,
         });
 
-        command_list.complete();
+        // Here we create executable commands from the currently recorded commands from the command recorder.
+        // After doing this the recorder is empty and can record and create new executable commands later.
+        auto executalbe_commands = recorder.complete_current_commands();
+        // But for now we only need this one executable commands blob, and we destroy the recorder.
+        // Encoders CAN NOT be keept over multiple frames. They are temporary objects and need to be destroyed before calling collect_garbage!
+        recorder.~CommandRecorder();
 
-        auto const & acquire_semaphore = swapchain.get_acquire_semaphore();
-        auto const & present_semaphore = swapchain.get_present_semaphore();
-        auto const & gpu_timeline = swapchain.get_gpu_timeline_semaphore();
-        auto const cpu_timeline = swapchain.get_cpu_timeline_value();
-
-        device.submit_commands({
-            .command_lists = {command_list},
-            .wait_binary_semaphores = {acquire_semaphore},
-            .signal_binary_semaphores = {present_semaphore},
-            .signal_timeline_semaphores = {{gpu_timeline, cpu_timeline}},
+        auto const & acquire_semaphore = swapchain.current_acquire_semaphore();
+        auto const & present_semaphore = swapchain.current_present_semaphore();
+        device.submit_commands(daxa::CommandSubmitInfo{
+            .command_lists = std::array{executalbe_commands},
+            .wait_binary_semaphores = std::array{acquire_semaphore},
+            .signal_binary_semaphores = std::array{present_semaphore},
+            .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
         });
         device.present_frame({
-            .wait_binary_semaphores = {present_semaphore},
+            .wait_binary_semaphores = std::array{present_semaphore},
             .swapchain = swapchain,
         });
+        device.collect_garbage();
     }
 
     device.wait_idle();

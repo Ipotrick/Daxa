@@ -2,125 +2,202 @@
 #include "impl_instance.hpp"
 #include "impl_device.hpp"
 
-#include <chrono>
-#include <utility>
+#include <vector>
 
-namespace daxa
+// --- Begin API Functions ---
+
+auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_instance) -> daxa_Result
 {
-    auto create_instance(InstanceInfo const & info) -> Instance
+    setenv("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", "1", 1);
+
+    auto ret = daxa_ImplInstance{};
+    ret.info = *reinterpret_cast<InstanceInfo const *>(info);
+    ret.engine_name = {ret.info.engine_name.data(), ret.info.engine_name.size()};
+    ret.info.engine_name = ret.engine_name;
+    ret.app_name = {ret.info.app_name.data(), ret.info.app_name.size()};
+    ret.info.app_name = ret.app_name;
+    std::vector<char const *> required_extensions{};
+    required_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    if ((ret.info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
     {
-        return Instance{ManagedPtr{new ImplInstance(info)}};
+        required_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
-
-    Instance::Instance(ManagedPtr impl) : ManagedPtr(std::move(impl)) {}
-
-    auto Instance::create_device(DeviceInfo const & device_info) -> Device
-    {
-        auto & impl = *as<ImplInstance>();
-
-        u32 physical_device_n = 0;
-        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, nullptr);
-        std::vector<VkPhysicalDevice> physical_devices;
-        physical_devices.resize(physical_device_n);
-        vkEnumeratePhysicalDevices(impl.vk_instance, &physical_device_n, physical_devices.data());
-
-        auto device_score = [&](VkPhysicalDevice physical_device) -> i32
-        {
-            VkPhysicalDeviceProperties vk_device_properties;
-            vkGetPhysicalDeviceProperties(physical_device, &vk_device_properties);
-            if (vk_device_properties.apiVersion < VK_API_VERSION_1_3)
-            {
-                // NOTE: Found device with incompatible API version. Skipping this device...
-                return 0;
-            }
-            return device_info.selector(*reinterpret_cast<DeviceProperties *>(&vk_device_properties));
-        };
-
-        auto device_comparator = [&](auto const & a, auto const & b) -> bool
-        {
-            return device_score(a) < device_score(b);
-        };
-        auto best_physical_device = std::max_element(physical_devices.begin(), physical_devices.end(), device_comparator);
-
-        DAXA_DBG_ASSERT_TRUE_M(device_score(*best_physical_device) != -1, "no suitable device found");
-
-        // TODO: check for every possible device if it has the required features and if not dont even consider them.
-
-        VkPhysicalDevice physical_device = *best_physical_device;
-
-        return Device{ManagedPtr{new ImplDevice(device_info, this->make_weak(), physical_device)}};
-    }
-
-    ImplInstance::ImplInstance(InstanceInfo a_info)
-        : info{std::move(a_info)}
-    {
-        setenv("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", "1", 1);
-
-        std::vector<char const *> required_extensions{};
-        required_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-        if (info.enable_debug_utils)
-        {
-            required_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-        }
-
-        auto instance_create_flags = VkInstanceCreateFlags{};
+    auto instance_create_flags = VkInstanceCreateFlags{};
 
 #if defined(WIN32)
-        required_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+    required_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif defined(__linux__)
-        required_extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+    required_extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #elif defined(__APPLE__)
-        required_extensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
-        // Needed for MoltenVK.
-        required_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
-        required_extensions.push_back("VK_EXT_metal_surface");
-        instance_create_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+    required_extensions.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+    // Needed for MoltenVK.
+    required_extensions.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+    required_extensions.push_back("VK_EXT_metal_surface");
+    instance_create_flags |= VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
 #else
 // no surface extension
 #endif
-        // Check existence of extensions:
-        std::vector<VkExtensionProperties> instance_extensions = {};
-        u32 instance_extension_count = {};
-        vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, nullptr);
-        instance_extensions.resize(instance_extension_count);
-        vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.data());
-        for (auto req_ext : required_extensions)
+    // Check existence of extensions:
+    std::vector<VkExtensionProperties> instance_extensions = {};
+    uint32_t instance_extension_count = {};
+    auto vk_result = vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, nullptr);
+    if (vk_result != VK_SUCCESS)
+    {
+        return std::bit_cast<daxa_Result>(vk_result);
+    }
+    instance_extensions.resize(instance_extension_count);
+    vk_result = vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.data());
+    if (vk_result != VK_SUCCESS)
+    {
+        return std::bit_cast<daxa_Result>(vk_result);
+    }
+    for (auto req_ext : required_extensions)
+    {
+        bool found = false;
+        for (uint32_t i = 0; i < instance_extensions.size(); ++i)
         {
-            bool found = false;
-            for (u32 i = 0; i < instance_extensions.size(); ++i)
+            if (std::strcmp(req_ext, instance_extensions[i].extensionName) == 0)
             {
-                if (std::strcmp(req_ext, instance_extensions[i].extensionName) == 0)
-                {
-                    found = true;
-                    break;
-                }
+                found = true;
+                break;
             }
-            DAXA_DBG_ASSERT_TRUE_M(found, "Not all required instance extensions are available, extension missing: " + std::string(req_ext));
         }
-        const VkApplicationInfo app_info = {
-            .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
-            .pNext = nullptr,
-            .pApplicationName = "Daxa Vulkan App",
-            .applicationVersion = 0,
-            .pEngineName = "daxa",
-            .engineVersion = 1,
-            .apiVersion = VK_API_VERSION_1_3,
-        };
-        VkInstanceCreateInfo const instance_ci = {
-            .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = instance_create_flags,
-            .pApplicationInfo = &app_info,
-            .enabledLayerCount = 0u,
-            .ppEnabledLayerNames = nullptr,
-            .enabledExtensionCount = static_cast<u32>(required_extensions.size()),
-            .ppEnabledExtensionNames = required_extensions.data(),
-        };
-        vkCreateInstance(&instance_ci, nullptr, &vk_instance);
+        if (!found)
+        {
+            return DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT;
+        }
+    }
+    VkApplicationInfo const app_info = {
+        .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
+        .pNext = nullptr,
+        .pApplicationName = ret.app_name.c_str(),
+        .applicationVersion = 0,
+        .pEngineName = ret.engine_name.c_str(),
+        .engineVersion = 1,
+        .apiVersion = VK_API_VERSION_1_3,
+    };
+    VkInstanceCreateInfo const instance_ci = {
+        .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO,
+        .pNext = nullptr,
+        .flags = instance_create_flags,
+        .pApplicationInfo = &app_info,
+        .enabledLayerCount = 0u,
+        .ppEnabledLayerNames = nullptr,
+        .enabledExtensionCount = static_cast<uint32_t>(required_extensions.size()),
+        .ppEnabledExtensionNames = required_extensions.data(),
+    };
+    vk_result = vkCreateInstance(&instance_ci, nullptr, &ret.vk_instance);
+    if (vk_result != VK_SUCCESS)
+    {
+        return std::bit_cast<daxa_Result>(vk_result);
+    }
+    ret.strong_count = 1;
+    *out_instance = new daxa_ImplInstance{};
+    **out_instance = std::move(ret);
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * info, daxa_Device * out_device) -> daxa_Result
+{
+    uint32_t physical_device_n = 0;
+    auto vk_result = vkEnumeratePhysicalDevices(self->vk_instance, &physical_device_n, nullptr);
+    if (vk_result != VK_SUCCESS)
+    {
+        return std::bit_cast<daxa_Result>(vk_result);
+    }
+    std::vector<VkPhysicalDevice> physical_devices;
+    physical_devices.resize(physical_device_n);
+    vk_result = vkEnumeratePhysicalDevices(self->vk_instance, &physical_device_n, physical_devices.data());
+    if (vk_result != VK_SUCCESS)
+    {
+        return std::bit_cast<daxa_Result>(vk_result);
     }
 
-    ImplInstance::~ImplInstance() // NOLINT(bugprone-exception-escape)
+    auto device_score = [&](VkPhysicalDevice physical_device) -> int32_t
     {
-        vkDestroyInstance(vk_instance, nullptr);
+        auto props = construct_daxa_physical_device_properties(physical_device);
+        if (props.vulkan_api_version < VK_API_VERSION_1_3)
+        {
+#if defined(__APPLE__)
+            return 0; // On Apple, there is not currently 1.3 support...
+#else
+            return -1;
+#endif
+        }
+        if (((info->flags & DAXA_DEVICE_FLAG_RAY_TRACING) != 0) &&
+            !(props.acceleration_structure_properties.has_value ||
+              props.ray_tracing_pipeline_properties.has_value))
+        {
+            return -1;
+        }
+        if (((info->flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0) &&
+            !(props.mesh_shader_properties.has_value))
+        {
+            return -1;
+        }
+        return info->selector(&props);
+    };
+
+    auto device_comparator = [&](auto const & a, auto const & b) -> bool
+    {
+        return device_score(a) < device_score(b);
+    };
+    auto best_physical_device = std::max_element(physical_devices.begin(), physical_devices.end(), device_comparator);
+
+    if (device_score(*best_physical_device) == -1)
+    {
+        return DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND;
     }
-} // namespace daxa
+
+    VkPhysicalDevice physical_device = *best_physical_device;
+
+    *out_device = new daxa_ImplDevice{};
+
+    auto const result = daxa_ImplDevice::create(self, *info, physical_device, *out_device);
+    if (result != DAXA_RESULT_SUCCESS)
+    {
+        delete *out_device;
+    }
+    else
+    {
+        (**out_device).strong_count = 1;
+        self->inc_weak_refcnt();
+    }
+    return result;
+}
+
+auto daxa_instance_inc_refcnt(daxa_Instance self) -> u64
+{
+    return self->inc_refcnt();
+}
+
+auto daxa_instance_dec_refcnt(daxa_Instance self) -> u64
+{
+    return self->dec_refcnt(
+        &daxa_ImplInstance::zero_ref_callback,
+        self);
+}
+
+auto daxa_instance_info(daxa_Instance self) -> daxa_InstanceInfo const *
+{
+    return reinterpret_cast<daxa_InstanceInfo const *>(&self->info);
+}
+
+auto daxa_instance_get_vk_instance(daxa_Instance self) -> VkInstance
+{
+    return self->vk_instance;
+}
+
+// --- End API Functions ---
+
+// --- Begin Internals ---
+
+void daxa_ImplInstance::zero_ref_callback(ImplHandle const * handle)
+{
+    _DAXA_TEST_PRINT("daxa_ImplInstance::zero_ref_callback\n");
+    daxa_Instance self = rc_cast<daxa_Instance>(handle);
+    vkDestroyInstance(self->vk_instance, nullptr);
+    delete self;
+}
+
+// --- End Internals ---

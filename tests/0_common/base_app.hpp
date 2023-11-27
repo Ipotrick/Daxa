@@ -12,9 +12,6 @@ using namespace std::chrono_literals;
 #include <daxa/utils/imgui.hpp>
 #include <imgui_impl_glfw.h>
 
-#include <daxa/utils/math_operators.hpp>
-using namespace daxa::math_operators;
-
 using Clock = std::chrono::high_resolution_clock;
 
 #if !defined(APPNAME)
@@ -25,6 +22,7 @@ using Clock = std::chrono::high_resolution_clock;
 #if !defined(DAXA_SHADERLANG)
 #define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #endif
+
 
 template <typename T>
 struct BaseApp : AppWindow<T>
@@ -146,8 +144,8 @@ struct BaseApp : AppWindow<T>
             .uses = imgui_task_uses,
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_command_list();
-                imgui_renderer.record_commands(ImGui::GetDrawData(), cmd_list, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
+                auto& recorder = ti.get_recorder();
+                imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
             .name = "ImGui Task",
         });

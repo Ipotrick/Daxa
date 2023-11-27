@@ -1,18 +1,15 @@
 #pragma once
 
-#include <daxa/instance.hpp>
-
 #include "impl_core.hpp"
 
-namespace daxa
-{
-    struct ImplInstance final : ManagedSharedState
-    {
-        InstanceInfo info;
-        VkInstance vk_instance = {};
-        VkDebugUtilsMessengerEXT vk_debug_utils_messenger = {};
+#include <daxa/c/instance.h>
 
-        explicit ImplInstance(InstanceInfo a_info);
-        virtual ~ImplInstance() override final;
-    };
-} // namespace daxa
+struct daxa_ImplInstance final : ImplHandle
+{
+    InstanceInfo info = {};
+    std::string engine_name = {};
+    std::string app_name = {};
+    VkInstance vk_instance = {};
+
+    static void zero_ref_callback(ImplHandle const * handle);
+};

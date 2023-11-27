@@ -55,7 +55,7 @@ struct WindowInfo
 // We also create a couple files for the shader, the shared.inl and the main.glsl
 #include "shared.inl"
 
-void draw_to_swapchain_task(daxa::Device & device, daxa::CommandList & cmd_list, std::shared_ptr<daxa::RasterPipeline> & pipeline, daxa::ImageId swapchain_image, daxa::BufferId buffer_id, daxa::u32 width, daxa::u32 height);
+void draw_to_swapchain_task(daxa::Device & device, daxa::CommandRecorder & recorder, std::shared_ptr<daxa::RasterPipeline> & pipeline, daxa::ImageId swapchain_image, daxa::BufferId buffer_id, daxa::u32 width, daxa::u32 height);
 
 struct UploadVertexDataTask
 {
@@ -66,7 +66,7 @@ struct UploadVertexDataTask
     std::string_view name = "upload vertices";
     void callback(daxa::TaskInterface ti)
     {
-        auto cmd_list = ti.get_command_list();
+        auto & recorder = ti.get_recorder();
         // This is the data we'll send to the GPU
         auto data = std::array{
             MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
@@ -80,7 +80,7 @@ struct UploadVertexDataTask
         // GPU memory.
         auto staging_buffer_id = ti.get_device().create_buffer({
             .size = sizeof(data),
-            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "my staging buffer",
         });
         // We can also ask the command list to destroy this temporary buffer,
@@ -88,18 +88,18 @@ struct UploadVertexDataTask
         // through its usage on the GPU (which won't happen until after these
         // commands are submitted), so we tell the command list to destroy it
         // in a deferred fashion.
-        cmd_list.destroy_buffer_deferred(staging_buffer_id);
+        recorder.destroy_buffer_deferred(staging_buffer_id);
         // Instead of doing this manually, we could use one of Daxa's
         // other useful utilities, "Mem", but it's simple enough for now.
 
         // We then get the memory mapped pointer of the staging buffer, and
         // write the data directly to it.
-        auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id);
+        auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id).value();
         *buffer_ptr = data;
 
         // And finally, we can just copy the data from the staging buffer
         // to the actual buffer.
-        cmd_list.copy_buffer_to_buffer({
+        recorder.copy_buffer_to_buffer({
             .src_buffer = staging_buffer_id,
             .dst_buffer = uses.vertex_buffer.buffer(),
             .size = sizeof(data),
@@ -122,12 +122,12 @@ struct DrawToSwapchainTask
     std::string_view name = "draw task";
     void callback(daxa::TaskInterface ti)
     {
-        auto cmd_list = ti.get_command_list();
-        auto const size_x = ti.get_device().info_image(uses.color_target.image()).size.x;
-        auto const size_y = ti.get_device().info_image(uses.color_target.image()).size.y;
-        cmd_list.begin_renderpass({
-            .color_attachments = {
-                {
+        auto & recorder = ti.get_recorder();
+        auto const size_x = ti.get_device().info_image(uses.color_target.image()).value().size.x;
+        auto const size_y = ti.get_device().info_image(uses.color_target.image()).value().size.y;
+        auto render_recorder = std::move(recorder).begin_renderpass({
+            .color_attachments = std::array{
+                daxa::RenderAttachmentInfo{
                     .image_view = uses.color_target.view(),
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
                     .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
@@ -136,15 +136,14 @@ struct DrawToSwapchainTask
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         // Here, we'll bind the pipeline to be used in the draw call below
-        cmd_list.set_pipeline(*pipeline);
+        render_recorder.set_pipeline(*pipeline);
         // Set the push constant specifically for the following draw call...
-        cmd_list.push_constant(MyPushConstant{
-            .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()),
-            // .my_output_image = uses.color_target.view(),
+        render_recorder.push_constant(MyPushConstant{
+            .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()).value(),
         });
         // and issue the draw call with the desired number of vertices.
-        cmd_list.draw({.vertex_count = 3});
-        cmd_list.end_renderpass();
+        render_recorder.draw({.vertex_count = 3});
+        recorder = std::move(render_recorder).end_renderpass();
     }
 };
 
@@ -406,6 +405,7 @@ auto main() -> int
 
         // So, now all we need to do is execute our task graph!
         loop_task_graph.execute({});
+        device.collect_garbage();
     }
 
     device.wait_idle();

@@ -17,7 +17,7 @@ namespace tests
         shader_aligned_vec3.x = 0.0f;
         shader_aligned_vec3.y = 1.0f;
         shader_aligned_vec3.z = 4.0f;
-        shader_aligned_vec3 = daxa::types::f32vec3{0.0f, 1.0f, 4.0f};
+        shader_aligned_vec3 = daxa_f32vec3{0.0f, 1.0f, 4.0f};
         shader_aligned_vec3 = daxa_f32vec3{0.0f, 1.0f, 4.0f};
         std::cout << "content of f32vec3: (" << shader_aligned_vec3.x << "," << shader_aligned_vec3.y << "," << shader_aligned_vec3.z << ")" << std::endl;
     }
@@ -41,7 +41,7 @@ namespace tests
             }
             std::cout << "i7: " << v.i7 << std::endl;
         };
-        auto are_same_Testu6Alignment = [](TestU64Alignment const & a, TestU64Alignment const & b)
+        [[maybe_unused]] auto are_same_Testu6Alignment = [](TestU64Alignment const & a, TestU64Alignment const & b)
         {
             bool same = true;
             same = same && a.i0 == b.i0;
@@ -69,12 +69,12 @@ namespace tests
         });
         auto src_buffer = device.create_buffer({
             .size = sizeof(TestU64Alignment),
-            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "align_test_src",
         });
         auto dst_buffer = device.create_buffer({
             .size = sizeof(TestU64Alignment),
-            .allocate_info = daxa::AutoAllocInfo{daxa::MemoryFlagBits::HOST_ACCESS_RANDOM},
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "align_test_dst",
         });
 
@@ -88,7 +88,7 @@ namespace tests
             .i6 = {61, 62, 63},
             .i7 = 7,
         };
-        *device.get_host_address_as<TestU64Alignment>(src_buffer) = test_values;
+        *device.get_host_address_as<TestU64Alignment>(src_buffer).value() = test_values;
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
@@ -108,6 +108,7 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
+            .push_constant_size = sizeof(TestShaderTaskHead),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -128,21 +129,20 @@ namespace tests
             .name = "align_test_dst",
         }};
         task_graph.use_persistent_buffer(dst);
-        TestShaderUses::Uses uses
-        {
-            .align_test_src = { src },
-            .align_test_dst = { dst },
-        };
         task_graph.add_task({
-            .uses = daxa::detail::to_generic_uses(uses),
+            .uses = daxa::generic_uses_cast(TestShaderTaskHead::Uses{
+                .align_test_src = src.view(),
+                .align_test_dst = dst.view(),
+            }),
             .task = [&](daxa::TaskInterface const & ti)
             {
-                auto cmd = ti.get_command_list();
-                cmd.set_uniform_buffer(ti.uses.get_uniform_buffer_info());
+                auto & cmd = ti.get_recorder();
+                TestShaderTaskHead head;
+                ti.copy_task_head_to(&head);
+                cmd.push_constant(head);
                 cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
-            .constant_buffer_slot = TestShaderUses::CONSANT_BUFFER_SLOT,
             .name = "test alignment",
         });
         task_graph.submit({});
@@ -152,7 +152,7 @@ namespace tests
 
         device.wait_idle();
 
-        [[maybe_unused]] TestU64Alignment readback_data = *device.get_host_address_as<TestU64Alignment>(dst_buffer);
+        [[maybe_unused]] TestU64Alignment readback_data = *device.get_host_address_as<TestU64Alignment>(dst_buffer).value();
 
         std::cout << "test values before: \n";
         print_Testu6Alignment(test_values);
@@ -248,18 +248,18 @@ namespace tests
             },
             .task = [&](daxa::TaskInterface ti)
             {
-                auto cmd = ti.get_command_list();
+                auto & cmd = ti.get_recorder();
                 cmd.set_pipeline(*bindless_access);
                 cmd.push_constant(BindlessTestPush{
                     .handles = {
-                        .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()),
-                        .my_float_image = {ti.uses[f32_image].image()},
-                        .my_uint_image = {ti.uses[u32_image].image()},
+                        .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()).value(),
+                        .my_float_image = ti.uses[f32_image].view(),
+                        .my_uint_image = ti.uses[u32_image].view(),
                         .my_sampler = sampler,
                     },
-                    .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),
+                    .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
                 });
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
             .name = "bindless access",
         });
@@ -271,12 +271,12 @@ namespace tests
             },
             .task = [&](daxa::TaskInterface const & ti)
             {
-                auto cmd = ti.get_command_list();
+                auto & cmd = ti.get_recorder();
                 cmd.set_pipeline(*bindless_access_followup);
                 cmd.push_constant(BindlessTestFollowPush{
-                    .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()),
+                    .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
                 });
-                cmd.dispatch(1, 1, 1);
+                cmd.dispatch({1, 1, 1});
             },
             .name = "bindless access",
         });

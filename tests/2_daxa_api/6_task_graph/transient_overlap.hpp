@@ -12,7 +12,7 @@ namespace tests
 
     void set_initial_buffer_data(
         daxa::TaskInterface & ti,
-        daxa::CommandList & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskBufferView buffer,
         u32 size,
         u32 value)
@@ -23,16 +23,16 @@ namespace tests
             reinterpret_cast<u32 *>(staging.host_address)[x] = value;
         }
         cmd.copy_buffer_to_buffer({
-            .src_buffer = ti.get_allocator().get_buffer(),
-            .src_offset = staging.buffer_offset,
+            .src_buffer = ti.get_allocator().buffer(),
             .dst_buffer = ti.uses[buffer].buffer(),
+            .src_offset = staging.buffer_offset,
             .size = size * sizeof(u32),
         });
     }
 
     void validate_buffer_data(
         daxa::TaskInterface & ti,
-        daxa::CommandList & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskBufferView buffer,
         u32 size,
         u32 value,
@@ -40,16 +40,16 @@ namespace tests
     {
         cmd.set_pipeline(pipeline);
         cmd.push_constant(TestBufferPush{
-            .test_buffer = ti.get_device().get_device_address(ti.uses[buffer].buffer()),
+            .test_buffer = ti.get_device().get_device_address(ti.uses[buffer].buffer()).value(),
             .size = size,
             .value = value,
         });
-        cmd.dispatch(div_round_up(size, 128));
+        cmd.dispatch({div_round_up(size, 128)});
     }
 
     void set_initial_image_data(
         daxa::TaskInterface & ti,
-        daxa::CommandList & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskImageView image,
         auto size,
         f32 value)
@@ -68,7 +68,7 @@ namespace tests
             }
         }
         cmd.copy_buffer_to_image({
-            .buffer = ti.get_allocator().get_buffer(),
+            .buffer = ti.get_allocator().buffer(),
             .buffer_offset = staging.buffer_offset,
             .image = ti.uses[image].image(),
             .image_extent = {size.x, size.y, size.z},
@@ -77,7 +77,7 @@ namespace tests
 
     void validate_image_data(
         daxa::TaskInterface & ti,
-        daxa::CommandList & cmd,
+        daxa::CommandRecorder & cmd,
         daxa::TaskImageView image,
         auto size,
         f32 value,
@@ -85,14 +85,15 @@ namespace tests
     {
         cmd.set_pipeline(pipeline);
         cmd.push_constant(TestImagePush{
-            .test_image = {ti.uses[image].view()},
+            .test_image = ti.uses[image].view(),
             .size = size,
             .value = value,
         });
-        cmd.dispatch(
+        cmd.dispatch({
             div_round_up(size.x, 4),
             div_round_up(size.y, 4),
-            div_round_up(size.z, 4));
+            div_round_up(size.z, 4),
+        });
     }
 
     void transient_write_aliasing()
@@ -104,15 +105,17 @@ namespace tests
         // Tasks:
         //      Task 1 - writes into image A and B
         //      Task 2 - validate image A and B
-        //      Task 3 - writes into image A and C 
-        //          - Note(msakmary) both tasks writing image A creates a dependency between task 1 so that 
+        //      Task 3 - writes into image A and C
+        //          - Note(msakmary) both tasks writing image A creates a dependency between task 1 so that
         //            they are not inserted into the same batch and we can actually test if aliasing occurs
         //      Task 4 - validate image A and C
         // Expected:
         //      Images B and C are aliased and the content is correct after execution of each of the tasks
 
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device({ .name = "device", });
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
             .device = device,
@@ -139,12 +142,12 @@ namespace tests
         auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
 
         {
-            const f32 IMAGE_A_VALUE = 1.0f;
-            const f32 IMAGE_B_VALUE = 2.0f;
-            const f32 IMAGE_C_VALUE = 3.0f;
-            const u32vec3 IMAGE_A_SIZE = {2, 2, 1};
-            const u32vec3 IMAGE_B_SIZE = {2, 2, 1};
-            const u32vec3 IMAGE_C_SIZE = {2, 2, 1};
+            f32 const IMAGE_A_VALUE = 1.0f;
+            f32 const IMAGE_B_VALUE = 2.0f;
+            f32 const IMAGE_C_VALUE = 3.0f;
+            daxa_u32vec3 const IMAGE_A_SIZE = {2, 2, 1};
+            daxa_u32vec3 const IMAGE_B_SIZE = {2, 2, 1};
+            daxa_u32vec3 const IMAGE_C_SIZE = {2, 2, 1};
 
             auto task_graph = daxa::TaskGraph({
                 .device = device,
@@ -155,26 +158,20 @@ namespace tests
             });
 
             // ========================================== Create resources ====================================================
-            auto image_A = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
-                .name = "Image A"
-            });
+            auto image_A = task_graph.create_transient_image({.dimensions = 3,
+                                                              .format = daxa::Format::R32_SFLOAT,
+                                                              .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
+                                                              .name = "Image A"});
 
-            auto image_B = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
-                .name = "Image B"
-            });
+            auto image_B = task_graph.create_transient_image({.dimensions = 3,
+                                                              .format = daxa::Format::R32_SFLOAT,
+                                                              .size = {IMAGE_B_SIZE.x, IMAGE_B_SIZE.y, IMAGE_B_SIZE.z},
+                                                              .name = "Image B"});
 
-            auto image_C = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_C_SIZE.x, IMAGE_C_SIZE.y, IMAGE_C_SIZE.z},
-                .name = "Image C"
-            });
+            auto image_C = task_graph.create_transient_image({.dimensions = 3,
+                                                              .format = daxa::Format::R32_SFLOAT,
+                                                              .size = {IMAGE_C_SIZE.x, IMAGE_C_SIZE.y, IMAGE_C_SIZE.z},
+                                                              .name = "Image C"});
 
             // ========================================== Record tasks =======================================================
             using namespace daxa::task_resource_uses;
@@ -186,7 +183,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = ti.get_command_list();
+                    auto & cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
                     set_initial_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
                 },
@@ -200,7 +197,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = ti.get_command_list();
+                    auto & cmd = ti.get_recorder();
                     validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
                     validate_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
                 },
@@ -214,7 +211,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = ti.get_command_list();
+                    auto & cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE);
                     set_initial_image_data(ti, cmd, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE);
                 },
@@ -228,7 +225,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = ti.get_command_list();
+                    auto & cmd = ti.get_recorder();
                     validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
                     validate_image_data(ti, cmd, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
                 },
@@ -240,7 +237,6 @@ namespace tests
 
             std::cout << task_graph.get_debug_string() << std::endl;
         }
-
     }
 
     void permutation_aliasing()
@@ -261,7 +257,9 @@ namespace tests
         //      Images A and B are aliased - they both start at the same offset
 
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device({ .name = "device", });
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
             .device = device,
@@ -288,12 +286,12 @@ namespace tests
         auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
 
         {
-            const f32 IMAGE_A_VALUE = 1.0f;
-            const f32 IMAGE_B_VALUE = 2.0f;
-            const f32 IMAGE_BASE_VALUE = 2.0f;
-            const u32vec3 IMAGE_A_SIZE = {128, 128, 1};
-            const u32vec3 IMAGE_B_SIZE = {256, 256, 1};
-            const u32vec3 IMAGE_BASE_SIZE = {64, 64, 1};
+            f32 const IMAGE_A_VALUE = 1.0f;
+            f32 const IMAGE_B_VALUE = 2.0f;
+            f32 const IMAGE_BASE_VALUE = 2.0f;
+            daxa_u32vec3 const IMAGE_A_SIZE = {128, 128, 1};
+            daxa_u32vec3 const IMAGE_B_SIZE = {256, 256, 1};
+            daxa_u32vec3 const IMAGE_BASE_SIZE = {64, 64, 1};
 
             auto task_graph = daxa::TaskGraph({
                 .device = device,
@@ -303,15 +301,12 @@ namespace tests
                 .name = "task_graph",
             });
 
-
             // ========================================== Record tasks =======================================================
             using namespace daxa::task_resource_uses;
-            auto image_base = task_graph.create_transient_image({
-                .dimensions = 3,
-                .format = daxa::Format::R32_SFLOAT,
-                .size = {IMAGE_BASE_SIZE.x, IMAGE_BASE_SIZE.y, IMAGE_BASE_SIZE.z},
-                .name = "Image Base"
-            });
+            auto image_base = task_graph.create_transient_image({.dimensions = 3,
+                                                                 .format = daxa::Format::R32_SFLOAT,
+                                                                 .size = {IMAGE_BASE_SIZE.x, IMAGE_BASE_SIZE.y, IMAGE_BASE_SIZE.z},
+                                                                 .name = "Image Base"});
 
             task_graph.add_task({
                 .uses = {
@@ -319,15 +314,15 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = ti.get_command_list();
+                    auto & cmd = ti.get_recorder();
                     set_initial_image_data(ti, cmd, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE);
                 },
                 .name = "Task 0 - write base image value",
             });
 
-            task_graph.conditional({
-                .condition_index = 0,
-                .when_true = [&](){
+            task_graph.conditional({.condition_index = 0,
+                                    .when_true = [&]()
+                                    {
                     auto image_A = task_graph.create_transient_image({
                         .dimensions = 3,
                         .format = daxa::Format::R32_SFLOAT,
@@ -340,7 +335,7 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto cmd = ti.get_command_list();
+                            auto& cmd = ti.get_recorder();
                             set_initial_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
                         },
                         .name = "Perm True - Task 1 - write image A",
@@ -352,13 +347,13 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto cmd = ti.get_command_list();
+                            auto& cmd = ti.get_recorder();
                             validate_image_data(ti, cmd, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
                         },
                         .name = "Perm True - Task 2 - check image A",
-                    });
-                },
-                .when_false = [&](){
+                    }); },
+                                    .when_false = [&]()
+                                    {
                     auto image_B = task_graph.create_transient_image({
                         .dimensions = 3,
                         .format = daxa::Format::R32_SFLOAT,
@@ -372,7 +367,7 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto cmd = ti.get_command_list();
+                            auto& cmd = ti.get_recorder();
                             set_initial_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
                         },
                         .name = "Perm False - Task 1 - write image B",
@@ -384,13 +379,11 @@ namespace tests
                         },
                         .task = [=](daxa::TaskInterface ti)
                         {
-                            auto cmd = ti.get_command_list();
+                            auto& cmd = ti.get_recorder();
                             validate_image_data(ti, cmd, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
                         },
                         .name = "Perm False - Task 2 - check image B",
-                    });
-                }
-            });
+                    }); }});
 
             task_graph.add_task({
                 .uses = {
@@ -398,7 +391,7 @@ namespace tests
                 },
                 .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = ti.get_command_list();
+                    auto & cmd = ti.get_recorder();
                     validate_image_data(ti, cmd, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE, *test_image_pipeline);
                 },
                 .name = "Task 3 - validate base image data",
@@ -513,10 +506,10 @@ namespace tests
                 .uses = {
                     daxa::TaskBufferUse<TBA::TRANSFER_WRITE>{long_life_buffer},
                 },
-                .task = [=](daxa::TaskInterface tri)
+                .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = tri.get_command_list();
-                    set_initial_buffer_data(tri, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE);
+                    auto & cmd = ti.get_recorder();
+                    set_initial_buffer_data(ti, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE);
                 },
                 .name = "populate long life buffer",
             });
@@ -525,10 +518,10 @@ namespace tests
                 .uses = {
                     daxa::TaskImageUse<TIA::TRANSFER_WRITE, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
                 },
-                .task = [=](daxa::TaskInterface tri)
+                .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = tri.get_command_list();
-                    set_initial_image_data(tri, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE);
+                    auto & cmd = ti.get_recorder();
+                    set_initial_image_data(ti, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE);
                 },
                 .name = "populate medium life image",
             });
@@ -539,12 +532,12 @@ namespace tests
                     daxa::TaskImageUse<TIA::COMPUTE_SHADER_SAMPLED, daxa::ImageViewType::REGULAR_3D>{medium_life_image},
                     daxa::TaskImageUse<TIA::TRANSFER_WRITE, daxa::ImageViewType::REGULAR_3D>{long_life_image},
                 },
-                .task = [=](daxa::TaskInterface tri)
+                .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = tri.get_command_list();
-                    set_initial_image_data(tri, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE);
-                    validate_image_data(tri, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE, *test_image_pipeline);
-                    validate_buffer_data(tri, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE, *test_buffer_pipeline);
+                    auto & cmd = ti.get_recorder();
+                    set_initial_image_data(ti, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE);
+                    validate_image_data(ti, cmd, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE, *test_image_pipeline);
+                    validate_buffer_data(ti, cmd, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE, *test_buffer_pipeline);
                 },
                 .name = "validate long life buffer, validate medium life image, populate long life image",
             });
@@ -560,10 +553,10 @@ namespace tests
                     daxa::TaskBufferUse<TBA::COMPUTE_SHADER_READ_WRITE>{short_life_buffer},
                     daxa::TaskImageUse<TIA::COMPUTE_SHADER_SAMPLED, daxa::ImageViewType::REGULAR_3D>{long_life_image},
                 },
-                .task = [=](daxa::TaskInterface tri)
+                .task = [=](daxa::TaskInterface ti)
                 {
-                    auto cmd = tri.get_command_list();
-                    validate_image_data(tri, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE, *test_image_pipeline);
+                    auto & cmd = ti.get_recorder();
+                    validate_image_data(ti, cmd, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE, *test_image_pipeline);
                 },
                 .name = "validate long life image, dummy access short life buffer",
             });

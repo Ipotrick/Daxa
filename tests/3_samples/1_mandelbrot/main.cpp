@@ -86,8 +86,10 @@ struct App : BaseApp<App>
         // ImGui::Begin("Settings");
 
         // ImGui::Image(
-        //     daxa::ImGuiRenderer::create_image_context({.image_view_id = render_image.default_view(),
-        //                                                .sampler_id = sampler}),
+        //     imgui_renderer.create_texture_id({
+        //         .image_view_id = render_image.default_view(),
+        //         .sampler_id = sampler,
+        //     }),
         //     ImVec2(200, 200));
 
         // if (ImGui::Checkbox("MY_TOGGLE", &my_toggle))
@@ -103,9 +105,9 @@ struct App : BaseApp<App>
         gpu_input.delta_time = delta_time;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
             std::cout << "Failed to reload " << reload_err->message << '\n';
-        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
             std::cout << "Successfully reloaded!\n";
 
         ui_update();
@@ -117,6 +119,7 @@ struct App : BaseApp<App>
             return;
         }
         loop_task_graph.execute({});
+        device.collect_garbage();
 
         auto query_results = timeline_query_pool.get_query_results(0, 2);
         if ((query_results[1] != 0u) && (query_results[3] != 0u))
@@ -140,7 +143,7 @@ struct App : BaseApp<App>
             render_image = device.create_image({
                 .format = daxa::Format::R8G8B8A8_UNORM,
                 .size = {size_x, size_y, 1},
-                .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+                .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
             task_render_image.set_images({.images = std::array{render_image}});
             base_on_update();
@@ -163,13 +166,13 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface runtime)
             {
-                auto cmd_list = runtime.get_command_list();
-                cmd_list.reset_timestamps({
+                auto& recorder = runtime.get_recorder();
+                recorder.reset_timestamps({
                     .query_pool = timeline_query_pool,
                     .start_index = 0,
                     .count = timeline_query_pool.info().query_count,
                 });
-                cmd_list.write_timestamp({
+                recorder.write_timestamp({
                     .query_pool = timeline_query_pool,
                     .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
                     .query_index = 0,
@@ -177,18 +180,18 @@ struct App : BaseApp<App>
                 auto staging_gpu_input_buffer = device.create_buffer({
                     .size = sizeof(GpuInput),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                    .name = APPNAME_PREFIX("staging_gpu_input_buffer"),
+                    .name = ("staging_gpu_input_buffer"),
                 });
-                cmd_list.destroy_buffer_deferred(staging_gpu_input_buffer);
-                auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer);
+                recorder.destroy_buffer_deferred(staging_gpu_input_buffer);
+                auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer).value();
                 *buffer_ptr = gpu_input;
-                cmd_list.copy_buffer_to_buffer({
+                recorder.copy_buffer_to_buffer({
                     .src_buffer = staging_gpu_input_buffer,
                     .dst_buffer = gpu_input_buffer,
                     .size = sizeof(GpuInput),
                 });
             },
-            .name = APPNAME_PREFIX("Upload Input"),
+            .name = ("Upload Input"),
         });
         new_task_graph.add_task({
             .uses = {
@@ -197,16 +200,16 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface runtime)
             {
-                auto cmd_list = runtime.get_command_list();
-                cmd_list.set_pipeline(*compute_pipeline);
-                cmd_list.push_constant(ComputePush{
+                auto& recorder = runtime.get_recorder();
+                recorder.set_pipeline(*compute_pipeline);
+                recorder.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
                     .frame_dim = {size_x, size_y},
                 });
-                cmd_list.dispatch((size_x + 7) / 8, (size_y + 7) / 8);
+                recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
             },
-            .name = APPNAME_PREFIX("Draw (Compute)"),
+            .name = ("Draw (Compute)"),
         });
         new_task_graph.add_task({
             .uses = {
@@ -215,8 +218,8 @@ struct App : BaseApp<App>
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto cmd_list = ti.get_command_list();
-                cmd_list.blit_image_to_image({
+                auto& recorder = ti.get_recorder();
+                recorder.blit_image_to_image({
                     .src_image = ti.uses[task_render_image].image(),
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.uses[task_swapchain_image].image(),
@@ -225,7 +228,7 @@ struct App : BaseApp<App>
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
 
-                cmd_list.write_timestamp({
+                recorder.write_timestamp({
                     .query_pool = timeline_query_pool,
                     .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
                     .query_index = 1,

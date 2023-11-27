@@ -1,40 +1,51 @@
 #pragma once
 
 #include <daxa/core.hpp>
+#include <daxa/types.hpp>
 
 namespace daxa
 {
-    using ShaderByteCode = std::span<u32 const>;
-
     struct ShaderInfo
     {
-        ShaderByteCode byte_code = {};
-        std::optional<std::string> entry_point = {};
+        u32 const * byte_code;
+        u32 byte_code_size;
+        SmallString entry_point = "main";
     };
 
     struct ComputePipelineInfo
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        std::string name = {};
+        SmallString name = "";
     };
 
-    struct ComputePipeline : ManagedPtr
+    /**
+     * @brief   Represents a pipeline state object, usable in recording commands.
+     *
+     * THREADSAFETY:
+     * * is internally synchronized
+     * * may be passed to different threads
+     * * may be used by multiple threads at the same time.
+     */
+    struct DAXA_EXPORT_CXX ComputePipeline final : ManagedPtr<ComputePipeline, daxa_ComputePipeline>
     {
         ComputePipeline() = default;
 
-        auto info() const -> ComputePipelineInfo const &;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() const -> ComputePipelineInfo const &;
 
-      private:
-        friend struct Device;
-        friend struct CommandList;
-        explicit ComputePipeline(ManagedPtr impl);
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
     struct DepthTestInfo
     {
         Format depth_attachment_format = Format::UNDEFINED;
-        bool enable_depth_test = {};
         bool enable_depth_write = {};
         CompareOp depth_test_compare_op = CompareOp::LESS_OR_EQUAL;
         f32 min_depth_bounds = 0.0f;
@@ -61,13 +72,13 @@ namespace daxa
         f32 depth_bias_clamp = 0.0f;
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
-        std::optional<ConservativeRasterInfo> conservative_raster_info = std::nullopt;
+        Optional<ConservativeRasterInfo> conservative_raster_info = {};
     };
 
     struct RenderAttachment
     {
         Format format = {};
-        BlendInfo blend = {};
+        Optional<BlendInfo> blend = {};
     };
 
     struct TesselationInfo
@@ -78,29 +89,41 @@ namespace daxa
 
     struct RasterPipelineInfo
     {
-        std::optional<ShaderInfo> mesh_shader_info = {};
-        std::optional<ShaderInfo> vertex_shader_info = {};
-        std::optional<ShaderInfo> tesselation_control_shader_info = {};
-        std::optional<ShaderInfo> tesselation_evaluation_shader_info = {};
-        std::optional<ShaderInfo> fragment_shader_info = {};
-        std::optional<ShaderInfo> task_shader_info = {};
-        std::vector<RenderAttachment> color_attachments = {};
-        DepthTestInfo depth_test = {};
+        Optional<ShaderInfo> mesh_shader_info = {};
+        Optional<ShaderInfo> vertex_shader_info = {};
+        Optional<ShaderInfo> tesselation_control_shader_info = {};
+        Optional<ShaderInfo> tesselation_evaluation_shader_info = {};
+        Optional<ShaderInfo> fragment_shader_info = {};
+        Optional<ShaderInfo> task_shader_info = {};
+        FixedList<RenderAttachment, 8> color_attachments = {};
+        Optional<DepthTestInfo> depth_test = {};
+        Optional<TesselationInfo> tesselation = {};
         RasterizerInfo raster = {};
-        TesselationInfo tesselation = {};
         u32 push_constant_size = {};
-        std::string name = {};
+        SmallString name = "";
     };
 
-    struct RasterPipeline : ManagedPtr
+    /**
+     * @brief   Represents a pipeline state object, usable in recording commands.
+     *
+     * THREADSAFETY:
+     * * is internally synchronized
+     * * may be passed to different threads
+     * * may be used by multiple threads at the same time.
+     */
+    struct DAXA_EXPORT_CXX RasterPipeline final : ManagedPtr<RasterPipeline, daxa_RasterPipeline>
     {
         RasterPipeline() = default;
 
-        auto info() const -> RasterPipelineInfo const &;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() const -> RasterPipelineInfo const &;
 
-      private:
-        friend struct Device;
-        friend struct CommandList;
-        explicit RasterPipeline(ManagedPtr impl);
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

@@ -41,7 +41,7 @@ namespace daxa
 
     using VirtualFileSet = std::map<std::string, VirtualFileState>;
 
-    struct ImplPipelineManager final : ManagedSharedState
+    struct ImplPipelineManager final : ImplHandle
     {
         enum class ShaderStage
         {
@@ -114,6 +114,7 @@ namespace daxa
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & virtual_info);
         auto reload_all() -> PipelineReloadResult;
+        auto all_pipelines_valid() const -> bool;
 
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
@@ -121,5 +122,7 @@ namespace daxa
         auto get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
         auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
         auto get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+
+        static auto zero_ref_callback(ImplHandle const * handle);
     };
 } // namespace daxa

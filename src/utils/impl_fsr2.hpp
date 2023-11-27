@@ -11,7 +11,7 @@
 
 namespace daxa
 {
-    struct ImplFsr2Context final : ManagedSharedState
+    struct ImplFsr2Context final : ImplHandle
     {
         UpscaleInstanceInfo info;
 
@@ -22,12 +22,12 @@ namespace daxa
         bool initialized = {};
 
         void resize(UpscaleSizeInfo const & resize_info);
-        void upscale(CommandList & command_list, UpscaleInfo const & upscale_info);
+        void upscale(CommandRecorder & command_list, UpscaleInfo const & upscale_info);
 
         void create_resizable_resources();
         void destroy_resizable_resources();
 
         ImplFsr2Context(UpscaleInstanceInfo a_info);
-        virtual ~ImplFsr2Context() override final;
+        ~ImplFsr2Context();
     };
 } // namespace daxa

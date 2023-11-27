@@ -57,22 +57,25 @@ if(DAXA_ENABLE_STATIC_ANALYSIS)
             --fix)
     endif()
 else()
+    # TODO(capi): re-enable when not dealing with the compile errors.
+    # Also, the features in the CMakePresets are disabled for now
     set(CMAKE_UNITY_BUILD true)
 endif()
 
-add_library(daxa STATIC
+add_library(daxa
+    "src/cpp_wrapper.cpp"
+
     "src/impl_device.cpp"
+    "src/impl_features.cpp"
     "src/impl_instance.cpp"
     "src/impl_core.cpp"
     "src/impl_pipeline.cpp"
     "src/impl_swapchain.cpp"
-    "src/impl_command_list.cpp"
+    "src/impl_command_recorder.cpp"
     "src/impl_gpu_resources.cpp"
-    "src/impl_semaphore.cpp"
+    "src/impl_sync.cpp"
     "src/impl_dependencies.cpp"
-    "src/impl_split_barrier.cpp"
     "src/impl_timeline_query.cpp"
-    "src/impl_memory_block.cpp"
 
     "src/utils/impl_task_graph.cpp"
     "src/utils/impl_imgui.cpp"
@@ -83,10 +86,23 @@ add_library(daxa STATIC
 
 add_library(daxa::daxa ALIAS daxa)
 
+if(BUILD_SHARED_LIBS)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+        target_compile_definitions(${PROJECT_NAME}
+            PRIVATE "$<IF:$<CXX_COMPILER_ID:Clang>,DAXA_CMAKE_EXPORT=[[gnu::dllexport]],DAXA_CMAKE_EXPORT=__declspec(dllexport)>"
+            INTERFACE "$<IF:$<CXX_COMPILER_ID:Clang>,DAXA_CMAKE_EXPORT=[[gnu::dllimport]],DAXA_CMAKE_EXPORT=__declspec(dllimport)>")
+    else()
+        target_compile_definitions(${PROJECT_NAME}
+            PUBLIC "DAXA_CMAKE_EXPORT=")
+    endif()
+else()
+    target_compile_definitions(${PROJECT_NAME}
+        PUBLIC "DAXA_CMAKE_EXPORT=")
+endif()
+
 target_compile_features(daxa PUBLIC cxx_std_20)
 
 find_package(Vulkan REQUIRED)
-find_package(glfw3 CONFIG REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 
@@ -95,9 +111,11 @@ include(GNUInstallDirs)
 target_compile_definitions(daxa
     PUBLIC
     $<BUILD_INTERFACE:DAXA_SHADER_INCLUDE_DIR="${CMAKE_CURRENT_LIST_DIR}/include">
-    DAXA_SHADERLANG_GLSL=1
-    DAXA_SHADERLANG_HLSL=2
 )
+
+if(DAXA_USE_STATIC_CRT AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
+    set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
 
 if(DAXA_ENABLE_UTILS_FSR2)
     target_compile_definitions(daxa
@@ -106,7 +124,7 @@ if(DAXA_ENABLE_UTILS_FSR2)
     )
     find_package(fsr2 CONFIG REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         fsr2::ffx_fsr2_api
         fsr2::ffx_fsr2_api_vk
     )
@@ -136,7 +154,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
     find_package(glslang CONFIG REQUIRED)
     find_package(Threads REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         glslang::glslang
         glslang::SPIRV
         glslang::HLSL
@@ -149,7 +167,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
     )
     find_package(dxc CONFIG REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         dxc::dxc
     )
 endif()
@@ -160,7 +178,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     )
     find_package(SPIRV-Tools CONFIG REQUIRED)
     target_link_libraries(daxa
-        PUBLIC
+        PRIVATE
         SPIRV-Tools-static
     )
 endif()
@@ -172,12 +190,19 @@ if(DAXA_ENABLE_UTILS_TASK_GRAPH)
 endif()
 
 target_link_libraries(daxa
-    PUBLIC
+    PRIVATE
     GPUOpen::VulkanMemoryAllocator
     Vulkan::Vulkan
     fmt::fmt
-    glfw
 )
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    find_package(glfw3 CONFIG REQUIRED)
+    target_link_libraries(daxa
+        PRIVATE
+        glfw
+    )
+endif()
 
 target_include_directories(daxa
     PUBLIC
@@ -193,7 +218,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             DAXA_BUILT_WITH_X11=true
         )
         target_link_libraries(daxa
-            PUBLIC
+            PRIVATE
             ${X11_LIBRARIES}
         )
     endif()
@@ -205,7 +230,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
             DAXA_BUILT_WITH_WAYLAND=true
         )
         target_link_libraries(daxa
-            PUBLIC
+            PRIVATE
             ${Wayland_LIBRARIES}
         )
     endif()
@@ -215,6 +240,12 @@ set_project_warnings(daxa)
 
 if(DAXA_ENABLE_TESTS)
     add_subdirectory(tests)
+endif()
+
+if(DAXA_ENABLE_TOOLS)
+    add_executable(daxa_tools_compile_imgui_shaders "src/utils/impl_imgui.cpp")
+    target_compile_definitions(daxa_tools_compile_imgui_shaders PRIVATE DAXA_COMPILE_IMGUI_SHADERS=true)
+    target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa fmt::fmt)
 endif()
 
 # Packaging
@@ -228,45 +259,12 @@ get_target_property(DAXA_PREV_DEFINITIONS daxa::daxa INTERFACE_COMPILE_DEFINITIO
 set_target_properties(daxa::daxa PROPERTIES
   INTERFACE_COMPILE_DEFINITIONS "${DAXA_PREV_DEFINITIONS};DAXA_SHADER_INCLUDE_DIR=\"${PACKAGE_PREFIX_DIR}/include\""
 )
-
-find_package(Vulkan REQUIRED)
-find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 ]=])
-
-if(DAXA_ENABLE_UTILS_FSR2)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(fsr2 CONFIG REQUIRED)
-]=])
-endif()
 if(DAXA_ENABLE_UTILS_IMGUI)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(imgui CONFIG REQUIRED)
 ]=])
 endif()
-if(DAXA_ENABLE_UTILS_MEM)
-# No package management work to do
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(glslang CONFIG REQUIRED)
-find_package(Threads REQUIRED)
-]=])
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(dxc CONFIG REQUIRED)
-]=])
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(SPIRV-Tools CONFIG REQUIRED)
-]=])
-endif()
-if(DAXA_ENABLE_UTILS_TASK_GRAPH)
-# No package management work to do
-endif()
-
 configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa
@@ -282,5 +280,8 @@ install(
     DESTINATION
     ${CMAKE_INSTALL_DATADIR}/daxa)
 install(TARGETS daxa EXPORT daxa-targets)
+if(BUILD_SHARED_LIBS AND WIN32)
+    install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION bin OPTIONAL)
+endif()
 install(EXPORT daxa-targets DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa NAMESPACE daxa::)
 install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ TYPE INCLUDE)

@@ -75,9 +75,9 @@ namespace tests
             while (true)
             {
                 auto reload_result = pipeline_manager.reload_all();
-                if (auto * reload_err = std::get_if<daxa::PipelineReloadError>(&reload_result))
+                if (auto * reload_err = daxa::get_if<daxa::PipelineReloadError>(&reload_result))
                     std::cerr << reload_err->message << std::endl;
-                else if (std::get_if<daxa::PipelineReloadSuccess>(&reload_result))
+                else if (daxa::get_if<daxa::PipelineReloadSuccess>(&reload_result))
                     break;
                 using namespace std::literals;
                 std::this_thread::sleep_for(1ms);

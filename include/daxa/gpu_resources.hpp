@@ -1,7 +1,6 @@
 #pragma once
 
-#include <daxa/core.hpp>
-#include <daxa/memory_block.hpp>
+#include <daxa/types.hpp>
 
 namespace daxa
 {
@@ -18,18 +17,18 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(ImageViewType const & type) -> std::string_view;
+    DAXA_EXPORT_CXX auto to_string(ImageViewType const & type) -> std::string_view;
 
-    struct GPUResourceId
+    struct DAXA_EXPORT_CXX GPUResourceId
     {
-        u32 index : 24 = {};
-        u32 version : 8 = {};
+        u64 index : 20 = {};
+        u64 version : 44 = {};
 
         auto is_empty() const -> bool;
 
         constexpr auto operator<=>(GPUResourceId const & other) const
         {
-            return std::bit_cast<u32>(*this) <=> std::bit_cast<u32>(other);
+            return std::bit_cast<u64>(*this) <=> std::bit_cast<u64>(other);
         }
         constexpr bool operator==(GPUResourceId const & other) const = default;
         constexpr bool operator!=(GPUResourceId const & other) const = default;
@@ -43,10 +42,12 @@ namespace daxa
     {
         struct BufferId : public GPUResourceId
         {
+            constexpr operator daxa_BufferId() const { return std::bit_cast<daxa_BufferId>(*this); }
         };
 
         struct ImageViewId : public GPUResourceId
         {
+            constexpr operator daxa_ImageViewId() const { return std::bit_cast<daxa_ImageViewId>(*this); }
         };
 
         template <ImageViewType VIEW_TYPE>
@@ -57,24 +58,37 @@ namespace daxa
 
         struct ImageId : public GPUResourceId
         {
-            auto default_view() const -> ImageViewId;
+            constexpr operator daxa_ImageId() const { return std::bit_cast<daxa_ImageId>(*this); }
+            DAXA_EXPORT_CXX auto default_view() const -> ImageViewId;
         };
 
         struct SamplerId : public GPUResourceId
         {
+            constexpr operator daxa_SamplerId() const { return std::bit_cast<daxa_SamplerId>(*this); }
+        };
+
+        struct TlasId : public GPUResourceId
+        {
+            operator daxa_TlasId() const { return std::bit_cast<daxa_TlasId>(*this); }
+        };
+
+        struct BlasId : public GPUResourceId
+        {
+            operator daxa_BlasId() const { return std::bit_cast<daxa_BlasId>(*this); }
         };
     } // namespace types
 
-    auto to_string(GPUResourceId const & id) -> std::string;
+    DAXA_EXPORT_CXX auto to_string(GPUResourceId const & id) -> std::string;
 
     struct BufferInfo
     {
-        u32 size = {};
-        AllocateInfo allocate_info = {};
-        std::string name = {};
+        usize size = {};
+        // Ignored when allocating with a memory block.
+        MemoryFlags allocate_info = {};
+        SmallString name = "";
     };
 
-    struct ImageCreateFlagsProperties
+    struct DAXA_EXPORT_CXX ImageCreateFlagsProperties
     {
         using Data = u32;
     };
@@ -98,8 +112,9 @@ namespace daxa
         u32 array_layer_count = 1;
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
-        AllocateInfo allocate_info = {};
-        std::string name = {};
+        // Ignored when allocating with a memory block.
+        MemoryFlags allocate_info = {};
+        SmallString name = "";
     };
 
     struct ImageViewInfo
@@ -108,7 +123,7 @@ namespace daxa
         Format format = Format::R8G8B8A8_UNORM;
         ImageId image = {};
         ImageMipArraySlice slice = {};
-        std::string name = {};
+        SmallString name = "";
     };
 
     struct SamplerInfo
@@ -129,6 +144,92 @@ namespace daxa
         f32 max_lod = 1000.0f; // This value is the "VK_LOD_CLAMP_MODE_NONE" value
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
-        std::string name = {};
+        SmallString name = "";
+    };
+
+    struct GeometryFlagsProperties
+    {
+        using Data = u32;
+    };
+    using GeometryFlags = Flags<GeometryFlagsProperties>;
+    struct GeometryFlagBits
+    {
+        static inline constexpr GeometryFlags OPAQUE = {0x1 << 0};
+        static inline constexpr GeometryFlags NO_DUPLICATE_ANY_HIT_INVOCATION = {0x1 << 1};
+    };
+
+    struct BlasTriangleGeometryInfo
+    {
+        Format vertex_format = daxa::Format::R32G32B32_SFLOAT;
+        DeviceAddress vertex_data = {};
+        u64 vertex_stride = 12;
+        u32 max_vertex = {};
+        IndexType index_type = IndexType::uint32;
+        DeviceAddress index_data = {};
+        DeviceAddress transform_data = {};
+        u32 count = {};
+        GeometryFlags flags = GeometryFlagBits::OPAQUE;
+    };
+
+    struct BlasAabbGeometryInfo
+    {
+        DeviceAddress data = {};
+        u64 stride = {};
+        u32 count = {};
+        GeometryFlags flags = GeometryFlagBits::OPAQUE;
+    };
+
+    /// Instances are defines as VkAccelerationStructureInstanceKHR;
+    struct TlasInstanceInfo
+    {
+        DeviceAddress data = {};
+        u32 count = {};
+        daxa_Bool8 is_data_array_of_pointers = {};
+        GeometryFlags flags = GeometryFlagBits::OPAQUE;
+    };
+
+    struct DAXA_EXPORT_CXX AccelerationStructureBuildFlagsProperties
+    {
+        using Data = u32;
+    };
+    using AccelerationStructureBuildFlags = Flags<AccelerationStructureBuildFlagsProperties>;
+    struct AccelerationStructureBuildFlagBits
+    {
+        static inline constexpr AccelerationStructureBuildFlags ALLOW_UPDATE = {0x00000001};
+        static inline constexpr AccelerationStructureBuildFlags ALLOW_COMPACTION = {0x00000002};
+        static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_TRACE = {0x00000004};
+        static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_BUILD = {0x00000008};
+        static inline constexpr AccelerationStructureBuildFlags LOW_MEMORY =  {0x00000010};
+    };
+
+    struct TlasBuildInfo
+    {
+        AccelerationStructureBuildFlags flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE;
+        daxa_TlasId dst_tlas = {};
+        std::span<TlasInstanceInfo const> instances = {};
+        DeviceAddress scratch_data = {};
+    };
+
+    struct BlasBuildInfo
+    {
+        AccelerationStructureBuildFlags flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE;
+        daxa_BlasId dst_blas = {};
+        Variant<
+            std::span<BlasTriangleGeometryInfo const>,
+            std::span<BlasAabbGeometryInfo const>>
+            geometries;
+        DeviceAddress scratch_data = {};
+    };
+
+    struct TlasInfo
+    {
+        u64 size = {};
+        SmallString name = "";
+    };
+
+    struct BlasInfo
+    {
+        u64 size = {};
+        SmallString name = "";
     };
 } // namespace daxa

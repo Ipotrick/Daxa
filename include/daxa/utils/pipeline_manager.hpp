@@ -19,7 +19,7 @@ namespace daxa
         std::string string;
     };
 
-    using ShaderSource = std::variant<std::monostate, ShaderFile, ShaderCode, ShaderByteCode>;
+    using ShaderSource = Variant<Monostate, ShaderFile, ShaderCode>;
 
     struct ShaderDefine
     {
@@ -54,7 +54,7 @@ namespace daxa
 
     struct ShaderCompileInfo
     {
-        ShaderSource source = std::monostate{};
+        ShaderSource source = Monostate{};
         ShaderCompileOptions compile_options = {};
     };
 
@@ -67,14 +67,14 @@ namespace daxa
 
     struct RasterPipelineCompileInfo
     {
-        std::optional<ShaderCompileInfo> mesh_shader_info = {};
-        std::optional<ShaderCompileInfo> vertex_shader_info = {};
-        std::optional<ShaderCompileInfo> tesselation_control_shader_info = {};
-        std::optional<ShaderCompileInfo> tesselation_evaluation_shader_info = {};
-        std::optional<ShaderCompileInfo> fragment_shader_info = {};
-        std::optional<ShaderCompileInfo> task_shader_info = {};
+        Optional<ShaderCompileInfo> mesh_shader_info = {};
+        Optional<ShaderCompileInfo> vertex_shader_info = {};
+        Optional<ShaderCompileInfo> tesselation_control_shader_info = {};
+        Optional<ShaderCompileInfo> tesselation_evaluation_shader_info = {};
+        Optional<ShaderCompileInfo> fragment_shader_info = {};
+        Optional<ShaderCompileInfo> task_shader_info = {};
         std::vector<RenderAttachment> color_attachments = {};
-        DepthTestInfo depth_test = {};
+        Optional<DepthTestInfo> depth_test = {};
         RasterizerInfo raster = {};
         TesselationInfo tesselation = {};
         u32 push_constant_size = {};
@@ -86,6 +86,7 @@ namespace daxa
         Device device;
         ShaderCompileOptions shader_compile_options = {};
         bool register_null_pipelines_when_first_compile_fails = false;
+        std::function<void(std::string &, std::filesystem::path const & path)> custom_preprocessor = {};
         std::string name = {};
     };
 
@@ -102,11 +103,12 @@ namespace daxa
     {
         std::string message;
     };
-    using NoPipelineChanged = std::monostate;
+    using NoPipelineChanged = Monostate;
 
-    using PipelineReloadResult = std::variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
+    using PipelineReloadResult = Variant<NoPipelineChanged, PipelineReloadSuccess, PipelineReloadError>;
 
-    struct PipelineManager : ManagedPtr
+    struct ImplPipelineManager;
+    struct DAXA_EXPORT_CXX PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
     {
         PipelineManager() = default;
 
@@ -118,5 +120,12 @@ namespace daxa
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & info);
         auto reload_all() -> PipelineReloadResult;
+        auto all_pipelines_valid() const -> bool;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa

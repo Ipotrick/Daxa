@@ -6,9 +6,6 @@
 #include <daxa/utils/pipeline_manager.hpp>
 #include <daxa/utils/task_graph.hpp>
 
-#define APPNAME "Daxa Sample: Boids"
-#define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
 using namespace daxa::types;
 using Clock = std::chrono::high_resolution_clock;
 
@@ -23,7 +20,7 @@ struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device({
-        .name = APPNAME_PREFIX("device"),
+        .name = ("device"),
     });
 
     daxa::Swapchain swapchain = device.create_swapchain({
@@ -31,7 +28,7 @@ struct App : AppWindow<App>
         .native_window_platform = get_native_platform(),
         .present_mode = daxa::PresentMode::FIFO,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
-        .name = APPNAME_PREFIX("swapchain"),
+        .name = ("swapchain"),
     });
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -45,7 +42,7 @@ struct App : AppWindow<App>
             .language = daxa::ShaderLanguage::GLSL,
             .enable_debug_info = true,
         },
-        .name = APPNAME_PREFIX("pipeline_manager"),
+        .name = ("pipeline_manager"),
     });
     // clang-format off
     std::shared_ptr<daxa::RasterPipeline> draw_pipeline = pipeline_manager.add_raster_pipeline({
@@ -54,12 +51,12 @@ struct App : AppWindow<App>
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .push_constant_size = sizeof(DrawPushConstant),
-        .name = APPNAME_PREFIX("draw_pipeline"),
+        .name = ("draw_pipeline"),
     }).value();
     std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = pipeline_manager.add_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"update_boids.glsl"}},
         .push_constant_size = sizeof(UpdateBoidsPushConstant),
-        .name = APPNAME_PREFIX("draw_pipeline"),
+        .name = ("draw_pipeline"),
     }).value();
     // clang-format on
 
@@ -73,12 +70,12 @@ struct App : AppWindow<App>
 
     daxa::BufferId boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .name = APPNAME_PREFIX("boids buffer a"),
+        .name = ("boids buffer a"),
     });
 
     daxa::BufferId old_boid_buffer = device.create_buffer({
         .size = sizeof(Boids),
-        .name = APPNAME_PREFIX("boids buffer b"),
+        .name = ("boids buffer b"),
     });
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain image"}};
@@ -89,18 +86,18 @@ struct App : AppWindow<App>
 
     daxa::TaskGraph task_graph = record_tasks();
 
-    App() : AppWindow<App>(APPNAME)
+    App() : AppWindow<App>("boids")
     {
-        auto cmd_list = device.create_command_list({.name = APPNAME_PREFIX("boid buffer init commands")});
+        auto recorder = device.create_command_recorder({.name = ("boid buffer init commands")});
 
         auto upload_buffer_id = device.create_buffer({
             .size = sizeof(Boids),
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
-            .name = APPNAME_PREFIX("voids buffer init staging buffer"),
+            .name = ("boids buffer init staging buffer"),
         });
-        cmd_list.destroy_buffer_deferred(upload_buffer_id);
+        recorder.destroy_buffer_deferred(upload_buffer_id);
 
-        auto * ptr = device.get_host_address_as<Boids>(upload_buffer_id);
+        auto * ptr = device.get_host_address_as<Boids>(upload_buffer_id).value();
 
         for (auto & boid : ptr->boids)
         {
@@ -111,32 +108,32 @@ struct App : AppWindow<App>
             boid.speed.y = std::sin(angle);
         }
 
-        cmd_list.copy_buffer_to_buffer({
+        recorder.copy_buffer_to_buffer({
             .src_buffer = upload_buffer_id,
             .dst_buffer = boid_buffer,
             .size = sizeof(Boids),
         });
 
-        cmd_list.copy_buffer_to_buffer({
+        recorder.copy_buffer_to_buffer({
             .src_buffer = upload_buffer_id,
             .dst_buffer = old_boid_buffer,
             .size = sizeof(Boids),
         });
 
-        cmd_list.pipeline_barrier({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::COMPUTE_SHADER_READ_WRITE | daxa::AccessConsts::VERTEX_SHADER_READ,
         });
-        cmd_list.complete();
+        auto executable_commands = recorder.complete_current_commands();
+        recorder.~CommandRecorder();
         device.submit_commands({
-            .command_lists = {cmd_list},
+            .command_lists = std::array{executable_commands},
         });
+        device.collect_garbage();
     }
 
     ~App()
     {
-        device.wait_idle();
-        device.collect_garbage();
         device.destroy_buffer(boid_buffer);
         device.destroy_buffer(old_boid_buffer);
     }
@@ -172,19 +169,16 @@ struct App : AppWindow<App>
             daxa::BufferComputeShaderRead previous{};
         } uses = {};
         std::string_view name = "update boids";
-
         std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
         void callback(daxa::TaskInterface ti)
         {
-            auto cmd_list = ti.get_command_list();
-            cmd_list.set_pipeline(*update_boids_pipeline);
-
-            cmd_list.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()),
-                .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()),
+            auto& recorder = ti.get_recorder();
+            recorder.set_pipeline(*update_boids_pipeline);
+            recorder.push_constant(UpdateBoidsPushConstant{
+                .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()).value(),
+                .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()).value(),
             });
-
-            cmd_list.dispatch((MAX_BOIDS + 63) / 64, 1, 1);
+            recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
         }
     };
 
@@ -198,17 +192,15 @@ struct App : AppWindow<App>
             daxa::ImageColorAttachment<> render_image{};
         } uses = {};
         std::string_view name = "draw boids";
-
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
         u32 * size_x = {};
         u32 * size_y = {};
         void callback(daxa::TaskInterface ti)
         {
-            auto cmd_list = ti.get_command_list();
-            cmd_list.set_pipeline(*draw_pipeline);
-            cmd_list.begin_renderpass({
-                .color_attachments = {
-                    {
+            auto& recorder = ti.get_recorder();
+            auto render_recorder = std::move(recorder).begin_renderpass({
+                .color_attachments = std::array{
+                    daxa::RenderAttachmentInfo{
                         .image_view = uses.render_image.view(),
                         .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
@@ -221,28 +213,25 @@ struct App : AppWindow<App>
                     .height = *size_y,
                 },
             });
-
-            cmd_list.push_constant(DrawPushConstant{
-                .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()),
+            render_recorder.set_pipeline(*draw_pipeline);
+            render_recorder.push_constant(DrawPushConstant{
+                .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()).value(),
                 .axis_scaling = {
                     std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
                     std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
                 },
             });
-
-            cmd_list.draw({.vertex_count = 3 * MAX_BOIDS});
-
-            cmd_list.end_renderpass();
+            render_recorder.draw({.vertex_count = 3 * MAX_BOIDS});
+            recorder = std::move(render_recorder).end_renderpass();
         }
     };
 
     auto record_tasks() -> daxa::TaskGraph
     {
-        daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = APPNAME_PREFIX("main task graph")});
+        daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = ("main task graph")});
         new_task_graph.use_persistent_image(task_swapchain_image);
         new_task_graph.use_persistent_buffer(task_boids_current);
         new_task_graph.use_persistent_buffer(task_boids_old);
-
         new_task_graph.add_task(UpdateBoidsTask{
             .uses = {
                 .current = {task_boids_current},
@@ -250,7 +239,6 @@ struct App : AppWindow<App>
             },
             .update_boids_pipeline = update_boids_pipeline,
         });
-
         new_task_graph.add_task(DrawBoidsTask{
             .uses = {
                 .boids = {task_boids_current},
@@ -260,11 +248,9 @@ struct App : AppWindow<App>
             .size_x = &size_x,
             .size_y = &size_y,
         });
-
         new_task_graph.submit({});
         new_task_graph.present({});
         new_task_graph.complete({});
-
         return new_task_graph;
     }
 
@@ -274,9 +260,9 @@ struct App : AppWindow<App>
         prev_time = now;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (auto reload_err = std::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
             std::cout << "Failed to reload " << reload_err->message << '\n';
-        if (std::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
             std::cout << "Successfully reloaded!\n";
 
         auto swapchain_image = swapchain.acquire_next_image();
@@ -288,6 +274,7 @@ struct App : AppWindow<App>
         task_graph.execute({});
         // Switch boids front and back buffers.
         task_boids_current.swap_buffers(task_boids_old);
+        device.collect_garbage();
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
