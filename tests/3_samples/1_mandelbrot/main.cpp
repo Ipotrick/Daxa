@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #define APPNAME "Daxa Sample: Mandelbrot"
 #include <0_common/base_app.hpp>
 

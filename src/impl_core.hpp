@@ -40,7 +40,7 @@ namespace daxa
     static inline constexpr u32 PIPELINE_LAYOUT_COUNT = {MAX_PUSH_CONSTANT_WORD_SIZE + 1};
     static inline constexpr char const * MAX_PUSH_CONSTANT_SIZE_ERROR = {"push constant size is limited to 128 bytes/ 32 device words"};
     static inline constexpr u32 GPU_TABLE_SET_BINDING = 0;
-    static inline constexpr u32 CONSTANT_BUFFER_BINDING_SET = 1;
+    static inline constexpr u32 CONSTANT_BUFFER_BINDING_SET = 2;
     static inline constexpr u32 CONSTANT_BUFFER_BINDING_COUNT = 8;
 
     auto is_depth_format(Format format) -> bool;

@@ -54,6 +54,8 @@ namespace daxa
     ImplInstance::ImplInstance(InstanceInfo a_info)
         : info{std::move(a_info)}
     {
+        setenv("MVK_CONFIG_USE_METAL_ARGUMENT_BUFFERS", "1", 1);
+
         std::vector<char const *> required_extensions{};
         required_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
         if (info.enable_debug_utils)

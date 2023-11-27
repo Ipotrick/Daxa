@@ -27,6 +27,8 @@ namespace daxa
         PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
         PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
         PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
+        PFN_vkCmdBeginRenderingKHR vkCmdBeginRenderingKHR = {};
+        PFN_vkCmdEndRenderingKHR vkCmdEndRenderingKHR = {};
 
         // Mesh shader:
         PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT = {};

@@ -13,7 +13,7 @@
 #extension GL_KHR_shader_subgroup_clustered : enable
 #extension GL_KHR_shader_subgroup_quad : enable
 #extension GL_EXT_scalar_block_layout : require
-#extension GL_EXT_shader_image_load_formatted : require
+// #extension GL_EXT_shader_image_load_formatted : require
 #extension GL_EXT_control_flow_attributes : require
 #extension GL_EXT_shader_image_int64 : require
 #extension GL_EXT_samplerless_texture_functions : require
@@ -111,10 +111,10 @@ daxa_u32 daxa_sampler_id_to_index(daxa_SamplerId id)
 }
 
 // Daxa implementation detail begin
-layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 0) restrict readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
+layout(scalar, binding = DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, set = 1) restrict readonly buffer daxa_BufferDeviceAddressBufferBlock { daxa_u64 addresses[]; }
 daxa_buffer_device_address_buffer;
-layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform sampler daxa_SamplerTable[];
-layout(binding = DAXA_SAMPLER_BINDING, set = 0) uniform samplerShadow daxa_SamplerShadowTable[];
+layout(binding = DAXA_SAMPLER_BINDING, set = 1) uniform sampler daxa_SamplerTable[];
+layout(binding = DAXA_SAMPLER_BINDING, set = 1) uniform samplerShadow daxa_SamplerShadowTable[];
 // Daxa implementation detail end
 
 /// @brief Retrieves a buffer device address to the start of the buffer of the given buffer id.
@@ -144,14 +144,14 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 #define DAXA_DECL_BUFFER_REFERENCE DAXA_DECL_BUFFER_REFERENCE_ALIGN(4)
 
 /// @brief Defines the storage image layout used in all buffer references in daxa glsl with format specification.
-#define DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(FORMAT) layout(FORMAT, binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
+#define DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(FORMAT) layout(FORMAT, binding = DAXA_STORAGE_IMAGE_BINDING, set = 1)
 
 /// @brief Defines the storage image layout used in all buffer references in daxa glsl.
-#define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 0)
+#define DAXA_STORAGE_IMAGE_LAYOUT layout(binding = DAXA_STORAGE_IMAGE_BINDING, set = 1, rgba8)
 /// @brief Defines the sampled image layout used in all buffer references in daxa glsl.
-#define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 0)
+#define DAXA_SAMPLED_IMAGE_LAYOUT layout(binding = DAXA_SAMPLED_IMAGE_BINDING, set = 1)
 /// @brief Defines the sampler layout used in all buffer references in daxa glsl.
-#define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 0)
+#define DAXA_SAMPLER_LAYOUT layout(binding = DAXA_SAMPLER_BINDING, set = 1)
 
 /// @brief  Defines three buffer reference using daxa's buffer reference layout.
 ///         The three blocks are 1. read write, 2. read only, 3. read write coherent.
@@ -264,9 +264,9 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_DECL_IMAGE(DIMENSION)                                                          \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform image##DIMENSION daxa_image##DIMENSION##Table[];       \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform iimage##DIMENSION daxa_iimage##DIMENSION##Table[];     \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform uimage##DIMENSION daxa_uimage##DIMENSION##Table[];     \
+    DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(rgba8) uniform image##DIMENSION daxa_image##DIMENSION##Table[];       \
+    DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(rgba8i) uniform iimage##DIMENSION daxa_iimage##DIMENSION##Table[];     \
+    DAXA_STORAGE_IMAGE_LAYOUT_WITH_FORMAT(rgba8ui) uniform uimage##DIMENSION daxa_uimage##DIMENSION##Table[];     \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform texture##DIMENSION daxa_texture##DIMENSION##Table[];   \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform itexture##DIMENSION daxa_itexture##DIMENSION##Table[]; \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform utexture##DIMENSION daxa_utexture##DIMENSION##Table[];

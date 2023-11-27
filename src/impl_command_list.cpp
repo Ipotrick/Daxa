@@ -268,7 +268,7 @@ namespace daxa
 
         impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout);
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline_layout, GPU_TABLE_SET_BINDING, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
         vkCmdBindPipeline(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline_impl.vk_pipeline);
     }
@@ -295,7 +295,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
 
-        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, 0, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
+        vkCmdBindDescriptorSets(impl.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout, GPU_TABLE_SET_BINDING, 1, &impl.impl_device.as<ImplDevice>()->gpu_shader_resource_table.vk_descriptor_set, 0, nullptr);
 
         impl.flush_constant_buffer_bindings(VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_impl.vk_pipeline_layout);
 
@@ -600,7 +600,7 @@ namespace daxa
         };
         vkCmdSetViewport(impl.vk_cmd_buffer, 0, 1, &vk_viewport);
 
-        vkCmdBeginRendering(impl.vk_cmd_buffer, &vk_rendering_info);
+        impl.impl_device.as<ImplDevice>()->vkCmdBeginRenderingKHR(impl.vk_cmd_buffer, &vk_rendering_info);
     }
 
     void CommandList::end_renderpass()
@@ -608,7 +608,7 @@ namespace daxa
         auto & impl = *as<ImplCommandList>();
         DAXA_DBG_ASSERT_TRUE_M(impl.recording_complete == false, "can only complete uncompleted command list");
         impl.flush_barriers();
-        vkCmdEndRendering(impl.vk_cmd_buffer);
+        impl.impl_device.as<ImplDevice>()->vkCmdEndRenderingKHR(impl.vk_cmd_buffer);
     }
 
     void CommandList::set_viewport(ViewportInfo const & info)
@@ -941,7 +941,7 @@ namespace daxa
             };
         }
 
-        device.vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
+        // device.vkCmdPushDescriptorSetKHR(this->vk_cmd_buffer, bind_point, pipeline_layout, CONSTANT_BUFFER_BINDING_SET, static_cast<u32>(descriptor_writes.size()), descriptor_writes.data());
         for (u32 index = 0; index < CONSTANT_BUFFER_BINDINGS_COUNT; ++index)
         {
             this->current_constant_buffer_bindings.at(index) = {};

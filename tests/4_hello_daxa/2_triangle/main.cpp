@@ -116,6 +116,7 @@ struct DrawToSwapchainTask
         // We declare a color target. We will assign the swapchain task image to this later.
         // The name `ImageColorAttachment<T_VIEW_TYPE = DEFAULT>` is a typedef for `daxa::TaskImageUse<daxa::TaskImageAccess::COLOR_ATTACHMENT, T_VIEW_TYPE>`.
         daxa::ImageColorAttachment<> color_target{};
+        // daxa::ImageFragmentShaderStorageWriteOnly<> color_target{};
     } uses = {};
     daxa::RasterPipeline * pipeline = {};
     std::string_view name = "draw task";
@@ -139,6 +140,7 @@ struct DrawToSwapchainTask
         // Set the push constant specifically for the following draw call...
         cmd_list.push_constant(MyPushConstant{
             .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()),
+            // .my_output_image = uses.color_target.view(),
         });
         // and issue the draw call with the desired number of vertices.
         cmd_list.draw({.vertex_count = 3});
@@ -269,6 +271,14 @@ auto main() -> int
     // But in the case of the swapchain images we need to reacquire a new image every frame.
     auto task_swapchain_image = daxa::TaskImage{{.swapchain_image = true, .name = "swapchain image"}};
 
+    // daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
+    //     .format = daxa::Format::R8G8B8A8_UNORM,
+    //     .size = {window_info.width, window_info.height, 1},
+    //     .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+    //     .name = "render_image",
+    // });
+    // daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
+
     // We will also create a buffer task resource, for our MyVertex buffer buffer_id
     // We do something a little special here, which is that we set the initial access
     // of the buffer to be vertex shader read, and that's because we'll create a task
@@ -301,6 +311,7 @@ auto main() -> int
     // Manually marking used resources makes it possible to detect errors in your graph recording.
     loop_task_graph.use_persistent_buffer(task_vertex_buffer);
     loop_task_graph.use_persistent_image(task_swapchain_image);
+    // loop_task_graph.use_persistent_image(task_render_image);
 
     // And a task to draw to the screen
     loop_task_graph.add_task(DrawToSwapchainTask{
@@ -310,6 +321,26 @@ auto main() -> int
         },
         .pipeline = pipeline.get(),
     });
+
+    // loop_task_graph.add_task({
+    //     .uses = {
+    //         ImageTransferRead<>{task_render_image},
+    //         ImageTransferWrite<>{task_swapchain_image},
+    //     },
+    //     .task = [&](daxa::TaskInterface ti)
+    //     {
+    //         auto cmd_list = ti.get_command_list();
+    //         cmd_list.blit_image_to_image({
+    //             .src_image = ti.uses[task_render_image].image(),
+    //             .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+    //             .dst_image = ti.uses[task_swapchain_image].image(),
+    //             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+    //             .src_offsets = {{{0, 0, 0}, {static_cast<daxa::i32>(window_info.width), static_cast<daxa::i32>(window_info.height), 1}}},
+    //             .dst_offsets = {{{0, 0, 0}, {static_cast<daxa::i32>(window_info.width), static_cast<daxa::i32>(window_info.height), 1}}},
+    //         });
+    //     },
+    //     .name = "Blit (render to swapchain)",
+    // });
 
     // We now need to tell the task graph that these commands will be submitted,
     // and that we have no additional information to provide. This exists in
@@ -327,7 +358,7 @@ auto main() -> int
     {
         // Now we record a secondary task graph, that is only executed once.
         // This task graph uploads the vertex buffer.
-        // Task Graph resources automatically link between graphcs at runtime, 
+        // Task Graph resources automatically link between graphcs at runtime,
         // so you dont need to be concerned about sync of the vertex buffer between the two graphs.
         auto upload_task_graph = daxa::TaskGraph({
             .device = device,
@@ -338,7 +369,7 @@ auto main() -> int
 
         // Now we can record our tasks!
 
-        // First thing we'll do is record the upload task. 
+        // First thing we'll do is record the upload task.
         upload_task_graph.add_task(UploadVertexDataTask{
             .uses = {
                 .vertex_buffer = task_vertex_buffer.view(),
@@ -380,4 +411,5 @@ auto main() -> int
     device.wait_idle();
     device.collect_garbage();
     device.destroy_buffer(buffer_id);
+    // device.destroy_image(render_image);
 }

@@ -15,4 +15,5 @@ DAXA_DECL_BUFFER_PTR(MyVertex)
 struct MyPushConstant
 {
     daxa_BufferPtr(MyVertex) my_vertex_ptr;
+    // daxa_ImageViewId my_output_image;
 };
