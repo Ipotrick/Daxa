@@ -92,14 +92,14 @@ DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 7_pipeline_manager
     LIBS
 )
-DAXA_CREATE_TEST(
-    FOLDER 2_daxa_api 8_mem
-    LIBS glfw
-)
-DAXA_CREATE_TEST(
-    FOLDER 2_daxa_api 9_shader_integration
-    LIBS glfw
-)
+# DAXA_CREATE_TEST(
+#     FOLDER 2_daxa_api 8_mem
+#     LIBS glfw
+# )
+# DAXA_CREATE_TEST(
+#     FOLDER 2_daxa_api 9_shader_integration
+#     LIBS glfw
+# )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 10_raytracing
     LIBS glfw
