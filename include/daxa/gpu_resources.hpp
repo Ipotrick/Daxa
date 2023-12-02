@@ -205,7 +205,7 @@ namespace daxa
     struct TlasBuildInfo
     {
         AccelerationStructureBuildFlags flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE;
-        daxa_TlasId dst_tlas = {};
+        TlasId dst_tlas = {};
         std::span<TlasInstanceInfo const> instances = {};
         DeviceAddress scratch_data = {};
     };
@@ -213,7 +213,7 @@ namespace daxa
     struct BlasBuildInfo
     {
         AccelerationStructureBuildFlags flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE;
-        daxa_BlasId dst_blas = {};
+        BlasId dst_blas = {};
         Variant<
             std::span<BlasTriangleGeometryInfo const>,
             std::span<BlasAabbGeometryInfo const>>
