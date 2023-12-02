@@ -54,7 +54,7 @@ namespace daxa
         DAXA_EXPORT_CXX auto timeline_value() const -> usize;
         // Returns timeline semaphore that needs to be signaled with the latest timeline value,
         // on a queue that uses memory from this pool.
-        DAXA_EXPORT_CXX auto timeline_semaphore() -> TimelineSemaphore;
+        DAXA_EXPORT_CXX auto timeline_semaphore() -> TimelineSemaphore const &;
         DAXA_EXPORT_CXX auto buffer() const -> daxa::BufferId;
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
