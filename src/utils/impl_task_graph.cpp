@@ -668,7 +668,14 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
         DAXA_DBG_ASSERT_TRUE_M(!impl.image_name_to_id.contains(info.name), "task image names must be unique");
-        TaskImageView task_image_id{{.task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.global_image_infos.size())}};
+        TaskImageView task_image_view = {{
+            .task_graph_index = impl.unique_index,
+            .index = static_cast<u32>(impl.global_image_infos.size()),
+        }};
+        task_image_view.slice = {
+            .level_count = info.mip_level_count,
+            .layer_count = info.array_layer_count,
+        };
 
         for (auto & permutation : impl.permutations)
         {
@@ -683,8 +690,8 @@ namespace daxa
             .task_image_data = PermIndepTaskImageInfo::Transient{
                 .info = info_copy,
             }});
-        impl.image_name_to_id[info.name] = task_image_id;
-        return task_image_id;
+        impl.image_name_to_id[info.name] = task_image_view;
+        return task_image_view;
     }
 
     auto ImplTaskGraph::get_actual_buffers(TaskBufferView id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>

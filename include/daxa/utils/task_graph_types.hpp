@@ -349,7 +349,7 @@ namespace daxa
         ImageViewType T_VIEW_TYPE = ImageViewType::MAX_ENUM,
         u16 T_SHADER_ARRAY_SIZE = 1u,
         TaskImageUseArrayType T_SHADER_ARRAY_TYPE = TaskImageUseArrayType::RUNTIME_IMAGES>
-    struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageUse
+    struct TaskImageUse
     {
       private:
         friend struct ImplTaskGraph;
