@@ -185,9 +185,9 @@ namespace daxa
     struct GenericTaskResourceUse
     {
         TaskResourceUseType type;
-        u32 m_shader_array_size;
+        u16 m_shader_array_size;
         // This is necessary for c++ to properly generate copy and move operators.
-        u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType) - sizeof(u32)];
+        u8 raw[TASK_INPUT_FIELD_SIZE - sizeof(TaskResourceUseType) - sizeof(decltype(m_shader_array_size))];
     };
 
     struct TrackedBuffers
@@ -269,7 +269,7 @@ namespace daxa
     };
 
     // Needed to shut up compilers. Its not possible to bitcast spans otherwise.
-    template<typename T>
+    template <typename T>
     struct OpaqueSpan
     {
         std::array<u64, 2> data = {};
@@ -291,10 +291,10 @@ namespace daxa
         friend struct TaskInterfaceUses;
         friend struct TaskInterface;
         TaskResourceUseType const type = TaskResourceUseType::BUFFER;
-        u32 m_shader_array_size = T_SHADER_ARRAY_SIZE;
+        u16 m_shader_array_size = T_SHADER_ARRAY_SIZE;
+        bool m_shader_as_address = T_SHADER_AS_ADDRESS;
         OpaqueSpan<BufferId const> buffers = {};
         TaskBufferAccess m_access = T_ACCESS;
-        bool m_shader_as_address = T_SHADER_AS_ADDRESS;
 
       public:
         TaskBufferView handle = {};
@@ -351,7 +351,17 @@ namespace daxa
         }
     };
 
-    template <TaskImageAccess T_ACCESS = TaskImageAccess::NONE, ImageViewType T_VIEW_TYPE = ImageViewType::MAX_ENUM, u32 T_SHADER_ARRAY_SIZE = 1u>
+    enum struct TaskImageUseArrayType : u16
+    {
+        RUNTIME_IMAGES,
+        MIP_LEVELS,
+    };
+
+    template <
+        TaskImageAccess T_ACCESS = TaskImageAccess::NONE,
+        ImageViewType T_VIEW_TYPE = ImageViewType::MAX_ENUM,
+        u16 T_SHADER_ARRAY_SIZE = 1u,
+        TaskImageUseArrayType T_SHADER_ARRAY_TYPE = TaskImageUseArrayType::RUNTIME_IMAGES>
     struct alignas(TASK_INPUT_FIELD_SIZE) TaskImageUse
     {
       private:
@@ -360,7 +370,8 @@ namespace daxa
         friend struct TaskInterfaceUses;
         friend struct TaskInterface;
         TaskResourceUseType type = TaskResourceUseType::IMAGE;
-        u32 m_shader_array_size = T_SHADER_ARRAY_SIZE;
+        u16 m_shader_array_size = T_SHADER_ARRAY_SIZE;
+        TaskImageUseArrayType m_shader_array_type = T_SHADER_ARRAY_TYPE;
         TaskImageAccess m_access = T_ACCESS;
         ImageViewType m_view_type = T_VIEW_TYPE;
         OpaqueSpan<ImageId const> images = {};
@@ -615,15 +626,14 @@ namespace daxa
                 callback_lambda(ti);
             }
         };
-        
 
-        template<typename T>
+        template <typename T>
         consteval usize get_task_head_shader_blob_size()
         {
             usize constexpr array_size = sizeof(T) / sizeof(GenericTaskResourceUse);
             auto const generic_uses = std::bit_cast<std::array<GenericTaskResourceUse, array_size>>(T{});
             usize byte_size = 0;
-            for (auto const & guse: generic_uses)
+            for (auto const & guse : generic_uses)
             {
                 byte_size += 8 * guse.m_shader_array_size;
             }

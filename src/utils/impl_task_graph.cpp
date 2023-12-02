@@ -381,7 +381,7 @@ namespace daxa
                 }
             });
     }
-    
+
     auto TaskInterface::allocate_task_head() -> std::optional<TransferMemoryPool::Allocation>
     {
         // NOTE:    At this point, all the uses should have already been verified.
@@ -833,15 +833,32 @@ namespace daxa
                 auto const actual_images = get_actual_images(tid, permutation);
                 auto & view_cache = task.image_view_cache[task_image_use_index];
 
-                bool cache_valid = actual_images.size() == view_cache.size();
-                if (cache_valid)
+                bool cache_valid = true;
+                if (image_use.m_shader_array_type == TaskImageUseArrayType::RUNTIME_IMAGES)
                 {
-                    for (u32 index = 0; index < actual_images.size(); ++index)
+                    cache_valid = actual_images.size() == view_cache.size();
+                    if (cache_valid)
                     {
-                        cache_valid = cache_valid &&
-                                      info.device.is_id_valid(view_cache[index]) &&
-                                      info.device.is_id_valid(info.device.info_image_view(view_cache[index]).value().image) &&
-                                      info.device.info_image_view(view_cache[index]).value().image == actual_images[index];
+                        for (u32 index = 0; index < actual_images.size(); ++index)
+                        {
+                            cache_valid = cache_valid &&
+                                          info.device.is_id_valid(view_cache[index]) &&
+                                          info.device.is_id_valid(info.device.info_image_view(view_cache[index]).value().image) &&
+                                          info.device.info_image_view(view_cache[index]).value().image == actual_images[index];
+                        }
+                    }
+                }
+                else // image_use.m_shader_array_type == TaskImageUseArrayType::MIP_LEVELS
+                {
+                    cache_valid = view_cache.size() > 0;
+                    if (cache_valid)
+                    {
+                        for (u32 index = 0; index < view_cache.size(); ++index)
+                        {
+                            cache_valid = cache_valid &&
+                                          info.device.is_id_valid(view_cache[index]) &&
+                                          info.device.is_id_valid(info.device.info_image_view(view_cache[index]).value().image);
+                        }
                     }
                 }
                 if (!cache_valid)
@@ -861,25 +878,50 @@ namespace daxa
                         }
                     }
                     view_cache.clear();
-                    for (u32 index = 0; index < actual_images.size(); ++index)
+                    if (image_use.m_shader_array_type == TaskImageUseArrayType::RUNTIME_IMAGES)
                     {
-                        ImageId parent = actual_images[index];
-                        ImageViewInfo view_info = info.device.info_image_view(parent.default_view()).value();
-                        ImageViewType use_view_type = (image_use.m_view_type != ImageViewType::MAX_ENUM) ? image_use.m_view_type : view_info.type;
+                        for (u32 index = 0; index < actual_images.size(); ++index)
+                        {
+                            ImageId parent = actual_images[index];
+                            ImageViewInfo view_info = info.device.info_image_view(parent.default_view()).value();
+                            ImageViewType use_view_type = (image_use.m_view_type != ImageViewType::MAX_ENUM) ? image_use.m_view_type : view_info.type;
 
-                        // When the use image view parameters match the default view,
-                        // then use the default view id and avoid creating a new id here.
-                        bool const is_use_default_slice = view_info.slice == slice;
-                        bool const is_use_default_view_type = use_view_type == view_info.type;
-                        if (is_use_default_slice && is_use_default_view_type)
-                        {
-                            view_cache.push_back(parent.default_view());
+                            // When the use image view parameters match the default view,
+                            // then use the default view id and avoid creating a new id here.
+                            bool const is_use_default_slice = view_info.slice == slice;
+                            bool const is_use_default_view_type = use_view_type == view_info.type;
+                            if (is_use_default_slice && is_use_default_view_type)
+                            {
+                                view_cache.push_back(parent.default_view());
+                            }
+                            else
+                            {
+                                view_info.type = use_view_type;
+                                view_info.slice = slice;
+                                view_cache.push_back(info.device.create_image_view(view_info));
+                            }
                         }
-                        else
+                    }
+                    else // image_use.m_shader_array_type == TaskImageUseArrayType::MIP_LEVELS
+                    {
+                        u32 base_mip_level = image_use.handle.slice.base_mip_level;
+                        view_cache.reserve(image_use.m_shader_array_size);
+                        auto filled_views = std::min(image_use.handle.slice.level_count, u32(image_use.m_shader_array_size));
+                        for (u32 index = 0; index < filled_views; ++index)
                         {
+                            ImageViewInfo view_info = info.device.info_image_view(actual_images[0].default_view()).value();
+                            ImageViewType use_view_type = (image_use.m_view_type != ImageViewType::MAX_ENUM) ? image_use.m_view_type : view_info.type;
                             view_info.type = use_view_type;
-                            view_info.slice = slice;
+                            view_info.slice = image_use.handle.slice;
+                            view_info.slice.base_mip_level = base_mip_level + index;
+                            view_info.slice.level_count = 1;
                             view_cache.push_back(info.device.create_image_view(view_info));
+                        }
+                        // When the slice is smaller then the array size,
+                        // The indices larger then the size are filled with 0 ids.
+                        for (u32 index = filled_views; index < image_use.m_shader_array_size; ++index)
+                        {
+                            view_cache.push_back(daxa::ImageViewId{});
                         }
                     }
                 }
@@ -976,10 +1018,21 @@ namespace daxa
             {
                 arg.images.span() = this->get_actual_images(arg.handle, permutation);
                 arg.views.span() = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
-                DAXA_DBG_ASSERT_TRUE_M(
-                    arg.m_shader_array_size <= arg.images.span().size(),
-                    fmt::format("image use (index {}) in task \"{}\" requires {} runtime image, but only {} runtime image are present when executing",
-                                index, task.base_task->get_name(), arg.m_shader_array_size, arg.images.span().size()));
+                if (arg.m_shader_array_type == TaskImageUseArrayType::MIP_LEVELS)
+                {
+
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        arg.images.span().size() >= 1,
+                        fmt::format("image array mip use (index {}) in task \"{}\" requires {} exactly one runtime image, but {} runtime images are present when executing",
+                                    index, task.base_task->get_name(), arg.m_shader_array_size, arg.images.span().size()));
+                }
+                else // arg.m_shader_array_type == TaskImageUseArrayType::RUNTIME_ARRAY
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        arg.m_shader_array_size <= arg.images.span().size(),
+                        fmt::format("image use (index {}) in task \"{}\" requires {} runtime image, but only {} runtime images are present when executing",
+                                    index, task.base_task->get_name(), arg.m_shader_array_size, arg.images.span().size()));
+                }
             });
         impl_runtime.current_task = &task;
         impl_runtime.recorder.begin_label({
