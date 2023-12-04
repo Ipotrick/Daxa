@@ -347,13 +347,13 @@ namespace daxa
         return TaskImageUse<>::from(impl.current_task->base_task->get_generic_uses()[image_use_index]);
     }
 
-    void TaskInterface::copy_task_head_to(void * dst) const
+    void TaskInterface::copy_task_head_to(std::span<std::byte> dst) const
     {
         // NOTE:    At this point, all the uses should have already been verified.
         //          We should not need to check here!
         auto & impl = *static_cast<ImplTaskRuntimeInterface *>(this->backend);
-        std::byte * dst_bytes = r_cast<std::byte *>(dst);
         u32 byte_offset = 0;
+        DAXA_DBG_ASSERT_TRUE_M(dst.size() == impl.current_task->base_task->get_task_head_shader_blob_size(), "Given task head shader blob byte size does not match tasks shader byte blob size");
         for_each(
             impl.current_task->base_task->get_generic_uses(),
             [&](u32, TaskBufferUse<> & buffer_use)
@@ -363,11 +363,11 @@ namespace daxa
                     if (buffer_use.m_shader_as_address)
                     {
                         BufferId buf_id = buffer_use.buffer(shader_array_i);
-                        *r_cast<DeviceAddress *>(dst_bytes + byte_offset) = impl.task_graph.info.device.get_device_address(buf_id).value();
+                        *r_cast<DeviceAddress *>(dst.data() + byte_offset) = impl.task_graph.info.device.get_device_address(buf_id).value();
                     }
                     else
                     {
-                        *r_cast<BufferId *>(dst_bytes + byte_offset) = buffer_use.buffer(shader_array_i);
+                        *r_cast<BufferId *>(dst.data() + byte_offset) = buffer_use.buffer(shader_array_i);
                     }
                     byte_offset += 8;
                 }
@@ -376,7 +376,7 @@ namespace daxa
             {
                 for (u32 shader_array_i = 0; shader_array_i < image_use.m_shader_array_size; ++shader_array_i)
                 {
-                    *r_cast<ImageViewId *>(dst_bytes + byte_offset) = image_use.view(shader_array_i);
+                    *r_cast<ImageViewId *>(dst.data() + byte_offset) = image_use.view(shader_array_i);
                     byte_offset += 8;
                 }
             });
@@ -393,7 +393,7 @@ namespace daxa
         {
             return std::nullopt;
         }
-        this->copy_task_head_to(alloc_opt->host_address);
+        this->copy_task_head_to({reinterpret_cast<std::byte*>(alloc_opt->host_address), size});
         return alloc_opt;
     }
 

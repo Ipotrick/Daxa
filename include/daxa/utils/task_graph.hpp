@@ -39,7 +39,11 @@ namespace daxa
         auto get_recorder() const -> CommandRecorder &;
         auto get_allocator() const -> TransferMemoryPool &;
 
-        void copy_task_head_to(void * dst) const;
+        template <typename T>
+        void copy_task_head_to(T * dst) const
+        {
+            copy_task_head_to({reinterpret_cast<std::byte *>(dst), sizeof(T)});
+        }
         auto allocate_task_head() -> std::optional<TransferMemoryPool::Allocation>;
 
         TaskInterfaceUses uses;
@@ -49,6 +53,7 @@ namespace daxa
         friend struct TaskGraph;
         friend struct ImplTaskGraph;
         TaskInterface(void * a_backend);
+        void copy_task_head_to(std::span<std::byte> dst) const;
         void * backend = {};
     };
 

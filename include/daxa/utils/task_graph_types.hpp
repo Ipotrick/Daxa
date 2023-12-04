@@ -503,10 +503,34 @@ namespace daxa
     // Namespace containing implementation details
     namespace detail
     {
+        template <typename T>
+        consteval usize task_head_shader_blob_size()
+        {
+            usize constexpr array_size = sizeof(T) / sizeof(GenericTaskResourceUse);
+            auto const generic_uses = std::bit_cast<std::array<GenericTaskResourceUse, array_size>>(T{});
+            usize byte_size = 0;
+            for (auto const & guse : generic_uses)
+            {
+                byte_size += 8 * guse.m_shader_array_size;
+            }
+            return byte_size;
+        }
+        
+        inline usize runtime_task_head_shader_blob_size(std::span<GenericTaskResourceUse const> generic_uses)
+        {
+            usize byte_size = 0;
+            for (auto const & guse : generic_uses)
+            {
+                byte_size += 8 * guse.m_shader_array_size;
+            }
+            return byte_size;
+        }
+
         struct BaseTask
         {
             virtual auto get_generic_uses() -> std::span<GenericTaskResourceUse> = 0;
             virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> = 0;
+            virtual auto get_task_head_shader_blob_size() const -> u64 = 0;
             virtual auto get_name() const -> std::string = 0;
             virtual void callback(TaskInterface const & ti) = 0;
             virtual ~BaseTask() {}
@@ -541,6 +565,11 @@ namespace daxa
             virtual auto get_generic_uses() const -> std::span<GenericTaskResourceUse const> override
             {
                 return std::span{reinterpret_cast<GenericTaskResourceUse const *>(&task.uses), USE_COUNT};
+            }
+
+            virtual auto get_task_head_shader_blob_size() const -> u64 override
+            {
+                return task_head_shader_blob_size<T_USES>();
             }
 
             virtual auto get_name() const -> std::string override
@@ -587,6 +616,11 @@ namespace daxa
                 return std::span{uses.data(), uses.size()};
             }
 
+            virtual auto get_task_head_shader_blob_size() const -> u64 override
+            {
+                return runtime_task_head_shader_blob_size(uses);
+            }
+
             virtual auto get_name() const -> std::string override
             {
                 return name;
@@ -597,19 +631,6 @@ namespace daxa
                 callback_lambda(ti);
             }
         };
-
-        template <typename T>
-        consteval usize get_task_head_shader_blob_size()
-        {
-            usize constexpr array_size = sizeof(T) / sizeof(GenericTaskResourceUse);
-            auto const generic_uses = std::bit_cast<std::array<GenericTaskResourceUse, array_size>>(T{});
-            usize byte_size = 0;
-            for (auto const & guse : generic_uses)
-            {
-                byte_size += 8 * guse.m_shader_array_size;
-            }
-            return byte_size;
-        }
     } // namespace detail
 
     template <detail::UserUses T>

@@ -190,13 +190,13 @@ struct MyTaskHead
             daxa::ImageViewType::REGULAR_2D
         > dst_image;
     };
-    // daxa::detail::get_task_head_shader_blob_size<Uses>()> performs simple 
+    // daxa::detail::task_head_shader_blob_size<Uses>()> performs simple 
     /// static reflection on the uses to determine the size of this array.
     // As this struct should be abi compatible, the array is made up 
     // of u64's to match the alignment of ids and ptrs in shader files.
     std::array<
         daxa::u64, 
-        daxa::detail::get_task_head_shader_blob_size<Uses>()
+        daxa::detail::task_head_shader_blob_size<Uses>()
     > shader_byte_blob = {};
 };
 ```

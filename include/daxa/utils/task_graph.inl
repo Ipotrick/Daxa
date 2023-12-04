@@ -48,7 +48,7 @@
 #define DAXA_DECL_TASK_HEAD_END                                                                        \
     }                                                                                                  \
     ;                                                                                                  \
-    std::array<std::byte, daxa::detail::get_task_head_shader_blob_size<Uses>()> shader_byte_blob = {}; \
+    std::array<std::byte, daxa::detail::task_head_shader_blob_size<Uses>()> shader_byte_blob = {}; \
     }                                                                                                  \
     ;
 
