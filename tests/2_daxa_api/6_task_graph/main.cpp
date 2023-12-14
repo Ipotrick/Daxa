@@ -8,6 +8,48 @@
 
 namespace tests
 {
+    TH_DECL_BEGIN(TestTaskHead, 4)
+    TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, buffer)
+    TH_IMAGE_NO_SHADER(COMPUTE_SHADER_SAMPLED, REGULAR_2D, image0)
+    TH_IMAGE_NO_SHADER(COMPUTE_SHADER_SAMPLED, REGULAR_2D, image1)
+    TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, test_buffer_no_shader)
+    TH_DECL_END
+
+    struct TestTask : TestTaskHead::Task
+    {
+        virtual void callback(TaskRuntimeInterface const & tri) const override
+        {
+            TaskBufferAttachmentIndex integer = buffer;
+            // TaskBufferAttachment const& b = attachments[buffer];
+            [[maybe_unused]] TaskAttachment const & a = attachments[0];
+            // \/ ERROR: TaskBufferAttachmentIndex index retrurns a TaskBufferAttachment!
+            // TaskAttachment const& b = attachments[buffer];
+            // \/ ERROR: integer index returns an Attachemnt!
+            // TaskBufferAttachment const& a = attachments[0];
+
+            [[maybe_unused]] BufferAttachmentRuntimeData const & buffer_runtime_data = tri.runtime_data[buffer];
+            BufferId buffer_id = tri.runtime_data[buffer].ids[0];
+
+            // attachment[buffer] vs tri.runtime_data[buffer]
+
+            // Can iterate over attachments:
+            for (TaskAttachment const & attach : attachments.span())
+            {
+                [[maybe_unused]] auto _ignore = attach;
+            }
+
+            // \/ ERROR: Can NOT change attachments inside callback:
+            // attachments[buffer].idata = 123;
+
+            std::cout << attachments[buffer].name << std::endl;
+            std::cout << attachments[image0].shader_array_size << std::endl;
+
+            // Problem, can reassign views within callback!
+            // attachments.set_view(buffer, TaskBufferView{111});
+            // SOLVED! Make task callback a const function.
+        }
+    };
+
     using namespace daxa::task_resource_uses;
 
     void simplest()

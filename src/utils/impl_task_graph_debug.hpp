@@ -2,7 +2,7 @@
 
 #include "impl_task_graph.hpp"
 #include <fmt/format.h>
-namespace daxa
+    namespace daxa
 {
     enum struct Level
     {
@@ -53,5 +53,26 @@ namespace daxa
             end_indent(out, indent);
         }
     };
+
+    void validate_not_compiled(ImplTaskGraph & impl)
+    {
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
+    }
+
+    void validate_buffer_task_view(ITask & task, u32 attach_index, TaskBufferAttachment const & attach)
+    {
+        DAXA_DBG_ASSERT_TRUE_M(
+            !attach.view.is_empty(),
+            fmt::format("detected unassigned task buffer view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+                        attach.name, attach_index, to_string(attach.access), task.name()));
+    }
+
+    void validate_image_task_view(ITask & task, u32 attach_index, TaskImageAttachment const & attach)
+    {
+        DAXA_DBG_ASSERT_TRUE_M(
+            !attach.view.is_empty(),
+            fmt::format("detected unassigned task image view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+                        attach.name, attach_index, to_string(attach.access), task.name()));
+    }
 
 } // namespace daxa

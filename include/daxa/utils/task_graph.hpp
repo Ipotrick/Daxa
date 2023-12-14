@@ -203,13 +203,20 @@ namespace daxa
             add_task(std::move(base_task));
         }
 
-        inline void add_task(InlineTaskInfo && info)
+        void add_task(InlineTaskInfo && info)
         {
             std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::InlineTask>(
                 std::move(info.uses),
                 std::move(info.task),
                 std::move(info.name));
             add_task(std::move(base_task));
+        }
+
+        template<typename TTask>
+        requires requires{ std::is_base_of_v<ITask, TTask>; }
+        void add_task(TTask && task)
+        {
+            add_task(std::make_unique<ITask>(task));
         }
 
         DAXA_EXPORT_CXX void add_preamble(TaskCallback callback);
@@ -236,5 +243,6 @@ namespace daxa
 
       private:
         DAXA_EXPORT_CXX void add_task(std::unique_ptr<detail::BaseTask> && base_task);
+        DAXA_EXPORT_CXX void add_task(std::unique_ptr<ITask> && task);
     };
 } // namespace daxa

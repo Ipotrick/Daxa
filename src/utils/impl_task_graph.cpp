@@ -1259,6 +1259,35 @@ namespace daxa
             });
     }
 
+    void translate_persistent_ids(ImplTaskGraph const & impl, ITask & task)
+    {
+        for (u32 i = 0; i < task._raw_attachments().size(); ++i)
+        {
+            auto & attach = task._raw_attachments()[i];
+            switch (attach.type)
+            {
+                case TaskAttachmentType::BUFFER:
+                {
+                    validate_buffer_task_view(task, i, attach.value.buffer);
+                    attach.value.buffer.view = impl.id_to_local_id(attach.value.buffer.view);
+                }
+                case TaskAttachmentType::IMAGE:
+                {
+                    validate_image_task_view(task, i, attach.value.image);
+                    attach.value.image.view = impl.id_to_local_id(attach.value.image.view);
+                }
+                default: abort();
+            }
+        }
+    }
+    
+    void TaskGraph::add_task(std::unique_ptr<ITask> && task)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        validate_not_compiled(impl);
+        translate_persistent_ids(impl, *task);
+    }
+
     void TaskGraph::add_task(std::unique_ptr<BaseTask> && base_task)
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
