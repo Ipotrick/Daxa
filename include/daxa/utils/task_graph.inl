@@ -38,7 +38,7 @@
 ///       * This Array is NOT always fully filled!
 //          If the given TaskImageView has less mips then the array size,
 //          the array slots >= SIZE will be filled with null ids.
-#define DAXA_TH_IMAGE_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) daxa::TaskImageUse<daxa::TaskImageAccess::TASK_ACCESS, daxa::ImageViewType::VIEW_TYPE, SIZE, daxa::TaskImageUseArrayType::MIP_LEVELS> NAME;
+#define DAXA_TH_IMAGE_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) daxa::TaskImageUse<daxa::TaskImageAccess::TASK_ACCESS, daxa::ImageViewType::VIEW_TYPE, SIZE, daxa::TaskHeadImageArrayType::MIP_LEVELS> NAME;
 #define DAXA_TH_BUFFER_NO_SHADER(TASK_ACCESS, NAME) daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_ACCESS, 0> NAME;
 #define DAXA_TH_BUFFER_ID(TASK_ACCESS, NAME) daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_ACCESS> NAME;
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) daxa::TaskBufferUse<daxa::TaskBufferAccess::TASK_ACCESS, 1, true> NAME;

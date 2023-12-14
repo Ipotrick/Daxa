@@ -841,7 +841,7 @@ namespace daxa
                 auto & view_cache = task.image_view_cache[task_image_use_index];
 
                 bool cache_valid = true;
-                if (image_use.m_shader_array_type == TaskImageUseArrayType::RUNTIME_IMAGES)
+                if (image_use.m_shader_array_type == TaskHeadImageArrayType::RUNTIME_IMAGES)
                 {
                     cache_valid = actual_images.size() == view_cache.size();
                     if (cache_valid)
@@ -855,7 +855,7 @@ namespace daxa
                         }
                     }
                 }
-                else // image_use.m_shader_array_type == TaskImageUseArrayType::MIP_LEVELS
+                else // image_use.m_shader_array_type == TaskHeadImageArrayType::MIP_LEVELS
                 {
                     cache_valid = view_cache.size() > 0;
                     if (cache_valid)
@@ -885,7 +885,7 @@ namespace daxa
                         }
                     }
                     view_cache.clear();
-                    if (image_use.m_shader_array_type == TaskImageUseArrayType::RUNTIME_IMAGES)
+                    if (image_use.m_shader_array_type == TaskHeadImageArrayType::RUNTIME_IMAGES)
                     {
                         for (u32 index = 0; index < actual_images.size(); ++index)
                         {
@@ -909,7 +909,7 @@ namespace daxa
                             }
                         }
                     }
-                    else // image_use.m_shader_array_type == TaskImageUseArrayType::MIP_LEVELS
+                    else // image_use.m_shader_array_type == TaskHeadImageArrayType::MIP_LEVELS
                     {
                         u32 base_mip_level = image_use.handle.slice.base_mip_level;
                         view_cache.reserve(image_use.m_shader_array_size);
@@ -1025,7 +1025,7 @@ namespace daxa
             {
                 arg.images.span() = this->get_actual_images(arg.handle, permutation);
                 arg.views.span() = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
-                if (arg.m_shader_array_type == TaskImageUseArrayType::MIP_LEVELS)
+                if (arg.m_shader_array_type == TaskHeadImageArrayType::MIP_LEVELS)
                 {
 
                     DAXA_DBG_ASSERT_TRUE_M(
@@ -1033,7 +1033,7 @@ namespace daxa
                         fmt::format("image array mip use (index {}) in task \"{}\" requires {} exactly one runtime image, but {} runtime images are present when executing",
                                     index, task.base_task->get_name(), arg.m_shader_array_size, arg.images.span().size()));
                 }
-                else // arg.m_shader_array_type == TaskImageUseArrayType::RUNTIME_ARRAY
+                else // arg.m_shader_array_type == TaskHeadImageArrayType::RUNTIME_ARRAY
                 {
                     DAXA_DBG_ASSERT_TRUE_M(
                         arg.m_shader_array_size <= arg.images.span().size(),
