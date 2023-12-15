@@ -102,7 +102,7 @@ namespace daxa
     struct ImplTask
     {
         std::unique_ptr<ITask> base_task = {};
-        TaskAttachmentRuntimeDataArray runtime_data = {};
+        std::vector<TaskAttachmentInfoVariant> runtime_data = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
     };
 

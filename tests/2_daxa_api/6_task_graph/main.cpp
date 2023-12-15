@@ -10,7 +10,7 @@ DAXA_DECL_TASK_HEAD_END
 
 struct TestTask : TestTaskHead::Task
 {
-    virtual void callback(daxa::TaskInterface const & ti) const override
+    virtual void callback(daxa::TaskInterface ti) const override
     {
         // There are two ways to get the info for any attachment:
         {

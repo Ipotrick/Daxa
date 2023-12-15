@@ -138,20 +138,20 @@ namespace daxa
         if (attach.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS)
         {
             DAXA_DBG_ASSERT_TRUE_M(
-                runtime_data.image_ids.size() >= 1,
+                runtime_data.ids.size() >= 1,
                 fmt::format("Detected invalid runtime image count.\n"
                             "Attachment \"{}\" in task \"{}\" requires at least 1 runtime image, but no runtime images are present when executing task.\n"
                             "Attachment runntime image count must be at least one for mip-array attachments!",
-                            attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.image_ids.size()));
+                            attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.ids.size()));
         }
         else // arg.shader_array_type == TaskHeadImageArrayType::RUNTIME_ARRAY
         {
             DAXA_DBG_ASSERT_TRUE_M(
-                runtime_data.image_ids.size() >= attach.shader_array_size,
+                runtime_data.ids.size() >= attach.shader_array_size,
                 fmt::format("Detected invalid runtime image count.\n"
                             "Attachment \"{}\" in task \"{}\" requires at least {} runtime image(s), but only {} runtime images are present when executing task.\n"
                             "Attachment runntime image count must be at least the shader array size for array attachments!",
-                            attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.image_ids.size()));
+                            attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.ids.size()));
         }
     }
     // void validate_

@@ -11,11 +11,6 @@ using Clock = std::chrono::high_resolution_clock;
 
 #include "shared.inl"
 
-namespace daxa
-{
-    using namespace task_resource_uses;
-}
-
 struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
@@ -161,47 +156,43 @@ struct App : AppWindow<App>
 
     // Update task:
 
-    struct UpdateBoidsTask
+    DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
+    DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ_WRITE, current)
+    DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, previous)
+    DAXA_DECL_TASK_HEAD_END
+    struct UpdateBoidsTask : UpdateBoids::Task
     {
-        struct Uses
-        {
-            daxa::BufferComputeShaderReadWrite current{};
-            daxa::BufferComputeShaderRead previous{};
-        } uses = {};
         std::string_view name = "update boids";
         std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
-        void callback(daxa::TaskInterface ti)
+        virtual void callback(daxa::TaskInterface ti) const
         {
-            auto& recorder = ti.get_recorder();
-            recorder.set_pipeline(*update_boids_pipeline);
-            recorder.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.get_device().get_device_address(uses.current.buffer()).value(),
-                .old_boids_buffer = ti.get_device().get_device_address(uses.previous.buffer()).value(),
+            ti.recorder.set_pipeline(*update_boids_pipeline);
+            ti.recorder.push_constant(UpdateBoidsPushConstant{
+                .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
+                .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
             });
-            recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
+            ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
         }
     };
 
     // Draw task:
 
-    struct DrawBoidsTask
+    DAXA_DECL_TASK_HEAD_BEGIN(DrawBoids, 2)
+    DAXA_TH_BUFFER_NO_SHADER(VERTEX_SHADER_READ, boids)
+    DAXA_TH_IMAGE_NO_SHADER(COLOR_ATTACHMENT, REGULAR_2D, render_image)
+    DAXA_DECL_TASK_HEAD_END
+    struct DrawBoidsTask : DrawBoids::Task
     {
-        struct Uses
-        {
-            daxa::BufferVertexShaderRead boids{};
-            daxa::ImageColorAttachment<> render_image{};
-        } uses = {};
         std::string_view name = "draw boids";
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
         u32 * size_x = {};
         u32 * size_y = {};
-        void callback(daxa::TaskInterface ti)
+        virtual void callback(daxa::TaskInterface ti) const
         {
-            auto& recorder = ti.get_recorder();
-            auto render_recorder = std::move(recorder).begin_renderpass({
+            auto render_recorder = std::move(ti.recorder).begin_renderpass({
                 .color_attachments = std::array{
                     daxa::RenderAttachmentInfo{
-                        .image_view = uses.render_image.view(),
+                        .image_view = ti.attach(render_image).view_ids[0],
                         .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
                         .store_op = daxa::AttachmentStoreOp::STORE,
@@ -215,14 +206,14 @@ struct App : AppWindow<App>
             });
             render_recorder.set_pipeline(*draw_pipeline);
             render_recorder.push_constant(DrawPushConstant{
-                .boids_buffer = ti.get_device().get_device_address(uses.boids.buffer()).value(),
+                .boids_buffer = ti.device.get_device_address(ti.attach(boids).ids[0]).value(),
                 .axis_scaling = {
                     std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
                     std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
                 },
             });
             render_recorder.draw({.vertex_count = 3 * MAX_BOIDS});
-            recorder = std::move(render_recorder).end_renderpass();
+            ti.recorder = std::move(render_recorder).end_renderpass();
         }
     };
 
@@ -232,22 +223,18 @@ struct App : AppWindow<App>
         new_task_graph.use_persistent_image(task_swapchain_image);
         new_task_graph.use_persistent_buffer(task_boids_current);
         new_task_graph.use_persistent_buffer(task_boids_old);
-        new_task_graph.add_task(UpdateBoidsTask{
-            .uses = {
-                .current = {task_boids_current},
-                .previous = {task_boids_old},
-            },
-            .update_boids_pipeline = update_boids_pipeline,
-        });
-        new_task_graph.add_task(DrawBoidsTask{
-            .uses = {
-                .boids = {task_boids_current},
-                .render_image = {task_swapchain_image},
-            },
-            .draw_pipeline = draw_pipeline,
-            .size_x = &size_x,
-            .size_y = &size_y,
-        });
+        UpdateBoidsTask update_task{};
+        update_task.update_boids_pipeline = update_boids_pipeline;
+        update_task.attachments.set_view(update_task.current, task_boids_current);
+        update_task.attachments.set_view(update_task.previous, task_boids_old);
+        new_task_graph.add_task(update_task);
+        DrawBoidsTask draw_task{};
+        draw_task.draw_pipeline = draw_pipeline;
+        draw_task.size_x = &size_x;
+        draw_task.size_y = &size_y;
+        draw_task.attachments.set_view(draw_task.boids, task_boids_current);
+        draw_task.attachments.set_view(draw_task.render_image, task_swapchain_image);
+        new_task_graph.add_task(draw_task);
         new_task_graph.submit({});
         new_task_graph.present({});
         new_task_graph.complete({});

@@ -14,7 +14,7 @@ struct TestU64Alignment
 };
 DAXA_DECL_BUFFER_PTR(TestU64Alignment)
 
-DAXA_DECL_TASK_HEAD_BEGIN(TestShaderTaskHead)
+DAXA_DECL_TASK_HEAD_BEGIN(TestShaderTaskHead, 2)
 DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ, daxa_BufferPtr(TestU64Alignment), align_test_src)
 DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ_WRITE, daxa_RWBufferPtr(TestU64Alignment), align_test_dst)
 DAXA_DECL_TASK_HEAD_END

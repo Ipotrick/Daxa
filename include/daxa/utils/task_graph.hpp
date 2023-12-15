@@ -149,35 +149,35 @@ namespace daxa
             attachments.reserve(info.attachments.size());
             for (u32 i = 0; i < info.attachments.size(); ++i)
             {
-                if (auto * attach = daxa::get_if<TaskBufferAttachment const>(&info.attachments[i]))
+                if (auto * attach = daxa::get_if<TaskBufferAttachment>(&info.attachments[i]))
                 {
                     attachments.push_back(TaskAttachment(*attach));
                 }
                 else
                 {
-                    attachments.push_back(TaskAttachment(daxa::get<TaskImageAttachment const>(info.attachments[i])));
+                    attachments.push_back(TaskAttachment(daxa::get<TaskImageAttachment>(info.attachments[i])));
                 }
             }
             _callback = info.task;
             _name = info.name;
         }
-        virtual auto _raw_attachments() -> std::span<TaskAttachment>
+        virtual auto _raw_attachments() -> std::span<TaskAttachment> override
         {
             return attachments;
         }
-        virtual auto _raw_attachments() const -> std::span<TaskAttachment const>
+        virtual auto _raw_attachments() const -> std::span<TaskAttachment const> override
         {
             return attachments;
         }
         virtual char const * name() const override { return _name; };
-        virtual void callback(TaskInterface const & tri) const override
+        virtual void callback(TaskInterface ti) const override
         {
-            _callback(tri);
+            _callback(ti);
         };
 
       private:
         std::vector<TaskAttachment> attachments = {};
-        std::function<void(TaskInterface const &)> _callback = {};
+        std::function<void(TaskInterface)> _callback = {};
         char const * _name = {};
     };
 
@@ -200,11 +200,11 @@ namespace daxa
             requires requires { std::is_base_of_v<ITask, TTask>; }
         void add_task(TTask && task)
         {
-            add_task(std::make_unique<ITask>(task));
+            add_task(std::unique_ptr<ITask>(new std::remove_reference_t<TTask>(task)));
         }
-        void add_task(InlineTaskInfo const& inline_task_info)
+        void add_task(InlineTaskInfo const & inline_task_info)
         {
-            add_task(std::make_unique<ITask>(InlineTask{inline_task_info}));
+            add_task(std::unique_ptr<ITask>(new InlineTask(inline_task_info)));
         }
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
@@ -215,8 +215,6 @@ namespace daxa
         DAXA_EXPORT_CXX void complete(TaskCompleteInfo const & info);
 
         DAXA_EXPORT_CXX void execute(ExecutionInfo const & info);
-        // TODO: Reimplement in another way.
-        // auto get_command_lists() -> std::vector<CommandRecorder>;
 
         DAXA_EXPORT_CXX auto get_debug_string() -> std::string;
         DAXA_EXPORT_CXX auto get_transient_memory_size() -> daxa::usize;
