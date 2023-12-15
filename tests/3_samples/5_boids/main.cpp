@@ -11,6 +11,69 @@ using Clock = std::chrono::high_resolution_clock;
 
 #include "shared.inl"
 
+// Update task:
+
+DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
+DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ_WRITE, current)
+DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, previous)
+DAXA_DECL_TASK_HEAD_END
+struct UpdateBoidsTask : UpdateBoids
+{
+    std::string_view name = "update boids";
+    std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
+    virtual void callback(daxa::TaskInterface ti) const
+    {
+        ti.recorder.set_pipeline(*update_boids_pipeline);
+        ti.recorder.push_constant(UpdateBoidsPushConstant{
+            .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
+            .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
+        });
+        ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
+    }
+};
+
+// Draw task:
+
+DAXA_DECL_TASK_HEAD_BEGIN(DrawBoids, 2)
+DAXA_TH_BUFFER_NO_SHADER(VERTEX_SHADER_READ, boids)
+DAXA_TH_IMAGE_NO_SHADER(COLOR_ATTACHMENT, REGULAR_2D, render_image)
+DAXA_DECL_TASK_HEAD_END
+struct DrawBoidsTask : DrawBoids
+{
+    std::string_view name = "draw boids";
+    std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
+    u32 * size_x = {};
+    u32 * size_y = {};
+    virtual void callback(daxa::TaskInterface ti) const
+    {
+        auto render_recorder = std::move(ti.recorder).begin_renderpass({
+            .color_attachments = std::array{
+                daxa::RenderAttachmentInfo{
+                    .image_view = ti.attach(render_image).view_ids[0],
+                    .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+                    .load_op = daxa::AttachmentLoadOp::CLEAR,
+                    .store_op = daxa::AttachmentStoreOp::STORE,
+                    .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
+                },
+            },
+            .render_area = {
+                .width = *size_x,
+                .height = *size_y,
+            },
+        });
+        render_recorder.set_pipeline(*draw_pipeline);
+        render_recorder.push_constant(DrawPushConstant{
+            .boids_buffer = ti.device.get_device_address(ti.attach(boids).ids[0]).value(),
+            .axis_scaling = {
+                std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
+                std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
+            },
+        });
+        render_recorder.draw({.vertex_count = 3 * MAX_BOIDS});
+        ti.recorder = std::move(render_recorder).end_renderpass();
+    }
+};
+
 struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
@@ -96,8 +159,8 @@ struct App : AppWindow<App>
 
         for (auto & boid : ptr->boids)
         {
-            boid.position.x = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
-            boid.position.y = static_cast<f32>(rand() % ((FIELD_SIZE)*100)) / 100.0f;
+            boid.position.x = static_cast<f32>(rand() % ((FIELD_SIZE) * 100)) / 100.0f;
+            boid.position.y = static_cast<f32>(rand() % ((FIELD_SIZE) * 100)) / 100.0f;
             f32 const angle = static_cast<f32>(rand() % 3600) * 0.1f;
             boid.speed.x = std::cos(angle);
             boid.speed.y = std::sin(angle);
@@ -154,87 +217,28 @@ struct App : AppWindow<App>
         return false;
     }
 
-    // Update task:
-
-    DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
-    DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ_WRITE, current)
-    DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, previous)
-    DAXA_DECL_TASK_HEAD_END
-    struct UpdateBoidsTask : UpdateBoids::Task
-    {
-        std::string_view name = "update boids";
-        std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
-        virtual void callback(daxa::TaskInterface ti) const
-        {
-            ti.recorder.set_pipeline(*update_boids_pipeline);
-            ti.recorder.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
-                .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
-            });
-            ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
-        }
-    };
-
-    // Draw task:
-
-    DAXA_DECL_TASK_HEAD_BEGIN(DrawBoids, 2)
-    DAXA_TH_BUFFER_NO_SHADER(VERTEX_SHADER_READ, boids)
-    DAXA_TH_IMAGE_NO_SHADER(COLOR_ATTACHMENT, REGULAR_2D, render_image)
-    DAXA_DECL_TASK_HEAD_END
-    struct DrawBoidsTask : DrawBoids::Task
-    {
-        std::string_view name = "draw boids";
-        std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
-        u32 * size_x = {};
-        u32 * size_y = {};
-        virtual void callback(daxa::TaskInterface ti) const
-        {
-            auto render_recorder = std::move(ti.recorder).begin_renderpass({
-                .color_attachments = std::array{
-                    daxa::RenderAttachmentInfo{
-                        .image_view = ti.attach(render_image).view_ids[0],
-                        .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
-                        .load_op = daxa::AttachmentLoadOp::CLEAR,
-                        .store_op = daxa::AttachmentStoreOp::STORE,
-                        .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
-                    },
-                },
-                .render_area = {
-                    .width = *size_x,
-                    .height = *size_y,
-                },
-            });
-            render_recorder.set_pipeline(*draw_pipeline);
-            render_recorder.push_constant(DrawPushConstant{
-                .boids_buffer = ti.device.get_device_address(ti.attach(boids).ids[0]).value(),
-                .axis_scaling = {
-                    std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
-                    std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
-                },
-            });
-            render_recorder.draw({.vertex_count = 3 * MAX_BOIDS});
-            ti.recorder = std::move(render_recorder).end_renderpass();
-        }
-    };
-
     auto record_tasks() -> daxa::TaskGraph
     {
         daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = ("main task graph")});
         new_task_graph.use_persistent_image(task_swapchain_image);
         new_task_graph.use_persistent_buffer(task_boids_current);
         new_task_graph.use_persistent_buffer(task_boids_old);
-        UpdateBoidsTask update_task{};
-        update_task.update_boids_pipeline = update_boids_pipeline;
-        update_task.attachments.set_view(update_task.current, task_boids_current);
-        update_task.attachments.set_view(update_task.previous, task_boids_old);
-        new_task_graph.add_task(update_task);
-        DrawBoidsTask draw_task{};
-        draw_task.draw_pipeline = draw_pipeline;
-        draw_task.size_x = &size_x;
-        draw_task.size_y = &size_y;
-        draw_task.attachments.set_view(draw_task.boids, task_boids_current);
-        draw_task.attachments.set_view(draw_task.render_image, task_swapchain_image);
-        new_task_graph.add_task(draw_task);
+        {
+            UpdateBoidsTask update_task{};
+            update_task.update_boids_pipeline = update_boids_pipeline;
+            update_task.attachments.set_view(update_task.current, task_boids_current);
+            update_task.attachments.set_view(update_task.previous, task_boids_old);
+            new_task_graph.add_task(update_task);
+        }
+        {
+            DrawBoidsTask draw_task{};
+            draw_task.draw_pipeline = draw_pipeline;
+            draw_task.size_x = &size_x;
+            draw_task.size_y = &size_y;
+            draw_task.attachments.set_view(draw_task.boids, task_boids_current);
+            draw_task.attachments.set_view(draw_task.render_image, task_swapchain_image);
+            new_task_graph.add_task(draw_task);
+        }
         new_task_graph.submit({});
         new_task_graph.present({});
         new_task_graph.complete({});

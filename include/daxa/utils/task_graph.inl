@@ -18,6 +18,7 @@
 #define DAXA_DECL_TASK_HEAD_END \
     }                           \
     ;
+#define DAXA_TH_BLOB(HEAD_NAME) HEAD_NAME
 #elif __cplusplus
 #include "task_graph_types.hpp"
 #else // C

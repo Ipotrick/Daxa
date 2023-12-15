@@ -310,7 +310,15 @@ namespace daxa
         virtual auto _raw_attachments() -> std::span<TaskAttachment> = 0;
         /// WARNING: Only used my internals!
         virtual auto _raw_attachments() const -> std::span<TaskAttachment const> = 0;
-        virtual auto _shader_blob_size() const -> usize { return 0; };
+        virtual auto _shader_blob_size() const -> usize
+        {
+            usize total = 0;
+            for (auto const & attach : _raw_attachments())
+            {
+                total += attach.shader_array_size() * 8;
+            }
+            return total;
+        };
         virtual char const * name() const { return "unnamed"; };
         virtual void callback(TaskInterface) const {};
     };
@@ -405,14 +413,20 @@ namespace daxa
     ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⡙⠓⠻⠶⠽⢮⣶⣥⣷⣭⣾⣥⣯⡵⠯⠼⠗⠛⠋⣉⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     */
 
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME, SIZE)              \
-    struct HEAD_NAME                                            \
-    {                                                           \
-        static constexpr inline char const * NAME = #HEAD_NAME; \
-        struct AttachmentInfo                                   \
-        {                                                       \
-            daxa::u8 _declared_attachments_count = {};          \
-            daxa::TaskAttachmentArray<SIZE> attachments = {};
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME, SIZE)                                      \
+    struct HEAD_NAME : daxa::ITask                                                      \
+    {                                                                                   \
+        virtual char const * name() const override { return #HEAD_NAME; }               \
+        virtual std::span<daxa::TaskAttachment> _raw_attachments() override             \
+        {                                                                               \
+            return attachments._raw;                                                    \
+        }                                                                               \
+        virtual std::span<daxa::TaskAttachment const> _raw_attachments() const override \
+        {                                                                               \
+            return attachments._raw;                                                    \
+        }                                                                               \
+        daxa::u8 _declared_attachments_count = {};                                      \
+        daxa::TaskAttachmentArray<SIZE> attachments = {};
 
 #define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)        \
     const daxa::TaskBufferAttachmentIndex NAME = [this]() {   \
@@ -434,26 +448,11 @@ namespace daxa
         return daxa::TaskImageAttachmentIndex{index};        \
     }();
 
-#define DAXA_DECL_TASK_HEAD_END                                                                                               \
-    }                                                                                                                         \
-    ;                                                                                                                         \
-    static_assert(daxa::detail::check_attachment_info<AttachmentInfo>());                                                     \
-    struct Task : daxa::ITask, AttachmentInfo                                                                                 \
-    {                                                                                                                         \
-        virtual char const * name() const override { return NAME; }                                                           \
-        virtual std::span<daxa::TaskAttachment> _raw_attachments() override                                                   \
-        {                                                                                                                     \
-            return attachments._raw;                                                                                          \
-        }                                                                                                                     \
-        virtual std::span<daxa::TaskAttachment const> _raw_attachments() const override                                       \
-        {                                                                                                                     \
-            return attachments._raw;                                                                                          \
-        }                                                                                                                     \
-        virtual auto _shader_blob_size() const -> usize override { return daxa::detail::shader_blob_size<AttachmentInfo>(); } \
-    };                                                                                                                        \
-    std::array<std::byte, daxa::detail::shader_blob_size<AttachmentInfo>()> shader_blob = {};                                 \
-    }                                                                                                                         \
+#define DAXA_DECL_TASK_HEAD_END \
+    }                           \
     ;
+
+#define DAXA_TH_BLOB(HEAD_NAME) std::array<std::byte, daxa::detail::shader_blob_size<HEAD_NAME>()>
 
 #define DAXA_TH_IMAGE_NO_SHADER(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0)
 #define DAXA_TH_IMAGE_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1)
