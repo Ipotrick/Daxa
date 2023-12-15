@@ -1560,13 +1560,13 @@ namespace daxa
             }
             ret += "COLOR_ATTACHMENT_OUTPUT";
         }
-        if ((flags & PipelineStageFlagBits::COMPUTE_SHADER) != PipelineStageFlagBits::NONE)
+        if ((flags & PipelineStageFlagBits::COMPUTE) != PipelineStageFlagBits::NONE)
         {
             if (!ret.empty())
             {
                 ret += " | ";
             }
-            ret += "COMPUTE_SHADER";
+            ret += "COMPUTE";
         }
         if ((flags & PipelineStageFlagBits::TRANSFER) != PipelineStageFlagBits::NONE)
         {

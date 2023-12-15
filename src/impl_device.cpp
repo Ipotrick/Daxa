@@ -1242,7 +1242,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
 
     for (u32 i = 0; i < queue_family_props_count; i++)
     {
-        if ((queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && (queue_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT) != 0 && (queue_props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
+        if ((queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) != 0 && (queue_props[i].queueFlags & VK_QUEUE_COMPUTE_SHADER_BIT) != 0 && (queue_props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) != 0)
         {
             self->main_queue_family_index = i;
             break;

@@ -101,7 +101,8 @@ namespace daxa
 
     struct ImplTask
     {
-        std::unique_ptr<detail::BaseTask> base_task = {};
+        std::unique_ptr<ITask> base_task = {};
+        TaskAttachmentRuntimeDataArray runtime_data = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
     };
 
@@ -153,7 +154,7 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(TaskId task_id, ImplTaskGraph & task_graph_impl, detail::BaseTask & task);
+        void add_task(ImplTaskGraph & task_graph_impl, ImplTask & impl_task, TaskId task_id);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -310,7 +311,6 @@ namespace daxa
         static inline std::atomic_uint32_t exec_unique_next_index = 1;
         u32 unique_index = {};
 
-        TaskCallback preamble = {};
         TaskGraphInfo info;
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
@@ -352,7 +352,6 @@ namespace daxa
         void update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation);
         void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
         void insert_pre_batch_barriers(TaskGraphPermutation & permutation);
-        void check_for_overlapping_use(detail::BaseTask & task);
         void create_transient_runtime_buffers(TaskGraphPermutation & permutation);
         void create_transient_runtime_images(TaskGraphPermutation & permutation);
         void allocate_transient_resources();
