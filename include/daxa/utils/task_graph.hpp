@@ -200,6 +200,7 @@ namespace daxa
             requires requires { std::is_base_of_v<ITask, TTask>; }
         void add_task(TTask && task)
         {
+            DAXA_DBG_ASSERT_TRUE_M(task.attachments._raw.size() == task._declared_attachments_count, "Detected task attachment count differing from Task head declared attachment count!");
             add_task(std::unique_ptr<ITask>(new std::remove_reference_t<TTask>(task)));
         }
         void add_task(InlineTaskInfo const & inline_task_info)

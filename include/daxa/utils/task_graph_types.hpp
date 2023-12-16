@@ -350,13 +350,6 @@ namespace daxa
     namespace detail
     {
         template <typename T>
-        consteval auto check_attachment_info() -> bool
-        {
-            T t{};
-            return t._declared_attachments_count == t.attachments._raw.size();
-        }
-
-        template <typename T>
         consteval auto shader_blob_size() -> usize
         {
             T t{};
@@ -463,8 +456,6 @@ namespace daxa
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
 #define DAXA_TH_BUFFER_ID_ARRAY(TASK_ACCESS, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
 #define DAXA_TH_BUFFER_PTR_ARRAY(TASK_ACCESS, PTR_TYPE, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
-#define DAXA_TH_BUFFER_INLINE(TASK_ACCESS, NAME, TASK_BUFFER_VIEW) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 0, .view = TASK_BUFFER_VIEW)
-#define DAXA_TH_IMAGE_INLINE(TASK_ACCESS, VIEW_TYPE, NAME, TASK_IMAGE_VIEW) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0, .view = TASK_IMAGE_VIEW)
 
     template <typename BufFn, typename ImgFn>
     constexpr void for_each(std::span<TaskAttachment> attachments, BufFn && buf_fn, ImgFn && img_fn)
