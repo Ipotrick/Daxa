@@ -305,12 +305,12 @@ namespace daxa
 
     struct ITask
     {
-        virtual ~ITask() {}
+        constexpr virtual ~ITask() {}
         /// WARNING: Only used my internals!
-        virtual auto _raw_attachments() -> std::span<TaskAttachment> = 0;
+        constexpr virtual auto _raw_attachments() -> std::span<TaskAttachment> = 0;
         /// WARNING: Only used my internals!
-        virtual auto _raw_attachments() const -> std::span<TaskAttachment const> = 0;
-        virtual auto _shader_blob_size() const -> usize
+        constexpr virtual auto _raw_attachments() const -> std::span<TaskAttachment const> = 0;
+        constexpr virtual auto _shader_blob_size() const -> usize
         {
             usize total = 0;
             for (auto const & attach : _raw_attachments())
@@ -319,7 +319,7 @@ namespace daxa
             }
             return total;
         };
-        virtual char const * name() const { return "unnamed"; };
+        constexpr virtual char const * name() const { return "unnamed"; };
         virtual void callback(TaskInterface) const {};
     };
 
@@ -409,12 +409,12 @@ namespace daxa
 #define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME, SIZE)                                      \
     struct HEAD_NAME : daxa::ITask                                                      \
     {                                                                                   \
-        virtual char const * name() const override { return #HEAD_NAME; }               \
-        virtual std::span<daxa::TaskAttachment> _raw_attachments() override             \
+        constexpr virtual char const * name() const override { return #HEAD_NAME; }               \
+        constexpr virtual std::span<daxa::TaskAttachment> _raw_attachments() override             \
         {                                                                               \
             return attachments._raw;                                                    \
         }                                                                               \
-        virtual std::span<daxa::TaskAttachment const> _raw_attachments() const override \
+        constexpr virtual std::span<daxa::TaskAttachment const> _raw_attachments() const override \
         {                                                                               \
             return attachments._raw;                                                    \
         }                                                                               \

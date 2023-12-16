@@ -161,15 +161,15 @@ namespace daxa
             _callback = info.task;
             _name = info.name;
         }
-        virtual auto _raw_attachments() -> std::span<TaskAttachment> override
+        constexpr virtual auto _raw_attachments() -> std::span<TaskAttachment> override
         {
             return attachments;
         }
-        virtual auto _raw_attachments() const -> std::span<TaskAttachment const> override
+        constexpr virtual auto _raw_attachments() const -> std::span<TaskAttachment const> override
         {
             return attachments;
         }
-        virtual char const * name() const override { return _name; };
+        constexpr virtual char const * name() const override { return _name; };
         virtual void callback(TaskInterface ti) const override
         {
             _callback(ti);
