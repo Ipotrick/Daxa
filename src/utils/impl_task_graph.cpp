@@ -974,8 +974,8 @@ namespace daxa
                 runtime_data.view_ids = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
                 validate_task_image_runtime_data(task, attach, runtime_data);
             });
-        std::vector<std::byte> shader_byte_blob = {};
-        shader_byte_blob.resize(task.base_task->_shader_blob_size());
+        std::vector<std::byte> attachment_shader_data_blob = {};
+        attachment_shader_data_blob.resize(task.base_task->_shader_blob_size());
         usize shader_byte_blob_offset = 0;
         for_each(
             task.base_task->_raw_attachments(),
@@ -988,14 +988,14 @@ namespace daxa
                     {
                         DeviceAddress buf_address = info.device.get_device_address(buf_id).value();
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(buf_address);
-                        std::memcpy(shader_byte_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
+                        std::memcpy(attachment_shader_data_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
                         /// WARNING: Keep offsets must be incremented by 8!
                         shader_byte_blob_offset += sizeof(DeviceAddress);
                     }
                     else
                     {
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(BufferId)>>(buf_id);
-                        std::memcpy(shader_byte_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(BufferId));
+                        std::memcpy(attachment_shader_data_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(BufferId));
                         /// WARNING: Keep offsets must be incremented by 8!
                         shader_byte_blob_offset += sizeof(BufferId);
                     }
@@ -1007,7 +1007,7 @@ namespace daxa
                 {
                     ImageViewId img_id = daxa::get<TaskImageAttachmentInfo>(task.runtime_data[attachment_index]).view_ids[shader_array_i];
                     auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(ImageViewId)>>(img_id);
-                    std::memcpy(shader_byte_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(ImageViewId));
+                    std::memcpy(attachment_shader_data_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(ImageViewId));
                     /// WARNING: Keep offsets must be incremented by 8!
                     shader_byte_blob_offset += sizeof(ImageViewId);
                 }
@@ -1022,7 +1022,7 @@ namespace daxa
             .recorder = impl_runtime.recorder,
             .attachment_infos = task.runtime_data,
             .allocator = this->staging_memory.has_value() ? &this->staging_memory.value() : nullptr,
-            .shader_byte_blob = shader_byte_blob,
+            .attachment_shader_data_blob = attachment_shader_data_blob,
         });
         impl_runtime.recorder.end_label();
     }

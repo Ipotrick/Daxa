@@ -197,7 +197,7 @@ struct MyTaskHead
     std::array<
         daxa::u64, 
         daxa::detail::task_head_shader_blob_size<Uses>()
-    > shader_byte_blob = {};
+    > attachment_shader_data_blob = {};
 };
 ```
 

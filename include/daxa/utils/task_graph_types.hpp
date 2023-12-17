@@ -288,7 +288,7 @@ namespace daxa
         std::span<TaskAttachmentInfoVariant const> attachment_infos = {};
         // optional:
         TransferMemoryPool * allocator = {};
-        std::span<std::byte> shader_byte_blob = {};
+        std::span<std::byte> attachment_shader_data_blob = {};
 
         TaskBufferAttachmentInfo const & buf_attach(TaskBufferAttachmentIndex index) const;
         TaskBufferAttachmentInfo const & buf_attach(TaskBufferView view) const;
