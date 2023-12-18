@@ -344,7 +344,43 @@ namespace daxa
             _raw[index.value].value.image.view = view;
         }
         /// WARNING: Meant for internal use only! Do not access this field without knowing what you are doing!
+        u8 _offset = 0;
         std::array<TaskAttachment, SIZE> _raw = {};
+        constexpr TaskBufferAttachmentIndex static_append(TaskBufferAttachment const & attach)
+        {
+            _raw.at(_offset) = attach;
+            return TaskBufferAttachmentIndex{_offset++};
+        }
+        constexpr TaskImageAttachmentIndex static_append(TaskImageAttachment const & attach)
+        {
+            _raw.at(_offset) = attach;
+            return TaskImageAttachmentIndex{_offset++};
+        }
+    };
+
+    template <usize N>
+    struct StringLiteral
+    {
+        constexpr StringLiteral(char const (&str)[N])
+        {
+            std::copy_n(str, N, value);
+        }
+        char value[N];
+    };
+
+    template <usize ATTACHMENT_COUNT, StringLiteral NAME>
+    struct PartialTask : ITask
+    {
+        constexpr virtual char const * name() const override { return NAME.value; }
+        constexpr virtual std::span<daxa::TaskAttachment> _raw_attachments() override
+        {
+            return attachments._raw;
+        }
+        constexpr virtual std::span<daxa::TaskAttachment const> _raw_attachments() const override
+        {
+            return attachments._raw;
+        }
+        daxa::TaskAttachmentArray<ATTACHMENT_COUNT> attachments = {};
     };
 
     namespace detail
@@ -406,40 +442,23 @@ namespace daxa
     ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⡙⠓⠻⠶⠽⢮⣶⣥⣷⣭⣾⣥⣯⡵⠯⠼⠗⠛⠋⣉⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     */
 
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME, SIZE)                                      \
-    struct HEAD_NAME : daxa::ITask                                                      \
-    {                                                                                   \
-        constexpr virtual char const * name() const override { return #HEAD_NAME; }               \
-        constexpr virtual std::span<daxa::TaskAttachment> _raw_attachments() override             \
-        {                                                                               \
-            return attachments._raw;                                                    \
-        }                                                                               \
-        constexpr virtual std::span<daxa::TaskAttachment const> _raw_attachments() const override \
-        {                                                                               \
-            return attachments._raw;                                                    \
-        }                                                                               \
-        daxa::u8 _declared_attachments_count = {};                                      \
-        daxa::TaskAttachmentArray<SIZE> attachments = {};
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME, SIZE)         \
+    struct HEAD_NAME : daxa::PartialTask<SIZE, #HEAD_NAME> \
+    {
 
 #define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)        \
-    const daxa::TaskBufferAttachmentIndex NAME = [this]() {   \
-        auto index = _declared_attachments_count++;           \
-        attachments._raw[index] = daxa::TaskBufferAttachment{ \
+    const daxa::TaskBufferAttachmentIndex NAME =              \
+        attachments.static_append(daxa::TaskBufferAttachment{ \
             .name = #NAME,                                    \
             .access = daxa::TaskBufferAccess::TASK_ACCESS,    \
-            __VA_ARGS__};                                     \
-        return daxa::TaskBufferAttachmentIndex{index};        \
-    }();
+            __VA_ARGS__});
 
 #define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)        \
-    const daxa::TaskImageAttachmentIndex NAME = [this]() {   \
-        auto index = _declared_attachments_count++;          \
-        attachments._raw[index] = daxa::TaskImageAttachment{ \
+    const daxa::TaskImageAttachmentIndex NAME =              \
+        attachments.static_append(daxa::TaskImageAttachment{ \
             .name = #NAME,                                   \
             .access = daxa::TaskImageAccess::TASK_ACCESS,    \
-            __VA_ARGS__};                                    \
-        return daxa::TaskImageAttachmentIndex{index};        \
-    }();
+            __VA_ARGS__});
 
 #define DAXA_DECL_TASK_HEAD_END \
     }                           \

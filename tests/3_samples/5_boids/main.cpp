@@ -11,69 +11,6 @@ using Clock = std::chrono::high_resolution_clock;
 
 #include "shared.inl"
 
-// Update task:
-
-DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
-DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ_WRITE, current)
-DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, previous)
-DAXA_DECL_TASK_HEAD_END
-struct UpdateBoidsTask : UpdateBoids
-{
-    std::string_view name = "update boids";
-    std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
-    virtual void callback(daxa::TaskInterface ti) const
-    {
-        ti.recorder.set_pipeline(*update_boids_pipeline);
-        ti.recorder.push_constant(UpdateBoidsPushConstant{
-            .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
-            .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
-        });
-        ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
-    }
-};
-
-// Draw task:
-
-DAXA_DECL_TASK_HEAD_BEGIN(DrawBoids, 2)
-DAXA_TH_BUFFER_NO_SHADER(VERTEX_SHADER_READ, boids)
-DAXA_TH_IMAGE_NO_SHADER(COLOR_ATTACHMENT, REGULAR_2D, render_image)
-DAXA_DECL_TASK_HEAD_END
-struct DrawBoidsTask : DrawBoids
-{
-    std::string_view name = "draw boids";
-    std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
-    u32 * size_x = {};
-    u32 * size_y = {};
-    virtual void callback(daxa::TaskInterface ti) const
-    {
-        auto render_recorder = std::move(ti.recorder).begin_renderpass({
-            .color_attachments = std::array{
-                daxa::RenderAttachmentInfo{
-                    .image_view = ti.attach(render_image).view_ids[0],
-                    .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
-                    .load_op = daxa::AttachmentLoadOp::CLEAR,
-                    .store_op = daxa::AttachmentStoreOp::STORE,
-                    .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
-                },
-            },
-            .render_area = {
-                .width = *size_x,
-                .height = *size_y,
-            },
-        });
-        render_recorder.set_pipeline(*draw_pipeline);
-        render_recorder.push_constant(DrawPushConstant{
-            .boids_buffer = ti.device.get_device_address(ti.attach(boids).ids[0]).value(),
-            .axis_scaling = {
-                std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
-                std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
-            },
-        });
-        render_recorder.draw({.vertex_count = 3 * MAX_BOIDS});
-        ti.recorder = std::move(render_recorder).end_renderpass();
-    }
-};
-
 struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
@@ -195,6 +132,73 @@ struct App : AppWindow<App>
         device.destroy_buffer(boid_buffer);
         device.destroy_buffer(old_boid_buffer);
     }
+
+    // Update task:
+
+    struct UpdateBoidsTask : daxa::PartialTask<2, "UpdateBoids">
+    {
+        daxa::TaskBufferAttachmentIndex current = attachments.static_append(daxa::TaskBufferAttachment{
+            .access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE,
+        });
+        daxa::TaskBufferAttachmentIndex previous = attachments.static_append(daxa::TaskBufferAttachment{
+            .access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ,
+        });
+        std::string_view name = "update boids";
+        std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
+        virtual void callback(daxa::TaskInterface ti) const
+        {
+            ti.recorder.set_pipeline(*update_boids_pipeline);
+            ti.recorder.push_constant(UpdateBoidsPushConstant{
+                .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
+                .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
+            });
+            ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
+        }
+    };
+
+    // Draw task:
+
+    struct DrawBoidsTask : daxa::PartialTask<2, "DrawBoids">
+    {
+        daxa::TaskBufferAttachmentIndex boids = attachments.static_append(daxa::TaskBufferAttachment{
+            .access = daxa::TaskBufferAccess::VERTEX_SHADER_READ,
+        });
+        daxa::TaskImageAttachmentIndex render_image = attachments.static_append(daxa::TaskImageAttachment{
+            .access = daxa::TaskImageAccess::COLOR_ATTACHMENT,
+        });
+        std::string_view name = "draw boids";
+        std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
+        u32 * size_x = {};
+        u32 * size_y = {};
+        virtual void callback(daxa::TaskInterface ti) const
+        {
+            auto render_recorder = std::move(ti.recorder).begin_renderpass({
+                .color_attachments = std::array{
+                    daxa::RenderAttachmentInfo{
+                        .image_view = ti.attach(render_image).view_ids[0],
+                        .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .store_op = daxa::AttachmentStoreOp::STORE,
+                        .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},
+                    },
+                },
+                .render_area = {
+                    .width = *size_x,
+                    .height = *size_y,
+                },
+            });
+            render_recorder.set_pipeline(*draw_pipeline);
+            render_recorder.push_constant(DrawPushConstant{
+                .boids_buffer = ti.device.get_device_address(ti.attach(boids).ids[0]).value(),
+                .axis_scaling = {
+                    std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
+                    std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
+                },
+            });
+            render_recorder.draw({.vertex_count = 3 * MAX_BOIDS});
+            ti.recorder = std::move(render_recorder).end_renderpass();
+        }
+    };
 
     auto update() -> bool
     {
