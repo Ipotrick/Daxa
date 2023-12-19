@@ -373,6 +373,14 @@ namespace daxa
         {
             return _raw;
         }
+        auto attachment(TaskBufferAttachmentIndex index) const -> TaskBufferAttachment const &
+        {
+            return _raw[index.value].value.buffer;
+        }
+        auto attachment(TaskImageAttachmentIndex index) const -> TaskImageAttachment const &
+        {
+            return _raw[index.value].value.image;
+        }
         virtual void set_view(TaskBufferAttachmentIndex index, TaskBufferView view) override
         {
             _raw[index.value].value.buffer.view = view;
