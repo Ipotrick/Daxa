@@ -136,11 +136,11 @@ namespace daxa
 
     auto to_string(TaskGPUResourceView const & id) -> std::string;
 
-    struct DAXA_EXPORT_CXX TaskBufferView : public TaskGPUResourceView
+    struct TaskBufferView : public TaskGPUResourceView
     {
     };
 
-    struct DAXA_EXPORT_CXX TaskImageView : public TaskGPUResourceView
+    struct TaskImageView : public TaskGPUResourceView
     {
         daxa::ImageMipArraySlice slice = {};
         auto view(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageView
@@ -221,7 +221,7 @@ namespace daxa
         std::is_same_v<T, TaskBufferAttachmentIndex> || std::is_same_v<T, TaskImageAttachmentIndex>;
     };
 
-    struct DAXA_EXPORT_CXX TaskAttachment
+    struct TaskAttachment
     {
         TaskAttachmentType type = TaskAttachmentType::UNDEFINED;
         union Value
@@ -324,7 +324,7 @@ namespace daxa
     };
 
     template <usize N>
-    struct DAXA_EXPORT_CXX StringLiteral
+    struct StringLiteral
     {
         constexpr StringLiteral(char const (&str)[N])
         {
@@ -334,7 +334,7 @@ namespace daxa
     };
 
     template <usize ATTACHMENT_COUNT, StringLiteral NAME>
-    struct DAXA_EXPORT_CXX PartialTask : ITask
+    struct PartialTask : ITask
     {
         constexpr virtual char const * name() const override { return NAME.value; }
         /// WARNING: Meant for internal use only! Do not access this field without knowing what you are doing!
