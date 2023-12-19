@@ -290,9 +290,22 @@ namespace tests
                         .source = daxa::ShaderFile{"shaders.glsl"},
                     },
                     .push_constant_size = sizeof(PushConstant),
-                    .name = "ray qery comp shader",
+                    .name = "ray query comp shader",
                 };
                 comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
+
+                auto const ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo{
+                    .ray_gen_infos = {daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"raygen.glsl"},
+                    }},
+                    .shader_groups_infos = {daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 0,
+                    }},
+                    .push_constant_size = sizeof(PushConstant),
+                    .name = "ray tracing raygen shader",
+                };
+                rt_pipeline = pipeline_manager.add_ray_tracing_pipeline(ray_tracing_pipe_info).value();
             }
 
             auto update() -> bool

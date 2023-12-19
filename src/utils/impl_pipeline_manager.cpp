@@ -629,11 +629,11 @@ namespace daxa
                         return Result<RayTracingPipelineState>(spv_result->message());
                     }
                 }
-                (*final_shader_info)[i] = daxa::ShaderInfo{
+                final_shader_info->push_back(daxa::ShaderInfo{
                     .byte_code = spv_result->value().data(),
                     .byte_code_size = static_cast<u32>(spv_result->value().size()),
                     .entry_point = {shader_compile_info.compile_options.entry_point.value()},
-                };
+                });
             }
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_ray_tracing_pipeline(ray_tracing_pipeline_info);

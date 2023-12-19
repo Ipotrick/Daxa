@@ -393,15 +393,8 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     ret.device = device;
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
 
-    u32 stage_count = ret.info.ray_gen_shaders.size() + 
-        ret.info.intersection_shaders.size() + 
-        ret.info.any_hit_shaders.size() +
-        ret.info.callable_shaders.size() + 
-        ret.info.closest_hit_shaders.size() + 
-        ret.info.miss_hit_shaders.size();
-
-    std::vector<VkPipelineShaderStageCreateInfo> stages(stage_count);
-    std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups(ret.info.shader_groups.size());
+    std::vector<VkPipelineShaderStageCreateInfo> stages = {};
+    std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups = {};
     
     std::vector<VkShaderModule> vk_shader_modules = {};
     // NOTE: Temporarily holds 0 terminated strings, incoming strings are data + size, not null terminated!
@@ -535,6 +528,22 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         }
     }
 
+    // Shader groups
+    for (u32 i = 0; i < ret.info.shader_groups.size(); ++i)
+    {
+        auto shader_group = ret.info.shader_groups.at(i);
+        VkRayTracingShaderGroupCreateInfoKHR group{
+            .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .type = static_cast<VkRayTracingShaderGroupTypeKHR>(shader_group.type),
+            .generalShader = shader_group.general_shader_index,
+            .closestHitShader = shader_group.closest_hit_shader_index,
+            .anyHitShader = shader_group.any_hit_shader_index,
+            .intersectionShader = shader_group.intersection_shader_index,
+        };
+        groups.push_back(group);
+    }
+
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
     VkRayTracingPipelineCreateInfoKHR const vk_ray_tracing_pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
@@ -557,6 +566,14 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         &vk_ray_tracing_pipeline_create_info,
         nullptr,
         &ret.vk_pipeline);
+
+    // Create ray tracing shader group handles 
+    if (pipeline_result == VK_SUCCESS) {
+        // This function creates 4 buffers, for raygen, miss, (hit+int+any) and callable shader.
+        // Each buffer will have the handle + 'data (if any)', .. n-times they have entries in the pipeline.
+        // TODO: implement this
+
+    }
 
     for (auto & vk_shader_module : vk_shader_modules)
     {

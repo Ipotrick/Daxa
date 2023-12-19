@@ -49,6 +49,7 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR = {};
     PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR = {};
     PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR = {};
+    PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR = {};
 
     VkBuffer buffer_device_address_buffer = {};
     u64 * buffer_device_address_buffer_host_ptr = {};

@@ -21,13 +21,21 @@ _DAXA_DECL_FIXED_LIST(daxa_RayTracingShaderInfo, 10)
 
 typedef struct {
     // TODO: daxa types?
-    VkRayTracingShaderGroupTypeKHR group_type;
+    VkRayTracingShaderGroupTypeKHR type;
     uint32_t general_shader_index;
     uint32_t closest_hit_shader_index;
     uint32_t any_hit_shader_index;
     uint32_t intersection_shader_index;
 } daxa_RayTracingShaderGroupInfo;
 _DAXA_DECL_FIXED_LIST(daxa_RayTracingShaderGroupInfo, 10)
+
+#define DAXA_RAY_TRACING_SHADER_GROUP_INFO_DEFAULT { \
+    .group_type = 0, \
+    .general_shader_index = VK_SHADER_UNUSED_KHR, \
+    .closest_hit_shader_index = VK_SHADER_UNUSED_KHR, \
+    .any_hit_shader_index = VK_SHADER_UNUSED_KHR, \
+    .intersection_shader_index = VK_SHADER_UNUSED_KHR \
+}
 
 typedef struct
 {

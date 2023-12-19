@@ -12,13 +12,14 @@ namespace daxa
         SmallString entry_point = "main";
     };
 
+    // TODO: find a better way to link shader groups to shaders than by index
     struct RayTracingShaderGroupInfo
     {
-        ShaderGroup group_type;
-        u32 general_shader_index;
-        u32 closest_hit_shader_index;
-        u32 any_hit_shader_index;
-        u32 intersection_shader_index;
+        ShaderGroup type;
+        u32 general_shader_index = (~0U);
+        u32 closest_hit_shader_index = (~0U);
+        u32 any_hit_shader_index = (~0U);
+        u32 intersection_shader_index = (~0U);
     };
 
 

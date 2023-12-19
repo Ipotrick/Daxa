@@ -9,3 +9,8 @@ struct PushConstant
     daxa_TlasId tlas;
     daxa_ImageViewId swapchain;
 };
+
+struct hitPayload
+{
+  daxa_f32vec3 hitValue;
+};
