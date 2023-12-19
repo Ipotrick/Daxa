@@ -402,7 +402,7 @@ daxa_cmd_reset_event(daxa_CommandRecorder cmd_enc, daxa_ResetEventInfo const * i
 DAXA_EXPORT void
 daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, void const * data, uint32_t size);
 DAXA_EXPORT void
-daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder cmd_enc, daxa_RayTracingPipeline const * pipeline);
+daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder cmd_enc, daxa_RayTracingPipeline pipeline);
 DAXA_EXPORT void
 daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline const * pipeline);
 DAXA_EXPORT void

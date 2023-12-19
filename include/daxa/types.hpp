@@ -1761,20 +1761,6 @@ namespace daxa
         none = 1000165000,
     };
 
-
-    // enum struct ShaderStage
-    // {
-    //     // TODO: check this
-    //     RAYGEN = 0x00000100,
-    //     ANY_HIT = 0x00000200,
-    //     CLOSEST_HIT = 0x00000400,
-    //     MISS = 0x00000800,
-    //     INTERSECTION = 0x00001000,
-    //     CALLABLE = 0x00002000,
-    //     MAX_ENUM = 0x7fffffff,
-    // };
-
-
     enum struct ShaderGroup {
         GENERAL = 0,
         TRIANGLES_HIT_GROUP = 1,

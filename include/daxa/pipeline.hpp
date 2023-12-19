@@ -11,7 +11,7 @@ namespace daxa
         u32 byte_code_size;
         SmallString entry_point = "main";
     };
-    
+
     struct RayTracingShaderGroupInfo
     {
         ShaderGroup group_type;
@@ -25,11 +25,11 @@ namespace daxa
     struct RayTracingPipelineInfo
     {
         FixedList<ShaderInfo, 10> ray_gen_shaders = {};
-        FixedList<ShaderInfo, 10> miss_shaders = {};
-        FixedList<ShaderInfo, 10> callable_shaders = {};
         FixedList<ShaderInfo, 10> intersection_shaders = {};
-        FixedList<ShaderInfo, 10> closest_hit_shaders = {};
         FixedList<ShaderInfo, 10> any_hit_shaders = {};
+        FixedList<ShaderInfo, 10> callable_shaders = {};
+        FixedList<ShaderInfo, 10> closest_hit_shaders = {};
+        FixedList<ShaderInfo, 10> miss_hit_shaders = {};
         FixedList<RayTracingShaderGroupInfo, 10> shader_groups = {};
         u32 max_recursion_depth;
         u32 push_constant_size = {};

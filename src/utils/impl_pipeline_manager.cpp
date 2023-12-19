@@ -546,53 +546,98 @@ namespace daxa
 
     auto ImplPipelineManager::create_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<RayTracingPipelineState>
     {
-        // auto modified_info = a_info;
-        // modified_info.shader_info.compile_options.inherit(this->info.shader_compile_options);
-        // if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
-        // {
-        //     return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
-        // }
-        // if (modified_info.push_constant_size % 4 != 0)
-        // {
-        //     return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
-        // }
-        // auto pipe_result = RayTracingPipelineState{
-        //     .pipeline_ptr = std::make_shared<RayTracingPipeline>(),
-        //     .info = modified_info,
-        //     .last_hotload_time = std::chrono::file_clock::now(),
-        //     .observed_hotload_files = {},
-        // };
-        // this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
-        // auto spirv_result = get_spirv(pipe_result.info.shader_info, pipe_result.info.name, ShaderStage::COMP);
-        // if (spirv_result.is_err())
-        // {
-        //     if (this->info.register_null_pipelines_when_first_compile_fails)
-        //     {
-        //         auto result = Result<RayTracingPipelineState>(pipe_result);
-        //         result.m = std::move(spirv_result.message());
-        //         return result;
-        //     }
-        //     else
-        //     {
-        //         return Result<RayTracingPipelineState>(spirv_result.message());
-        //     }
-        // }
-        // char const * entry_point = "main";
-        // if (a_info.shader_info.compile_options.entry_point.has_value())
-        // {
-        //     entry_point = a_info.shader_info.compile_options.entry_point.value().c_str();
-        // }
-        // (*pipe_result.pipeline_ptr) = this->info.device.create_ray_tracing_pipeline({
-        //     .shader_info = {
-        //         .byte_code = spirv_result.value().data(),
-        //         .byte_code_size = static_cast<u32>(spirv_result.value().size()),
-        //         .entry_point = entry_point,
-        //     },
-        //     .push_constant_size = modified_info.push_constant_size,
-        //     .name = modified_info.name.c_str(),
-        // });
-        // return Result<RayTracingPipelineState>(std::move(pipe_result));
-        return Result<RayTracingPipelineState>(nullptr);
+        auto modified_info = a_info;
+        for (auto & shader_compile_info : modified_info.ray_gen_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.intersection_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.any_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.callable_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.closest_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.miss_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+
+
+        if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        {
+            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
+        }
+        if (modified_info.push_constant_size % 4 != 0)
+        {
+            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
+        }
+        auto pipe_result = RayTracingPipelineState{
+            .pipeline_ptr = std::make_shared<RayTracingPipeline>(),
+            .info = modified_info,
+            .last_hotload_time = std::chrono::file_clock::now(),
+            .observed_hotload_files = {},
+        };
+        this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
+        auto ray_tracing_pipeline_info = RayTracingPipelineInfo{
+            .shader_groups = {modified_info.shader_groups_infos.data(), modified_info.shader_groups_infos.size()},
+            .max_recursion_depth = modified_info.max_recursion_depth,
+            .push_constant_size = modified_info.push_constant_size,
+            .name = modified_info.name,
+        };
+        auto raygen_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto intersection_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto any_hit_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto callable_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto closest_hit_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        auto miss_hit_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
+        using ElemT = std::tuple<std::vector<ShaderCompileInfo> *, FixedList<ShaderInfo, 10> *, daxa::Result<std::vector<unsigned int>> *, ShaderStage>;
+        auto const result_shader_compile_infos = std::array<ElemT, 6>{
+            ElemT{&pipe_result.info.ray_gen_infos, &ray_tracing_pipeline_info.ray_gen_shaders, &raygen_spirv_result, ShaderStage::RAY_GEN},
+            ElemT{&pipe_result.info.intersection_infos, &ray_tracing_pipeline_info.intersection_shaders, &intersection_spirv_result, ShaderStage::RAY_INTERSECT},
+            ElemT{&pipe_result.info.any_hit_infos, &ray_tracing_pipeline_info.any_hit_shaders, &any_hit_spirv_result, ShaderStage::RAY_ANY_HIT},
+            ElemT{&pipe_result.info.callable_infos, &ray_tracing_pipeline_info.callable_shaders, &callable_spirv_result, ShaderStage::RAY_CALLABLE},
+            ElemT{&pipe_result.info.closest_hit_infos, &ray_tracing_pipeline_info.closest_hit_shaders, &closest_hit_spirv_result, ShaderStage::RAY_CLOSEST_HIT},
+            ElemT{&pipe_result.info.miss_hit_infos, &ray_tracing_pipeline_info.miss_hit_shaders, &miss_hit_spirv_result, ShaderStage::RAY_MISS},
+        };
+        
+        for (auto [pipe_result_shader_info, final_shader_info, spv_result, stage] : result_shader_compile_infos)
+        {
+            for (FixedListSizeT i = 0; i < pipe_result_shader_info->size(); ++i)
+            {
+                auto &shader_compile_info = (*pipe_result_shader_info)[i];
+                *spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
+                if (spv_result->is_err())
+                {
+                    if (this->info.register_null_pipelines_when_first_compile_fails)
+                    {
+                        auto result = Result<RayTracingPipelineState>(pipe_result);
+                        result.m = std::move(spv_result->message());
+                        return result;
+                    }
+                    else
+                    {
+                        return Result<RayTracingPipelineState>(spv_result->message());
+                    }
+                }
+                (*final_shader_info)[i] = daxa::ShaderInfo{
+                    .byte_code = spv_result->value().data(),
+                    .byte_code_size = static_cast<u32>(spv_result->value().size()),
+                    .entry_point = {shader_compile_info.compile_options.entry_point.value()},
+                };
+            }
+        }
+        (*pipe_result.pipeline_ptr) = this->info.device.create_ray_tracing_pipeline(ray_tracing_pipeline_info);
+        return Result<RayTracingPipelineState>(std::move(pipe_result));
     }
 
     auto ImplPipelineManager::create_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<ComputePipelineState>
@@ -969,6 +1014,23 @@ namespace daxa
             {
                 reloaded = true;
                 auto new_pipeline = create_raster_pipeline(compile_info);
+                if (new_pipeline.is_ok())
+                {
+                    *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
+                }
+                else
+                {
+                    return PipelineReloadError{new_pipeline.m};
+                }
+            }
+        }
+
+        for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->ray_tracing_pipelines)
+        {
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files, lookup_table))
+            {
+                reloaded = true;
+                auto new_pipeline = create_ray_tracing_pipeline(compile_info);
                 if (new_pipeline.is_ok())
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);

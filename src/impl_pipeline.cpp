@@ -394,11 +394,11 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
 
     u32 stage_count = ret.info.ray_gen_shaders.size() + 
-        ret.info.miss_shaders.size() + 
-        ret.info.callable_shaders.size() + 
         ret.info.intersection_shaders.size() + 
+        ret.info.any_hit_shaders.size() +
+        ret.info.callable_shaders.size() + 
         ret.info.closest_hit_shaders.size() + 
-        ret.info.any_hit_shaders.size();
+        ret.info.miss_hit_shaders.size();
 
     std::vector<VkPipelineShaderStageCreateInfo> stages(stage_count);
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups(ret.info.shader_groups.size());
@@ -455,6 +455,76 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     {
         auto stage = ret.info.ray_gen_shaders.at(i);
         auto result = create_shader_module(stage, VkShaderStageFlagBits::VK_SHADER_STAGE_RAYGEN_BIT_KHR);
+        if (result != VK_SUCCESS)
+        {
+            for (auto module : vk_shader_modules)
+            {
+                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
+            }
+            return std::bit_cast<daxa_Result>(result);
+        }
+    }
+
+    for (FixedListSizeT i = 0; i < ret.info.intersection_shaders.size(); ++i)
+    {
+        auto stage = ret.info.intersection_shaders.at(i);
+        auto result = create_shader_module(stage, VkShaderStageFlagBits::VK_SHADER_STAGE_INTERSECTION_BIT_KHR);
+        if (result != VK_SUCCESS)
+        {
+            for (auto module : vk_shader_modules)
+            {
+                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
+            }
+            return std::bit_cast<daxa_Result>(result);
+        }
+    }
+
+    for (FixedListSizeT i = 0; i < ret.info.any_hit_shaders.size(); ++i)
+    {
+        auto stage = ret.info.any_hit_shaders.at(i);
+        auto result = create_shader_module(stage, VkShaderStageFlagBits::VK_SHADER_STAGE_ANY_HIT_BIT_KHR);
+        if (result != VK_SUCCESS)
+        {
+            for (auto module : vk_shader_modules)
+            {
+                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
+            }
+            return std::bit_cast<daxa_Result>(result);
+        }
+    }
+
+    for (FixedListSizeT i = 0; i < ret.info.callable_shaders.size(); ++i)
+    {
+        auto stage = ret.info.callable_shaders.at(i);
+        auto result = create_shader_module(stage, VkShaderStageFlagBits::VK_SHADER_STAGE_CALLABLE_BIT_KHR);
+        if (result != VK_SUCCESS)
+        {
+            for (auto module : vk_shader_modules)
+            {
+                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
+            }
+            return std::bit_cast<daxa_Result>(result);
+        }
+    }
+
+    for (FixedListSizeT i = 0; i < ret.info.miss_hit_shaders.size(); ++i)
+    {
+        auto stage = ret.info.miss_hit_shaders.at(i);
+        auto result = create_shader_module(stage, VkShaderStageFlagBits::VK_SHADER_STAGE_MISS_BIT_KHR);
+        if (result != VK_SUCCESS)
+        {
+            for (auto module : vk_shader_modules)
+            {
+                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
+            }
+            return std::bit_cast<daxa_Result>(result);
+        }
+    }
+
+    for (FixedListSizeT i = 0; i < ret.info.closest_hit_shaders.size(); ++i)
+    {
+        auto stage = ret.info.closest_hit_shaders.at(i);
+        auto result = create_shader_module(stage, VkShaderStageFlagBits::VK_SHADER_STAGE_CLOSEST_HIT_BIT_KHR);
         if (result != VK_SUCCESS)
         {
             for (auto module : vk_shader_modules)

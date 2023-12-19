@@ -410,6 +410,7 @@ namespace daxa
     _DAXA_DECL_DVC_CREATE_FN(CommandRecorder, command_recorder)
     _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
+    _DAXA_DECL_DVC_CREATE_FN(RayTracingPipeline, ray_tracing_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
     _DAXA_DECL_DVC_CREATE_FN(BinarySemaphore, binary_semaphore)
     _DAXA_DECL_DVC_CREATE_FN(TimelineSemaphore, timeline_semaphore)
