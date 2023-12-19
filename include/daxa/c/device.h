@@ -411,6 +411,8 @@ daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo cons
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipeline * out_pipeline);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderInfo const * info, daxa_CommandRecorder * out_command_list);

@@ -1,4 +1,5 @@
 #include <iostream>
+#include <thread>
 
 #include <daxa/daxa.hpp>
 #include <daxa/utils/pipeline_manager.hpp>
@@ -19,10 +20,11 @@ namespace tests
             daxa::Device device = {};
             daxa::Swapchain swapchain = {};
             daxa::PipelineManager pipeline_manager = {};
-            std::shared_ptr<daxa::ComputePipeline> comp_pipeline = {};
+            // std::shared_ptr<daxa::ComputePipeline> comp_pipeline = {};
+            std::shared_ptr<daxa::RayTracingPipeline> rt_pipeline = {};
             daxa::TlasId tlas = {};
             daxa::BlasId blas = {};
-            daxa::BlasId proc_blas = {};
+            // daxa::BlasId proc_blas = {};
 
             App() : AppWindow<App>("ray query test") {}
 
@@ -32,7 +34,7 @@ namespace tests
                 {
                     device.destroy_tlas(tlas);
                     device.destroy_blas(blas);
-                    device.destroy_blas(proc_blas);
+                    // device.destroy_blas(proc_blas);
                 }
             }
 
@@ -106,7 +108,6 @@ namespace tests
                         .flags = daxa::GeometryFlagBits::OPAQUE,                                    // Is also default
                     }};
                 /// Create Triangle Blas:
-                /// TODO(Raytracing): create aabb data, buffers, BlasAabbGeometryInfo and blas for it.
                 auto blas_build_info = daxa::BlasBuildInfo{
                     .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,       // Is also default
                     .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.       // Is also default
@@ -136,53 +137,53 @@ namespace tests
 // https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#VUID-VkAccelerationStructureBuildGeometryInfoKHR-type-03792
 // GeometryType of each element of pGeometries must be the same
                 
-                /// aabb data:
-                auto min_max = std::array{
-                    std::array{-0.15f, -0.15f, -0.15f},
-                    std::array{0.15f, 0.15f, 0.15f},
-                };
-                auto aabb_buffer = device.create_buffer({
-                    .size = sizeof(decltype(min_max)),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                    .name = "aabb buffer",
-                });
-                defer { device.destroy_buffer(aabb_buffer); };
-                *device.get_host_address_as<decltype(min_max)>(aabb_buffer).value() = min_max;
-                /// Procedural Geometry Info:
-                auto proc_geometries = std::array{
-                    daxa::BlasAabbGeometryInfo{
-                        .data = device.get_device_address(aabb_buffer).value(),
-                        .stride = sizeof(daxa_f32mat3x2),
-                        .count = 1,
-                        .flags = daxa::GeometryFlagBits::OPAQUE,                                    // Is also default
-                    }};
-                /// Create Procedural Blas:
-                auto proc_blas_build_info = daxa::BlasBuildInfo{
-                    .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,       // Is also default
-                    .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.       // Is also default
-                    .geometries = proc_geometries,
-                    .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
-                };
-                daxa::AccelerationStructureBuildSizesInfo proc_build_size_info = device.get_blas_build_sizes(proc_blas_build_info);
-                auto proc_blas_scratch_buffer = device.create_buffer({
-                    .size = proc_build_size_info.build_scratch_size,
-                    .name = "proc blas build scratch buffer",
-                });
-                defer { device.destroy_buffer(proc_blas_scratch_buffer); };
-                this->proc_blas = device.create_blas({
-                    .size = build_size_info.acceleration_structure_size,
-                    .name = "test procedural blas",
-                });
-                proc_blas_build_info.dst_blas = proc_blas;
-                proc_blas_build_info.scratch_data = device.get_device_address(proc_blas_scratch_buffer).value();
+                // /// aabb data:
+                // auto min_max = std::array{
+                //     std::array{-0.15f, -0.15f, -0.15f},
+                //     std::array{0.15f, 0.15f, 0.15f},
+                // };
+                // auto aabb_buffer = device.create_buffer({
+                //     .size = sizeof(decltype(min_max)),
+                //     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                //     .name = "aabb buffer",
+                // });
+                // defer { device.destroy_buffer(aabb_buffer); };
+                // *device.get_host_address_as<decltype(min_max)>(aabb_buffer).value() = min_max;
+                // /// Procedural Geometry Info:
+                // auto proc_geometries = std::array{
+                //     daxa::BlasAabbGeometryInfo{
+                //         .data = device.get_device_address(aabb_buffer).value(),
+                //         .stride = sizeof(daxa_f32mat3x2),
+                //         .count = 1,
+                //         .flags = daxa::GeometryFlagBits::OPAQUE,                                    // Is also default
+                //     }};
+                // /// Create Procedural Blas:
+                // auto proc_blas_build_info = daxa::BlasBuildInfo{
+                //     .flags = daxa::AccelerationStructureBuildFlagBits::PREFER_FAST_TRACE,       // Is also default
+                //     .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.       // Is also default
+                //     .geometries = proc_geometries,
+                //     .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
+                // };
+                // daxa::AccelerationStructureBuildSizesInfo proc_build_size_info = device.get_blas_build_sizes(proc_blas_build_info);
+                // auto proc_blas_scratch_buffer = device.create_buffer({
+                //     .size = proc_build_size_info.build_scratch_size,
+                //     .name = "proc blas build scratch buffer",
+                // });
+                // defer { device.destroy_buffer(proc_blas_scratch_buffer); };
+                // this->proc_blas = device.create_blas({
+                //     .size = build_size_info.acceleration_structure_size,
+                //     .name = "test procedural blas",
+                // });
+                // proc_blas_build_info.dst_blas = proc_blas;
+                // proc_blas_build_info.scratch_data = device.get_device_address(proc_blas_scratch_buffer).value();
 
 
 
 
                 /// create blas instances for tlas:
-                /// TODO(Raytracing): add instance of blas for aabb.
                 auto blas_instances_buffer = device.create_buffer({
-                    .size = sizeof(daxa_BlasInstanceData) * 2,
+                    // .size = sizeof(daxa_BlasInstanceData) * 2,
+                    .size = sizeof(daxa_BlasInstanceData),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "blas instances array buffer",
                 });
@@ -202,29 +203,28 @@ namespace tests
                         .flags = {},                                       // Is also default
                         .blas_device_address = device.get_device_address(blas).value(),
                     },
-                    daxa_BlasInstanceData{
-                        .transform = {
-                            {1, 0, 0, 0.25f},
-                            {0, 1, 0, 0.25f},
-                            {0, 0, 1, 0.5f},
-                        },
-                        .instance_custom_index = 1, // Is also default
-                        .mask = 0xFF,
-                        .instance_shader_binding_table_record_offset = {}, // Is also default
-                        .flags = {},                                       // Is also default
-                        .blas_device_address = device.get_device_address(proc_blas).value(),
-                    }
+                    // daxa_BlasInstanceData{
+                    //     .transform = {
+                    //         {1, 0, 0, 0.25f},
+                    //         {0, 1, 0, 0.25f},
+                    //         {0, 0, 1, 0.5f},
+                    //     },
+                    //     .instance_custom_index = 1, // Is also default
+                    //     .mask = 0xFF,
+                    //     .instance_shader_binding_table_record_offset = {}, // Is also default
+                    //     .flags = {},                                       // Is also default
+                    //     .blas_device_address = device.get_device_address(proc_blas).value(),
+                    // }
                 };
                 std::memcpy(device.get_host_address_as<daxa_BlasInstanceData>(blas_instances_buffer).value(), 
                     blas_instance_array.data(), 
                     blas_instance_array.size() * sizeof(daxa_BlasInstanceData));
 
 
-                /// TODO(Raytracing): add instance of blas for aabb.
                 auto blas_instances = std::array{
                     daxa::TlasInstanceInfo{
                         .data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
-                        .count = 2,
+                        .count = 1,
                         .is_data_array_of_pointers = false, // Buffer contains flat array of instances, not an array of pointers to instances.
                         .flags = daxa::GeometryFlagBits::OPAQUE,                            // Is also default
                     },
@@ -256,7 +256,7 @@ namespace tests
                 {
                     auto recorder = device.create_command_recorder({});
                     recorder.build_acceleration_structures({
-                        .blas_build_infos = std::array{blas_build_info, proc_blas_build_info},
+                        .blas_build_infos = std::array{blas_build_info},
                     });
                     recorder.pipeline_barrier({
                         .src_access = daxa::AccessConsts::ACCELERATION_STRUCTURE_BUILD_WRITE,
@@ -285,14 +285,40 @@ namespace tests
                         },
                     },
                 }};
-                auto const compute_pipe_info = daxa::ComputePipelineCompileInfo{
-                    .shader_info = daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"shaders.glsl"},
-                    },
+                // auto const compute_pipe_info = daxa::ComputePipelineCompileInfo{
+                //     .shader_info = daxa::ShaderCompileInfo{
+                //         .source = daxa::ShaderFile{"shaders.glsl"},
+                //     },
+                //     .push_constant_size = sizeof(PushConstant),
+                //     .name = "ray query comp shader",
+                // };
+                // comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
+
+                auto const ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo{
+                    .ray_gen_infos = {daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"raygen.glsl"},
+                    }},
+                    .closest_hit_infos = {daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"rchit.glsl"},
+                    }},
+                    .miss_hit_infos = {daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"rmiss.glsl"},
+                    }},
+                    .shader_groups_infos = {daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 0,
+                    },daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::TRIANGLES_HIT_GROUP,
+                        .closest_hit_shader_index = 1,
+                    },daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 2,
+                    }},
+                    .max_ray_recursion_depth = 2,
                     .push_constant_size = sizeof(PushConstant),
-                    .name = "ray qery comp shader",
+                    .name = "basic ray tracing pipeline",
                 };
-                comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
+                rt_pipeline = pipeline_manager.add_ray_tracing_pipeline(ray_tracing_pipe_info).value();
             }
 
             auto update() -> bool
@@ -335,31 +361,68 @@ namespace tests
                     .name = ("recorder (clearcolor)"),
                 });
 
+                // recorder.pipeline_barrier_image_transition({
+                //     .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                //     .src_layout = daxa::ImageLayout::UNDEFINED,
+                //     .dst_layout = daxa::ImageLayout::GENERAL,
+                //     .image_id = swapchain_image,
+                // });
+
+                // recorder.set_pipeline(*comp_pipeline);
+
+                // daxa::u32 width = device.info_image(swapchain_image).value().size.x;
+                // daxa::u32 height = device.info_image(swapchain_image).value().size.y;
+                // recorder.push_constant(PushConstant{
+                //     .size = {width, height},
+                //     .tlas = tlas,
+                //     .swapchain = swapchain_image.default_view(),
+                // });
+                // daxa::u32 block_count_x = (width + 8 - 1) / 8;
+                // daxa::u32 block_count_y = (height + 8 - 1) / 8;
+                // recorder.dispatch({block_count_x, block_count_y, 1});
+
+                // recorder.pipeline_barrier_image_transition({
+                //     .src_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                //     .src_layout = daxa::ImageLayout::GENERAL,
+                //     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
+                //     .image_id = swapchain_image,
+                // });
+
                 recorder.pipeline_barrier_image_transition({
-                    .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                    .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::GENERAL,
                     .image_id = swapchain_image,
                 });
 
-                recorder.set_pipeline(*comp_pipeline);
+                auto ray_recorder = std::move(recorder).begin_ray_tracing();
+
+                ray_recorder.set_pipeline(*rt_pipeline);
+
+
                 daxa::u32 width = device.info_image(swapchain_image).value().size.x;
                 daxa::u32 height = device.info_image(swapchain_image).value().size.y;
-                recorder.push_constant(PushConstant{
+                ray_recorder.push_constant(PushConstant{
                     .size = {width, height},
                     .tlas = tlas,
                     .swapchain = swapchain_image.default_view(),
                 });
-                daxa::u32 block_count_x = (width + 8 - 1) / 8;
-                daxa::u32 block_count_y = (height + 8 - 1) / 8;
-                recorder.dispatch({block_count_x, block_count_y, 1});
 
+                ray_recorder.trace_rays({
+                    .width = width,
+                    .height = height,
+                    .depth = 1,
+                });
+
+                recorder = std::move(ray_recorder).end_ray_tracing();
+                
                 recorder.pipeline_barrier_image_transition({
-                    .src_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                    .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::GENERAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
+
 
                 auto executalbe_commands = recorder.complete_current_commands();
                 /// NOTE:

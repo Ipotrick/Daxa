@@ -234,7 +234,7 @@ void daxa_as_build_info_to_vk(
 {
     vk_build_geometry_infos.reserve(tlas_count + blas_count);
     primitive_counts.reserve(tlas_count + blas_count);
-    u32 geo_infos_count = 0;
+    size_t geo_infos_count = 0;
     for (u32 tlas_i = 0; tlas_i < tlas_count; ++tlas_i)
     {
         geo_infos_count += tlas_infos[tlas_i].instance_count;

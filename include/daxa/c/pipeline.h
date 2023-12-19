@@ -3,6 +3,7 @@
 
 #include <daxa/c/types.h>
 
+
 typedef struct
 {
     uint32_t const * byte_code;
@@ -10,6 +11,57 @@ typedef struct
     daxa_SmallString entry_point;
 } daxa_ShaderInfo;
 _DAXA_DECL_OPTIONAL(daxa_ShaderInfo)
+
+// RAY TRACING PIPELINE 
+typedef struct
+{
+    daxa_ShaderInfo info;
+} daxa_RayTracingShaderInfo;
+_DAXA_DECL_FIXED_LIST(daxa_RayTracingShaderInfo, 10)
+
+typedef struct {
+    // TODO: daxa types?
+    VkRayTracingShaderGroupTypeKHR type;
+    uint32_t general_shader_index;
+    uint32_t closest_hit_shader_index;
+    uint32_t any_hit_shader_index;
+    uint32_t intersection_shader_index;
+} daxa_RayTracingShaderGroupInfo;
+_DAXA_DECL_FIXED_LIST(daxa_RayTracingShaderGroupInfo, 10)
+
+#define DAXA_RAY_TRACING_SHADER_GROUP_INFO_DEFAULT { \
+    .group_type = 0, \
+    .general_shader_index = VK_SHADER_UNUSED_KHR, \
+    .closest_hit_shader_index = VK_SHADER_UNUSED_KHR, \
+    .any_hit_shader_index = VK_SHADER_UNUSED_KHR, \
+    .intersection_shader_index = VK_SHADER_UNUSED_KHR \
+}
+
+typedef struct
+{
+    // TODO: dynamic size?
+    daxa_FixedList(daxa_RayTracingShaderInfo, 10) ray_gen_stages;
+    daxa_FixedList(daxa_RayTracingShaderInfo, 10) miss_stages;
+    daxa_FixedList(daxa_RayTracingShaderInfo, 10) callable_stages;
+    daxa_FixedList(daxa_RayTracingShaderInfo, 10) intersection_stages;
+    daxa_FixedList(daxa_RayTracingShaderInfo, 10) closest_hit_stages;
+    daxa_FixedList(daxa_RayTracingShaderInfo, 10) any_hit_stages;
+    daxa_FixedList(daxa_RayTracingShaderGroupInfo, 10) shader_groups;
+    uint32_t max_ray_recursion_depth;
+    uint32_t push_constant_size;
+    daxa_SmallString name;
+} daxa_RayTracingPipelineInfo;
+
+DAXA_EXPORT daxa_RayTracingPipelineInfo const *
+daxa_ray_tracing_pipeline_info(daxa_RayTracingPipeline ray_tracing_pipeline);
+
+DAXA_EXPORT uint64_t
+daxa_ray_tracing_pipeline_inc_refcnt(daxa_RayTracingPipeline pipeline);
+DAXA_EXPORT uint64_t
+daxa_ray_tracing_pipeline_dec_refcnt(daxa_RayTracingPipeline pipeline);
+
+
+// COMPUTE PIPELINE
 
 typedef struct
 {
@@ -25,6 +77,9 @@ DAXA_EXPORT uint64_t
 daxa_compute_pipeline_inc_refcnt(daxa_ComputePipeline pipeline);
 DAXA_EXPORT uint64_t
 daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline pipeline);
+
+
+// RASTER PIPELINE
 
 typedef struct
 {
