@@ -58,6 +58,28 @@ namespace daxa
         ShaderCompileOptions compile_options = {};
     };
 
+    struct ShaderGroupInfo
+    {
+        ShaderGroup group_type;
+        u32 general_shader_index;
+        u32 closest_hit_shader_index;
+        u32 any_hit_shader_index;
+        u32 intersection_shader_index;
+    };
+
+    struct RayTracingPipelineCompileInfo
+    {
+        std::vector<ShaderCompileInfo> raygen_infos = {};
+        std::vector<ShaderCompileInfo> callable_infos = {};
+        std::vector<ShaderCompileInfo> miss_infos = {};
+        std::vector<ShaderCompileInfo> intersection_infos = {};
+        std::vector<ShaderCompileInfo> any_hit_infos = {};
+        std::vector<ShaderGroupInfo> shader_groups_infos = {};
+        u32 max_recursion_depth = {};
+        u32 push_constant_size = {};
+        std::string name = {};
+    };
+
     struct ComputePipelineCompileInfo
     {
         ShaderCompileInfo shader_info = {};
@@ -114,8 +136,10 @@ namespace daxa
 
         PipelineManager(PipelineManagerInfo info);
 
+        auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
         auto add_compute_pipeline(ComputePipelineCompileInfo const & info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
+        void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & info);

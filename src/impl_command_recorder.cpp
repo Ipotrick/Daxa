@@ -629,6 +629,13 @@ void daxa_cmd_push_constant(daxa_CommandRecorder self, void const * data, uint32
     vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, self->device->gpu_sro_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
+void daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline const * pipeline)
+{
+    daxa_cmd_flush_barriers(self);
+    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, (**pipeline).vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, (**pipeline).vk_pipeline);
+}
+
 void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline const * pipeline)
 {
     daxa_cmd_flush_barriers(self);
@@ -642,6 +649,8 @@ void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline
     vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
 }
+
+// TODO: trace ray
 
 void daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info)
 {

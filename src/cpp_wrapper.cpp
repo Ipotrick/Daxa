@@ -741,6 +741,21 @@ namespace daxa
 
     /// --- Begin Pipelines
 
+     auto RayTracingPipeline::info() const -> RayTracingPipelineInfo const &
+    {
+        return *r_cast<RayTracingPipelineInfo const *>(rc_cast<daxa_RayTracingPipeline>(this->object));
+    }
+
+    auto RayTracingPipeline::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_ray_tracing_pipeline_inc_refcnt(rc_cast<daxa_RayTracingPipeline>(object));
+    }
+
+    auto RayTracingPipeline::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_ray_tracing_pipeline_dec_refcnt(rc_cast<daxa_RayTracingPipeline>(object));
+    }
+
     auto ComputePipeline::info() const -> ComputePipelineInfo const &
     {
         return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(this->object));

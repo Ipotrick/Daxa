@@ -11,6 +11,55 @@ namespace daxa
         u32 byte_code_size;
         SmallString entry_point = "main";
     };
+    
+    struct RayTracingShaderGroupInfo
+    {
+        ShaderGroup group_type;
+        u32 general_shader_index;
+        u32 closest_hit_shader_index;
+        u32 any_hit_shader_index;
+        u32 intersection_shader_index;
+    };
+
+
+    struct RayTracingPipelineInfo
+    {
+        FixedList<ShaderInfo, 10> ray_gen_shaders = {};
+        FixedList<ShaderInfo, 10> miss_shaders = {};
+        FixedList<ShaderInfo, 10> callable_shaders = {};
+        FixedList<ShaderInfo, 10> intersection_shaders = {};
+        FixedList<ShaderInfo, 10> closest_hit_shaders = {};
+        FixedList<ShaderInfo, 10> any_hit_shaders = {};
+        FixedList<RayTracingShaderGroupInfo, 10> shader_groups = {};
+        u32 max_recursion_depth;
+        u32 push_constant_size = {};
+        SmallString name = "";
+    };
+
+
+    /**
+     * @brief   Represents a pipeline state object, usable in recording commands.
+     *
+     * THREADSAFETY:
+     * * is internally synchronized
+     * * may be passed to different threads
+     * * may be used by multiple threads at the same time.
+     */
+    struct DAXA_EXPORT_CXX RayTracingPipeline final : ManagedPtr<RayTracingPipeline, daxa_RayTracingPipeline>
+    {
+        RayTracingPipeline() = default;
+
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() const -> RayTracingPipelineInfo const &;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
 
     struct ComputePipelineInfo
     {

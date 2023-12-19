@@ -1413,6 +1413,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags TASK_SHADER = {0x00080000ull};
         static inline constexpr PipelineStageFlags MESH_SHADER = {0x00100000ull};
         static inline constexpr PipelineStageFlags ACCELERATION_STRUCTURE_BUILD = {0x02000000ull};
+        static inline constexpr PipelineStageFlags RAY_TRACING = {0x00200000ull};
     };
 
     [[nodiscard]] auto to_string(PipelineStageFlags flags) -> std::string;
@@ -1758,5 +1759,26 @@ namespace daxa
         uint32 = 1,
         uint8 = 1000265000,
         none = 1000165000,
+    };
+
+
+    // enum struct ShaderStage
+    // {
+    //     // TODO: check this
+    //     RAYGEN = 0x00000100,
+    //     ANY_HIT = 0x00000200,
+    //     CLOSEST_HIT = 0x00000400,
+    //     MISS = 0x00000800,
+    //     INTERSECTION = 0x00001000,
+    //     CALLABLE = 0x00002000,
+    //     MAX_ENUM = 0x7fffffff,
+    // };
+
+
+    enum struct ShaderGroup {
+        GENERAL = 0,
+        TRIANGLES_HIT_GROUP = 1,
+        PROCEDURAL_HIT_GROUP = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 } // namespace daxa

@@ -35,6 +35,7 @@ typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
 typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
 typedef struct daxa_ImplExecutableCommandList * daxa_ExecutableCommandList;
 typedef struct daxa_ImplInstance * daxa_Instance;
+typedef struct daxa_ImplRayTracingPipeline * daxa_RayTracingPipeline;
 typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
 typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
 typedef struct daxa_ImplSwapchain * daxa_Swapchain;

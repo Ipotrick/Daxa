@@ -1312,6 +1312,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         self->vkCmdWriteAccelerationStructuresPropertiesKHR = r_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdWriteAccelerationStructuresPropertiesKHR"));
         self->vkCmdBuildAccelerationStructuresKHR = r_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBuildAccelerationStructuresKHR"));
         self->vkGetAccelerationStructureDeviceAddressKHR = r_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetAccelerationStructureDeviceAddressKHR"));
+        self->vkCreateRayTracingPipelinesKHR = r_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCreateRayTracingPipelinesKHR"));
     }
 
     vkGetDeviceQueue(self->vk_device, self->main_queue_family_index, 0, &self->main_queue_vk_queue);
