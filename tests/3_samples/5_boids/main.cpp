@@ -11,6 +11,31 @@ using Clock = std::chrono::high_resolution_clock;
 
 #include "shared.inl"
 
+    // Update task:
+
+    DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
+    DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ_WRITE, current)
+    DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, previous)
+    DAXA_DECL_TASK_HEAD_END
+    struct UpdateBoidsTask : UpdateBoids
+    {
+        std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
+        virtual void callback(daxa::TaskInterface ti) const
+        {
+            ti.recorder.set_pipeline(*update_boids_pipeline);
+            ti.recorder.push_constant(UpdateBoidsPushConstant{
+                .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
+                .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
+            });
+            ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
+        }
+    };
+
+    struct Test
+    {
+        DAXA_TH_BLOB(UpdateBoids) test;
+    };
+
 struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
@@ -133,37 +158,14 @@ struct App : AppWindow<App>
         device.destroy_buffer(old_boid_buffer);
     }
 
-    // Update task:
-
-    struct UpdateBoidsTask : daxa::PartialTask<2, "UpdateBoids">
-    {
-        daxa::TaskBufferAttachmentIndex current = attachments.static_append(daxa::TaskBufferAttachment{
-            .access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE,
-        });
-        daxa::TaskBufferAttachmentIndex previous = attachments.static_append(daxa::TaskBufferAttachment{
-            .access = daxa::TaskBufferAccess::COMPUTE_SHADER_READ,
-        });
-        std::string_view name = "update boids";
-        std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
-        virtual void callback(daxa::TaskInterface ti) const
-        {
-            ti.recorder.set_pipeline(*update_boids_pipeline);
-            ti.recorder.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
-                .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
-            });
-            ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
-        }
-    };
-
     // Draw task:
 
     struct DrawBoidsTask : daxa::PartialTask<2, "DrawBoids">
     {
-        daxa::TaskBufferAttachmentIndex boids = attachments.static_append(daxa::TaskBufferAttachment{
+        daxa::TaskBufferAttachmentIndex boids = add_attachment(daxa::TaskBufferAttachment{
             .access = daxa::TaskBufferAccess::VERTEX_SHADER_READ,
         });
-        daxa::TaskImageAttachmentIndex render_image = attachments.static_append(daxa::TaskImageAttachment{
+        daxa::TaskImageAttachmentIndex render_image = add_attachment(daxa::TaskImageAttachment{
             .access = daxa::TaskImageAccess::COLOR_ATTACHMENT,
         });
         std::string_view name = "draw boids";
@@ -230,8 +232,8 @@ struct App : AppWindow<App>
         {
             UpdateBoidsTask update_task{};
             update_task.update_boids_pipeline = update_boids_pipeline;
-            update_task.attachments.set_view(update_task.current, task_boids_current);
-            update_task.attachments.set_view(update_task.previous, task_boids_old);
+            update_task.set_view(update_task.current, task_boids_current);
+            update_task.set_view(update_task.previous, task_boids_old);
             new_task_graph.add_task(update_task);
         }
         {
@@ -239,8 +241,8 @@ struct App : AppWindow<App>
             draw_task.draw_pipeline = draw_pipeline;
             draw_task.size_x = &size_x;
             draw_task.size_y = &size_y;
-            draw_task.attachments.set_view(draw_task.boids, task_boids_current);
-            draw_task.attachments.set_view(draw_task.render_image, task_swapchain_image);
+            draw_task.set_view(draw_task.boids, task_boids_current);
+            draw_task.set_view(draw_task.render_image, task_swapchain_image);
             new_task_graph.add_task(draw_task);
         }
         new_task_graph.submit({});

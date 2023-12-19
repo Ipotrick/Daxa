@@ -975,7 +975,7 @@ namespace daxa
                 validate_task_image_runtime_data(task, attach, runtime_data);
             });
         std::vector<std::byte> attachment_shader_data_blob = {};
-        attachment_shader_data_blob.resize(task.base_task->_shader_blob_size());
+        attachment_shader_data_blob.resize(task.base_task->_attachment_shader_data_blob_size());
         usize shader_byte_blob_offset = 0;
         for_each(
             task.base_task->_raw_attachments(),

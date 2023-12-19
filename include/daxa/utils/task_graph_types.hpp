@@ -310,7 +310,7 @@ namespace daxa
         constexpr virtual auto _raw_attachments() -> std::span<TaskAttachment> = 0;
         /// WARNING: Only used my internals!
         constexpr virtual auto _raw_attachments() const -> std::span<TaskAttachment const> = 0;
-        constexpr virtual auto _shader_blob_size() const -> usize
+        constexpr virtual auto _attachment_shader_data_blob_size() const -> usize
         {
             usize total = 0;
             for (auto const & attach : _raw_attachments())
@@ -326,36 +326,9 @@ namespace daxa
     template <std::size_t SIZE>
     struct TaskAttachmentArray
     {
-        TaskBufferAttachment const & operator[](TaskBufferAttachmentIndex index) const
-        {
-            return _raw[index.value].value.buffer;
-        }
-        TaskImageAttachment const & operator[](TaskImageAttachmentIndex index) const
-        {
-            return _raw[index.value].value.image;
-        }
-        auto span() const -> std::span<TaskAttachment const> { return _raw; }
-        void set_view(TaskBufferAttachmentIndex index, TaskBufferView view)
-        {
-            _raw[index.value].value.buffer.view = view;
-        }
-        void set_view(TaskImageAttachmentIndex index, TaskImageView view)
-        {
-            _raw[index.value].value.image.view = view;
-        }
         /// WARNING: Meant for internal use only! Do not access this field without knowing what you are doing!
         u8 _offset = 0;
         std::array<TaskAttachment, SIZE> _raw = {};
-        constexpr TaskBufferAttachmentIndex static_append(TaskBufferAttachment const & attach)
-        {
-            _raw.at(_offset) = attach;
-            return TaskBufferAttachmentIndex{_offset++};
-        }
-        constexpr TaskImageAttachmentIndex static_append(TaskImageAttachment const & attach)
-        {
-            _raw.at(_offset) = attach;
-            return TaskImageAttachmentIndex{_offset++};
-        }
     };
 
     template <usize N>
@@ -380,6 +353,26 @@ namespace daxa
         {
             return attachments._raw;
         }
+        void set_view(TaskBufferAttachmentIndex index, TaskBufferView view)
+        {
+            attachments._raw[index.value].value.buffer.view = view;
+        }
+        void set_view(TaskImageAttachmentIndex index, TaskImageView view)
+        {
+            attachments._raw[index.value].value.image.view = view;
+        }
+        constexpr TaskBufferAttachmentIndex add_attachment(TaskBufferAttachment const & attach)
+        {
+            attachments._raw.at(attachments._offset) = attach;
+            return TaskBufferAttachmentIndex{attachments._offset++};
+        }
+        constexpr TaskImageAttachmentIndex add_attachment(TaskImageAttachment const & attach)
+        {
+            attachments._raw.at(attachments._offset) = attach;
+            return TaskImageAttachmentIndex{attachments._offset++};
+        }
+
+      private:
         daxa::TaskAttachmentArray<ATTACHMENT_COUNT> attachments = {};
     };
 
@@ -391,7 +384,7 @@ namespace daxa
             T t{};
             usize blob_size = 0;
             constexpr usize ELEMENT_SIZE = sizeof(u64);
-            for (TaskAttachment const & a : t.attachments._raw)
+            for (TaskAttachment const & a : t._raw_attachments())
             {
                 blob_size += a.shader_array_size() * ELEMENT_SIZE;
             }
@@ -448,14 +441,14 @@ namespace daxa
 
 #define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)        \
     const daxa::TaskBufferAttachmentIndex NAME =              \
-        attachments.static_append(daxa::TaskBufferAttachment{ \
+        add_attachment(daxa::TaskBufferAttachment{ \
             .name = #NAME,                                    \
             .access = daxa::TaskBufferAccess::TASK_ACCESS,    \
             __VA_ARGS__});
 
 #define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)        \
     const daxa::TaskImageAttachmentIndex NAME =              \
-        attachments.static_append(daxa::TaskImageAttachment{ \
+        add_attachment(daxa::TaskImageAttachment{ \
             .name = #NAME,                                   \
             .access = daxa::TaskImageAccess::TASK_ACCESS,    \
             __VA_ARGS__});

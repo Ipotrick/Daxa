@@ -197,10 +197,10 @@ namespace daxa
         DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
 
         template <typename TTask>
-            requires requires { std::is_base_of_v<ITask, TTask>; }
-        void add_task(TTask && task)
+            requires std::is_base_of_v<ITask, TTask>
+        void add_task(TTask const& task)
         {
-            DAXA_DBG_ASSERT_TRUE_M(task.attachments._raw.size() == task.attachments._offset, "Detected task attachment count differing from Task head declared attachment count!");
+            // DAXA_DBG_ASSERT_TRUE_M(task._raw_attachments().size() == task._raw_attachments()._offset, "Detected task attachment count differing from Task head declared attachment count!");
             add_task(std::unique_ptr<ITask>(new std::remove_reference_t<TTask>(task)));
         }
         void add_task(InlineTaskInfo const & inline_task_info)
