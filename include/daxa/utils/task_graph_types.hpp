@@ -373,11 +373,11 @@ namespace daxa
         }
         constexpr TaskBufferAttachment const& get_attachment(TaskBufferAttachmentIndex const & index) const
         {
-            return attachments[index.value].value.buffer;
+            return attachments._raw.at(index.value).value.buffer;
         }
         constexpr TaskImageAttachment const& get_attachment(TaskImageAttachmentIndex const & index) const
         {
-            return attachments[index.value].value.image;
+            return attachments._raw.at(index.value).value.image;
         }
       private:
         daxa::TaskAttachmentArray<ATTACHMENT_COUNT> attachments = {};
