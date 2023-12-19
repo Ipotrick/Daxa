@@ -275,6 +275,7 @@ namespace daxa
 
     struct TaskImageAttachmentInfo : TaskImageAttachment
     {
+        ImageLayout layout = {};
         std::span<ImageId const> ids = {};
         std::span<ImageViewId const> view_ids = {};
     };
@@ -306,22 +307,36 @@ namespace daxa
     struct ITask
     {
         constexpr virtual ~ITask() {}
-        /// WARNING: Only used my internals!
-        constexpr virtual auto _raw_attachments() -> std::span<TaskAttachment> = 0;
-        /// WARNING: Only used my internals!
-        constexpr virtual auto _raw_attachments() const -> std::span<TaskAttachment const> = 0;
-        constexpr virtual auto _attachment_shader_data_blob_size() const -> usize
+        constexpr virtual auto attachment_shader_data_blob_size() const -> usize
         {
             usize total = 0;
-            for (auto const & attach : _raw_attachments())
+            for (auto const & attach : attachments())
             {
                 total += attach.shader_array_size() * 8;
             }
             return total;
         };
-        constexpr virtual char const * name() const { return "unnamed"; };
+        virtual void set_view(TaskBufferAttachmentIndex index, TaskBufferView view) = 0;
+        virtual void set_view(TaskImageAttachmentIndex index, TaskImageView view) = 0;
+        constexpr virtual auto attachments() const -> std::span<TaskAttachment const> = 0;
+        constexpr virtual char const * name() const = 0;
         virtual void callback(TaskInterface) const {};
     };
+
+    namespace detail
+    {
+        template <typename T>
+        consteval auto attachment_shader_data_blob_size() -> usize
+        {
+            T t{};
+            usize total = 0;
+            for (auto const & attach : t.constexpr_attachments())
+            {
+                total += attach.shader_array_size() * 8;
+            }
+            return total;
+        }
+    } // namespace detail
 
     template <usize N>
     struct StringLiteral
@@ -336,68 +351,41 @@ namespace daxa
     template <usize ATTACHMENT_COUNT, StringLiteral NAME>
     struct PartialTask : ITask
     {
-        constexpr virtual char const * name() const override { return NAME.value; }
-        /// WARNING: Meant for internal use only! Do not access this field without knowing what you are doing!
-        constexpr virtual std::span<daxa::TaskAttachment> _raw_attachments() override
-        {
-            return _raw;
-        }
-        /// WARNING: Meant for internal use only! Do not access this field without knowing what you are doing!
-        constexpr virtual std::span<daxa::TaskAttachment const> _raw_attachments() const override
-        {
-            return _raw;
-        }
-        void set_view(TaskBufferAttachmentIndex index, TaskBufferView view)
-        {
-            _raw[index.value].value.buffer.view = view;
-        }
-        void set_view(TaskImageAttachmentIndex index, TaskImageView view)
-        {
-            _raw[index.value].value.image.view = view;
-        }
-        constexpr TaskBufferAttachmentIndex add_attachment(TaskBufferAttachment const & attach)
+        /// NOTE: Used to add attachments and declate named constant indices to the added attachment.
+        constexpr auto add_attachment(TaskBufferAttachment const & attach) -> TaskBufferAttachmentIndex
         {
             _raw.at(_offset) = attach;
             return TaskBufferAttachmentIndex{_offset++};
         }
-        constexpr TaskImageAttachmentIndex add_attachment(TaskImageAttachment const & attach)
+        /// NOTE: Used to add attachments and declate named constant indices to the added attachment.
+        constexpr auto add_attachment(TaskImageAttachment const & attach) -> TaskImageAttachmentIndex
         {
             _raw.at(_offset) = attach;
             return TaskImageAttachmentIndex{_offset++};
         }
-        constexpr TaskBufferAttachment const & attachment(TaskBufferAttachmentIndex const & index) const
-        {
-            return _raw.at(index.value).value.buffer;
-        }
-        constexpr TaskImageAttachment const & attachment(TaskImageAttachmentIndex const & index) const
-        {
-            return _raw.at(index.value).value.image;
-        }
-        constexpr std::span<TaskAttachment const> get_attachments() const
+        /// NOTE: Needed, as virtual + constexpr sadly dont play nice together.
+        constexpr auto constexpr_attachments() const -> std::span<TaskAttachment const>
         {
             return _raw;
+        }
+        virtual char const * name() const override { return NAME.value; }
+        virtual auto attachments() const -> std::span<TaskAttachment const> override
+        {
+            return _raw;
+        }
+        virtual void set_view(TaskBufferAttachmentIndex index, TaskBufferView view) override
+        {
+            _raw[index.value].value.buffer.view = view;
+        }
+        virtual void set_view(TaskImageAttachmentIndex index, TaskImageView view) override
+        {
+            _raw[index.value].value.image.view = view;
         }
 
       private:
         u8 _offset = 0;
         std::array<TaskAttachment, ATTACHMENT_COUNT> _raw = {};
     };
-
-    namespace detail
-    {
-        template <typename T>
-        consteval auto shader_blob_size() -> usize
-        {
-            T t{};
-            usize blob_size = 0;
-            constexpr usize ELEMENT_SIZE = sizeof(u64);
-            for (TaskAttachment const & a : t.get_attachments())
-            {
-                blob_size += a.shader_array_size() * ELEMENT_SIZE;
-            }
-            return blob_size;
-        }
-    }; // namespace detail
 
     /*
     ⠀⠀⢀⣀⣄⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⠾⠛⠛⠷⣦⡀⠀⠀⠀⠀⠀⠀
@@ -464,7 +452,7 @@ namespace daxa
     }                           \
     ;
 
-#define DAXA_TH_BLOB(HEAD_NAME) std::array<std::byte, daxa::detail::shader_blob_size<HEAD_NAME>()>
+#define DAXA_TH_BLOB(HEAD_NAME) std::array<std::byte, daxa::detail::attachment_shader_data_blob_size<HEAD_NAME>()>
 
 #define DAXA_TH_IMAGE_NO_SHADER(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0)
 #define DAXA_TH_IMAGE_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1)

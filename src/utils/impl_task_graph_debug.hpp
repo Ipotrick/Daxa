@@ -78,11 +78,11 @@ namespace daxa
     void validate_overlapping_attachment_views(ImplTaskGraph const & impl, ITask const * task)
     {
         for_each(
-            task->_raw_attachments(),
+            task->attachments(),
             [&](u32 index_a, TaskBufferAttachment const & a)
             {
                 for_each(
-                    task->_raw_attachments(),
+                    task->attachments(),
                     [&](u32 index_b, TaskBufferAttachment const & b)
                     {
                         if (index_a == index_b)
@@ -103,7 +103,7 @@ namespace daxa
             [&](u32 index_a, TaskImageAttachment const & a)
             {
                 for_each(
-                    task->_raw_attachments(),
+                    task->attachments(),
                     [&](u32, TaskBufferAttachment const &) {},
                     [&](u32 index_b, TaskImageAttachment const & b)
                     {
@@ -123,7 +123,7 @@ namespace daxa
             });
     }
 
-    void validate_task_buffer_runtime_data(ImplTask & task, TaskBufferAttachment & attach, TaskBufferAttachmentInfo & runtime_data)
+    void validate_task_buffer_runtime_data(ImplTask & task, TaskBufferAttachment const & attach, TaskBufferAttachmentInfo & runtime_data)
     {
         DAXA_DBG_ASSERT_TRUE_M(
             runtime_data.ids.size() >= attach.shader_array_size,
@@ -133,7 +133,7 @@ namespace daxa
                         attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.ids.size()));
     }
 
-    void validate_task_image_runtime_data(ImplTask & task, TaskImageAttachment & attach, TaskImageAttachmentInfo & runtime_data)
+    void validate_task_image_runtime_data(ImplTask & task, TaskImageAttachment const & attach, TaskImageAttachmentInfo & runtime_data)
     {
         if (attach.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS)
         {

@@ -150,14 +150,12 @@ namespace daxa
             _callback = info.task;
             _name = info.name;
         }
-        constexpr virtual auto _raw_attachments() -> std::span<TaskAttachment> override
+        constexpr virtual auto attachments() const -> std::span<TaskAttachment const> override
         {
             return _attachments;
         }
-        constexpr virtual auto _raw_attachments() const -> std::span<TaskAttachment const> override
-        {
-            return _attachments;
-        }
+        virtual void set_view(TaskBufferAttachmentIndex index, TaskBufferView view) override { _attachments[index.value].value.buffer.view = view; }
+        virtual void set_view(TaskImageAttachmentIndex index, TaskImageView view) override { _attachments[index.value].value.image.view = view; }
         constexpr virtual char const * name() const override { return _name; };
         virtual void callback(TaskInterface ti) const override
         {
@@ -189,7 +187,7 @@ namespace daxa
             requires std::is_base_of_v<ITask, TTask>
         void add_task(TTask const& task)
         {
-            // DAXA_DBG_ASSERT_TRUE_M(task._raw_attachments().size() == task._raw_attachments()._offset, "Detected task attachment count differing from Task head declared attachment count!");
+            // DAXA_DBG_ASSERT_TRUE_M(task.attachments().size() == task.attachments()._offset, "Detected task attachment count differing from Task head declared attachment count!");
             add_task(std::unique_ptr<ITask>(new std::remove_reference_t<TTask>(task)));
         }
         void add_task(InlineTaskInfo const & inline_task_info)
