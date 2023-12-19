@@ -1175,7 +1175,6 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_not_compiled(impl);
-        translate_persistent_ids(impl, task.get());
         validate_overlapping_attachment_views(impl, task.get());
 
         TaskId const task_id = impl.tasks.size();
@@ -1211,6 +1210,17 @@ namespace daxa
                 runtime_data.layout = attach.layout;
                 runtime_data.view = attach.view;
                 impl_task.runtime_data.push_back(runtime_data);
+            });
+        translate_persistent_ids(impl, impl_task.base_task.get());
+        for_each(
+            impl_task.base_task->attachments(),
+            [&](u32 i, TaskBufferAttachment const & attach)
+            {
+                daxa::get<TaskBufferAttachmentInfo>(impl_task.runtime_data[i]).translated_view = attach.view;
+            },
+            [&](u32 i, TaskImageAttachment const & attach)
+            {
+                daxa::get<TaskImageAttachmentInfo>(impl_task.runtime_data[i]).translated_view = attach.view;
             });
 
         for (auto * permutation : impl.record_active_permutations)
