@@ -371,7 +371,14 @@ namespace daxa
             attachments._raw.at(attachments._offset) = attach;
             return TaskImageAttachmentIndex{attachments._offset++};
         }
-
+        constexpr TaskBufferAttachment const& get_attachment(TaskBufferAttachmentIndex const & index) const
+        {
+            return attachments[index.value].value.buffer;
+        }
+        constexpr TaskImageAttachment const& get_attachment(TaskImageAttachmentIndex const & index) const
+        {
+            return attachments[index.value].value.image;
+        }
       private:
         daxa::TaskAttachmentArray<ATTACHMENT_COUNT> attachments = {};
     };
