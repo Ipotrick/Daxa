@@ -391,7 +391,7 @@ namespace daxa
             T t{};
             usize blob_size = 0;
             constexpr usize ELEMENT_SIZE = sizeof(u64);
-            for (TaskAttachment const & a : t._raw_attachments())
+            for (TaskAttachment const & a : t.get_attachments())
             {
                 blob_size += a.shader_array_size() * ELEMENT_SIZE;
             }

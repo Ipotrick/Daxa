@@ -137,7 +137,7 @@ namespace daxa
 
     struct InlineTaskInfo
     {
-        std::vector<Variant<TaskBufferAttachment, TaskImageAttachment>> attachments = {};
+        std::vector<TaskAttachment> attachments = {};
         std::function<void(TaskInterface const &)> task = {};
         char const * name = "unnamed";
     };
@@ -146,28 +146,17 @@ namespace daxa
     {
         InlineTask(InlineTaskInfo const & info)
         {
-            attachments.reserve(info.attachments.size());
-            for (u32 i = 0; i < info.attachments.size(); ++i)
-            {
-                if (auto * attach = daxa::get_if<TaskBufferAttachment>(&info.attachments[i]))
-                {
-                    attachments.push_back(TaskAttachment(*attach));
-                }
-                else
-                {
-                    attachments.push_back(TaskAttachment(daxa::get<TaskImageAttachment>(info.attachments[i])));
-                }
-            }
+            _attachments = info.attachments;
             _callback = info.task;
             _name = info.name;
         }
         constexpr virtual auto _raw_attachments() -> std::span<TaskAttachment> override
         {
-            return attachments;
+            return _attachments;
         }
         constexpr virtual auto _raw_attachments() const -> std::span<TaskAttachment const> override
         {
-            return attachments;
+            return _attachments;
         }
         constexpr virtual char const * name() const override { return _name; };
         virtual void callback(TaskInterface ti) const override
@@ -176,7 +165,7 @@ namespace daxa
         };
 
       private:
-        std::vector<TaskAttachment> attachments = {};
+        std::vector<TaskAttachment> _attachments = {};
         std::function<void(TaskInterface)> _callback = {};
         char const * _name = {};
     };
