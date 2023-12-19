@@ -221,7 +221,7 @@ namespace daxa
         std::is_same_v<T, TaskBufferAttachmentIndex> || std::is_same_v<T, TaskImageAttachmentIndex>;
     };
 
-    struct TaskAttachment
+    struct DAXA_EXPORT_CXX TaskAttachment
     {
         TaskAttachmentType type = TaskAttachmentType::UNDEFINED;
         union Value
@@ -281,7 +281,7 @@ namespace daxa
 
     using TaskAttachmentInfoVariant = Variant<TaskBufferAttachmentInfo, TaskImageAttachmentInfo>;
 
-    struct TaskInterface
+    struct DAXA_EXPORT_CXX TaskInterface
     {
         Device & device;
         CommandRecorder & recorder;
@@ -324,7 +324,7 @@ namespace daxa
     };
 
     template <usize N>
-    struct StringLiteral
+    struct DAXA_EXPORT_CXX StringLiteral
     {
         constexpr StringLiteral(char const (&str)[N])
         {
@@ -334,7 +334,7 @@ namespace daxa
     };
 
     template <usize ATTACHMENT_COUNT, StringLiteral NAME>
-    struct PartialTask : ITask
+    struct DAXA_EXPORT_CXX PartialTask : ITask
     {
         constexpr virtual char const * name() const override { return NAME.value; }
         /// WARNING: Meant for internal use only! Do not access this field without knowing what you are doing!
@@ -365,11 +365,11 @@ namespace daxa
             _raw.at(_offset) = attach;
             return TaskImageAttachmentIndex{_offset++};
         }
-        constexpr TaskBufferAttachment const & get_attachment(TaskBufferAttachmentIndex const & index) const
+        constexpr TaskBufferAttachment const & attachment(TaskBufferAttachmentIndex const & index) const
         {
             return _raw.at(index.value).value.buffer;
         }
-        constexpr TaskImageAttachment const & get_attachment(TaskImageAttachmentIndex const & index) const
+        constexpr TaskImageAttachment const & attachment(TaskImageAttachmentIndex const & index) const
         {
             return _raw.at(index.value).value.image;
         }
