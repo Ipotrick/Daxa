@@ -673,12 +673,12 @@ namespace daxa
 
     auto ImplTaskGraph::id_to_local_id(TaskBufferView id) const -> TaskBufferView
     {
-        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "detected empty task buffer id. Please make sure to only use initialized task buffer ids.");
+        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task buffer id. Please make sure to only use initialized task buffer ids.");
         if (id.is_persistent())
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 persistent_buffer_index_to_local_index.contains(id.index),
-                fmt::format("detected invalid access of persistent task buffer id ({}) in task graph \"{}\"; "
+                fmt::format("Detected invalid access of persistent task buffer id ({}) in task graph \"{}\"; "
                             "please make sure to declare persistent resource use to each task graph that uses this buffer with the function use_persistent_buffer!",
                             id.index, info.name));
             return TaskBufferView{{.task_graph_index = this->unique_index, .index = persistent_buffer_index_to_local_index.at(id.index)}};
@@ -687,7 +687,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 id.task_graph_index == this->unique_index,
-                fmt::format("detected invalid access of transient task buffer id ({}) in task graph \"{}\"; "
+                fmt::format("Detected invalid access of transient task buffer id ({}) in task graph \"{}\"; "
                             "please make sure that you only use transient buffers within the list they are created in!",
                             id.index, info.name));
             return TaskBufferView{{.task_graph_index = this->unique_index, .index = id.index}};
@@ -696,12 +696,12 @@ namespace daxa
 
     auto ImplTaskGraph::id_to_local_id(TaskImageView id) const -> TaskImageView
     {
-        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "detected empty task image id. Please make sure to only use initialized task image ids.");
+        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task image id. Please make sure to only use initialized task image ids.");
         if (id.is_persistent())
         {
             DAXA_DBG_ASSERT_TRUE_MS(
                 persistent_image_index_to_local_index.contains(id.index),
-                << "detected invalid access of persistent task image id "
+                << "Detected invalid access of persistent task image id "
                 << id.index
                 << " in task graph \""
                 << info.name
@@ -712,7 +712,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_MS(
                 id.task_graph_index == this->unique_index,
-                << "detected invalid access of transient task image id "
+                << "Detected invalid access of transient task image id "
                 << (id.index)
                 << " in task graph \""
                 << info.name
@@ -764,7 +764,7 @@ namespace daxa
         {
             ImageId image = actual_images[index];
             [[maybe_unused]] bool const access_valid = (impl.info.device.info_image(image).value().usage & use_flags) != ImageUsageFlagBits::NONE;
-            DAXA_DBG_ASSERT_TRUE_M(access_valid, fmt::format("detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
+            DAXA_DBG_ASSERT_TRUE_M(access_valid, fmt::format("Detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
                                                              "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
                                                              impl.info.device.info_image(image).value().name.view(), task_image_name, use_index, task_name, daxa::to_string(use_flags)));
         }
@@ -900,7 +900,7 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(
                 runtime_buffers.size() > 0,
                 fmt::format(
-                    "detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
+                    "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
                     impl.global_buffer_infos[local_buffer_i].get_name(),
                     impl.info.name,
                     PERSISTENT_RESOURCE_MESSAGE));
@@ -909,7 +909,7 @@ namespace daxa
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.info.device.is_id_valid(runtime_buffers[buffer_index]),
                     fmt::format(
-                        "detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
+                        "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
                         impl.global_buffer_infos[local_buffer_i].get_name(),
                         impl.info.name,
                         buffer_index,
@@ -930,7 +930,7 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(
                 runtime_images.size() > 0,
                 fmt::format(
-                    "detected persistent task image \"{}\" used in task graph \"{}\" with 0 runtime images; {}",
+                    "Detected persistent task image \"{}\" used in task graph \"{}\" with 0 runtime images; {}",
                     impl.global_image_infos[local_image_i].get_name(),
                     impl.info.name,
                     PERSISTENT_RESOURCE_MESSAGE));
@@ -939,7 +939,7 @@ namespace daxa
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.info.device.is_id_valid(runtime_images[image_index]),
                     fmt::format(
-                        "detected persistent task image \"{}\" used in task graph \"{}\" with invalid image id (runtime image index: {}); {}",
+                        "Detected persistent task image \"{}\" used in task graph \"{}\" with invalid image id (runtime image index: {}); {}",
                         impl.global_image_infos[local_image_i].get_name(),
                         impl.info.name,
                         image_index,
@@ -1032,7 +1032,7 @@ namespace daxa
         [[maybe_unused]] bool const already_active = ((impl.record_active_conditional_scopes >> conditional_info.condition_index) & 1u) != 0;
         DAXA_DBG_ASSERT_TRUE_M(!already_active, "can not nest scopes of the same condition in itself.");
         DAXA_DBG_ASSERT_TRUE_M(conditional_info.condition_index < impl.info.permutation_condition_count,
-                               fmt::format("detected invalid conditional index {}; conditional indices must all be smaller then the conditional count given in construction", conditional_info.condition_index));
+                               fmt::format("Detected invalid conditional index {}; conditional indices must all be smaller then the conditional count given in construction", conditional_info.condition_index));
         // Set conditional scope to active.
         impl.record_active_conditional_scopes |= 1u << conditional_info.condition_index;
         impl.update_active_permutations();
@@ -2271,7 +2271,7 @@ namespace daxa
                 auto & image = actual_images[index];
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.info.device.is_id_valid(image),
-                    std::string("detected invalid runtime image id while inserting barriers: the runtime image id at index ") +
+                    std::string("Detected invalid runtime image id while inserting barriers: the runtime image id at index ") +
                         std::to_string(index) +
                         std::string(" of task image \"") +
                         std::string(impl.global_image_infos[barrier.image_id.index].get_name()) +
@@ -2501,7 +2501,7 @@ namespace daxa
     void TaskGraph::execute(ExecutionInfo const & info)
     {
         auto & impl = *r_cast<ImplTaskGraph *>(this->object);
-        DAXA_DBG_ASSERT_TRUE_M(info.permutation_condition_values.size() >= impl.info.permutation_condition_count, "detected invalid permutation condition count");
+        DAXA_DBG_ASSERT_TRUE_M(info.permutation_condition_values.size() >= impl.info.permutation_condition_count, "Detected invalid permutation condition count");
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "task graphs must be completed before execution");
 
         u32 permutation_index = {};
