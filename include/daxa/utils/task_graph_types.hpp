@@ -199,7 +199,7 @@ namespace daxa
     {
         char const * name = {};
         TaskImageAccess access = {};
-        ImageViewType view_type = {};
+        ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
         TaskHeadImageArrayType shader_array_type = {};
         ImageLayout layout = {};
