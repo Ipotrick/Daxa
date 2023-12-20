@@ -134,6 +134,11 @@ namespace daxa
     {
         return this->current_timeline_value;
     }
+    
+    auto TransferMemoryPool::inc_timeline_value() -> usize
+    {
+        return this->current_timeline_value++;
+    }
 
     void TransferMemoryPool::reclaim_unused_memory()
     {

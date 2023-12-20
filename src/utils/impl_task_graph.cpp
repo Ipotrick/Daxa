@@ -2754,10 +2754,7 @@ namespace daxa
                 {
                     signal_timeline_semaphores.insert(signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                 }
-                if (impl.staging_memory.has_value() && impl.staging_memory->timeline_value() > impl.last_execution_staging_timeline_value)
-                {
-                    signal_timeline_semaphores.push_back({impl.staging_memory->timeline_semaphore(), impl.staging_memory->timeline_value()});
-                }
+                signal_timeline_semaphores.push_back({impl.staging_memory->timeline_semaphore(), impl.staging_memory->inc_timeline_value()});
                 daxa::CommandSubmitInfo submit_info = {
                     .wait_stages = wait_stages,
                     .command_lists = commands,
@@ -2817,10 +2814,6 @@ namespace daxa
         // impl.left_over_command_lists = std::move(impl_runtime.recorder.complete_current_commands());
         impl.executed_once = true;
         impl.prev_frame_permutation_index = permutation_index;
-        if (impl.staging_memory.has_value())
-        {
-            impl.last_execution_staging_timeline_value = impl.staging_memory->timeline_value();
-        }
 
         if (impl.info.record_debug_information)
         {
@@ -2833,7 +2826,7 @@ namespace daxa
     {
         if (a_info.staging_memory_pool_size != 0)
         {
-            this->staging_memory = TransferMemoryPool{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true, .name = info.name}};
+            this->staging_memory = TransferMemoryPool{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true, .name = "Transfer Memory Pool"}};
         }
     }
 
