@@ -22,6 +22,19 @@ namespace daxa
         u32 intersection_shader_index = (~0U);
     };
 
+    struct StridedDeviceAddressRegion {
+        DeviceAddress address;
+        u64 stride;
+        u64 size;
+    };
+
+    struct RayTracingShaderBindingTable {
+        BufferId buffer_id; // TODO: find a better way to store this?
+        StridedDeviceAddressRegion raygen_region;
+        StridedDeviceAddressRegion miss_region;
+        StridedDeviceAddressRegion hit_region;
+        StridedDeviceAddressRegion callable_region;
+    };
 
     struct RayTracingPipelineInfo
     {
@@ -32,7 +45,8 @@ namespace daxa
         FixedList<ShaderInfo, 10> closest_hit_shaders = {};
         FixedList<ShaderInfo, 10> miss_hit_shaders = {};
         FixedList<RayTracingShaderGroupInfo, 10> shader_groups = {};
-        u32 max_recursion_depth;
+        RayTracingShaderBindingTable shader_binding_table = {};
+        u32 max_ray_recursion_depth;
         u32 push_constant_size = {};
         SmallString name = "";
     };

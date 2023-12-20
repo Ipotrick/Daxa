@@ -590,7 +590,7 @@ namespace daxa
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
         auto ray_tracing_pipeline_info = RayTracingPipelineInfo{
             .shader_groups = {modified_info.shader_groups_infos.data(), modified_info.shader_groups_infos.size()},
-            .max_recursion_depth = modified_info.max_recursion_depth,
+            .max_ray_recursion_depth = modified_info.max_ray_recursion_depth,
             .push_constant_size = modified_info.push_constant_size,
             .name = modified_info.name,
         };

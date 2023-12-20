@@ -298,12 +298,25 @@ namespace tests
                     .ray_gen_infos = {daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"raygen.glsl"},
                     }},
+                    .closest_hit_infos = {daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"rchit.glsl"},
+                    }},
+                    .miss_hit_infos = {daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"rmiss.glsl"},
+                    }},
                     .shader_groups_infos = {daxa::RayTracingShaderGroupInfo{
                         .type = daxa::ShaderGroup::GENERAL,
                         .general_shader_index = 0,
+                    },daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::TRIANGLES_HIT_GROUP,
+                        .general_shader_index = 1,
+                    },daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 2,
                     }},
+                    .max_ray_recursion_depth = 2,
                     .push_constant_size = sizeof(PushConstant),
-                    .name = "ray tracing raygen shader",
+                    .name = "basic ray tracing pipeline",
                 };
                 rt_pipeline = pipeline_manager.add_ray_tracing_pipeline(ray_tracing_pipe_info).value();
             }

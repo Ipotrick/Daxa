@@ -47,7 +47,7 @@ typedef struct
     daxa_FixedList(daxa_RayTracingShaderInfo, 10) closest_hit_stages;
     daxa_FixedList(daxa_RayTracingShaderInfo, 10) any_hit_stages;
     daxa_FixedList(daxa_RayTracingShaderGroupInfo, 10) shader_groups;
-    uint32_t max_recursion_depth;
+    uint32_t max_ray_recursion_depth;
     uint32_t push_constant_size;
     daxa_SmallString name;
 } daxa_RayTracingPipelineInfo;
