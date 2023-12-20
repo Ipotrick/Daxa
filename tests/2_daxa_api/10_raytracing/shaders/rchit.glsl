@@ -7,7 +7,7 @@ DAXA_DECL_PUSH_CONSTANT(PushConstant, p)
 
 hitAttributeEXT vec2 attribs;
 
-layout(location = 0) rayPayloadEXT hitPayload prd;
+layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 void main()
 {

@@ -171,6 +171,16 @@ typedef struct
 
 static daxa_RenderPassBeginInfo const DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = DAXA_ZERO_INIT;
 
+
+typedef struct {
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
+} daxa_TraceRaysInfo;
+
+static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = {1, 1, 1};
+
+
 typedef struct
 {
     uint32_t x;
@@ -407,6 +417,7 @@ DAXA_EXPORT void
 daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline const * pipeline);
 DAXA_EXPORT void
 daxa_cmd_set_raster_pipeline(daxa_CommandRecorder cmd_enc, daxa_RasterPipeline pipeline);
+
 DAXA_EXPORT void
 daxa_cmd_dispatch(daxa_CommandRecorder cmd_enc, daxa_DispatchInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
@@ -433,12 +444,22 @@ daxa_cmd_destroy_image_view_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageVie
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId id);
 
+
+/// @brief  Starts a ray tracing scope akin to the dynamic rendering feature in vulkan.
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_begin_ray_tracing(daxa_CommandRecorder cmd_enc);
+/// @brief  Ends a ray tracing scope akin to the dynamic rendering feature in vulkan.
+DAXA_EXPORT void
+daxa_cmd_end_ray_tracing(daxa_CommandRecorder cmd_enc);
+DAXA_EXPORT void
+daxa_cmd_trace_rays(daxa_CommandRecorder cmd_enc, daxa_TraceRaysInfo const * info);
+
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
 /// @param info parameters.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_begin_renderpass(daxa_CommandRecorder cmd_enc, daxa_RenderPassBeginInfo const * info);
-/// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
+/// @brief  Ends a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
 DAXA_EXPORT void
 daxa_cmd_end_renderpass(daxa_CommandRecorder cmd_enc);

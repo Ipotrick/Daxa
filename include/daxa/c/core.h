@@ -32,7 +32,7 @@ static uint32_t const DAXA_ID_VERSION_OFFSET = 20;
 
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
-typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
+typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder; // TODO: duplicated?
 typedef struct daxa_ImplExecutableCommandList * daxa_ExecutableCommandList;
 typedef struct daxa_ImplInstance * daxa_Instance;
 typedef struct daxa_ImplRayTracingPipeline * daxa_RayTracingPipeline;

@@ -20,7 +20,7 @@ namespace tests
             daxa::Device device = {};
             daxa::Swapchain swapchain = {};
             daxa::PipelineManager pipeline_manager = {};
-            std::shared_ptr<daxa::ComputePipeline> comp_pipeline = {};
+            // std::shared_ptr<daxa::ComputePipeline> comp_pipeline = {};
             std::shared_ptr<daxa::RayTracingPipeline> rt_pipeline = {};
             daxa::TlasId tlas = {};
             daxa::BlasId blas = {};
@@ -285,14 +285,14 @@ namespace tests
                         },
                     },
                 }};
-                auto const compute_pipe_info = daxa::ComputePipelineCompileInfo{
-                    .shader_info = daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"shaders.glsl"},
-                    },
-                    .push_constant_size = sizeof(PushConstant),
-                    .name = "ray query comp shader",
-                };
-                comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
+                // auto const compute_pipe_info = daxa::ComputePipelineCompileInfo{
+                //     .shader_info = daxa::ShaderCompileInfo{
+                //         .source = daxa::ShaderFile{"shaders.glsl"},
+                //     },
+                //     .push_constant_size = sizeof(PushConstant),
+                //     .name = "ray query comp shader",
+                // };
+                // comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
 
                 auto const ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo{
                     .ray_gen_infos = {daxa::ShaderCompileInfo{
@@ -309,7 +309,7 @@ namespace tests
                         .general_shader_index = 0,
                     },daxa::RayTracingShaderGroupInfo{
                         .type = daxa::ShaderGroup::TRIANGLES_HIT_GROUP,
-                        .general_shader_index = 1,
+                        .closest_hit_shader_index = 1,
                     },daxa::RayTracingShaderGroupInfo{
                         .type = daxa::ShaderGroup::GENERAL,
                         .general_shader_index = 2,
@@ -361,31 +361,68 @@ namespace tests
                     .name = ("recorder (clearcolor)"),
                 });
 
+                // recorder.pipeline_barrier_image_transition({
+                //     .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                //     .src_layout = daxa::ImageLayout::UNDEFINED,
+                //     .dst_layout = daxa::ImageLayout::GENERAL,
+                //     .image_id = swapchain_image,
+                // });
+
+                // recorder.set_pipeline(*comp_pipeline);
+
+                // daxa::u32 width = device.info_image(swapchain_image).value().size.x;
+                // daxa::u32 height = device.info_image(swapchain_image).value().size.y;
+                // recorder.push_constant(PushConstant{
+                //     .size = {width, height},
+                //     .tlas = tlas,
+                //     .swapchain = swapchain_image.default_view(),
+                // });
+                // daxa::u32 block_count_x = (width + 8 - 1) / 8;
+                // daxa::u32 block_count_y = (height + 8 - 1) / 8;
+                // recorder.dispatch({block_count_x, block_count_y, 1});
+
+                // recorder.pipeline_barrier_image_transition({
+                //     .src_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                //     .src_layout = daxa::ImageLayout::GENERAL,
+                //     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
+                //     .image_id = swapchain_image,
+                // });
+
                 recorder.pipeline_barrier_image_transition({
-                    .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                    .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::GENERAL,
                     .image_id = swapchain_image,
                 });
 
-                recorder.set_pipeline(*comp_pipeline);
+                auto ray_recorder = std::move(recorder).begin_ray_tracing();
+
+                ray_recorder.set_pipeline(*rt_pipeline);
+
+
                 daxa::u32 width = device.info_image(swapchain_image).value().size.x;
                 daxa::u32 height = device.info_image(swapchain_image).value().size.y;
-                recorder.push_constant(PushConstant{
+                ray_recorder.push_constant(PushConstant{
                     .size = {width, height},
                     .tlas = tlas,
                     .swapchain = swapchain_image.default_view(),
                 });
-                daxa::u32 block_count_x = (width + 8 - 1) / 8;
-                daxa::u32 block_count_y = (height + 8 - 1) / 8;
-                recorder.dispatch({block_count_x, block_count_y, 1});
 
+                ray_recorder.trace_rays({
+                    .width = width,
+                    .height = height,
+                    .depth = 1,
+                });
+
+                recorder = std::move(ray_recorder).end_ray_tracing();
+                
                 recorder.pipeline_barrier_image_transition({
-                    .src_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
+                    .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::GENERAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
+
 
                 auto executalbe_commands = recorder.complete_current_commands();
                 /// NOTE:

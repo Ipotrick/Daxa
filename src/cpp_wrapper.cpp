@@ -803,6 +803,80 @@ namespace daxa
 
     /// --- End Executable Commands
 
+    /// --- Begin RayCommandBuffer
+
+#define _DAXA_DECL_RAY_COMMAND_LIST_WRAPPER(name, Info) \
+    void RayCommandRecorder::name(Info const & info)    \
+    {                                                      \
+        daxa_cmd_##name(                                   \
+            this->internal,                                \
+            r_cast<daxa_##Info const *>(&info));           \
+    }
+#define _DAXA_DECL_RAY_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
+    void RayCommandRecorder::name(Info const & info)                 \
+    {                                                                   \
+        auto result = daxa_cmd_##name(                                  \
+            this->internal,                                             \
+            r_cast<daxa_##Info const *>(&info));                        \
+        check_result(result, "failed in " #name);                       \
+    }
+
+    RayCommandRecorder::RayCommandRecorder(RayCommandRecorder && other)
+    {
+        internal = {};
+        std::swap(this->internal, other.internal);
+    }
+
+    RayCommandRecorder & RayCommandRecorder::operator=(RayCommandRecorder && other)
+    {
+        if (internal != nullptr)
+        {
+            daxa_destroy_command_recorder(this->internal);
+            this->internal = {};
+        }
+        std::swap(this->internal, other.internal);
+        return *this;
+    }
+
+    RayCommandRecorder::~RayCommandRecorder()
+    {
+        if (this->internal != nullptr)
+        {
+            daxa_destroy_command_recorder(this->internal);
+            this->internal = {};
+        }
+    }
+
+    auto RayCommandRecorder::end_ray_tracing() && -> CommandRecorder
+    {
+        daxa_cmd_end_ray_tracing(this->internal);
+        CommandRecorder ret = {};
+        ret.internal = this->internal;
+        this->internal = {};
+        return ret;
+    }
+    
+    _DAXA_DECL_RAY_COMMAND_LIST_WRAPPER(trace_rays, TraceRaysInfo)
+
+    void RayCommandRecorder::set_pipeline(RayTracingPipeline const & pipeline)
+    {
+        daxa_cmd_set_ray_tracing_pipeline(
+            this->internal,
+            *r_cast<daxa_RayTracingPipeline const *>(&pipeline));
+    }
+
+    void RayCommandRecorder::push_constant_vptr(void const * data, u32 size)
+    {
+        daxa_cmd_push_constant(
+            this->internal, data, size);
+    }
+
+
+    /// --- End RayCommandBuffer
+
+
+
+
     /// --- Begin RenderCommandBuffer
 
 #define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(name, Info) \
@@ -988,6 +1062,16 @@ namespace daxa
             r_cast<daxa_RenderPassBeginInfo const *>(&info));
         check_result(result, "failed to begin renderpass");
         RenderCommandRecorder ret = {};
+        ret.internal = this->internal;
+        this->internal = {};
+        return ret;
+    }
+
+    auto CommandRecorder::begin_ray_tracing() && -> RayCommandRecorder
+    {
+        auto result = daxa_cmd_begin_ray_tracing(this->internal);
+        check_result(result, "failed to begin ray tracing");
+        RayCommandRecorder ret = {};
         ret.internal = this->internal;
         this->internal = {};
         return ret;
@@ -1583,6 +1667,14 @@ namespace daxa
                 ret += " | ";
             }
             ret += "COMPUTE_SHADER";
+        }
+        if ((flags & PipelineStageFlagBits::RAY_TRACING_SHADER) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "RAY_TRACING_SHADER";
         }
         if ((flags & PipelineStageFlagBits::TRANSFER) != PipelineStageFlagBits::NONE)
         {

@@ -21,10 +21,10 @@ vec4 fromLinear(vec4 linearRGB)
 void main()
 {
     const ivec2 index = ivec2(gl_LaunchIDEXT.xy);
-    if (index.x >= p.size.x || index.y >= p.size.y)
-    {
-        return;
-    }
+    // if (index.x >= p.size.x || index.y >= p.size.y)
+    // {
+    //     return;
+    // }
 
     uint cull_mask = 0xff;
     vec3 origin = vec3(
@@ -32,6 +32,8 @@ void main()
         (float(index.y) + 0.5f) / float(p.size.y),
         0
     );
+    // vec3 origin = vec3(index.x, index.y, 0);
+
     vec3 direction = vec3(0,0,1);
     
     uint  rayFlags = gl_RayFlagsOpaqueEXT;
@@ -51,5 +53,7 @@ void main()
                 0                                      // payload (location = 0)
     );
 
-    imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(prd.hitValue, 1.0)));
+    // imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(prd.hitValue, 1.0)));
+    imageStore(daxa_image2D(p.swapchain), index, vec4(prd.hitValue, 1.0));
+    // imageStore(daxa_image2D(p.swapchain), index, vec4(1.0, 1.0, 1.0, 1.0));
 }

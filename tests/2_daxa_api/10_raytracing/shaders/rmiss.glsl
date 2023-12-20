@@ -5,7 +5,7 @@
 
 DAXA_DECL_PUSH_CONSTANT(PushConstant, p)
 
-layout(location = 0) rayPayloadEXT hitPayload prd;
+layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 void main()
 {
