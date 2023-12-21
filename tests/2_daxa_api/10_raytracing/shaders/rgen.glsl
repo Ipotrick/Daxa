@@ -3,41 +3,46 @@
 #include <daxa/daxa.inl>
 
 #include "shared.inl"
+#include "random.glsl"
 
 DAXA_DECL_PUSH_CONSTANT(PushConstant, p)
 
 layout(location = 0) rayPayloadEXT hitPayload prd;
 
-// Credit: https://gamedev.stackexchange.com/questions/92015/optimized-linear-to-srgb-glsl
-vec4 fromLinear(vec4 linearRGB)
-{
-    bvec4 cutoff = lessThan(linearRGB, vec4(0.0031308));
-    vec4 higher = vec4(1.055)*pow(linearRGB, vec4(1.0/2.4)) - vec4(0.055);
-    vec4 lower = linearRGB * vec4(12.92);
-
-    return mix(higher, lower, cutoff);
-}
+const uint NBSAMPLES = 1;
 
 void main()
 {
     const ivec2 index = ivec2(gl_LaunchIDEXT.xy);
-    // if (index.x >= p.size.x || index.y >= p.size.y)
-    // {
-    //     return;
-    // }
+
+    uint frame = p.frame;
+    
+    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, frame * NBSAMPLES);
+    prd.seed  = seed;
 
     uint cull_mask = 0xff;
-    vec3 origin = vec3(
-        (float(index.x) + 0.5f) / float(p.size.x),
-        (float(index.y) + 0.5f) / float(p.size.y),
-        0
-    );
-    // vec3 origin = vec3(index.x, index.y, 0);
-
-    vec3 direction = vec3(0,0,1);
+    // vec3 origin = vec3(
+    //     (float(index.x) + 0.5f) / float(p.size.x),
+    //     (float(index.y) + 0.5f) / float(p.size.y),
+    //     0
+    // );
+    // vec3 direction = vec3(0,0,1);
     
-    uint  rayFlags = gl_RayFlagsOpaqueEXT;
-    float tMin     = 0.001;
+    // Camera setup
+    daxa_f32mat4x4 inv_view = deref(p.camera_buffer).inv_view;
+    daxa_f32mat4x4 inv_proj = deref(p.camera_buffer).inv_proj;
+
+    const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+    const vec2 inUV        = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
+    vec2       d           = inUV * 2.0 - 1.0;
+
+    vec4 origin    = inv_view * vec4(0, 0, 0, 1);
+    vec4 target    = inv_proj * vec4(d.x, d.y, 1, 1);
+    vec4 direction = inv_view * vec4(normalize(target.xyz), 0);
+
+    
+    uint  rayFlags = gl_RayFlagsNoneEXT;
+    float tMin     = 0.0001;
     float tMax     = 10000.0;
 
     traceRayEXT(daxa_accelerationStructureEXT(p.tlas), // acceleration structure

@@ -1764,6 +1764,7 @@ namespace daxa
         none = 1000165000,
     };
 
+    // TODO: distinguish between GENERAL(raygen, miss & callable) cause shader handles must be set in order (raygen, miss, hit, callable)?
     enum struct ShaderGroup {
         GENERAL = 0,
         TRIANGLES_HIT_GROUP = 1,

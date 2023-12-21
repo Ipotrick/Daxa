@@ -589,18 +589,24 @@ namespace daxa
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
         auto ray_tracing_pipeline_info = RayTracingPipelineInfo{
+            .ray_gen_shaders = {},
+            .intersection_shaders = {},
+            .any_hit_shaders = {},
+            .callable_shaders = {},
+            .closest_hit_shaders = {},
+            .miss_hit_shaders = {},
             .shader_groups = {modified_info.shader_groups_infos.data(), modified_info.shader_groups_infos.size()},
             .max_ray_recursion_depth = modified_info.max_ray_recursion_depth,
             .push_constant_size = modified_info.push_constant_size,
             .name = modified_info.name,
         };
-        auto raygen_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        auto intersection_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        auto any_hit_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        auto callable_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        auto closest_hit_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        auto miss_hit_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        using ElemT = std::tuple<std::vector<ShaderCompileInfo> *, FixedList<ShaderInfo, 10> *, daxa::Result<std::vector<unsigned int>> *, ShaderStage>;
+        auto raygen_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto intersection_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto any_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto callable_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto closest_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto miss_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        using ElemT = std::tuple<std::vector<ShaderCompileInfo> *, FixedList<ShaderInfo, 10> *, std::vector<daxa::Result<std::vector<unsigned int>>>*, ShaderStage>;
         auto const result_shader_compile_infos = std::array<ElemT, 6>{
             ElemT{&pipe_result.info.ray_gen_infos, &ray_tracing_pipeline_info.ray_gen_shaders, &raygen_spirv_result, ShaderStage::RAY_GEN},
             ElemT{&pipe_result.info.intersection_infos, &ray_tracing_pipeline_info.intersection_shaders, &intersection_spirv_result, ShaderStage::RAY_INTERSECT},
@@ -610,28 +616,29 @@ namespace daxa
             ElemT{&pipe_result.info.miss_hit_infos, &ray_tracing_pipeline_info.miss_hit_shaders, &miss_hit_spirv_result, ShaderStage::RAY_MISS},
         };
         
-        for (auto [pipe_result_shader_info, final_shader_info, spv_result, stage] : result_shader_compile_infos)
+        for (auto [pipe_result_shader_info, final_shader_info, spv_results, stage] : result_shader_compile_infos)
         {
             for (FixedListSizeT i = 0; i < pipe_result_shader_info->size(); ++i)
             {
                 auto &shader_compile_info = (*pipe_result_shader_info)[i];
-                *spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
-                if (spv_result->is_err())
+                auto spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
+                if (spv_result.is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
                     {
                         auto result = Result<RayTracingPipelineState>(pipe_result);
-                        result.m = std::move(spv_result->message());
+                        result.m = std::move(spv_result.message());
                         return result;
                     }
                     else
                     {
-                        return Result<RayTracingPipelineState>(spv_result->message());
+                        return Result<RayTracingPipelineState>(spv_result.message());
                     }
                 }
+                spv_results->push_back(std::move(spv_result));
                 final_shader_info->push_back(daxa::ShaderInfo{
-                    .byte_code = spv_result->value().data(),
-                    .byte_code_size = static_cast<u32>(spv_result->value().size()),
+                    .byte_code = spv_results->back().value().data(),
+                    .byte_code_size = static_cast<u32>(spv_results->back().value().size()),
                     .entry_point = {shader_compile_info.compile_options.entry_point.value()},
                 });
             }
