@@ -651,25 +651,6 @@ void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
 }
 
-
-auto daxa_cmd_begin_ray_tracing(daxa_CommandRecorder self) -> daxa_Result
-{
-    daxa_cmd_flush_barriers(self);
-    if((self->device->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
-    {
-        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
-    }
-    self->in_ray_tracing = true;
-    return DAXA_RESULT_SUCCESS;
-}
-
-void daxa_cmd_end_ray_tracing(daxa_CommandRecorder self)
-{
-    daxa_cmd_flush_barriers(self);
-    self->shader_binding_table = {};
-    self->in_ray_tracing = false;
-}
-
 void daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * info)
 {
     self->device->vkCmdTraceRaysKHR(self->current_command_data.vk_cmd_buffer, 

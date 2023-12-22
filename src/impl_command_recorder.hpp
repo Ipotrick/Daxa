@@ -59,7 +59,6 @@ struct daxa_ImplCommandRecorder final : ImplHandle
 {
     daxa_Device device = {};
     bool in_renderpass = {};
-    bool in_ray_tracing = {};
     daxa_CommandRecorderInfo info = {};
     VkCommandPool vk_cmd_pool = {};
     std::vector<VkCommandBuffer> allocated_command_buffers = {};
@@ -68,6 +67,7 @@ struct daxa_ImplCommandRecorder final : ImplHandle
     usize image_barrier_batch_count = {};
     usize memory_barrier_batch_count = {};
     usize split_barrier_batch_count = {};
+    // TODO: pass this by parameter to the functions that need it.
     RayTracingShaderBindingTable shader_binding_table = {};
 
     ExecutableCommandListData current_command_data = {};

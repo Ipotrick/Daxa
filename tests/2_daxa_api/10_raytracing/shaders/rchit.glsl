@@ -16,19 +16,19 @@ void main()
   // Barycentric coordinates from GL_EXT_ray_tracing extension
   const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
-  // Vertex positions from GL_EXT_ray_tracing_position_fetch extension
+  // Vertex positions in object space from GL_EXT_ray_tracing_position_fetch extension
   vec3 v0 = gl_HitTriangleVertexPositionsEXT[0];
   vec3 v1 = gl_HitTriangleVertexPositionsEXT[1];
   vec3 v2 = gl_HitTriangleVertexPositionsEXT[2];
 
-  // Position calculation
-  const vec3 pos = v0 * barycentrics.x + v1 * barycentrics.y + v2 * barycentrics.z;
-  const vec3 worldPos = vec3(gl_ObjectToWorldEXT * vec4(pos, 1.0));  // Transforming the position to world space
+  // Color vertices (adjust these colors as desired)
+  vec3 color0 = vec3(1.0, 0.0, 0.0); // Red
+  vec3 color1 = vec3(0.0, 1.0, 0.0); // Green
+  vec3 color2 = vec3(0.0, 0.0, 1.0); // Blue
 
-  // Normal calculation
-  const vec3 normal = normalize(cross(v1 - v0, v2 - v0));
-  const vec3 worldNormal = normalize(vec3(gl_ObjectToWorldEXT * vec4(normal, 0.0)));  // Transforming the normal to world space
+  // Interpolate colors using barycentric coordinates
+  vec3 interpolatedColor = barycentrics.x * color0 + barycentrics.y * color1 + barycentrics.z * color2;
 
-
-  prd.hitValue = vec3(worldPos);
+  // Output the interpolated color
+  prd.hitValue = interpolatedColor;
 }

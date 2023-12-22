@@ -13,8 +13,8 @@ DAXA_DECL_BUFFER_PTR(camera_view)
 
 struct Aabb
 {
-  daxa_f32vec3 minimum;
-  daxa_f32vec3 maximum;
+    daxa_f32vec3 minimum;
+    daxa_f32vec3 maximum;
 };
 
 struct Aabbs
@@ -33,15 +33,21 @@ struct PushConstant
     daxa_BufferPtr(Aabbs) aabb_buffer;
 };
 
-
+struct rayLight
+{
+    daxa_f32vec3 inHitPosition;
+    daxa_f32 outLightDistance;
+    daxa_f32vec3 outLightDir;
+    daxa_f32 outIntensity;
+};
 struct hitPayload
 {
-  daxa_f32vec3 hitValue;
-  daxa_u32 seed;
+    daxa_f32vec3 hitValue;
+    daxa_u32 seed;
 };
 
 struct Ray
 {
-  daxa_f32vec3 origin;
-  daxa_f32vec3 direction;
+    daxa_f32vec3 origin;
+    daxa_f32vec3 direction;
 };

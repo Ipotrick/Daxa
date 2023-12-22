@@ -26,23 +26,29 @@ void main()
     ray.origin = gl_ObjectRayOriginEXT;
     ray.direction = gl_ObjectRayDirectionEXT;
 
-    mat4 model = mat4(
-      gl_WorldToObjectEXT[0][0], gl_WorldToObjectEXT[0][1], gl_WorldToObjectEXT[0][2], 0,
-      gl_WorldToObjectEXT[1][0], gl_WorldToObjectEXT[1][1], gl_WorldToObjectEXT[1][2], 0,
-      gl_WorldToObjectEXT[2][0], gl_WorldToObjectEXT[2][1], gl_WorldToObjectEXT[2][2], 0,
-      gl_WorldToObjectEXT[3][0], gl_WorldToObjectEXT[3][1], gl_WorldToObjectEXT[3][2], 1.0);
+    // mat4 model = mat4(
+    //   gl_WorldToObjectEXT[0][0], gl_WorldToObjectEXT[0][1], gl_WorldToObjectEXT[0][2], 0,
+    //   gl_WorldToObjectEXT[1][0], gl_WorldToObjectEXT[1][1], gl_WorldToObjectEXT[1][2], 0,
+    //   gl_WorldToObjectEXT[2][0], gl_WorldToObjectEXT[2][1], gl_WorldToObjectEXT[2][2], 0,
+    //   gl_WorldToObjectEXT[3][0], gl_WorldToObjectEXT[3][1], gl_WorldToObjectEXT[3][2], 1.0);
 
-    ray.origin = (model * vec4(ray.origin, 1)).xyz;
-    ray.direction = (model * vec4(ray.direction, 0)).xyz;
+    mat4 inv_model = mat4(
+      gl_ObjectToWorld3x4EXT[0][0], gl_ObjectToWorld3x4EXT[0][1], gl_ObjectToWorld3x4EXT[0][2], gl_ObjectToWorld3x4EXT[0][3],
+      gl_ObjectToWorld3x4EXT[0][1], gl_ObjectToWorld3x4EXT[1][1], gl_ObjectToWorld3x4EXT[1][2], gl_ObjectToWorld3x4EXT[1][3],
+      gl_ObjectToWorld3x4EXT[2][0], gl_ObjectToWorld3x4EXT[2][1], gl_ObjectToWorld3x4EXT[2][2], gl_ObjectToWorld3x4EXT[2][3],
+      0, 0, 0, 1.0);
+
+    ray.origin = (inv_model * vec4(ray.origin, 1)).xyz;
+    ray.direction = (inv_model * vec4(ray.direction, 0)).xyz;
 
 
     float tHit = -1;
 
-    uint i = gl_PrimitiveID + gl_GeometryIndexEXT;
+    uint i = gl_PrimitiveID + gl_GeometryIndexEXT + gl_InstanceCustomIndexEXT;
 
     Aabb aabb = deref(p.aabb_buffer).aabbs[i];
-    aabb.minimum = (model * vec4(aabb.minimum, 1)).xyz;
-    aabb.maximum = (model * vec4(aabb.maximum, 1)).xyz;
+    // aabb.minimum = (model * vec4(aabb.minimum, 1)).xyz;
+    // aabb.maximum = (model * vec4(aabb.maximum, 1)).xyz;
 
 
     tHit = hitAabb(aabb, ray);

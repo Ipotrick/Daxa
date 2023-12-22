@@ -356,6 +356,12 @@ namespace tests
                     .any_hit_infos = {daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"rahit.glsl"},
                     }},
+                    .callable_infos = {daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"rcall.glsl"},
+                    },
+                    daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"rcall2.glsl"},
+                    }},
                     .closest_hit_infos = {daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"rchit2.glsl"},
                     }, daxa::ShaderCompileInfo{
@@ -363,6 +369,8 @@ namespace tests
                     }},
                     .miss_hit_infos = {daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"rmiss.glsl"},
+                    }, daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"rmiss2.glsl"},
                     }},
                     // Groups are in order of their shader indices.
                     // NOTE: The order of the groups is important! raygen, miss, hit, callable
@@ -371,15 +379,24 @@ namespace tests
                         .general_shader_index = 0,
                     },daxa::RayTracingShaderGroupInfo{
                         .type = daxa::ShaderGroup::GENERAL,
-                        .general_shader_index = 5,
+                        .general_shader_index = 7,
+                    },daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 8,
                     },daxa::RayTracingShaderGroupInfo{
                         .type = daxa::ShaderGroup::PROCEDURAL_HIT_GROUP,
-                        .closest_hit_shader_index = 3,
+                        .closest_hit_shader_index = 5,
                         .any_hit_shader_index = 2,
                         .intersection_shader_index = 1,
                     },daxa::RayTracingShaderGroupInfo{
                         .type = daxa::ShaderGroup::TRIANGLES_HIT_GROUP,
-                        .closest_hit_shader_index = 4,
+                        .closest_hit_shader_index = 6,
+                    },daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 3,
+                    },daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 4,
                     }},
                     .max_ray_recursion_depth = 2,
                     .push_constant_size = sizeof(PushConstant),
@@ -523,11 +540,9 @@ namespace tests
                     .image_id = swapchain_image,
                 });
 
-                auto ray_recorder = std::move(recorder).begin_ray_tracing();
+                recorder.set_pipeline(*rt_pipeline);
 
-                ray_recorder.set_pipeline(*rt_pipeline);
-
-                ray_recorder.push_constant(PushConstant{
+                recorder.push_constant(PushConstant{
                     .frame = frame++,
                     .size = {width, height},
                     .tlas = tlas,
@@ -536,13 +551,11 @@ namespace tests
                     .aabb_buffer = this->device.get_device_address(aabb_buffer).value(),
                 });
 
-                ray_recorder.trace_rays({
+                recorder.trace_rays({
                     .width = width,
                     .height = height,
                     .depth = 1,
                 });
-
-                recorder = std::move(ray_recorder).end_ray_tracing();
                 
                 recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,

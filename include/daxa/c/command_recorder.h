@@ -445,12 +445,7 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId id);
 
 
-/// @brief  Starts a ray tracing scope akin to the dynamic rendering feature in vulkan.
-DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_begin_ray_tracing(daxa_CommandRecorder cmd_enc);
-/// @brief  Ends a ray tracing scope akin to the dynamic rendering feature in vulkan.
-DAXA_EXPORT void
-daxa_cmd_end_ray_tracing(daxa_CommandRecorder cmd_enc);
+
 DAXA_EXPORT void
 daxa_cmd_trace_rays(daxa_CommandRecorder cmd_enc, daxa_TraceRaysInfo const * info);
 

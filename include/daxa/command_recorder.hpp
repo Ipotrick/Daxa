@@ -251,35 +251,6 @@ namespace daxa
 
     struct CommandRecorder;
 
-    struct DAXA_EXPORT_CXX RayCommandRecorder
-    {
-      private:
-        daxa_CommandRecorder internal = {};
-        friend struct CommandRecorder;
-
-      public:
-        RayCommandRecorder() = default;
-        ~RayCommandRecorder();
-        RayCommandRecorder(RayCommandRecorder const &) = delete;
-        RayCommandRecorder & operator=(RayCommandRecorder const &) = delete;
-        RayCommandRecorder(RayCommandRecorder &&);
-        RayCommandRecorder & operator=(RayCommandRecorder &&);
-
-        /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
-        ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
-        [[nodiscard]] auto end_ray_tracing() && -> CommandRecorder;
-
-        void trace_rays(TraceRaysInfo const & info);
-
-        void push_constant_vptr(void const * data, u32 size);
-        template <typename T>
-        void push_constant(T const & constant)
-        {
-            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
-        }
-        void set_pipeline(RayTracingPipeline const & pipeline);
-    };
-
     struct DAXA_EXPORT_CXX RenderCommandRecorder
     {
       private:
@@ -343,7 +314,6 @@ namespace daxa
       private:
         daxa_CommandRecorder internal = {};
         friend struct RenderCommandRecorder;
-        friend struct RayCommandRecorder;
 
       public:
         CommandRecorder() = default;
@@ -423,8 +393,9 @@ namespace daxa
         // void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
         // void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
 
-        /// @brief  Starts a ray tracing scope akin to the dynamic rendering feature in vulkan.
-        [[nodiscard]] auto begin_ray_tracing() && -> RayCommandRecorder;
+        void set_pipeline(RayTracingPipeline const & pipeline);
+
+        void trace_rays(TraceRaysInfo const & info);
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);

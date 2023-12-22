@@ -21,12 +21,6 @@ void main()
     prd.seed  = seed;
 
     uint cull_mask = 0xff;
-    // vec3 origin = vec3(
-    //     (float(index.x) + 0.5f) / float(p.size.x),
-    //     (float(index.y) + 0.5f) / float(p.size.y),
-    //     0
-    // );
-    // vec3 direction = vec3(0,0,1);
     
     // Camera setup
     daxa_f32mat4x4 inv_view = deref(p.camera_buffer).inv_view;
