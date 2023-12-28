@@ -15,7 +15,7 @@
  *   A partial array of the attachments runtime ids are represented within an id array in the blob.
  * 
  * DAXA_TH_IMAGE_ID_MIP_ARRAY:   
- *   Declares an image attachment  .  
+ *   Declares an image attachment.  
  *   A partial array of image views pointing to separate mip levels of the first runtime image are represented within the blob.
  * 
  * DAXA_TH_BUFFER:               
