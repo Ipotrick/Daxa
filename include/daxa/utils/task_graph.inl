@@ -1,6 +1,45 @@
 #pragma once
 #include "../daxa.inl"
 
+/**
+ * DAXA_TH_IMAGE:                
+ *   Declares an image attachment.
+ *   The attachment is NOT represented at all within the shader blob.
+ * 
+ * DAXA_TH_IMAGE_ID:             
+ *   Declares an image attachment. 
+ *   The first runtime image will be represented within the blob.
+ * 
+ * DAXA_TH_IMAGE_ID_ARRAY:       
+ *   Declares an image attachment. 
+ *   A partial array of the attachments runtime ids are represented within an id array in the blob.
+ * 
+ * DAXA_TH_IMAGE_ID_MIP_ARRAY:   
+ *   Declares an image attachment  .  
+ *   A partial array of image views pointing to separate mip levels of the first runtime image are represented within the blob.
+ * 
+ * DAXA_TH_BUFFER:               
+ *   Declares a buffer attachment.
+ *   The attachment is NOT represented at all within the shader blob.
+ * 
+ * DAXA_TH_BUFFER_ID:            
+ *   Declares a buffer attachment.
+ *   The first runtime buffer will be represented within the blob.
+ * 
+ * DAXA_TH_BUFFER_PTR:           
+ *   Declares a buffer attachment.
+ *   The first runtime buffer will be represented with its buffer device address within the blob.
+ * 
+ * DAXA_TH_BUFFER_ID_ARRAY:      
+ *   Declares a buffer attachment.
+ *   A partial array of the attachments runtime buffers are represented within an id array in the blob.
+ * 
+ * DAXA_TH_BUFFER_PTR_ARRAY:     
+ *   Declares a buffer attachment.
+ *   A partial array of the attachments runtime buffers are represented with their buffer device addresses within an id array in the blob.
+ * 
+*/
+
 // DAXA 3.0 Task-Head-Shader interface:
 #if DAXA_SHADER
 #define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME, SIZE) \
