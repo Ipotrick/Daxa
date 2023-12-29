@@ -18,40 +18,40 @@ void main()
     const ivec2 index = ivec2(gl_LaunchIDEXT.xy);
 
     uint frame = p.frame;
-    
+
     uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, frame * NBSAMPLES);
-    prd.seed  = seed;
+    prd.seed = seed;
 
     uint cull_mask = 0xff;
-    
+
     // Camera setup
     daxa_f32mat4x4 inv_view = deref(p.camera_buffer).inv_view;
     daxa_f32mat4x4 inv_proj = deref(p.camera_buffer).inv_proj;
 
     const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
-    const vec2 inUV        = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
-    vec2       d           = inUV * 2.0 - 1.0;
+    const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
+    vec2 d = inUV * 2.0 - 1.0;
 
-    vec4 origin    = inv_view * vec4(0, 0, 0, 1);
-    vec4 target    = inv_proj * vec4(d.x, d.y, 1, 1);
+    vec4 origin = inv_view * vec4(0, 0, 0, 1);
+    vec4 target = inv_proj * vec4(d.x, d.y, 1, 1);
     vec4 direction = inv_view * vec4(normalize(target.xyz), 0);
 
-    
-    uint  rayFlags = gl_RayFlagsNoneEXT;
-    float tMin     = 0.0001;
-    float tMax     = 10000.0;
+    uint rayFlags = gl_RayFlagsNoneEXT;
+    float tMin = 0.0001;
+    float tMax = 10000.0;
 
-    traceRayEXT(daxa_accelerationStructureEXT(p.tlas), // acceleration structure
-                rayFlags,                              // rayFlags
-                0xFF,                                  // cullMask
-                0,                                     // sbtRecordOffset
-                0,                                     // sbtRecordStride
-                0,                                     // missIndex
-                origin.xyz,                            // ray origin
-                tMin,                                  // ray min range
-                direction.xyz,                         // ray direction
-                tMax,                                  // ray max range
-                0                                      // payload (location = 0)
+    traceRayEXT(
+        daxa_accelerationStructureEXT(p.tlas),
+        rayFlags,      // rayFlags
+        0xFF,          // cullMask
+        0,             // sbtRecordOffset
+        0,             // sbtRecordStride
+        0,             // missIndex
+        origin.xyz,    // ray origin
+        tMin,          // ray min range
+        direction.xyz, // ray direction
+        tMax,          // ray max range
+        0              // payload (location = 0)
     );
 
     // imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(prd.hitValue, 1.0)));
@@ -64,14 +64,14 @@ void main()
 // Ray-AABB intersection
 float hitAabb(const Aabb aabb, const Ray r)
 {
-  vec3  invDir = 1.0 / r.direction;
-  vec3  tbot   = invDir * (aabb.minimum - r.origin);
-  vec3  ttop   = invDir * (aabb.maximum - r.origin);
-  vec3  tmin   = min(ttop, tbot);
-  vec3  tmax   = max(ttop, tbot);
-  float t0     = max(tmin.x, max(tmin.y, tmin.z));
-  float t1     = min(tmax.x, min(tmax.y, tmax.z));
-  return t1 > max(t0, 0.0) ? t0 : -1.0;
+    vec3 invDir = 1.0 / r.direction;
+    vec3 tbot = invDir * (aabb.minimum - r.origin);
+    vec3 ttop = invDir * (aabb.maximum - r.origin);
+    vec3 tmin = min(ttop, tbot);
+    vec3 tmax = max(ttop, tbot);
+    float t0 = max(tmin.x, max(tmin.y, tmin.z));
+    float t1 = min(tmax.x, min(tmax.y, tmax.z));
+    return t1 > max(t0, 0.0) ? t0 : -1.0;
 }
 
 void main()
@@ -87,14 +87,13 @@ void main()
     //   gl_WorldToObjectEXT[3][0], gl_WorldToObjectEXT[3][1], gl_WorldToObjectEXT[3][2], 1.0);
 
     mat4 inv_model = mat4(
-      gl_ObjectToWorld3x4EXT[0][0], gl_ObjectToWorld3x4EXT[0][1], gl_ObjectToWorld3x4EXT[0][2], gl_ObjectToWorld3x4EXT[0][3],
-      gl_ObjectToWorld3x4EXT[0][1], gl_ObjectToWorld3x4EXT[1][1], gl_ObjectToWorld3x4EXT[1][2], gl_ObjectToWorld3x4EXT[1][3],
-      gl_ObjectToWorld3x4EXT[2][0], gl_ObjectToWorld3x4EXT[2][1], gl_ObjectToWorld3x4EXT[2][2], gl_ObjectToWorld3x4EXT[2][3],
-      0, 0, 0, 1.0);
+        gl_ObjectToWorld3x4EXT[0][0], gl_ObjectToWorld3x4EXT[0][1], gl_ObjectToWorld3x4EXT[0][2], gl_ObjectToWorld3x4EXT[0][3],
+        gl_ObjectToWorld3x4EXT[0][1], gl_ObjectToWorld3x4EXT[1][1], gl_ObjectToWorld3x4EXT[1][2], gl_ObjectToWorld3x4EXT[1][3],
+        gl_ObjectToWorld3x4EXT[2][0], gl_ObjectToWorld3x4EXT[2][1], gl_ObjectToWorld3x4EXT[2][2], gl_ObjectToWorld3x4EXT[2][3],
+        0, 0, 0, 1.0);
 
     ray.origin = (inv_model * vec4(ray.origin, 1)).xyz;
     ray.direction = (inv_model * vec4(ray.direction, 0)).xyz;
-
 
     float tHit = -1;
 
@@ -104,7 +103,6 @@ void main()
     // aabb.minimum = (model * vec4(aabb.minimum, 1)).xyz;
     // aabb.maximum = (model * vec4(aabb.maximum, 1)).xyz;
 
-
     tHit = hitAabb(aabb, ray);
 
     // Report hit point
@@ -112,20 +110,19 @@ void main()
         reportIntersectionEXT(tHit, 0); // 0 is the hit kind (hit group index)
 }
 
-
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_ANY_HIT
 
 layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 // hardcoded dissolve
-const float dissolve = 0.3;
+float const dissolve = 0.3;
 
 void main()
 {
 
-  uint seed = prd.seed;  // We don't want to modify the PRD
-  if(rnd(seed) > dissolve)
-    ignoreIntersectionEXT;
+    uint seed = prd.seed; // We don't want to modify the PRD
+    if (rnd(seed) > dissolve)
+        ignoreIntersectionEXT;
 }
 
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_CALLABLE
@@ -142,10 +139,10 @@ float lightIntensity = 10.0;
 
 void main()
 {
-    vec3 lDir               = lightPos - cLight.inHitPosition;
+    vec3 lDir = lightPos - cLight.inHitPosition;
     cLight.outLightDistance = length(lDir);
-    cLight.outIntensity     = lightIntensity / (cLight.outLightDistance * cLight.outLightDistance);
-    cLight.outLightDir      = normalize(lDir);
+    cLight.outIntensity = lightIntensity / (cLight.outLightDistance * cLight.outLightDistance);
+    cLight.outLightDir = normalize(lDir);
 }
 
 #else
@@ -156,12 +153,11 @@ vec3 lightDirection = vec3(0.0, 1.0, 0.0);
 void main()
 {
     cLight.outLightDistance = 1000000;
-    cLight.outIntensity     = 3.0;
-    cLight.outLightDir      = normalize(lightDirection);
+    cLight.outIntensity = 3.0;
+    cLight.outLightDir = normalize(lightDirection);
 }
 
 #endif // SPOT_LIGHT
-
 
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_CLOSEST_HIT
 
@@ -176,24 +172,24 @@ layout(location = 0) rayPayloadInEXT hitPayload prd;
 void main()
 {
 
-  // Barycentric coordinates from GL_EXT_ray_tracing extension
-  const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
+    // Barycentric coordinates from GL_EXT_ray_tracing extension
+    const vec3 barycentrics = vec3(1.0 - attribs.x - attribs.y, attribs.x, attribs.y);
 
-  // Vertex positions in object space from GL_EXT_ray_tracing_position_fetch extension
-  vec3 v0 = gl_HitTriangleVertexPositionsEXT[0];
-  vec3 v1 = gl_HitTriangleVertexPositionsEXT[1];
-  vec3 v2 = gl_HitTriangleVertexPositionsEXT[2];
+    // Vertex positions in object space from GL_EXT_ray_tracing_position_fetch extension
+    vec3 v0 = gl_HitTriangleVertexPositionsEXT[0];
+    vec3 v1 = gl_HitTriangleVertexPositionsEXT[1];
+    vec3 v2 = gl_HitTriangleVertexPositionsEXT[2];
 
-  // Color vertices (adjust these colors as desired)
-  vec3 color0 = vec3(1.0, 0.0, 0.0); // Red
-  vec3 color1 = vec3(0.0, 1.0, 0.0); // Green
-  vec3 color2 = vec3(0.0, 0.0, 1.0); // Blue
+    // Color vertices (adjust these colors as desired)
+    vec3 color0 = vec3(1.0, 0.0, 0.0); // Red
+    vec3 color1 = vec3(0.0, 1.0, 0.0); // Green
+    vec3 color2 = vec3(0.0, 0.0, 1.0); // Blue
 
-  // Interpolate colors using barycentric coordinates
-  vec3 interpolatedColor = barycentrics.x * color0 + barycentrics.y * color1 + barycentrics.z * color2;
+    // Interpolate colors using barycentric coordinates
+    vec3 interpolatedColor = barycentrics.x * color0 + barycentrics.y * color1 + barycentrics.z * color2;
 
-  // Output the interpolated color
-  prd.hitValue = interpolatedColor;
+    // Output the interpolated color
+    prd.hitValue = interpolatedColor;
 }
 
 #else // HIT_TRIANGLE
@@ -208,87 +204,87 @@ layout(location = 3) callableDataEXT rayLight cLight;
 
 void main()
 {
-  vec3 world_pos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
+    vec3 world_pos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 
-  cLight.inHitPosition = world_pos;
+    cLight.inHitPosition = world_pos;
 
+    if (DAXA_CALLABLE_INDEX < 2)
+        executeCallableEXT(DAXA_CALLABLE_INDEX, 3);
+    else
+    {
+        vec3 lDir = vec3(1.0, 2.0, 0.4) - cLight.inHitPosition;
+        cLight.outLightDistance = length(lDir);
+        cLight.outIntensity = 100.0 / (cLight.outLightDistance * cLight.outLightDistance);
+        cLight.outLightDir = normalize(lDir);
+    }
 
-  if(DAXA_CALLABLE_INDEX < 2)
-    executeCallableEXT(DAXA_CALLABLE_INDEX, 3);
-  else {
-    vec3 lDir               = vec3(1.0, 2.0, 0.4) - cLight.inHitPosition;
-    cLight.outLightDistance = length(lDir);
-    cLight.outIntensity     = 100.0 / (cLight.outLightDistance * cLight.outLightDistance);
-    cLight.outLightDir      = normalize(lDir);
-  }
+    mat4 model = mat4(
+        gl_ObjectToWorldEXT[0][0], gl_ObjectToWorldEXT[0][1], gl_ObjectToWorldEXT[0][2], 0,
+        gl_ObjectToWorldEXT[0][1], gl_ObjectToWorldEXT[1][1], gl_ObjectToWorldEXT[1][2], 0,
+        gl_ObjectToWorldEXT[2][0], gl_ObjectToWorldEXT[2][1], gl_ObjectToWorldEXT[2][2], 0,
+        gl_ObjectToWorldEXT[3][0], gl_ObjectToWorldEXT[3][1], gl_ObjectToWorldEXT[3][2], 1.0);
 
-  mat4 model = mat4(
-      gl_ObjectToWorldEXT[0][0], gl_ObjectToWorldEXT[0][1], gl_ObjectToWorldEXT[0][2], 0,
-      gl_ObjectToWorldEXT[0][1], gl_ObjectToWorldEXT[1][1], gl_ObjectToWorldEXT[1][2], 0,
-      gl_ObjectToWorldEXT[2][0], gl_ObjectToWorldEXT[2][1], gl_ObjectToWorldEXT[2][2], 0,
-      gl_ObjectToWorldEXT[3][0], gl_ObjectToWorldEXT[3][1], gl_ObjectToWorldEXT[3][2], 1.0);
+    uint prim_index = gl_PrimitiveID + gl_GeometryIndexEXT + gl_InstanceCustomIndexEXT;
 
-  uint prim_index = gl_PrimitiveID + gl_GeometryIndexEXT + gl_InstanceCustomIndexEXT;
+    Aabb aabb = deref(p.aabb_buffer).aabbs[prim_index];
+    vec3 center = (aabb.minimum + aabb.maximum) * 0.5;
+    center = (model * vec4(center, 1)).xyz;
 
-  Aabb aabb = deref(p.aabb_buffer).aabbs[prim_index];
-  vec3 center = (aabb.minimum + aabb.maximum) * 0.5;
-  center = (model * vec4(center, 1)).xyz;
+    // Computing the normal at hit position
+    vec3 world_nrm = normalize(world_pos - center);
 
-  // Computing the normal at hit position
-  vec3 world_nrm = normalize(world_pos - center);
+    {
+        vec3 absN = abs(world_nrm);
+        float maxC = max(max(absN.x, absN.y), absN.z);
+        world_nrm = (maxC == absN.x) ? vec3(sign(world_nrm.x), 0, 0) : (maxC == absN.y) ? vec3(0, sign(world_nrm.y), 0)
+                                                                                        : vec3(0, 0, sign(world_nrm.z));
+    }
 
-  {
-    vec3  absN = abs(world_nrm);
-    float maxC = max(max(absN.x, absN.y), absN.z);
-    world_nrm   = (maxC == absN.x) ? vec3(sign(world_nrm.x), 0, 0) :
-                 (maxC == absN.y) ? vec3(0, sign(world_nrm.y), 0) :
-                                    vec3(0, 0, sign(world_nrm.z));
-  }
-
-  const vec3 diffuse = world_nrm * 0.5 + 0.5;
+    const vec3 diffuse = world_nrm * 0.5 + 0.5;
 
 #ifdef DEBUG_NORMALS
-  prd.hitValue = diffuse;
-#else 
-  float attenuation = 0.3;
+    prd.hitValue = diffuse;
+#else
+    float attenuation = 0.3;
 
-  // Tracing shadow ray only if the light is visible from the surface
-  if(dot(world_nrm, cLight.outLightDir) > 0)
-  {
-    float tMin   = 0.001;
-    float tMax   = cLight.outLightDistance;
-    vec3  origin = world_pos;
-    vec3  rayDir = cLight.outLightDir;
-    uint  flags  = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
-    isShadowed   = true;
-    traceRayEXT(daxa_accelerationStructureEXT(p.tlas),  // acceleration structure
-                flags,       // rayFlags
-                0xFF,        // cullMask
-                0,           // sbtRecordOffset
-                0,           // sbtRecordStride
-                1,           // missIndex
-                origin,      // ray origin
-                tMin,        // ray min range
-                rayDir,      // ray direction
-                tMax,        // ray max range
-                1            // payload (location = 1)
-    );
-
-    if(isShadowed)
+    // Tracing shadow ray only if the light is visible from the surface
+    if (dot(world_nrm, cLight.outLightDir) > 0)
     {
-      attenuation = 0.3;
-    } else {
-      attenuation = 1.0;
+        float tMin = 0.001;
+        float tMax = cLight.outLightDistance;
+        vec3 origin = world_pos;
+        vec3 rayDir = cLight.outLightDir;
+        uint flags = gl_RayFlagsTerminateOnFirstHitEXT | gl_RayFlagsOpaqueEXT | gl_RayFlagsSkipClosestHitShaderEXT;
+        isShadowed = true;
+        traceRayEXT(
+            daxa_accelerationStructureEXT(p.tlas),
+            flags,  // rayFlags
+            0xFF,   // cullMask
+            0,      // sbtRecordOffset
+            0,      // sbtRecordStride
+            1,      // missIndex
+            origin, // ray origin
+            tMin,   // ray min range
+            rayDir, // ray direction
+            tMax,   // ray max range
+            1       // payload (location = 1)
+        );
+
+        if (isShadowed)
+        {
+            attenuation = 0.3;
+        }
+        else
+        {
+            attenuation = 1.0;
+        }
     }
-  }
 
-  prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse));
+    prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse));
 #endif // DEBUG_NORMALS
-
 }
 
 #endif // HIT_TRIANGLE
-
 
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_MISS
 
@@ -298,7 +294,7 @@ layout(location = 1) rayPayloadInEXT bool isShadowed;
 
 void main()
 {
-  isShadowed = false;
+    isShadowed = false;
 }
 
 #else
@@ -307,10 +303,9 @@ layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 void main()
 {
-  prd.hitValue = vec3(0.5, 0.7, 1.0);
+    prd.hitValue = vec3(0.5, 0.7, 1.0);
 }
 
 #endif // MISS_SHADOW
-
 
 #endif // DAXA_SHADER_STAGE

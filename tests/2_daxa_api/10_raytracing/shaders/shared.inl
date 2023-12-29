@@ -5,11 +5,12 @@
 
 #define MAX_PRIMITIVES 2
 
-struct camera_view{ 
+struct CameraView
+{
     daxa_f32mat4x4 inv_view;
     daxa_f32mat4x4 inv_proj;
 };
-DAXA_DECL_BUFFER_PTR(camera_view)
+DAXA_DECL_BUFFER_PTR(CameraView)
 
 struct Aabb
 {
@@ -29,7 +30,7 @@ struct PushConstant
     daxa_u32vec2 size;
     daxa_TlasId tlas;
     daxa_ImageViewId swapchain;
-    daxa_BufferPtr(camera_view) camera_buffer;
+    daxa_BufferPtr(CameraView) camera_buffer;
     daxa_BufferPtr(Aabbs) aabb_buffer;
 };
 
