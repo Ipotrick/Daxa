@@ -12,11 +12,11 @@
 
 namespace daxa
 {
-    TaskBufferAttachmentInfo const & TaskInterface::buf_attach(TaskBufferAttachmentIndex index) const
+    TaskBufferAttachmentInfo const & TaskInterface::buf(TaskBufferAttachmentIndex index) const
     {
         return daxa::get<TaskBufferAttachmentInfo>(attachment_infos[index.value]);
     }
-    TaskBufferAttachmentInfo const & TaskInterface::buf_attach(TaskBufferView view) const
+    TaskBufferAttachmentInfo const & TaskInterface::buf(TaskBufferView view) const
     {
         auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const& other){ 
             if (auto * ptr = daxa::get_if<TaskBufferAttachmentInfo>(&other))
@@ -28,15 +28,15 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
         return daxa::get<TaskBufferAttachmentInfo>(*iter);
     }
-    TaskBufferAttachmentInfo const & TaskInterface::buf_attach(usize index) const
+    TaskBufferAttachmentInfo const & TaskInterface::buf(usize index) const
     {
         return daxa::get<TaskBufferAttachmentInfo>(attachment_infos[index]);
     }
-    TaskImageAttachmentInfo const & TaskInterface::img_attach(TaskImageAttachmentIndex index) const
+    TaskImageAttachmentInfo const & TaskInterface::img(TaskImageAttachmentIndex index) const
     {
         return daxa::get<TaskImageAttachmentInfo>(attachment_infos[index.value]);
     }
-    TaskImageAttachmentInfo const & TaskInterface::img_attach(TaskImageView view) const
+    TaskImageAttachmentInfo const & TaskInterface::img(TaskImageView view) const
     {
         auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const& other){ 
             if (auto * ptr = daxa::get_if<TaskImageAttachmentInfo>(&other))
@@ -48,29 +48,29 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
         return daxa::get<TaskImageAttachmentInfo>(*iter);
     }
-    TaskImageAttachmentInfo const & TaskInterface::img_attach(usize index) const
+    TaskImageAttachmentInfo const & TaskInterface::img(usize index) const
     {
         return daxa::get<TaskImageAttachmentInfo>(attachment_infos[index]);
     }
     
     TaskBufferAttachmentInfo const & TaskInterface::attach(TaskBufferAttachmentIndex index) const
     {
-        return buf_attach(index);
+        return buf(index);
     }
 
     TaskImageAttachmentInfo const & TaskInterface::attach(TaskImageAttachmentIndex index) const
     {
-        return img_attach(index);
+        return img(index);
     }
 
     TaskBufferAttachmentInfo const & TaskInterface::attach(TaskBufferView view) const
     {
-        return buf_attach(view);
+        return buf(view);
     }
 
     TaskImageAttachmentInfo const & TaskInterface::attach(TaskImageView view) const
     {
-        return img_attach(view);
+        return img(view);
     }
 
     TaskAttachmentInfoVariant const & TaskInterface::attach(usize index) const

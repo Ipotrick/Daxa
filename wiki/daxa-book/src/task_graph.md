@@ -160,7 +160,7 @@ For inline tasks, the uses can be retrieved with the task interface:
 ```cpp
   .task = [=](daxa::TaskInterface ti)
   {
-    daxa::TaskImageAttachmentInfo const & img_attachment = ti.img(attachment);
+    daxa::TaskImageAttachmentInfo const & imgment = ti.img(attachment);
   },
 ```
 

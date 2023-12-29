@@ -450,8 +450,8 @@ namespace tests
                     virtual void callback(daxa::TaskInterface const & tri) const override
                     {
                         tri.recorder.blit_image_to_image({
-                            .src_image = tri.img_attach(lower_mip).ids[0],
-                            .dst_image = tri.img_attach(higher_mip).ids[0],
+                            .src_image = tri.img(lower_mip).ids[0],
+                            .dst_image = tri.img(higher_mip).ids[0],
                             .src_slice = {
                                 .mip_level = info.mip,
                                 .base_array_layer = 0,
@@ -487,7 +487,7 @@ namespace tests
                         TaskBufferAttachment{.access = TaskBufferAccess::HOST_TRANSFER_WRITE, .view = task_mipmapping_gpu_input_buffer},
                     },
                     .task = [this](daxa::TaskInterface const & tri)
-                    { update_gpu_input(tri.recorder, tri.buf_attach(0).ids[0]); },
+                    { update_gpu_input(tri.recorder, tri.buf(0).ids[0]); },
                     .name = "Input Transfer",
                 }));
                 new_task_graph.conditional({
@@ -501,7 +501,7 @@ namespace tests
                             },
                             .task = [=, this](daxa::TaskInterface const & tri)
                             {
-                                paint(tri.recorder, tri.img_attach(1).ids[0], tri.buf_attach(0).ids[0]);
+                                paint(tri.recorder, tri.img(1).ids[0], tri.buf(0).ids[0]);
                             },
                             .name = "mouse paint",
                         }});
@@ -535,7 +535,7 @@ namespace tests
                         tri.recorder.clear_image({
                             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                            .dst_image = tri.img_attach(task_swapchain_image).ids[0],
+                            .dst_image = tri.img(task_swapchain_image).ids[0],
                         });
                     },
                     .name = "clear swapchain",

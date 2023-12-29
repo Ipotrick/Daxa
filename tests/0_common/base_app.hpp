@@ -141,7 +141,7 @@ struct BaseApp : AppWindow<T>
             .attachments = { daxa::TaskImageAttachment{.access=daxa::TaskImageAccess::COLOR_ATTACHMENT, .view = task_swapchain_image} },
             .task = [this](daxa::TaskInterface const & ti)
             {
-                imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.img_attach(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
+                imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.img(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
             .name = "ImGui Task",
         });
