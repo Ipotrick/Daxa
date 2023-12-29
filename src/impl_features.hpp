@@ -30,6 +30,7 @@ namespace daxa
         std::optional<VkPhysicalDeviceAccelerationStructureFeaturesKHR> acceleration_structure = {};
         std::optional<VkPhysicalDeviceRayTracingPipelineFeaturesKHR> ray_tracing_pipeline = {};
         std::optional<VkPhysicalDeviceRayQueryFeaturesKHR> ray_query = {};
+        std::optional<VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR> ray_tracing_position_fetch = {};
         void * chain = {};
 
         void initialize(daxa_DeviceInfo info);

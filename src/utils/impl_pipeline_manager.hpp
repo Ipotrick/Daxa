@@ -52,6 +52,12 @@ namespace daxa
             TESS_EVAL,
             TASK,
             MESH,
+            RAY_GEN,
+            RAY_INTERSECT,
+            RAY_ANY_HIT,
+            RAY_CLOSEST_HIT,
+            RAY_MISS,
+            RAY_CALLABLE,
         };
 
         PipelineManagerInfo info = {};
@@ -72,9 +78,11 @@ namespace daxa
 
         using ComputePipelineState = PipelineState<ComputePipeline, ComputePipelineCompileInfo>;
         using RasterPipelineState = PipelineState<RasterPipeline, RasterPipelineCompileInfo>;
+        using RayTracingPipelineState = PipelineState<RayTracingPipeline, RayTracingPipelineCompileInfo>;
 
         std::vector<ComputePipelineState> compute_pipelines;
         std::vector<RasterPipelineState> raster_pipelines;
+        std::vector<RayTracingPipelineState> ray_tracing_pipelines;
 
         // TODO(grundlett): Maybe make the pipeline compiler *internally* thread-safe!
         // This variable is accessed by the includer, which makes that not thread-safe
@@ -106,10 +114,13 @@ namespace daxa
         ImplPipelineManager(PipelineManagerInfo && a_info);
         ~ImplPipelineManager();
 
+        auto create_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<RayTracingPipelineState>;
         auto create_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<ComputePipelineState>;
         auto create_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<RasterPipelineState>;
+        auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RayTracingPipeline>>;
         auto add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>;
+        void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & virtual_info);

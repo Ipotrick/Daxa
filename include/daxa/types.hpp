@@ -1413,6 +1413,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags TASK_SHADER = {0x00080000ull};
         static inline constexpr PipelineStageFlags MESH_SHADER = {0x00100000ull};
         static inline constexpr PipelineStageFlags ACCELERATION_STRUCTURE_BUILD = {0x02000000ull};
+        static inline constexpr PipelineStageFlags RAY_TRACING_SHADER = {0x00200000ull};
     };
 
     [[nodiscard]] auto to_string(PipelineStageFlags flags) -> std::string;
@@ -1459,6 +1460,7 @@ namespace daxa
         static inline constexpr Access TASK_SHADER_READ = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access MESH_SHADER_READ = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_READ = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access RAY_TRACING_SHADER_READ = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::READ};
 
         static inline constexpr Access TOP_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access DRAW_INDIRECT_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::WRITE};
@@ -1485,6 +1487,7 @@ namespace daxa
         static inline constexpr Access TASK_SHADER_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access MESH_SHADER_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_WRITE = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access RAY_TRACING_SHADER_WRITE = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::WRITE};
 
         static inline constexpr Access TOP_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access DRAW_INDIRECT_READ_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ_WRITE};
@@ -1511,6 +1514,7 @@ namespace daxa
         static inline constexpr Access TASK_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access MESH_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_READ_WRITE = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access RAY_TRACING_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
     } // namespace AccessConsts
 
     enum struct SamplerAddressMode
@@ -1758,5 +1762,13 @@ namespace daxa
         uint32 = 1,
         uint8 = 1000265000,
         none = 1000165000,
+    };
+
+    // TODO: distinguish between GENERAL(raygen, miss & callable) cause shader handles must be set in order (raygen, miss, hit, callable)?
+    enum struct ShaderGroup {
+        GENERAL = 0,
+        TRIANGLES_HIT_GROUP = 1,
+        PROCEDURAL_HIT_GROUP = 2,
+        MAX_ENUM = 0x7fffffff,
     };
 } // namespace daxa

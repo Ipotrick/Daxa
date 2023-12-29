@@ -31,3 +31,8 @@ struct daxa_ImplComputePipeline final : ImplPipeline
 {
     ComputePipelineInfo info = {};
 };
+
+struct daxa_ImplRayTracingPipeline final : ImplPipeline
+{
+    RayTracingPipelineInfo info = {};
+};

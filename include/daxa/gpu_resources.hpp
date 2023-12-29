@@ -200,6 +200,7 @@ namespace daxa
         static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_TRACE = {0x00000004};
         static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_BUILD = {0x00000008};
         static inline constexpr AccelerationStructureBuildFlags LOW_MEMORY =  {0x00000010};
+        static inline constexpr AccelerationStructureBuildFlags ALLOW_DATA_ACCESS = {0x00000800};
     };
 
     struct TlasBuildInfo

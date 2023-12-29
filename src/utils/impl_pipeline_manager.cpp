@@ -387,6 +387,12 @@ namespace
         case daxa::ImplPipelineManager::ShaderStage::TESS_EVAL: return "tess_eval";
         case daxa::ImplPipelineManager::ShaderStage::TASK: return "task";
         case daxa::ImplPipelineManager::ShaderStage::MESH: return "mesh";
+        case daxa::ImplPipelineManager::ShaderStage::RAY_GEN: return "rgen";
+        case daxa::ImplPipelineManager::ShaderStage::RAY_INTERSECT: return "rint";
+        case daxa::ImplPipelineManager::ShaderStage::RAY_ANY_HIT: return "rahit";
+        case daxa::ImplPipelineManager::ShaderStage::RAY_CLOSEST_HIT: return "rchit";
+        case daxa::ImplPipelineManager::ShaderStage::RAY_MISS: return "rmiss";
+        case daxa::ImplPipelineManager::ShaderStage::RAY_CALLABLE: return "rcall";
         default: return "none";
         }
     }
@@ -425,6 +431,12 @@ namespace daxa
     {
         this->object = new ImplPipelineManager{std::move(info)};
     }
+    
+    auto PipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
+    {
+        auto & impl = *r_cast<ImplPipelineManager *>(this->object);
+        return impl.add_ray_tracing_pipeline(info);
+    }
 
     auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & info) -> Result<std::shared_ptr<ComputePipeline>>
     {
@@ -442,6 +454,12 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
         return impl.remove_compute_pipeline(pipeline);
+    }
+
+    void PipelineManager::remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline)
+    {
+        auto & impl = *r_cast<ImplPipelineManager *>(this->object);
+        return impl.remove_ray_tracing_pipeline(pipeline);
     }
 
     void PipelineManager::remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline)
@@ -524,6 +542,109 @@ namespace daxa
             }
         }
 #endif
+    }
+
+    auto ImplPipelineManager::create_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<RayTracingPipelineState>
+    {
+        auto modified_info = a_info;
+        for (auto & shader_compile_info : modified_info.ray_gen_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.intersection_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.any_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.callable_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.closest_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.miss_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+
+
+        if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        {
+            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
+        }
+        if (modified_info.push_constant_size % 4 != 0)
+        {
+            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
+        }
+        auto pipe_result = RayTracingPipelineState{
+            .pipeline_ptr = std::make_shared<RayTracingPipeline>(),
+            .info = modified_info,
+            .last_hotload_time = std::chrono::file_clock::now(),
+            .observed_hotload_files = {},
+        };
+        this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
+        auto ray_tracing_pipeline_info = RayTracingPipelineInfo{
+            .ray_gen_shaders = {},
+            .intersection_shaders = {},
+            .any_hit_shaders = {},
+            .callable_shaders = {},
+            .closest_hit_shaders = {},
+            .miss_hit_shaders = {},
+            .shader_groups = {modified_info.shader_groups_infos.data(), modified_info.shader_groups_infos.size()},
+            .max_ray_recursion_depth = modified_info.max_ray_recursion_depth,
+            .push_constant_size = modified_info.push_constant_size,
+            .name = modified_info.name,
+        };
+        auto raygen_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto intersection_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto any_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto callable_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto closest_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        auto miss_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
+        using ElemT = std::tuple<std::vector<ShaderCompileInfo> *, FixedList<ShaderInfo, 10> *, std::vector<daxa::Result<std::vector<unsigned int>>>*, ShaderStage>;
+        auto const result_shader_compile_infos = std::array<ElemT, 6>{
+            ElemT{&pipe_result.info.ray_gen_infos, &ray_tracing_pipeline_info.ray_gen_shaders, &raygen_spirv_result, ShaderStage::RAY_GEN},
+            ElemT{&pipe_result.info.intersection_infos, &ray_tracing_pipeline_info.intersection_shaders, &intersection_spirv_result, ShaderStage::RAY_INTERSECT},
+            ElemT{&pipe_result.info.any_hit_infos, &ray_tracing_pipeline_info.any_hit_shaders, &any_hit_spirv_result, ShaderStage::RAY_ANY_HIT},
+            ElemT{&pipe_result.info.callable_infos, &ray_tracing_pipeline_info.callable_shaders, &callable_spirv_result, ShaderStage::RAY_CALLABLE},
+            ElemT{&pipe_result.info.closest_hit_infos, &ray_tracing_pipeline_info.closest_hit_shaders, &closest_hit_spirv_result, ShaderStage::RAY_CLOSEST_HIT},
+            ElemT{&pipe_result.info.miss_hit_infos, &ray_tracing_pipeline_info.miss_hit_shaders, &miss_hit_spirv_result, ShaderStage::RAY_MISS},
+        };
+        
+        for (auto [pipe_result_shader_info, final_shader_info, spv_results, stage] : result_shader_compile_infos)
+        {
+            for (FixedListSizeT i = 0; i < pipe_result_shader_info->size(); ++i)
+            {
+                auto &shader_compile_info = (*pipe_result_shader_info)[i];
+                auto spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
+                if (spv_result.is_err())
+                {
+                    if (this->info.register_null_pipelines_when_first_compile_fails)
+                    {
+                        auto result = Result<RayTracingPipelineState>(pipe_result);
+                        result.m = std::move(spv_result.message());
+                        return result;
+                    }
+                    else
+                    {
+                        return Result<RayTracingPipelineState>(spv_result.message());
+                    }
+                }
+                spv_results->push_back(std::move(spv_result));
+                final_shader_info->push_back(daxa::ShaderInfo{
+                    .byte_code = spv_results->back().value().data(),
+                    .byte_code_size = static_cast<u32>(spv_results->back().value().size()),
+                    .entry_point = {shader_compile_info.compile_options.entry_point.value()},
+                });
+            }
+        }
+        (*pipe_result.pipeline_ptr) = this->info.device.create_ray_tracing_pipeline(ray_tracing_pipeline_info);
+        return Result<RayTracingPipelineState>(std::move(pipe_result));
     }
 
     auto ImplPipelineManager::create_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<ComputePipelineState>
@@ -661,6 +782,28 @@ namespace daxa
         return Result<RasterPipelineState>(std::move(pipe_result));
     }
 
+
+    auto ImplPipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RayTracingPipeline>>
+    {
+        // DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
+        auto pipe_result = create_ray_tracing_pipeline(a_info);
+        if (pipe_result.is_err())
+        {
+            return Result<std::shared_ptr<RayTracingPipeline>>(pipe_result.m);
+        }
+        this->ray_tracing_pipelines.push_back(pipe_result.value());
+        if (this->info.register_null_pipelines_when_first_compile_fails)
+        {
+            auto result = Result<std::shared_ptr<RayTracingPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+            result.m = std::move(pipe_result.m);
+            return result;
+        }
+        else
+        {
+            return Result<std::shared_ptr<RayTracingPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        }
+    }
+
     auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
         DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
@@ -700,6 +843,22 @@ namespace daxa
         {
             return Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
         }
+    }
+
+    void ImplPipelineManager::remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline)
+    {
+        auto pipeline_iter = std::find_if(
+            this->ray_tracing_pipelines.begin(),
+            this->ray_tracing_pipelines.end(),
+            [&pipeline](RayTracingPipelineState const & other)
+            {
+                return pipeline.get() == other.pipeline_ptr.get();
+            });
+        if (pipeline_iter == this->ray_tracing_pipelines.end())
+        {
+            return;
+        }
+        this->ray_tracing_pipelines.erase(pipeline_iter);
     }
 
     void ImplPipelineManager::remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline)
@@ -862,6 +1021,23 @@ namespace daxa
             {
                 reloaded = true;
                 auto new_pipeline = create_raster_pipeline(compile_info);
+                if (new_pipeline.is_ok())
+                {
+                    *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
+                }
+                else
+                {
+                    return PipelineReloadError{new_pipeline.m};
+                }
+            }
+        }
+
+        for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->ray_tracing_pipelines)
+        {
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files, lookup_table))
+            {
+                reloaded = true;
+                auto new_pipeline = create_ray_tracing_pipeline(compile_info);
                 if (new_pipeline.is_ok())
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
@@ -1113,6 +1289,12 @@ namespace daxa
             case ShaderStage::TESS_EVAL: return EShLanguage::EShLangTessEvaluation;
             case ShaderStage::TASK: return EShLanguage::EShLangTask;
             case ShaderStage::MESH: return EShLanguage::EShLangMesh;
+            case ShaderStage::RAY_GEN: return EShLanguage::EShLangRayGen;
+            case ShaderStage::RAY_ANY_HIT: return EShLanguage::EShLangAnyHit;
+            case ShaderStage::RAY_CLOSEST_HIT: return EShLanguage::EShLangClosestHit;
+            case ShaderStage::RAY_MISS: return EShLanguage::EShLangMiss;
+            case ShaderStage::RAY_INTERSECT: return EShLanguage::EShLangIntersect;
+            case ShaderStage::RAY_CALLABLE: return EShLanguage::EShLangCallable;
             default:
                 DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
                 return EShLanguage::EShLangCount;
@@ -1129,6 +1311,12 @@ namespace daxa
             case ShaderStage::TESS_EVAL: return "tess_eval";
             case ShaderStage::TASK: return "task";
             case ShaderStage::MESH: return "mesh";
+            case ShaderStage::RAY_GEN: return "rgen";
+            case ShaderStage::RAY_ANY_HIT: return "rahit";
+            case ShaderStage::RAY_CLOSEST_HIT: return "rchit";
+            case ShaderStage::RAY_MISS: return "rmiss";
+            case ShaderStage::RAY_INTERSECT: return "rint";
+            case ShaderStage::RAY_CALLABLE: return "rcall";
             default:
                 DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
                 return "bruh";
@@ -1154,6 +1342,12 @@ namespace daxa
         case ShaderStage::FRAG: preamble += "#define DAXA_SHADER_STAGE 4\n"; break;
         case ShaderStage::TASK: preamble += "#define DAXA_SHADER_STAGE 5\n"; break;
         case ShaderStage::MESH: preamble += "#define DAXA_SHADER_STAGE 6\n"; break;
+        case ShaderStage::RAY_GEN: preamble += "#define DAXA_SHADER_STAGE 7\n"; break;
+        case ShaderStage::RAY_ANY_HIT: preamble += "#define DAXA_SHADER_STAGE 8\n"; break;
+        case ShaderStage::RAY_CLOSEST_HIT: preamble += "#define DAXA_SHADER_STAGE 9\n"; break;
+        case ShaderStage::RAY_MISS: preamble += "#define DAXA_SHADER_STAGE 10\n"; break;
+        case ShaderStage::RAY_INTERSECT: preamble += "#define DAXA_SHADER_STAGE 11\n"; break;
+        case ShaderStage::RAY_CALLABLE: preamble += "#define DAXA_SHADER_STAGE 12\n"; break;
         }
 
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
@@ -1292,6 +1486,12 @@ namespace daxa
         args.push_back(L"-DDAXA_SHADER_STAGE_FRAGMENT=4");
         args.push_back(L"-DDAXA_SHADER_STAGE_TASK=5");
         args.push_back(L"-DDAXA_SHADER_STAGE_MESH=6");
+        args.push_back(L"-DDAXA_SHADER_STAGE_RAYGEN=7");
+        args.push_back(L"-DDAXA_SHADER_STAGE_ANY_HIT=8");
+        args.push_back(L"-DDAXA_SHADER_STAGE_CLOSEST_HIT=9");
+        args.push_back(L"-DDAXA_SHADER_STAGE_MISS=10");
+        args.push_back(L"-DDAXA_SHADER_STAGE_INTERSECTION=11");
+        args.push_back(L"-DDAXA_SHADER_STAGE_CALLABLE=12");
 
         switch (shader_stage)
         {
@@ -1302,6 +1502,12 @@ namespace daxa
         case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=4"); break;
         case ShaderStage::TASK: args.push_back(L"-DDAXA_SHADER_STAGE=5"); break;
         case ShaderStage::MESH: args.push_back(L"-DDAXA_SHADER_STAGE=6"); break;
+        case ShaderStage::RAY_GEN: args.push_back(L"-DDAXA_SHADER_STAGE=7"); break;
+        case ShaderStage::RAY_ANY_HIT: args.push_back(L"-DDAXA_SHADER_STAGE=8"); break;
+        case ShaderStage::RAY_CLOSEST_HIT: args.push_back(L"-DDAXA_SHADER_STAGE=9"); break;
+        case ShaderStage::RAY_MISS: args.push_back(L"-DDAXA_SHADER_STAGE=10"); break;
+        case ShaderStage::RAY_INTERSECT: args.push_back(L"-DDAXA_SHADER_STAGE=11"); break;
+        case ShaderStage::RAY_CALLABLE: args.push_back(L"-DDAXA_SHADER_STAGE=12"); break;
         }
 
         for (auto const & root : shader_info.compile_options.root_paths)
@@ -1344,6 +1550,12 @@ namespace daxa
         case ShaderStage::FRAG: profile[0] = L'p'; break;
         case ShaderStage::TASK: profile[0] = L't'; break;
         case ShaderStage::MESH: profile[0] = L'm'; break;
+        case ShaderStage::RAY_GEN: profile[0] = L'r'; break;
+        case ShaderStage::RAY_ANY_HIT: profile[0] = L'a'; break;
+        case ShaderStage::RAY_CLOSEST_HIT: profile[0] = L's'; break;
+        case ShaderStage::RAY_MISS: profile[0] = L'm'; break;
+        case ShaderStage::RAY_INTERSECT: profile[0] = L'i'; break;
+        case ShaderStage::RAY_CALLABLE: profile[0] = L'l'; break;
         default: break;
         }
         args.push_back(profile.c_str());

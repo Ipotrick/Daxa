@@ -378,6 +378,7 @@ namespace daxa
 
         [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
+        [[nodiscard]] auto create_ray_tracing_pipeline(RayTracingPipelineInfo const & info) -> RayTracingPipeline;
 
         [[nodiscard]] auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         [[nodiscard]] auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;

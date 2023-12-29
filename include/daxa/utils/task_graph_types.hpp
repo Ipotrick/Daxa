@@ -26,6 +26,9 @@ namespace daxa
         COMPUTE_SHADER_READ,
         COMPUTE_SHADER_WRITE,
         COMPUTE_SHADER_READ_WRITE,
+        RAY_TRACING_SHADER_READ,
+        RAY_TRACING_SHADER_WRITE,
+        RAY_TRACING_SHADER_READ_WRITE,
         TASK_SHADER_READ,
         TASK_SHADER_WRITE,
         TASK_SHADER_READ_WRITE,
@@ -69,6 +72,10 @@ namespace daxa
         COMPUTE_SHADER_STORAGE_WRITE_ONLY,
         COMPUTE_SHADER_STORAGE_READ_ONLY,
         COMPUTE_SHADER_STORAGE_READ_WRITE,
+        RAY_TRACING_SHADER_SAMPLED,
+        RAY_TRACING_SHADER_STORAGE_WRITE_ONLY,
+        RAY_TRACING_SHADER_STORAGE_READ_ONLY,
+        RAY_TRACING_SHADER_STORAGE_READ_WRITE,
         TASK_SHADER_SAMPLED,
         TASK_SHADER_STORAGE_WRITE_ONLY,
         TASK_SHADER_STORAGE_READ_ONLY,
@@ -677,6 +684,9 @@ namespace daxa
         using BufferTransferWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::TRANSFER_WRITE>;
         using BufferHostTransferRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::HOST_TRANSFER_READ>;
         using BufferHostTransferWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::HOST_TRANSFER_WRITE>;
+        using BufferRayTracingShaderRead = daxa::TaskBufferUse<daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ>;
+        using BufferRayTracingShaderWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::RAY_TRACING_SHADER_WRITE>;
+        using BufferRayTracingShaderReadWrite = daxa::TaskBufferUse<daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ_WRITE>;
 
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageGraphicsShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_SAMPLED, T_VIEW_TYPE>;
@@ -694,6 +704,14 @@ namespace daxa
         using ImageComputeShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageComputeShaderStorageReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageRayTracingShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::RAY_TRACING_SHADER_SAMPLED, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageRayTracingShaderStorageWriteOnly = daxa::TaskImageUse<daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageRayTracingShaderStorageReadOnly = daxa::TaskImageUse<daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY, T_VIEW_TYPE>;
+        template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
+        using ImageRayTracingShaderStorageReadWrite = daxa::TaskImageUse<daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>
         using ImageTessellationControlShaderSampled = daxa::TaskImageUse<daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_SAMPLED, T_VIEW_TYPE>;
         template <daxa::ImageViewType T_VIEW_TYPE = daxa::ImageViewType::MAX_ENUM>

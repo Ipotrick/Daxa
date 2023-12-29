@@ -410,6 +410,7 @@ namespace daxa
     _DAXA_DECL_DVC_CREATE_FN(CommandRecorder, command_recorder)
     _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
+    _DAXA_DECL_DVC_CREATE_FN(RayTracingPipeline, ray_tracing_pipeline)
     _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
     _DAXA_DECL_DVC_CREATE_FN(BinarySemaphore, binary_semaphore)
     _DAXA_DECL_DVC_CREATE_FN(TimelineSemaphore, timeline_semaphore)
@@ -741,6 +742,21 @@ namespace daxa
 
     /// --- Begin Pipelines
 
+     auto RayTracingPipeline::info() const -> RayTracingPipelineInfo const &
+    {
+        return *r_cast<RayTracingPipelineInfo const *>(rc_cast<daxa_RayTracingPipeline>(this->object));
+    }
+
+    auto RayTracingPipeline::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_ray_tracing_pipeline_inc_refcnt(rc_cast<daxa_RayTracingPipeline>(object));
+    }
+
+    auto RayTracingPipeline::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_ray_tracing_pipeline_dec_refcnt(rc_cast<daxa_RayTracingPipeline>(object));
+    }
+
     auto ComputePipeline::info() const -> ComputePipelineInfo const &
     {
         return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(this->object));
@@ -786,6 +802,9 @@ namespace daxa
     }
 
     /// --- End Executable Commands
+
+
+
 
     /// --- Begin RenderCommandBuffer
 
@@ -975,6 +994,16 @@ namespace daxa
         ret.internal = this->internal;
         this->internal = {};
         return ret;
+    }
+
+    
+    _DAXA_DECL_COMMAND_LIST_WRAPPER(trace_rays, TraceRaysInfo)
+
+    void CommandRecorder::set_pipeline(RayTracingPipeline const & pipeline)
+    {
+        daxa_cmd_set_ray_tracing_pipeline(
+            this->internal,
+            *r_cast<daxa_RayTracingPipeline const *>(&pipeline));
     }
 
     _DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
@@ -1567,6 +1596,14 @@ namespace daxa
                 ret += " | ";
             }
             ret += "COMPUTE_SHADER";
+        }
+        if ((flags & PipelineStageFlagBits::RAY_TRACING_SHADER) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "RAY_TRACING_SHADER";
         }
         if ((flags & PipelineStageFlagBits::TRANSFER) != PipelineStageFlagBits::NONE)
         {
