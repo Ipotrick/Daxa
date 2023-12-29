@@ -348,29 +348,35 @@ namespace tests
 
                 auto const ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo{
                     .ray_gen_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rgen.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
                     }},
                     .intersection_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rint.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
                     }},
                     .any_hit_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rahit.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
                     }},
                     .callable_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rcall.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .compile_options = {
+                            .defines = std::vector{daxa::ShaderDefine{"SPOT_LIGHT", "1"}}},
                     },
                     daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rcall2.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
                     }},
                     .closest_hit_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rchit2.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
                     }, daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rchit.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .compile_options = {
+                            .defines = std::vector{daxa::ShaderDefine{"HIT_TRIANGLE", "1"}}},
                     }},
                     .miss_hit_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rmiss.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"}
                     }, daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"rmiss2.glsl"},
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .compile_options = {
+                            .defines = std::vector{daxa::ShaderDefine{"MISS_SHADOW", "1"}}},
                     }},
                     // Groups are in order of their shader indices.
                     // NOTE: The order of the groups is important! raygen, miss, hit, callable
