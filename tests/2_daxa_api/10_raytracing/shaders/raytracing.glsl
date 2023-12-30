@@ -115,7 +115,7 @@ void main()
 layout(location = 0) rayPayloadInEXT hitPayload prd;
 
 // hardcoded dissolve
-float const dissolve = 0.3;
+const float dissolve = 0.3;
 
 void main()
 {
