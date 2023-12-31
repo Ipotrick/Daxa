@@ -27,7 +27,7 @@ typedef struct {
     uint32_t any_hit_shader_index;
     uint32_t intersection_shader_index;
 } daxa_RayTracingShaderGroupInfo;
-_DAXA_DECL_FIXED_LIST(daxa_RayTracingShaderGroupInfo, 10)
+_DAXA_DECL_FIXED_LIST(daxa_RayTracingShaderGroupInfo, 50)
 
 #define DAXA_RAY_TRACING_SHADER_GROUP_INFO_DEFAULT { \
     .group_type = 0, \
@@ -46,7 +46,7 @@ typedef struct
     daxa_FixedList(daxa_RayTracingShaderInfo, 10) intersection_stages;
     daxa_FixedList(daxa_RayTracingShaderInfo, 10) closest_hit_stages;
     daxa_FixedList(daxa_RayTracingShaderInfo, 10) any_hit_stages;
-    daxa_FixedList(daxa_RayTracingShaderGroupInfo, 10) shader_groups;
+    daxa_FixedList(daxa_RayTracingShaderGroupInfo, 50) shader_groups;
     uint32_t max_ray_recursion_depth;
     uint32_t push_constant_size;
     daxa_SmallString name;
