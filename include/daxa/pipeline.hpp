@@ -22,13 +22,15 @@ namespace daxa
         u32 intersection_shader_index = (~0U);
     };
 
-    struct StridedDeviceAddressRegion {
+    struct StridedDeviceAddressRegion
+    {
         DeviceAddress address;
         u64 stride;
         u64 size;
     };
 
-    struct RayTracingShaderBindingTable {
+    struct RayTracingShaderBindingTable
+    {
         BufferId buffer_id; // TODO: find a better way to store this?
         StridedDeviceAddressRegion raygen_region;
         StridedDeviceAddressRegion miss_region;
@@ -50,7 +52,6 @@ namespace daxa
         u32 push_constant_size = {};
         SmallString name = "";
     };
-
 
     /**
      * @brief   Represents a pipeline state object, usable in recording commands.
