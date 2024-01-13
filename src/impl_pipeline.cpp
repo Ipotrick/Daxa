@@ -97,11 +97,12 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .flags = {},
         .patchControlPoints = ret.info.tesselation.value_or(no_tess).control_points,
     };
-    constexpr VkPipelineMultisampleStateCreateInfo vk_multisample_state{
+    // TODO(grundlett): Maybe check if samples is valid value?
+    VkPipelineMultisampleStateCreateInfo const vk_multisample_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        .rasterizationSamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
+        .rasterizationSamples = static_cast<VkSampleCountFlagBits>(ret.info.raster.samples),
         .sampleShadingEnable = VK_FALSE,
         .minSampleShading = 1.0f,
         .pSampleMask = {},

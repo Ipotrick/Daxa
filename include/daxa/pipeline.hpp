@@ -136,6 +136,7 @@ namespace daxa
         f32 depth_bias_clamp = 0.0f;
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
+        u32 samples = 1;
         Optional<ConservativeRasterInfo> conservative_raster_info = {};
     };
 
