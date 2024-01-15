@@ -185,6 +185,11 @@ namespace daxa
         u32 min_acceleration_structure_scratch_offset_alignment = {};
     };
 
+    struct InvocationReorderProperties
+    {
+        u32 invocation_reorder_mode = {};
+    };
+
     struct DeviceProperties
     {
         u32 vulkan_api_version = {};
@@ -198,6 +203,7 @@ namespace daxa
         Optional<MeshShaderDeviceProperties> mesh_shading_properties = {};
         Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
         Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
+        Optional<InvocationReorderProperties> invocation_reorder_properties = {};
     };
 
     DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
