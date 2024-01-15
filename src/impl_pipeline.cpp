@@ -97,11 +97,12 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .flags = {},
         .patchControlPoints = ret.info.tesselation.value_or(no_tess).control_points,
     };
-    constexpr VkPipelineMultisampleStateCreateInfo vk_multisample_state{
+    // TODO(grundlett): Maybe check if samples is valid value?
+    VkPipelineMultisampleStateCreateInfo const vk_multisample_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        .rasterizationSamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
+        .rasterizationSamples = static_cast<VkSampleCountFlagBits>(ret.info.raster.samples),
         .sampleShadingEnable = VK_FALSE,
         .minSampleShading = 1.0f,
         .pSampleMask = {},
@@ -390,6 +391,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
 {
     _DAXA_TEST_PRINT("daxa_dvc_create_ray_tracing_pipeline\n");
     daxa_ImplRayTracingPipeline ret = {};
+    ret.is_rt_pipeline = true;
     ret.device = device;
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
 
@@ -403,13 +405,17 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     std::vector<VkPipelineShaderStageCreateInfo> stages = {};
     // Shader groups are made of stages targets: [general | triangles | procedural], types: [general | closest hit + any hit + intersection]
     std::vector<VkRayTracingShaderGroupCreateInfoKHR> groups = {};
-    
+
     std::vector<VkShaderModule> vk_shader_modules = {};
     // NOTE: Temporarily holds 0 terminated strings, incoming strings are data + size, not null terminated!
     std::vector<std::unique_ptr<std::string>> entry_point_names = {};
 
-    defer {  
-        for (auto & vk_shader_module : vk_shader_modules){vkDestroyShaderModule(ret.device->vk_device, vk_shader_module, nullptr);} 
+    defer
+    {
+        for (auto & vk_shader_module : vk_shader_modules)
+        {
+            vkDestroyShaderModule(ret.device->vk_device, vk_shader_module, nullptr);
+        }
     };
 
     auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> VkResult
@@ -568,8 +574,9 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         nullptr,
         &ret.vk_pipeline);
 
-    // Create ray tracing shader group handles 
-    if (pipeline_result == VK_SUCCESS) {
+    // Create ray tracing shader group handles
+    if (pipeline_result == VK_SUCCESS)
+    {
         // This function creates 4 buffers, for raygen, miss, hit(chit+int+any) and callable shader.
         // Each buffer will have the handle + 'data (if any)', .. n-times they have entries in the pipeline.
 
@@ -582,20 +589,21 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         u32 handle_size = ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
         u32 handle_stride = ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
 
-        auto get_aligned = [&](u64 operand, u64 granularity) -> u64 {
+        auto get_aligned = [&](u64 operand, u64 granularity) -> u64
+        {
             return ((operand + (granularity - 1)) & ~(granularity - 1));
         };
 
         // The SBT (buffer) need to have starting groups to be aligned and handles in the group to be aligned.
         u64 handle_size_aligned = get_aligned(handle_size, handle_stride);
 
-        auto& raygen_region = ret.info.shader_binding_table.raygen_region;
-        auto& miss_region = ret.info.shader_binding_table.miss_region;
-        auto& hit_region = ret.info.shader_binding_table.hit_region;
-        auto& callable_region = ret.info.shader_binding_table.callable_region;
+        auto & raygen_region = ret.info.shader_binding_table.raygen_region;
+        auto & miss_region = ret.info.shader_binding_table.miss_region;
+        auto & hit_region = ret.info.shader_binding_table.hit_region;
+        auto & callable_region = ret.info.shader_binding_table.callable_region;
 
         raygen_region.stride = get_aligned(ray_count_number * handle_size_aligned, handle_stride);
-        raygen_region.size = raygen_region.stride;  // The size member of pRayGenShaderBindingTable must be equal to its stride member
+        raygen_region.size = raygen_region.stride; // The size member of pRayGenShaderBindingTable must be equal to its stride member
         miss_region.stride = handle_size_aligned;
         miss_region.size = get_aligned(miss_count_number * handle_size_aligned, handle_stride);
         hit_region.stride = handle_size_aligned;
@@ -610,14 +618,15 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         VkDeviceSize sbt_size = raygen_region.size + miss_region.size + hit_region.size + callable_region.size;
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkGetRayTracingShaderGroupHandlesNV.html
         pipeline_result = ret.device->vkGetRayTracingShaderGroupHandlesKHR(
-            ret.device->vk_device, 
+            ret.device->vk_device,
             ret.vk_pipeline,
             0,
             handle_count,
             sbt_size,
             shader_handle_storage.data());
 
-        if (pipeline_result == VK_SUCCESS) {
+        if (pipeline_result == VK_SUCCESS)
+        {
 
             auto name_cstr = ret.info.name.c_str();
             // Allocate a buffer for storing the SBT.
@@ -627,14 +636,14 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
                 .name = std::bit_cast<daxa_SmallString>(name_cstr),
             };
             // TODO: We need to store the buffer id somewhere, so we can destroy after the pipeline is destroyed
-            auto& stb_buffer_id = ret.info.shader_binding_table.buffer_id;
+            auto & stb_buffer_id = ret.info.shader_binding_table.buffer_id;
             auto daxa_result = daxa_dvc_create_buffer(device, &stb_info, r_cast<daxa_BufferId *>(&stb_buffer_id));
             if (daxa_result == DAXA_RESULT_SUCCESS)
             {
 
-                u8* sbt_buffer_ptr;
-                daxa_result = daxa_dvc_buffer_host_address(device, stb_buffer_id, reinterpret_cast<void**>(&sbt_buffer_ptr));
-                if(daxa_result != DAXA_RESULT_SUCCESS)
+                u8 * sbt_buffer_ptr;
+                daxa_result = daxa_dvc_buffer_host_address(device, stb_buffer_id, reinterpret_cast<void **>(&sbt_buffer_ptr));
+                if (daxa_result != DAXA_RESULT_SUCCESS)
                 {
                     // TODO: Check this
                     auto destroy_buffer_result = daxa_dvc_destroy_buffer(device, stb_buffer_id);
@@ -644,9 +653,9 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
 
                 // Find the SBT addresses of each group
                 VkDeviceAddress sbt_address;
-                
+
                 daxa_result = daxa_dvc_buffer_device_address(device, stb_buffer_id, reinterpret_cast<daxa_DeviceAddress *>(&sbt_address));
-                if(daxa_result != DAXA_RESULT_SUCCESS)
+                if (daxa_result != DAXA_RESULT_SUCCESS)
                 {
                     // TODO: Check this
                     auto destroy_buffer_result = daxa_dvc_destroy_buffer(device, stb_buffer_id);
@@ -660,9 +669,10 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
 
                 u64 offset = 0;
                 // Iterator through the shader handles and store them in the SBT
-                u8* sbt_ptr_iterator = sbt_buffer_ptr;
+                u8 * sbt_ptr_iterator = sbt_buffer_ptr;
                 // Raygen shaders load data
-                for (u32 c = 0; c < ray_count_number; c++) {
+                for (u32 c = 0; c < ray_count_number; c++)
+                {
                     std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
                     sbt_ptr_iterator += raygen_region.stride;
                     offset += handle_size;
@@ -671,7 +681,8 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
                 // Miss shaders (base ptr + raygen size)
                 sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size;
                 // Miss shaders load data
-                for (u32 c = 0; c < miss_count_number; c++) {
+                for (u32 c = 0; c < miss_count_number; c++)
+                {
                     std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
                     sbt_ptr_iterator += miss_region.stride;
                     offset += handle_size;
@@ -680,7 +691,8 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
                 // Hit shaders (base ptr + raygen size + miss size)
                 sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size + miss_region.size;
                 // Closest-hit + any-hit + intersection shaders load data
-                for (u32 c = 0; c < hit_count_number; c++) {
+                for (u32 c = 0; c < hit_count_number; c++)
+                {
                     std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
                     sbt_ptr_iterator += hit_region.stride;
                     offset += handle_size;
@@ -689,12 +701,15 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
                 // Callable shaders (base ptr + raygen size + miss size + hit size)
                 sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size + miss_region.size + hit_region.size;
                 // Callable shaders load data
-                for (u32 c = 0; c < callable_count_number; c++) {
+                for (u32 c = 0; c < callable_count_number; c++)
+                {
                     std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
                     sbt_ptr_iterator += callable_region.stride;
                     offset += handle_size;
                 }
-            } else {
+            }
+            else
+            {
                 // TODO: check this
                 device->gpu_sro_table.buffer_slots.try_zombify(stb_buffer_id);
                 // DAXA_RESULT_FAILED_TO_CREATE_BUFFER;
@@ -763,14 +778,18 @@ void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
-    // TODO: check if this is correct to do here
-    auto buffer_id = rc_cast<daxa_ImplRayTracingPipeline *>(handle)->info.shader_binding_table.buffer_id;
-    // This is not working because the great cleansing is done before the pipeline is destroyed
-    // self->device->main_queue_buffer_zombies.push_front({
-    //     main_queue_cpu_timeline_value,
-    //     std::bit_cast<BufferId>(buffer_id),
-    // });
-    daxa_dvc_destroy_buffer(self->device, buffer_id);
+
+    // TODO: Figure out if this is a good way to handle this.
+    if (self->is_rt_pipeline)
+    {
+        auto buffer_id = rc_cast<daxa_ImplRayTracingPipeline *>(handle)->info.shader_binding_table.buffer_id;
+        // This is not working because the great cleansing is done before the pipeline is destroyed
+        // self->device->main_queue_buffer_zombies.push_front({
+        //     main_queue_cpu_timeline_value,
+        //     std::bit_cast<BufferId>(buffer_id),
+        // });
+        daxa_dvc_destroy_buffer(self->device, buffer_id);
+    }
     delete self;
 }
 

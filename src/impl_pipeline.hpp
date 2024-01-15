@@ -18,6 +18,7 @@ struct ImplPipeline : ImplHandle
     daxa_Device device = {};
     VkPipeline vk_pipeline = {};
     VkPipelineLayout vk_pipeline_layout = {};
+    bool is_rt_pipeline = {};
 
     static void zero_ref_callback(ImplHandle const * handle);
 };

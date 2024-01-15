@@ -12,6 +12,8 @@ Why would you want to use Daxa? These are some of the aspects of Daxa that set i
 
 - Specifically designed for GPGPU programming and GPU driven rendering. Daxa makes writing modern renderers simple and easy. It does not compromise for old hardware or old API concepts. Modern GPUs are the target (for Nvidia this is >=Turing, for amd this is >=GCN3).
 
+- Fully bindless. Buffers, images, samplers and acceleration structures are all exclusively accessed via a bindless api. The bindless api abstracts descriptors completely. There is no binding, no descriptor sets, no set layouts, no descriptor pools, no binding or set indices within shaders.
+
 - Very high convenience with near zero boilerplate. Daxa makes the simple things as easy as possible. It abstracts over unnecessarily explicit parts of Vulkan. Tons of default values and common abstractions for renderers such as a render-graph and shader build system are provided by Daxa.
 
 - Shader utilities and shader feature integration. Daxa provides custom GLSL and HLSL headers, host/shader code sharing utilities and even a shader build system featureing hot reloading and include management. Especially the shader integration for many features is very convenient.

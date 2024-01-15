@@ -120,6 +120,7 @@ typedef struct
     float depth_bias_clamp;
     float depth_bias_slope_factor;
     float line_width;
+    daxa_u32 samples;
     daxa_Optional(daxa_ConservativeRasterInfo) conservative_raster_info;
 } daxa_RasterizerInfo;
 
@@ -136,6 +137,7 @@ static const daxa_RasterizerInfo DAXA_DEFAULT_RASTERIZATION_INFO = {
     .depth_bias_clamp = 0.0f,
     .depth_bias_slope_factor = 0.0f,
     .line_width = 1.0f,
+    .samples = 1,
     .conservative_raster_info = {.has_value = 0},
 };
 
