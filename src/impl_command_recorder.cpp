@@ -653,11 +653,12 @@ void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline
 
 void daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * info)
 {
-    self->device->vkCmdTraceRaysKHR(self->current_command_data.vk_cmd_buffer, 
-        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.raygen_region), 
-        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.miss_region), 
-        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.hit_region), 
-        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.callable_region), 
+    self->device->vkCmdTraceRaysKHR(
+        self->current_command_data.vk_cmd_buffer,
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.raygen_region),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.miss_region),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.hit_region),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&self->shader_binding_table.callable_region),
         info->width, info->height, info->depth);
 }
 

@@ -414,7 +414,7 @@ auto create_acceleration_structure_helper(
     if (vk_result != VK_SUCCESS)
     {
         table.unsafe_destroy_zombie_slot(id);
-        [[maybe_unused]] auto const _ignore =  daxa_dvc_destroy_buffer(self, ret.buffer_id);
+        [[maybe_unused]] auto const _ignore = daxa_dvc_destroy_buffer(self, ret.buffer_id);
         return std::bit_cast<daxa_Result>(vk_result);
     }
 
@@ -425,8 +425,7 @@ auto create_acceleration_structure_helper(
     };
     ret.device_address = self->vkGetAccelerationStructureDeviceAddressKHR(
         self->vk_device,
-        &vk_acceleration_structure_device_address_info_khr
-    );
+        &vk_acceleration_structure_device_address_info_khr);
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
@@ -802,7 +801,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     return DAXA_RESULT_SUCCESS;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME, VK_NAME)                                 \
+#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME, vk_name, VK_NAME)                        \
     auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id) -> daxa_Result                            \
     {                                                                                                            \
         _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                 \
@@ -825,18 +824,27 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
         }                                                                                                        \
         return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
     }                                                                                                            \
+    auto daxa_dvc_get_vk_##name##(daxa_Device self, daxa_##Name##Id id, VK_NAME * out_vk_handle) -> daxa_Result  \
+    {                                                                                                            \
+        if (daxa_dvc_is_##name##_valid(self, id))                                                                \
+        {                                                                                                        \
+            *out_vk_handle = self->slot(id).vk_##vk_name;                                                        \
+            return DAXA_RESULT_SUCCESS;                                                                          \
+        }                                                                                                        \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
+    }                                                                                                            \
     auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id) -> daxa_Bool8                          \
     {                                                                                                            \
         return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                              \
             std::bit_cast<daxa::GPUResourceId>(id)));                                                            \
     }
 
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots, VkBuffer)
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image, Image, IMAGE, image_slots, VkImage)
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image_view, ImageView, IMAGE_VIEW, image_slots, VkImageView)
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots, VkSampler)
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(tlas, Tlas, TLAS, tlas_slots, VkAccelerationStructureKHR)
-_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(blas, Blas, BLAS, blas_slots, VkAccelerationStructureKHR)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots, buffer, VkBuffer)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image, Image, IMAGE, image_slots, image, VkImage)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(image_view, ImageView, IMAGE_VIEW, image_slots, image_view, VkImageView)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots, sampler, VkSampler)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(tlas, Tlas, TLAS, tlas_slots, acceleration_structure, VkAccelerationStructureKHR)
+_DAXA_DECL_COMMON_GP_RES_FUNCTIONS(blas, Blas, BLAS, blas_slots, acceleration_structure, VkAccelerationStructureKHR)
 
 auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_DeviceAddress * out_addr) -> daxa_Result
 {
@@ -890,6 +898,11 @@ auto daxa_dvc_info(daxa_Device self) -> daxa_DeviceInfo const *
 auto daxa_dvc_get_vk_device(daxa_Device self) -> VkDevice
 {
     return self->vk_device;
+}
+
+auto daxa_dvc_get_vk_physical_device(daxa_Device self) -> VkPhysicalDevice
+{
+    return self->vk_physical_device;
 }
 
 auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
