@@ -46,7 +46,7 @@ namespace daxa
         FixedList<ShaderInfo, 10> callable_shaders = {};
         FixedList<ShaderInfo, 10> closest_hit_shaders = {};
         FixedList<ShaderInfo, 10> miss_hit_shaders = {};
-        FixedList<RayTracingShaderGroupInfo, 10> shader_groups = {};
+        FixedList<RayTracingShaderGroupInfo, 50> shader_groups = {};
         RayTracingShaderBindingTable shader_binding_table = {};
         u32 max_ray_recursion_depth;
         u32 push_constant_size = {};

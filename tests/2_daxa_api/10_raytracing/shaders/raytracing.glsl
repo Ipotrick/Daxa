@@ -5,22 +5,125 @@
 #include "shared.inl"
 #include "random.glsl"
 
+#if SER_ON == 1
+#extension GL_NV_shader_invocation_reorder : enable
+layout(location = 0) hitObjectAttributeNV vec3 hitValue;
+#endif
+
 DAXA_DECL_PUSH_CONSTANT(PushConstant, p)
 
 #if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_RAYGEN
 
 layout(location = 0) rayPayloadEXT hitPayload prd;
 
+
+#if PRIMARY_RAYS == 1
+    void main()
+{
+    const ivec2 index = ivec2(gl_LaunchIDEXT.xy);
+
+    uint cull_mask = 0xff;
+
+    daxa_f32vec3 color = vec3(0);
+
+    // Camera setup
+    daxa_f32mat4x4 inv_view = deref(p.camera_buffer).inv_view;
+    daxa_f32mat4x4 inv_proj = deref(p.camera_buffer).inv_proj;
+
+    const vec2 pixelCenter = vec2(gl_LaunchIDEXT.xy) + vec2(0.5);
+    const vec2 inUV = pixelCenter / vec2(gl_LaunchSizeEXT.xy);
+    vec2 d = inUV * 2.0 - 1.0;
+
+    vec4 origin = inv_view * vec4(0, 0, 0, 1);
+    vec4 target = inv_proj * vec4(d.x, d.y, 1, 1);
+    vec4 direction = inv_view * vec4(normalize(target.xyz), 0);
+
+    uint rayFlags = gl_RayFlagsNoneEXT;
+    float tMin = 0.0001;
+    float tMax = 10000.0;
+    uint cullMask = 0xFF;
+
+#if SER_ON == 1
+    hitObjectNV hitObject;
+    //Initialize to an empty hit object
+    hitObjectRecordEmptyNV(hitObject);
+
+    // Trace the ray
+    hitObjectTraceRayNV(hitObject,
+                        daxa_accelerationStructureEXT(p.tlas), // topLevelAccelerationStructure
+                        rayFlags,      // rayFlags
+                        cullMask,      // cullMask
+                        0,             // sbtRecordOffset
+                        0,             // sbtRecordStride
+                        0,             // missIndex
+                        origin.xyz,    // ray origin
+                        tMin,          // ray min range
+                        direction.xyz, // ray direction
+                        tMax,          // ray max range
+                        0              // payload (location = 0)
+    );
+    
+    if(hitObjectIsHitNV(hitObject))
+    { 
+        daxa_f32 tHit = hitObjectGetRayTMaxNV(hitObject);
+        color = 1.0 / tHit * vec3(1.0, 1.0, 1.0);
+    }
+
+#else
+    
+#extension GL_EXT_ray_query : enable
+
+    rayQueryEXT rayQuery;
+    rayQueryInitializeEXT(
+        rayQuery, daxa_accelerationStructureEXT(p.tlas),
+        rayFlags,
+        cullMask, // cullMask
+        origin.xyz, tMin, direction.xyz, tMax);
+
+    while (rayQueryProceedEXT(rayQuery))
+    {
+        uint type = rayQueryGetIntersectionTypeEXT(rayQuery, false);
+        if (type == gl_RayQueryCandidateIntersectionTriangleEXT)
+        {
+            rayQueryConfirmIntersectionEXT(rayQuery);
+        }
+        else if (type == gl_RayQueryCandidateIntersectionAABBEXT)
+        {
+            rayQueryGenerateIntersectionEXT(rayQuery, tMax);
+        }
+    }
+
+    uint type = rayQueryGetIntersectionTypeEXT(rayQuery, true);
+
+    if (type == gl_RayQueryCommittedIntersectionTriangleEXT)
+    {
+        // daxa_f32 tHit = rayQueryGetIntersectionTEXT(rayQuery, true);
+        // vec2 barycentrics = rayQueryGetIntersectionBarycentricsEXT(rayQuery, true);
+        // vec3 bary_color = vec3(barycentrics.x, barycentrics.y, 1.0 - barycentrics.x - barycentrics.y);
+        // color = (bary_color * tHit) / (tMax * vec3(1.0, 1.0, 1.0));
+        // color = bary_color;
+        color = vec3(1.0, 1.0, 1.0);
+    }
+    else if (type == gl_RayQueryCommittedIntersectionGeneratedEXT)
+    {
+        // daxa_f32 tHit = rayQueryGetIntersectionTEXT(rayQuery, true);
+        // color = 1.0 / tHit * vec3(1.0, 1.0, 1.0);
+        color = vec3(1.0, 1.0, 1.0);
+    }
+#endif
+
+    // imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(prd.hitValue, 1.0)));
+    imageStore(daxa_image2D(p.swapchain), index, vec4(color, 1.0));
+    // imageStore(daxa_image2D(p.swapchain), index, vec4(1.0, 1.0, 1.0, 1.0));
+}
+
+#else 
+
 const uint NBSAMPLES = 1;
 
 void main()
 {
     const ivec2 index = ivec2(gl_LaunchIDEXT.xy);
-
-    uint frame = p.frame;
-
-    uint seed = tea(gl_LaunchIDEXT.y * gl_LaunchSizeEXT.x + gl_LaunchIDEXT.x, frame * NBSAMPLES);
-    prd.seed = seed;
 
     uint cull_mask = 0xff;
 
@@ -39,11 +142,53 @@ void main()
     uint rayFlags = gl_RayFlagsNoneEXT;
     float tMin = 0.0001;
     float tMax = 10000.0;
+    uint cullMask = 0xFF;
 
+#if SER_ON == 1
+    hitObjectNV hitObject;
+    //Initialize to an empty hit object
+    hitObjectRecordEmptyNV(hitObject);
+
+    // Trace the ray
+    hitObjectTraceRayNV(hitObject,
+                        daxa_accelerationStructureEXT(p.tlas), // topLevelAccelerationStructure
+                        rayFlags,      // rayFlags
+                        cullMask,      // cullMask
+                        0,             // sbtRecordOffset
+                        0,             // sbtRecordStride
+                        0,             // missIndex
+                        origin.xyz,    // ray origin
+                        tMin,          // ray min range
+                        direction.xyz, // ray direction
+                        tMax,          // ray max range
+                        0              // payload (location = 0)
+    );
+
+
+    int mesh_id = 0;
+    
+    if(hitObjectIsHitNV(hitObject))
+    { 
+        mesh_id = hitObjectGetInstanceCustomIndexNV(hitObject);
+    }
+        
+
+    // Reorder the ray (based on the hit object or whatever else user wants)
+    reorderThreadNV(hitObject, mesh_id, 2);
+    // reorderThreadNV(hitObject);
+    // reorderThreadNV(mesh_id, 2);
+
+    //Get Attributes
+    hitObjectGetAttributesNV(hitObject, 0); // hitObjectAttributeNV hit_value
+    // Execute either the closest hit or the miss shader
+    hitObjectExecuteShaderNV(hitObject, 0); // hitObjectAttributeNV hit_value
+    
+
+#else
     traceRayEXT(
-        daxa_accelerationStructureEXT(p.tlas),
+        daxa_accelerationStructureEXT(p.tlas), // topLevelAccelerationStructure
         rayFlags,      // rayFlags
-        0xFF,          // cullMask
+        cullMask,      // cullMask
         0,             // sbtRecordOffset
         0,             // sbtRecordStride
         0,             // missIndex
@@ -53,11 +198,14 @@ void main()
         tMax,          // ray max range
         0              // payload (location = 0)
     );
+#endif
 
     // imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(prd.hitValue, 1.0)));
     imageStore(daxa_image2D(p.swapchain), index, vec4(prd.hitValue, 1.0));
     // imageStore(daxa_image2D(p.swapchain), index, vec4(1.0, 1.0, 1.0, 1.0));
 }
+
+#endif // PRIMARY_RAYS
 
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_INTERSECTION
 

@@ -1,5 +1,6 @@
 #include <iostream>
 #include <thread>
+#include <string>
 
 #include <daxa/daxa.hpp>
 #include <daxa/utils/pipeline_manager.hpp>
@@ -43,6 +44,7 @@ namespace tests
             daxa::BufferId aabb_buffer = {};
 
             daxa_u32 frame = 0;
+            daxa_u32 raygen_shader_binding_table_offset = 0;
 
             Camera my_camera = {
                 .position = {0.0f, 0.0f, -1.0f},
@@ -79,7 +81,14 @@ namespace tests
                     // Device flags make daxa automatically filter devices that do not have the required capabilities.
                     .flags = daxa::DeviceFlagBits::RAY_TRACING,
                 });
-                std::cout << "Choosen Device: " << device.properties().device_name << std::endl;
+
+                bool ray_tracing_supported = device.properties().ray_tracing_properties.has_value();
+                auto invocation_reorder_mode = device.properties().invocation_reorder_properties.has_value() ? device.properties().invocation_reorder_properties.value().invocation_reorder_mode : 0;
+                std::string ray_tracing_supported_str = ray_tracing_supported ? "available" : "not available";
+
+                std::cout << "Choosen Device: " << device.properties().device_name <<
+                            ", Ray Tracing: " <<  ray_tracing_supported_str <<
+                            ", Invocation Reordering mode: " << invocation_reorder_mode  << std::endl;
                 swapchain = device.create_swapchain({
                     .native_window = get_native_handle(),
                     .native_window_platform = get_native_platform(),
@@ -335,10 +344,37 @@ namespace tests
                 // };
                 // comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
 
-                auto const ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo{
-                    .ray_gen_infos = {daxa::ShaderCompileInfo{
+
+                daxa::ShaderCompileInfo prim_ray_gen_compile_info;
+                daxa::ShaderCompileInfo ray_gen_compile_info;
+                if(invocation_reorder_mode == static_cast<daxa_u32>(daxa::InvocationReorderMode::ALLOW_REORDER)) {
+                    prim_ray_gen_compile_info = daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"raytracing.glsl"},
-                    }},
+                        .compile_options = {
+                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, daxa::ShaderDefine{"SER_ON", "1"}}},
+                    };
+                    ray_gen_compile_info = daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .compile_options = {
+                            .defines = std::vector{daxa::ShaderDefine{"SER_ON", "1"}}},
+                    };
+                } else {
+                    prim_ray_gen_compile_info = daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .compile_options = {
+                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}}},
+                    };
+                    ray_gen_compile_info = daxa::ShaderCompileInfo{
+                        .source = daxa::ShaderFile{"raytracing.glsl"}
+                    };
+                }
+
+                
+                auto const ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo{
+                    .ray_gen_infos = {
+                        prim_ray_gen_compile_info,
+                        ray_gen_compile_info
+                    },
                     .intersection_infos = {daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"raytracing.glsl"},
                     }},
@@ -380,29 +416,33 @@ namespace tests
                         },
                         daxa::RayTracingShaderGroupInfo{
                             .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 7,
+                            .general_shader_index = 1,
                         },
                         daxa::RayTracingShaderGroupInfo{
                             .type = daxa::ShaderGroup::GENERAL,
                             .general_shader_index = 8,
                         },
                         daxa::RayTracingShaderGroupInfo{
+                            .type = daxa::ShaderGroup::GENERAL,
+                            .general_shader_index = 9,
+                        },
+                        daxa::RayTracingShaderGroupInfo{
                             .type = daxa::ShaderGroup::PROCEDURAL_HIT_GROUP,
-                            .closest_hit_shader_index = 5,
-                            .any_hit_shader_index = 2,
-                            .intersection_shader_index = 1,
+                            .closest_hit_shader_index = 6,
+                            .any_hit_shader_index = 3,
+                            .intersection_shader_index = 2,
                         },
                         daxa::RayTracingShaderGroupInfo{
                             .type = daxa::ShaderGroup::TRIANGLES_HIT_GROUP,
-                            .closest_hit_shader_index = 6,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 3,
+                            .closest_hit_shader_index = 7,
                         },
                         daxa::RayTracingShaderGroupInfo{
                             .type = daxa::ShaderGroup::GENERAL,
                             .general_shader_index = 4,
+                        },
+                        daxa::RayTracingShaderGroupInfo{
+                            .type = daxa::ShaderGroup::GENERAL,
+                            .general_shader_index = 5,
                         },
                     },
                     .max_ray_recursion_depth = 2,
@@ -420,8 +460,6 @@ namespace tests
                     std::cout << reload_err->message << std::endl;
                 else if (daxa::get_if<daxa::PipelineReloadSuccess>(&reload_result))
                     std::cout << "reload success" << std::endl;
-                using namespace std::literals;
-                std::this_thread::sleep_for(1ms);
                 glfwPollEvents();
                 if (glfwWindowShouldClose(glfw_window_ptr) != 0)
                 {
@@ -557,6 +595,7 @@ namespace tests
                     .width = width,
                     .height = height,
                     .depth = 1,
+                    .raygen_shader_binding_table_offset = raygen_shader_binding_table_offset,
                 });
 
                 recorder.pipeline_barrier_image_transition({
@@ -593,7 +632,11 @@ namespace tests
 
             void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
             void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
-            void on_key(i32 /*unused*/, i32 /*unused*/) {}
+            void on_key(i32 key, i32 action) {
+                if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+                    raygen_shader_binding_table_offset = (raygen_shader_binding_table_offset + 1) % 2;
+                }
+            }
 
             void on_resize(u32 sx, u32 sy)
             {

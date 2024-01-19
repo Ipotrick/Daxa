@@ -110,6 +110,10 @@ namespace daxa
         uint32_t width;
         uint32_t height;
         uint32_t depth;
+        uint32_t raygen_shader_binding_table_offset;
+        uint32_t miss_shader_binding_table_offset;
+        uint32_t miss_shader_binding_table_stride;
+        uint32_t hit_shader_binding_table_offset;
     };
 
     struct DispatchInfo
