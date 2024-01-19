@@ -661,7 +661,7 @@ void daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
     StridedDeviceAddressRegion hit_handle = self->shader_binding_table.hit_region;
     raygen_handle.address += self->shader_binding_table.hit_region.stride * info->hit_handle_offset;
     StridedDeviceAddressRegion call_handle = self->shader_binding_table.callable_region;
-    raygen_handle.address += self->shader_binding_table.hit_region.stride * info->callable_handle_offset;
+    raygen_handle.address += self->shader_binding_table.callable_region.stride * info->callable_handle_offset;
     self->device->vkCmdTraceRaysKHR(
         self->current_command_data.vk_cmd_buffer,
         reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&raygen_handle),
