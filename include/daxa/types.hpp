@@ -1771,4 +1771,10 @@ namespace daxa
         PROCEDURAL_HIT_GROUP = 2,
         MAX_ENUM = 0x7fffffff,
     };
+
+    enum struct InvocationReorderMode {
+        NO_REORDER = 0,
+        ALLOW_REORDER = 1,
+        MAX_ENUM = 0x7fffffff,
+    };
 } // namespace daxa

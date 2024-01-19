@@ -82,7 +82,7 @@ namespace tests
                 });
 
                 bool ray_tracing_supported = device.properties().ray_tracing_properties.has_value();
-                daxa_u32 invocation_reorder_mode = device.properties().invocation_reorder_properties.has_value() ? device.properties().invocation_reorder_properties.value().invocation_reorder_mode : 0;
+                auto invocation_reorder_mode = device.properties().invocation_reorder_properties.has_value() ? device.properties().invocation_reorder_properties.value().invocation_reorder_mode : 0;
                 std::string ray_tracing_supported_str = ray_tracing_supported ? "available" : "not available";
 
                 std::cout << "Choosen Device: " << device.properties().device_name <<
@@ -345,7 +345,7 @@ namespace tests
 
 
                 daxa::ShaderCompileInfo ray_gen_compile_info;
-                if(invocation_reorder_mode == 1) {
+                if(invocation_reorder_mode == static_cast<daxa_u32>(daxa::InvocationReorderMode::ALLOW_REORDER)) {
                     ray_gen_compile_info = daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"raytracing.glsl"},
                         .compile_options = {
