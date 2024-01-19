@@ -157,6 +157,14 @@ typedef struct
 } daxa_AccelerationStructureProperties;
 _DAXA_DECL_OPTIONAL(daxa_AccelerationStructureProperties)
 
+
+// MUST BE ABI COMPATIBLE WITH VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV!
+typedef struct
+{
+    uint32_t invocation_reorder_mode;
+} daxa_RayTracingInvocationReorderProperties;
+_DAXA_DECL_OPTIONAL(daxa_RayTracingInvocationReorderProperties)
+
 // Is NOT ABI Compatible with VkPhysicalDeviceMeshShaderPropertiesEXT!
 typedef struct
 {
@@ -204,6 +212,7 @@ typedef struct
     daxa_Optional(daxa_MeshShaderProperties) mesh_shader_properties;
     daxa_Optional(daxa_RayTracingPipelineProperties) ray_tracing_pipeline_properties;
     daxa_Optional(daxa_AccelerationStructureProperties) acceleration_structure_properties;
+    daxa_Optional(daxa_RayTracingInvocationReorderProperties) ray_tracing_invocation_reorder_properties;
 } daxa_DeviceProperties;
 
 DAXA_EXPORT int32_t
@@ -383,19 +392,18 @@ daxa_dvc_is_tlas_valid(daxa_Device device, daxa_TlasId tlas);
 DAXA_EXPORT daxa_Bool8
 daxa_dvc_is_blas_valid(daxa_Device device, daxa_BlasId blas);
 
-// TODO: Overhaul these:
-// DAXA_EXPORT VkBuffer
-// daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer);
-// DAXA_EXPORT VkImage
-// daxa_dvc_get_vk_image(daxa_Device device, daxa_ImageId image);
-// DAXA_EXPORT VkImageView
-// daxa_dvc_get_default_vk_image_view(daxa_Device device, daxa_ImageId image);
-// DAXA_EXPORT VkImageView
-// daxa_dvc_get_vk_image_view(daxa_Device device, daxa_ImageViewId image_view);
-// DAXA_EXPORT VkSampler
-// daxa_dvc_get_vk_sampler(daxa_Device device, daxa_SamplerId sampler);
-// DAXA_EXPORT VkSampler
-// daxa_dvc_get_tlas_vk_acceleraion_structure(daxa_Device device, daxa_SamplerId sampler);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer, VkBuffer* out_vk_handle);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_image(daxa_Device device, daxa_ImageId image, VkImage* out_vk_handle);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_image_view(daxa_Device device, daxa_ImageViewId id, VkImageView* out_vk_handle);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_sampler(daxa_Device device, daxa_SamplerId sampler, VkSampler* out_vk_handle);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_tlas(daxa_Device device, daxa_TlasId tlas, VkAccelerationStructureInstanceKHR* out_vk_handle);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_blas(daxa_Device device, daxa_BlasId blas, VkAccelerationStructureInstanceKHR* out_vk_handle);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_buffer_device_address(daxa_Device device, daxa_BufferId buffer, daxa_DeviceAddress * out_addr);
@@ -410,6 +418,8 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipeline * out_pipeline);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
@@ -427,6 +437,8 @@ DAXA_EXPORT daxa_DeviceInfo const *
 daxa_dvc_info(daxa_Device device);
 DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
+DAXA_EXPORT VkPhysicalDevice
+daxa_dvc_get_vk_physical_device(daxa_Device device);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_wait_idle(daxa_Device device);

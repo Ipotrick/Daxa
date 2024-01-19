@@ -105,6 +105,17 @@ namespace daxa
         Rect2D render_area = {};
     };
 
+    struct TraceRaysInfo
+    {
+        uint32_t width;
+        uint32_t height;
+        uint32_t depth;
+        uint32_t raygen_shader_binding_table_offset;
+        uint32_t miss_shader_binding_table_offset;
+        uint32_t miss_shader_binding_table_stride;
+        uint32_t hit_shader_binding_table_offset;
+    };
+
     struct DispatchInfo
     {
         u32 x = 1;
@@ -243,6 +254,7 @@ namespace daxa
     };
 
     struct CommandRecorder;
+
     struct DAXA_EXPORT_CXX RenderCommandRecorder
     {
       private:
@@ -384,6 +396,10 @@ namespace daxa
         // void draw_mesh_tasks(u32 x, u32 y, u32 z);
         // void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
         // void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
+
+        void set_pipeline(RayTracingPipeline const & pipeline);
+
+        void trace_rays(TraceRaysInfo const & info);
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);

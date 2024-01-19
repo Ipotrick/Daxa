@@ -629,6 +629,14 @@ void daxa_cmd_push_constant(daxa_CommandRecorder self, void const * data, uint32
     vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, self->device->gpu_sro_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
 }
 
+void daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline)
+{
+    self->shader_binding_table = pipeline->info.shader_binding_table;
+    daxa_cmd_flush_barriers(self);
+    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline);
+}
+
 void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline const * pipeline)
 {
     daxa_cmd_flush_barriers(self);
@@ -641,6 +649,26 @@ void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline
     daxa_cmd_flush_barriers(self);
     vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
+}
+
+void daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * info)
+{
+    // TODO: Check if those offsets are in range?
+    StridedDeviceAddressRegion raygen_handle = self->shader_binding_table.raygen_region;
+    raygen_handle.address += self->shader_binding_table.raygen_region.stride * info->raygen_handle_offset;
+    StridedDeviceAddressRegion miss_handle = self->shader_binding_table.miss_region;
+    raygen_handle.address += self->shader_binding_table.miss_region.stride * info->miss_handle_offset;
+    StridedDeviceAddressRegion hit_handle = self->shader_binding_table.hit_region;
+    raygen_handle.address += self->shader_binding_table.hit_region.stride * info->hit_handle_offset;
+    StridedDeviceAddressRegion call_handle = self->shader_binding_table.callable_region;
+    raygen_handle.address += self->shader_binding_table.callable_region.stride * info->callable_handle_offset;
+    self->device->vkCmdTraceRaysKHR(
+        self->current_command_data.vk_cmd_buffer,
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&raygen_handle),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&miss_handle),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&hit_handle),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&call_handle),
+        info->width, info->height, info->depth);
 }
 
 void daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info)

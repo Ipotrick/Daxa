@@ -173,12 +173,12 @@ typedef struct
 
 static daxa_BlasTriangleGeometryInfo const DAXA_DEFAULT_BLAS_TRIANGLE_GEPMETRY_INFO = {
     .vertex_format = VK_FORMAT_R32G32B32_SFLOAT,
-    .vertex_data = {},
+    .vertex_data = DAXA_ZERO_INIT,
     .vertex_stride = 24,
     .max_vertex = 0,
     .index_type = VK_INDEX_TYPE_UINT32,
-    .index_data = {},
-    .transform_data = {},
+    .index_data = DAXA_ZERO_INIT,
+    .transform_data = DAXA_ZERO_INIT,
     .count = 0,
     .flags = DAXA_GEOMETRY_OPAQUE,
 };
@@ -192,7 +192,7 @@ typedef struct
 } daxa_BlasAabbGeometryInfo;
 
 static daxa_BlasAabbGeometryInfo const DAXA_DEFAULT_BLAS_AABB_GEOMETRY_INFO = {
-    .data = {},
+    .data = DAXA_ZERO_INIT,
     .stride = 24,
     .count = 0,
     .flags = DAXA_GEOMETRY_OPAQUE,
@@ -208,7 +208,7 @@ typedef struct
 } daxa_TlasInstanceInfo;
 
 static daxa_TlasInstanceInfo const DAXA_DEFAULT_TLAS_INSTANCE_INFO = {
-    .data = {},
+    .data = DAXA_ZERO_INIT,
     .count = 0,
     .is_data_array_of_pointers = 0,
     .flags = DAXA_GEOMETRY_OPAQUE,
@@ -254,10 +254,10 @@ typedef struct
 
 static daxa_TlasBuildInfo const DAXA_DEFAULT_TLAS_BUILD_INFO = {
     .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
-    .dst_tlas = {},
-    .instances = {},
-    .instance_count = {},
-    .scratch_data = {},
+    .dst_tlas = DAXA_ZERO_INIT,
+    .instances = DAXA_ZERO_INIT,
+    .instance_count = DAXA_ZERO_INIT,
+    .scratch_data = DAXA_ZERO_INIT,
 };
 
 typedef struct
@@ -270,9 +270,9 @@ typedef struct
 
 static daxa_BlasBuildInfo const DAXA_DEFAULT_BLAS_BUILD_INFO = {
     .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
-    .dst_blas = {},
-    .geometries = {},
-    .scratch_data = {},
+    .dst_blas = DAXA_ZERO_INIT,
+    .geometries = DAXA_ZERO_INIT,
+    .scratch_data = DAXA_ZERO_INIT,
 };
 
 typedef struct
@@ -282,9 +282,9 @@ typedef struct
 } daxa_TlasInfo;
 
 static daxa_TlasInfo const DAXA_DEFAULT_TLAS_INFO = {
-    .size = {},
+    .size = DAXA_ZERO_INIT,
     .name = {
-        .data = {},
+        .data = DAXA_ZERO_INIT,
         .size = 0,
     },
 };
@@ -296,9 +296,9 @@ typedef struct
 } daxa_BlasInfo;
 
 static daxa_BlasInfo const DAXA_DEFAULT_BLAS_INFO = {
-    .size = {},
+    .size = DAXA_ZERO_INIT,
     .name = {
-        .data = {},
+        .data = DAXA_ZERO_INIT,
         .size = 0,
     },
 };

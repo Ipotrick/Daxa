@@ -140,6 +140,12 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
         .pNext = nullptr,
     };
 
+    bool invocation_reorder_supported = false;
+    VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV vk_physical_device_ray_tracing_invocation_reorder_properties_nv = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV,
+        .pNext = nullptr,
+    };
+
     bool mesh_shader_supported = false;
     VkPhysicalDeviceMeshShaderPropertiesEXT vk_physical_device_mesh_shader_properties_ext = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT,
@@ -165,6 +171,12 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
             acceleration_structure_supported = true;
             vk_physical_device_acceleration_structure_properties_khr.pNext = pNextChain;
             pNextChain = &vk_physical_device_acceleration_structure_properties_khr;
+        }
+        if(std::strcmp(extension.extensionName, VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME) == 0)
+        {
+            invocation_reorder_supported = true;
+            vk_physical_device_ray_tracing_invocation_reorder_properties_nv.pNext = pNextChain;
+            pNextChain = &vk_physical_device_ray_tracing_invocation_reorder_properties_nv;
         }
         if (std::strcmp(extension.extensionName, VK_EXT_MESH_SHADER_EXTENSION_NAME) == 0)
         {
@@ -201,6 +213,14 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
             r_cast<std::byte const *>(&vk_physical_device_acceleration_structure_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
             sizeof(daxa_AccelerationStructureProperties));
     }
+    if(invocation_reorder_supported)
+    {
+        ret.ray_tracing_invocation_reorder_properties.has_value = true;
+        std::memcpy(
+            &ret.ray_tracing_invocation_reorder_properties.value,
+            r_cast<std::byte const *>(&vk_physical_device_ray_tracing_invocation_reorder_properties_nv) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_RayTracingInvocationReorderProperties));
+    }
     if (mesh_shader_supported)
     {
         ret.mesh_shader_properties.has_value = true;
@@ -234,7 +254,7 @@ void daxa_as_build_info_to_vk(
 {
     vk_build_geometry_infos.reserve(tlas_count + blas_count);
     primitive_counts.reserve(tlas_count + blas_count);
-    u32 geo_infos_count = 0;
+    size_t geo_infos_count = 0;
     for (u32 tlas_i = 0; tlas_i < tlas_count; ++tlas_i)
     {
         geo_infos_count += tlas_infos[tlas_i].instance_count;

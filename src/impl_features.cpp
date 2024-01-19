@@ -203,6 +203,19 @@ namespace daxa
                 .rayQuery = VK_TRUE,
             };
             this->chain = r_cast<void *>(&this->ray_query.value());
+            // TODO: Maybe this should be enabled separately to raytracing:
+            this->ray_tracing_position_fetch = VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR{
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR,
+                .pNext = this->chain,
+                .rayTracingPositionFetch = VK_TRUE,
+            };
+            this->chain = r_cast<void *>(&this->ray_tracing_position_fetch.value());
+            ray_tracing_invocation_reorder = VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV{
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV,
+                .pNext = this->chain,
+                .rayTracingInvocationReorder = VK_TRUE,
+            };
+            this->chain = r_cast<void *>(&this->ray_tracing_invocation_reorder.value());
         }
     }
 
@@ -232,6 +245,9 @@ namespace daxa
             // Maybe this should be enabled separately to raytracing:
             this->data[size++] = {VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME};
             this->data[size++] = {VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME};
+            // TODO: different flags for different raytracing features.
+            this->data[size++] = {VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME};
+            this->data[size++] = {VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME};
         }
     }
 } // namespace daxa

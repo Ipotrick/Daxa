@@ -97,6 +97,7 @@ namespace daxa
         case TaskImageAccess::TASK_SHADER_SAMPLED: [[fallthrough]];
         case TaskImageAccess::MESH_SHADER_SAMPLED: [[fallthrough]];
         case TaskImageAccess::COMPUTE_SHADER_SAMPLED:
+        case TaskImageAccess::RAY_TRACING_SHADER_SAMPLED:
             return ImageUsageFlagBits::SHADER_SAMPLED;
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
@@ -104,6 +105,9 @@ namespace daxa
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
         case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
@@ -159,10 +163,21 @@ namespace daxa
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::WRITE}};
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ}};
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE}};
+<<<<<<< HEAD
         case TaskImageAccess::COMPUTE_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE, AccessTypeFlagBits::READ}};
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE, AccessTypeFlagBits::WRITE}};
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE, AccessTypeFlagBits::READ}};
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE, AccessTypeFlagBits::READ_WRITE}};
+=======
+        case TaskImageAccess::COMPUTE_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::RAY_TRACING_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::WRITE}};
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE}};
+>>>>>>> master
         case TaskImageAccess::VERTEX_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}};
         case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}};
         case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}};
@@ -219,9 +234,18 @@ namespace daxa
         case TaskBufferAccess::GRAPHICS_SHADER_READ: return {PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ};
         case TaskBufferAccess::GRAPHICS_SHADER_WRITE: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::WRITE};
         case TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE};
+<<<<<<< HEAD
         case TaskBufferAccess::COMPUTE_SHADER_READ: return {PipelineStageFlagBits::COMPUTE, AccessTypeFlagBits::READ};
         case TaskBufferAccess::COMPUTE_SHADER_WRITE: return {PipelineStageFlagBits::COMPUTE, AccessTypeFlagBits::WRITE};
         case TaskBufferAccess::COMPUTE_SHADER_READ_WRITE: return {PipelineStageFlagBits::COMPUTE, AccessTypeFlagBits::READ_WRITE};
+=======
+        case TaskBufferAccess::COMPUTE_SHADER_READ: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::COMPUTE_SHADER_WRITE: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::COMPUTE_SHADER_READ_WRITE: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE};
+        case TaskBufferAccess::RAY_TRACING_SHADER_READ: return {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::RAY_TRACING_SHADER_WRITE: return {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::WRITE};
+        case TaskBufferAccess::RAY_TRACING_SHADER_READ_WRITE: return {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE};
+>>>>>>> master
         case TaskBufferAccess::VERTEX_SHADER_READ: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ};
         case TaskBufferAccess::VERTEX_SHADER_WRITE: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE};
         case TaskBufferAccess::VERTEX_SHADER_READ_WRITE: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE};
@@ -275,6 +299,9 @@ namespace daxa
         case daxa::TaskBufferAccess::COMPUTE_SHADER_READ: return std::string_view{"COMPUTE_SHADER_READ"};
         case daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE: return std::string_view{"COMPUTE_SHADER_WRITE"};
         case daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE: return std::string_view{"COMPUTE_SHADER_READ_WRITE"};
+        case daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ: return std::string_view{"RAY_TRACING_SHADER_READ"};
+        case daxa::TaskBufferAccess::RAY_TRACING_SHADER_WRITE: return std::string_view{"RAY_TRACING_SHADER_WRITE"};
+        case daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ_WRITE: return std::string_view{"RAY_TRACING_SHADER_READ_WRITE"};
         case daxa::TaskBufferAccess::TASK_SHADER_READ: return std::string_view{"TASK_SHADER_READ"};
         case daxa::TaskBufferAccess::TASK_SHADER_WRITE: return std::string_view{"TASK_SHADER_WRITE"};
         case daxa::TaskBufferAccess::TASK_SHADER_READ_WRITE: return std::string_view{"TASK_SHADER_READ_WRITE"};
@@ -321,6 +348,10 @@ namespace daxa
         case daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"COMPUTE_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: return std::string_view{"COMPUTE_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: return std::string_view{"COMPUTE_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::RAY_TRACING_SHADER_SAMPLED: return std::string_view{"RAY_TRACING_SHADER_SAMPLED"};
+        case daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"RAY_TRACING_SHADER_STORAGE_WRITE_ONLY"};
+        case daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY: return std::string_view{"RAY_TRACING_SHADER_STORAGE_READ_ONLY"};
+        case daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE: return std::string_view{"RAY_TRACING_SHADER_STORAGE_READ_WRITE"};
         case daxa::TaskImageAccess::TASK_SHADER_SAMPLED: return std::string_view{"TASK_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"TASK_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY: return std::string_view{"TASK_SHADER_STORAGE_READ_ONLY"};

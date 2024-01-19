@@ -11,7 +11,7 @@
 namespace daxa
 {
     // NOTE(pahrens): Arbitrary limit. Bump if needed.
-    static constexpr inline u32 EXTENSION_LIST_MAX = 16;
+    static constexpr inline u32 EXTENSION_LIST_MAX = 32;
 
         struct PhysicalDeviceFeatureTable
     {
@@ -30,6 +30,8 @@ namespace daxa
         std::optional<VkPhysicalDeviceAccelerationStructureFeaturesKHR> acceleration_structure = {};
         std::optional<VkPhysicalDeviceRayTracingPipelineFeaturesKHR> ray_tracing_pipeline = {};
         std::optional<VkPhysicalDeviceRayQueryFeaturesKHR> ray_query = {};
+        std::optional<VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR> ray_tracing_position_fetch = {};
+        std::optional<VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV > ray_tracing_invocation_reorder = {};
         void * chain = {};
 
         void initialize(daxa_DeviceInfo info);
