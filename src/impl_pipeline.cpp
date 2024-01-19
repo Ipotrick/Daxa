@@ -603,7 +603,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         auto & callable_region = ret.info.shader_binding_table.callable_region;
 
         raygen_region.stride = get_aligned(ray_count_number * handle_size_aligned, handle_stride);
-        raygen_region.size = raygen_region.stride; // The size member of pRayGenShaderBindingTable must be equal to its stride member
+        raygen_region.size = raygen_region.stride * ray_count_number; // The size member of pRayGenShaderBindingTable must be equal to its stride member
         miss_region.stride = handle_size_aligned;
         miss_region.size = get_aligned(miss_count_number * handle_size_aligned, handle_stride);
         hit_region.stride = handle_size_aligned;
