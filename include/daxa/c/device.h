@@ -157,6 +157,14 @@ typedef struct
 } daxa_AccelerationStructureProperties;
 _DAXA_DECL_OPTIONAL(daxa_AccelerationStructureProperties)
 
+
+// MUST BE ABI COMPATIBLE WITH VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV!
+typedef struct
+{
+    uint32_t invocation_reorder_mode;
+} daxa_RayTracingInvocationReorderProperties;
+_DAXA_DECL_OPTIONAL(daxa_RayTracingInvocationReorderProperties)
+
 // Is NOT ABI Compatible with VkPhysicalDeviceMeshShaderPropertiesEXT!
 typedef struct
 {
@@ -204,6 +212,7 @@ typedef struct
     daxa_Optional(daxa_MeshShaderProperties) mesh_shader_properties;
     daxa_Optional(daxa_RayTracingPipelineProperties) ray_tracing_pipeline_properties;
     daxa_Optional(daxa_AccelerationStructureProperties) acceleration_structure_properties;
+    daxa_Optional(daxa_RayTracingInvocationReorderProperties) ray_tracing_invocation_reorder_properties;
 } daxa_DeviceProperties;
 
 DAXA_EXPORT int32_t

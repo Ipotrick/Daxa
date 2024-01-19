@@ -5,6 +5,11 @@
 #include "shared.inl"
 #include "random.glsl"
 
+#if SER_ON == 1
+#extension GL_NV_shader_invocation_reorder : enable
+layout(location = 0) hitObjectAttributeNV vec3 hitValue;
+#endif
+
 DAXA_DECL_PUSH_CONSTANT(PushConstant, p)
 
 #if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_RAYGEN
@@ -39,11 +44,53 @@ void main()
     uint rayFlags = gl_RayFlagsNoneEXT;
     float tMin = 0.0001;
     float tMax = 10000.0;
+    uint cullMask = 0xFF;
 
+#if SER_ON == 1
+    hitObjectNV hitObject;
+    //Initialize to an empty hit object
+    hitObjectRecordEmptyNV(hitObject);
+
+    // Trace the ray
+    hitObjectTraceRayNV(hitObject,
+                        daxa_accelerationStructureEXT(p.tlas), // topLevelAccelerationStructure
+                        rayFlags,      // rayFlags
+                        cullMask,      // cullMask
+                        0,             // sbtRecordOffset
+                        0,             // sbtRecordStride
+                        0,             // missIndex
+                        origin.xyz,    // ray origin
+                        tMin,          // ray min range
+                        direction.xyz, // ray direction
+                        tMax,          // ray max range
+                        0              // payload (location = 0)
+    );
+
+
+    int mesh_id = 0;
+    
+    if(hitObjectIsHitNV(hitObject))
+    { 
+        mesh_id = hitObjectGetInstanceCustomIndexNV(hitObject);
+    }
+        
+
+    // Reorder the ray (based on the hit object or whatever else user wants)
+    reorderThreadNV(hitObject, mesh_id, 2);
+    // reorderThreadNV(hitObject);
+    // reorderThreadNV(mesh_id, 2);
+
+    //Get Attributes
+    hitObjectGetAttributesNV(hitObject, 0); // hitObjectAttributeNV hit_value
+    // Execute either the closest hit or the miss shader
+    hitObjectExecuteShaderNV(hitObject, 0); // hitObjectAttributeNV hit_value
+    
+
+#else
     traceRayEXT(
-        daxa_accelerationStructureEXT(p.tlas),
+        daxa_accelerationStructureEXT(p.tlas), // topLevelAccelerationStructure
         rayFlags,      // rayFlags
-        0xFF,          // cullMask
+        cullMask,      // cullMask
         0,             // sbtRecordOffset
         0,             // sbtRecordStride
         0,             // missIndex
@@ -53,6 +100,7 @@ void main()
         tMax,          // ray max range
         0              // payload (location = 0)
     );
+#endif
 
     // imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(prd.hitValue, 1.0)));
     imageStore(daxa_image2D(p.swapchain), index, vec4(prd.hitValue, 1.0));
