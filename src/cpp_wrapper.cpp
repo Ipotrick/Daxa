@@ -1589,7 +1589,7 @@ namespace daxa
             }
             ret += "COLOR_ATTACHMENT_OUTPUT";
         }
-        if ((flags & PipelineStageFlagBits::COMPUTE) != PipelineStageFlagBits::NONE)
+        if ((flags & PipelineStageFlagBits::COMPUTE_SHADER) != PipelineStageFlagBits::NONE)
         {
             if (!ret.empty())
             {

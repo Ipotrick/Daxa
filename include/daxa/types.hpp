@@ -1398,7 +1398,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags EARLY_FRAGMENT_TESTS = {0x00000100ull};
         static inline constexpr PipelineStageFlags LATE_FRAGMENT_TESTS = {0x00000200ull};
         static inline constexpr PipelineStageFlags COLOR_ATTACHMENT_OUTPUT = {0x00000400ull};
-        static inline constexpr PipelineStageFlags COMPUTE = {0x00000800ull};
+        static inline constexpr PipelineStageFlags COMPUTE_SHADER = {0x00000800ull};
         static inline constexpr PipelineStageFlags TRANSFER = {0x00001000ull};
         static inline constexpr PipelineStageFlags BOTTOM_OF_PIPE = {0x00002000ull};
         static inline constexpr PipelineStageFlags HOST = {0x00004000ull};
@@ -1445,7 +1445,7 @@ namespace daxa
         static inline constexpr Access EARLY_FRAGMENT_TESTS_READ = {.stages = PipelineStageFlagBits::EARLY_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access LATE_FRAGMENT_TESTS_READ = {.stages = PipelineStageFlagBits::LATE_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access COLOR_ATTACHMENT_OUTPUT_READ = {.stages = PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, .type = AccessTypeFlagBits::READ};
-        static inline constexpr Access COMPUTE_SHADER_READ = {.stages = PipelineStageFlagBits::COMPUTE, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access COMPUTE_SHADER_READ = {.stages = PipelineStageFlagBits::COMPUTE_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access TRANSFER_READ = {.stages = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access BOTTOM_OF_PIPE_READ = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access HOST_READ = {.stages = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::READ};
@@ -1472,7 +1472,7 @@ namespace daxa
         static inline constexpr Access EARLY_FRAGMENT_TESTS_WRITE = {.stages = PipelineStageFlagBits::EARLY_FRAGMENT_TESTS, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access LATE_FRAGMENT_TESTS_WRITE = {.stages = PipelineStageFlagBits::LATE_FRAGMENT_TESTS, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access COLOR_ATTACHMENT_OUTPUT_WRITE = {.stages = PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, .type = AccessTypeFlagBits::WRITE};
-        static inline constexpr Access COMPUTE_SHADER_WRITE = {.stages = PipelineStageFlagBits::COMPUTE, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access COMPUTE_SHADER_WRITE = {.stages = PipelineStageFlagBits::COMPUTE_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access TRANSFER_WRITE = {.stages = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access BOTTOM_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access HOST_WRITE = {.stages = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::WRITE};
@@ -1499,7 +1499,7 @@ namespace daxa
         static inline constexpr Access EARLY_FRAGMENT_TESTS_READ_WRITE = {.stages = PipelineStageFlagBits::EARLY_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access LATE_FRAGMENT_TESTS_READ_WRITE = {.stages = PipelineStageFlagBits::LATE_FRAGMENT_TESTS, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access COLOR_ATTACHMENT_OUTPUT_READ_WRITE = {.stages = PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, .type = AccessTypeFlagBits::READ_WRITE};
-        static inline constexpr Access COMPUTE_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::COMPUTE, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access COMPUTE_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::COMPUTE_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access TRANSFER_READ_WRITE = {.stages = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access BOTTOM_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access HOST_READ_WRITE = {.stages = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::READ_WRITE};
