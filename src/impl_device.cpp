@@ -824,7 +824,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
         }                                                                                                        \
         return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
     }                                                                                                            \
-    auto daxa_dvc_get_vk_##name##(daxa_Device self, daxa_##Name##Id id, VK_NAME * out_vk_handle) -> daxa_Result  \
+    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id, VK_NAME * out_vk_handle) -> daxa_Result    \
     {                                                                                                            \
         if (daxa_dvc_is_##name##_valid(self, id))                                                                \
         {                                                                                                        \

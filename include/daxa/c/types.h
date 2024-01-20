@@ -144,6 +144,14 @@ typedef enum
 
 #define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
 
+#define _DAXA_DECL_SPAN_TO_CONST(T) \
+    typedef struct                  \
+    {                               \
+        T const * data;             \
+        size_t size;                \
+    } daxa_Span##T##ToConst;
+#define daxa_SpanToConst(T) daxa_Span##T##ToConst
+
 #define _DAXA_VARIANT_INDEX_TYPE uint8_t
 
 /// ABI STABLE VARIANT TYPE.
@@ -182,13 +190,13 @@ typedef struct
 } daxa_ImageSlice;
 
 typedef uint32_t daxa_MemoryFlags;
-static const daxa_MemoryFlags DAXA_MEMORY_FLAG_NONE = 0x00000000;
-static const daxa_MemoryFlags DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
-static const daxa_MemoryFlags DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
-static const daxa_MemoryFlags DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
-static const daxa_MemoryFlags DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800;
-static const daxa_MemoryFlags DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
-static const daxa_MemoryFlags DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
+static daxa_MemoryFlags const DAXA_MEMORY_FLAG_NONE = 0x00000000;
+static daxa_MemoryFlags const DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
+static daxa_MemoryFlags const DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
+static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
+static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800;
+static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
+static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
 
 typedef struct
 {
