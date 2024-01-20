@@ -239,6 +239,61 @@ namespace daxa
         }
     };
 
+    template <typename T>
+    struct Span
+    {
+        T * m_data = {};
+        usize m_size = {};
+
+        Span() = default;
+        Span(T const * in_data, usize in_size) : m_data{in_data}, m_size{in_size} {}
+        template <typename T2, usize IN_SIZE>
+            requires std::same_as<T2, std::remove_cv_t<T>>
+        Span(std::array<T2, IN_SIZE> const & in) : m_data{in.data()}, m_size{in.size()} {}
+        [[nodiscard]] auto at(usize i) -> T &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(i < m_size, "INDEX OUT OF RANGE");
+            return this->m_data[i];
+        }
+        [[nodiscard]] auto at(usize i) const -> T const &
+        {
+            return this->m_data.at(i);
+        }
+        [[nodiscard]] auto operator[](usize i) -> T &
+        {
+            return this->m_data[i];
+        }
+        [[nodiscard]] auto operator[](usize i) const -> T const &
+        {
+            return this->m_data[i];
+        }
+        [[nodiscard]] auto size() const -> usize
+        {
+            return this->m_size;
+        }
+        [[nodiscard]] auto data() const -> T const *
+        {
+            return this->m_data.data();
+        }
+        [[nodiscard]] auto data() -> T *
+        {
+            return this->m_data.data();
+        }
+        [[nodiscard]] auto empty() const -> bool
+        {
+            return this->m_size == 0;
+        }
+        [[nodiscard]] auto back() -> T &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "EMPTY");
+            return this->m_data[this->m_size - 1];
+        }
+        [[nodiscard]] auto span() const -> std::span<T const>
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
+    };
+
     struct SmallString final : public FixedList<char, DAXA_SMALL_STRING_CAPACITY>
     {
         constexpr SmallString(char const * c_str)
@@ -1146,7 +1201,8 @@ namespace daxa
         }
         [[nodiscard]] inline constexpr auto operator<=>(Flags const & other) const = default;
 
-        operator bool() const {
+        operator bool() const
+        {
             return data != 0;
         }
     };
@@ -1765,14 +1821,16 @@ namespace daxa
     };
 
     // TODO: distinguish between GENERAL(raygen, miss & callable) cause shader handles must be set in order (raygen, miss, hit, callable)?
-    enum struct ShaderGroup {
+    enum struct ShaderGroup
+    {
         GENERAL = 0,
         TRIANGLES_HIT_GROUP = 1,
         PROCEDURAL_HIT_GROUP = 2,
         MAX_ENUM = 0x7fffffff,
     };
 
-    enum struct InvocationReorderMode {
+    enum struct InvocationReorderMode
+    {
         NO_REORDER = 0,
         ALLOW_REORDER = 1,
         MAX_ENUM = 0x7fffffff,

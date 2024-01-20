@@ -40,13 +40,13 @@ namespace daxa
 
     struct RayTracingPipelineInfo
     {
-        FixedList<ShaderInfo, 10> ray_gen_shaders = {};
-        FixedList<ShaderInfo, 10> intersection_shaders = {};
-        FixedList<ShaderInfo, 10> any_hit_shaders = {};
-        FixedList<ShaderInfo, 10> callable_shaders = {};
-        FixedList<ShaderInfo, 10> closest_hit_shaders = {};
-        FixedList<ShaderInfo, 10> miss_hit_shaders = {};
-        FixedList<RayTracingShaderGroupInfo, 50> shader_groups = {};
+        Span<ShaderInfo const> ray_gen_shaders = {};
+        Span<ShaderInfo const> intersection_shaders = {};
+        Span<ShaderInfo const> any_hit_shaders = {};
+        Span<ShaderInfo const> callable_shaders = {};
+        Span<ShaderInfo const> closest_hit_shaders = {};
+        Span<ShaderInfo const> miss_hit_shaders = {};
+        Span<RayTracingShaderGroupInfo const> shader_groups = {};
         RayTracingShaderBindingTable shader_binding_table = {};
         u32 max_ray_recursion_depth;
         u32 push_constant_size = {};
