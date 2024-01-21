@@ -621,12 +621,12 @@ void daxa_cmd_reset_event(daxa_CommandRecorder self, daxa_ResetEventInfo const *
         info->stage_masks);
 }
 
-void daxa_cmd_push_constant(daxa_CommandRecorder self, void const * data, uint32_t size)
+void daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo const * info)
 {
     daxa_cmd_flush_barriers(self);
-    u64 layout_index = (size + sizeof(u32) - 1) / sizeof(u32);
+    u64 layout_index = (info->size + sizeof(u32) - 1) / sizeof(u32);
     // TODO(general): The size can be smaller then the layouts size... Is that a problem? I remember renderdoc complaining sometimes.
-    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, self->device->gpu_sro_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, 0, size, data);
+    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, self->device->gpu_sro_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, info->offset, info->size, info->data);
 }
 
 void daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline)

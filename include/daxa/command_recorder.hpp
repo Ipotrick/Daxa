@@ -11,6 +11,13 @@ namespace daxa
 {
     static inline constexpr usize CONSTANT_BUFFER_BINDINGS_COUNT = 8;
 
+    struct PushConstantInfo
+    {
+        void const * data = {};
+        u32 size = {};
+        u32 offset = {};
+    };
+
     struct CommandRecorderInfo
     {
         SmallString name = "";
@@ -273,11 +280,15 @@ namespace daxa
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
         [[nodiscard]] auto end_renderpass() && -> CommandRecorder;
 
-        void push_constant_vptr(void const * data, u32 size);
+        void push_constant_vptr(PushConstantInfo const & info);
         template <typename T>
         void push_constant(T const & constant)
         {
-            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
+            push_constant_vptr({
+                .data = static_cast<void const *>(&constant),
+                .size = static_cast<u32>(sizeof(T)),
+                .offset = 0,
+            });
         }
         void set_pipeline(RasterPipeline const & pipeline);
         void set_viewport(ViewportInfo const & info);
@@ -349,11 +360,15 @@ namespace daxa
         void wait_event(EventWaitInfo const & info);
         void reset_event(ResetEventInfo const & info);
 
-        void push_constant_vptr(void const * data, u32 size);
+        void push_constant_vptr(PushConstantInfo const & info);
         template <typename T>
         void push_constant(T const & constant)
         {
-            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
+            push_constant_vptr({
+                .data = &constant,
+                .size = static_cast<u32>(sizeof(T)),
+                .offset = 0,
+            });
         }
         void set_pipeline(ComputePipeline const & pipeline);
         void dispatch(DispatchInfo const & info);

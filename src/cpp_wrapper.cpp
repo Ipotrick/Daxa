@@ -896,10 +896,11 @@ namespace daxa
             *r_cast<daxa_RasterPipeline const *>(&pipeline));
     }
 
-    void RenderCommandRecorder::push_constant_vptr(void const * data, u32 size)
+    void RenderCommandRecorder::push_constant_vptr(PushConstantInfo const & info)
     {
+        auto c_info = std::bit_cast<daxa_PushConstantInfo>(info);
         daxa_cmd_push_constant(
-            this->internal, data, size);
+            this->internal, &c_info);
     }
 
     /// --- End RenderCommandBuffer
@@ -949,10 +950,11 @@ namespace daxa
     _DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
     _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_event, ResetEventInfo)
 
-    void CommandRecorder::push_constant_vptr(void const * data, u32 size)
+    void CommandRecorder::push_constant_vptr(PushConstantInfo const & info)
     {
+        auto const c_info = std::bit_cast<daxa_PushConstantInfo>(info);
         daxa_cmd_push_constant(
-            this->internal, data, size);
+            this->internal, &c_info);
     }
 
     void CommandRecorder::set_pipeline(ComputePipeline const & pipeline)

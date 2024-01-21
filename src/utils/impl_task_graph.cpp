@@ -14,43 +14,43 @@ namespace daxa
 {
     TaskBufferAttachmentInfo const & TaskInterface::buf(TaskBufferAttachmentIndex index) const
     {
-        return daxa::get<TaskBufferAttachmentInfo>(attachment_infos[index.value]);
+        return attachment_infos[index.value].value.buffer;
     }
     TaskBufferAttachmentInfo const & TaskInterface::buf(TaskBufferView view) const
     {
         auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const& other){ 
-            if (auto * ptr = daxa::get_if<TaskBufferAttachmentInfo>(&other))
+            if (other.type == TaskAttachmentType::BUFFER)
             {
-                return ptr->view == view;
+                return other.value.buffer.view == view;
             }
             return false;
          });
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
-        return daxa::get<TaskBufferAttachmentInfo>(*iter);
+        return iter->value.buffer;
     }
     TaskBufferAttachmentInfo const & TaskInterface::buf(usize index) const
     {
-        return daxa::get<TaskBufferAttachmentInfo>(attachment_infos[index]);
+        return attachment_infos[index].value.buffer;
     }
     TaskImageAttachmentInfo const & TaskInterface::img(TaskImageAttachmentIndex index) const
     {
-        return daxa::get<TaskImageAttachmentInfo>(attachment_infos[index.value]);
+        return attachment_infos[index.value].value.image;
     }
     TaskImageAttachmentInfo const & TaskInterface::img(TaskImageView view) const
     {
         auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const& other){ 
-            if (auto * ptr = daxa::get_if<TaskImageAttachmentInfo>(&other))
+            if (other.type == TaskAttachmentType::IMAGE)
             {
-                return ptr->view == view;
+                return other.value.image.view == view;
             }
             return false;
          });
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
-        return daxa::get<TaskImageAttachmentInfo>(*iter);
+        return iter->value.image;
     }
     TaskImageAttachmentInfo const & TaskInterface::img(usize index) const
     {
-        return daxa::get<TaskImageAttachmentInfo>(attachment_infos[index]);
+        return attachment_infos[index].value.image;
     }
     
     TaskBufferAttachmentInfo const & TaskInterface::attach(TaskBufferAttachmentIndex index) const
@@ -73,7 +73,7 @@ namespace daxa
         return img(view);
     }
 
-    TaskAttachmentInfoVariant const & TaskInterface::attach(usize index) const
+    TaskAttachmentInfo const & TaskInterface::attach(usize index) const
     {
         return attachment_infos[index];
     }
@@ -792,8 +792,8 @@ namespace daxa
     {
         for_each(
             task.base_task->attachments(),
-            [](u32, TaskBufferAttachment const &) {},
-            [&](u32 task_image_attach_index, TaskImageAttachment const & image_attach)
+            [](u32, TaskBufferAttachmentInfo const &) {},
+            [&](u32 task_image_attach_index, TaskImageAttachmentInfo const & image_attach)
             {
                 auto const slice = image_attach.view.slice;
                 // The image id here is already the task graph local id.
@@ -977,29 +977,27 @@ namespace daxa
         update_image_view_cache(task, permutation);
         for_each(
             task.base_task->attachments(),
-            [&](u32 index, TaskBufferAttachment const & attach)
+            [&](u32, TaskBufferAttachmentInfo & attach)
             {
-                auto & runtime_data = daxa::get<TaskBufferAttachmentInfo>(task.runtime_data[index]);
-                runtime_data.ids = this->get_actual_buffers(attach.view, permutation);
-                validate_task_buffer_runtime_data(task, attach, runtime_data); 
+                attach.ids = this->get_actual_buffers(attach.view, permutation);
+                validate_task_buffer_runtime_data(task, attach); 
             },
-            [&](u32 index, TaskImageAttachment const & attach)
+            [&](u32 index, TaskImageAttachmentInfo & attach)
             {
-                auto & runtime_data = daxa::get<TaskImageAttachmentInfo>(task.runtime_data[index]);
-                runtime_data.ids = this->get_actual_images(attach.view, permutation);
-                runtime_data.view_ids = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
-                validate_task_image_runtime_data(task, attach, runtime_data);
+                attach.ids = this->get_actual_images(attach.view, permutation);
+                attach.view_ids = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
+                validate_task_image_runtime_data(task, attach);
             });
         std::vector<std::byte> attachment_shader_data_blob = {};
         attachment_shader_data_blob.resize(task.base_task->attachment_shader_data_blob_size());
         usize shader_byte_blob_offset = 0;
         for_each(
             task.base_task->attachments(),
-            [&](u32 attachment_index, TaskBufferAttachment const & buffer_attach)
+            [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
             {
                 for (u32 shader_array_i = 0; shader_array_i < buffer_attach.shader_array_size; ++shader_array_i)
                 {
-                    BufferId buf_id = daxa::get<TaskBufferAttachmentInfo>(task.runtime_data[attachment_index]).ids[shader_array_i];
+                    BufferId buf_id = buffer_attach.ids[shader_array_i];
                     if (buffer_attach.shader_as_address)
                     {
                         DeviceAddress buf_address = info.device.get_device_address(buf_id).value();
@@ -1017,11 +1015,11 @@ namespace daxa
                     }
                 }
             },
-            [&](u32 attachment_index, TaskImageAttachment const & image_attach)
+            [&](u32, TaskImageAttachmentInfo const & image_attach)
             {
                 for (u32 shader_array_i = 0; shader_array_i < image_attach.shader_array_size; ++shader_array_i)
                 {
-                    ImageViewId img_id = daxa::get<TaskImageAttachmentInfo>(task.runtime_data[attachment_index]).view_ids[shader_array_i];
+                    ImageViewId img_id = image_attach.view_ids[shader_array_i];
                     auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(ImageViewId)>>(img_id);
                     std::memcpy(attachment_shader_data_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(ImageViewId));
                     /// WARNING: Keep offsets must be incremented by 8!
@@ -1031,12 +1029,12 @@ namespace daxa
         impl_runtime.current_task = &task;
         impl_runtime.recorder.begin_label({
             .label_color = info.task_label_color,
-            .name = std::string("task ") + std::to_string(in_batch_task_index) + std::string(" \"") + task.base_task->name() + std::string("\""),
+            .name = std::string("task ") + std::to_string(in_batch_task_index) + std::string(" \"") + std::string(task.base_task->name()) + std::string("\""),
         });
         task.base_task->callback(TaskInterface{
             .device = this->info.device,
             .recorder = impl_runtime.recorder,
-            .attachment_infos = task.runtime_data,
+            .attachment_infos = task.base_task->attachments(),
             .allocator = this->staging_memory.has_value() ? &this->staging_memory.value() : nullptr,
             .attachment_shader_data_blob = attachment_shader_data_blob,
         });
@@ -1089,7 +1087,7 @@ namespace daxa
 
         for_each(
             task.attachments(),
-            [&](u32, TaskBufferAttachment const & attach)
+            [&](u32, TaskBufferAttachmentInfo const & attach)
             {
                 PerPermTaskBuffer const & task_buffer = perm.buffer_infos[attach.view.index];
                 // If the latest access is in a previous submit scope, the earliest batch we can insert into is
@@ -1116,7 +1114,7 @@ namespace daxa
                 }
                 first_possible_batch_index = std::max(first_possible_batch_index, current_buffer_first_possible_batch_index);
             },
-            [&](u32, TaskImageAttachment const & attach)
+            [&](u32, TaskImageAttachmentInfo const & attach)
             {
                 PerPermTaskImage const & task_image = perm.image_infos[attach.view.index];
                 PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[attach.view.index];
@@ -1177,15 +1175,15 @@ namespace daxa
     { 
         for_each(
             task->attachments(),
-            [&](u32 i, TaskBufferAttachment const & attach)
+            [&](u32 i, TaskBufferAttachmentInfo & attach)
             {
                 validate_buffer_task_view(*task, i, attach);
-                task->set_view(TaskBufferAttachmentIndex{static_cast<u8>(i)}, impl.id_to_local_id(attach.view));
+                attach.view = impl.id_to_local_id(attach.view);
             },
-            [&](u32 i, TaskImageAttachment const & attach)
+            [&](u32 i, TaskImageAttachmentInfo & attach)
             {
                 validate_image_task_view(*task, i, attach);
-                task->set_view(TaskImageAttachmentIndex{static_cast<u8>(i)}, impl.id_to_local_id(attach.view));
+                attach.view = impl.id_to_local_id(attach.view);
             });
     }
 
@@ -1203,43 +1201,7 @@ namespace daxa
             .base_task = std::move(task),
             .image_view_cache = std::move(view_cache),
         };
-
-        impl_task.runtime_data.reserve(impl_task.base_task->attachments().size());
-        for_each(
-            impl_task.base_task->attachments(),
-            [&](u32, TaskBufferAttachment const & attach)
-            {
-                TaskBufferAttachmentInfo runtime_data{};
-                runtime_data.name = attach.name;
-                runtime_data.access = attach.access;
-                runtime_data.shader_array_size = attach.shader_array_size;
-                runtime_data.shader_as_address = attach.shader_as_address;
-                runtime_data.view = attach.view;
-                impl_task.runtime_data.push_back(runtime_data);
-            },
-            [&](u32, TaskImageAttachment const & attach)
-            {
-                TaskImageAttachmentInfo runtime_data{};
-                runtime_data.name = attach.name;
-                runtime_data.access = attach.access;
-                runtime_data.view_type = attach.view_type;
-                runtime_data.shader_array_size = attach.shader_array_size;
-                runtime_data.shader_array_type = attach.shader_array_type;
-                runtime_data.layout = attach.layout;
-                runtime_data.view = attach.view;
-                impl_task.runtime_data.push_back(runtime_data);
-            });
         translate_persistent_ids(impl, impl_task.base_task.get());
-        for_each(
-            impl_task.base_task->attachments(),
-            [&](u32 i, TaskBufferAttachment const & attach)
-            {
-                daxa::get<TaskBufferAttachmentInfo>(impl_task.runtime_data[i]).translated_view = attach.view;
-            },
-            [&](u32 i, TaskImageAttachment const & attach)
-            {
-                daxa::get<TaskImageAttachmentInfo>(impl_task.runtime_data[i]).translated_view = attach.view;
-            });
 
         for (auto * permutation : impl.record_active_permutations)
         {
@@ -1379,14 +1341,14 @@ namespace daxa
         // Set persistent task resources to be valid for the permutation.
         for_each(
             task.attachments(),
-            [&](u32, TaskBufferAttachment const & attach)
+            [&](u32, TaskBufferAttachmentInfo const & attach)
             {
                 if (task_graph_impl.global_buffer_infos[attach.view.index].is_persistent())
                 {
                     buffer_infos[attach.view.index].valid = true;
                 }
             },
-            [&](u32, TaskImageAttachment const & attach)
+            [&](u32, TaskImageAttachmentInfo const & attach)
             {
                 if (task_graph_impl.global_image_infos[attach.view.index].is_persistent())
                 {
@@ -1421,7 +1383,7 @@ namespace daxa
         // are combined into a single unit which is synchronized against other batches.
         for_each(
             task.attachments(),
-            [&](u32, TaskBufferAttachment const & buffer_attach)
+            [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
             {
                 PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_attach.view.index];
                 Access const current_buffer_access = task_buffer_access_to_access(buffer_attach.access);
@@ -1549,7 +1511,7 @@ namespace daxa
                 task_buffer.latest_access_batch_index = batch_index;
                 task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
             },
-            [&](u32 i, TaskImageAttachment const & image_attach)
+            [&](u32, TaskImageAttachmentInfo & image_attach)
             {
                 auto const & used_image_t_id = image_attach.view;
                 auto const & used_image_t_access = image_attach.access;
@@ -1585,7 +1547,7 @@ namespace daxa
                 }
                 task_image.usage |= access_to_usage(used_image_t_access);
                 auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
-                daxa::get<TaskImageAttachmentInfo>(impl_task.runtime_data.at(i)).layout = current_image_layout;
+                image_attach.layout = current_image_layout;
                 // Now this seems strange, why would be need multiple current use slices, as we only have one here.
                 // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
                 // We need to then test the rest against all the remaining tracked uses,
@@ -2967,7 +2929,7 @@ namespace daxa
         [[maybe_unused]] FormatIndent d0{out, indent, true};
         for_each(
             task.base_task->attachments(),
-            [&](u32, TaskBufferAttachment const & buf)
+            [&](u32, TaskBufferAttachmentInfo const & buf)
             {
                 auto access = task_buffer_access_to_access(buf.access);
                 fmt::format_to(std::back_inserter(out), "{}buffer argument:\n", indent);
@@ -2975,7 +2937,7 @@ namespace daxa
                 print_task_buffer_to(out, indent, permutation, buf.view);
                 print_separator_to(out, indent);
             },
-            [&](u32, TaskImageAttachment const & img)
+            [&](u32, TaskImageAttachmentInfo const & img)
             {
                 auto [layout, access] = task_image_access_to_layout_access(img.access);
                 fmt::format_to(std::back_inserter(out), "{}image argument:\n", indent);

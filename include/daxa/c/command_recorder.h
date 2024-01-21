@@ -6,6 +6,13 @@
 #include <daxa/c/gpu_resources.h>
 #include <daxa/c/pipeline.h>
 
+typedef struct 
+{
+    void const * data;
+    uint32_t size;
+    uint32_t offset;
+} daxa_PushConstantInfo;
+
 typedef struct
 {
     daxa_SmallString name;
@@ -414,7 +421,7 @@ DAXA_EXPORT void
 daxa_cmd_reset_event(daxa_CommandRecorder cmd_enc, daxa_ResetEventInfo const * info);
 
 DAXA_EXPORT void
-daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, void const * data, uint32_t size);
+daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, daxa_PushConstantInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder cmd_enc, daxa_RayTracingPipeline pipeline);
 DAXA_EXPORT void

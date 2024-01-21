@@ -59,7 +59,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Completed task graphs can not record new tasks");
     }
 
-    void validate_buffer_task_view(ITask const & task, u32 attach_index, TaskBufferAttachment const & attach)
+    void validate_buffer_task_view(ITask const & task, u32 attach_index, TaskBufferAttachmentInfo const & attach)
     {
         DAXA_DBG_ASSERT_TRUE_M(
             !attach.view.is_empty(),
@@ -67,7 +67,7 @@ namespace daxa
                         attach.name, attach_index, to_string(attach.access), task.name()));
     }
 
-    void validate_image_task_view(ITask const & task, u32 attach_index, TaskImageAttachment const & attach)
+    void validate_image_task_view(ITask const & task, u32 attach_index, TaskImageAttachmentInfo const & attach)
     {
         DAXA_DBG_ASSERT_TRUE_M(
             !attach.view.is_empty(),
@@ -79,11 +79,11 @@ namespace daxa
     {
         for_each(
             task->attachments(),
-            [&](u32 index_a, TaskBufferAttachment const & a)
+            [&](u32 index_a, TaskBufferAttachmentInfo const & a)
             {
                 for_each(
                     task->attachments(),
-                    [&](u32 index_b, TaskBufferAttachment const & b)
+                    [&](u32 index_b, TaskBufferAttachmentInfo const & b)
                     {
                         if (index_a == index_b)
                             return;
@@ -98,14 +98,14 @@ namespace daxa
                                 impl.global_buffer_infos[a.view.index].get_name(),
                                 task->name()));
                     },
-                    [&](u32, TaskImageAttachment const &) {});
+                    [&](u32, TaskImageAttachmentInfo const &) {});
             },
-            [&](u32 index_a, TaskImageAttachment const & a)
+            [&](u32 index_a, TaskImageAttachmentInfo const & a)
             {
                 for_each(
                     task->attachments(),
-                    [&](u32, TaskBufferAttachment const &) {},
-                    [&](u32 index_b, TaskImageAttachment const & b)
+                    [&](u32, TaskBufferAttachmentInfo const &) {},
+                    [&](u32 index_b, TaskImageAttachmentInfo const & b)
                     {
                         if (index_a == index_b)
                             return;
@@ -123,35 +123,35 @@ namespace daxa
             });
     }
 
-    void validate_task_buffer_runtime_data(ImplTask & task, TaskBufferAttachment const & attach, TaskBufferAttachmentInfo & runtime_data)
+    void validate_task_buffer_runtime_data(ImplTask & task, TaskBufferAttachmentInfo const & attach)
     {
         DAXA_DBG_ASSERT_TRUE_M(
-            runtime_data.ids.size() >= attach.shader_array_size,
+            attach.ids.size() >= attach.shader_array_size,
             fmt::format("Detected invalid runtime buffer count.\n"
                         "Attachment \"{}\" in task \"{}\" requires {} runtime buffer(s), but only {} runtime buffer(s) are present when executing task.\n"
                         "Attachment runtime buffers must be at least as many as its shader array size!",
-                        attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.ids.size()));
+                        attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
     }
 
-    void validate_task_image_runtime_data(ImplTask & task, TaskImageAttachment const & attach, TaskImageAttachmentInfo & runtime_data)
+    void validate_task_image_runtime_data(ImplTask & task, TaskImageAttachmentInfo const & attach)
     {
         if (attach.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS)
         {
             DAXA_DBG_ASSERT_TRUE_M(
-                runtime_data.ids.size() >= 1,
+                attach.ids.size() >= 1,
                 fmt::format("Detected invalid runtime image count.\n"
                             "Attachment \"{}\" in task \"{}\" requires at least 1 runtime image, but no runtime images are present when executing task.\n"
                             "Attachment runntime image count must be at least one for mip-array attachments!",
-                            attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.ids.size()));
+                            attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
         }
         else // arg.shader_array_type == TaskHeadImageArrayType::RUNTIME_ARRAY
         {
             DAXA_DBG_ASSERT_TRUE_M(
-                runtime_data.ids.size() >= attach.shader_array_size,
+                attach.ids.size() >= attach.shader_array_size,
                 fmt::format("Detected invalid runtime image count.\n"
                             "Attachment \"{}\" in task \"{}\" requires at least {} runtime image(s), but only {} runtime images are present when executing task.\n"
                             "Attachment runntime image count must be at least the shader array size for array attachments!",
-                            attach.name, task.base_task->name(), attach.shader_array_size, runtime_data.ids.size()));
+                            attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
         }
     }
     // void validate_
