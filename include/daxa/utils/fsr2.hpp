@@ -8,15 +8,21 @@
 
 namespace daxa
 {
-    struct DAXA_EXPORT_CXX Fsr2Context : ManagedPtr
+    struct ImplFsr2Context;
+    struct DAXA_EXPORT_CXX Fsr2Context : ManagedPtr<Fsr2Context, ImplFsr2Context *>
     {
         Fsr2Context() = default;
 
         Fsr2Context(UpscaleInstanceInfo const & info);
-        ~Fsr2Context();
 
         void resize(UpscaleSizeInfo const & info);
         void upscale(CommandRecorder & command_list, UpscaleInfo const & info);
-        auto get_jitter(u64 index) const -> f32vec2;
+        auto get_jitter(u64 index) const -> daxa_f32vec2;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa
