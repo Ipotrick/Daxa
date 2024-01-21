@@ -12,11 +12,12 @@
 
 namespace daxa
 {
-    TaskBufferAttachmentInfo const & TaskInterface::buf(TaskBufferAttachmentIndex index) const
+    TaskBufferAttachmentInfo const & TaskInterface::get(TaskBufferAttachmentIndex index) const
     {
         return attachment_infos[index.value].value.buffer;
     }
-    TaskBufferAttachmentInfo const & TaskInterface::buf(TaskBufferView view) const
+
+    TaskBufferAttachmentInfo const & TaskInterface::get(TaskBufferView view) const
     {
         auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const& other){ 
             if (other.type == TaskAttachmentType::BUFFER)
@@ -26,17 +27,16 @@ namespace daxa
             return false;
          });
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
+        
         return iter->value.buffer;
     }
-    TaskBufferAttachmentInfo const & TaskInterface::buf(usize index) const
-    {
-        return attachment_infos[index].value.buffer;
-    }
-    TaskImageAttachmentInfo const & TaskInterface::img(TaskImageAttachmentIndex index) const
+    
+    TaskImageAttachmentInfo const & TaskInterface::get(TaskImageAttachmentIndex index) const
     {
         return attachment_infos[index.value].value.image;
     }
-    TaskImageAttachmentInfo const & TaskInterface::img(TaskImageView view) const
+
+    TaskImageAttachmentInfo const & TaskInterface::get(TaskImageView view) const
     {
         auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const& other){ 
             if (other.type == TaskAttachmentType::IMAGE)
@@ -48,32 +48,8 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
         return iter->value.image;
     }
-    TaskImageAttachmentInfo const & TaskInterface::img(usize index) const
-    {
-        return attachment_infos[index].value.image;
-    }
-    
-    TaskBufferAttachmentInfo const & TaskInterface::attach(TaskBufferAttachmentIndex index) const
-    {
-        return buf(index);
-    }
 
-    TaskImageAttachmentInfo const & TaskInterface::attach(TaskImageAttachmentIndex index) const
-    {
-        return img(index);
-    }
-
-    TaskBufferAttachmentInfo const & TaskInterface::attach(TaskBufferView view) const
-    {
-        return buf(view);
-    }
-
-    TaskImageAttachmentInfo const & TaskInterface::attach(TaskImageView view) const
-    {
-        return img(view);
-    }
-
-    TaskAttachmentInfo const & TaskInterface::attach(usize index) const
+    TaskAttachmentInfo const & TaskInterface::get(usize index) const
     {
         return attachment_infos[index];
     }

@@ -25,8 +25,8 @@ using Clock = std::chrono::high_resolution_clock;
         {
             ti.recorder.set_pipeline(*update_boids_pipeline);
             ti.recorder.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.device.get_device_address(ti.attach(current).ids[0]).value(),
-                .old_boids_buffer = ti.device.get_device_address(ti.attach(previous).ids[0]).value(),
+                .boids_buffer = ti.device.get_device_address(ti.get(current).ids[0]).value(),
+                .old_boids_buffer = ti.device.get_device_address(ti.get(previous).ids[0]).value(),
             });
             ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
         }
@@ -178,7 +178,7 @@ struct App : AppWindow<App>
             auto render_recorder = std::move(ti.recorder).begin_renderpass({
                 .color_attachments = std::array{
                     daxa::RenderAttachmentInfo{
-                        .image_view = ti.attach(render_image).view_ids[0],
+                        .image_view = ti.get(render_image).view_ids[0],
                         .layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
                         .store_op = daxa::AttachmentStoreOp::STORE,
@@ -192,7 +192,7 @@ struct App : AppWindow<App>
             });
             render_recorder.set_pipeline(*draw_pipeline);
             render_recorder.push_constant(DrawPushConstant{
-                .boids_buffer = ti.device.get_device_address(ti.attach(boids).ids[0]).value(),
+                .boids_buffer = ti.device.get_device_address(ti.get(boids).ids[0]).value(),
                 .axis_scaling = {
                     std::min(1.0f, static_cast<f32>(*this->size_y) / static_cast<f32>(*this->size_x)),
                     std::min(1.0f, static_cast<f32>(*this->size_x) / static_cast<f32>(*this->size_y)),
@@ -230,28 +230,22 @@ struct App : AppWindow<App>
         new_task_graph.use_persistent_image(task_swapchain_image);
         new_task_graph.use_persistent_buffer(task_boids_current);
         new_task_graph.use_persistent_buffer(task_boids_old);
-        {
-            UpdateBoidsTask update_task{
-                .views = std::array{
-                    daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::current, task_boids_current }},
-                    daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::previous, task_boids_old }},
-                },
-                .update_boids_pipeline = update_boids_pipeline,
-            };
-            new_task_graph.add_task(update_task);
-        }
-        {
-            DrawBoidsTask draw_task{
-                .views = std::array{
-                    daxa::TaskViewVariant{std::pair{ DrawBoidsTask::boids, task_boids_current }},
-                    daxa::TaskViewVariant{std::pair{ DrawBoidsTask::render_image, task_swapchain_image }},
-                },
-                .draw_pipeline = draw_pipeline,
-                .size_x = &size_x,
-                .size_y = &size_y,
-            };
-            new_task_graph.add_task(draw_task);
-        }
+        new_task_graph.add_task(UpdateBoidsTask{
+            .views = std::array{
+                daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::current, task_boids_current }},
+                daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::previous, task_boids_old }},
+            },
+            .update_boids_pipeline = update_boids_pipeline,
+        });
+        new_task_graph.add_task(DrawBoidsTask{
+            .views = std::array{
+                daxa::TaskViewVariant{std::pair{ DrawBoidsTask::boids, task_boids_current }},
+                daxa::TaskViewVariant{std::pair{ DrawBoidsTask::render_image, task_swapchain_image }},
+            },
+            .draw_pipeline = draw_pipeline,
+            .size_x = &size_x,
+            .size_y = &size_y,
+        });
         new_task_graph.submit({});
         new_task_graph.present({});
         new_task_graph.complete({});
