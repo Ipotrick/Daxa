@@ -1,7 +1,6 @@
 #pragma once
 
 #include <daxa/utils/fsr2.hpp>
-#include <deque>
 
 #include "../impl_core.hpp"
 #include "../impl_device.hpp"
@@ -29,5 +28,7 @@ namespace daxa
 
         ImplFsr2Context(UpscaleInstanceInfo a_info);
         ~ImplFsr2Context();
+
+        static void zero_ref_callback(ImplHandle const *);
     };
 } // namespace daxa

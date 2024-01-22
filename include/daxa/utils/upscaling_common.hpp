@@ -25,7 +25,7 @@ namespace daxa
 
         bool should_reset = false;
         f32 delta_time;
-        f32vec2 jitter;
+        daxa_f32vec2 jitter;
 
         bool should_sharpen = false;
         f32 sharpening = 0.0f;

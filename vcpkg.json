@@ -27,6 +27,12 @@
         "imgui"
       ]
     },
+    "utils-fsr2": {
+      "description": "The FSR2 Daxa utility",
+      "dependencies": [
+        "fsr2"
+      ]
+    },
     "utils-mem": {
       "description": "The Mem Daxa utility"
     },
