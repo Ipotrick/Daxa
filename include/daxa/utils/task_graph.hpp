@@ -139,7 +139,7 @@ namespace daxa
     struct InlineTaskInfo
     {
         std::vector<TaskAttachmentInfo> attachments = {};
-        std::function<void(TaskInterface const &)> task = {};
+        std::function<void(TaskInterface)> task = {};
         std::string_view name = "unnamed";
     };
 

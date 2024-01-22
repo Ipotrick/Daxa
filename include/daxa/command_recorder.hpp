@@ -14,7 +14,7 @@ namespace daxa
     struct PushConstantInfo
     {
         void const * data = {};
-        u32 size = {};
+        u64 size = {};
         u32 offset = {};
     };
 

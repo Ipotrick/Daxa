@@ -357,7 +357,7 @@ namespace daxa
         std::span<TaskAttachmentInfo const> attachment_infos = {};
         // optional:
         TransferMemoryPool * allocator = {};
-        std::span<std::byte> attachment_shader_data_blob = {};
+        std::span<std::byte> attachment_shader_data = {};
 
         TaskBufferAttachmentInfo const & get(TaskBufferAttachmentIndex index) const;
         TaskBufferAttachmentInfo const & get(TaskBufferView view) const;
@@ -375,7 +375,7 @@ namespace daxa
     {
         constexpr virtual ~ITask() {}
         /// TODO(pahrens): optimize:
-        constexpr virtual auto attachment_shader_data_blob_size() const -> usize
+        constexpr virtual auto attachment_shader_data_size() const -> usize
         {
             usize total = 0;
             for (auto const & attach : attachments())
@@ -454,6 +454,16 @@ namespace daxa
         {
             return _raw[index.value].value.image;
         }
+
+        static auto attachment_shader_data_size() -> u32
+        {
+            u32 total = 0;
+            for (auto const & attach : _raw)
+            {
+                total += attach.shader_array_size() * 8;
+            }
+            return total;
+        };
 
         static constexpr inline usize ATTACH_COUNT = ATTACHMENT_COUNT;
         static inline u8 _offset = 0;
@@ -567,16 +577,6 @@ namespace daxa
         }
     }
 
-    static inline constexpr usize TASK_USE_TYPE_SIZE = 128;
-
-    struct GenericTaskResourceUse
-    {
-        TaskResourceUseType type;
-        u16 shader_array_size;
-        // This is necessary for c++ to properly generate copy and move operators.
-        u8 raw[TASK_USE_TYPE_SIZE - sizeof(TaskResourceUseType) - sizeof(u32)];
-    };
-
     struct TrackedBuffers
     {
         std::span<BufferId const> buffers = {};
@@ -655,4 +655,42 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
+    using AttachmentViewPairVariant = std::variant<std::pair<TaskBufferAttachment, TaskBufferView>, std::pair<TaskImageAttachment, TaskImageView>>;
+
+    inline auto inl_atch(TaskBufferAccess access, TaskBufferView view) -> TaskAttachmentInfo { 
+        TaskBufferAttachmentInfo buf = {};
+        buf.name = "inline attachment";
+        buf.access = access;
+        buf.shader_array_size = 0;
+        buf.shader_as_address = false;
+        buf.view = view;
+        TaskAttachmentInfo info = {};
+        info.type = daxa::TaskAttachmentType::BUFFER;
+        info.value.buffer = buf;
+        return info;
+     }
+    inline auto inl_atch(TaskImageAccess access, TaskImageView view) -> TaskAttachmentInfo { 
+        TaskImageAttachmentInfo img = {};
+        img.name = "inline attachment";
+        img.access = access;
+        img.view_type = daxa::ImageViewType::MAX_ENUM;
+        img.shader_array_size = 0;
+        img.view = view;
+        TaskAttachmentInfo info = {};
+        info.value.image = img;
+        info.type = daxa::TaskAttachmentType::IMAGE;
+        return info; 
+    }
+    inline auto inl_atch(TaskImageAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo { 
+        TaskImageAttachmentInfo img = {};
+        img.name = "inline attachment";
+        img.access = access;
+        img.view_type = view_type;
+        img.shader_array_size = 0;
+        img.view = view;
+        TaskAttachmentInfo info = {};
+        info.type = daxa::TaskAttachmentType::IMAGE;
+        info.value.image = img;
+        return info; 
+    }
 } // namespace daxa

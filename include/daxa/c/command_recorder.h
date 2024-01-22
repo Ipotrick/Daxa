@@ -9,7 +9,7 @@
 typedef struct 
 {
     void const * data;
-    uint32_t size;
+    uint64_t size;
     uint32_t offset;
 } daxa_PushConstantInfo;
 
