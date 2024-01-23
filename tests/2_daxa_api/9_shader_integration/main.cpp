@@ -24,7 +24,7 @@ namespace tests
 
     void alignment()
     {
-        auto print_Testu6Alignment = [](TestU64Alignment const & v)
+        auto print_Testu64Alignment = [](TestU64Alignment const & v)
         {
             std::cout << "i0: " << v.i0 << std::endl;
             std::cout << "i1: " << v.i1 << std::endl;
@@ -136,8 +136,8 @@ namespace tests
             std::shared_ptr<daxa::ComputePipeline> pipeline = {};
             void callback(daxa::TaskInterface ti)
             {
-                ti.recorder.push_constant_vptr({ti.attachment_shader_data.data(), ti.attachment_shader_data.size()});
                 ti.recorder.set_pipeline(*pipeline);
+                ti.recorder.push_constant_vptr({ti.attachment_shader_data.data(), ti.attachment_shader_data.size()});
                 ti.recorder.dispatch({1, 1, 1});
             }
         };
@@ -158,9 +158,9 @@ namespace tests
         [[maybe_unused]] TestU64Alignment readback_data = *device.get_host_address_as<TestU64Alignment>(dst_buffer).value();
 
         std::cout << "test values before: \n";
-        print_Testu6Alignment(test_values);
+        print_Testu64Alignment(test_values);
         std::cout << "readback values after: \n";
-        print_Testu6Alignment(readback_data);
+        print_Testu64Alignment(readback_data);
         DAXA_DBG_ASSERT_TRUE_M(are_same_Testu6Alignment(test_values, readback_data), "values differ");
 
         device.destroy_buffer(src_buffer);

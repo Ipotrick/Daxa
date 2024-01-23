@@ -420,16 +420,16 @@ daxa_cmd_wait_event(daxa_CommandRecorder cmd_enc, daxa_EventWaitInfo const * inf
 DAXA_EXPORT void
 daxa_cmd_reset_event(daxa_CommandRecorder cmd_enc, daxa_ResetEventInfo const * info);
 
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, daxa_PushConstantInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder cmd_enc, daxa_RayTracingPipeline pipeline);
 DAXA_EXPORT void
-daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline const * pipeline);
+daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline pipeline);
 DAXA_EXPORT void
 daxa_cmd_set_raster_pipeline(daxa_CommandRecorder cmd_enc, daxa_RasterPipeline pipeline);
 
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_dispatch(daxa_CommandRecorder cmd_enc, daxa_DispatchInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_dispatch_indirect(daxa_CommandRecorder cmd_enc, daxa_DispatchIndirectInfo const * info);
@@ -457,7 +457,7 @@ daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId i
 
 
 
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_trace_rays(daxa_CommandRecorder cmd_enc, daxa_TraceRaysInfo const * info);
 
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.

@@ -621,47 +621,78 @@ void daxa_cmd_reset_event(daxa_CommandRecorder self, daxa_ResetEventInfo const *
         info->stage_masks);
 }
 
-void daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo const * info)
+auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo const * info) -> daxa_Result
 {
     daxa_cmd_flush_barriers(self);
-    u64 layout_index = (info->size + sizeof(u32) - 1) / sizeof(u32);
-    // TODO(general): The size can be smaller then the layouts size... Is that a problem? I remember renderdoc complaining sometimes.
-    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, self->device->gpu_sro_table.pipeline_layouts.at(layout_index), VK_SHADER_STAGE_ALL, info->offset, info->size, info->data);
+    if (daxa::holds_alternative<daxa_ImplCommandRecorder::NoPipeline>(self->current_pipeline))
+    {
+        return DAXA_RESULT_NO_PIPELINE_BOUND;
+    }
+    VkPipelineLayout vk_pipeline_layout = {};
+    u32 current_pipeline_push_constant_size = {};
+    if (daxa_ComputePipeline * pipeline = daxa::get_if<daxa_ComputePipeline>(&self->current_pipeline))
+    {
+        current_pipeline_push_constant_size = (**pipeline).info.push_constant_size;
+        vk_pipeline_layout = (**pipeline).vk_pipeline_layout;
+    }
+    if (daxa_RasterPipeline * pipeline = daxa::get_if<daxa_RasterPipeline>(&self->current_pipeline))
+    {
+        current_pipeline_push_constant_size = (**pipeline).info.push_constant_size;
+        vk_pipeline_layout = (**pipeline).vk_pipeline_layout;
+    }
+    if (daxa_RayTracingPipeline * pipeline = daxa::get_if<daxa_RayTracingPipeline>(&self->current_pipeline))
+    {
+        current_pipeline_push_constant_size = (**pipeline).info.push_constant_size;
+        vk_pipeline_layout = (**pipeline).vk_pipeline_layout;
+    }
+    if (current_pipeline_push_constant_size < (info->offset + info->size))
+    {
+        return DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED;
+    }
+    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, info->offset, static_cast<u32>(info->size), info->data);
+    return DAXA_RESULT_SUCCESS;
 }
 
 void daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline)
 {
-    self->shader_binding_table = pipeline->info.shader_binding_table;
     daxa_cmd_flush_barriers(self);
+    self->current_pipeline = pipeline;
     vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline);
 }
 
-void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline const * pipeline)
+void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline pipeline)
 {
     daxa_cmd_flush_barriers(self);
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (**pipeline).vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
-    vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, (**pipeline).vk_pipeline);
+    self->current_pipeline = pipeline;
+    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
 }
 
 void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline pipeline)
 {
     daxa_cmd_flush_barriers(self);
+    self->current_pipeline = pipeline;
     vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
 }
 
-void daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * info)
+auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * info) -> daxa_Result
 {
     // TODO: Check if those offsets are in range?
-    StridedDeviceAddressRegion raygen_handle = self->shader_binding_table.raygen_region;
-    raygen_handle.address += self->shader_binding_table.raygen_region.stride * info->raygen_handle_offset;
-    StridedDeviceAddressRegion miss_handle = self->shader_binding_table.miss_region;
-    raygen_handle.address += self->shader_binding_table.miss_region.stride * info->miss_handle_offset;
-    StridedDeviceAddressRegion hit_handle = self->shader_binding_table.hit_region;
-    raygen_handle.address += self->shader_binding_table.hit_region.stride * info->hit_handle_offset;
-    StridedDeviceAddressRegion call_handle = self->shader_binding_table.callable_region;
-    raygen_handle.address += self->shader_binding_table.callable_region.stride * info->callable_handle_offset;
+    if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
+    {
+        return DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND;
+    }
+    RayTracingShaderBindingTable const & binding_table = daxa::get<daxa_RayTracingPipeline>(self->current_pipeline)->info.shader_binding_table;
+    StridedDeviceAddressRegion raygen_handle = binding_table.raygen_region;
+    raygen_handle.address += binding_table.raygen_region.stride * info->raygen_handle_offset;
+    StridedDeviceAddressRegion miss_handle = binding_table.miss_region;
+    raygen_handle.address += binding_table.miss_region.stride * info->miss_handle_offset;
+    StridedDeviceAddressRegion hit_handle = binding_table.hit_region;
+    raygen_handle.address += binding_table.hit_region.stride * info->hit_handle_offset;
+    StridedDeviceAddressRegion call_handle = binding_table.callable_region;
+    raygen_handle.address += binding_table.callable_region.stride * info->callable_handle_offset;
     self->device->vkCmdTraceRaysKHR(
         self->current_command_data.vk_cmd_buffer,
         reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&raygen_handle),
@@ -669,16 +700,27 @@ void daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
         reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&hit_handle),
         reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&call_handle),
         info->width, info->height, info->depth);
+    return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info)
+auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info) -> daxa_Result
 {
+    // TODO: Check if those offsets are in range?
+    if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
+    {
+        return DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND;
+    }
     vkCmdDispatch(self->current_command_data.vk_cmd_buffer, info->x, info->y, info->z);
+    return DAXA_RESULT_SUCCESS;
 }
 
 auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirectInfo const * info) -> daxa_Result
 {
     _DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer)
+    if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
+    {
+        return DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND;
+    }
     vkCmdDispatchIndirect(self->current_command_data.vk_cmd_buffer, self->device->slot(info->indirect_buffer).vk_buffer, info->offset);
     return DAXA_RESULT_SUCCESS;
 }
@@ -1042,6 +1084,7 @@ auto daxa_cmd_complete_current_commands(
         .cmd_recorder = self,
         .data = std::move(cmd_data),
     };
+    self->current_pipeline = daxa_ImplCommandRecorder::NoPipeline{};
     self->inc_refcnt();
     return DAXA_RESULT_SUCCESS;
 }

@@ -2,47 +2,48 @@
 
 #include "common.hpp"
 DAXA_DECL_TASK_HEAD_BEGIN(TestTaskHead, 4)
-DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, buffer0)
-DAXA_TH_IMAGE_NO_SHADER(COMPUTE_SHADER_SAMPLED, REGULAR_2D, image0)
-DAXA_TH_IMAGE_NO_SHADER(COMPUTE_SHADER_SAMPLED, REGULAR_2D, image1)
-DAXA_TH_BUFFER_NO_SHADER(COMPUTE_SHADER_READ, test_buffer_no_shader)
+DAXA_TH_BUFFER(COMPUTE_SHADER_READ, buffer0)
+DAXA_TH_IMAGE(COMPUTE_SHADER_SAMPLED, REGULAR_2D, image0)
+DAXA_TH_IMAGE(COMPUTE_SHADER_SAMPLED, REGULAR_2D, image1)
+DAXA_TH_BUFFER(COMPUTE_SHADER_READ, test_buffer_no_shader)
 DAXA_DECL_TASK_HEAD_END
 
-struct TestTask : TestTaskHead::Task
+struct TestTask : TestTaskHead
 {
-    virtual void callback(daxa::TaskInterface ti) const override
+    Views views = {};
+    void callback(daxa::TaskInterface ti)
     {
         // There are two ways to get the info for any attachment:
         {
             // daxa::TaskBufferAttachmentIndex index:
-            [[maybe_unused]] daxa::TaskBufferAttachmentInfo const & buffer0_attachment0 = ti.attach(buffer0);
+            [[maybe_unused]] daxa::TaskBufferAttachmentInfo const & buffer0_attachment0 = ti.get(buffer0);
             // daxa::TaskBufferView assigned to the buffer attachment:
-            [[maybe_unused]] daxa::TaskBufferAttachmentInfo const & buffer0_attachment1 = ti.attach(buffer0_attachment0.view);
+            [[maybe_unused]] daxa::TaskBufferAttachmentInfo const & buffer0_attachment1 = ti.get(buffer0_attachment0.view);
         }
         // The Buffer Attachment info contents:
         {
-            [[maybe_unused]] daxa::BufferId id = ti.attach(buffer0).ids[0];
-            [[maybe_unused]] char const * name = ti.attach(buffer0).name;
-            [[maybe_unused]] daxa::TaskBufferAccess access = ti.attach(buffer0).access;
-            [[maybe_unused]] u8 shader_array_size = ti.attach(buffer0).shader_array_size;
-            [[maybe_unused]] bool shader_as_address = ti.attach(buffer0).shader_as_address;
-            [[maybe_unused]] daxa::TaskBufferView view = ti.attach(buffer0).view;
-            [[maybe_unused]] std::span<daxa::BufferId const> ids = ti.attach(buffer0).ids;
+            [[maybe_unused]] daxa::BufferId id = ti.get(buffer0).ids[0];
+            [[maybe_unused]] char const * name = ti.get(buffer0).name;
+            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(buffer0).access;
+            [[maybe_unused]] u8 shader_array_size = ti.get(buffer0).shader_array_size;
+            [[maybe_unused]] bool shader_as_address = ti.get(buffer0).shader_as_address;
+            [[maybe_unused]] daxa::TaskBufferView view = ti.get(buffer0).view;
+            [[maybe_unused]] std::span<daxa::BufferId const> ids = ti.get(buffer0).ids;
         }
         // The Image Attachment info contents:
         {
-            [[maybe_unused]] char const * name = ti.attach(image0).name;
-            [[maybe_unused]] daxa::TaskImageAccess access = ti.attach(image0).access;
-            [[maybe_unused]] daxa::ImageViewType view_type = ti.attach(image0).view_type;
-            [[maybe_unused]] u8 shader_array_size = ti.attach(image0).shader_array_size;
-            [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.attach(image0).shader_array_type;
-            [[maybe_unused]] daxa::ImageLayout layout = ti.attach(image0).layout;
-            [[maybe_unused]] daxa::TaskImageView view = ti.attach(image0).view;
-            [[maybe_unused]] std::span<daxa::ImageId const> ids = ti.attach(image0).ids;
-            [[maybe_unused]] std::span<daxa::ImageViewId const> view_ids = ti.attach(image0).view_ids;
+            [[maybe_unused]] char const * name = ti.get(image0).name;
+            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(image0).access;
+            [[maybe_unused]] daxa::ImageViewType view_type = ti.get(image0).view_type;
+            [[maybe_unused]] u8 shader_array_size = ti.get(image0).shader_array_size;
+            [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(image0).shader_array_type;
+            [[maybe_unused]] daxa::ImageLayout layout = ti.get(image0).layout;
+            [[maybe_unused]] daxa::TaskImageView view = ti.get(image0).view;
+            [[maybe_unused]] std::span<daxa::ImageId const> ids = ti.get(image0).ids;
+            [[maybe_unused]] std::span<daxa::ImageViewId const> view_ids = ti.get(image0).view_ids;
         }
         // The attachment infos are also provided, directly via a span:
-        for ([[maybe_unused]] daxa::TaskAttachmentInfoVariant const & attach : ti.attachment_infos)
+        for ([[maybe_unused]] daxa::TaskAttachmentInfo const & attach : ti.attachment_infos)
         {
         }
     }
@@ -412,23 +413,38 @@ namespace tests
         task_graph.use_persistent_image(task_image);
         task_graph.use_persistent_buffer(task_buffer);
 
-        task_graph.add_task({
-            .attachments = daxa::generic_uses_cast(ShaderIntegrationTaskHead::Uses{
-                .settings = task_buffer.view(),
-                .image = task_image.view(),
-            }),
-            .task = [&](daxa::TaskInterface ti)
+        struct WriteImage : ShaderIntegrationTaskHead
+        {
+            Views views = {};
+            std::shared_ptr<daxa::ComputePipeline> pipeline = {};
+            void callback(daxa::TaskInterface ti)
             {
-                auto & cmd = ti.get_recorder();
-                // Write TaskHead shader blob to the push constant.
-                ShaderIntegrationTaskHead push;
-                ti.copy_task_head_to(&push);
-                cmd.push_constant(push);
-                cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch({1, 1, 1});
+                ti.recorder.set_pipeline(*pipeline);
+                ti.recorder.push_constant_vptr({*pipeline, ti.attachment_shader_data.data(), ti.attachment_shader_data.size()});
+                ti.recorder.dispatch({1, 1, 1});
+            }
+        };
+        task_graph.add_task(WriteImage{
+            .views = std::array{
+                daxa::TaskViewVariant{std::pair{ WriteImage::settings, task_buffer }},
+                daxa::TaskViewVariant{std::pair{ WriteImage::image, task_image }},
             },
-            .name = "write image in compute",
+            .pipeline = compute_pipeline,
         });
+        struct ReadImage : ShaderIntegrationTaskHead
+        {
+            Views views = {};
+            std::shared_ptr<daxa::ComputePipeline> pipeline = {};
+            void callback(daxa::TaskInterface ti)
+            {
+                // Optionally, the shader uses can still be accessed with the usual task interface for immediate tasks.
+                [[maybe_unused]] auto img = ti.get(image).ids[0];
+                // Write TaskHead shader blob to the push constant.
+                ti.recorder.set_pipeline(*pipeline);
+                ti.recorder.push_constant_vptr({ti.attachment_shader_data.data(), ti.attachment_shader_data.size()});
+                ti.recorder.dispatch({1, 1, 1});
+            }
+        }
         task_graph.add_task({
             .attachments = daxa::generic_uses_cast(ShaderIntegrationTaskHead::Uses{
                 .settings = task_buffer.view(),
