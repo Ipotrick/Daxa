@@ -122,16 +122,19 @@ namespace tests
                     .name = "vertex buffer",
                 });
                 defer { device.destroy_buffer(vertex_buffer); };
-                *device.get_host_address_as<decltype(vertices)>(vertex_buffer).value() = vertices;
+                // *device.get_host_address_as<decltype(vertices)>(vertex_buffer).value() = vertices;
+                std::memcpy(device.get_host_address_as<daxa_f32vec3>(vertex_buffer).value(), vertices.data(), sizeof(daxa_f32vec3) * vertices.size());
+
                 /// Indices:
                 auto indices = std::array{0, 1, 2};
                 auto index_buffer = device.create_buffer({
-                    .size = sizeof(decltype(indices)),
+                    .size = sizeof(daxa_u32) * indices.size(),
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "index buffer",
                 });
                 defer { device.destroy_buffer(index_buffer); };
-                *device.get_host_address_as<decltype(indices)>(index_buffer).value() = indices;
+                // *device.get_host_address_as<decltype(indices)>(index_buffer).value() = indices;
+                std::memcpy(device.get_host_address_as<daxa_u32>(index_buffer).value(), indices.data(), sizeof(daxa_u32) * indices.size());
                 /// Transforms:
                 auto transform_buffer = device.create_buffer({
                     .size = sizeof(daxa_f32mat3x4),
@@ -144,17 +147,20 @@ namespace tests
                     {0, 1, 0, 0},
                     {0, 0, 1, 0},
                 };
+
+                // TODO: The fact that we delayed some parameters to the create info and afterwards, we add them for building the acceleration structure cause a crash.
+                // TODO: Could we improve the whole process?
                 /// Triangle Geometry Info:
                 auto geometries = std::array{
                     daxa::BlasTriangleGeometryInfo{
                         .vertex_format = daxa::Format::R32G32B32_SFLOAT, // Is also default
-                        .vertex_data = {},                               // Ignored in get_acceleration_structure_build_sizes.    // Is also default
+                        .vertex_data = device.get_device_address(vertex_buffer).value(),                               // Ignored in get_acceleration_structure_build_sizes.    // Is also default
                         .vertex_stride = sizeof(daxa_f32vec3),           // Is also default
                         .max_vertex = static_cast<u32>(vertices.size() - 1),
                         .index_type = daxa::IndexType::uint32, // Is also default
-                        .index_data = {},                      // Ignored in get_acceleration_structure_build_sizes. // Is also default
-                        .transform_data = {},                  // Ignored in get_acceleration_structure_build_sizes. // Is also default
-                        .count = 1,
+                        .index_data = device.get_device_address(index_buffer).value(),                      // Ignored in get_acceleration_structure_build_sizes. // Is also default
+                        .transform_data = device.get_device_address(transform_buffer).value(),                  // Ignored in get_acceleration_structure_build_sizes. // Is also default
+                        .count = static_cast<daxa_u32>(indices.size() / 3),
                         .flags = daxa::GeometryFlagBits::OPAQUE, // Is also default
                     }};
                 /// Create Triangle Blas:
@@ -169,18 +175,13 @@ namespace tests
                     .size = build_size_info.build_scratch_size,
                     .name = "blas build scratch buffer",
                 });
+                blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value();
                 defer { device.destroy_buffer(blas_scratch_buffer); };
                 this->blas = device.create_blas({
                     .size = build_size_info.acceleration_structure_size,
                     .name = "test blas",
                 });
-                /// Fill the remaining fields of the build info:
-                auto & tri_geom = geometries[0];
-                tri_geom.vertex_data = device.get_device_address(vertex_buffer).value();
-                tri_geom.index_data = device.get_device_address(index_buffer).value();
-                tri_geom.transform_data = device.get_device_address(transform_buffer).value();
                 blas_build_info.dst_blas = blas;
-                blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value();
 
                 // https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#VUID-VkAccelerationStructureBuildGeometryInfoKHR-type-03792
                 // GeometryType of each element of pGeometries must be the same
@@ -227,7 +228,7 @@ namespace tests
                 });
                 defer { device.destroy_buffer(proc_blas_scratch_buffer); };
                 this->proc_blas = device.create_blas({
-                    .size = build_size_info.acceleration_structure_size,
+                    .size = proc_build_size_info.acceleration_structure_size,
                     .name = "test procedural blas",
                 });
                 proc_blas_build_info.dst_blas = proc_blas;
@@ -301,6 +302,7 @@ namespace tests
                 tlas_build_info.dst_tlas = tlas;
                 tlas_build_info.scratch_data = device.get_device_address(tlas_scratch_buffer).value();
                 blas_instances[0].data = device.get_device_address(blas_instances_buffer).value();
+                
                 /// Record build commands:
                 auto exec_cmds = [&]()
                 {
