@@ -42,6 +42,15 @@ namespace tests
             daxa::BlasId blas = {};
             daxa::BlasId proc_blas = {};
             daxa::BufferId aabb_buffer = {};
+            
+            daxa::BufferId blas_scratch_buffer = {};
+            daxa_u64 blas_scratch_buffer_size = 1024 * 1024 * 10;
+            daxa_u64 blas_scratch_buffer_offset = 0;
+            daxa_u32 acceleration_structure_scratch_offset_alignment = 0;
+            daxa::BufferId blas_buffer = {};
+            daxa_u64 blas_buffer_size = 1024 * 1024 * 10;
+            daxa_u64 blas_buffer_offset = 0;
+            const daxa_u32 ACCELERATION_STRUCTURE_BUILD_OFFSET_ALIGMENT = 256; // NOTE: Requested by the spec
 
             daxa_u32 frame = 0;
             daxa_u32 raygen_shader_binding_table_offset = 0;
@@ -71,6 +80,8 @@ namespace tests
                     device.destroy_blas(proc_blas);
                     device.destroy_buffer(cam_buffer);
                     device.destroy_buffer(aabb_buffer);
+                    device.destroy_buffer(blas_scratch_buffer);
+                    device.destroy_buffer(blas_buffer);
                 }
             }
 
@@ -103,12 +114,32 @@ namespace tests
                     .image_usage = daxa::ImageUsageFlagBits::SHADER_STORAGE,
                 });
 
+                acceleration_structure_scratch_offset_alignment = device.properties().acceleration_structure_properties.value().min_acceleration_structure_scratch_offset_alignment;
+
+
                 /// Create Camera Buffer
                 cam_buffer = device.create_buffer({
                     .size = cam_buffer_size,
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("cam_buffer"),
                 });
+
+                blas_scratch_buffer = device.create_buffer({
+                    .size = blas_scratch_buffer_size,
+                    .name = ("blas_scratch_buffer"),
+                });
+
+                blas_buffer = device.create_buffer({
+                    .size = blas_buffer_size,
+                    .name = ("blas_buffer"),
+                });
+
+
+                /// Alignments:
+                auto get_aligned = [&](u64 operand, u64 granularity) -> u64
+                {
+                    return ((operand + (granularity - 1)) & ~(granularity - 1));
+                };
 
                 /// Vertices:
                 auto vertices = std::array{
@@ -171,17 +202,36 @@ namespace tests
                     .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
                 };
                 daxa::AccelerationStructureBuildSizesInfo build_size_info = device.get_blas_build_sizes(blas_build_info);
-                auto blas_scratch_buffer = device.create_buffer({
-                    .size = build_size_info.build_scratch_size,
-                    .name = "blas build scratch buffer",
-                });
-                blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value();
-                defer { device.destroy_buffer(blas_scratch_buffer); };
-                this->blas = device.create_blas({
-                    .size = build_size_info.acceleration_structure_size,
-                    .name = "test blas",
+
+                daxa_u64 scratch_alignment_size = get_aligned(build_size_info.build_scratch_size, acceleration_structure_scratch_offset_alignment);
+
+                if ((blas_scratch_buffer_offset + scratch_alignment_size) > blas_scratch_buffer_size)
+                {
+                    // TODO: Try to resize buffer
+                    std::cout << "blas_scratch_buffer_offset > blas_scratch_buffer_size" << std::endl;
+                    abort();
+                }
+                blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value() + blas_scratch_buffer_offset;
+                blas_scratch_buffer_offset += scratch_alignment_size;
+
+                daxa_u64 build_aligment_size = get_aligned(build_size_info.acceleration_structure_size, ACCELERATION_STRUCTURE_BUILD_OFFSET_ALIGMENT);
+
+                if ((blas_buffer_offset + build_aligment_size) > blas_buffer_size)
+                {
+                    // TODO: Try to resize buffer
+                    std::cout << "blas_buffer_offset > blas_buffer_size" << std::endl;
+                    abort();
+                }
+
+                this->blas = device.create_blas_from_buffer({
+                    .blas_info = {   .size = build_size_info.acceleration_structure_size,
+                        .name = "test blas",
+                    },
+                    .buffer_id = blas_buffer,
+                    .offset = blas_buffer_offset,
                 });
                 blas_build_info.dst_blas = blas;
+                blas_buffer_offset += build_aligment_size;
 
                 // https://registry.khronos.org/vulkan/specs/1.3-extensions/html/vkspec.html#VUID-VkAccelerationStructureBuildGeometryInfoKHR-type-03792
                 // GeometryType of each element of pGeometries must be the same
@@ -222,17 +272,38 @@ namespace tests
                     .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
                 };
                 daxa::AccelerationStructureBuildSizesInfo proc_build_size_info = device.get_blas_build_sizes(proc_blas_build_info);
-                auto proc_blas_scratch_buffer = device.create_buffer({
-                    .size = proc_build_size_info.build_scratch_size,
-                    .name = "proc blas build scratch buffer",
-                });
-                defer { device.destroy_buffer(proc_blas_scratch_buffer); };
-                this->proc_blas = device.create_blas({
-                    .size = proc_build_size_info.acceleration_structure_size,
-                    .name = "test procedural blas",
+                
+                scratch_alignment_size = get_aligned(proc_build_size_info.build_scratch_size, acceleration_structure_scratch_offset_alignment);
+                if ((blas_scratch_buffer_offset + scratch_alignment_size) > blas_scratch_buffer_size)
+                {
+                    std::cout << "blas_scratch_buffer_offset > blas_scratch_buffer_size" << std::endl;
+                    abort();
+                }
+                proc_blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value() + blas_scratch_buffer_offset;
+                blas_scratch_buffer_offset += scratch_alignment_size;
+
+                
+                build_aligment_size = get_aligned(proc_build_size_info.acceleration_structure_size, ACCELERATION_STRUCTURE_BUILD_OFFSET_ALIGMENT);
+
+                if ((blas_buffer_offset + build_aligment_size) > blas_buffer_size)
+                {
+                    // TODO: Try to resize buffer
+                    std::cout << "blas_buffer_offset > blas_buffer_size" << std::endl;
+                    abort();
+                }
+
+                this->proc_blas = device.create_blas_from_buffer({
+                    .blas_info = {   .size = build_size_info.acceleration_structure_size,
+                        .name = "test procedural blas",
+                    },
+                    .buffer_id = blas_buffer,
+                    .offset = blas_buffer_offset,
                 });
                 proc_blas_build_info.dst_blas = proc_blas;
-                proc_blas_build_info.scratch_data = device.get_device_address(proc_blas_scratch_buffer).value();
+                blas_buffer_offset += build_aligment_size;
+
+
+
 
                 /// create blas instances for tlas:
                 auto blas_instances_buffer = device.create_buffer({
@@ -268,6 +339,8 @@ namespace tests
                         .flags = DAXA_GEOMETRY_INSTANCE_FORCE_OPAQUE, // Is also default
                         .blas_device_address = device.get_device_address(blas).value(),
                     }};
+
+
                 std::memcpy(device.get_host_address_as<daxa_BlasInstanceData>(blas_instances_buffer).value(),
                             blas_instance_array.data(),
                             blas_instance_array.size() * sizeof(daxa_BlasInstanceData));
