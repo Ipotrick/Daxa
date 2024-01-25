@@ -421,7 +421,7 @@ auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_Buil
     vk_build_ranges_ptrs.reserve(primitive_counts_ptrs.size());
     for (auto prim_counts_ptr : primitive_counts_ptrs)
     {
-        u64 prim_counts_start_idx = static_cast<u64>(prim_counts_ptr - primitive_counts.data()) / sizeof(u32);
+        u64 prim_counts_start_idx = prim_counts_ptr - primitive_counts.data();
         vk_build_ranges_ptrs.push_back(vk_build_ranges.data() + prim_counts_start_idx);
     }
     self->device->vkCmdBuildAccelerationStructuresKHR(
