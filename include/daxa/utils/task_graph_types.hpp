@@ -394,10 +394,10 @@ namespace daxa
     {
         constexpr StringLiteral(char const (&str)[N])
         {
-            std::copy_n(str, N, value);
+            std::copy_n(str, N - 1, value);
         }
-        char value[N];
-        usize SIZE = N;
+        char value[N - 1];
+        usize SIZE = N - 1;
     };
 
     // Used for simpler concept template constraint in add_task.
