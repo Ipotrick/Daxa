@@ -207,7 +207,7 @@ namespace daxa
                             info.access = NoRefTTask::_raw[i].value.buffer.access,
                             info.shader_array_size = NoRefTTask::_raw[i].value.buffer.shader_array_size,
                             info.shader_as_address = NoRefTTask::_raw[i].value.buffer.shader_as_address,
-                            info.view = std::get<TaskBufferView>(task.views.views[i]),
+                            info.view = get<TaskBufferView>(task.views.views[i]),
                             _attachments[i] = info;
                         }
                         else if (NoRefTTask::_raw[i].type == daxa::TaskAttachmentType::IMAGE)
@@ -218,7 +218,7 @@ namespace daxa
                             info.view_type = NoRefTTask::_raw[i].value.image.view_type,
                             info.shader_array_size = NoRefTTask::_raw[i].value.image.shader_array_size,
                             info.shader_array_type = NoRefTTask::_raw[i].value.image.shader_array_type,
-                            info.view = std::get<TaskImageView>(task.views.views[i]),
+                            info.view = get<TaskImageView>(task.views.views[i]),
                             _attachments[i] = info;
                         }
                         else
