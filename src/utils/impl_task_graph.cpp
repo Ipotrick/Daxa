@@ -22,7 +22,7 @@ namespace daxa
                                  { 
             if (other.type == TaskAttachmentType::BUFFER)
             {
-                return other.value.buffer.view == view;
+                return other.value.buffer.view == view || other.value.buffer.translated_view == view;
             }
             return false; });
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
@@ -41,7 +41,7 @@ namespace daxa
                                  { 
             if (other.type == TaskAttachmentType::IMAGE)
             {
-                return other.value.image.view == view;
+                return other.value.image.view == view || other.value.image.translated_view == view;
             }
             return false; });
         DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
