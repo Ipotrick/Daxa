@@ -431,13 +431,13 @@ namespace daxa
     struct PartialTask : IPartialTask
     {
         /// NOTE: Used to add attachments and declate named constant indices to the added attachment.
-        static constexpr auto add_attachment(TaskBufferAttachment const & attach) -> TaskBufferAttachmentIndex
+        static auto add_attachment(TaskBufferAttachment const & attach) -> TaskBufferAttachmentIndex
         {
             _raw.at(_offset) = attach;
             return TaskBufferAttachmentIndex{_offset++};
         }
         /// NOTE: Used to add attachments and declate named constant indices to the added attachment.
-        static constexpr auto add_attachment(TaskImageAttachment const & attach) -> TaskImageAttachmentIndex
+        static auto add_attachment(TaskImageAttachment const & attach) -> TaskImageAttachmentIndex
         {
             _raw.at(_offset) = attach;
             return TaskImageAttachmentIndex{_offset++};
