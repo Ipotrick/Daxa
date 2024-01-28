@@ -160,7 +160,7 @@ namespace daxa
 
     struct ImplPersistentTaskBuffer final : ImplHandle
     {
-        ImplPersistentTaskBuffer(TaskBufferInfo const & a_info);
+        ImplPersistentTaskBuffer(TaskBufferInfo a_info);
         ~ImplPersistentTaskBuffer();
 
         TaskBufferInfo info = {};

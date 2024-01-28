@@ -189,7 +189,7 @@ typedef struct {
     uint32_t callable_handle_offset;
 } daxa_TraceRaysInfo;
 
-static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = {1, 1, 1};
+static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = {0, 0, 0, 0, 0, 0, 0};
 
 
 typedef struct

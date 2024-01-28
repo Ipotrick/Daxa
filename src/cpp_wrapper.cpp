@@ -137,11 +137,11 @@ void check_result(daxa_Result result, char const * message, std::array<daxa_Resu
     if (!result_allowed)
     {
         std::cout << fmt::format(
-                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n",
+                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n\n",
                          daxa_result_to_string(result),
                          std::bit_cast<i32>(result),
                          message)
-                  << std::endl;
+                  << std::flush;
         throw std::runtime_error({});
     }
 }
@@ -250,7 +250,7 @@ namespace daxa
         return ret;
     }
 
-#define _DAXA_DECL_GPU_RES_FN(Name, name)                               \
+#define DAXA_DECL_GPU_RES_FN(Name, name)                                \
     auto Device::create_##name(Name##Info const & info) -> Name##Id     \
     {                                                                   \
         Name##Id id = {};                                               \
@@ -333,16 +333,16 @@ namespace daxa
             "failed to create blas from buffer");
         return id;
     }
-    _DAXA_DECL_GPU_RES_FN(Buffer, buffer)
-    _DAXA_DECL_GPU_RES_FN(Image, image)
-    _DAXA_DECL_GPU_RES_FN(ImageView, image_view)
-    _DAXA_DECL_GPU_RES_FN(Sampler, sampler)
-    _DAXA_DECL_GPU_RES_FN(Tlas, tlas)
-    _DAXA_DECL_GPU_RES_FN(Blas, blas)
+    DAXA_DECL_GPU_RES_FN(Buffer, buffer)
+    DAXA_DECL_GPU_RES_FN(Image, image)
+    DAXA_DECL_GPU_RES_FN(ImageView, image_view)
+    DAXA_DECL_GPU_RES_FN(Sampler, sampler)
+    DAXA_DECL_GPU_RES_FN(Tlas, tlas)
+    DAXA_DECL_GPU_RES_FN(Blas, blas)
 
     auto Device::get_device_address(BufferId id) const -> Optional<DeviceAddress>
     {
-        DeviceAddress ret;
+        DeviceAddress ret = 0;
         auto result = daxa_dvc_buffer_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
@@ -357,7 +357,7 @@ namespace daxa
 
     auto Device::get_device_address(TlasId id) const -> Optional<DeviceAddress>
     {
-        DeviceAddress ret;
+        DeviceAddress ret = 0;
         auto result = daxa_dvc_tlas_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_TlasId>(id),
@@ -372,7 +372,7 @@ namespace daxa
 
     auto Device::get_device_address(BlasId id) const -> Optional<DeviceAddress>
     {
-        DeviceAddress ret;
+        DeviceAddress ret = 0;
         auto result = daxa_dvc_blas_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BlasId>(id),
@@ -387,7 +387,7 @@ namespace daxa
 
     auto Device::get_host_address(BufferId id) const -> Optional<std::byte *>
     {
-        std::byte * ret;
+        std::byte * ret = nullptr;
         auto result = daxa_dvc_buffer_host_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
@@ -400,7 +400,7 @@ namespace daxa
         return {};
     }
 
-#define _DAXA_DECL_DVC_CREATE_FN(Name, name)                       \
+#define DAXA_DECL_DVC_CREATE_FN(Name, name)                        \
     auto Device::create_##name(Name##Info const & info) -> Name    \
     {                                                              \
         Name ret = {};                                             \
@@ -412,15 +412,15 @@ namespace daxa
         return ret;                                                \
     }
 
-    _DAXA_DECL_DVC_CREATE_FN(CommandRecorder, command_recorder)
-    _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
-    _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
-    _DAXA_DECL_DVC_CREATE_FN(RayTracingPipeline, ray_tracing_pipeline)
-    _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
-    _DAXA_DECL_DVC_CREATE_FN(BinarySemaphore, binary_semaphore)
-    _DAXA_DECL_DVC_CREATE_FN(TimelineSemaphore, timeline_semaphore)
-    _DAXA_DECL_DVC_CREATE_FN(Event, event)
-    _DAXA_DECL_DVC_CREATE_FN(TimelineQueryPool, timeline_query_pool)
+    DAXA_DECL_DVC_CREATE_FN(CommandRecorder, command_recorder)
+    DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
+    DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
+    DAXA_DECL_DVC_CREATE_FN(RayTracingPipeline, ray_tracing_pipeline)
+    DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
+    DAXA_DECL_DVC_CREATE_FN(BinarySemaphore, binary_semaphore)
+    DAXA_DECL_DVC_CREATE_FN(TimelineSemaphore, timeline_semaphore)
+    DAXA_DECL_DVC_CREATE_FN(Event, event)
+    DAXA_DECL_DVC_CREATE_FN(TimelineQueryPool, timeline_query_pool)
 
     auto Device::info() const -> DeviceInfo const &
     {
@@ -435,7 +435,7 @@ namespace daxa
 
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
-        daxa_CommandSubmitInfo c_submit_info = {
+        daxa_CommandSubmitInfo const c_submit_info = {
             .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
             .command_lists = reinterpret_cast<daxa_ExecutableCommandList const *>(submit_info.command_lists.data()),
             .command_list_count = submit_info.command_lists.size(),
@@ -455,7 +455,7 @@ namespace daxa
 
     void Device::present_frame(PresentInfo const & info)
     {
-        daxa_PresentInfo c_present_info = {
+        daxa_PresentInfo const c_present_info = {
             .wait_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const *>(info.wait_binary_semaphores.data()),
             .wait_binary_semaphore_count = info.wait_binary_semaphores.size(),
             .swapchain = *reinterpret_cast<daxa_Swapchain const *>(&info.swapchain),
@@ -479,7 +479,7 @@ namespace daxa
 
     auto Device::get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>
     {
-        auto c_device = rc_cast<daxa_Device>(object);
+        auto * c_device = rc_cast<daxa_Device>(object);
         VkSurfaceKHR surface = {};
         auto result = create_surface(
             c_device->instance,
@@ -713,7 +713,7 @@ namespace daxa
 
     auto Swapchain::current_timeline_pair() const -> std::pair<TimelineSemaphore, u64>
     {
-        auto gpu_value = *r_cast<TimelineSemaphore const*>(daxa_swp_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
+        auto gpu_value = *r_cast<TimelineSemaphore const *>(daxa_swp_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
         auto cpu_value = daxa_swp_current_cpu_timeline_value(rc_cast<daxa_Swapchain>(this->object));
         return std::pair{gpu_value, cpu_value};
     }
@@ -747,7 +747,7 @@ namespace daxa
 
     /// --- Begin Pipelines
 
-     auto RayTracingPipeline::info() const -> RayTracingPipelineInfo const &
+    auto RayTracingPipeline::info() const -> RayTracingPipelineInfo const &
     {
         return *r_cast<RayTracingPipelineInfo const *>(rc_cast<daxa_RayTracingPipeline>(this->object));
     }
@@ -808,34 +808,30 @@ namespace daxa
 
     /// --- End Executable Commands
 
-
-
-
     /// --- Begin RenderCommandBuffer
 
-#define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(name, Info) \
-    void RenderCommandRecorder::name(Info const & info)    \
-    {                                                      \
-        daxa_cmd_##name(                                   \
-            this->internal,                                \
-            r_cast<daxa_##Info const *>(&info));           \
+#define DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(name, Info) \
+    void RenderCommandRecorder::name(Info const & info)   \
+    {                                                     \
+        daxa_cmd_##name(                                  \
+            this->internal,                               \
+            r_cast<daxa_##Info const *>(&info));          \
     }
-#define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
-    void RenderCommandRecorder::name(Info const & info)                 \
-    {                                                                   \
-        auto result = daxa_cmd_##name(                                  \
-            this->internal,                                             \
-            r_cast<daxa_##Info const *>(&info));                        \
-        check_result(result, "failed in " #name);                       \
+#define DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
+    void RenderCommandRecorder::name(Info const & info)                \
+    {                                                                  \
+        auto result = daxa_cmd_##name(                                 \
+            this->internal,                                            \
+            r_cast<daxa_##Info const *>(&info));                       \
+        check_result(result, "failed in " #name);                      \
     }
 
-    RenderCommandRecorder::RenderCommandRecorder(RenderCommandRecorder && other)
+    RenderCommandRecorder::RenderCommandRecorder(RenderCommandRecorder && other) : internal{}
     {
-        internal = {};
         std::swap(this->internal, other.internal);
     }
 
-    RenderCommandRecorder & RenderCommandRecorder::operator=(RenderCommandRecorder && other)
+    auto RenderCommandRecorder::operator=(RenderCommandRecorder && other) -> RenderCommandRecorder &
     {
         if (internal != nullptr)
         {
@@ -878,12 +874,12 @@ namespace daxa
             r_cast<VkRect2D const *>(&info));
     }
 
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw, DrawInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw, DrawInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
 
     void RenderCommandRecorder::draw_mesh_tasks(u32 x, u32 y, u32 z)
     {
@@ -891,8 +887,8 @@ namespace daxa
             this->internal,
             x, y, z);
     }
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
 
     void RenderCommandRecorder::set_pipeline(RasterPipeline const & pipeline)
     {
@@ -913,29 +909,29 @@ namespace daxa
 
     /// --- Begin CommandRecorder ---
 
-#define _DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
-    void CommandRecorder::name(Info const & info)   \
-    {                                               \
-        daxa_cmd_##name(                            \
-            this->internal,                         \
-            r_cast<daxa_##Info const *>(&info));    \
+#define DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
+    void CommandRecorder::name(Info const & info)  \
+    {                                              \
+        daxa_cmd_##name(                           \
+            this->internal,                        \
+            r_cast<daxa_##Info const *>(&info));   \
     }
-#define _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
-    void CommandRecorder::name(Info const & info)                \
-    {                                                            \
-        auto result = daxa_cmd_##name(                           \
-            this->internal,                                      \
-            r_cast<daxa_##Info const *>(&info));                 \
-        check_result(result, "failed in " #name);                \
+#define DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
+    void CommandRecorder::name(Info const & info)               \
+    {                                                           \
+        auto result = daxa_cmd_##name(                          \
+            this->internal,                                     \
+            r_cast<daxa_##Info const *>(&info));                \
+        check_result(result, "failed in " #name);               \
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_buffer, BufferCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_image, BufferImageCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_buffer, ImageBufferCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_image, ImageCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_buffer, BufferCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_image, BufferImageCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_buffer, ImageBufferCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_image, ImageCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
     void CommandRecorder::build_acceleration_structures(BuildAccelerationStructuresInfo const & info)
     {
         auto result = daxa_cmd_build_acceleration_structures(
@@ -943,9 +939,9 @@ namespace daxa
             r_cast<daxa_BuildAccelerationStucturesInfo const *>(&info));
         check_result(result, "failed to build acceleration structures");
     }
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
 
     void CommandRecorder::wait_events(std::span<EventWaitInfo const> const & infos)
     {
@@ -953,8 +949,8 @@ namespace daxa
             this->internal, r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_event, ResetEventInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(reset_event, ResetEventInfo)
 
     void CommandRecorder::push_constant_vptr(PushConstantInfo const & info)
     {
@@ -979,9 +975,9 @@ namespace daxa
         check_result(result, "failed in dispatch");
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)
 
-#define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name)  \
+#define DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name)   \
     void CommandRecorder::destroy_##name##_deferred(Name##Id id) \
     {                                                            \
         auto result = daxa_cmd_destroy_##name##_deferred(        \
@@ -989,10 +985,10 @@ namespace daxa
             static_cast<daxa_##Name##Id>(id));                   \
         check_result(result, "failed to destroy " #name);        \
     }
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
 
     auto CommandRecorder::begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandRecorder
     {
@@ -1006,8 +1002,7 @@ namespace daxa
         return ret;
     }
 
-    
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(trace_rays, TraceRaysInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(trace_rays, TraceRaysInfo)
 
     void CommandRecorder::set_pipeline(RayTracingPipeline const & pipeline)
     {
@@ -1016,9 +1011,9 @@ namespace daxa
             *r_cast<daxa_RayTracingPipeline const *>(&pipeline));
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)
 
     void CommandRecorder::end_label()
     {
@@ -1047,13 +1042,13 @@ namespace daxa
         }
     }
 
-    CommandRecorder::CommandRecorder(CommandRecorder && other)
+    CommandRecorder::CommandRecorder(CommandRecorder && other) : internal{}
     {
-        internal = {};
+
         std::swap(this->internal, other.internal);
     }
 
-    CommandRecorder & CommandRecorder::operator=(CommandRecorder && other)
+    auto CommandRecorder::operator=(CommandRecorder && other) -> CommandRecorder &
     {
         if (internal != nullptr)
         {

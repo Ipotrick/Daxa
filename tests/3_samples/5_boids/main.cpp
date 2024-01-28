@@ -11,31 +11,31 @@ using Clock = std::chrono::high_resolution_clock;
 
 #include "shared.inl"
 
-    // Update task:
+// Update task:
 
-    DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
-    DAXA_TH_BUFFER(COMPUTE_SHADER_READ_WRITE, current)
-    DAXA_TH_BUFFER(COMPUTE_SHADER_READ, previous)
-    DAXA_DECL_TASK_HEAD_END
-    struct UpdateBoidsTask : UpdateBoids
+DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
+DAXA_TH_BUFFER(COMPUTE_SHADER_READ_WRITE, current)
+DAXA_TH_BUFFER(COMPUTE_SHADER_READ, previous)
+DAXA_DECL_TASK_HEAD_END
+struct UpdateBoidsTask : UpdateBoids
+{
+    UpdateBoids::Views views = {};
+    std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
+    void callback(daxa::TaskInterface ti) const
     {
-        UpdateBoids::Views views = {};
-        std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
-        void callback(daxa::TaskInterface ti)
-        {
-            ti.recorder.set_pipeline(*update_boids_pipeline);
-            ti.recorder.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.device.get_device_address(ti.get(current).ids[0]).value(),
-                .old_boids_buffer = ti.device.get_device_address(ti.get(previous).ids[0]).value(),
-            });
-            ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
-        }
-    };
+        ti.recorder.set_pipeline(*update_boids_pipeline);
+        ti.recorder.push_constant(UpdateBoidsPushConstant{
+            .boids_buffer = ti.device.get_device_address(ti.get(current).ids[0]).value(),
+            .old_boids_buffer = ti.device.get_device_address(ti.get(previous).ids[0]).value(),
+        });
+        ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
+    }
+};
 
-    struct Test
-    {
-        DAXA_TH_BLOB(UpdateBoids, test)
-    };
+struct Test
+{
+    DAXA_TH_BLOB(UpdateBoids, test)
+};
 
 struct App : AppWindow<App>
 {
@@ -163,17 +163,17 @@ struct App : AppWindow<App>
 
     struct DrawBoidsTask : daxa::PartialTask<2, "DrawBoids">
     {
-        static inline const daxa::TaskBufferAttachmentIndex boids = add_attachment(daxa::TaskBufferAttachment{
+        static inline daxa::TaskBufferAttachmentIndex const boids = add_attachment(daxa::TaskBufferAttachment{
             .access = daxa::TaskBufferAccess::VERTEX_SHADER_READ,
         });
-        static inline const daxa::TaskImageAttachmentIndex render_image = add_attachment(daxa::TaskImageAttachment{
+        static inline daxa::TaskImageAttachmentIndex const render_image = add_attachment(daxa::TaskImageAttachment{
             .access = daxa::TaskImageAccess::COLOR_ATTACHMENT,
         });
         Views views = {};
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
         u32 * size_x = {};
         u32 * size_y = {};
-        void callback(daxa::TaskInterface ti)
+        void callback(daxa::TaskInterface ti) const
         {
             auto render_recorder = std::move(ti.recorder).begin_renderpass({
                 .color_attachments = std::array{
@@ -232,15 +232,15 @@ struct App : AppWindow<App>
         new_task_graph.use_persistent_buffer(task_boids_old);
         new_task_graph.add_task(UpdateBoidsTask{
             .views = std::array{
-                daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::current, task_boids_current }},
-                daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::previous, task_boids_old }},
+                daxa::TaskViewVariant{std::pair{UpdateBoidsTask::current, task_boids_current}},
+                daxa::TaskViewVariant{std::pair{UpdateBoidsTask::previous, task_boids_old}},
             },
             .update_boids_pipeline = update_boids_pipeline,
         });
         new_task_graph.add_task(DrawBoidsTask{
             .views = std::array{
-                daxa::TaskViewVariant{std::pair{ DrawBoidsTask::boids, task_boids_current }},
-                daxa::TaskViewVariant{std::pair{ DrawBoidsTask::render_image, task_swapchain_image }},
+                daxa::TaskViewVariant{std::pair{DrawBoidsTask::boids, task_boids_current}},
+                daxa::TaskViewVariant{std::pair{DrawBoidsTask::render_image, task_swapchain_image}},
             },
             .draw_pipeline = draw_pipeline,
             .size_x = &size_x,
@@ -258,10 +258,14 @@ struct App : AppWindow<App>
         prev_time = now;
 
         auto reloaded_result = pipeline_manager.reload_all();
-        if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        if (auto * reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
+        {
             std::cout << "Failed to reload " << reload_err->message << '\n';
-        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+        }
+        if (daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result) != nullptr)
+        {
             std::cout << "Successfully reloaded!\n";
+        }
 
         auto swapchain_image = swapchain.acquire_next_image();
         task_swapchain_image.set_images({.images = {&swapchain_image, 1}});

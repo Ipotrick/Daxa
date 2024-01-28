@@ -126,7 +126,7 @@ namespace daxa
         };
         this->chain = r_cast<void *>(&this->scalar_layout);
         auto vk_memory_model = VkPhysicalDeviceVulkanMemoryModelFeatures{};
-        if (info.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL)
+        if ((info.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL) != 0u)
         {
             vk_memory_model = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
@@ -137,7 +137,7 @@ namespace daxa
             };
             this->chain = r_cast<void *>(&vk_memory_model);
         }
-        if (info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64)
+        if ((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64) != 0u)
         {
             this->shader_atomic64 = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
@@ -147,7 +147,7 @@ namespace daxa
             };
             this->chain = r_cast<void *>(&this->shader_atomic64);
         }
-        if (info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
+        if ((info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64) != 0u)
         {
             this->image_atomic64 = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
@@ -157,7 +157,7 @@ namespace daxa
             };
             this->chain = r_cast<void *>(&this->image_atomic64);
         }
-        if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+        if ((info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0u)
         {
             this->mesh_shader = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
@@ -170,9 +170,9 @@ namespace daxa
             };
             this->chain = r_cast<void *>(&this->mesh_shader.value());
         }
-        if (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING)
+        if ((info.flags & DAXA_DEVICE_FLAG_RAY_TRACING) != 0u)
         {
-            /// NOTE:   
+            /// NOTE:
             /// These settings have been derived by the minimum supported features of gpu architectures:
             ///   * Ampeere
             ///   * Ada Lovlace
@@ -197,7 +197,7 @@ namespace daxa
                 .rayTraversalPrimitiveCulling = VK_TRUE,
             };
             this->chain = r_cast<void *>(&this->ray_tracing_pipeline.value());
-            this->ray_query = VkPhysicalDeviceRayQueryFeaturesKHR {
+            this->ray_query = VkPhysicalDeviceRayQueryFeaturesKHR{
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_QUERY_FEATURES_KHR,
                 .pNext = this->chain,
                 .rayQuery = VK_TRUE,
@@ -224,19 +224,19 @@ namespace daxa
         // NOTE(pahrens): Make sure to never exceed EXTENSION_LIST_MAX!
         this->size = 0;
         this->data[size++] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
-        if (info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION)
+        if ((info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION) != 0u)
         {
             this->data[size++] = {VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME};
         }
-        if (info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
+        if ((info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64) != 0u)
         {
             this->data[size++] = {VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME};
         }
-        if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+        if ((info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0u)
         {
             this->data[size++] = {VK_EXT_MESH_SHADER_EXTENSION_NAME};
         }
-        if (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING)
+        if ((info.flags & DAXA_DEVICE_FLAG_RAY_TRACING) != 0u)
         {
             this->data[size++] = {VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME};
             this->data[size++] = {VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME};

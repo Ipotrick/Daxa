@@ -154,7 +154,8 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
         });
     abs_path_str.erase(remove_iter, abs_path_str.end());
 
-    auto check_for_pragma_once = [](std::string const &line) {
+    auto check_for_pragma_once = [](std::string const & line)
+    {
         auto pragma_pos = line.find("#pragma");
         auto once_pos = line.find("once");
         return pragma_pos != std::string::npos && once_pos != std::string::npos && once_pos > pragma_pos;
@@ -431,7 +432,7 @@ namespace daxa
     {
         this->object = new ImplPipelineManager{std::move(info)};
     }
-    
+
     auto PipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
@@ -572,7 +573,6 @@ namespace daxa
             shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
         }
 
-
         if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
             return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
@@ -606,7 +606,7 @@ namespace daxa
         auto callable_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
         auto closest_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
         auto miss_hit_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
-        using ElemT = std::tuple<std::vector<ShaderCompileInfo> *, FixedList<ShaderInfo, 10> *, std::vector<daxa::Result<std::vector<unsigned int>>>*, ShaderStage>;
+        using ElemT = std::tuple<std::vector<ShaderCompileInfo> *, FixedList<ShaderInfo, 10> *, std::vector<daxa::Result<std::vector<unsigned int>>> *, ShaderStage>;
         auto const result_shader_compile_infos = std::array<ElemT, 6>{
             ElemT{&pipe_result.info.ray_gen_infos, &ray_tracing_pipeline_info.ray_gen_shaders, &raygen_spirv_result, ShaderStage::RAY_GEN},
             ElemT{&pipe_result.info.intersection_infos, &ray_tracing_pipeline_info.intersection_shaders, &intersection_spirv_result, ShaderStage::RAY_INTERSECT},
@@ -615,19 +615,18 @@ namespace daxa
             ElemT{&pipe_result.info.closest_hit_infos, &ray_tracing_pipeline_info.closest_hit_shaders, &closest_hit_spirv_result, ShaderStage::RAY_CLOSEST_HIT},
             ElemT{&pipe_result.info.miss_hit_infos, &ray_tracing_pipeline_info.miss_hit_shaders, &miss_hit_spirv_result, ShaderStage::RAY_MISS},
         };
-        
+
         for (auto [pipe_result_shader_info, final_shader_info, spv_results, stage] : result_shader_compile_infos)
         {
-            for (FixedListSizeT i = 0; i < pipe_result_shader_info->size(); ++i)
+            for (auto & shader_compile_info : *pipe_result_shader_info)
             {
-                auto &shader_compile_info = (*pipe_result_shader_info)[i];
                 auto spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
                 if (spv_result.is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
                     {
                         auto result = Result<RayTracingPipelineState>(pipe_result);
-                        result.m = std::move(spv_result.message());
+                        result.m = spv_result.message();
                         return result;
                     }
                     else
@@ -672,7 +671,7 @@ namespace daxa
             if (this->info.register_null_pipelines_when_first_compile_fails)
             {
                 auto result = Result<ComputePipelineState>(pipe_result);
-                result.m = std::move(spirv_result.message());
+                result.m = spirv_result.message();
                 return result;
             }
             else
@@ -763,7 +762,7 @@ namespace daxa
                     if (this->info.register_null_pipelines_when_first_compile_fails)
                     {
                         auto result = Result<RasterPipelineState>(pipe_result);
-                        result.m = std::move(spv_result->message());
+                        result.m = spv_result->message();
                         return result;
                     }
                     else
@@ -781,7 +780,6 @@ namespace daxa
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
         return Result<RasterPipelineState>(std::move(pipe_result));
     }
-
 
     auto ImplPipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RayTracingPipeline>>
     {
@@ -1156,7 +1154,7 @@ namespace daxa
         {
             name = debug_name_opt;
         }
-        else if (ShaderFile const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
+        else if (auto const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
         {
             name = shader_file->path.string();
         }
@@ -1364,7 +1362,7 @@ namespace daxa
             }
         }
         std::string name = "unnamed-shader";
-        if (ShaderFile const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
+        if (auto const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
         {
             name = shader_file->path.string();
         }
@@ -1593,7 +1591,7 @@ namespace daxa
 
         std::vector<u32> spv;
         spv.resize(shader_obj->GetBufferSize() / sizeof(u32));
-        auto dxc_spv_ptr = static_cast<u32 *>(shader_obj->GetBufferPointer());
+        auto * dxc_spv_ptr = static_cast<u32 *>(shader_obj->GetBufferPointer());
         std::copy(dxc_spv_ptr, dxc_spv_ptr + spv.size(), spv.begin());
 
         // DXC often generates bad or invalid SPIR-V. Some say that running spirv-tools' optimizer on the resulting SPIR-V will rectify this.
@@ -1608,7 +1606,7 @@ namespace daxa
 
     auto ImplPipelineManager::zero_ref_callback(ImplHandle const * handle)
     {
-        auto self = r_cast<ImplPipelineManager const *>(handle);
+        auto const * self = r_cast<ImplPipelineManager const *>(handle);
         delete self;
     }
 
