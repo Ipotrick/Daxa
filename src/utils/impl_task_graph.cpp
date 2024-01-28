@@ -761,10 +761,10 @@ namespace daxa
             [](u32, TaskBufferAttachmentInfo const &) {},
             [&](u32 task_image_attach_index, TaskImageAttachmentInfo const & image_attach)
             {
-                auto const slice = image_attach.view.slice;
+                auto const slice = image_attach.translated_view.slice;
                 // The image id here is already the task graph local id.
                 // The persistent ids are converted to local ids in the add_task function.
-                auto const tid = image_attach.view;
+                auto const tid = image_attach.translated_view;
 
                 auto const actual_images = get_actual_images(tid, permutation);
                 auto & view_cache = task.image_view_cache[task_image_attach_index];
@@ -839,15 +839,15 @@ namespace daxa
                     }
                     else // image_attach.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS
                     {
-                        u32 const base_mip_level = image_attach.view.slice.base_mip_level;
+                        u32 const base_mip_level = image_attach.translated_view.slice.base_mip_level;
                         view_cache.reserve(image_attach.shader_array_size);
-                        auto filled_views = std::min(image_attach.view.slice.level_count, u32(image_attach.shader_array_size));
+                        auto filled_views = std::min(image_attach.translated_view.slice.level_count, u32(image_attach.shader_array_size));
                         for (u32 index = 0; index < filled_views; ++index)
                         {
                             ImageViewInfo view_info = info.device.info_image_view(actual_images[0].default_view()).value();
                             ImageViewType const use_view_type = (image_attach.view_type != ImageViewType::MAX_ENUM) ? image_attach.view_type : view_info.type;
                             view_info.type = use_view_type;
-                            view_info.slice = image_attach.view.slice;
+                            view_info.slice = image_attach.translated_view.slice;
                             view_info.slice.base_mip_level = base_mip_level + index;
                             view_info.slice.level_count = 1;
                             view_cache.push_back(info.device.create_image_view(view_info));
@@ -944,12 +944,12 @@ namespace daxa
             task.base_task->attachments(),
             [&](u32, TaskBufferAttachmentInfo & attach)
             {
-                attach.ids = this->get_actual_buffers(attach.view, permutation);
+                attach.ids = this->get_actual_buffers(attach.translated_view, permutation);
                 validate_task_buffer_runtime_data(task, attach);
             },
             [&](u32 index, TaskImageAttachmentInfo & attach)
             {
-                attach.ids = this->get_actual_images(attach.view, permutation);
+                attach.ids = this->get_actual_images(attach.translated_view, permutation);
                 attach.view_ids = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
                 validate_task_image_runtime_data(task, attach);
             });
@@ -1054,7 +1054,7 @@ namespace daxa
             task.attachments(),
             [&](u32, TaskBufferAttachmentInfo const & attach)
             {
-                PerPermTaskBuffer const & task_buffer = perm.buffer_infos[attach.view.index];
+                PerPermTaskBuffer const & task_buffer = perm.buffer_infos[attach.translated_view.index];
                 // If the latest access is in a previous submit scope, the earliest batch we can insert into is
                 // the current scopes first batch.
                 if (task_buffer.latest_access_submit_scope_index < current_submit_scope_index)
@@ -1081,8 +1081,8 @@ namespace daxa
             },
             [&](u32, TaskImageAttachmentInfo const & attach)
             {
-                PerPermTaskImage const & task_image = perm.image_infos[attach.view.index];
-                PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[attach.view.index];
+                PerPermTaskImage const & task_image = perm.image_infos[attach.translated_view.index];
+                PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[attach.translated_view.index];
                 DAXA_DBG_ASSERT_TRUE_M(!task_image.swapchain_semaphore_waited_upon, "swapchain image is already presented!");
                 if (glob_task_image.is_persistent() && glob_task_image.get_persistent().info.swapchain_image)
                 {
@@ -1108,7 +1108,7 @@ namespace daxa
                     // When the slices dont intersect, we dont need to do any sync or execution ordering between them.
                     if (
                         tracked_slice.latest_access_submit_scope_index < current_submit_scope_index ||
-                        !tracked_slice.state.slice.intersects(attach.view.slice))
+                        !tracked_slice.state.slice.intersects(attach.translated_view.slice))
                     {
                         continue;
                     }
@@ -1143,12 +1143,12 @@ namespace daxa
             [&](u32 i, TaskBufferAttachmentInfo & attach)
             {
                 validate_buffer_task_view(*task, i, attach);
-                attach.view = impl.id_to_local_id(attach.view);
+                attach.translated_view = impl.id_to_local_id(attach.view);
             },
             [&](u32 i, TaskImageAttachmentInfo & attach)
             {
                 validate_image_task_view(*task, i, attach);
-                attach.view = impl.id_to_local_id(attach.view);
+                attach.translated_view = impl.id_to_local_id(attach.view);
             });
     }
 
@@ -1308,16 +1308,16 @@ namespace daxa
             task.attachments(),
             [&](u32, TaskBufferAttachmentInfo const & attach)
             {
-                if (task_graph_impl.global_buffer_infos[attach.view.index].is_persistent())
+                if (attach.view.is_persistent())
                 {
-                    buffer_infos[attach.view.index].valid = true;
+                    buffer_infos[attach.translated_view.index].valid = true;
                 }
             },
             [&](u32, TaskImageAttachmentInfo const & attach)
             {
-                if (task_graph_impl.global_image_infos[attach.view.index].is_persistent())
+                if (attach.view.is_persistent())
                 {
-                    image_infos[attach.view.index].valid = true;
+                    image_infos[attach.translated_view.index].valid = true;
                 }
             });
 
@@ -1350,13 +1350,13 @@ namespace daxa
             task.attachments(),
             [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
             {
-                PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_attach.view.index];
+                PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_attach.translated_view.index];
                 Access const current_buffer_access = task_buffer_access_to_access(buffer_attach.access);
                 update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
                 // For transient buffers, we need to record first and last use so that we can later name their allocations.
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_buffer_first_access below since
                 // they both overlap in what they are doing
-                if (!task_graph_impl.global_buffer_infos.at(buffer_attach.view.index).is_persistent())
+                if (!task_graph_impl.global_buffer_infos.at(buffer_attach.translated_view.index).is_persistent())
                 {
                     auto & buffer_first_use = task_buffer.lifetime.first_use;
                     auto & buffer_last_use = task_buffer.lifetime.last_use;
@@ -1478,9 +1478,9 @@ namespace daxa
             },
             [&](u32, TaskImageAttachmentInfo & image_attach)
             {
-                auto const & used_image_t_id = image_attach.view;
+                auto const & used_image_t_id = image_attach.translated_view;
                 auto const & used_image_t_access = image_attach.access;
-                auto const & initial_used_image_slice = image_attach.view.slice;
+                auto const & initial_used_image_slice = image_attach.translated_view.slice;
                 PerPermTaskImage & task_image = this->image_infos[used_image_t_id.index];
                 // For transient images we need to record first and last use so that we can later name their allocations
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_image_inital_slices below since

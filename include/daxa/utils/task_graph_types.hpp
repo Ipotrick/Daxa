@@ -294,12 +294,14 @@ namespace daxa
     struct TaskBufferAttachmentInfo : TaskBufferAttachment
     {
         TaskBufferView view = {};
+        TaskBufferView translated_view = {};
         std::span<BufferId const> ids = {};
     };
 
     struct TaskImageAttachmentInfo : TaskImageAttachment
     {
         TaskImageView view = {};
+        TaskImageView translated_view = {};
         ImageLayout layout = {};
         std::span<ImageId const> ids = {};
         std::span<ImageViewId const> view_ids = {};
