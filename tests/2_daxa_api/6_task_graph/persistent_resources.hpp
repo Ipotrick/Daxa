@@ -49,16 +49,16 @@ namespace tests
         task_graph_A.use_persistent_buffer(persistent_task_buffer);
         task_graph_B.use_persistent_buffer(persistent_task_buffer);
         task_graph_A.add_task({
-            .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::GRAPHICS_SHADER_WRITE>{persistent_task_buffer}},
-            .task = [&](daxa::TaskInterface const &) {},
+            .attachments = { daxa::inl_attachment( daxa::TaskBufferAccess::GRAPHICS_SHADER_WRITE, persistent_task_buffer ) },
+            .task = [&](daxa::TaskInterface) {},
             .name = "write persistent buffer",
         });
         task_graph_A.submit({});
         task_graph_A.complete({});
 
         task_graph_B.add_task({
-            .uses = {daxa::TaskBufferUse<daxa::TaskBufferAccess::GRAPHICS_SHADER_READ>{persistent_task_buffer}},
-            .task = [&](daxa::TaskInterface const &) {},
+            .attachments = { daxa::inl_attachment( daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, persistent_task_buffer ) },
+            .task = [&](daxa::TaskInterface) {},
             .name = "read persistent buffer",
         });
         task_graph_B.submit({});
@@ -123,13 +123,13 @@ namespace tests
 
         task_graph_A.use_persistent_image(persistent_task_image);
         task_graph_A.add_task({
-            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY>{persistent_task_image}},
-            .task = [&](daxa::TaskInterface const &) {},
+            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY, persistent_task_image ) },
+            .task = [&](daxa::TaskInterface) {},
             .name = "write persistent image",
         });
         task_graph_A.add_task({
-            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::COLOR_ATTACHMENT>{persistent_task_image}},
-            .task = [&](daxa::TaskInterface const &) {},
+            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, persistent_task_image ) },
+            .task = [&](daxa::TaskInterface) {},
             .name = "persistent image - color attachment",
         });
         task_graph_A.submit({});
@@ -142,8 +142,8 @@ namespace tests
         });
         task_graph_B.use_persistent_image(persistent_task_image);
         task_graph_B.add_task({
-            .uses = {daxa::TaskImageUse<daxa::TaskImageAccess::GRAPHICS_SHADER_SAMPLED>{persistent_task_image}},
-            .task = [&](daxa::TaskInterface const &) {},
+            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::GRAPHICS_SHADER_SAMPLED, persistent_task_image ) },
+            .task = [&](daxa::TaskInterface) {},
             .name = "read persistent image",
         });
         task_graph_B.submit({});

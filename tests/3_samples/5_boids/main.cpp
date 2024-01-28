@@ -19,7 +19,7 @@ using Clock = std::chrono::high_resolution_clock;
     DAXA_DECL_TASK_HEAD_END
     struct UpdateBoidsTask : UpdateBoids
     {
-        UpdateBoids::Views views = {};
+        AttachmentViews views = {};
         std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
         void callback(daxa::TaskInterface ti)
         {
@@ -169,7 +169,7 @@ struct App : AppWindow<App>
         static inline const daxa::TaskImageAttachmentIndex render_image = add_attachment(daxa::TaskImageAttachment{
             .access = daxa::TaskImageAccess::COLOR_ATTACHMENT,
         });
-        Views views = {};
+        AttachmentViews views = {};
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
         u32 * size_x = {};
         u32 * size_y = {};
@@ -232,15 +232,15 @@ struct App : AppWindow<App>
         new_task_graph.use_persistent_buffer(task_boids_old);
         new_task_graph.add_task(UpdateBoidsTask{
             .views = std::array{
-                daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::current, task_boids_current }},
-                daxa::TaskViewVariant{std::pair{ UpdateBoidsTask::previous, task_boids_old }},
+                daxa::attachment_view(UpdateBoidsTask::current, task_boids_current ),
+                daxa::attachment_view(UpdateBoidsTask::previous, task_boids_old ),
             },
             .update_boids_pipeline = update_boids_pipeline,
         });
         new_task_graph.add_task(DrawBoidsTask{
             .views = std::array{
-                daxa::TaskViewVariant{std::pair{ DrawBoidsTask::boids, task_boids_current }},
-                daxa::TaskViewVariant{std::pair{ DrawBoidsTask::render_image, task_swapchain_image }},
+                daxa::attachment_view( DrawBoidsTask::boids, task_boids_current ),
+                daxa::attachment_view( DrawBoidsTask::render_image, task_swapchain_image ),
             },
             .draw_pipeline = draw_pipeline,
             .size_x = &size_x,

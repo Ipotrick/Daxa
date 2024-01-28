@@ -4,6 +4,40 @@
 
 namespace tests
 {
+    DAXA_DECL_TASK_HEAD_BEGIN(MipMapTaskHead, 2)
+    DAXA_TH_IMAGE(TRANSFER_READ, REGULAR_2D, lower_mip)
+    DAXA_TH_IMAGE(TRANSFER_WRITE, REGULAR_2D, higher_mip)
+    DAXA_DECL_TASK_HEAD_END
+    struct MipMapTask : MipMapTaskHead
+    {
+        struct Info
+        {
+            u32 mip = {};
+            std::array<i32, 3> mip_size = {};
+            std::array<i32, 3> next_mip_size = {};
+        } info = {};
+        void callback(daxa::TaskInterface tri)
+        {
+            tri.recorder.blit_image_to_image({
+                .src_image = tri.get(lower_mip).ids[0],
+                .dst_image = tri.get(higher_mip).ids[0],
+                .src_slice = {
+                    .mip_level = info.mip,
+                    .base_array_layer = 0,
+                    .layer_count = 1,
+                },
+                .src_offsets = {{{0, 0, 0}, {info.mip_size[0], info.mip_size[1], info.mip_size[2]}}},
+                .dst_slice = {
+                    .mip_level = info.mip + 1,
+                    .base_array_layer = 0,
+                    .layer_count = 1,
+                },
+                .dst_offsets = {{{0, 0, 0}, {info.next_mip_size[0], info.next_mip_size[1], info.next_mip_size[2]}}},
+                .filter = daxa::Filter::LINEAR,
+            });
+        }
+    };
+
     void mipmapping()
     {
         struct App : AppWindow<App>
@@ -435,39 +469,6 @@ namespace tests
 
             auto record_tasks() -> daxa::TaskGraph
             {
-                DAXA_DECL_TASK_HEAD_BEGIN(MipMapTaskHead, 2)
-                DAXA_TH_IMAGE_NO_SHADER(TRANSFER_READ, REGULAR_2D, lower_mip)
-                DAXA_TH_IMAGE_NO_SHADER(TRANSFER_WRITE, REGULAR_2D, higher_mip)
-                DAXA_DECL_TASK_HEAD_END
-                struct MipMapTask : MipMapTaskHead::Task
-                {
-                    struct Info
-                    {
-                        u32 mip = {};
-                        std::array<i32, 3> mip_size = {};
-                        std::array<i32, 3> next_mip_size = {};
-                    } info = {};
-                    virtual void callback(daxa::TaskInterface const & tri) const override
-                    {
-                        tri.recorder.blit_image_to_image({
-                            .src_image = tri.img(lower_mip).ids[0],
-                            .dst_image = tri.img(higher_mip).ids[0],
-                            .src_slice = {
-                                .mip_level = info.mip,
-                                .base_array_layer = 0,
-                                .layer_count = 1,
-                            },
-                            .src_offsets = {{{0, 0, 0}, {info.mip_size[0], info.mip_size[1], info.mip_size[2]}}},
-                            .dst_slice = {
-                                .mip_level = info.mip + 1,
-                                .base_array_layer = 0,
-                                .layer_count = 1,
-                            },
-                            .dst_offsets = {{{0, 0, 0}, {info.next_mip_size[0], info.next_mip_size[1], info.next_mip_size[2]}}},
-                            .filter = daxa::Filter::LINEAR,
-                        });
-                    }
-                };
 
                 daxa::TaskGraph new_task_graph = daxa::TaskGraph({
                     .device = device,
@@ -482,29 +483,29 @@ namespace tests
 
                 using namespace daxa;
 
-                new_task_graph.add_task(InlineTask({
+                new_task_graph.add_task({
                     .attachments = {
-                        TaskBufferAttachment{.access = TaskBufferAccess::HOST_TRANSFER_WRITE, .view = task_mipmapping_gpu_input_buffer},
+                        daxa::inl_attachment(TaskBufferAccess::HOST_TRANSFER_WRITE,  task_mipmapping_gpu_input_buffer),
                     },
-                    .task = [this](daxa::TaskInterface const & tri)
-                    { update_gpu_input(tri.recorder, tri.buf(0).ids[0]); },
+                    .task = [this](daxa::TaskInterface tri)
+                    { update_gpu_input(tri.recorder, tri.get(task_mipmapping_gpu_input_buffer).ids[0]); },
                     .name = "Input Transfer",
-                }));
+                });
                 new_task_graph.conditional({
                     .condition_index = TASK_CONDITION_MOUSE_DRAWING,
                     .when_true = [&]()
                     {
-                        new_task_graph.add_task(daxa::InlineTask{{
+                        new_task_graph.add_task({
                             .attachments = {
-                                TaskBufferAttachment{.access = TaskBufferAccess::COMPUTE_SHADER_READ, .view = task_mipmapping_gpu_input_buffer},
-                                TaskImageAttachment{.access = TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE, .view = task_render_image},
+                                daxa::inl_attachment(TaskBufferAccess::COMPUTE_SHADER_READ, task_mipmapping_gpu_input_buffer),
+                                daxa::inl_attachment(TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE, task_render_image),
                             },
-                            .task = [=, this](daxa::TaskInterface const & tri)
+                            .task = [=, this](daxa::TaskInterface tri)
                             {
-                                paint(tri.recorder, tri.img(1).ids[0], tri.buf(0).ids[0]);
+                                paint(tri.recorder, tri.get(task_render_image).ids[0], tri.get(task_mipmapping_gpu_input_buffer).ids[0]);
                             },
                             .name = "mouse paint",
-                        }});
+                        });
                         {
                             auto image_info = device.info_image(render_image).value();
                             std::array<i32, 3> mip_size = {std::max<i32>(1, static_cast<i32>(image_info.size.x)), std::max<i32>(1, static_cast<i32>(image_info.size.y)), std::max<i32>(1, static_cast<i32>(image_info.size.z))};
@@ -526,44 +527,44 @@ namespace tests
                     },
                 });
 
-                new_task_graph.add_task(daxa::InlineTask({
+                new_task_graph.add_task({
                     .attachments = {
-                        TaskImageAttachment{.access = TaskImageAccess::TRANSFER_WRITE, .view = task_swapchain_image},
+                        daxa::inl_attachment(TaskImageAccess::TRANSFER_WRITE, task_swapchain_image),
                     },
                     .task = [=, this](daxa::TaskInterface const & tri)
                     {
                         tri.recorder.clear_image({
                             .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                            .dst_image = tri.img(task_swapchain_image).ids[0],
+                            .dst_image = tri.get(task_swapchain_image).ids[0],
                         });
                     },
                     .name = "clear swapchain",
-                }));
+                });
                 auto render_img_view = task_render_image.view().view({.level_count = 5});
-                new_task_graph.add_task(daxa::InlineTask({
+                new_task_graph.add_task({
                     .attachments = {
-                        TaskImageAttachment{.access = TaskImageAccess::TRANSFER_READ, .view = render_img_view},
-                        TaskImageAttachment{.access = TaskImageAccess::TRANSFER_WRITE, .view = task_swapchain_image},
+                        daxa::inl_attachment(TaskImageAccess::TRANSFER_READ, render_img_view),
+                        daxa::inl_attachment(TaskImageAccess::TRANSFER_WRITE, task_swapchain_image),
                     },
                     .task = [=, this](daxa::TaskInterface const & ti)
                     {
                         /// NOTE: Its possible to use TaskImageView as an index into the task attachment intos:
-                        daxa::ImageId render_img = ti.attach(render_img_view).ids[0];
-                        daxa::ImageId swapchain_img = ti.attach(task_swapchain_image).ids[0];
+                        daxa::ImageId render_img = ti.get(render_img_view).ids[0];
+                        daxa::ImageId swapchain_img = ti.get(task_swapchain_image).ids[0];
 
                         this->blit_image_to_swapchain(ti.recorder, render_img, swapchain_img);
                     },
                     .name = "blit to swapchain",
-                }));
-                new_task_graph.add_task(daxa::InlineTask({
-                    .attachments = {daxa::TaskImageAttachment{ .access = daxa::TaskImageAccess::COLOR_ATTACHMENT, .view = task_swapchain_image}},
+                });
+                new_task_graph.add_task({
+                    .attachments = {daxa::inl_attachment( daxa::TaskImageAccess::COLOR_ATTACHMENT, task_swapchain_image ) },
                     .task = [=, this](daxa::TaskInterface const & ti)
                     {
-                        this->draw_ui(ti.recorder, ti.attach(task_swapchain_image).ids[0]);
+                        this->draw_ui(ti.recorder, ti.get(task_swapchain_image).ids[0]);
                     },
                     .name = "Imgui",
-                }));
+                });
                 new_task_graph.submit({});
                 new_task_graph.present({});
                 new_task_graph.complete({});

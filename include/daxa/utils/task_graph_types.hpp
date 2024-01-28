@@ -405,9 +405,9 @@ namespace daxa
     struct IPartialTask {};
 
     template<usize ATTACHMENT_COUNT>
-    struct Views
+    struct AttachmentViews
     {
-        Views(std::array<daxa::TaskViewVariant, ATTACHMENT_COUNT> const & index_view_pairs)
+        AttachmentViews(std::array<daxa::TaskViewVariant, ATTACHMENT_COUNT> const & index_view_pairs)
         {
             for (TaskViewVariant const& vari : index_view_pairs)
             {
@@ -422,7 +422,7 @@ namespace daxa
                 }
             }
         }
-        Views() = default;
+        AttachmentViews() = default;
         std::array<std::variant<daxa::TaskBufferView, daxa::TaskImageView>, ATTACHMENT_COUNT> views = {};
     };
 
@@ -468,8 +468,7 @@ namespace daxa
         static constexpr inline usize ATTACH_COUNT = ATTACHMENT_COUNT;
         static inline u8 _offset = 0;
         static inline std::array<TaskAttachment, ATTACHMENT_COUNT> _raw = {};
-        using ViewsArray = std::array<daxa::TaskViewVariant, ATTACHMENT_COUNT>; 
-        using Views = Views<ATTACHMENT_COUNT>;
+        using AttachmentViews = AttachmentViews<ATTACHMENT_COUNT>;
     };
 
     /*
@@ -657,7 +656,17 @@ namespace daxa
 
     using AttachmentViewPairVariant = std::variant<std::pair<TaskBufferAttachment, TaskBufferView>, std::pair<TaskImageAttachment, TaskImageView>>;
 
-    inline auto inl_atch(TaskBufferAccess access, TaskBufferView view) -> TaskAttachmentInfo { 
+    inline auto attachment_view(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewVariant
+    {
+        return std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>(index, view);
+    }
+
+    inline auto attachment_view(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewVariant
+    {
+        return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
+    }
+
+    inline auto inl_attachment(TaskBufferAccess access, TaskBufferView view) -> TaskAttachmentInfo { 
         TaskBufferAttachmentInfo buf = {};
         buf.name = "inline attachment";
         buf.access = access;
@@ -669,7 +678,7 @@ namespace daxa
         info.value.buffer = buf;
         return info;
      }
-    inline auto inl_atch(TaskImageAccess access, TaskImageView view) -> TaskAttachmentInfo { 
+    inline auto inl_attachment(TaskImageAccess access, TaskImageView view) -> TaskAttachmentInfo { 
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
         img.access = access;
@@ -681,7 +690,7 @@ namespace daxa
         info.type = daxa::TaskAttachmentType::IMAGE;
         return info; 
     }
-    inline auto inl_atch(TaskImageAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo { 
+    inline auto inl_attachment(TaskImageAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo { 
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
         img.access = access;

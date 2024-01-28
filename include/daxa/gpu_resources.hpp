@@ -4,7 +4,6 @@
 
 namespace daxa
 {
-
     enum struct ImageViewType
     {
         REGULAR_1D = 0,

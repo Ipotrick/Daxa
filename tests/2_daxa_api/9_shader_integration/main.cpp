@@ -132,7 +132,7 @@ namespace tests
 
         struct TestTask : TestShaderTaskHead
         {
-            Views views = {};
+            AttachmentViews views = {};
             std::shared_ptr<daxa::ComputePipeline> pipeline = {};
             void callback(daxa::TaskInterface ti)
             {
@@ -143,8 +143,8 @@ namespace tests
         };
         task_graph.add_task(TestTask{
             .views = std::array{
-                daxa::TaskViewVariant{std::pair{ TestTask::align_test_src, src }},
-                daxa::TaskViewVariant{std::pair{ TestTask::align_test_dst, dst }},
+                daxa::attachment_view( TestTask::align_test_src, src ),
+                daxa::attachment_view( TestTask::align_test_dst, dst ),
             },
             .pipeline = compute_pipeline,
         });
@@ -245,10 +245,10 @@ namespace tests
 
         task_graph.add_task({
             .attachments = {
-                daxa::inl_atch(BA::COMPUTE_SHADER_WRITE, handles_buffer),
-                daxa::inl_atch(BA::COMPUTE_SHADER_WRITE, f32_buffer),
-                daxa::inl_atch(IA::COMPUTE_SHADER_STORAGE_WRITE_ONLY, f32_image),
-                daxa::inl_atch(IA::COMPUTE_SHADER_STORAGE_READ_ONLY, u32_image),
+                daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, handles_buffer),
+                daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, f32_buffer),
+                daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_WRITE_ONLY, f32_image),
+                daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_READ_ONLY, u32_image),
             },
             .task = [=](daxa::TaskInterface ti)
             {
@@ -268,9 +268,9 @@ namespace tests
         });
         task_graph.add_task({
             .attachments = {
-                daxa::inl_atch(BA::COMPUTE_SHADER_READ, handles_buffer),
-                daxa::inl_atch(BA::COMPUTE_SHADER_READ, f32_buffer),
-                daxa::inl_atch(IA::COMPUTE_SHADER_SAMPLED, f32_image),
+                daxa::inl_attachment(BA::COMPUTE_SHADER_READ, handles_buffer),
+                daxa::inl_attachment(BA::COMPUTE_SHADER_READ, f32_buffer),
+                daxa::inl_attachment(IA::COMPUTE_SHADER_SAMPLED, f32_image),
             },
             .task = [=](daxa::TaskInterface ti)
             {
