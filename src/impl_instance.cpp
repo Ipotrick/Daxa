@@ -42,12 +42,12 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
-    for (auto req_ext : required_extensions)
+    for (auto const * req_ext : required_extensions)
     {
         bool found = false;
-        for (uint32_t i = 0; i < instance_extensions.size(); ++i)
+        for (auto & instance_extension : instance_extensions)
         {
-            if (std::strcmp(req_ext, instance_extensions[i].extensionName) == 0)
+            if (std::strcmp(req_ext, instance_extension.extensionName) == 0)
             {
                 found = true;
                 break;
@@ -112,13 +112,13 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * inf
             return -1;
         }
         if (((info->flags & DAXA_DEVICE_FLAG_RAY_TRACING) != 0) &&
-            !(props.acceleration_structure_properties.has_value ||
-              props.ray_tracing_pipeline_properties.has_value))
+            !((props.acceleration_structure_properties.has_value != 0) ||
+              (props.ray_tracing_pipeline_properties.has_value != 0)))
         {
             return -1;
         }
         if (((info->flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0) &&
-            !(props.mesh_shader_properties.has_value))
+            ((props.mesh_shader_properties.has_value) == 0))
         {
             return -1;
         }

@@ -100,7 +100,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight; i++)
     {
         BinarySemaphore sema = {};
-        daxa_BinarySemaphoreInfo sema_info = {};
+        daxa_BinarySemaphoreInfo const sema_info = {};
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
         {
@@ -113,7 +113,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     for (u32 i = 0; i < ret.images.size(); i++)
     {
         BinarySemaphore sema = {};
-        daxa_BinarySemaphoreInfo sema_info = {};
+        daxa_BinarySemaphoreInfo const sema_info = {};
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
         {
@@ -357,7 +357,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         this->images[i] = result_pair.second;
     }
 
-    if ((this->device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && this->info_name.size() != 0)
+    if ((this->device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !this->info_name.empty())
     {
         VkDebugUtilsObjectNameInfoEXT const swapchain_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -422,7 +422,7 @@ auto daxa_ImplSwapchain::recreate_surface() -> daxa_Result
 void daxa_ImplSwapchain::zero_ref_callback(ImplHandle const * handle)
 {
     _DAXA_TEST_PRINT("      daxa_ImplSwapchain::zero_ref_callback\n");
-    auto self = rc_cast<daxa_Swapchain>(handle);
+    auto *self = rc_cast<daxa_Swapchain>(handle);
     if (self->device != nullptr)
     {
         self->full_cleanup();

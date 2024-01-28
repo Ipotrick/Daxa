@@ -73,7 +73,7 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
     };
     {
         auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWin32SurfaceKHR"));
-        VkResult vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
+        VkResult const vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
         return std::bit_cast<daxa_Result>(vk_result);
     }
 #elif defined(__linux__)
@@ -121,8 +121,8 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
 #endif
 }
 
-#define _DAXA_ASSIGN_ARRAY_3(SRC) \
-    & { SRC[0], SRC[1], SRC[3] }
+#define DAXA_ASSIGN_ARRAY_3(SRC) \
+    & { (SRC)[0], (SRC)[1], (SRC)[3] }
 
 auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties
 {
@@ -172,7 +172,7 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
             vk_physical_device_acceleration_structure_properties_khr.pNext = pNextChain;
             pNextChain = &vk_physical_device_acceleration_structure_properties_khr;
         }
-        if(std::strcmp(extension.extensionName, VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME) == 0)
+        if (std::strcmp(extension.extensionName, VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME) == 0)
         {
             invocation_reorder_supported = true;
             vk_physical_device_ray_tracing_invocation_reorder_properties_nv.pNext = pNextChain;
@@ -199,7 +199,7 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
         offsetof(daxa_DeviceProperties, mesh_shader_properties));
     if (ray_tracing_pipeline_supported)
     {
-        ret.ray_tracing_pipeline_properties.has_value = true;
+        ret.ray_tracing_pipeline_properties.has_value = 1;
         std::memcpy(
             &ret.ray_tracing_pipeline_properties.value,
             r_cast<std::byte const *>(&vk_physical_device_ray_tracing_pipeline_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
@@ -207,15 +207,15 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
     }
     if (acceleration_structure_supported)
     {
-        ret.acceleration_structure_properties.has_value = true;
+        ret.acceleration_structure_properties.has_value = 1;
         std::memcpy(
             &ret.acceleration_structure_properties.value,
             r_cast<std::byte const *>(&vk_physical_device_acceleration_structure_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
             sizeof(daxa_AccelerationStructureProperties));
     }
-    if(invocation_reorder_supported)
+    if (invocation_reorder_supported)
     {
-        ret.ray_tracing_invocation_reorder_properties.has_value = true;
+        ret.ray_tracing_invocation_reorder_properties.has_value = 1;
         std::memcpy(
             &ret.ray_tracing_invocation_reorder_properties.value,
             r_cast<std::byte const *>(&vk_physical_device_ray_tracing_invocation_reorder_properties_nv) + sizeof(void *) * 2, // skip sType and pNext
@@ -223,7 +223,7 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
     }
     if (mesh_shader_supported)
     {
-        ret.mesh_shader_properties.has_value = true;
+        ret.mesh_shader_properties.has_value = 1;
         std::memcpy(
             &ret.mesh_shader_properties.value,
             r_cast<std::byte const *>(&vk_physical_device_mesh_shader_properties_ext) + sizeof(void *) * 2, // skip sType and pNext
@@ -274,7 +274,7 @@ void daxa_as_build_info_to_vk(
         for (u32 inst_i = 0; inst_i < info.instance_count; ++inst_i)
         {
             daxa_TlasInstanceInfo const & inst_info = info.instances[inst_i];
-            VkAccelerationStructureGeometryInstancesDataKHR vk_inst_data = {
+            VkAccelerationStructureGeometryInstancesDataKHR const vk_inst_data = {
                 .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_INSTANCES_DATA_KHR,
                 .pNext = nullptr,
                 .arrayOfPointers = static_cast<VkBool32>(inst_info.is_data_array_of_pointers),
@@ -301,7 +301,7 @@ void daxa_as_build_info_to_vk(
             .dstAccelerationStructure =
                 info.dst_tlas.value != 0
                     ? device->slot(info.dst_tlas).vk_acceleration_structure
-                    : 0,
+                    : nullptr,
             .geometryCount = info.instance_count,
             .pGeometries = vk_geo_array_ptr,
             .ppGeometries = nullptr,
@@ -363,7 +363,7 @@ void daxa_as_build_info_to_vk(
             .dstAccelerationStructure =
                 info.dst_blas.value != 0
                     ? device->slot(info.dst_blas).vk_acceleration_structure
-                    : 0,
+                    : nullptr,
             .geometryCount = geo_count,
             .pGeometries = vk_geo_array_ptr,
             .ppGeometries = nullptr,
@@ -463,7 +463,7 @@ auto ImplHandle::impl_inc_weak_refcnt([[maybe_unused]] char const * callsite) co
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance, [[maybe_unused]] char const * callsite) const -> u64
+auto ImplHandle::impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance /*unused*/, [[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
     auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
@@ -501,7 +501,7 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
         return DAXA_RESULT_ERROR_UNKNOWN;
     }
 
-    VmaAllocationCreateInfo create_info{
+    VmaAllocationCreateInfo const create_info{
         .flags = info->flags,
         .usage = VMA_MEMORY_USAGE_GPU_ONLY,
         .requiredFlags = {}, // TODO: idk what this is...
@@ -521,7 +521,7 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
     self->inc_weak_refcnt();
     *out_memory_block = new daxa_ImplMemoryBlock{};
     // TODO(general): memory block is missing a name.
-    **out_memory_block = std::move(ret);
+    **out_memory_block = ret;
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -544,15 +544,14 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
 
 void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
 {
-    auto self = rc_cast<daxa_ImplMemoryBlock *>(handle);
+    auto * self = rc_cast<daxa_ImplMemoryBlock *>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    self->device->main_queue_memory_block_zombies.push_front({
+    self->device->main_queue_memory_block_zombies.emplace_front(
         main_queue_cpu_timeline_value,
         MemoryBlockZombie{
             .allocation = self->allocation,
-        },
-    });
+        });
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
