@@ -218,6 +218,7 @@ namespace daxa
                             info.view_type = NoRefTTask::_raw[i].value.image.view_type,
                             info.shader_array_size = NoRefTTask::_raw[i].value.image.shader_array_size,
                             info.shader_array_type = NoRefTTask::_raw[i].value.image.shader_array_type,
+                            info.shader_as_index = NoRefTTask::_raw[i].value.image.shader_as_index,
                             info.view = get<TaskImageView>(task.views.views[i]),
                             _attachments[i] = info;
                         }

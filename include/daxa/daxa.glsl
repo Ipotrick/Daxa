@@ -96,6 +96,11 @@ struct daxa_ImageViewId
     uint64_t value;
 };
 
+struct daxa_ImageViewIndex
+{
+    daxa_u32 value;
+};
+
 struct daxa_SamplerId
 {
     uint64_t value;
@@ -122,6 +127,14 @@ daxa_u32 daxa_buffer_id_to_index(daxa_BufferId id)
 daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewId id)
 {
     return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
+}
+
+/// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
+/// @param id The id the index is retrieved from.
+/// @return The index the id contains.
+daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewIndex index)
+{
+    return index.value;
 }
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/

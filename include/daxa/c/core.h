@@ -65,6 +65,11 @@ typedef struct
 
 typedef struct
 {
+    uint32_t value;
+} daxa_ImageViewIndex;
+
+typedef struct
+{
     uint64_t value;
 } daxa_SamplerId;
 

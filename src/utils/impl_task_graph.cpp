@@ -956,6 +956,16 @@ namespace daxa
         std::vector<std::byte> attachment_shader_data = {};
         attachment_shader_data.resize(task.base_task->attachment_shader_data_size());
         usize shader_byte_blob_offset = 0;
+        auto upalign = [&](size_t align_size) {
+            if (align_size == 0)
+            {
+                return;
+            }
+            auto current_offset = shader_byte_blob_offset % align_size;
+            if (current_offset != 0) {
+                shader_byte_blob_offset += align_size - current_offset;
+            }
+        };
         for_each(
             task.base_task->attachments(),
             [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
@@ -965,17 +975,17 @@ namespace daxa
                     BufferId const buf_id = buffer_attach.ids[shader_array_i];
                     if (buffer_attach.shader_as_address)
                     {
+                        upalign(sizeof(DeviceAddress));
                         DeviceAddress const buf_address = info.device.get_device_address(buf_id).value();
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(buf_address);
                         std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
-                        /// WARNING: Keep offsets must be incremented by 8!
                         shader_byte_blob_offset += sizeof(DeviceAddress);
                     }
                     else
                     {
+                        upalign(sizeof(BufferId));
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(BufferId)>>(buf_id);
                         std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(BufferId));
-                        /// WARNING: Keep offsets must be incremented by 8!
                         shader_byte_blob_offset += sizeof(BufferId);
                     }
                 }
@@ -985,10 +995,20 @@ namespace daxa
                 for (u32 shader_array_i = 0; shader_array_i < image_attach.shader_array_size; ++shader_array_i)
                 {
                     ImageViewId const img_id = image_attach.view_ids[shader_array_i];
-                    auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(ImageViewId)>>(img_id);
-                    std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(ImageViewId));
-                    /// WARNING: Keep offsets must be incremented by 8!
-                    shader_byte_blob_offset += sizeof(ImageViewId);
+                    if (image_attach.shader_as_index)
+                    {
+                        upalign(sizeof(daxa_ImageViewIndex));
+                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_ImageViewIndex)>>(static_cast<uint32_t>(img_id.index));
+                        std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_ImageViewIndex));
+                        shader_byte_blob_offset += sizeof(daxa_ImageViewIndex);
+                    }
+                    else
+                    {
+                        upalign(sizeof(ImageViewId));
+                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(ImageViewId)>>(img_id);
+                        std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(ImageViewId));
+                        shader_byte_blob_offset += sizeof(ImageViewId);
+                    }
                 }
             });
         impl_runtime.current_task = &task;

@@ -207,6 +207,7 @@ namespace daxa
         TaskImageAccess access = {};
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
+        bool shader_as_index = {};
         TaskHeadImageArrayType shader_array_type = {};
     };
 
@@ -280,8 +281,8 @@ namespace daxa
         {
             switch (type)
             {
-            case TaskAttachmentType::BUFFER: return value.buffer.shader_array_size;
-            case TaskAttachmentType::IMAGE: return value.image.shader_array_size;
+            case TaskAttachmentType::BUFFER: return value.buffer.shader_array_size * 8;
+            case TaskAttachmentType::IMAGE: return value.image.shader_array_size * (value.image.shader_as_index ? 4 : 8);
             default: return 0;
             }
         }
@@ -343,8 +344,8 @@ namespace daxa
         {
             switch (type)
             {
-            case TaskAttachmentType::BUFFER: return value.buffer.shader_array_size;
-            case TaskAttachmentType::IMAGE: return value.image.shader_array_size;
+            case TaskAttachmentType::BUFFER: return value.buffer.shader_array_size * 8;
+            case TaskAttachmentType::IMAGE: return value.image.shader_array_size * (value.image.shader_as_index ? 4 : 8);
             default: return 0;
             }
         }
@@ -381,7 +382,17 @@ namespace daxa
             usize total = 0;
             for (auto const & attach : attachments())
             {
-                total += attach.shader_array_size() * 8;
+                auto attach_size = attach.shader_array_size();
+                // up-align
+                if (attach_size != 0)
+                {
+                    auto align_offset = total % attach_size;
+                    if (align_offset != 0)
+                    {
+                        total += attach_size - align_offset;
+                    }
+                }
+                total += attach_size;
             }
             return total;
         };
@@ -407,7 +418,7 @@ namespace daxa
     {
     };
 
-    template<usize ATTACHMENT_COUNT>
+    template <usize ATTACHMENT_COUNT>
     struct AttachmentViews
     {
         AttachmentViews(std::array<daxa::TaskViewVariant, ATTACHMENT_COUNT> const & index_view_pairs)
@@ -463,7 +474,17 @@ namespace daxa
             u32 total = 0;
             for (auto const & attach : _raw)
             {
-                total += attach.shader_array_size() * 8;
+                auto attach_size = attach.shader_array_size();
+                // up-align
+                if (attach_size != 0)
+                {
+                    auto align_offset = total % attach_size;
+                    if (align_offset != 0)
+                    {
+                        total += attach_size - align_offset;
+                    }
+                }
+                total += attach_size;
             }
             return total;
         };
@@ -543,6 +564,7 @@ namespace daxa
 
 #define DAXA_TH_IMAGE(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0)
 #define DAXA_TH_IMAGE_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1)
+#define DAXA_TH_IMAGE_INDEX(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1, .shader_as_index = true)
 #define DAXA_TH_IMAGE_ID_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE)
 #define DAXA_TH_IMAGE_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
 #define DAXA_TH_BUFFER(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 0)
@@ -669,7 +691,8 @@ namespace daxa
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
 
-    inline auto inl_attachment(TaskBufferAccess access, TaskBufferView view) -> TaskAttachmentInfo { 
+    inline auto inl_attachment(TaskBufferAccess access, TaskBufferView view) -> TaskAttachmentInfo
+    {
         TaskBufferAttachmentInfo buf = {};
         buf.name = "inline attachment";
         buf.access = access;
@@ -680,8 +703,9 @@ namespace daxa
         info.type = daxa::TaskAttachmentType::BUFFER;
         info.value.buffer = buf;
         return info;
-     }
-    inline auto inl_attachment(TaskImageAccess access, TaskImageView view) -> TaskAttachmentInfo { 
+    }
+    inline auto inl_attachment(TaskImageAccess access, TaskImageView view) -> TaskAttachmentInfo
+    {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
         img.access = access;
@@ -693,7 +717,8 @@ namespace daxa
         info.type = daxa::TaskAttachmentType::IMAGE;
         return info;
     }
-    inline auto inl_atch(TaskImageAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo { 
+    inline auto inl_attachment(TaskImageAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo
+    {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
         img.access = access;
