@@ -395,8 +395,8 @@ namespace daxa
 
     inline namespace detail
     {
-        // TODO(pahrens): Move the implementation to cpp file.
-        constexpr auto calculate_attachment_shader_data_size(std::span<TaskAttachmentInfo const> attachments) -> u32
+        template<typename T>
+        constexpr auto calculate_attachment_shader_data_size(std::span<T const> attachments) -> u32
         {
             u32 total = 0;
             for (auto const & attach : attachments)
