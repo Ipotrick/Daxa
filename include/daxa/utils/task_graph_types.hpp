@@ -286,6 +286,16 @@ namespace daxa
             default: return 0;
             }
         }
+
+        constexpr auto shader_element_align() const -> u32
+        {
+            switch (type)
+            {
+            case TaskAttachmentType::BUFFER: return 8;
+            case TaskAttachmentType::IMAGE: return value.image.shader_as_index ? 4 : 8;
+            default: return 0;
+            }
+        }
     };
 
     struct UndefinedAttachmentRuntimeData
@@ -349,6 +359,16 @@ namespace daxa
             default: return 0;
             }
         }
+
+        constexpr auto shader_element_align() const -> u32
+        {
+            switch (type)
+            {
+            case TaskAttachmentType::BUFFER: return 8;
+            case TaskAttachmentType::IMAGE: return value.image.shader_as_index ? 4 : 8;
+            default: return 0;
+            }
+        }
     };
 
     using TaskAttachmentInfoVariant = Variant<TaskBufferAttachmentInfo, TaskImageAttachmentInfo>;
@@ -373,28 +393,38 @@ namespace daxa
         std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>,
         std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>>;
 
-    struct ITask
+    inline namespace detail
     {
-        constexpr virtual ~ITask() {}
-        /// TODO(pahrens): optimize:
-        constexpr virtual auto attachment_shader_data_size() const -> usize
+        // TODO(pahrens): Move the implementation to cpp file.
+        constexpr auto calculate_attachment_shader_data_size(std::span<TaskAttachmentInfo const> attachments) -> u32
         {
-            usize total = 0;
-            for (auto const & attach : attachments())
+            u32 total = 0;
+            for (auto const & attach : attachments)
             {
                 auto attach_size = attach.shader_array_size();
+                const auto align = attach.shader_element_align();
                 // up-align
                 if (attach_size != 0)
                 {
-                    auto align_offset = total % attach_size;
+                    auto align_offset = total % align;
                     if (align_offset != 0)
                     {
-                        total += attach_size - align_offset;
+                        total += align - align_offset;
                     }
                 }
                 total += attach_size;
             }
             return total;
+        }
+    }
+
+    struct ITask
+    {
+        constexpr virtual ~ITask() {}
+        /// TODO(pahrens): optimize:
+        constexpr virtual auto attachment_shader_data_size() const -> u32
+        {
+            return detail::calculate_attachment_shader_data_size(attachments());
         };
         constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> = 0;
         constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> = 0;
@@ -471,22 +501,7 @@ namespace daxa
 
         static auto attachment_shader_data_size() -> u32
         {
-            u32 total = 0;
-            for (auto const & attach : _raw)
-            {
-                auto attach_size = attach.shader_array_size();
-                // up-align
-                if (attach_size != 0)
-                {
-                    auto align_offset = total % attach_size;
-                    if (align_offset != 0)
-                    {
-                        total += attach_size - align_offset;
-                    }
-                }
-                total += attach_size;
-            }
-            return total;
+            return detail::calculate_attachment_shader_data_size(attachments());
         };
 
         static constexpr inline usize ATTACH_COUNT = ATTACHMENT_COUNT;
