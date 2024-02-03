@@ -130,6 +130,9 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 #include <utility>
 #include <sstream>
 #include <iostream>
+#include <string>
+// for std::hash<std::string>
+#include <unordered_map>
 
 // static auto const PRAGMA_ONCE_REGEX = RE2(R"regex(\s*#\s*pragma\s+once\s*)regex");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
@@ -415,6 +418,10 @@ namespace daxa
         {
             this->write_out_shader_binary = other.write_out_shader_binary;
         }
+        if (!this->spirv_cache_folder.has_value())
+        {
+            this->spirv_cache_folder = other.spirv_cache_folder;
+        }
         if (!this->language.has_value())
         {
             this->language = other.language;
@@ -547,43 +554,17 @@ namespace daxa
 
     auto ImplPipelineManager::create_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<RayTracingPipelineState>
     {
-        auto modified_info = a_info;
-        for (auto & shader_compile_info : modified_info.ray_gen_infos)
+        if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
         }
-        for (auto & shader_compile_info : modified_info.intersection_infos)
+        if (a_info.push_constant_size % 4 != 0)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.any_hit_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.callable_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.closest_hit_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.miss_hit_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-
-        if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
-        {
-            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
-        }
-        if (modified_info.push_constant_size % 4 != 0)
-        {
-            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
+            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
         }
         auto pipe_result = RayTracingPipelineState{
             .pipeline_ptr = std::make_shared<RayTracingPipeline>(),
-            .info = modified_info,
+            .info = a_info,
             .last_hotload_time = std::chrono::file_clock::now(),
             .observed_hotload_files = {},
         };
@@ -595,10 +576,10 @@ namespace daxa
             .callable_shaders = {},
             .closest_hit_shaders = {},
             .miss_hit_shaders = {},
-            .shader_groups = {modified_info.shader_groups_infos.data(), modified_info.shader_groups_infos.size()},
-            .max_ray_recursion_depth = modified_info.max_ray_recursion_depth,
-            .push_constant_size = modified_info.push_constant_size,
-            .name = modified_info.name,
+            .shader_groups = {a_info.shader_groups_infos.data(), a_info.shader_groups_infos.size()},
+            .max_ray_recursion_depth = a_info.max_ray_recursion_depth,
+            .push_constant_size = a_info.push_constant_size,
+            .name = a_info.name,
         };
         auto raygen_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
         auto intersection_spirv_result = std::vector<daxa::Result<std::vector<unsigned int>>>();
@@ -648,19 +629,17 @@ namespace daxa
 
     auto ImplPipelineManager::create_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<ComputePipelineState>
     {
-        auto modified_info = a_info;
-        modified_info.shader_info.compile_options.inherit(this->info.shader_compile_options);
-        if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            return Result<ComputePipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
+            return Result<ComputePipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
         }
-        if (modified_info.push_constant_size % 4 != 0)
+        if (a_info.push_constant_size % 4 != 0)
         {
-            return Result<ComputePipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
+            return Result<ComputePipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
         }
         auto pipe_result = ComputePipelineState{
             .pipeline_ptr = std::make_shared<ComputePipeline>(),
-            .info = modified_info,
+            .info = a_info,
             .last_hotload_time = std::chrono::file_clock::now(),
             .observed_hotload_files = {},
         };
@@ -690,52 +669,36 @@ namespace daxa
                 .byte_code_size = static_cast<u32>(spirv_result.value().size()),
                 .entry_point = entry_point,
             },
-            .push_constant_size = modified_info.push_constant_size,
-            .name = modified_info.name.c_str(),
+            .push_constant_size = a_info.push_constant_size,
+            .name = a_info.name.c_str(),
         });
         return Result<ComputePipelineState>(std::move(pipe_result));
     }
 
     auto ImplPipelineManager::create_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<RasterPipelineState>
     {
-        auto modified_info = a_info;
-        auto const modified_shader_compile_infos = std::array<Optional<ShaderCompileInfo> *, 6>{
-            &modified_info.vertex_shader_info,
-            &modified_info.tesselation_control_shader_info,
-            &modified_info.tesselation_evaluation_shader_info,
-            &modified_info.fragment_shader_info,
-            &modified_info.mesh_shader_info,
-            &modified_info.task_shader_info,
-        };
-        for (auto * shader_compile_info : modified_shader_compile_infos)
+        if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            if (shader_compile_info->has_value())
-            {
-                shader_compile_info->value().compile_options.inherit(this->info.shader_compile_options);
-            }
+            return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
         }
-        if (modified_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        if (a_info.push_constant_size % 4 != 0)
         {
-            return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
-        }
-        if (modified_info.push_constant_size % 4 != 0)
-        {
-            return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(modified_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
+            return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" is not a multiple of 4(bytes)"));
         }
         auto pipe_result = RasterPipelineState{
             .pipeline_ptr = std::make_shared<RasterPipeline>(),
-            .info = modified_info,
+            .info = a_info,
             .last_hotload_time = std::chrono::file_clock::now(),
             .observed_hotload_files = {},
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
         auto raster_pipeline_info = RasterPipelineInfo{
-            .color_attachments = {modified_info.color_attachments.data(), modified_info.color_attachments.size()},
-            .depth_test = modified_info.depth_test,
-            .tesselation = modified_info.tesselation,
-            .raster = modified_info.raster,
-            .push_constant_size = modified_info.push_constant_size,
-            .name = modified_info.name,
+            .color_attachments = {a_info.color_attachments.data(), a_info.color_attachments.size()},
+            .depth_test = a_info.depth_test,
+            .tesselation = a_info.tesselation,
+            .raster = a_info.raster,
+            .push_constant_size = a_info.push_constant_size,
+            .name = a_info.name,
         };
         auto vertex_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         auto fragment_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
@@ -784,7 +747,33 @@ namespace daxa
     auto ImplPipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RayTracingPipeline>>
     {
         // DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
-        auto pipe_result = create_ray_tracing_pipeline(a_info);
+        auto modified_info = a_info;
+        for (auto & shader_compile_info : modified_info.ray_gen_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.intersection_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.any_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.callable_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.closest_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+        for (auto & shader_compile_info : modified_info.miss_hit_infos)
+        {
+            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+        }
+
+        auto pipe_result = create_ray_tracing_pipeline(modified_info);
         if (pipe_result.is_err())
         {
             return Result<std::shared_ptr<RayTracingPipeline>>(pipe_result.m);
@@ -805,7 +794,9 @@ namespace daxa
     auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
         DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
-        auto pipe_result = create_compute_pipeline(a_info);
+        auto modified_info = a_info;
+        modified_info.shader_info.compile_options.inherit(this->info.shader_compile_options);
+        auto pipe_result = create_compute_pipeline(modified_info);
         if (pipe_result.is_err())
         {
             return Result<std::shared_ptr<ComputePipeline>>(pipe_result.m);
@@ -825,7 +816,23 @@ namespace daxa
 
     auto ImplPipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>
     {
-        auto pipe_result = create_raster_pipeline(a_info);
+        auto modified_info = a_info;
+        auto const modified_shader_compile_infos = std::array<Optional<ShaderCompileInfo> *, 6>{
+            &modified_info.vertex_shader_info,
+            &modified_info.tesselation_control_shader_info,
+            &modified_info.tesselation_evaluation_shader_info,
+            &modified_info.fragment_shader_info,
+            &modified_info.mesh_shader_info,
+            &modified_info.task_shader_info,
+        };
+        for (auto * shader_compile_info : modified_shader_compile_infos)
+        {
+            if (shader_compile_info->has_value())
+            {
+                shader_compile_info->value().compile_options.inherit(this->info.shader_compile_options);
+            }
+        }
+        auto pipe_result = create_raster_pipeline(modified_info);
         if (pipe_result.is_err())
         {
             return Result<std::shared_ptr<RasterPipeline>>(pipe_result.m);
@@ -1077,8 +1084,115 @@ namespace daxa
         return true;
     }
 
+    static auto hash_shader_info(std::string const & source_string, ShaderCompileOptions const & compile_options, ImplPipelineManager::ShaderStage shader_stage) -> uint64_t
+    {
+        auto result = uint64_t{};
+
+        auto hash_combine = [](uint64_t h1, uint64_t h2) -> uint64_t
+        {
+            return h1 ^ (h2 << 1);
+        };
+
+        auto hash_shader_compile_options = [&hash_combine](ShaderCompileOptions const & options) -> uint64_t
+        {
+            auto result = uint64_t{};
+            if (options.entry_point.has_value())
+            {
+                result = hash_combine(result, std::hash<std::string>{}(options.entry_point.value()));
+            }
+            for (auto const & path : options.root_paths)
+            {
+                result = hash_combine(result, std::hash<std::string>{}(path.string()));
+            }
+            if (options.language.has_value())
+            {
+                result = hash_combine(result, std::hash<uint32_t>{}(static_cast<uint32_t>(options.language.value())));
+            }
+            for (auto const & define : options.defines)
+            {
+                result = hash_combine(result, std::hash<std::string>{}(define.name));
+                result = hash_combine(result, std::hash<std::string>{}(define.value));
+            }
+            return result;
+        };
+
+        result = hash_combine(result, std::hash<std::string>{}(source_string));
+        result = hash_combine(result, hash_shader_compile_options(compile_options));
+        result = hash_combine(result, std::hash<uint32_t>{}(static_cast<uint32_t>(shader_stage)));
+
+        return result;
+    }
+
+    struct ShaderCacheFileHeader
+    {
+        uint64_t dependency_n;
+        uint64_t spirv_size;
+    };
+
+    void ImplPipelineManager::save_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash, std::vector<u32> const & spirv)
+    {
+        std::filesystem::create_directories(cache_folder);
+        auto out_file = std::ofstream{cache_folder / std::filesystem::path{std::to_string(shader_info_hash)}, std::ios::binary};
+        auto header = ShaderCacheFileHeader{};
+        header.dependency_n = current_observed_hotload_files->size();
+        header.spirv_size = spirv.size() * sizeof(u32);
+
+        out_file.write(reinterpret_cast<char const *>(&header), sizeof(header));
+        // TODO: Save more granular dependency info
+        for (auto const & [path, time_point] : *current_observed_hotload_files)
+        {
+            auto path_string = path.string();
+            auto path_string_size = uint64_t{path_string.size()};
+            auto time_since_epoch = time_point.time_since_epoch().count();
+            out_file.write(reinterpret_cast<char const *>(&path_string_size), sizeof(path_string_size));
+            out_file.write(path_string.data(), path_string.size());
+            out_file.write(reinterpret_cast<char const *>(&time_since_epoch), sizeof(time_since_epoch));
+        }
+        out_file.write(reinterpret_cast<char const *>(spirv.data()), header.spirv_size);
+    }
+
+    auto ImplPipelineManager::try_load_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash) -> Result<std::vector<u32>>
+    {
+        auto in_file = std::ifstream{cache_folder / std::filesystem::path{std::to_string(shader_info_hash)}, std::ios::binary};
+        if (in_file.good())
+        {
+            auto header = ShaderCacheFileHeader{};
+            in_file.read(reinterpret_cast<char *>(&header), sizeof(header));
+
+            for (uint64_t dep_i = 0; dep_i < header.dependency_n; ++dep_i)
+            {
+                auto path = std::filesystem::path{};
+                auto time_since_epoch = std::chrono::system_clock::rep{};
+                auto path_string = std::string{};
+                auto path_string_size = uint64_t{};
+                in_file.read(reinterpret_cast<char *>(&path_string_size), sizeof(path_string_size));
+                path_string.resize(path_string_size);
+                in_file.read(path_string.data(), path_string_size);
+                in_file.read(reinterpret_cast<char *>(&time_since_epoch), sizeof(time_since_epoch));
+                path = path_string;
+                if (virtual_files.contains(path_string))
+                {
+                    return Result<std::vector<u32>>(std::string_view{"needs update"});
+                }
+                // TODO: Does this crash if the file was deleted?
+                auto write_time = std::filesystem::last_write_time(path);
+                if (write_time.time_since_epoch().count() > time_since_epoch)
+                {
+                    return Result<std::vector<u32>>(std::string_view{"needs update"});
+                }
+            }
+
+            auto spirv = std::vector<u32>{};
+            spirv.resize(header.spirv_size / sizeof(u32));
+            in_file.read(reinterpret_cast<char *>(spirv.data()), header.spirv_size);
+            return Result<std::vector<u32>>{spirv};
+        }
+        return Result<std::vector<u32>>(std::string_view{"no cache found"});
+    }
+
     auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>
     {
+        // TODO: Not internally threadsafe
         current_shader_info = &shader_info;
         std::vector<u32> spirv = {};
         // if (daxa::holds_alternative<ShaderByteCode>(shader_info.source))
@@ -1120,6 +1234,17 @@ namespace daxa
                 code = daxa::get<ShaderCode>(shader_info.source);
             }
 
+            // TODO: Test if this is slow, as it's not needed if there's no shader cache.
+            auto shader_info_hash = hash_shader_info(code.string, shader_info.compile_options, shader_stage);
+            if (shader_info.compile_options.spirv_cache_folder.has_value())
+            {
+                auto cache_ret = try_load_shader_cache(shader_info.compile_options.spirv_cache_folder.value(), shader_info_hash);
+                if (cache_ret.is_ok())
+                {
+                    return cache_ret;
+                }
+            }
+
             Result<std::vector<u32>> ret = Result<std::vector<u32>>("No shader was compiled");
 
             assert(shader_info.compile_options.language.has_value() && "How did this happen? You mustn't provide a nullopt for the language");
@@ -1145,7 +1270,12 @@ namespace daxa
                 current_shader_info = nullptr;
                 return Result<std::vector<u32>>(ret.message());
             }
+
             spirv = ret.value();
+            if (shader_info.compile_options.spirv_cache_folder.has_value())
+            {
+                save_shader_cache(shader_info.compile_options.spirv_cache_folder.value(), shader_info_hash, spirv);
+            }
         }
         current_shader_info = nullptr;
 
@@ -1165,7 +1295,9 @@ namespace daxa
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
             name = name + "." + std::string{stage_string(shader_stage)} + ".spv";
-            std::ofstream ofs(shader_info.compile_options.write_out_shader_binary.value() / name, std::ios_base::trunc | std::ios_base::binary);
+            auto out_folder = shader_info.compile_options.write_out_shader_binary.value();
+            std::filesystem::create_directories(out_folder);
+            std::ofstream ofs(out_folder / name, std::ios_base::trunc | std::ios_base::binary);
             ofs.write(r_cast<char const *>(spirv.data()), static_cast<std::streamsize>(spirv.size() * 4));
             ofs.close();
 
@@ -1402,7 +1534,9 @@ namespace daxa
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
             std::string const file_name = std::string("preprocessed_") + name + "." + std::string(shader_stage_string(shader_stage));
-            auto filepath = shader_info.compile_options.write_out_preprocessed_code.value() / file_name;
+            auto out_folder = shader_info.compile_options.write_out_preprocessed_code.value();
+            std::filesystem::create_directories(out_folder);
+            auto filepath = out_folder / file_name;
             std::string preprocessed_result = {};
             shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, SHADER_VERSION, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
             auto ofs = std::ofstream{filepath, std::ios_base::trunc};

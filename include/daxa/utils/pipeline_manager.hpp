@@ -45,6 +45,7 @@ namespace daxa
         std::vector<std::filesystem::path> root_paths = {};
         std::optional<std::filesystem::path> write_out_preprocessed_code = {};
         std::optional<std::filesystem::path> write_out_shader_binary = {};
+        std::optional<std::filesystem::path> spirv_cache_folder = {};
         std::optional<ShaderLanguage> language = {};
         std::vector<ShaderDefine> defines = {};
         std::optional<bool> enable_debug_info = {};
