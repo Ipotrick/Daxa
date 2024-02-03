@@ -76,33 +76,43 @@ namespace daxa
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::MESH_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::MESH_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::GEOMETRY_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
         case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT: [[fallthrough]];
         case TaskImageAccess::FRAGMENT_SHADER_STORAGE_WRITE_ONLY: [[fallthrough]];
         case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_ONLY: [[fallthrough]];
-        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE:
+        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE: [[fallthrough]];
+        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT:
             return ImageUsageFlagBits::SHADER_STORAGE;
         case TaskImageAccess::TRANSFER_READ:
             return ImageUsageFlagBits::TRANSFER_SRC;
@@ -128,112 +138,132 @@ namespace daxa
         }
     }
 
-    auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>
+    auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>
     {
         switch (access)
         {
-        case TaskImageAccess::NONE: return {ImageLayout::UNDEFINED, {PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE}};
-        case TaskImageAccess::GRAPHICS_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::COMPUTE_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::RAY_TRACING_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::VERTEX_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::TASK_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::MESH_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::MESH_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::MESH_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::GEOMETRY_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::FRAGMENT_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}};
-        case TaskImageAccess::TRANSFER_READ: return {ImageLayout::TRANSFER_SRC_OPTIMAL, {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::TRANSFER_WRITE: return {ImageLayout::TRANSFER_DST_OPTIMAL, {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::COLOR_ATTACHMENT: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::NONE: return {ImageLayout::UNDEFINED, {PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::GRAPHICS_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::COMPUTE_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::RAY_TRACING_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::VERTEX_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TASK_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::MESH_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::MESH_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::MESH_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::GEOMETRY_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::FRAGMENT_SHADER_SAMPLED: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_WRITE_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_ONLY: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT: return {ImageLayout::GENERAL, {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TRANSFER_READ: return {ImageLayout::TRANSFER_SRC_OPTIMAL, {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::TRANSFER_WRITE: return {ImageLayout::TRANSFER_DST_OPTIMAL, {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::COLOR_ATTACHMENT: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskImageAccess::DEPTH_ATTACHMENT:
             [[fallthrough]];
         case TaskImageAccess::STENCIL_ATTACHMENT:
             [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE}};
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskImageAccess::DEPTH_ATTACHMENT_READ:
             [[fallthrough]];
         case TaskImageAccess::STENCIL_ATTACHMENT_READ:
             [[fallthrough]];
-        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ}};
-        case TaskImageAccess::RESOLVE_WRITE: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::RESOLVE, AccessTypeFlagBits::WRITE}};
-        case TaskImageAccess::PRESENT: return {ImageLayout::PRESENT_SRC, {PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ}};
+        case TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ: return {ImageLayout::READ_ONLY_OPTIMAL, {PipelineStageFlagBits::EARLY_FRAGMENT_TESTS | PipelineStageFlagBits::LATE_FRAGMENT_TESTS, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskImageAccess::RESOLVE_WRITE: return {ImageLayout::ATTACHMENT_OPTIMAL, {PipelineStageFlagBits::RESOLVE, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskImageAccess::PRESENT: return {ImageLayout::PRESENT_SRC, {PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
         return {};
     }
 
-    auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access
+    auto task_buffer_access_to_access(TaskBufferAccess const & access) -> std::pair<Access, TaskAccessConcurrency>
     {
         switch (access)
         {
-        case TaskBufferAccess::NONE: return {PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE};
-        case TaskBufferAccess::GRAPHICS_SHADER_READ: return {PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::GRAPHICS_SHADER_WRITE: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE: return {PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::COMPUTE_SHADER_READ: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::COMPUTE_SHADER_WRITE: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::COMPUTE_SHADER_READ_WRITE: return {PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::RAY_TRACING_SHADER_READ: return {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::RAY_TRACING_SHADER_WRITE: return {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::RAY_TRACING_SHADER_READ_WRITE: return {PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::VERTEX_SHADER_READ: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::VERTEX_SHADER_WRITE: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::VERTEX_SHADER_READ_WRITE: return {PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::TASK_SHADER_READ: return {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::TASK_SHADER_WRITE: return {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::TASK_SHADER_READ_WRITE: return {PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::MESH_SHADER_READ: return {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::MESH_SHADER_WRITE: return {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::MESH_SHADER_READ_WRITE: return {PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::GEOMETRY_SHADER_READ: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::FRAGMENT_SHADER_READ: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::GEOMETRY_SHADER_WRITE: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::FRAGMENT_SHADER_WRITE: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return {PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE: return {PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE: return {PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE};
-        case TaskBufferAccess::TRANSFER_READ: return {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::TRANSFER_WRITE: return {PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::HOST_TRANSFER_READ: return {PipelineStageFlagBits::HOST, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::HOST_TRANSFER_WRITE: return {PipelineStageFlagBits::HOST, AccessTypeFlagBits::WRITE};
-        case TaskBufferAccess::INDEX_READ: return {PipelineStageFlagBits::INDEX_INPUT, AccessTypeFlagBits::READ};
-        case TaskBufferAccess::DRAW_INDIRECT_INFO_READ: return {PipelineStageFlagBits::DRAW_INDIRECT, AccessTypeFlagBits::READ};
+        case TaskBufferAccess::NONE: return {{PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::GRAPHICS_SHADER_READ: return {{PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::GRAPHICS_SHADER_WRITE: return {{PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE: return {{PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::COMPUTE_SHADER_READ: return {{PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::COMPUTE_SHADER_WRITE: return {{PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::COMPUTE_SHADER_READ_WRITE: return {{PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::COMPUTE_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::COMPUTE_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::RAY_TRACING_SHADER_READ: return {{PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::RAY_TRACING_SHADER_WRITE: return {{PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::RAY_TRACING_SHADER_READ_WRITE: return {{PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::RAY_TRACING_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::RAY_TRACING_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::VERTEX_SHADER_READ: return {{PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::VERTEX_SHADER_WRITE: return {{PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::VERTEX_SHADER_READ_WRITE: return {{PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::VERTEX_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::VERTEX_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TASK_SHADER_READ: return {{PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TASK_SHADER_WRITE: return {{PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TASK_SHADER_READ_WRITE: return {{PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TASK_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::TASK_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::MESH_SHADER_READ: return {{PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::MESH_SHADER_WRITE: return {{PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::MESH_SHADER_READ_WRITE: return {{PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::MESH_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::GEOMETRY_SHADER_READ: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::FRAGMENT_SHADER_READ: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::GEOMETRY_SHADER_WRITE: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::FRAGMENT_SHADER_WRITE: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TRANSFER_READ: return {{PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TRANSFER_WRITE: return {{PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::HOST_TRANSFER_READ: return {{PipelineStageFlagBits::HOST, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::HOST_TRANSFER_WRITE: return {{PipelineStageFlagBits::HOST, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::INDEX_READ: return {{PipelineStageFlagBits::INDEX_INPUT, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::DRAW_INDIRECT_INFO_READ: return {{PipelineStageFlagBits::DRAW_INDIRECT, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
         return {};
@@ -1075,6 +1105,53 @@ namespace daxa
         impl.update_active_permutations();
     }
 
+    template<typename TrackedState>
+    struct AccessRelation
+    {
+        bool is_previous_none = {};
+        bool is_previous_read = {};
+        bool is_current_read = {};
+        bool is_previous_rw_concurrent = {};
+        bool is_current_rw_concurrent = {};
+        bool are_both_read = {};
+        bool are_both_rw_concurrent = {};
+        bool are_layouts_identical = {};
+        bool are_both_read_and_same_layout = {};
+        bool are_both_rw_concurrent_and_same_layout = {};
+        bool are_both_concurrent = {};
+        bool are_both_concurrent_and_same_layout = {};
+        AccessRelation(TrackedState latest, Access new_access, TaskAccessConcurrency new_concurrency, ImageLayout latest_layout = ImageLayout::UNDEFINED, ImageLayout new_layout = ImageLayout::UNDEFINED)
+        {
+            if constexpr (std::is_same_v<TrackedState, PerPermTaskBuffer>)
+            {
+                is_previous_none = latest.latest_access.type == AccessTypeFlagBits::NONE;
+                is_previous_read = latest.latest_access.type == AccessTypeFlagBits::READ;
+                is_previous_rw_concurrent = 
+                    latest.latest_access.type == AccessTypeFlagBits::READ_WRITE && 
+                    latest.latest_access_concurrent == TaskAccessConcurrency::CONCURRENT;
+            }
+            if constexpr (std::is_same_v<TrackedState, ExtendedImageSliceState>)
+            {
+                is_previous_none = latest.state.latest_access.type == AccessTypeFlagBits::NONE;
+                is_previous_read = latest.state.latest_access.type == AccessTypeFlagBits::READ;
+                is_previous_rw_concurrent = 
+                    latest.state.latest_access.type == AccessTypeFlagBits::READ_WRITE && 
+                    latest.latest_access_concurrent == TaskAccessConcurrency::CONCURRENT;
+            }
+            is_current_read = new_access.type == AccessTypeFlagBits::READ;
+            is_current_rw_concurrent = 
+                new_access.type == AccessTypeFlagBits::READ_WRITE && 
+                new_concurrency == TaskAccessConcurrency::CONCURRENT;
+            are_both_read = is_previous_read && is_current_read;
+            are_both_rw_concurrent = is_previous_rw_concurrent && is_current_rw_concurrent;
+            are_layouts_identical = latest_layout == new_layout;
+            are_both_read_and_same_layout = are_both_read && are_layouts_identical;
+            are_both_rw_concurrent_and_same_layout = are_both_rw_concurrent && are_layouts_identical;
+            are_both_concurrent = (is_previous_read && is_current_read) || (is_previous_rw_concurrent && is_current_rw_concurrent);
+            are_both_concurrent_and_same_layout = are_both_concurrent && are_both_rw_concurrent_and_same_layout;
+        }
+    };
+
     auto schedule_task(
         ImplTaskGraph & impl,
         TaskGraphPermutation & perm,
@@ -1101,18 +1178,20 @@ namespace daxa
                     return;
                 }
 
-                Access const current_buffer_access = task_buffer_access_to_access(attach.access);
+                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(attach.access);
                 // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
-                bool const is_last_access_read = task_buffer.latest_access.type == AccessTypeFlagBits::READ;
                 bool const is_last_access_none = task_buffer.latest_access.type == AccessTypeFlagBits::NONE;
-                bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
-
                 // TODO(msakmary): improve scheduling here to reorder reads in front of each other, respecting the last to read barrier if present!
                 // When a buffer has been read in a previous use AND the current task also reads the buffer,
                 // we must insert the task at or after the last use batch.
                 usize current_buffer_first_possible_batch_index = task_buffer.latest_access_batch_index;
-                // So when not both, the last access and the current access, are reads, we need to insert AFTER the latest access.
-                if (!(is_last_access_read && is_current_access_read) && !is_last_access_none)
+                // When two buffer accesses intersect, we potentially need to insert a ner barrier or modify an existing barrier.
+                // If the access is a read on read or a rw_concurrent on rw_concurrent, the task is still allowed within the same batch as the task of the previous access.
+                // This means that two tasks reading from buffer X are allowed within the same batch, using the same barrier.
+                // If they are not inserted within the same batch due to dependencies of other attachments, daxa will still reuse the barriers.
+                // This is only possible for read write concurrent and read access sequences!
+                AccessRelation<decltype(task_buffer)> relation{task_buffer, current_buffer_access, current_access_concurrency};
+                if (!relation.are_both_read && !relation.are_both_rw_concurrent_and_same_layout && !is_last_access_none)
                 {
                     current_buffer_first_possible_batch_index += 1;
                 }
@@ -1137,7 +1216,7 @@ namespace daxa
                     }
                 }
 
-                auto [this_task_image_layout, this_task_image_access] = task_image_access_to_layout_access(attach.access);
+                auto [this_task_image_layout, this_task_image_access, current_access_concurrent] = task_image_access_to_layout_access(attach.access);
                 // As image subresources can be in different layouts and also different synchronization scopes,
                 // we need to track these image ranges individually.
                 for (ExtendedImageSliceState const & tracked_slice : task_image.last_slice_states)
@@ -1151,16 +1230,15 @@ namespace daxa
                     {
                         continue;
                     }
-                    // Now that we found out that the new use and an old use intersect,
-                    // we need to insert the task in the same or a later batch.
-                    bool const is_last_access_read = tracked_slice.state.latest_access.type == AccessTypeFlagBits::READ;
-                    bool const is_current_access_read = this_task_image_access.type == AccessTypeFlagBits::READ;
-                    // When the image layouts differ, we must do a layout transition between reads.
-                    // This forces us to place the task into a batch AFTER the tracked uses last batch.
-                    bool const is_layout_identical = this_task_image_layout == tracked_slice.state.latest_layout;
+                    // Tasks are always shedules after or with the tasks they depend on.
                     usize current_image_first_possible_batch_index = tracked_slice.latest_access_batch_index;
-                    // If either the image layouts differ, or not both accesses are reads, we must place the task in a later batch.
-                    if (!(is_last_access_read && is_current_access_read && is_layout_identical))
+                    // When two image accesses intersect, we potentially need to insert a ner barrier or modify an existing barrier.
+                    // If the access is a read on read or a rw_concurrent on rw_concurrent, the task is still allowed within the same batch as the task of the previous access.
+                    // This means that two tasks reading from image X are allowed within the same batch, using the same barrier.
+                    // If they are not inserted within the same batch due to dependencies of other attachments, daxa will still reuse the barriers.
+                    // This is only possible for read write concurrent and read access sequences!
+                    AccessRelation<decltype(tracked_slice)> relation{tracked_slice, this_task_image_access, current_access_concurrent, tracked_slice.state.latest_layout, this_task_image_layout};
+                    if (!relation.are_both_read_and_same_layout && !relation.are_both_rw_concurrent_and_same_layout)
                     {
                         current_image_first_possible_batch_index += 1;
                     }
@@ -1390,7 +1468,7 @@ namespace daxa
             [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
             {
                 PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_attach.translated_view.index];
-                Access const current_buffer_access = task_buffer_access_to_access(buffer_attach.access);
+                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(buffer_attach.access);
                 update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
                 // For transient buffers, we need to record first and last use so that we can later name their allocations.
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_buffer_first_access below since
@@ -1422,28 +1500,31 @@ namespace daxa
                 }
                 // When the last use was a read AND the new use of the buffer is a read AND,
                 // we need to add our stage flags to the existing barrier of the last use.
-                bool const is_last_access_read = task_buffer.latest_access.type == AccessTypeFlagBits::READ;
-                bool const is_current_access_read = current_buffer_access.type == AccessTypeFlagBits::READ;
-                // We only need barriers between two accesses.
+                
+                AccessRelation<decltype(task_buffer)> relation{task_buffer, current_buffer_access, current_access_concurrency};
+                // We only need barriers between two non-concurrent accesses of a resource.
                 // If the previous access is none, the current access is the first access.
                 // Therefore we do not need to insert any synchronization if the previous access is none.
                 // This is buffer specific. Images have a layout that needs to be set from undefined to the current accesses layout.
                 // When the latest access  is a read that did not require a barrier before we also do not need a barrier now.
-                // So skip, if the latest access is read and there is no latest_access_read_barrier_index present.
-                bool const is_last_access_none = task_buffer.latest_access == AccessConsts::NONE;
-                if (!is_last_access_none && !(daxa::holds_alternative<Monostate>(task_buffer.latest_access_read_barrier_index) && is_last_access_read))
+                // So skip, if the latest access is read and there is no latest_concurrent_access_barrer_index present.
+                bool const last_access_concurrent_and_external = 
+                    daxa::holds_alternative<Monostate>(task_buffer.latest_concurrent_access_barrer_index) && 
+                    (relation.is_previous_read || relation.is_previous_rw_concurrent);
+                if (!relation.is_previous_none && !last_access_concurrent_and_external)
                 {
-                    if (is_last_access_read && is_current_access_read)
+                    if (relation.are_both_concurrent)
                     {
-                        if (LastReadSplitBarrierIndex const * index0 = daxa::get_if<LastReadSplitBarrierIndex>(&task_buffer.latest_access_read_barrier_index))
+                        // If the last and current access is concurrent of the same type (read or rw concurrent), we can reuse the first barrier in the sequence of concurrent accesses.
+                        if (LastConcurrentAccessSplitBarrierIndex const * index0 = daxa::get_if<LastConcurrentAccessSplitBarrierIndex>(&task_buffer.latest_concurrent_access_barrer_index))
                         {
-                            auto & last_read_split_barrier = this->split_barriers[index0->index];
-                            last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | current_buffer_access;
+                            auto & last_concurrent_access_split_barrier = this->split_barriers[index0->index];
+                            last_concurrent_access_split_barrier.dst_access = last_concurrent_access_split_barrier.dst_access | current_buffer_access;
                         }
-                        else if (LastReadBarrierIndex const * index1 = daxa::get_if<LastReadBarrierIndex>(&task_buffer.latest_access_read_barrier_index))
+                        else if (LastConcurrentAccessBarrierIndex const * index1 = daxa::get_if<LastConcurrentAccessBarrierIndex>(&task_buffer.latest_concurrent_access_barrer_index))
                         {
-                            auto & last_read_barrier = this->barriers[index1->index];
-                            last_read_barrier.dst_access = last_read_barrier.dst_access | current_buffer_access;
+                            auto & last_concurrent_access_barrier = this->barriers[index1->index];
+                            last_concurrent_access_barrier.dst_access = last_concurrent_access_barrier.dst_access | current_buffer_access;
                         }
                     }
                     else
@@ -1471,11 +1552,14 @@ namespace daxa
                             });
                             // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
                             batch.pipeline_barrier_indices.push_back(barrier_index);
-                            if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                            if (relation.are_both_concurrent)
                             {
-                                // As the new access is a read we remember our barrier index,
-                                // So that potential future reads after this can reuse this barrier.
-                                task_buffer.latest_access_read_barrier_index = LastReadBarrierIndex{barrier_index};
+                                // In an uninterrupted sequence of concurrent accesses we need to remember the fist concurrent access and the barrier.
+                                task_buffer.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
+                            }
+                            else
+                            {
+                                task_buffer.latest_concurrent_access_barrer_index = {};
                             }
                         }
                         else
@@ -1497,15 +1581,14 @@ namespace daxa
                             src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
                             // And we also insert the split barrier index into the waits of the current tasks batch.
                             batch.wait_split_barrier_indices.push_back(split_barrier_index);
-                            if (current_buffer_access.type == AccessTypeFlagBits::READ)
+                            if (relation.are_both_concurrent)
                             {
-                                // As the new access is a read we remember our barrier index,
-                                // So that potential future reads after this can reuse this barrier.
-                                task_buffer.latest_access_read_barrier_index = LastReadSplitBarrierIndex{split_barrier_index};
+                                // In an uninterrupted sequence of concurrent accesses we need to remember the fist concurrent access and the barrier.
+                                task_buffer.latest_concurrent_access_barrer_index = LastConcurrentAccessSplitBarrierIndex{split_barrier_index};
                             }
                             else
                             {
-                                task_buffer.latest_access_read_barrier_index = {};
+                                task_buffer.latest_concurrent_access_barrer_index = {};
                             }
                         }
                     }
@@ -1514,6 +1597,7 @@ namespace daxa
                 task_buffer.latest_access = current_buffer_access;
                 task_buffer.latest_access_batch_index = batch_index;
                 task_buffer.latest_access_submit_scope_index = current_submit_scope_index;
+                task_buffer.latest_access_concurrent = current_access_concurrency;
             },
             [&](u32, TaskImageAttachmentInfo & image_attach)
             {
@@ -1550,7 +1634,7 @@ namespace daxa
                     }
                 }
                 task_image.usage |= access_to_usage(used_image_t_access);
-                auto [current_image_layout, current_image_access] = task_image_access_to_layout_access(used_image_t_access);
+                auto [current_image_layout, current_image_access, current_access_concurrency] = task_image_access_to_layout_access(used_image_t_access);
                 image_attach.layout = current_image_layout;
                 // Now this seems strange, why would be need multiple current use slices, as we only have one here.
                 // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
@@ -1564,9 +1648,10 @@ namespace daxa
                         .latest_layout = current_image_layout,
                         .slice = initial_used_image_slice,
                     },
+                    .latest_access_concurrent = current_access_concurrency,
                     .latest_access_batch_index = batch_index,
                     .latest_access_submit_scope_index = current_submit_scope_index,
-                    .latest_access_read_barrier_index = {}, // This is a dummy value (either set later or ignored entirely).
+                    .latest_concurrent_access_barrer_index = {}, // This is a dummy value (either set later or ignored entirely).
                 };
                 // We update the initial access slices.
                 update_image_initial_access_slices(task_image, ret_new_use_tracked_slice);
@@ -1638,18 +1723,17 @@ namespace daxa
                         // When the last use was a read AND the new use of the buffer is a read AND,
                         // we need to add our stage flags to the existing barrier of the last use.
                         // To be able to do this the layout of the image slice must also match.
-                        // If they differ we need to insert an execution barrier with a layout transition.
-                        bool const is_last_access_read = tracked_slice.state.latest_access.type == AccessTypeFlagBits::READ;
-                        bool const is_current_access_read = current_image_access.type == AccessTypeFlagBits::READ;
-                        bool const are_layouts_identical = tracked_slice.state.latest_layout == current_image_layout;
-                        if (is_last_access_read && is_current_access_read && are_layouts_identical)
+                        // If they differ we need to insert an execution barrier with a layout transition.                        
+                        AccessRelation<decltype(tracked_slice)> relation{tracked_slice, current_image_access, current_access_concurrency, tracked_slice.state.latest_layout, current_image_layout};
+                        // Read write concurrent and reads (implicitly concurrent) are reusing the already inserted barriers if there was a previous identical access. 
+                        if (relation.are_both_concurrent_and_same_layout)
                         {
-                            if (auto const * index0 = daxa::get_if<LastReadSplitBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                            if (auto const * index0 = daxa::get_if<LastConcurrentAccessSplitBarrierIndex>(&tracked_slice.latest_concurrent_access_barrer_index))
                             {
                                 auto & last_read_split_barrier = this->split_barriers[index0->index];
                                 last_read_split_barrier.dst_access = last_read_split_barrier.dst_access | tracked_slice.state.latest_access;
                             }
-                            else if (auto const * index1 = daxa::get_if<LastReadBarrierIndex>(&tracked_slice.latest_access_read_barrier_index))
+                            else if (auto const * index1 = daxa::get_if<LastConcurrentAccessBarrierIndex>(&tracked_slice.latest_concurrent_access_barrer_index))
                             {
                                 auto & last_read_barrier = this->barriers[index1->index];
                                 last_read_barrier.dst_access = last_read_barrier.dst_access | tracked_slice.state.latest_access;
@@ -1687,7 +1771,7 @@ namespace daxa
                                 {
                                     // As the new access is a read we remember our barrier index,
                                     // So that potential future reads after this can reuse this barrier.
-                                    ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadBarrierIndex{barrier_index};
+                                    ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
                                 }
                             }
                             else
@@ -1712,15 +1796,15 @@ namespace daxa
                                 src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
                                 // And we also insert the split barrier index into the waits of the current tasks batch.
                                 batch.wait_split_barrier_indices.push_back(split_barrier_index);
-                                if (current_image_access.type == AccessTypeFlagBits::READ)
+                                if (relation.are_both_concurrent)
                                 {
-                                    // As the new access is a read we remember our barrier index,
-                                    // So that potential future reads after this can reuse this barrier.
-                                    ret_new_use_tracked_slice.latest_access_read_barrier_index = LastReadSplitBarrierIndex{split_barrier_index};
+                                    // Need to remember the first concurrent access. 
+                                    // In case of multiple concurrent accesses following on each other, the first barrier in the sequence can be reused for all accesses.
+                                    ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessSplitBarrierIndex{split_barrier_index};
                                 }
                                 else
                                 {
-                                    ret_new_use_tracked_slice.latest_access_read_barrier_index = Monostate{};
+                                    ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = Monostate{};
                                 }
                             }
                         }
@@ -2933,7 +3017,7 @@ namespace daxa
             task.base_task->attachments(),
             [&](u32, TaskBufferAttachmentInfo const & buf)
             {
-                auto access = task_buffer_access_to_access(buf.access);
+                auto [access, is_concurrent] = task_buffer_access_to_access(buf.access);
                 fmt::format_to(std::back_inserter(out), "{}buffer argument:\n", indent);
                 fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
                 print_task_buffer_to(out, indent, permutation, buf.view);
@@ -2941,7 +3025,7 @@ namespace daxa
             },
             [&](u32, TaskImageAttachmentInfo const & img)
             {
-                auto [layout, access] = task_image_access_to_layout_access(img.access);
+                auto [layout, access, is_concurrent] = task_image_access_to_layout_access(img.access);
                 fmt::format_to(std::back_inserter(out), "{}image argument:\n", indent);
                 fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
                 fmt::format_to(std::back_inserter(out), "{}layout: {}\n", indent, to_string(layout));
