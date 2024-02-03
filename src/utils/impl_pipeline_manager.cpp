@@ -1123,8 +1123,13 @@ namespace daxa
         return result;
     }
 
+    static constexpr auto CACHE_FILE_MAGIC_NUMBER = std::bit_cast<uint64_t>(std::to_array("daxpipe"));
+    static constexpr auto CACHE_FILE_VERSION = uint64_t{1};
+
     struct ShaderCacheFileHeader
     {
+        uint64_t magic_number;
+        uint64_t version;
         uint64_t dependency_n;
         uint64_t spirv_size;
     };
@@ -1134,6 +1139,8 @@ namespace daxa
         std::filesystem::create_directories(cache_folder);
         auto out_file = std::ofstream{cache_folder / std::filesystem::path{std::to_string(shader_info_hash)}, std::ios::binary};
         auto header = ShaderCacheFileHeader{};
+        header.magic_number = CACHE_FILE_MAGIC_NUMBER;
+        header.version = CACHE_FILE_VERSION;
         header.dependency_n = current_observed_hotload_files->size();
         header.spirv_size = spirv.size() * sizeof(u32);
 
@@ -1158,6 +1165,14 @@ namespace daxa
         {
             auto header = ShaderCacheFileHeader{};
             in_file.read(reinterpret_cast<char *>(&header), sizeof(header));
+            if (header.magic_number != CACHE_FILE_MAGIC_NUMBER)
+            {
+                return Result<std::vector<u32>>(std::string_view{"bad cache file"});
+            }
+            if (header.version != CACHE_FILE_VERSION)
+            {
+                return Result<std::vector<u32>>(std::string_view{"needs update"});
+            }
 
             for (uint64_t dep_i = 0; dep_i < header.dependency_n; ++dep_i)
             {
