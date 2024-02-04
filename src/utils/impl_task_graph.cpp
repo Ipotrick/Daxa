@@ -1150,7 +1150,7 @@ namespace daxa
             are_both_read_and_same_layout = are_both_read && are_layouts_identical;
             are_both_rw_concurrent_and_same_layout = are_both_rw_concurrent && are_layouts_identical;
             are_both_concurrent = (is_previous_read && is_current_read) || (is_previous_rw_concurrent && is_current_rw_concurrent);
-            are_both_concurrent_and_same_layout = are_both_concurrent && are_both_rw_concurrent_and_same_layout;
+            are_both_concurrent_and_same_layout = are_both_concurrent && are_layouts_identical;
         }
     };
 
@@ -1729,6 +1729,7 @@ namespace daxa
                         // Read write concurrent and reads (implicitly concurrent) are reusing the already inserted barriers if there was a previous identical access. 
                         if (relation.are_both_concurrent_and_same_layout)
                         {
+                            // Reuse first barrier in coherent access sequence.
                             if (auto const * index0 = daxa::get_if<LastConcurrentAccessSplitBarrierIndex>(&tracked_slice.latest_concurrent_access_barrer_index))
                             {
                                 auto & last_read_split_barrier = this->split_barriers[index0->index];
@@ -1773,6 +1774,10 @@ namespace daxa
                                     // As the new access is a read we remember our barrier index,
                                     // So that potential future reads after this can reuse this barrier.
                                     ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
+                                }
+                                else
+                                {
+                                    ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = Monostate{};
                                 }
                             }
                             else
