@@ -282,12 +282,12 @@ namespace daxa
 
         void push_constant_vptr(PushConstantInfo const & info);
         template <typename T>
-        void push_constant(T const & constant)
+        void push_constant(T const & constant, u32 offset = 0)
         {
             push_constant_vptr({
                 .data = static_cast<void const *>(&constant),
                 .size = static_cast<u32>(sizeof(T)),
-                .offset = 0,
+                .offset = offset,
             });
         }
         void set_pipeline(RasterPipeline const & pipeline);
