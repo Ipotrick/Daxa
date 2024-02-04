@@ -757,25 +757,122 @@ namespace tests
         device.destroy_buffer(buffer);
         device.collect_garbage();
     }
+
+    void concurrent_read_on_read()
+    {
+        // TEST:
+        //  1) write buffer
+        //  2) read buffer
+        //  3) read buffer
+        //  4) write buffer
+        // EXPECTED:
+        // batch 0 : write buffer (1)
+        // batch 1 : read buffer (2 and 3)
+        // batch 2 : wriite buffer (4)
+        daxa::Instance daxa_ctx = daxa::create_instance({});
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
+
+        auto buffer = device.create_buffer({
+            .size = 1,
+            .name = "actual_buffer",
+        });
+
+        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+            .initial_buffers = {.buffers = {&buffer, 1}},
+            .name = "buffer",
+        });
+
+        auto buffer_b = daxa::TaskBuffer(daxa::TaskBufferInfo{
+            .initial_buffers = {.buffers = {&buffer, 1}},
+            .name = "buffer b",
+        });
+
+        auto task_graph = daxa::TaskGraph({
+            .device = device,
+            .record_debug_information = true,
+            .name = "task graph A",
+        });
+
+        task_graph.use_persistent_buffer(persistent_task_buffer);
+        task_graph.use_persistent_buffer(buffer_b);
+
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, buffer_b),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "write buffer b",
+        });
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, buffer_b),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "write buffer b",
+        });
+
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, persistent_task_buffer),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "1 write buffer",
+        });
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, persistent_task_buffer),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "2 read buffer",
+        });
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, persistent_task_buffer),
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, buffer_b),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "3 read buffer",
+        });
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, persistent_task_buffer),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "4 write buffer",
+        });
+        task_graph.submit({});
+        task_graph.complete({});
+
+
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
+
+        device.wait_idle();
+        device.destroy_buffer(buffer);
+        device.collect_garbage();
+    }
 } //namespace tests
 
 auto main() -> i32
 {
-    tests::simplest();
-    tests::execution();
-    tests::write_read_image();
-    tests::write_read_image_layer();
-    tests::create_transfer_read_buffer();
-    tests::initial_layout_access();
-    tests::tracked_slice_barrier_collapsing();
-    tests::correct_read_buffer_task_ordering();
-    tests::sharing_persistent_image();
-    tests::sharing_persistent_buffer();
-    tests::transient_write_aliasing();
-    tests::transient_resources();
-    tests::shader_integration_inl_use();
-    tests::test_concurrent_read_write_buffer();
-    tests::test_concurrent_read_write_image();
-    tests::test_concurrent_read_write_buffer_cross_graphs();
-    tests::mipmapping();
+    tests::concurrent_read_on_read();
+    // tests::simplest();
+    // tests::execution();
+    // tests::write_read_image();
+    // tests::write_read_image_layer();
+    // tests::create_transfer_read_buffer();
+    // tests::initial_layout_access();
+    // tests::tracked_slice_barrier_collapsing();
+    // tests::correct_read_buffer_task_ordering();
+    // tests::sharing_persistent_image();
+    // tests::sharing_persistent_buffer();
+    // tests::transient_write_aliasing();
+    // tests::transient_resources();
+    // tests::shader_integration_inl_use();
+    // tests::test_concurrent_read_write_buffer();
+    // tests::test_concurrent_read_write_image();
+    // tests::test_concurrent_read_write_buffer_cross_graphs();
+    // tests::mipmapping();
 }

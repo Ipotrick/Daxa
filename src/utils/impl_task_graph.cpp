@@ -1113,6 +1113,7 @@ namespace daxa
         bool is_current_read = {};
         bool is_previous_rw_concurrent = {};
         bool is_current_rw_concurrent = {};
+        bool is_current_concurrent = {};
         bool are_both_read = {};
         bool are_both_rw_concurrent = {};
         bool are_layouts_identical = {};
@@ -1142,6 +1143,7 @@ namespace daxa
             is_current_rw_concurrent = 
                 new_access.type == AccessTypeFlagBits::READ_WRITE && 
                 new_concurrency == TaskAccessConcurrency::CONCURRENT;
+            is_current_concurrent = is_current_read || is_current_read;
             are_both_read = is_previous_read && is_current_read;
             are_both_rw_concurrent = is_previous_rw_concurrent && is_current_rw_concurrent;
             are_layouts_identical = latest_layout == new_layout;
@@ -1551,7 +1553,7 @@ namespace daxa
                             });
                             // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
                             batch.pipeline_barrier_indices.push_back(barrier_index);
-                            if (relation.are_both_concurrent)
+                            if (relation.is_current_concurrent)
                             {
                                 // In an uninterrupted sequence of concurrent accesses we need to remember the fist concurrent access and the barrier.
                                 task_buffer.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
@@ -1766,7 +1768,7 @@ namespace daxa
                                 });
                                 // And we insert the barrier index into the list of pipeline barriers of the current tasks batch.
                                 batch.pipeline_barrier_indices.push_back(barrier_index);
-                                if (current_image_access.type == AccessTypeFlagBits::READ)
+                                if (relation.is_current_concurrent)
                                 {
                                     // As the new access is a read we remember our barrier index,
                                     // So that potential future reads after this can reuse this barrier.
@@ -1795,7 +1797,7 @@ namespace daxa
                                 src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
                                 // And we also insert the split barrier index into the waits of the current tasks batch.
                                 batch.wait_split_barrier_indices.push_back(split_barrier_index);
-                                if (relation.are_both_concurrent)
+                                if (relation.is_current_concurrent)
                                 {
                                     // Need to remember the first concurrent access. 
                                     // In case of multiple concurrent accesses following on each other, the first barrier in the sequence can be reused for all accesses.
