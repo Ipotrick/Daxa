@@ -485,9 +485,6 @@ namespace tests
                     .name = "tiny size short life buffer",
                 });
 
-            using TBA = daxa::TaskBufferAccess;
-            using TIA = daxa::TaskImageAccess;
-
             // Record tasks.
             task_graph.add_task({
                 .attachments = {

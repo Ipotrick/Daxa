@@ -1122,7 +1122,7 @@ namespace daxa
         bool are_both_concurrent_and_same_layout = {};
         AccessRelation(TrackedState latest, Access new_access, TaskAccessConcurrency new_concurrency, ImageLayout latest_layout = ImageLayout::UNDEFINED, ImageLayout new_layout = ImageLayout::UNDEFINED)
         {
-            if constexpr (std::is_same_v<TrackedState, PerPermTaskBuffer>)
+            if constexpr (requires{latest.latest_access;})
             {
                 is_previous_none = latest.latest_access.type == AccessTypeFlagBits::NONE;
                 is_previous_read = latest.latest_access.type == AccessTypeFlagBits::READ;
@@ -1130,7 +1130,7 @@ namespace daxa
                     latest.latest_access.type == AccessTypeFlagBits::READ_WRITE && 
                     latest.latest_access_concurrent == TaskAccessConcurrency::CONCURRENT;
             }
-            if constexpr (std::is_same_v<TrackedState, ExtendedImageSliceState>)
+            if constexpr (requires{latest.state.latest_access;})
             {
                 is_previous_none = latest.state.latest_access.type == AccessTypeFlagBits::NONE;
                 is_previous_read = latest.state.latest_access.type == AccessTypeFlagBits::READ;
@@ -1180,7 +1180,6 @@ namespace daxa
 
                 auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(attach.access);
                 // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
-                bool const is_last_access_none = task_buffer.latest_access.type == AccessTypeFlagBits::NONE;
                 // TODO(msakmary): improve scheduling here to reorder reads in front of each other, respecting the last to read barrier if present!
                 // When a buffer has been read in a previous use AND the current task also reads the buffer,
                 // we must insert the task at or after the last use batch.
@@ -1191,7 +1190,7 @@ namespace daxa
                 // If they are not inserted within the same batch due to dependencies of other attachments, daxa will still reuse the barriers.
                 // This is only possible for read write concurrent and read access sequences!
                 AccessRelation<decltype(task_buffer)> relation{task_buffer, current_buffer_access, current_access_concurrency};
-                if (!relation.are_both_read && !relation.are_both_rw_concurrent_and_same_layout && !is_last_access_none)
+                if (!relation.are_both_read && !relation.are_both_rw_concurrent && !relation.is_previous_none)
                 {
                     current_buffer_first_possible_batch_index += 1;
                 }
@@ -3020,7 +3019,7 @@ namespace daxa
                 auto [access, is_concurrent] = task_buffer_access_to_access(buf.access);
                 fmt::format_to(std::back_inserter(out), "{}buffer argument:\n", indent);
                 fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
-                print_task_buffer_to(out, indent, permutation, buf.view);
+                print_task_buffer_to(out, indent, permutation, buf.translated_view);
                 print_separator_to(out, indent);
             },
             [&](u32, TaskImageAttachmentInfo const & img)
@@ -3029,8 +3028,8 @@ namespace daxa
                 fmt::format_to(std::back_inserter(out), "{}image argument:\n", indent);
                 fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
                 fmt::format_to(std::back_inserter(out), "{}layout: {}\n", indent, to_string(layout));
-                fmt::format_to(std::back_inserter(out), "{}slice: {}\n", indent, to_string(img.view.slice));
-                print_task_image_to(out, indent, permutation, img.view);
+                fmt::format_to(std::back_inserter(out), "{}slice: {}\n", indent, to_string(img.translated_view.slice));
+                print_task_image_to(out, indent, permutation, img.translated_view);
                 print_separator_to(out, indent);
             });
     }

@@ -10,6 +10,7 @@ namespace tests
     DAXA_DECL_TASK_HEAD_END
     struct MipMapTask : MipMapTaskHead
     {
+        AttachmentViews views = {};
         struct Info
         {
             u32 mip = {};
@@ -512,15 +513,17 @@ namespace tests
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
-                                MipMapTask mtask{};
-                                mtask.attachments.set_view(mtask.lower_mip, task_render_image.view().view({.base_mip_level = i}));
-                                mtask.attachments.set_view(mtask.higher_mip, task_render_image.view().view({.base_mip_level = i + 1}));
-                                mtask.info = {
-                                    .mip = i,
-                                    .mip_size = mip_size,
-                                    .next_mip_size = next_mip_size,
-                                };
-                                new_task_graph.add_task(std::move(mtask));
+                                new_task_graph.add_task(MipMapTask{
+                                    .views = std::array{
+                                        daxa::attachment_view(MipMapTask::lower_mip, task_render_image.view().view({.base_mip_level = i})),
+                                        daxa::attachment_view(MipMapTask::higher_mip, task_render_image.view().view({.base_mip_level = i + 1})),
+                                    },
+                                    .info = {
+                                        .mip = i,
+                                        .mip_size = mip_size,
+                                        .next_mip_size = next_mip_size,
+                                    },
+                                });
                                 mip_size = next_mip_size;
                             }
                         }

@@ -25,7 +25,6 @@ namespace tests
         });
         auto buffer = device.create_buffer({
             .size = 1,
-            .allocate_info = daxa::MemoryFlagBits::DEDICATED_MEMORY,
             .name = "actual buffer",
         });
 
