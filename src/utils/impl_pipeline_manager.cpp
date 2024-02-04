@@ -1113,6 +1113,10 @@ namespace daxa
                 result = hash_combine(result, std::hash<std::string>{}(define.name));
                 result = hash_combine(result, std::hash<std::string>{}(define.value));
             }
+            if (options.enable_debug_info.has_value())
+            {
+                result = hash_combine(result, std::hash<uint32_t>{}(static_cast<uint32_t>(options.enable_debug_info.value())));
+            }
             return result;
         };
 
