@@ -1128,7 +1128,7 @@ namespace daxa
     }
 
     static constexpr auto CACHE_FILE_MAGIC_NUMBER = std::bit_cast<uint64_t>(std::to_array("daxpipe"));
-    static constexpr auto CACHE_FILE_VERSION = uint64_t{1};
+    static constexpr auto CACHE_FILE_VERSION = uint64_t{2};
 
     struct ShaderCacheFileHeader
     {
@@ -1152,12 +1152,27 @@ namespace daxa
         // TODO: Save more granular dependency info
         for (auto const & [path, time_point] : *current_observed_hotload_files)
         {
+            auto flags = uint64_t{};
             auto path_string = path.string();
             auto path_string_size = uint64_t{path_string.size()};
+            auto virtual_file_iter = virtual_files.find(path_string);
+            bool is_virtual_file = virtual_file_iter != virtual_files.end();
+            flags |= (is_virtual_file << 0);
             auto time_since_epoch = time_point.time_since_epoch().count();
+            out_file.write(reinterpret_cast<char const *>(&flags), sizeof(flags));
             out_file.write(reinterpret_cast<char const *>(&path_string_size), sizeof(path_string_size));
             out_file.write(path_string.data(), path_string.size());
-            out_file.write(reinterpret_cast<char const *>(&time_since_epoch), sizeof(time_since_epoch));
+            if (is_virtual_file)
+            {
+                auto const & virtual_file_contents = virtual_file_iter->second.contents;
+                auto virtual_file_size = uint64_t{virtual_file_contents.size()};
+                out_file.write(reinterpret_cast<char const *>(&virtual_file_size), sizeof(virtual_file_size));
+                out_file.write(virtual_file_contents.data(), virtual_file_contents.size());
+            }
+            else
+            {
+                out_file.write(reinterpret_cast<char const *>(&time_since_epoch), sizeof(time_since_epoch));
+            }
         }
         out_file.write(reinterpret_cast<char const *>(spirv.data()), header.spirv_size);
     }
@@ -1180,24 +1195,48 @@ namespace daxa
 
             for (uint64_t dep_i = 0; dep_i < header.dependency_n; ++dep_i)
             {
+                auto flags = uint64_t{};
                 auto path = std::filesystem::path{};
                 auto time_since_epoch = std::chrono::system_clock::rep{};
                 auto path_string = std::string{};
                 auto path_string_size = uint64_t{};
+                in_file.read(reinterpret_cast<char *>(&flags), sizeof(flags));
+                auto is_virtual_file = ((flags >> 0) & 1) != 0;
                 in_file.read(reinterpret_cast<char *>(&path_string_size), sizeof(path_string_size));
                 path_string.resize(path_string_size);
                 in_file.read(path_string.data(), path_string_size);
-                in_file.read(reinterpret_cast<char *>(&time_since_epoch), sizeof(time_since_epoch));
                 path = path_string;
-                if (virtual_files.contains(path_string))
+                if (is_virtual_file)
                 {
-                    return Result<std::vector<u32>>(std::string_view{"needs update"});
+                    auto virtual_file_contents = std::string{};
+                    auto virtual_file_size = uint64_t{};
+
+                    in_file.read(reinterpret_cast<char *>(&virtual_file_size), sizeof(virtual_file_size));
+                    virtual_file_contents.resize(virtual_file_size);
+                    in_file.read(virtual_file_contents.data(), virtual_file_size);
+
+                    auto virtual_file_iter = virtual_files.find(path_string);
+                    if (virtual_file_iter == virtual_files.end())
+                    {
+                        return Result<std::vector<u32>>(std::string_view{"needs update"});
+                    }
+                    if (virtual_file_iter->second.contents != virtual_file_contents)
+                    {
+                        return Result<std::vector<u32>>(std::string_view{"needs update"});
+                    }
                 }
-                // TODO: Does this crash if the file was deleted?
-                auto write_time = std::filesystem::last_write_time(path);
-                if (write_time.time_since_epoch().count() > time_since_epoch)
+                else
                 {
-                    return Result<std::vector<u32>>(std::string_view{"needs update"});
+                    in_file.read(reinterpret_cast<char *>(&time_since_epoch), sizeof(time_since_epoch));
+                    if (!std::filesystem::exists(path))
+                    {
+                        return Result<std::vector<u32>>(std::string_view{"needs update"});
+                    }
+                    auto write_time = std::filesystem::last_write_time(path);
+                    if (write_time.time_since_epoch().count() > time_since_epoch)
+                    {
+                        return Result<std::vector<u32>>(std::string_view{"needs update"});
+                    }
                 }
             }
 
