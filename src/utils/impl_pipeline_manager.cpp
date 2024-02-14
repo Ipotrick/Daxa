@@ -1238,6 +1238,9 @@ namespace daxa
                         return Result<std::vector<u32>>(std::string_view{"needs update"});
                     }
                 }
+                // NOTE(grundlett): Setting the time to now is fine, as we successfully handle
+                // any temporal changes above. This is a bus sus tho.
+                current_observed_hotload_files->insert({path, std::chrono::file_clock::now()});
             }
 
             auto spirv = std::vector<u32>{};
