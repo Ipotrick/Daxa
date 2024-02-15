@@ -1168,17 +1168,17 @@ namespace daxa
     struct Flags final
     {
         typename Properties::Data data;
-        [[nodiscard]] inline constexpr auto operator|=(Flags const & other) -> Flags &
+        inline constexpr auto operator|=(Flags const & other) -> Flags &
         {
             data |= other.data;
             return *this;
         }
-        [[nodiscard]] inline constexpr auto operator&=(Flags const & other) -> Flags &
+        inline constexpr auto operator&=(Flags const & other) -> Flags &
         {
             data &= other.data;
             return *this;
         }
-        [[nodiscard]] inline constexpr auto operator^=(Flags const & other) -> Flags &
+        inline constexpr auto operator^=(Flags const & other) -> Flags &
         {
             data ^= other.data;
             return *this;

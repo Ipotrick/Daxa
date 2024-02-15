@@ -24,7 +24,7 @@ namespace tests
 
     void alignment()
     {
-        auto print_Testu6Alignment = [](TestU64Alignment const & v)
+        auto print_Testu64Alignment = [](TestU64Alignment const & v)
         {
             std::cout << "i0: " << v.i0 << std::endl;
             std::cout << "i1: " << v.i1 << std::endl;
@@ -108,7 +108,7 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = sizeof(TestShaderTaskHead),
+            .push_constant_size = TestShaderTaskHead::attachment_shader_data_size(),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -129,21 +129,24 @@ namespace tests
             .name = "align_test_dst",
         }};
         task_graph.use_persistent_buffer(dst);
-        task_graph.add_task({
-            .uses = daxa::generic_uses_cast(TestShaderTaskHead::Uses{
-                .align_test_src = src.view(),
-                .align_test_dst = dst.view(),
-            }),
-            .task = [&](daxa::TaskInterface const & ti)
+
+        struct TestTask : TestShaderTaskHead
+        {
+            AttachmentViews views = {};
+            std::shared_ptr<daxa::ComputePipeline> pipeline = {};
+            void callback(daxa::TaskInterface ti)
             {
-                auto & cmd = ti.get_recorder();
-                TestShaderTaskHead head;
-                ti.copy_task_head_to(&head);
-                cmd.push_constant(head);
-                cmd.set_pipeline(*compute_pipeline);
-                cmd.dispatch({1, 1, 1});
+                ti.recorder.set_pipeline(*pipeline);
+                ti.recorder.push_constant_vptr({ti.attachment_shader_data.data(), ti.attachment_shader_data.size()});
+                ti.recorder.dispatch({1, 1, 1});
+            }
+        };
+        task_graph.add_task(TestTask{
+            .views = std::array{
+                daxa::attachment_view( TestTask::align_test_src, src ),
+                daxa::attachment_view( TestTask::align_test_dst, dst ),
             },
-            .name = "test alignment",
+            .pipeline = compute_pipeline,
         });
         task_graph.submit({});
         task_graph.complete({});
@@ -155,9 +158,9 @@ namespace tests
         [[maybe_unused]] TestU64Alignment readback_data = *device.get_host_address_as<TestU64Alignment>(dst_buffer).value();
 
         std::cout << "test values before: \n";
-        print_Testu6Alignment(test_values);
+        print_Testu64Alignment(test_values);
         std::cout << "readback values after: \n";
-        print_Testu6Alignment(readback_data);
+        print_Testu64Alignment(readback_data);
         DAXA_DBG_ASSERT_TRUE_M(are_same_Testu6Alignment(test_values, readback_data), "values differ");
 
         device.destroy_buffer(src_buffer);
@@ -237,46 +240,45 @@ namespace tests
             .name = "f32 buffer",
         });
 
-        using namespace daxa::task_resource_uses;
+        using BA = daxa::TaskBufferAccess;
+        using IA = daxa::TaskImageAccess;
 
         task_graph.add_task({
-            .uses = {
-                BufferComputeShaderWrite{handles_buffer},
-                BufferComputeShaderWrite{f32_buffer},
-                ImageComputeShaderStorageWriteOnly<>{f32_image},
-                ImageComputeShaderStorageReadWrite<>{u32_image},
+            .attachments = {
+                daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, handles_buffer),
+                daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, f32_buffer),
+                daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_WRITE_ONLY, f32_image),
+                daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_READ_ONLY, u32_image),
             },
-            .task = [&](daxa::TaskInterface ti)
+            .task = [=](daxa::TaskInterface ti)
             {
-                auto & cmd = ti.get_recorder();
-                cmd.set_pipeline(*bindless_access);
-                cmd.push_constant(BindlessTestPush{
+                ti.recorder.set_pipeline(*bindless_access);
+                ti.recorder.push_constant(BindlessTestPush{
                     .handles = {
-                        .my_buffer = ti.get_device().get_device_address(ti.uses[f32_buffer].buffer()).value(),
-                        .my_float_image = ti.uses[f32_image].view(),
-                        .my_uint_image = ti.uses[u32_image].view(),
+                        .my_buffer = ti.device.get_device_address(ti.get(f32_buffer).ids[0]).value(),
+                        .my_float_image = ti.get(f32_image).view_ids[0],
+                        .my_uint_image = ti.get(u32_image).view_ids[0],
                         .my_sampler = sampler,
                     },
-                    .next_shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
+                    .next_shader_input = ti.device.get_device_address(ti.get(handles_buffer).ids[0]).value(),
                 });
-                cmd.dispatch({1, 1, 1});
+                ti.recorder.dispatch({1, 1, 1});
             },
-            .name = "bindless access",
+            .name = std::string_view{"bindless access"},
         });
         task_graph.add_task({
-            .uses = {
-                BufferComputeShaderRead{handles_buffer},
-                BufferComputeShaderRead{f32_buffer},
-                ImageComputeShaderSampled<>{f32_image},
+            .attachments = {
+                daxa::inl_attachment(BA::COMPUTE_SHADER_READ, handles_buffer),
+                daxa::inl_attachment(BA::COMPUTE_SHADER_READ, f32_buffer),
+                daxa::inl_attachment(IA::COMPUTE_SHADER_SAMPLED, f32_image),
             },
-            .task = [&](daxa::TaskInterface const & ti)
+            .task = [=](daxa::TaskInterface ti)
             {
-                auto & cmd = ti.get_recorder();
-                cmd.set_pipeline(*bindless_access_followup);
-                cmd.push_constant(BindlessTestFollowPush{
-                    .shader_input = ti.get_device().get_device_address(ti.uses[handles_buffer].buffer()).value(),
+                ti.recorder.set_pipeline(*bindless_access_followup);
+                ti.recorder.push_constant(BindlessTestFollowPush{
+                    .shader_input = ti.device.get_device_address(ti.get(handles_buffer).ids[0]).value(),
                 });
-                cmd.dispatch({1, 1, 1});
+                ti.recorder.dispatch({1, 1, 1});
             },
             .name = "bindless access",
         });

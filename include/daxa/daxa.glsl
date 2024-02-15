@@ -1,5 +1,9 @@
 #pragma once
 
+// Optional features:
+// #define DAXA_IMAGE_INT64
+// #define DAXA_RAY_TRACING
+
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_buffer_reference : enable
 #extension GL_EXT_buffer_reference2 : enable
@@ -15,7 +19,9 @@
 #extension GL_EXT_scalar_block_layout : require
 #extension GL_EXT_shader_image_load_formatted : require
 #extension GL_EXT_control_flow_attributes : require
-#extension GL_EXT_shader_image_int64 : require
+#if DAXA_IMAGE_INT64
+// #extension GL_EXT_shader_image_int64 : require
+#endif // #if DAXA_IMAGE_INT64
 #extension GL_EXT_samplerless_texture_functions : require
 
 #define DAXA_ID_INDEX_BITS 20
@@ -90,6 +96,11 @@ struct daxa_ImageViewId
     uint64_t value;
 };
 
+struct daxa_ImageViewIndex
+{
+    daxa_u32 value;
+};
+
 struct daxa_SamplerId
 {
     uint64_t value;
@@ -116,6 +127,14 @@ daxa_u32 daxa_buffer_id_to_index(daxa_BufferId id)
 daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewId id)
 {
     return daxa_u32(id.value & DAXA_ID_INDEX_MASK);
+}
+
+/// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
+/// @param id The id the index is retrieved from.
+/// @return The index the id contains.
+daxa_u32 daxa_image_view_id_to_index(daxa_ImageViewIndex index)
+{
+    return index.value;
 }
 
 /// @brief Every resource id contains an index and a version number. The index can be used to access the corresponding resource in the binding arrays/
@@ -268,8 +287,6 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
 #define _DAXA_GET_IMAGE(DIMENSION, image_view_id) daxa_image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 #define _DAXA_GET_IIMAGE(DIMENSION, image_view_id) daxa_iimage##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 #define _DAXA_GET_UIMAGE(DIMENSION, image_view_id) daxa_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
-#define _DAXA_GET_I64IMAGE(DIMENSION, image_view_id) daxa_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
-#define _DAXA_GET_U64IMAGE(DIMENSION, image_view_id) daxa_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_GET_TEXTURE(DIMENSION, image_view_id) daxa_texture##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
@@ -289,8 +306,6 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
     DAXA_STORAGE_IMAGE_LAYOUT uniform image##DIMENSION daxa_image##DIMENSION##Table[];       \
     DAXA_STORAGE_IMAGE_LAYOUT uniform iimage##DIMENSION daxa_iimage##DIMENSION##Table[];     \
     DAXA_STORAGE_IMAGE_LAYOUT uniform uimage##DIMENSION daxa_uimage##DIMENSION##Table[];     \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform i64image##DIMENSION daxa_i64image##DIMENSION##Table[]; \
-    DAXA_STORAGE_IMAGE_LAYOUT uniform u64image##DIMENSION daxa_u64image##DIMENSION##Table[]; \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform texture##DIMENSION daxa_texture##DIMENSION##Table[];   \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform itexture##DIMENSION daxa_itexture##DIMENSION##Table[]; \
     DAXA_SAMPLED_IMAGE_LAYOUT uniform utexture##DIMENSION daxa_utexture##DIMENSION##Table[];
@@ -310,8 +325,6 @@ _DAXA_DECL_IMAGE(1D)
 #define daxa_image1D(image_view_id) _DAXA_GET_IMAGE(1D, image_view_id)
 #define daxa_iimage1D(image_view_id) _DAXA_GET_IIMAGE(1D, image_view_id)
 #define daxa_uimage1D(image_view_id) _DAXA_GET_UIMAGE(1D, image_view_id)
-#define daxa_i64image1D(image_view_id) _DAXA_GET_I64IMAGE(1D, image_view_id)
-#define daxa_u64image1D(image_view_id) _DAXA_GET_U64IMAGE(1D, image_view_id)
 #define daxa_texture1D(image_view_id) _DAXA_GET_TEXTURE(1D, image_view_id)
 #define daxa_itexture1D(image_view_id) _DAXA_GET_ITEXTURE(1D, image_view_id)
 #define daxa_utexture1D(image_view_id) _DAXA_GET_UTEXTURE(1D, image_view_id)
@@ -326,8 +339,6 @@ _DAXA_DECL_IMAGE(2D)
 #define daxa_image2D(image_view_id) _DAXA_GET_IMAGE(2D, image_view_id)
 #define daxa_iimage2D(image_view_id) _DAXA_GET_IIMAGE(2D, image_view_id)
 #define daxa_uimage2D(image_view_id) _DAXA_GET_UIMAGE(2D, image_view_id)
-#define daxa_i64image2D(image_view_id) _DAXA_GET_I64IMAGE(2D, image_view_id)
-#define daxa_u64image2D(image_view_id) _DAXA_GET_U64IMAGE(2D, image_view_id)
 #define daxa_texture2D(image_view_id) _DAXA_GET_TEXTURE(2D, image_view_id)
 #define daxa_itexture2D(image_view_id) _DAXA_GET_ITEXTURE(2D, image_view_id)
 #define daxa_utexture2D(image_view_id) _DAXA_GET_UTEXTURE(2D, image_view_id)
@@ -342,8 +353,6 @@ _DAXA_DECL_IMAGE(3D)
 #define daxa_image3D(image_view_id) _DAXA_GET_IMAGE(3D, image_view_id)
 #define daxa_iimage3D(image_view_id) _DAXA_GET_IIMAGE(3D, image_view_id)
 #define daxa_uimage3D(image_view_id) _DAXA_GET_UIMAGE(3D, image_view_id)
-#define daxa_i64image3D(image_view_id) _DAXA_GET_I64IMAGE(3D, image_view_id)
-#define daxa_u64image3D(image_view_id) _DAXA_GET_U64IMAGE(3D, image_view_id)
 #define daxa_texture3D(image_view_id) _DAXA_GET_TEXTURE(3D, image_view_id)
 #define daxa_itexture3D(image_view_id) _DAXA_GET_ITEXTURE(3D, image_view_id)
 #define daxa_utexture3D(image_view_id) _DAXA_GET_UTEXTURE(3D, image_view_id)
@@ -358,8 +367,6 @@ _DAXA_DECL_IMAGE(Cube)
 #define daxa_imageCube(image_view_id) _DAXA_GET_IMAGE(Cube, image_view_id)
 #define daxa_iimageCube(image_view_id) _DAXA_GET_IIMAGE(Cube, image_view_id)
 #define daxa_uimageCube(image_view_id) _DAXA_GET_UIMAGE(Cube, image_view_id)
-#define daxa_i64imageCube(image_view_id) _DAXA_GET_I64IMAGE(Cube, image_view_id)
-#define daxa_u64imageCube(image_view_id) _DAXA_GET_U64IMAGE(Cube, image_view_id)
 #define daxa_textureCube(image_view_id) _DAXA_GET_TEXTURE(Cube, image_view_id)
 #define daxa_itextureCube(image_view_id) _DAXA_GET_ITEXTURE(Cube, image_view_id)
 #define daxa_utextureCube(image_view_id) _DAXA_GET_UTEXTURE(Cube, image_view_id)
@@ -374,8 +381,6 @@ _DAXA_DECL_IMAGE(CubeArray)
 #define daxa_imageCubeArray(image_view_id) _DAXA_GET_IMAGE(CubeArray, image_view_id)
 #define daxa_iimageCubeArray(image_view_id) _DAXA_GET_IIMAGE(CubeArray, image_view_id)
 #define daxa_uimageCubeArray(image_view_id) _DAXA_GET_UIMAGE(CubeArray, image_view_id)
-#define daxa_i64imageCubeArray(image_view_id) _DAXA_GET_I64IMAGE(CubeArray, image_view_id)
-#define daxa_u64imageCubeArray(image_view_id) _DAXA_GET_U64IMAGE(CubeArray, image_view_id)
 #define daxa_textureCubeArray(image_view_id) _DAXA_GET_TEXTURE(CubeArray, image_view_id)
 #define daxa_itextureCubeArray(image_view_id) _DAXA_GET_ITEXTURE(CubeArray, image_view_id)
 #define daxa_utextureCubeArray(image_view_id) _DAXA_GET_UTEXTURE(CubeArray, image_view_id)
@@ -390,8 +395,6 @@ _DAXA_DECL_IMAGE(1DArray)
 #define daxa_image1DArray(image_view_id) _DAXA_GET_IMAGE(1DArray, image_view_id)
 #define daxa_iimage1DArray(image_view_id) _DAXA_GET_IIMAGE(1DArray, image_view_id)
 #define daxa_uimage1DArray(image_view_id) _DAXA_GET_UIMAGE(1DArray, image_view_id)
-#define daxa_i64image1DArray(image_view_id) _DAXA_GET_I64IMAGE(1DArray, image_view_id)
-#define daxa_u64image1DArray(image_view_id) _DAXA_GET_U64IMAGE(1DArray, image_view_id)
 #define daxa_texture1DArray(image_view_id) _DAXA_GET_TEXTURE(1DArray, image_view_id)
 #define daxa_itexture1DArray(image_view_id) _DAXA_GET_ITEXTURE(1DArray, image_view_id)
 #define daxa_utexture1DArray(image_view_id) _DAXA_GET_UTEXTURE(1DArray, image_view_id)
@@ -406,8 +409,6 @@ _DAXA_DECL_IMAGE(2DArray)
 #define daxa_image2DArray(image_view_id) _DAXA_GET_IMAGE(2DArray, image_view_id)
 #define daxa_iimage2DArray(image_view_id) _DAXA_GET_IIMAGE(2DArray, image_view_id)
 #define daxa_uimage2DArray(image_view_id) _DAXA_GET_UIMAGE(2DArray, image_view_id)
-#define daxa_i64image2DArray(image_view_id) _DAXA_GET_I64IMAGE(2DArray, image_view_id)
-#define daxa_u64image2DArray(image_view_id) _DAXA_GET_U64IMAGE(2DArray, image_view_id)
 #define daxa_texture2DArray(image_view_id) _DAXA_GET_TEXTURE(2DArray, image_view_id)
 #define daxa_itexture2DArray(image_view_id) _DAXA_GET_ITEXTURE(2DArray, image_view_id)
 #define daxa_utexture2DArray(image_view_id) _DAXA_GET_UTEXTURE(2DArray, image_view_id)
@@ -422,8 +423,6 @@ _DAXA_DECL_IMAGE(2DMS)
 #define daxa_image2DMS(image_view_id) _DAXA_GET_IMAGE(2DMS, image_view_id)
 #define daxa_iimage2DMS(image_view_id) _DAXA_GET_IIMAGE(2DMS, image_view_id)
 #define daxa_uimage2DMS(image_view_id) _DAXA_GET_UIMAGE(2DMS, image_view_id)
-#define daxa_i64image2DMS(image_view_id) _DAXA_GET_I64IMAGE(2DMS, image_view_id)
-#define daxa_u64image2DMS(image_view_id) _DAXA_GET_U64IMAGE(2DMS, image_view_id)
 #define daxa_texture2DMS(image_view_id) _DAXA_GET_TEXTURE(2DMS, image_view_id)
 #define daxa_itexture2DMS(image_view_id) _DAXA_GET_ITEXTURE(2DMS, image_view_id)
 #define daxa_utexture2DMS(image_view_id) _DAXA_GET_UTEXTURE(2DMS, image_view_id)
@@ -438,8 +437,6 @@ _DAXA_DECL_IMAGE(2DMSArray)
 #define daxa_image2DMSArray(image_view_id) _DAXA_GET_IMAGE(2DMSArray, image_view_id)
 #define daxa_iimage2DMSArray(image_view_id) _DAXA_GET_IIMAGE(2DMSArray, image_view_id)
 #define daxa_uimage2DMSArray(image_view_id) _DAXA_GET_UIMAGE(2DMSArray, image_view_id)
-#define daxa_i64image2DMSArray(image_view_id) _DAXA_GET_I64IMAGE(2DMSArray, image_view_id)
-#define daxa_u64image2DMSArray(image_view_id) _DAXA_GET_U64IMAGE(2DMSArray, image_view_id)
 #define daxa_texture2DMSArray(image_view_id) _DAXA_GET_TEXTURE(2DMSArray, image_view_id)
 #define daxa_itexture2DMSArray(image_view_id) _DAXA_GET_ITEXTURE(2DMSArray, image_view_id)
 #define daxa_utexture2DMSArray(image_view_id) _DAXA_GET_UTEXTURE(2DMSArray, image_view_id)
@@ -449,6 +446,36 @@ _DAXA_DECL_IMAGE(2DMSArray)
 #define daxa_sampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 #define daxa_isampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 #define daxa_usampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
+
+#if DAXA_IMAGE_INT64
+/// ONLY USED BY IMPLEMENTATION!
+#define _DAXA_DECL_IMAGE_INT64(DIMENSION)                                                    \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform i64image##DIMENSION daxa_i64image##DIMENSION##Table[]; \
+    DAXA_STORAGE_IMAGE_LAYOUT uniform u64image##DIMENSION daxa_u64image##DIMENSION##Table[];
+
+#define _DAXA_GET_I64IMAGE(DIMENSION, image_view_id) daxa_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+#define _DAXA_GET_U64IMAGE(DIMENSION, image_view_id) daxa_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
+
+_DAXA_DECL_IMAGE_INT64(1D)
+#define daxa_i64image1D(image_view_id) _DAXA_GET_I64IMAGE(1D, image_view_id)
+#define daxa_u64image1D(image_view_id) _DAXA_GET_U64IMAGE(1D, image_view_id)
+
+_DAXA_DECL_IMAGE_INT64(2D)
+#define daxa_i64image2D(image_view_id) _DAXA_GET_I64IMAGE(2D, image_view_id)
+#define daxa_u64image2D(image_view_id) _DAXA_GET_U64IMAGE(2D, image_view_id)
+
+_DAXA_DECL_IMAGE_INT64(3D)
+#define daxa_i64image3D(image_view_id) _DAXA_GET_I64IMAGE(3D, image_view_id)
+#define daxa_u64image3D(image_view_id) _DAXA_GET_U64IMAGE(3D, image_view_id)
+
+_DAXA_DECL_IMAGE_INT64(1DArray)
+#define daxa_i64image1DArray(image_view_id) _DAXA_GET_I64IMAGE(1DArray, image_view_id)
+#define daxa_u64image1DArray(image_view_id) _DAXA_GET_U64IMAGE(1DArray, image_view_id)
+
+_DAXA_DECL_IMAGE_INT64(2DArray)
+#define daxa_i64image2DArray(image_view_id) _DAXA_GET_I64IMAGE(2DArray, image_view_id)
+#define daxa_u64image2DArray(image_view_id) _DAXA_GET_U64IMAGE(2DArray, image_view_id)
+#endif // #if DAXA_IMAGE64
 
 DAXA_DECL_BUFFER_PTR(daxa_f32)
 // DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32

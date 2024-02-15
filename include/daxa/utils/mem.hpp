@@ -36,7 +36,7 @@ namespace daxa
             u64 timeline_index = {};
         };
         // Returns nullopt if the allocation fails.
-        DAXA_EXPORT_CXX auto allocate(u32 size, u32 alignment_requirement = 1) -> std::optional<Allocation>;
+        DAXA_EXPORT_CXX auto allocate(u32 size, u32 alignment_requirement = 16 /* 16 is a save default for most gpu data*/) -> std::optional<Allocation>;
         /// @brief  Allocates a section of a buffer with the size of T, writes the given T to the allocation.
         /// @return allocation. 
         template<typename T>
@@ -52,6 +52,9 @@ namespace daxa
         }
         // Returns current timeline index.
         DAXA_EXPORT_CXX auto timeline_value() const -> usize;
+        // Returns and then increments the current timeline index.
+        // This is useful to ensure that the timeline value used for submits is always increasing.
+        DAXA_EXPORT_CXX auto inc_timeline_value() -> usize;
         // Returns timeline semaphore that needs to be signaled with the latest timeline value,
         // on a queue that uses memory from this pool.
         DAXA_EXPORT_CXX auto timeline_semaphore() -> TimelineSemaphore const &;

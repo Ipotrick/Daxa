@@ -127,7 +127,6 @@ struct BaseApp : AppWindow<T>
 
     auto record_loop_task_graph() -> daxa::TaskGraph
     {
-        using namespace daxa::task_resource_uses;
         daxa::TaskGraph new_task_graph = daxa::TaskGraph({
             .device = device,
             .swapchain = swapchain,
@@ -136,16 +135,13 @@ struct BaseApp : AppWindow<T>
         });
         new_task_graph.use_persistent_image(task_swapchain_image);
 
-        using namespace daxa::task_resource_uses;
-        imgui_task_uses.push_back(ImageColorAttachment<>{task_swapchain_image});
         reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
         new_task_graph.add_task({
-            .uses = imgui_task_uses,
-            .task = [this](daxa::TaskInterface ti)
+            .attachments = { daxa::TaskImageAttachment{.access=daxa::TaskImageAccess::COLOR_ATTACHMENT, .view = task_swapchain_image} },
+            .task = [this](daxa::TaskInterface const & ti)
             {
-                auto& recorder = ti.get_recorder();
-                imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
+                imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.img(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
             .name = "ImGui Task",
         });

@@ -127,6 +127,8 @@ namespace daxa
         auto reload_all() -> PipelineReloadResult;
         auto all_pipelines_valid() const -> bool;
 
+        auto try_load_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash) -> Result<std::vector<u32>>;
+        void save_shader_cache(std::filesystem::path const &out_folder, uint64_t shader_info_hash, std::vector<u32> const &spirv);
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
 
