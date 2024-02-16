@@ -21,8 +21,8 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-glslang")
 endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-dxc")
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-slang")
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
@@ -160,15 +160,21 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
         glslang::HLSL
     )
 endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC=true
+        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG=true
     )
-    find_package(dxc CONFIG REQUIRED)
+    # NOTE(grundlett): Really hacky. We should have a find_package
+    find_path(SLANG_INCLUDE_PATH slang.h)
+    find_library(SLANG_LIBRARY slang)
+    target_include_directories(daxa
+        PRIVATE
+        ${SLANG_INCLUDE_PATH}
+    )
     target_link_libraries(daxa
         PRIVATE
-        dxc::dxc
+        ${SLANG_LIBRARY}
     )
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)

@@ -1,7 +1,7 @@
 #pragma once
 
-#if !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG && !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_PIPELINE_MANAGER_(GLSLANG|DXC) CMake option enabled, or request the utils-pipeline-manager-(glslang|dxc) feature in vcpkg"
+#if !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG && !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_PIPELINE_MANAGER_(GLSLANG|SLANG) CMake option enabled, or request the utils-pipeline-manager-(glslang|slang) feature in vcpkg"
 #endif
 
 #include <daxa/device.hpp>
@@ -30,7 +30,7 @@ namespace daxa
     enum struct ShaderLanguage
     {
         GLSL,
-        HLSL,
+        SLANG,
         MAX_ENUM = 0x7fffffff,
     };
 

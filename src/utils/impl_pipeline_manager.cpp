@@ -1,4 +1,4 @@
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG || DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG || DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
 #include "daxa/utils/pipeline_manager.hpp"
 
 #include "../impl_core.hpp"
@@ -295,87 +295,6 @@ namespace daxa
         }
     };
 #endif
-
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-    struct DxcCustomIncluder : public IDxcIncludeHandler
-    {
-        IDxcIncludeHandler * default_includer{};
-        ImplPipelineManager * impl_pipeline_manager{};
-
-        virtual ~DxcCustomIncluder() = default;
-        auto LoadSource(LPCWSTR filename, IDxcBlob ** include_source) -> HRESULT override
-        {
-            ComPtr<IDxcBlobEncoding> dxc_blob_encoding = {};
-            if (filename[0] == '.')
-            {
-                filename += 2;
-            }
-            auto header_name_str = std::filesystem::path{filename}.string();
-            if (impl_pipeline_manager->virtual_files.contains(header_name_str))
-            {
-                auto search_pred = [&](std::filesystem::path const & p)
-                { return p == header_name_str; };
-                if (std::find_if(impl_pipeline_manager->current_seen_shader_files.begin(),
-                                 impl_pipeline_manager->current_seen_shader_files.end(), search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
-                {
-                    // Return empty string blob if this file has been included before
-                    static char const * const null_str = " ";
-                    impl_pipeline_manager->dxc_backend.dxc_utils->CreateBlob(null_str, static_cast<u32>(strlen(null_str)), CP_UTF8, &dxc_blob_encoding);
-                    *include_source = dxc_blob_encoding.Detach();
-                    return S_OK;
-                }
-                else
-                {
-                    impl_pipeline_manager->current_observed_hotload_files->insert({header_name_str, std::chrono::file_clock::now()});
-                    auto & str = impl_pipeline_manager->virtual_files.at(header_name_str).contents;
-                    impl_pipeline_manager->dxc_backend.dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, &dxc_blob_encoding);
-                    *include_source = dxc_blob_encoding.Detach();
-                    return S_OK;
-                }
-            }
-            auto result = impl_pipeline_manager->full_path_to_file(filename);
-            if (result.is_err())
-            {
-                *include_source = nullptr;
-                return SCARD_E_FILE_NOT_FOUND;
-            }
-            auto full_path = result.value();
-            auto search_pred = [&](std::filesystem::path const & p)
-            { return p == full_path; };
-            if (std::find_if(impl_pipeline_manager->current_seen_shader_files.begin(),
-                             impl_pipeline_manager->current_seen_shader_files.end(), search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
-            {
-                // Return empty string blob if this file has been included before
-                static char const * const null_str = " ";
-                impl_pipeline_manager->dxc_backend.dxc_utils->CreateBlob(null_str, static_cast<u32>(strlen(null_str)), CP_UTF8, &dxc_blob_encoding);
-                *include_source = dxc_blob_encoding.Detach();
-                return S_OK;
-            }
-            else
-            {
-                impl_pipeline_manager->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
-            }
-            auto str_result = impl_pipeline_manager->load_shader_source_from_file(full_path);
-            if (str_result.is_err())
-            {
-                *include_source = nullptr;
-                return SCARD_E_INVALID_PARAMETER;
-            }
-            std::string const str = str_result.value().string;
-            impl_pipeline_manager->dxc_backend.dxc_utils->CreateBlob(str.c_str(), static_cast<u32>(str.size()), CP_UTF8, &dxc_blob_encoding);
-            *include_source = dxc_blob_encoding.Detach();
-            return S_OK;
-        }
-
-        auto QueryInterface(REFIID riid, void ** object) -> HRESULT override
-        {
-            return default_includer->QueryInterface(riid, object);
-        }
-
-        auto STDMETHODCALLTYPE AddRef() -> unsigned long override { return 0; }
-        auto STDMETHODCALLTYPE Release() -> unsigned long override { return 0; }
-    };
-#endif
 } // namespace daxa
 
 namespace
@@ -524,16 +443,9 @@ namespace daxa
         }
 #endif
 
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
         {
-            [[maybe_unused]] HRESULT const dxc_utils_result = DxcCreateInstance(CLSID_DxcUtils, IID_PPV_ARGS(&this->dxc_backend.dxc_utils));
-            DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_utils_result), "Failed to create DXC utils");
-            [[maybe_unused]] HRESULT const dxc_compiler_result = DxcCreateInstance(CLSID_DxcCompiler, IID_PPV_ARGS(&this->dxc_backend.dxc_compiler));
-            DAXA_DBG_ASSERT_TRUE_M(SUCCEEDED(dxc_compiler_result), "Failed to create DXC compiler");
-
-            this->dxc_backend.dxc_includer = std::make_shared<DxcCustomIncluder>();
-            dynamic_cast<DxcCustomIncluder &>(*this->dxc_backend.dxc_includer).impl_pipeline_manager = this;
-            this->dxc_backend.dxc_utils->CreateDefaultIncludeHandler(&dynamic_cast<DxcCustomIncluder &>(*this->dxc_backend.dxc_includer).default_includer);
+            RETURN_ON_FAIL(slang::createGlobalSession(slang_backend.global_session.writeRef()));
         }
 #endif
     }
@@ -1332,8 +1244,8 @@ namespace daxa
                 ret = get_spirv_glslang(shader_info, debug_name_opt, shader_stage, code);
                 break;
 #endif
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-            case ShaderLanguage::HLSL:
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+            case ShaderLanguage::SLANG:
                 ret = get_spirv_dxc(shader_info, shader_stage, code);
                 break;
 #endif
@@ -1655,162 +1567,9 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineManager::get_spirv_dxc([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_slang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-        auto u8_ascii_to_wstring = [](char const * str) -> std::wstring
-        {
-            std::wstring ret = {};
-            for (usize i = 0; (i < std::strlen(str) + 1) && str != nullptr; i++)
-            {
-                ret.push_back(static_cast<wchar_t>(str[i]));
-            }
-            return ret;
-        };
-
-        std::vector<wchar_t const *> args = {};
-
-        std::vector<std::wstring> wstring_buffer = {};
-
-        wstring_buffer.reserve(shader_info.compile_options.defines.size() + 1 + shader_info.compile_options.root_paths.size());
-
-        for (auto const & define : shader_info.compile_options.defines)
-        {
-            auto define_str = define.name;
-            if (define.value.length() > 0)
-            {
-                define_str += "=";
-                define_str += define.value;
-            }
-            wstring_buffer.push_back(u8_ascii_to_wstring(define_str.c_str()));
-            args.push_back(L"-D");
-            args.push_back(wstring_buffer.back().c_str());
-        }
-        args.push_back(L"-DDAXA_SHADER_STAGE_COMPUTE=0");
-        args.push_back(L"-DDAXA_SHADER_STAGE_VERTEX=1");
-        args.push_back(L"-DDAXA_SHADER_STAGE_TESS_CONTROL=2");
-        args.push_back(L"-DDAXA_SHADER_STAGE_TESS_EVAL=3");
-        args.push_back(L"-DDAXA_SHADER_STAGE_FRAGMENT=4");
-        args.push_back(L"-DDAXA_SHADER_STAGE_TASK=5");
-        args.push_back(L"-DDAXA_SHADER_STAGE_MESH=6");
-        args.push_back(L"-DDAXA_SHADER_STAGE_RAYGEN=7");
-        args.push_back(L"-DDAXA_SHADER_STAGE_ANY_HIT=8");
-        args.push_back(L"-DDAXA_SHADER_STAGE_CLOSEST_HIT=9");
-        args.push_back(L"-DDAXA_SHADER_STAGE_MISS=10");
-        args.push_back(L"-DDAXA_SHADER_STAGE_INTERSECTION=11");
-        args.push_back(L"-DDAXA_SHADER_STAGE_CALLABLE=12");
-
-        switch (shader_stage)
-        {
-        case ShaderStage::COMP: args.push_back(L"-DDAXA_SHADER_STAGE=0"); break;
-        case ShaderStage::VERT: args.push_back(L"-DDAXA_SHADER_STAGE=1"); break;
-        case ShaderStage::TESS_CONTROL: args.push_back(L"-DDAXA_SHADER_STAGE=2"); break;
-        case ShaderStage::TESS_EVAL: args.push_back(L"-DDAXA_SHADER_STAGE=3"); break;
-        case ShaderStage::FRAG: args.push_back(L"-DDAXA_SHADER_STAGE=4"); break;
-        case ShaderStage::TASK: args.push_back(L"-DDAXA_SHADER_STAGE=5"); break;
-        case ShaderStage::MESH: args.push_back(L"-DDAXA_SHADER_STAGE=6"); break;
-        case ShaderStage::RAY_GEN: args.push_back(L"-DDAXA_SHADER_STAGE=7"); break;
-        case ShaderStage::RAY_ANY_HIT: args.push_back(L"-DDAXA_SHADER_STAGE=8"); break;
-        case ShaderStage::RAY_CLOSEST_HIT: args.push_back(L"-DDAXA_SHADER_STAGE=9"); break;
-        case ShaderStage::RAY_MISS: args.push_back(L"-DDAXA_SHADER_STAGE=10"); break;
-        case ShaderStage::RAY_INTERSECT: args.push_back(L"-DDAXA_SHADER_STAGE=11"); break;
-        case ShaderStage::RAY_CALLABLE: args.push_back(L"-DDAXA_SHADER_STAGE=12"); break;
-        }
-
-        for (auto const & root : shader_info.compile_options.root_paths)
-        {
-            args.push_back(L"-I");
-            wstring_buffer.push_back(root.wstring());
-            args.push_back(wstring_buffer.back().c_str());
-        }
-
-        // set matrix packing to column major
-        args.push_back(L"-Zpc");
-        // set warnings as errors
-        args.push_back(DXC_ARG_WARNINGS_ARE_ERRORS); //-WX
-        // setting target
-        args.push_back(L"-spirv");
-        args.push_back(L"-fspv-target-env=vulkan1.1");
-        // setting entry point
-        args.push_back(L"-E");
-        auto entry_point_wstr = u8_ascii_to_wstring(shader_info.compile_options.entry_point.value_or("main").c_str());
-        args.push_back(entry_point_wstr.c_str());
-        args.push_back(L"-fvk-use-scalar-layout");
-        // args.push_back(L"-fvk-allow-rwstructuredbuffer-arrays");
-        // args.push_back(L"-fspv-flatten-resource-arrays");
-        if (shader_info.compile_options.enable_debug_info.value_or(false))
-        {
-            // insert debug info
-            args.push_back(L"-Zi");
-            args.push_back(L"-fspv-debug=line");
-        }
-
-        // set shader model explicitly to 6.6
-        args.push_back(L"-T");
-        std::wstring profile = L"vs_6_6";
-        switch (shader_stage)
-        {
-        case ShaderStage::COMP: profile[0] = L'c'; break;
-        case ShaderStage::VERT: profile[0] = L'v'; break;
-        case ShaderStage::TESS_CONTROL: profile[0] = L'h'; break;
-        case ShaderStage::TESS_EVAL: profile[0] = L'd'; break;
-        case ShaderStage::FRAG: profile[0] = L'p'; break;
-        case ShaderStage::TASK: profile[0] = L't'; break;
-        case ShaderStage::MESH: profile[0] = L'm'; break;
-        case ShaderStage::RAY_GEN: profile[0] = L'r'; break;
-        case ShaderStage::RAY_ANY_HIT: profile[0] = L'a'; break;
-        case ShaderStage::RAY_CLOSEST_HIT: profile[0] = L's'; break;
-        case ShaderStage::RAY_MISS: profile[0] = L'm'; break;
-        case ShaderStage::RAY_INTERSECT: profile[0] = L'i'; break;
-        case ShaderStage::RAY_CALLABLE: profile[0] = L'l'; break;
-        default: break;
-        }
-        args.push_back(profile.c_str());
-        // set hlsl version to 2021
-        args.push_back(L"-HV");
-        args.push_back(L"2021");
-        DxcBuffer const source_buffer{
-            .Ptr = code.string.c_str(),
-            .Size = static_cast<u32>(code.string.size()),
-            .Encoding = static_cast<u32>(0),
-        };
-
-        IDxcResult * result = nullptr;
-        dynamic_cast<DxcCustomIncluder &>(*this->dxc_backend.dxc_includer).impl_pipeline_manager = this;
-        this->dxc_backend.dxc_compiler->Compile(
-            &source_buffer, args.data(), static_cast<u32>(args.size()),
-            this->dxc_backend.dxc_includer.get(), IID_PPV_ARGS(&result));
-        IDxcBlobUtf8 * error_message = nullptr;
-        result->GetOutput(DXC_OUT_ERRORS, IID_PPV_ARGS(&error_message), nullptr);
-
-        if ((error_message != nullptr) && error_message->GetStringLength() > 0)
-        {
-            auto str = std::string();
-            str.resize(error_message->GetBufferSize());
-            for (usize i = 0; i < str.size(); i++)
-            {
-                str[i] = static_cast<char const *>(error_message->GetBufferPointer())[i];
-            }
-            str = std::string("DXC: ") + str;
-            return Result<std::vector<u32>>(str);
-        }
-
-        IDxcBlob * shader_obj = nullptr;
-        result->GetOutput(DXC_OUT_OBJECT, IID_PPV_ARGS(&shader_obj), nullptr);
-
-        std::vector<u32> spv;
-        spv.resize(shader_obj->GetBufferSize() / sizeof(u32));
-        auto * dxc_spv_ptr = static_cast<u32 *>(shader_obj->GetBufferPointer());
-        std::copy(dxc_spv_ptr, dxc_spv_ptr + spv.size(), spv.begin());
-
-        // DXC often generates bad or invalid SPIR-V. Some say that running spirv-tools' optimizer on the resulting SPIR-V will rectify this.
-        // On the contrary, the DXC docs suggest that this legalization step is done automatically via SPIR-V tools:
-        //   - https://github.com/microsoft/DirectXShaderCompiler/blob/main/docs/SPIR-V.rst#legalization-optimization-validation
-
-        return Result<std::vector<u32>>(spv);
-#else
         return Result<std::vector<u32>>("Asked for Dxc compilation without enabling Dxc");
-#endif
     }
 
     auto ImplPipelineManager::zero_ref_callback(ImplHandle const * handle)
