@@ -62,8 +62,8 @@ struct BaseApp : AppWindow<T>
             },
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
             .language = daxa::ShaderLanguage::GLSL,
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
-            .language = daxa::ShaderLanguage::HLSL,
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+            .language = daxa::ShaderLanguage::SLANG,
 #endif
             .enable_debug_info = true,
         },
@@ -85,7 +85,7 @@ struct BaseApp : AppWindow<T>
     f32 time = 0.0f, delta_time = 1.0f;
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
-    std::vector<daxa::GenericTaskResourceUse> imgui_task_uses{};
+    std::vector<daxa::TaskAttachmentInfo> imgui_task_attachments{};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -137,14 +137,16 @@ struct BaseApp : AppWindow<T>
 
         reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
-        new_task_graph.add_task({
-            .attachments = { daxa::TaskImageAttachment{.access=daxa::TaskImageAccess::COLOR_ATTACHMENT, .view = task_swapchain_image} },
+        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, task_swapchain_image));
+        auto imgui_task_info = daxa::InlineTaskInfo{
+            .attachments = std::move(imgui_task_attachments),
             .task = [this](daxa::TaskInterface const & ti)
             {
-                imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.img(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
+                imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.get(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
             .name = "ImGui Task",
-        });
+        };
+        new_task_graph.add_task(imgui_task_info);
 
         new_task_graph.submit({});
         new_task_graph.present({});

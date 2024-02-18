@@ -1,6 +1,6 @@
 #pragma once
 
-#include <daxa/daxa.inl>
+#include "daxa/daxa.inl"
 
 struct GpuInput
 {

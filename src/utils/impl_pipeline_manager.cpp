@@ -432,22 +432,19 @@ namespace daxa
             this->info.shader_compile_options.enable_debug_info = {false};
         }
 
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         {
             auto lock = std::lock_guard{glslang_init_mtx};
             if (pipeline_manager_count == 0)
             {
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
                 glslang::InitializeProcess();
+#endif
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+                auto ret = slang::createGlobalSession(slang_backend.global_session.writeRef());
+#endif
             }
             ++pipeline_manager_count;
         }
-#endif
-
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
-        {
-            RETURN_ON_FAIL(slang::createGlobalSession(slang_backend.global_session.writeRef()));
-        }
-#endif
     }
 
     ImplPipelineManager::~ImplPipelineManager()
@@ -1246,7 +1243,7 @@ namespace daxa
 #endif
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
             case ShaderLanguage::SLANG:
-                ret = get_spirv_dxc(shader_info, shader_stage, code);
+                ret = get_spirv_slang(shader_info, shader_stage, code);
                 break;
 #endif
             default: break;
@@ -1569,7 +1566,108 @@ namespace daxa
 
     auto ImplPipelineManager::get_spirv_slang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
-        return Result<std::vector<u32>>("Asked for Dxc compilation without enabling Dxc");
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+        auto session = Slang::ComPtr<slang::ISession>{};
+
+        {
+            // lock?
+            auto search_paths_strings = std::vector<std::string>{};
+            auto search_paths = std::vector<char const *>{};
+            search_paths_strings.reserve(shader_info.compile_options.root_paths.size());
+            search_paths.reserve(shader_info.compile_options.root_paths.size());
+            for (auto const & path : shader_info.compile_options.root_paths)
+            {
+                search_paths_strings.push_back(path.string());
+                search_paths.push_back(search_paths_strings.back().c_str());
+            }
+
+            auto macros = std::vector<slang::PreprocessorMacroDesc>{};
+            macros.reserve(shader_info.compile_options.defines.size());
+            for (auto const & [name, value] : shader_info.compile_options.defines)
+            {
+                macros.push_back({name.c_str(), value.c_str()});
+            }
+
+            auto target_desc = slang::TargetDesc{};
+            target_desc.format = SlangCompileTarget::SLANG_SPIRV;
+            target_desc.profile = slang_backend.global_session->findProfile("glsl460");
+            target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
+
+            // NOTE(grundlett): Does GLSL here refer to SPIR-V?
+            target_desc.forceGLSLScalarBufferLayout = true;
+
+            auto session_desc = slang::SessionDesc{};
+            session_desc.targets = &target_desc;
+            session_desc.targetCount = 1;
+            session_desc.searchPaths = search_paths.data();
+            session_desc.searchPathCount = search_paths.size();
+            session_desc.preprocessorMacros = macros.data();
+            session_desc.preprocessorMacroCount = macros.size();
+            session_desc.defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR;
+
+            slang_backend.global_session->createSession(session_desc, session.writeRef());
+        }
+
+        auto name = std::string{"test"};
+        auto error_message_prefix = std::string("SLANG [") + name + "] ";
+
+        auto diagnostics = Slang::ComPtr<slang::IBlob>{};
+        auto shader_module = session->loadModule("compute", diagnostics.writeRef());
+        if (diagnostics != nullptr)
+        {
+            return Result<std::vector<u32>>(error_message_prefix + (char const *)diagnostics->getBufferPointer());
+        }
+
+        auto entry_point = Slang::ComPtr<slang::IEntryPoint>{};
+        shader_module->findEntryPointByName(shader_info.compile_options.entry_point.value().c_str(), entry_point.writeRef());
+        if (entry_point == nullptr)
+        {
+            return Result<std::vector<u32>>(error_message_prefix + "Failed to find entry point '" + shader_info.compile_options.entry_point.value() + "' in module");
+        }
+
+        auto component_types = std::vector<slang::IComponentType *>{};
+        component_types.push_back(shader_module);
+        component_types.push_back(entry_point);
+
+        auto composed_program = Slang::ComPtr<slang::IComponentType>{};
+        {
+            auto result = session->createCompositeComponentType(
+                component_types.data(),
+                component_types.size(),
+                composed_program.writeRef(),
+                diagnostics.writeRef());
+            if (diagnostics != nullptr)
+            {
+                return Result<std::vector<u32>>(error_message_prefix + (char const *)diagnostics->getBufferPointer());
+            }
+            if (result != 0)
+            {
+                return Result<std::vector<u32>>(error_message_prefix + "Bad result in createCompositeComponentType");
+            }
+        }
+
+        auto spirv_code = Slang::ComPtr<slang::IBlob>{};
+        {
+            auto result = composed_program->getEntryPointCode(
+                0, 0, spirv_code.writeRef(), diagnostics.writeRef());
+            if (diagnostics != nullptr)
+            {
+                return Result<std::vector<u32>>(error_message_prefix + (char const *)diagnostics->getBufferPointer());
+            }
+            if (result != 0)
+            {
+                return Result<std::vector<u32>>(error_message_prefix + "Bad result in getEntryPointCode");
+            }
+        }
+
+        auto result_span = std::span<u32 const>{static_cast<u32 const *>(spirv_code->getBufferPointer()), spirv_code->getBufferSize() / sizeof(u32)};
+        auto result = std::vector<u32>{};
+        result.insert(result.begin(), result_span.begin(), result_span.end());
+
+        return Result<std::vector<u32>>(result);
+#else
+        return Result<std::vector<u32>>("Asked for Slang compilation without enabling Slang");
+#endif
     }
 
     auto ImplPipelineManager::zero_ref_callback(ImplHandle const * handle)
