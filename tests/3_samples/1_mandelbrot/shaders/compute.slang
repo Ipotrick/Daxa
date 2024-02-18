@@ -1,11 +1,15 @@
 #include "daxa/daxa.inl"
 #include "shared.inl"
-
 // #include "custom file!!"
 
-[[vk::binding(1, 0)]] RWTexture2D<float4> testTable[50000];
+[[vk::push_constant]] ComputePush p;
 
-[[vk::push_constant]] const ComputePush p;
+struct Test
+{
+    GpuInput* value;
+};
+
+[[vk::binding(DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, 0)]] StructuredBuffer<Test> test;
 
 #define CENTER float2(-0.694008, -0.324998)
 #define SUBSAMPLES 2
@@ -21,8 +25,8 @@ float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-    // GpuInput * gpu_input = p.test;//(GpuInput *)(daxa::buffer_addresses[p.input_buffer_id.index()]);
-    float time = 1;//gpu_input[0].time;//daxa_StructuredBuffer(GpuInput, p.input_buffer_id)[0].time;
+    GpuInput * gpu_input = test[p.input_buffer_id.index()].value;
+    float time = gpu_input[0].time;
     float scale = 12.0 / (exp(time) + 0.0001);
     float2 z = uv * scale * 2 + CENTER;
     float2 c = z;
@@ -69,6 +73,5 @@ void main(uint3 pixel_i : SV_DispatchThreadID)
         }
     }
     col *= 1.0 / float(SUBSAMPLES * SUBSAMPLES);
-    testTable[p.image_id.index()][pixel_i.xy] = float4(col, 1);
-    //daxa_RWTexture2D(float4, p.image_id)[pixel_i.xy] = float4(col, 1);
+    daxa_RWTexture2D(float4, p.image_id)[pixel_i.xy] = float4(col, 1);
 }

@@ -127,28 +127,22 @@ namespace daxa
 #define daxa_ImageViewId daxa::ImageViewId
 #define daxa_SamplerId daxa::SamplerId
 
-namespace daxa
-{
-    [[vk::binding(DAXA_SAMPLER_BINDING, 0)]] SamplerState SamplerStateTable[50000];
-    [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] ByteAddressBuffer ByteAddressBufferTable[50000];
-    [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] RWByteAddressBuffer RWByteAddressBufferTable[50000];
-} // namespace daxa
-#define daxa_SamplerState(SAMPLER_ID) daxa::SamplerStateTable[SAMPLER_ID.index()]
-#define daxa_ByteAddressBuffer(SAMPLER_ID) daxa::ByteAddressBufferTable[SAMPLER_ID.index()]
-#define daxa_RWByteAddressBuffer(SAMPLER_ID) daxa::RWByteAddressBufferTable[SAMPLER_ID.index()]
+[[vk::binding(DAXA_SAMPLER_BINDING, 0)]] SamplerState daxa_SamplerStateTable[];
+[[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] ByteAddressBuffer daxa_ByteAddressBufferTable[];
+[[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] RWByteAddressBuffer daxa_RWByteAddressBufferTable[];
+#define daxa_SamplerState(SAMPLER_ID) daxa_SamplerStateTable[SAMPLER_ID.index()]
+#define daxa_ByteAddressBuffer(SAMPLER_ID) daxa_ByteAddressBufferTable[SAMPLER_ID.index()]
+#define daxa_RWByteAddressBuffer(SAMPLER_ID) daxa_RWByteAddressBufferTable[SAMPLER_ID.index()]
 
 #define DAXA_DECL_BUFFER_PTR_ALIGN(Type, Align) DAXA_DECL_BUFFER_PTR(Type)
-#define DAXA_DECL_BUFFER_PTR(Type)                                                                              \
-    namespace daxa                                                                                              \
-    {                                                                                                           \
-        [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] StructuredBuffer<Type> StructuredBuffer##Type##Table[50000]; \
-    }
-#define daxa_StructuredBuffer(STRUCT_TYPE, BUFFER_ID) daxa::StructuredBuffer##STRUCT_TYPE##Table[BUFFER_ID.index()]
+#define DAXA_DECL_BUFFER_PTR(Type)                                                                                   \
+        [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] StructuredBuffer<Type> daxa_StructuredBuffer##Type##Table[];
+#define daxa_StructuredBuffer(STRUCT_TYPE, BUFFER_ID) daxa_StructuredBuffer##STRUCT_TYPE##Table[BUFFER_ID.index()]
 
 #define _DAXA_DECL_TEXTURE_RET(TYPE, RET_TYPE) \
-    [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] TYPE<RET_TYPE> TYPE##RET_TYPE##Table[50000];
+    [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] TYPE<RET_TYPE> daxa_##TYPE##RET_TYPE##Table[];
 #define _DAXA_DECL_RWTEXTURE_RET(TYPE, RET_TYPE) \
-    [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] RW##TYPE<RET_TYPE> RW##TYPE##RET_TYPE##Table[50000];
+    [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] RW##TYPE<RET_TYPE> daxa_##RW##TYPE##RET_TYPE##Table[];
 #define _DAXA_DECL_TEXTURE(TYPE)           \
     _DAXA_DECL_TEXTURE_RET(TYPE, float4)   \
     _DAXA_DECL_TEXTURE_RET(TYPE, uint4)    \
@@ -160,37 +154,34 @@ namespace daxa
     _DAXA_DECL_TEXTURE_RET(TYPE, float4) \
     _DAXA_DECL_TEXTURE_RET(TYPE, uint4)  \
     _DAXA_DECL_TEXTURE_RET(TYPE, int4)
+_DAXA_DECL_TEXTURE(Texture1D)
+_DAXA_DECL_TEXTURE(Texture1DArray)
+_DAXA_DECL_TEXTURE(Texture2D)
+_DAXA_DECL_TEXTURE(Texture2DArray)
+_DAXA_DECL_TEXTURE(Texture3D)
+_DAXA_DECL_TEXTURE_NO_RW(Texture2DMS)
+_DAXA_DECL_TEXTURE_NO_RW(TextureCube)
+_DAXA_DECL_TEXTURE_NO_RW(TextureCubeArray)
+
+#define daxa_RWTexture1D(RET_TYPE, IMAGE_VIEW_ID) daxa_RWTexture1D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_RWTexture1DArray(RET_TYPE, IMAGE_VIEW_ID) daxa_RWTexture1DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_RWTexture2D(RET_TYPE, IMAGE_VIEW_ID) daxa_RWTexture2D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_RWTexture2DArray(RET_TYPE, IMAGE_VIEW_ID) daxa_RWTexture2DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_RWTexture3D(RET_TYPE, IMAGE_VIEW_ID) daxa_RWTexture3D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_Texture1D(RET_TYPE, IMAGE_VIEW_ID) daxa_Texture1D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_Texture1DArray(RET_TYPE, IMAGE_VIEW_ID) daxa_Texture1DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_Texture2D(RET_TYPE, IMAGE_VIEW_ID) daxa_Texture2D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_Texture2DArray(RET_TYPE, IMAGE_VIEW_ID) daxa_Texture2DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_Texture3D(RET_TYPE, IMAGE_VIEW_ID) daxa_Texture3D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_Texture2DMS(RET_TYPE, IMAGE_VIEW_ID) daxa_Texture2DMS##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_TextureCube(RET_TYPE, IMAGE_VIEW_ID) daxa_TextureCube##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+#define daxa_TextureCubeArray(RET_TYPE, IMAGE_VIEW_ID) daxa_TextureCubeArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
+
+[[vk::binding(DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, 0)]] StructuredBuffer<daxa_u64> daxa_buffer_addresses;
 namespace daxa
 {
-    _DAXA_DECL_TEXTURE(Texture1D)
-    _DAXA_DECL_TEXTURE(Texture1DArray)
-    _DAXA_DECL_TEXTURE(Texture2D)
-    _DAXA_DECL_TEXTURE(Texture2DArray)
-    _DAXA_DECL_TEXTURE(Texture3D)
-    _DAXA_DECL_TEXTURE_NO_RW(Texture2DMS)
-    _DAXA_DECL_TEXTURE_NO_RW(TextureCube)
-    _DAXA_DECL_TEXTURE_NO_RW(TextureCubeArray)
-} // namespace daxa
-
-#define daxa_RWTexture1D(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture1D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture1DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture1DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture2D(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture2D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture2DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture2DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture3D(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture3D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture1D(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture1D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture1DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture1DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture2D(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture2DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture3D(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture3D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture2DMS(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2DMS##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_TextureCube(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCube##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_TextureCubeArray(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCubeArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-
-namespace daxa
-{
-    [[vk::binding(DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, 0)]] StructuredBuffer<daxa_u64> buffer_addresses;
     func id_to_address(daxa::BufferId buffer_id) -> daxa_u64
     {
-        return buffer_addresses[buffer_id.index()];
+        return daxa_buffer_addresses[buffer_id.index()];
     }
 }
