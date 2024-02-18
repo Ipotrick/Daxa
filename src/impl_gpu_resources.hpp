@@ -240,6 +240,7 @@ namespace daxa
 
     struct GPUShaderResourceTable
     {
+        std::mutex descriptor_set_lock = {};
         std::shared_mutex lifetime_lock = {};
         GpuResourcePool<ImplBufferSlot> buffer_slots = {};
         GpuResourcePool<ImplImageSlot> image_slots = {};
