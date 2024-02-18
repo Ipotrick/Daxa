@@ -29,7 +29,7 @@ namespace daxa
 
     struct BinarySemaphoreInfo
     {
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct DAXA_EXPORT_CXX BinarySemaphore final : ManagedPtr<BinarySemaphore, daxa_BinarySemaphore>
@@ -51,7 +51,7 @@ namespace daxa
     struct TimelineSemaphoreInfo
     {
         u64 initial_value = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct DAXA_EXPORT_CXX TimelineSemaphore final : ManagedPtr<TimelineSemaphore, daxa_TimelineSemaphore>
@@ -76,7 +76,7 @@ namespace daxa
 
     struct EventInfo
     {
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct DAXA_EXPORT_CXX Event final : ManagedPtr<Event, daxa_Event>

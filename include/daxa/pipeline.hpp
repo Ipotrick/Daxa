@@ -50,7 +50,7 @@ namespace daxa
         RayTracingShaderBindingTable shader_binding_table = {};
         u32 max_ray_recursion_depth;
         u32 push_constant_size = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     /**
@@ -81,7 +81,7 @@ namespace daxa
     {
         ShaderInfo shader_info = {};
         u32 push_constant_size = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     /**
@@ -166,7 +166,7 @@ namespace daxa
         Optional<TesselationInfo> tesselation = {};
         RasterizerInfo raster = {};
         u32 push_constant_size = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     /**

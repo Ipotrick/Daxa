@@ -20,7 +20,7 @@ namespace daxa
 
     struct CommandRecorderInfo
     {
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct ImageBlitInfo
@@ -219,7 +219,7 @@ namespace daxa
     struct CommandLabelInfo
     {
         std::array<f32, 4> label_color = {0.463f, 0.333f, 0.671f, 1.0f};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct SetUniformBufferInfo

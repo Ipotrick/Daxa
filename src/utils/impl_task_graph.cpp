@@ -759,14 +759,11 @@ namespace daxa
         {
             ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).value().slice;
             auto name_sw = impl.info.device.info_image(actual_images[index]).value().name;
-            std::string const & name = {name_sw.data(), name_sw.size()};
             [[maybe_unused]] bool const use_within_runtime_image_counts =
                 (access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count) &&
                 (access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count);
-            [[maybe_unused]] std::string const error_message =
-                fmt::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
-                            use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
-            DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
+            DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, fmt::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
+                                                                                use_index, task_name, to_string(access_slice), index, std::string{name_sw.data(), name_sw.size()}, to_string(full_slice)));
         }
     }
 
@@ -1105,7 +1102,7 @@ namespace daxa
         impl.update_active_permutations();
     }
 
-    template<typename TrackedState>
+    template <typename TrackedState>
     struct AccessRelation
     {
         bool is_previous_none = {};
@@ -1123,25 +1120,25 @@ namespace daxa
         bool are_both_concurrent_and_same_layout = {};
         AccessRelation(TrackedState latest, Access new_access, TaskAccessConcurrency new_concurrency, ImageLayout latest_layout = ImageLayout::UNDEFINED, ImageLayout new_layout = ImageLayout::UNDEFINED)
         {
-            if constexpr (requires{latest.latest_access;})
+            if constexpr (requires { latest.latest_access; })
             {
                 is_previous_none = latest.latest_access.type == AccessTypeFlagBits::NONE;
                 is_previous_read = latest.latest_access.type == AccessTypeFlagBits::READ;
-                is_previous_rw_concurrent = 
-                    latest.latest_access.type == AccessTypeFlagBits::READ_WRITE && 
+                is_previous_rw_concurrent =
+                    latest.latest_access.type == AccessTypeFlagBits::READ_WRITE &&
                     latest.latest_access_concurrent == TaskAccessConcurrency::CONCURRENT;
             }
-            if constexpr (requires{latest.state.latest_access;})
+            if constexpr (requires { latest.state.latest_access; })
             {
                 is_previous_none = latest.state.latest_access.type == AccessTypeFlagBits::NONE;
                 is_previous_read = latest.state.latest_access.type == AccessTypeFlagBits::READ;
-                is_previous_rw_concurrent = 
-                    latest.state.latest_access.type == AccessTypeFlagBits::READ_WRITE && 
+                is_previous_rw_concurrent =
+                    latest.state.latest_access.type == AccessTypeFlagBits::READ_WRITE &&
                     latest.latest_access_concurrent == TaskAccessConcurrency::CONCURRENT;
             }
             is_current_read = new_access.type == AccessTypeFlagBits::READ;
-            is_current_rw_concurrent = 
-                new_access.type == AccessTypeFlagBits::READ_WRITE && 
+            is_current_rw_concurrent =
+                new_access.type == AccessTypeFlagBits::READ_WRITE &&
                 new_concurrency == TaskAccessConcurrency::CONCURRENT;
             is_current_concurrent = is_current_read || is_current_read;
             are_both_read = is_previous_read && is_current_read;
@@ -1501,7 +1498,7 @@ namespace daxa
                 }
                 // When the last use was a read AND the new use of the buffer is a read AND,
                 // we need to add our stage flags to the existing barrier of the last use.
-                
+
                 AccessRelation<decltype(task_buffer)> relation{task_buffer, current_buffer_access, current_access_concurrency};
                 // We only need barriers between two non-concurrent accesses of a resource.
                 // If the previous access is none, the current access is the first access.
@@ -1509,8 +1506,8 @@ namespace daxa
                 // This is buffer specific. Images have a layout that needs to be set from undefined to the current accesses layout.
                 // When the latest access  is a read that did not require a barrier before we also do not need a barrier now.
                 // So skip, if the latest access is read and there is no latest_concurrent_access_barrer_index present.
-                bool const last_access_concurrent_and_external = 
-                    daxa::holds_alternative<Monostate>(task_buffer.latest_concurrent_access_barrer_index) && 
+                bool const last_access_concurrent_and_external =
+                    daxa::holds_alternative<Monostate>(task_buffer.latest_concurrent_access_barrer_index) &&
                     (relation.is_previous_read || relation.is_previous_rw_concurrent);
                 if (!relation.is_previous_none && !last_access_concurrent_and_external)
                 {
@@ -1724,9 +1721,9 @@ namespace daxa
                         // When the last use was a read AND the new use of the buffer is a read AND,
                         // we need to add our stage flags to the existing barrier of the last use.
                         // To be able to do this the layout of the image slice must also match.
-                        // If they differ we need to insert an execution barrier with a layout transition.                        
+                        // If they differ we need to insert an execution barrier with a layout transition.
                         AccessRelation<decltype(tracked_slice)> relation{tracked_slice, current_image_access, current_access_concurrency, tracked_slice.state.latest_layout, current_image_layout};
-                        // Read write concurrent and reads (implicitly concurrent) are reusing the already inserted barriers if there was a previous identical access. 
+                        // Read write concurrent and reads (implicitly concurrent) are reusing the already inserted barriers if there was a previous identical access.
                         if (relation.are_both_concurrent_and_same_layout)
                         {
                             // Reuse first barrier in coherent access sequence.
@@ -1804,7 +1801,7 @@ namespace daxa
                                 batch.wait_split_barrier_indices.push_back(split_barrier_index);
                                 if (relation.is_current_concurrent)
                                 {
-                                    // Need to remember the first concurrent access. 
+                                    // Need to remember the first concurrent access.
                                     // In case of multiple concurrent accesses following on each other, the first barrier in the sequence can be reused for all accesses.
                                     ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessSplitBarrierIndex{split_barrier_index};
                                 }

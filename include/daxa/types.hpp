@@ -296,6 +296,7 @@ namespace daxa
 
     struct SmallString final : public FixedList<char, DAXA_SMALL_STRING_CAPACITY>
     {
+        using FixedList::FixedList;
         constexpr SmallString(char const * c_str)
         {
             while (c_str != nullptr && *c_str != 0)
@@ -1791,7 +1792,7 @@ namespace daxa
     struct TimelineQueryPoolInfo
     {
         u32 query_count = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct DAXA_EXPORT_CXX TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>

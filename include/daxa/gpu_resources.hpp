@@ -84,7 +84,7 @@ namespace daxa
         usize size = {};
         // Ignored when allocating with a memory block.
         MemoryFlags allocate_info = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct DAXA_EXPORT_CXX ImageCreateFlagsProperties
@@ -113,7 +113,7 @@ namespace daxa
         ImageUsageFlags usage = {};
         // Ignored when allocating with a memory block.
         MemoryFlags allocate_info = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct ImageViewInfo
@@ -122,7 +122,7 @@ namespace daxa
         Format format = Format::R8G8B8A8_UNORM;
         ImageId image = {};
         ImageMipArraySlice slice = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct SamplerInfo
@@ -143,7 +143,7 @@ namespace daxa
         f32 max_lod = 1000.0f; // This value is the "VK_LOD_CLAMP_MODE_NONE" value
         BorderColor border_color = BorderColor::FLOAT_TRANSPARENT_BLACK;
         bool enable_unnormalized_coordinates = false;
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct GeometryFlagsProperties
@@ -224,12 +224,12 @@ namespace daxa
     struct TlasInfo
     {
         u64 size = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct BlasInfo
     {
         u64 size = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 } // namespace daxa

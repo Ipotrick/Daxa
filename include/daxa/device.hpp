@@ -253,7 +253,7 @@ namespace daxa
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 400;
         u32 max_allowed_acceleration_structures = 10'000;
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct CommandSubmitInfo
