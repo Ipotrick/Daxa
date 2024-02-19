@@ -149,7 +149,7 @@ namespace daxa
                 if (this->free_index_stack.empty())
                 {
                     index = this->next_index++;
-                    if (index == this->max_resources || index == MAX_RESOURCE_COUNT)
+                    if (index >= this->max_resources || index >= MAX_RESOURCE_COUNT)
                     {
                         return std::nullopt;
                     }
