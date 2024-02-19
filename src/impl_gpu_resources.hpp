@@ -123,13 +123,13 @@ namespace daxa
             auto const version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
             // Slots that reached max version CAN NOT be recycled.
             // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
+            // Clear slot MUST HAPPEN before pushing into free list.
+            this->pages[page]->at(offset).first = {};
             if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
             {
                 std::unique_lock l{mut};
                 this->free_index_stack.push_back(id.index);
             }
-            // Clear slot:
-            this->pages[page]->at(offset).first = {};
         }
 
         /**
@@ -149,7 +149,7 @@ namespace daxa
                 if (this->free_index_stack.empty())
                 {
                     index = this->next_index++;
-                    if (index == this->max_resources || index == MAX_RESOURCE_COUNT)
+                    if (index >= this->max_resources || index >= MAX_RESOURCE_COUNT)
                     {
                         return std::nullopt;
                     }

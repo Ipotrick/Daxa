@@ -166,6 +166,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
     }
+    DAXA_DBG_ASSERT_TRUE_M(ret.vk_buffer != VK_NULL_HANDLE, "internal error");
 
     {
         // Does not need external sync given we use update after bind.
