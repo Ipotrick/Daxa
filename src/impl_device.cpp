@@ -168,7 +168,8 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     }
 
     {
-        auto lock = std::unique_lock{self->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_buffer(
             self->vk_device,
             self->gpu_sro_table.vk_descriptor_set, ret.vk_buffer,
@@ -334,7 +335,8 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
     }
 
     {
-        auto lock = std::unique_lock{self->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(
             self->vk_device,
             self->gpu_sro_table.vk_descriptor_set,
@@ -448,7 +450,8 @@ auto create_acceleration_structure_helper(
     // TODO(Raytracing): improve handling.
     if (vk_as_type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
     {
-        auto lock = std::unique_lock{self->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_acceleration_structure(
             self->vk_device,
             self->gpu_sro_table.vk_descriptor_set,
@@ -728,7 +731,8 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     }
 
     {
-        auto lock = std::unique_lock{self->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(
             self->vk_device,
             self->gpu_sro_table.vk_descriptor_set,
@@ -807,7 +811,8 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     }
 
     {
-        auto lock = std::unique_lock{self->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_sampler(self->vk_device, self->gpu_sro_table.vk_descriptor_set, ret.vk_sampler, id.index);
     }
     *out_id = std::bit_cast<daxa_SamplerId>(id);
@@ -1929,7 +1934,8 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
     }
 
     {
-        auto lock = std::unique_lock{this->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
     }
 
@@ -1942,7 +1948,8 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     ImplBufferSlot const & buffer_slot = this->gpu_sro_table.buffer_slots.unsafe_get(gid);
     this->buffer_device_address_buffer_host_ptr[gid.index] = 0;
     {
-        auto lock = std::unique_lock{this->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_buffer(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
     }
     if (buffer_slot.opt_memory_block != nullptr)
@@ -1962,7 +1969,8 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
     auto gid = std::bit_cast<GPUResourceId>(id);
     ImplImageSlot const & image_slot = gpu_sro_table.image_slots.unsafe_get(gid);
     {
-        auto lock = std::unique_lock{this->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(
             this->vk_device,
             this->gpu_sro_table.vk_descriptor_set,
@@ -1990,7 +1998,8 @@ void daxa_ImplDevice::cleanup_image_view(ImageViewId id)
     DAXA_DBG_ASSERT_TRUE_M(gpu_sro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id)).vk_image == VK_NULL_HANDLE, "can not destroy default image view of image");
     ImplImageViewSlot const & image_slot = gpu_sro_table.image_slots.unsafe_get(std::bit_cast<GPUResourceId>(id)).view_slot;
     {
-        auto lock = std::unique_lock{this->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
     }
     vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
@@ -2001,7 +2010,8 @@ void daxa_ImplDevice::cleanup_sampler(SamplerId id)
 {
     ImplSamplerSlot const & sampler_slot = this->gpu_sro_table.sampler_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
     {
-        auto lock = std::unique_lock{this->gpu_sro_table.descriptor_set_lock};
+        // Does not need external sync given we use update after bind.
+        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_sampler(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_sampler, std::bit_cast<GPUResourceId>(id).index);
     }
     vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
