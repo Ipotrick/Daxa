@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_SLANG
+#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
 #define APPNAME "Daxa Sample: Mandelbrot"
 #include <0_common/base_app.hpp>
 
@@ -83,6 +83,7 @@ struct App : BaseApp<App>
     {
         ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
+        ImGui::ShowDemoWindow();
         ImGui::Begin("Settings");
 
         ImGui::Image(
