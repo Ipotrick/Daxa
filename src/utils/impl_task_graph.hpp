@@ -85,6 +85,7 @@ namespace daxa
         std::vector<ExtendedImageSliceState> first_slice_states = {};
         // only for transient images
         ResourceLifetime lifetime = {};
+        ImageCreateFlags create_flags = ImageCreateFlagBits::NONE;
         ImageUsageFlags usage = ImageUsageFlagBits::NONE;
         ImageId actual_image = {};
         usize allocation_offset = {};

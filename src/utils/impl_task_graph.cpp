@@ -138,6 +138,19 @@ namespace daxa
         }
     }
 
+    auto static constexpr view_type_to_create_flags(ImageViewType const & view_type) -> ImageCreateFlags
+    {
+        // NOTE: Do we need to handle other flags, such as compatible array?
+        if (view_type == ImageViewType::CUBE)
+        {
+            return ImageCreateFlagBits::COMPATIBLE_CUBE;
+        }
+        else
+        {
+            return ImageCreateFlagBits::NONE;
+        }
+    }
+
     auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>
     {
         switch (access)
@@ -759,11 +772,14 @@ namespace daxa
         {
             ImageMipArraySlice const full_slice = impl.info.device.info_image_view(actual_images[index].default_view()).value().slice;
             auto name_sw = impl.info.device.info_image(actual_images[index]).value().name;
+            std::string const & name = {name_sw.data(), name_sw.size()};
             [[maybe_unused]] bool const use_within_runtime_image_counts =
                 (access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count) &&
                 (access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count);
-            DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, fmt::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
-                                                                                use_index, task_name, to_string(access_slice), index, std::string{name_sw.data(), name_sw.size()}, to_string(full_slice)));
+            [[maybe_unused]] std::string const error_message =
+                fmt::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
+                            use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
+            DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
         }
     }
 
@@ -1632,6 +1648,7 @@ namespace daxa
                     }
                 }
                 task_image.usage |= access_to_usage(used_image_t_access);
+                task_image.create_flags |= view_type_to_create_flags(image_attach.view_type);
                 auto [current_image_layout, current_image_access, current_access_concurrency] = task_image_access_to_layout_access(used_image_t_access);
                 image_attach.layout = current_image_layout;
                 // Now this seems strange, why would be need multiple current use slices, as we only have one here.
@@ -1948,7 +1965,7 @@ namespace daxa
                 perm_image.actual_image = info.device.create_image_from_memory_block(
                     MemoryBlockImageInfo{
                         .image_info = ImageInfo{
-                            .flags = daxa::ImageCreateFlagBits::ALLOW_ALIAS,
+                            .flags = daxa::ImageCreateFlagBits::ALLOW_ALIAS | perm_image.create_flags,
                             .dimensions = transient_image_info.dimensions,
                             .format = transient_image_info.format,
                             .size = transient_image_info.size,
