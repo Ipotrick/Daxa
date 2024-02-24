@@ -5,7 +5,7 @@ namespace daxa
     void PhysicalDeviceFeatureTable::initialize(daxa_DeviceInfo info)
     {
         this->features = {
-            .robustBufferAccess = VK_FALSE,
+            .robustBufferAccess = (info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u ? VK_TRUE : VK_FALSE,
             .fullDrawIndexUint32 = VK_FALSE,
             .imageCubeArray = VK_TRUE,
             .independentBlend = VK_TRUE,
@@ -125,17 +125,37 @@ namespace daxa
             .scalarBlockLayout = VK_TRUE,
         };
         this->chain = r_cast<void *>(&this->scalar_layout);
-        auto vk_memory_model = VkPhysicalDeviceVulkanMemoryModelFeatures{};
+        if ((info.flags & DAXA_DEVICE_FLAG_SHADER_FLOAT16) != 0u || (info.flags & DAXA_DEVICE_FLAG_SHADER_INT8) != 0u)
+        {
+            this->shader_float16_int8 = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES,
+                .pNext = this->chain,
+                .shaderFloat16 = (info.flags & DAXA_DEVICE_FLAG_SHADER_FLOAT16) != 0u ? VK_TRUE : VK_FALSE,
+                .shaderInt8 = (info.flags & DAXA_DEVICE_FLAG_SHADER_INT8) != 0u ? VK_TRUE : VK_FALSE,
+            };
+            this->chain = r_cast<void *>(&this->shader_float16_int8);
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u || (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u)
+        {
+            this->robustness2 = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+                .pNext = this->chain,
+                .robustBufferAccess2 = (info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u ? VK_TRUE : VK_FALSE,
+                .robustImageAccess2 = (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u ? VK_TRUE : VK_FALSE,
+                .nullDescriptor = VK_FALSE,
+            };
+            this->chain = r_cast<void *>(&this->robustness2);
+        }
         if ((info.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL) != 0u)
         {
-            vk_memory_model = {
+            this->memory_model = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
                 .pNext = this->chain,
                 .vulkanMemoryModel = VK_TRUE,
                 .vulkanMemoryModelDeviceScope = VK_TRUE,
                 .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low general gpu support.
             };
-            this->chain = r_cast<void *>(&vk_memory_model);
+            this->chain = r_cast<void *>(&this->memory_model);
         }
         if ((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64) != 0u)
         {
@@ -248,6 +268,10 @@ namespace daxa
             // TODO: different flags for different raytracing features.
             this->data[size++] = {VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME};
             this->data[size++] = {VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME};
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u || (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u)
+        {
+            this->data[size++] = {VK_EXT_ROBUSTNESS_2_EXTENSION_NAME};
         }
     }
 } // namespace daxa

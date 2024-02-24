@@ -23,6 +23,8 @@ namespace daxa
         VkPhysicalDeviceSynchronization2Features sync2 = {};
         VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore = {};
         VkPhysicalDeviceScalarBlockLayoutFeatures scalar_layout = {};
+        std::optional<VkPhysicalDeviceShaderFloat16Int8Features> shader_float16_int8 = {};
+        std::optional<VkPhysicalDeviceRobustness2FeaturesEXT> robustness2 = {};
         std::optional<VkPhysicalDeviceVulkanMemoryModelFeatures> memory_model = {};
         std::optional<VkPhysicalDeviceShaderAtomicInt64Features> shader_atomic64 = {};
         std::optional<VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT> image_atomic64 = {};
