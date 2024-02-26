@@ -1681,7 +1681,7 @@ namespace daxa
             // }
             if (result != 0)
             {
-                return Result<std::vector<u32>>(error_message_prefix + "Bad result in getEntryPointCode");
+                return Result<std::vector<u32>>(error_message_prefix + (char const *)composite_program_diagnostics->getBufferPointer());
             }
         }
 
