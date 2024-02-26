@@ -1590,7 +1590,7 @@ namespace daxa
 
             auto target_desc = slang::TargetDesc{};
             target_desc.format = SlangCompileTarget::SLANG_SPIRV;
-            target_desc.profile = slang_backend.global_session->findProfile("glsl460");
+            target_desc.profile = slang_backend.global_session->findProfile("glsl_460");
             target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
             // NOTE(grundlett): Does GLSL here refer to SPIR-V?
@@ -1611,12 +1611,35 @@ namespace daxa
         auto name = std::string{"test"};
         auto error_message_prefix = std::string("SLANG [") + name + "] ";
 
-        auto diagnostics = Slang::ComPtr<slang::IBlob>{};
-        auto shader_module = session->loadModule("compute", diagnostics.writeRef());
-        if (diagnostics != nullptr)
+        auto const filename = "compute";
+
+        Slang::ComPtr<SlangCompileRequest> slangRequest = nullptr;
+        session->createCompileRequest(slangRequest.writeRef());
+        if (slangRequest == nullptr)
         {
-            return Result<std::vector<u32>>(error_message_prefix + (char const *)diagnostics->getBufferPointer());
+            return Result<std::vector<u32>>( std::string_view{"internal error: session->createCompileRequest(&slangRequest) returned nullptr"} );
         }
+        std::array<char const *, 3> cmd_args = {
+            // https://github.com/shader-slang/slang/issues/3532
+            // Disables warning for aliasing bindings.  
+            "-warnings-disable", "39001", 
+            "-O0",
+        };
+        slangRequest->processCommandLineArguments(cmd_args.data(), cmd_args.size());
+
+        int translationUnitIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, filename);
+        slangRequest->addTranslationUnitSourceString(translationUnitIndex, "main", code.string.c_str());
+
+        const SlangResult compileRes = slangRequest->compile();
+        auto diagnostics = slangRequest->getDiagnosticOutput();
+
+        if(SLANG_FAILED(compileRes))
+        {
+            return Result<std::vector<u32>>( error_message_prefix + diagnostics );
+        }
+
+        Slang::ComPtr<slang::IModule> shader_module = {};
+        slangRequest->getModule(translationUnitIndex, shader_module.writeRef());
 
         auto entry_point = Slang::ComPtr<slang::IEntryPoint>{};
         shader_module->findEntryPointByName(shader_info.compile_options.entry_point.value().c_str(), entry_point.writeRef());
@@ -1629,16 +1652,18 @@ namespace daxa
         component_types.push_back(shader_module);
         component_types.push_back(entry_point);
 
+        auto composite_program_diagnostics = Slang::ComPtr<slang::IBlob>{};
+
         auto composed_program = Slang::ComPtr<slang::IComponentType>{};
         {
             auto result = session->createCompositeComponentType(
                 component_types.data(),
                 component_types.size(),
                 composed_program.writeRef(),
-                diagnostics.writeRef());
-            if (diagnostics != nullptr)
+                composite_program_diagnostics.writeRef());
+            if (composite_program_diagnostics != nullptr)
             {
-                return Result<std::vector<u32>>(error_message_prefix + (char const *)diagnostics->getBufferPointer());
+                return Result<std::vector<u32>>(error_message_prefix + (char const *)composite_program_diagnostics->getBufferPointer());
             }
             if (result != 0)
             {
@@ -1649,11 +1674,11 @@ namespace daxa
         auto spirv_code = Slang::ComPtr<slang::IBlob>{};
         {
             auto result = composed_program->getEntryPointCode(
-                0, 0, spirv_code.writeRef(), diagnostics.writeRef());
-            if (diagnostics != nullptr)
-            {
-                return Result<std::vector<u32>>(error_message_prefix + (char const *)diagnostics->getBufferPointer());
-            }
+                0, 0, spirv_code.writeRef(), composite_program_diagnostics.writeRef());
+            // if (composite_program_diagnostics != nullptr)
+            // {
+            //     return Result<std::vector<u32>>(error_message_prefix + (char const *)composite_program_diagnostics->getBufferPointer());
+            // }
             if (result != 0)
             {
                 return Result<std::vector<u32>>(error_message_prefix + "Bad result in getEntryPointCode");

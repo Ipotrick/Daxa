@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_SLANG
 #define APPNAME "Daxa Sample: Mandelbrot"
 #include <0_common/base_app.hpp>
 
@@ -200,8 +200,8 @@ struct App : BaseApp<App>
                 ti.recorder.set_pipeline(*compute_pipeline);
                 ti.recorder.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
-                    // .test = reinterpret_cast<GpuInput*>(device.get_device_address(gpu_input_buffer).value()),
                     .input_buffer_id = gpu_input_buffer,
+                    .ptr = reinterpret_cast<GpuInput*>(device.get_device_address(gpu_input_buffer).value()),
                     .frame_dim = {size_x, size_y},
                 });
                 ti.recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});

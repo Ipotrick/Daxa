@@ -2,6 +2,7 @@
 #include "shared.inl"
 // #include "custom file!!"
 
+#if 1
 [[vk::push_constant]] ComputePush p;
 
 struct Test
@@ -25,7 +26,7 @@ float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-    GpuInput * gpu_input = test[p.input_buffer_id.index()].value;
+    GpuInput * gpu_input = p.ptr;
     float time = gpu_input[0].time;
     float scale = 12.0 / (exp(time) + 0.0001);
     float2 z = uv * scale * 2 + CENTER;
@@ -75,59 +76,62 @@ void main(uint3 pixel_i : SV_DispatchThreadID)
     col *= 1.0 / float(SUBSAMPLES * SUBSAMPLES);
     daxa_RWTexture2D(float4, p.image_id)[pixel_i.xy] = float4(col, 1);
 }
+#endif
 
-// struct TestStruct
-// {
-//     uint index;
-// };
-// 
-// [[vk::binding(2, 0)]] StructuredBuffer<uint64_t> test;
-// 
-// struct PP
-// {
-//     int data;
-//     int data2;
-// }
-// struct Data
-// {
-//     int data;
-//     PP* pNext;
-// };
-// 
-// void funcThatTakesPointer(PP* p)
-// {
-//     p.data = 2;
-// }
-// int* funcThatReturnsPointer(PP* p)
-// {
-//     return &p.data;
-// }
-// 
-// // CHECK: OpEntryPoint
-// 
-// [[vk::binding(0, 0)]] StructuredBuffer<Data> buffer;
-// [[vk::binding(1, 0)]] RWStructuredBuffer<int> output;
-// [shader("compute")]
-// [numthreads(8, 8, 1)]
-// void main(int id : SV_DispatchThreadID)
-// {
-//     TestStruct * ptr = (TestStruct *)(test[0]);
-//     output[0] = buffer[ptr.index].pNext.data;
-//     let pData = &(buffer[0].pNext.data);
-//     // CHECK: OpPtrAccessChain
-//     int* pData1 = pData + 1;
-//     *pData1 = 3;
-//     *(int2*)pData = int2(1, 2);
-//     pData1[-1] = 2;
-//     buffer[0].pNext[1] = {5};
-//     // CHECK: OpConvertPtrToU
-//     // CHECK: OpINotEqual
-//     if (pData1)
-//     {
-//         *(funcThatReturnsPointer(buffer[0].pNext)) = 4;
-//     }
-//     if (pData1 > pData)
-//     {
-//         funcThatTakesPointer(buffer[0].pNext);
-//     }
-// }
+#if 0
+struct TestStruct
+{
+    uint index;
+};
+
+[[vk::binding(2, 0)]] StructuredBuffer<uint64_t> test;
+
+struct PP
+{
+    int data;
+    int data2;
+}
+struct Data
+{
+    int data;
+    PP* pNext;
+};
+
+void funcThatTakesPointer(PP* p)
+{
+    p.data = 2;
+}
+int* funcThatReturnsPointer(PP* p)
+{
+    return &p.data;
+}
+
+// CHECK: OpEntryPoint
+
+[[vk::binding(0, 0)]] StructuredBuffer<Data> buffer;
+[[vk::binding(1, 0)]] RWStructuredBuffer<int> output;
+[shader("compute")]
+[numthreads(8, 8, 1)]
+void main(int id : SV_DispatchThreadID)
+{
+    TestStruct * ptr = (TestStruct *)(test[0]);
+    output[0] = buffer[ptr.index].pNext.data;
+    let pData = &(buffer[0].pNext.data);
+    // CHECK: OpPtrAccessChain
+    int* pData1 = pData + 1;
+    *pData1 = 3;
+    *(int2*)pData = int2(1, 2);
+    pData1[-1] = 2;
+    buffer[0].pNext[1] = {5};
+    // CHECK: OpConvertPtrToU
+    // CHECK: OpINotEqual
+    if (pData1)
+    {
+        *(funcThatReturnsPointer(buffer[0].pNext)) = 4;
+    }
+    if (pData1 > pData)
+    {
+        funcThatTakesPointer(buffer[0].pNext);
+    }
+}
+#endif
