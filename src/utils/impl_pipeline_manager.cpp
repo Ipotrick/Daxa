@@ -1407,7 +1407,7 @@ namespace daxa
     {
         if (std::filesystem::exists(path))
         {
-            return Result<std::filesystem::path>(path);
+            return Result<std::filesystem::path>(std::filesystem::canonical(path));
         }
         std::filesystem::path potential_path;
         if (this->current_shader_info != nullptr)
@@ -1418,7 +1418,7 @@ namespace daxa
                 potential_path = root / path;
                 if (std::filesystem::exists(potential_path))
                 {
-                    return Result<std::filesystem::path>(potential_path);
+                    return Result<std::filesystem::path>(std::filesystem::canonical(potential_path));
                 }
             }
         }
@@ -1430,7 +1430,7 @@ namespace daxa
                 potential_path = root / path;
                 if (std::filesystem::exists(potential_path))
                 {
-                    return Result<std::filesystem::path>(potential_path);
+                    return Result<std::filesystem::path>(std::filesystem::canonical(potential_path));
                 }
             }
         }
@@ -1470,9 +1470,9 @@ namespace daxa
             }
             if (this->info.custom_preprocessor)
             {
-                this->info.custom_preprocessor(str, path);
+                this->info.custom_preprocessor(str, result_path.value());
             }
-            shader_preprocess(str, path);
+            shader_preprocess(str, result_path.value());
             return Result(ShaderCode{.string = str});
         }
         std::string err = "timeout while trying to read file: \"";
