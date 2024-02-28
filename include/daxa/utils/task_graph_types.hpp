@@ -527,7 +527,7 @@ namespace daxa
         static constexpr inline usize ATTACH_COUNT = ATTACHMENT_COUNT;
         static inline u8 _offset = 0;
         static inline std::array<TaskAttachment, ATTACHMENT_COUNT> _raw = {};
-        using AttachmentViews = AttachmentViews<ATTACHMENT_COUNT>;
+        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;
     };
 
     /*

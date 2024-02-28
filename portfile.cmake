@@ -13,7 +13,7 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     utils-pipeline-manager-spirv-validation WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
     utils-task-graph WITH_UTILS_TASK_GRAPH
 )
-set(DAXA_DEFINES)
+set(DAXA_DEFINES "-DDAXA_INSTALL=true")
 
 if(WITH_UTILS_IMGUI)
     list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_IMGUI=true")
@@ -33,7 +33,6 @@ endif()
 if(WITH_UTILS_TASK_GRAPH)
     list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_TASK_GRAPH=true")
 endif()
-
 
 vcpkg_configure_cmake(
     SOURCE_PATH "${SOURCE_PATH}"

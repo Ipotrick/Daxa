@@ -138,6 +138,21 @@ install(EXPORT fsr2-targets DESTINATION ${CMAKE_INSTALL_DATADIR}/fsr2 NAMESPACE 
 install(DIRECTORY ${PROJECT_SOURCE_DIR} TYPE INCLUDE FILES_MATCHING PATTERN "*.h")
 ]==])
 
+if(VCPKG_TARGET_IS_LINUX)
+    file(READ "${SOURCE_PATH}/src/ffx-fsr2-api/ffx_util.h" ffx_util)
+    string(APPEND ffx_util [=[
+#include <wchar.h>
+#include <locale>
+#define _countof(x) (sizeof(x) / sizeof(x[0]))
+#define wcscpy_s wcscpy
+]=])
+    file(WRITE "${SOURCE_PATH}/src/ffx-fsr2-api/ffx_util.h" "${ffx_util}")
+
+    file(READ "${SOURCE_PATH}/src/ffx-fsr2-api/ffx_types.h" ffx_types)
+    string(REGEX REPLACE "pragma once" "pragma once\n#include <stddef.h>" ffx_types "${ffx_types}")
+    string(REGEX REPLACE "__declspec.dllexport." " " ffx_types "${ffx_types}")
+    file(WRITE "${SOURCE_PATH}/src/ffx-fsr2-api/ffx_types.h" "${ffx_types}")
+endif()
 
 file(WRITE "${SOURCE_PATH}/src/ffx-fsr2-api/vk/CMakeLists.txt" [==[
 if(NOT ${FFX_FSR2_API_VK})
@@ -179,6 +194,12 @@ target_link_libraries(ffx_fsr2_api_vk PUBLIC Vulkan::Vulkan)
 target_include_directories(ffx_fsr2_api_vk PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/../shaders/vk>)
 target_include_directories(ffx_fsr2_api_vk PUBLIC ${Vulkan_INCLUDE_DIR})
 
+if (UNIX)
+file(DOWNLOAD "https://github.com/GabeRundlett/fsr2-precompiled-shaders/archive/refs/tags/0.2.0.zip" "${CMAKE_CURRENT_BINARY_DIR}/shaders.zip")
+file(ARCHIVE_EXTRACT INPUT "${CMAKE_CURRENT_BINARY_DIR}/shaders.zip" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/..")
+file(COPY "${CMAKE_CURRENT_BINARY_DIR}/../fsr2-precompiled-shaders-0.2.0/shaders" DESTINATION "${CMAKE_CURRENT_BINARY_DIR}/..")
+file(REMOVE_RECURSE "${CMAKE_CURRENT_BINARY_DIR}/../fsr2-precompiled-shaders-0.2.0")
+else()
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/../shaders/vk)
 
 if (FSR2_AUTO_COMPILE_SHADERS)
@@ -230,6 +251,7 @@ add_dependencies(${FFX_SC_DEPENDENT_TARGET} shader_permutations_vk)
 
 source_group("source"  FILES ${VK})
 source_group("shaders" FILES ${SHADERS})
+endif()
 ]==])
 
 if(WITH_DX12)
