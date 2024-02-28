@@ -165,16 +165,12 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
         PUBLIC
         DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG=true
     )
-    # NOTE(grundlett): Really hacky. We should have a find_package
-    find_path(SLANG_INCLUDE_PATH slang.h)
-    find_library(SLANG_LIBRARY slang)
-    target_include_directories(daxa
-        PRIVATE
-        ${SLANG_INCLUDE_PATH}
-    )
-    target_link_libraries(daxa
-        PRIVATE
-        ${SLANG_LIBRARY}
+    find_package(shader-slang CONFIG REQUIRED)
+    target_link_libraries(daxa PRIVATE slang::slang)
+    # NOTE(grundlett): Really hacky. It appears there's no way to create plugin dll dependencies...
+    # see https://gitlab.kitware.com/cmake/cmake/-/issues/22993
+    add_custom_command(TARGET daxa POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:slang::glslang> $<TARGET_FILE_DIR:daxa>
     )
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
