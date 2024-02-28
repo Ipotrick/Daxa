@@ -10,8 +10,6 @@ struct Test
     GpuInput* value;
 };
 
-[[vk::binding(DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, 0)]] StructuredBuffer<Test> test;
-
 #define CENTER float2(-0.694008, -0.324998)
 #define SUBSAMPLES 2
 
@@ -22,12 +20,17 @@ float3 hsv2rgb(float3 c)
     return c.z * lerp(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
 }
 
+float test(float * v)
+{
+    return *v;
+}
+
 float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-    GpuInput * gpu_input = p.ptr;
-    float time = gpu_input[0].time;
+    GpuInput * gpu_input = (GpuInput *)daxa::id_to_address(p.input_buffer_id);
+    float time = test(&gpu_input[0].time);
     float scale = 12.0 / (exp(time) + 0.0001);
     float2 z = uv * scale * 2 + CENTER;
     float2 c = z;
@@ -55,11 +58,9 @@ float3 mandelbrot_colored(float2 pixel_p)
     return col;
 }
 
-// clang-format off
 [shader("compute")]
 [numthreads(8, 8, 1)]
 void main(uint3 pixel_i : SV_DispatchThreadID)
-// clang-format on
 {
     if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
         return;
@@ -114,7 +115,7 @@ int* funcThatReturnsPointer(PP* p)
 [numthreads(8, 8, 1)]
 void main(int id : SV_DispatchThreadID)
 {
-    TestStruct * ptr = (TestStruct *)(test[0]);
+    const TestStruct * ptr = (const TestStruct *)(test[0]);
     output[0] = buffer[ptr.index].pNext.data;
     let pData = &(buffer[0].pNext.data);
     // CHECK: OpPtrAccessChain

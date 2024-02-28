@@ -758,6 +758,81 @@ namespace tests
         device.collect_garbage();
     }
 
+    void read_on_readwriteconcurrent()
+    {
+        // TEST:
+        //  1) read write concurrent buffer
+        //  2) read write concurrent buffer
+        //  3) read buffer
+        // EXPECTED:
+        // batch 0 : read write concurrent (1) (2)
+        // batch 2 : read buffer (3)
+        daxa::Instance daxa_ctx = daxa::create_instance({});
+        daxa::Device device = daxa_ctx.create_device({
+            .name = "device",
+        });
+
+        auto buffer = device.create_buffer({
+            .size = 1,
+            .name = "actual_buffer",
+        });
+
+        auto tbuffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+            .initial_buffers = {.buffers = {&buffer, 1}},
+            .name = "buffer",
+        });
+
+        auto task_graph = daxa::TaskGraph({
+            .device = device,
+            .record_debug_information = true,
+            .name = "task graph",
+        });
+
+        task_graph.use_persistent_buffer(tbuffer);
+
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, tbuffer),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "write 0",
+        });
+
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE_CONCURRENT, tbuffer),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "read write concurrent 1",
+        });
+
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE_CONCURRENT, tbuffer),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "read write concurrent 2",
+        });
+
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, tbuffer),
+            },
+            .task = [&](daxa::TaskInterface const &) {},
+            .name = "read",
+        });
+        task_graph.submit({});
+        task_graph.complete({});
+
+
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
+
+        device.wait_idle();
+        device.destroy_buffer(buffer);
+        device.collect_garbage();
+    }
+    
     void concurrent_read_on_read()
     {
         // TEST:
@@ -857,7 +932,8 @@ namespace tests
 
 auto main() -> i32
 {
-    tests::concurrent_read_on_read();
+    // tests::concurrent_read_on_read();
+    tests::read_on_readwriteconcurrent();
     // tests::simplest();
     // tests::execution();
     // tests::write_read_image();

@@ -1143,7 +1143,7 @@ namespace daxa
             is_current_rw_concurrent = 
                 new_access.type == AccessTypeFlagBits::READ_WRITE && 
                 new_concurrency == TaskAccessConcurrency::CONCURRENT;
-            is_current_concurrent = is_current_read || is_current_read;
+            is_current_concurrent = is_current_read || is_current_rw_concurrent;
             are_both_read = is_previous_read && is_current_read;
             are_both_rw_concurrent = is_previous_rw_concurrent && is_current_rw_concurrent;
             are_layouts_identical = latest_layout == new_layout;
@@ -1558,10 +1558,6 @@ namespace daxa
                                 // In an uninterrupted sequence of concurrent accesses we need to remember the fist concurrent access and the barrier.
                                 task_buffer.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
                             }
-                            else
-                            {
-                                task_buffer.latest_concurrent_access_barrer_index = {};
-                            }
                         }
                         else
                         {
@@ -1582,14 +1578,10 @@ namespace daxa
                             src_batch.signal_split_barrier_indices.push_back(split_barrier_index);
                             // And we also insert the split barrier index into the waits of the current tasks batch.
                             batch.wait_split_barrier_indices.push_back(split_barrier_index);
-                            if (relation.are_both_concurrent)
+                            if (relation.is_current_concurrent)
                             {
                                 // In an uninterrupted sequence of concurrent accesses we need to remember the fist concurrent access and the barrier.
                                 task_buffer.latest_concurrent_access_barrer_index = LastConcurrentAccessSplitBarrierIndex{split_barrier_index};
-                            }
-                            else
-                            {
-                                task_buffer.latest_concurrent_access_barrer_index = {};
                             }
                         }
                     }
@@ -1775,10 +1767,6 @@ namespace daxa
                                     // So that potential future reads after this can reuse this barrier.
                                     ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
                                 }
-                                else
-                                {
-                                    ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = Monostate{};
-                                }
                             }
                             else
                             {
@@ -1807,10 +1795,6 @@ namespace daxa
                                     // Need to remember the first concurrent access. 
                                     // In case of multiple concurrent accesses following on each other, the first barrier in the sequence can be reused for all accesses.
                                     ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessSplitBarrierIndex{split_barrier_index};
-                                }
-                                else
-                                {
-                                    ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = Monostate{};
                                 }
                             }
                         }
