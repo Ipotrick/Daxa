@@ -21,8 +21,8 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-glslang")
 endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-dxc")
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-slang")
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
@@ -157,18 +157,19 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
         PRIVATE
         glslang::glslang
         glslang::SPIRV
-        glslang::HLSL
     )
 endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC=true
+        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG=true
     )
-    find_package(dxc CONFIG REQUIRED)
-    target_link_libraries(daxa
-        PRIVATE
-        dxc::dxc
+    find_package(shader-slang CONFIG REQUIRED)
+    target_link_libraries(daxa PRIVATE slang::slang)
+    # NOTE(grundlett): Really hacky. It appears there's no way to create plugin dll dependencies...
+    # see https://gitlab.kitware.com/cmake/cmake/-/issues/22993
+    add_custom_command(TARGET daxa POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:slang::glslang> $<TARGET_FILE_DIR:daxa>
     )
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)

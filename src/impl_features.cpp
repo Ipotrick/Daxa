@@ -62,6 +62,13 @@ namespace daxa
             .inheritedQueries = VK_FALSE,
         };
         this->chain = nullptr;
+        this->variable_pointers = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES,
+            .pNext = chain,
+            .variablePointersStorageBuffer = VK_TRUE, // SLANG WANTS THIS
+            .variablePointers = VK_TRUE, // SLANG WANTS THIS
+        };
+        this->chain = r_cast<void *>(&this->variable_pointers);
         this->buffer_device_address = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = chain,
