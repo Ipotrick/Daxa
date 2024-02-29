@@ -1,6 +1,6 @@
 #include "daxa/daxa.inl"
 #include "shared.inl"
-// #include "custom file!!"
+import "custom file!!";
 
 #if 1
 [[vk::push_constant]] ComputePush p;
@@ -51,9 +51,9 @@ float3 mandelbrot_colored(float2 pixel_p)
         float sl = l - log2(log2(dot(z, z))) + 4.0;
         sl = pow(sl * 0.01, 1.0);
         col = hsv2rgb(float3(sl, 1, 1));
-#if defined(MY_TOGGLE)
-        col = 1 - col;
-#endif
+        if (MY_TOGGLE) {
+            col = 1 - col;
+        }
     }
     return col;
 }

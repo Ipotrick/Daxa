@@ -14,20 +14,28 @@ struct App : BaseApp<App>
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 1
                 )",
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+                .contents = R"(static const bool MY_TOGGLE = true;)",
+#endif
             });
         }
         else
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 0
                 )",
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+                .contents = R"(static const bool MY_TOGGLE = false;)",
+#endif
             });
         }
     }
@@ -201,7 +209,7 @@ struct App : BaseApp<App>
                 ti.recorder.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
-                    .ptr = reinterpret_cast<GpuInput*>(device.get_device_address(gpu_input_buffer).value()),
+                    .ptr = reinterpret_cast<GpuInput *>(device.get_device_address(gpu_input_buffer).value()),
                     .frame_dim = {size_x, size_y},
                 });
                 ti.recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});

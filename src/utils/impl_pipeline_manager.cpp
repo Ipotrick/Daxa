@@ -1617,25 +1617,44 @@ namespace daxa
         session->createCompileRequest(slangRequest.writeRef());
         if (slangRequest == nullptr)
         {
-            return Result<std::vector<u32>>( std::string_view{"internal error: session->createCompileRequest(&slangRequest) returned nullptr"} );
+            return Result<std::vector<u32>>(std::string_view{"internal error: session->createCompileRequest(&slangRequest) returned nullptr"});
         }
         std::array<char const *, 3> cmd_args = {
             // https://github.com/shader-slang/slang/issues/3532
-            // Disables warning for aliasing bindings.  
-            "-warnings-disable", "39001", 
+            // Disables warning for aliasing bindings.
+            // clang-format off
+            "-warnings-disable", "39001",
             "-O0",
+            // clang-format on
         };
         slangRequest->processCommandLineArguments(cmd_args.data(), cmd_args.size());
 
-        int translationUnitIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, filename);
-        slangRequest->addTranslationUnitSourceString(translationUnitIndex, "main", code.string.c_str());
+        for (auto const & [virtual_path, virtual_file] : virtual_files)
+        {
+            int virtualFileIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, virtual_path.c_str());
+            slangRequest->addTranslationUnitSourceString(virtualFileIndex, virtual_path.c_str(), virtual_file.contents.c_str());
+            current_observed_hotload_files->insert({virtual_path, std::chrono::file_clock::now()});
+        }
 
-        const SlangResult compileRes = slangRequest->compile();
+        int translationUnitIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, filename);
+        slangRequest->addTranslationUnitSourceString(translationUnitIndex, "_daxa_slang_main", code.string.c_str());
+
+        SlangResult const compileRes = slangRequest->compile();
+        auto const dependency_n = slangRequest->getDependencyFileCount();
+        for (int32_t dependency_i = 0; dependency_i < dependency_n; ++dependency_i)
+        {
+            auto const * const dep_path = slangRequest->getDependencyFilePath(dependency_i);
+            if (std::strcmp(dep_path, "unknown") != 0)
+            {
+                std::cout << " - " << dep_path << std::endl;
+                current_observed_hotload_files->insert({dep_path, std::chrono::file_clock::now()});
+            }
+        }
         auto diagnostics = slangRequest->getDiagnosticOutput();
 
-        if(SLANG_FAILED(compileRes))
+        if (SLANG_FAILED(compileRes))
         {
-            return Result<std::vector<u32>>( error_message_prefix + diagnostics );
+            return Result<std::vector<u32>>(error_message_prefix + diagnostics);
         }
 
         Slang::ComPtr<slang::IModule> shader_module = {};
