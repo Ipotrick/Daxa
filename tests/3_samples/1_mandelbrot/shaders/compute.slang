@@ -60,7 +60,7 @@ float3 mandelbrot_colored(float2 pixel_p)
 
 [shader("compute")]
 [numthreads(8, 8, 1)]
-void main(uint3 pixel_i : SV_DispatchThreadID)
+void entry_mandelbrot(uint3 pixel_i : SV_DispatchThreadID)
 {
     if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
         return;
