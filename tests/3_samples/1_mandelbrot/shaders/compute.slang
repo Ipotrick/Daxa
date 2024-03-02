@@ -113,7 +113,7 @@ int* funcThatReturnsPointer(PP* p)
 [[vk::binding(1, 0)]] RWStructuredBuffer<int> output;
 [shader("compute")]
 [numthreads(8, 8, 1)]
-void main(int id : SV_DispatchThreadID)
+void entry_mandelbrot(int id : SV_DispatchThreadID)
 {
     const TestStruct * ptr = (const TestStruct *)(test[0]);
     output[0] = buffer[ptr.index].pNext.data;

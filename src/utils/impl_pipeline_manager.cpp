@@ -1658,10 +1658,30 @@ namespace daxa
         }
 
         Slang::ComPtr<slang::IModule> shader_module = {};
+        SlangStage stage = {};
+        switch(shader_stage)
+        {
+            case ShaderStage::COMP: stage = SLANG_STAGE_COMPUTE; break;
+            case ShaderStage::VERT: stage = SLANG_STAGE_VERTEX; break;
+            case ShaderStage::FRAG: stage = SLANG_STAGE_FRAGMENT; break;
+            case ShaderStage::TESS_CONTROL: stage = SLANG_STAGE_HULL; break;
+            case ShaderStage::TESS_EVAL: stage = SLANG_STAGE_DOMAIN; break;
+            case ShaderStage::TASK: stage = SLANG_STAGE_AMPLIFICATION; break;
+            case ShaderStage::MESH: stage = SLANG_STAGE_MESH; break;
+            case ShaderStage::RAY_GEN: stage = SLANG_STAGE_RAY_GENERATION; break;
+            case ShaderStage::RAY_INTERSECT: stage = SLANG_STAGE_INTERSECTION; break;
+            case ShaderStage::RAY_ANY_HIT: stage = SLANG_STAGE_ANY_HIT; break;
+            case ShaderStage::RAY_CLOSEST_HIT: stage = SLANG_STAGE_CLOSEST_HIT; break;
+            case ShaderStage::RAY_MISS: stage = SLANG_STAGE_MISS; break;
+            case ShaderStage::RAY_CALLABLE: stage = SLANG_STAGE_CALLABLE; break;
+            default: stage = SLANG_STAGE_NONE; break;
+        }
+        i32 entry_point_index = slangRequest->addEntryPoint(translationUnitIndex, shader_info.compile_options.entry_point.value().c_str(), stage);
         slangRequest->getModule(translationUnitIndex, shader_module.writeRef());
 
         auto entry_point = Slang::ComPtr<slang::IEntryPoint>{};
-        shader_module->findEntryPointByName(shader_info.compile_options.entry_point.value().c_str(), entry_point.writeRef());
+        // shader_module->findEntryPointByName(shader_info.compile_options.entry_point.value().c_str(), entry_point.writeRef());
+        shader_module->getDefinedEntryPoint(entry_point_index, entry_point.writeRef());
         if (entry_point == nullptr)
         {
             return Result<std::vector<u32>>(error_message_prefix + "Failed to find entry point '" + shader_info.compile_options.entry_point.value() + "' in module");

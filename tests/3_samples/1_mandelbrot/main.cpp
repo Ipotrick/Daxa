@@ -47,7 +47,7 @@ struct App : BaseApp<App>
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
             .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
-            .shader_info = {.source = daxa::ShaderFile{"compute.slang"}},
+            .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_mandelbrot"}},
 #endif
             .push_constant_size = sizeof(ComputePush),
             .name = "compute_pipeline",
