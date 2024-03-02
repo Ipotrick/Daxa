@@ -1168,6 +1168,27 @@ auto daxa_executable_commands_dec_refcnt(daxa_ExecutableCommandList self) -> u64
 
 /// --- Begin Internals ---
 
+void executable_cmd_list_execute_deferred_destructions(daxa_Device device, ExecutableCommandListData & cmd_list)
+{
+    for (auto [id, index] : cmd_list.deferred_destructions)
+    {
+        // TODO(lifetime): check these and report errors if these were destroyed too early.
+        [[maybe_unused]] daxa_Result _ignore = {};
+        switch (index)
+        {
+        case DEFERRED_DESTRUCTION_BUFFER_INDEX: _ignore = daxa_dvc_destroy_buffer(device, std::bit_cast<daxa_BufferId>(id)); break;
+        case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(device, std::bit_cast<daxa_ImageId>(id)); break;
+        case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(device, std::bit_cast<daxa_ImageViewId>(id)); break;
+        case DEFERRED_DESTRUCTION_SAMPLER_INDEX:
+            _ignore = daxa_dvc_destroy_sampler(device, std::bit_cast<daxa_SamplerId>(id));
+            break;
+            // TODO(capi): DO NOT THROW FROM A C FUNCTION
+            // default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+        }
+    }
+    cmd_list.deferred_destructions.clear();
+}
+
 auto daxa_ImplCommandRecorder::generate_new_current_command_data() -> daxa_Result
 {
     VkCommandBufferAllocateInfo const vk_command_buffer_allocate_info{
@@ -1206,6 +1227,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
     auto * self = rc_cast<daxa_CommandRecorder>(handle);
     u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+    executable_cmd_list_execute_deferred_destructions(self->device, self->current_command_data);
     self->device->main_queue_command_list_zombies.emplace_front(
         main_queue_cpu_timeline,
         CommandRecorderZombie{
@@ -1221,6 +1243,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
 void daxa_ImplExecutableCommandList::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_ExecutableCommandList>(handle);
+    executable_cmd_list_execute_deferred_destructions(self->cmd_recorder->device, self->data);
     self->cmd_recorder->dec_refcnt(
         daxa_ImplCommandRecorder::zero_ref_callback,
         self->cmd_recorder->device->instance);

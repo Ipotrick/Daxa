@@ -84,3 +84,5 @@ struct daxa_ImplExecutableCommandList final : ImplHandle
 
     static void zero_ref_callback(ImplHandle const * handle);
 };
+
+void executable_cmd_list_execute_deferred_destructions(daxa_Device device, ExecutableCommandListData & cmd_list);

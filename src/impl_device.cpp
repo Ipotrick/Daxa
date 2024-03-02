@@ -976,22 +976,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
-        for (auto [id, index] : commands->data.deferred_destructions)
-        {
-            // TODO(lifetime): check these and report errors if these were destroyed too early.
-            [[maybe_unused]] daxa_Result _ignore = {};
-            switch (index)
-            {
-            case DEFERRED_DESTRUCTION_BUFFER_INDEX: _ignore = daxa_dvc_destroy_buffer(self, std::bit_cast<daxa_BufferId>(id)); break;
-            case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(self, std::bit_cast<daxa_ImageId>(id)); break;
-            case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(self, std::bit_cast<daxa_ImageViewId>(id)); break;
-            case DEFERRED_DESTRUCTION_SAMPLER_INDEX:
-                _ignore = daxa_dvc_destroy_sampler(self, std::bit_cast<daxa_SamplerId>(id));
-                break;
-                // TODO(capi): DO NOT THROW FROM A C FUNCTION
-                // default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
-            }
-        }
+        executable_cmd_list_execute_deferred_destructions(self, commands->data);
     }
 
     std::vector<VkCommandBuffer> submit_vk_command_buffers = {};
