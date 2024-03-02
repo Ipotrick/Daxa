@@ -582,7 +582,7 @@ namespace daxa
             }
         }
         char const * entry_point = "main";
-        if (a_info.shader_info.compile_options.entry_point.has_value())
+        if (a_info.shader_info.compile_options.entry_point.has_value() && a_info.shader_info.compile_options.language != ShaderLanguage::SLANG)
         {
             entry_point = a_info.shader_info.compile_options.entry_point.value().c_str();
         }
@@ -1590,7 +1590,7 @@ namespace daxa
 
             auto target_desc = slang::TargetDesc{};
             target_desc.format = SlangCompileTarget::SLANG_SPIRV;
-            target_desc.profile = slang_backend.global_session->findProfile("glsl_460");
+            target_desc.profile = slang_backend.global_session->findProfile("GLSL_460");
             target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
             // NOTE(grundlett): Does GLSL here refer to SPIR-V?
@@ -1627,7 +1627,7 @@ namespace daxa
             "-O0",
             // clang-format on
         };
-        slangRequest->processCommandLineArguments(cmd_args.data(), cmd_args.size());
+        slangRequest->processCommandLineArguments(cmd_args.data(), static_cast<int>(cmd_args.size()));
 
         for (auto const & [virtual_path, virtual_file] : virtual_files)
         {
@@ -1658,69 +1658,32 @@ namespace daxa
         }
 
         Slang::ComPtr<slang::IModule> shader_module = {};
-        SlangStage stage = {};
-        switch(shader_stage)
+        auto * refl = slangRequest->getReflection();
+        auto entry_point_n = spReflection_getEntryPointCount(refl);
+        int32_t entry_point_index = -1;
+        for (uint32_t i = 0; i < entry_point_n; ++i)
         {
-            case ShaderStage::COMP: stage = SLANG_STAGE_COMPUTE; break;
-            case ShaderStage::VERT: stage = SLANG_STAGE_VERTEX; break;
-            case ShaderStage::FRAG: stage = SLANG_STAGE_FRAGMENT; break;
-            case ShaderStage::TESS_CONTROL: stage = SLANG_STAGE_HULL; break;
-            case ShaderStage::TESS_EVAL: stage = SLANG_STAGE_DOMAIN; break;
-            case ShaderStage::TASK: stage = SLANG_STAGE_AMPLIFICATION; break;
-            case ShaderStage::MESH: stage = SLANG_STAGE_MESH; break;
-            case ShaderStage::RAY_GEN: stage = SLANG_STAGE_RAY_GENERATION; break;
-            case ShaderStage::RAY_INTERSECT: stage = SLANG_STAGE_INTERSECTION; break;
-            case ShaderStage::RAY_ANY_HIT: stage = SLANG_STAGE_ANY_HIT; break;
-            case ShaderStage::RAY_CLOSEST_HIT: stage = SLANG_STAGE_CLOSEST_HIT; break;
-            case ShaderStage::RAY_MISS: stage = SLANG_STAGE_MISS; break;
-            case ShaderStage::RAY_CALLABLE: stage = SLANG_STAGE_CALLABLE; break;
-            default: stage = SLANG_STAGE_NONE; break;
+            auto * entry_refl = spReflection_getEntryPointByIndex(refl, i);
+            auto const * entry_name = spReflectionEntryPoint_getName(entry_refl);
+            if (strcmp(entry_name, shader_info.compile_options.entry_point.value().c_str()) == 0)
+            {
+                entry_point_index = i;
+                break;
+            }
         }
-        i32 entry_point_index = slangRequest->addEntryPoint(translationUnitIndex, shader_info.compile_options.entry_point.value().c_str(), stage);
-        slangRequest->getModule(translationUnitIndex, shader_module.writeRef());
-
-        auto entry_point = Slang::ComPtr<slang::IEntryPoint>{};
-        // shader_module->findEntryPointByName(shader_info.compile_options.entry_point.value().c_str(), entry_point.writeRef());
-        shader_module->getDefinedEntryPoint(entry_point_index, entry_point.writeRef());
-        if (entry_point == nullptr)
+        if (entry_point_index == -1)
         {
             return Result<std::vector<u32>>(error_message_prefix + "Failed to find entry point '" + shader_info.compile_options.entry_point.value() + "' in module");
         }
 
-        auto component_types = std::vector<slang::IComponentType *>{};
-        component_types.push_back(shader_module);
-        component_types.push_back(entry_point);
-
-        auto composite_program_diagnostics = Slang::ComPtr<slang::IBlob>{};
-
-        auto composed_program = Slang::ComPtr<slang::IComponentType>{};
-        {
-            auto result = session->createCompositeComponentType(
-                component_types.data(),
-                component_types.size(),
-                composed_program.writeRef(),
-                composite_program_diagnostics.writeRef());
-            if (composite_program_diagnostics != nullptr)
-            {
-                return Result<std::vector<u32>>(error_message_prefix + (char const *)composite_program_diagnostics->getBufferPointer());
-            }
-            if (result != 0)
-            {
-                return Result<std::vector<u32>>(error_message_prefix + "Bad result in createCompositeComponentType");
-            }
-        }
+        slangRequest->getModule(translationUnitIndex, shader_module.writeRef());
 
         auto spirv_code = Slang::ComPtr<slang::IBlob>{};
         {
-            auto result = composed_program->getEntryPointCode(
-                0, 0, spirv_code.writeRef(), composite_program_diagnostics.writeRef());
-            // if (composite_program_diagnostics != nullptr)
-            // {
-            //     return Result<std::vector<u32>>(error_message_prefix + (char const *)composite_program_diagnostics->getBufferPointer());
-            // }
+            auto result = slangRequest->getEntryPointCodeBlob(entry_point_index, 0, spirv_code.writeRef());
             if (result != 0)
             {
-                return Result<std::vector<u32>>(error_message_prefix + (char const *)composite_program_diagnostics->getBufferPointer());
+                return Result<std::vector<u32>>(error_message_prefix + slangRequest->getDiagnosticOutput());
             }
         }
 
