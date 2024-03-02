@@ -1640,6 +1640,12 @@ namespace daxa
         slangRequest->addTranslationUnitSourceString(translationUnitIndex, "_daxa_slang_main", code.string.c_str());
 
         SlangResult const compileRes = slangRequest->compile();
+        auto diagnostics = slangRequest->getDiagnosticOutput();
+
+        if (SLANG_FAILED(compileRes))
+        {
+            return Result<std::vector<u32>>(error_message_prefix + diagnostics);
+        }
         auto const dependency_n = slangRequest->getDependencyFileCount();
         for (int32_t dependency_i = 0; dependency_i < dependency_n; ++dependency_i)
         {
@@ -1649,12 +1655,6 @@ namespace daxa
                 std::cout << " - " << dep_path << std::endl;
                 current_observed_hotload_files->insert({dep_path, std::chrono::file_clock::now()});
             }
-        }
-        auto diagnostics = slangRequest->getDiagnosticOutput();
-
-        if (SLANG_FAILED(compileRes))
-        {
-            return Result<std::vector<u32>>(error_message_prefix + diagnostics);
         }
 
         Slang::ComPtr<slang::IModule> shader_module = {};
