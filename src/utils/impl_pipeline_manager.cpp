@@ -1652,7 +1652,6 @@ namespace daxa
             auto const * const dep_path = slangRequest->getDependencyFilePath(dependency_i);
             if (std::strcmp(dep_path, "unknown") != 0)
             {
-                std::cout << " - " << dep_path << std::endl;
                 current_observed_hotload_files->insert({dep_path, std::chrono::file_clock::now()});
             }
         }
