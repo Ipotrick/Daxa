@@ -137,9 +137,6 @@ namespace daxa
 #define daxa_ByteAddressBuffer(SAMPLER_ID) ByteAddressBufferTable[SAMPLER_ID.index()]
 #define daxa_RWByteAddressBuffer(SAMPLER_ID) RWByteAddressBufferTable[SAMPLER_ID.index()]
 
-#define DAXA_DECL_BUFFER_PTR_ALIGN(Type, Align) DAXA_DECL_BUFFER_PTR(Type)
-#define DAXA_DECL_BUFFER_PTR(Type)                                                                                   \
-    namespace daxa { [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] StructuredBuffer<Type> StructuredBuffer##Type##Table[]; }
 #define daxa_StructuredBuffer(STRUCT_TYPE, BUFFER_ID) StructuredBuffer##STRUCT_TYPE##Table[BUFFER_ID.index()]
 
 #define _DAXA_DECL_TEXTURE_RET(TYPE, RET_TYPE) \
@@ -189,5 +186,18 @@ namespace daxa
     }
 }
 
-#define daxa_BufferPtr(X) X*
-#define daxa_RWBufferPtr(X) X*
+#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
+#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
+
+#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) DAXA_DECL_BUFER_PTR(STRUCT_TYPE)
+#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) \
+    struct daxa_RWBufferPtr##STRUCT_TYPE  \
+    {                                     \
+        STRUCT_TYPE* value;               \
+    };                                    \
+    struct daxa_BufferPtr##STRUCT_TYPE    \
+    {                                     \
+        STRUCT_TYPE* value;               \
+    };
+
+#define deref(PTR) PTR.value

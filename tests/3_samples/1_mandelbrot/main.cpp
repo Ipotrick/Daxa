@@ -209,7 +209,7 @@ struct App : BaseApp<App>
                 ti.recorder.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
-                    .ptr = reinterpret_cast<GpuInput *>(device.get_device_address(gpu_input_buffer).value()),
+                    .ptr = device.get_device_address(gpu_input_buffer).value(),
                     .frame_dim = {size_x, size_y},
                 });
                 ti.recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
