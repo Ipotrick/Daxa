@@ -29,8 +29,8 @@ float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-    GpuInput * gpu_input = deref(p.ptr);//(GpuInput *)daxa::id_to_address(p.input_buffer_id);
-    float time = test(&gpu_input[0].time);
+    GpuInput gpu_input = deref_i(p.ptr, 0);//(GpuInput *)daxa::id_to_address(p.input_buffer_id);
+    float time = gpu_input.time;
     float scale = 12.0 / (exp(time) + 0.0001);
     float2 z = uv * scale * 2 + CENTER;
     float2 c = z;

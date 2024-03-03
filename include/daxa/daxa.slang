@@ -201,3 +201,4 @@ namespace daxa
     };
 
 #define deref(PTR) PTR.value
+#define deref_i(PTR, INDEX) (PTR.value[INDEX])

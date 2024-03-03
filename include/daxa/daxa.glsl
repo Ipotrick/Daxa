@@ -187,10 +187,12 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
 #if defined(DAXA_BUFFER_PTR_COMPAT)
 #define deref(BUFFER_PTR) daxa_ptr_get(BUFFER_PTR).value
+#define deref_i(BUFFER_PTR, INDEX) ((daxa_ptr_get(BUFFER_PTR) + INDEX).value)
 #define advance(BUFFER_PTR, offset) daxa_ptr_advance(BUFFER_PTR, offset)
 #define as_address(x) (x).address
 #else
 #define deref(BUFFER_PTR) (BUFFER_PTR).value
+#define deref_i(BUFFER_PTR, INDEX) ((BUFFER_PTR + INDEX).value)
 #define advance(BUFFER_PTR, offset) (BUFFER_PTR + offset)
 #define as_address(x) uint64_t(x)
 #endif
