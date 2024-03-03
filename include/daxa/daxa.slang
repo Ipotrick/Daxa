@@ -189,7 +189,7 @@ namespace daxa
 #define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
 #define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
 
-#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) DAXA_DECL_BUFER_PTR(STRUCT_TYPE)
+#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) \
     struct daxa_RWBufferPtr##STRUCT_TYPE  \
     {                                     \
