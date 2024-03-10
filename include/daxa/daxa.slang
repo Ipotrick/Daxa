@@ -200,5 +200,34 @@ namespace daxa
         STRUCT_TYPE* value;               \
     };
 
-#define deref(PTR) PTR.value
+#define deref(PTR) (PTR.value[0])
 #define deref_i(PTR, INDEX) (PTR.value[INDEX])
+
+DAXA_DECL_BUFFER_PTR(daxa_f32)
+// DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32
+DAXA_DECL_BUFFER_PTR(daxa_f32vec2)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat2x2)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat2x3)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat2x4)
+DAXA_DECL_BUFFER_PTR(daxa_f32vec3)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat3x2)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat3x3)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat3x4)
+DAXA_DECL_BUFFER_PTR(daxa_f32vec4)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat4x2)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat4x3)
+DAXA_DECL_BUFFER_PTR(daxa_f32mat4x4)
+DAXA_DECL_BUFFER_PTR(daxa_i32)
+// DAXA_DECL_BUFFER_PTR(daxa_i32vec1) // covered by daxa_i32
+DAXA_DECL_BUFFER_PTR(daxa_i32vec2)
+DAXA_DECL_BUFFER_PTR(daxa_i32vec3)
+DAXA_DECL_BUFFER_PTR(daxa_i32vec4)
+DAXA_DECL_BUFFER_PTR(daxa_u32)
+// DAXA_DECL_BUFFER_PTR(daxa_u32vec1) // covered by daxa_u32
+DAXA_DECL_BUFFER_PTR(daxa_u32vec2)
+DAXA_DECL_BUFFER_PTR(daxa_u32vec3)
+DAXA_DECL_BUFFER_PTR(daxa_u32vec4)
+
+DAXA_DECL_BUFFER_PTR(daxa_BufferId)
+DAXA_DECL_BUFFER_PTR(daxa_ImageViewId)
+DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
