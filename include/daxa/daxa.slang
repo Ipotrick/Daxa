@@ -202,6 +202,7 @@ namespace daxa
 
 #define deref(PTR) (PTR.value[0])
 #define deref_i(PTR, INDEX) (PTR.value[INDEX])
+#define as_address(x) uint64_t(x.value)
 
 DAXA_DECL_BUFFER_PTR(daxa_f32)
 // DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32

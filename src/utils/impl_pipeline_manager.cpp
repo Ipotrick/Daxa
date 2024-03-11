@@ -659,8 +659,11 @@ namespace daxa
                 *final_shader_info = daxa::ShaderInfo{
                     .byte_code = spv_result->value().data(),
                     .byte_code_size = static_cast<u32>(spv_result->value().size()),
-                    .entry_point = {pipe_result_shader_info->value().compile_options.entry_point.value()},
                 };
+                if (pipe_result_shader_info->value().compile_options.language != ShaderLanguage::SLANG)
+                {
+                    final_shader_info->value().entry_point = {pipe_result_shader_info->value().compile_options.entry_point.value()};
+                }
             }
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
