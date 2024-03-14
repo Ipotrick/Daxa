@@ -25,51 +25,51 @@ typedef float daxa_f32;
 typedef double daxa_f64;
 typedef float2 daxa_f32vec2;
 typedef float2x2 daxa_f32mat2x2;
-typedef float2x3 daxa_f32mat2x3;
-typedef float2x4 daxa_f32mat2x4;
+typedef float3x2 daxa_f32mat2x3;
+typedef float4x2 daxa_f32mat2x4;
 typedef double2 daxa_f64vec2;
 typedef double2x2 daxa_f64mat2x2;
-typedef double2x3 daxa_f64mat2x3;
-typedef double2x4 daxa_f64mat2x4;
+typedef double3x2 daxa_f64mat2x3;
+typedef double4x2 daxa_f64mat2x4;
 typedef float3 daxa_f32vec3;
-typedef float3x2 daxa_f32mat3x2;
+typedef float2x3 daxa_f32mat3x2;
 typedef float3x3 daxa_f32mat3x3;
-typedef float3x4 daxa_f32mat3x4;
+typedef float4x3 daxa_f32mat3x4;
 typedef double3 daxa_f64vec3;
-typedef double3x2 daxa_f64mat3x2;
+typedef double2x3 daxa_f64mat3x2;
 typedef double3x3 daxa_f64mat3x3;
-typedef double3x4 daxa_f64mat3x4;
+typedef double4x3 daxa_f64mat3x4;
 typedef float4 daxa_f32vec4;
-typedef float4x2 daxa_f32mat4x2;
-typedef float4x3 daxa_f32mat4x3;
+typedef float2x4 daxa_f32mat4x2;
+typedef float3x4 daxa_f32mat4x3;
 typedef float4x4 daxa_f32mat4x4;
 typedef double4 daxa_f64vec4;
-typedef double4x2 daxa_f64mat4x2;
-typedef double4x3 daxa_f64mat4x3;
+typedef double2x4 daxa_f64mat4x2;
+typedef double3x4 daxa_f64mat4x3;
 typedef double4x4 daxa_f64mat4x4;
 typedef int2 daxa_i32vec2;
 typedef int2x2 daxa_i32mat2x2;
-typedef int2x3 daxa_i32mat2x3;
-typedef int2x4 daxa_i32mat2x4;
+typedef int3x2 daxa_i32mat2x3;
+typedef int4x2 daxa_i32mat2x4;
 typedef uint2 daxa_u32vec2;
 typedef uint2x2 daxa_u32mat2x2;
-typedef uint2x3 daxa_u32mat2x3;
-typedef uint2x4 daxa_u32mat2x4;
+typedef uint3x2 daxa_u32mat2x3;
+typedef uint4x2 daxa_u32mat2x4;
 typedef int3 daxa_i32vec3;
-typedef int3x2 daxa_i32mat3x2;
+typedef int2x3 daxa_i32mat3x2;
 typedef int3x3 daxa_i32mat3x3;
-typedef int3x4 daxa_i32mat3x4;
+typedef int4x3 daxa_i32mat3x4;
 typedef uint3 daxa_u32vec3;
-typedef uint3x2 daxa_u32mat3x2;
+typedef uint2x3 daxa_u32mat3x2;
 typedef uint3x3 daxa_u32mat3x3;
-typedef uint3x4 daxa_u32mat3x4;
+typedef uint4x3 daxa_u32mat3x4;
 typedef int4 daxa_i32vec4;
-typedef int4x2 daxa_i32mat4x2;
-typedef int4x3 daxa_i32mat4x3;
+typedef int2x4 daxa_i32mat4x2;
+typedef int3x4 daxa_i32mat4x3;
 typedef int4x4 daxa_i32mat4x4;
 typedef uint4 daxa_u32vec4;
-typedef uint4x2 daxa_u32mat4x2;
-typedef uint4x3 daxa_u32mat4x3;
+typedef uint2x4 daxa_u32mat4x2;
+typedef uint3x4 daxa_u32mat4x3;
 typedef uint4x4 daxa_u32mat4x4;
 typedef bool daxa_b32;
 typedef bool daxa_b32vec1;
@@ -186,23 +186,23 @@ namespace daxa
     }
 }
 
-#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtr##STRUCT_TYPE
-#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtr##STRUCT_TYPE
+#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtrWrappper##STRUCT_TYPE*
+#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtrWrapper##STRUCT_TYPE*
 
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
-#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) \
-    struct daxa_RWBufferPtr##STRUCT_TYPE  \
-    {                                     \
-        STRUCT_TYPE* value;               \
-    };                                    \
-    struct daxa_BufferPtr##STRUCT_TYPE    \
-    {                                     \
-        STRUCT_TYPE* value;               \
+#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)         \
+    struct daxa_RWBufferPtrWrappper##STRUCT_TYPE  \
+    {                                             \
+        STRUCT_TYPE value;                        \
+    };                                            \
+    struct daxa_BufferPtrWrapper##STRUCT_TYPE     \
+    {                                             \
+        STRUCT_TYPE value;                        \
     };
 
-#define deref(PTR) (PTR.value[0])
-#define deref_i(PTR, INDEX) (PTR.value[INDEX])
-#define as_address(x) uint64_t(x.value)
+#define deref(PTR) (PTR.value)
+#define deref_i(PTR, INDEX) ((PTR + INDEX).value)
+#define as_address(PTR) uint64_t(PTR)
 
 DAXA_DECL_BUFFER_PTR(daxa_f32)
 // DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32
