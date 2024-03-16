@@ -112,6 +112,10 @@ DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 10_raytracing
     LIBS glfw
 )
+DAXA_CREATE_TEST(
+    FOLDER 2_daxa_api 11_mesh_shader
+    LIBS glfw
+)
 
 DAXA_CREATE_TEST(
     FOLDER 3_samples 0_rectangle_cutting

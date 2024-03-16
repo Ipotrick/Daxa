@@ -2,7 +2,7 @@
 #include "shared.inl"
 import "custom file!!";
 
-#if 1
+#if 0
 [[vk::push_constant]] ComputePush p;
 
 struct Test
@@ -20,9 +20,9 @@ float3 hsv2rgb(float3 c)
     return c.z * lerp(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
 }
 
-float test(float * v)
+float test(float t)
 {
-    return *v;
+    return t + 1;
 }
 
 float3 mandelbrot_colored(float2 pixel_p)
@@ -30,6 +30,7 @@ float3 mandelbrot_colored(float2 pixel_p)
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
     GpuInput gpu_input = deref_i(p.ptr, 0);//(GpuInput *)daxa::id_to_address(p.input_buffer_id);
+    test((*p.ptr.value).time);
     float time = gpu_input.time;
     float scale = 12.0 / (exp(time) + 0.0001);
     float2 z = uv * scale * 2 + CENTER;
@@ -78,6 +79,25 @@ void entry_mandelbrot(uint3 pixel_i : SV_DispatchThreadID)
     daxa_RWTexture2D(float4, p.image_id)[pixel_i.xy] = float4(col, 1);
 }
 #endif
+
+struct Tester
+{
+  float x;
+};
+
+struct Push
+{
+    float* ptr0;
+    Tester* ptr1;
+};
+
+[[vk::push_constant]] Push push;
+[shader("compute")]
+[numthreads(1, 1, 1)]
+void main(uint3 dtid : SV_DispatchThreadID)
+{
+    *push.ptr0 = (*push.ptr1).x;
+}
 
 #if 0
 struct TestStruct

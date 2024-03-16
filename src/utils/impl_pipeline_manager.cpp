@@ -1593,7 +1593,7 @@ namespace daxa
 
             auto target_desc = slang::TargetDesc{};
             target_desc.format = SlangCompileTarget::SLANG_SPIRV;
-            target_desc.profile = slang_backend.global_session->findProfile("GLSL_460");
+            target_desc.profile = slang_backend.global_session->findProfile("spirv_1_4");
             target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
             // NOTE(grundlett): Does GLSL here refer to SPIR-V?
@@ -1613,8 +1613,6 @@ namespace daxa
 
         auto name = std::string{"test"};
         auto error_message_prefix = std::string("SLANG [") + name + "] ";
-
-        auto const filename = "compute";
 
         Slang::ComPtr<SlangCompileRequest> slangRequest = nullptr;
         session->createCompileRequest(slangRequest.writeRef());
@@ -1638,6 +1636,8 @@ namespace daxa
             slangRequest->addTranslationUnitSourceString(virtualFileIndex, virtual_path.c_str(), virtual_file.contents.c_str());
             current_observed_hotload_files->insert({virtual_path, std::chrono::file_clock::now()});
         }
+
+        auto const filename = "_daxa_file";
 
         int translationUnitIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, filename);
         slangRequest->addTranslationUnitSourceString(translationUnitIndex, "_daxa_slang_main", code.string.c_str());
