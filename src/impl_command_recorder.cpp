@@ -950,7 +950,7 @@ auto daxa_cmd_draw_indirect_count(daxa_CommandRecorder self, daxa_DrawIndirectCo
 
 void daxa_cmd_draw_mesh_tasks(daxa_CommandRecorder self, uint32_t x, uint32_t y, uint32_t z)
 {
-    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::MESH_SHADER)
+    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
     {
         self->device->vkCmdDrawMeshTasksEXT(self->current_command_data.vk_cmd_buffer, x, y, z);
     }
@@ -959,7 +959,7 @@ void daxa_cmd_draw_mesh_tasks(daxa_CommandRecorder self, uint32_t x, uint32_t y,
 auto daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandRecorder self, daxa_DrawMeshTasksIndirectInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer)
-    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::MESH_SHADER)
+    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
     {
         self->device->vkCmdDrawMeshTasksIndirectEXT(
             self->current_command_data.vk_cmd_buffer,
@@ -976,7 +976,7 @@ auto daxa_cmd_draw_mesh_tasks_indirect_count(
     daxa_DrawMeshTasksIndirectCountInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer, info->count_buffer)
-    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::MESH_SHADER)
+    if ((self->device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
     {
         self->device->vkCmdDrawMeshTasksIndirectCountEXT(
             self->current_command_data.vk_cmd_buffer,

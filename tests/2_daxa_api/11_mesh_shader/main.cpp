@@ -57,10 +57,10 @@ struct DrawTask : DrawTri
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
         render_recorder.set_pipeline(*pipeline);
-        render_recorder.push_constant_vptr({
-            .data = ti.attachment_shader_data.data(),
-            .size = ti.attachment_shader_data.size(),
-        });
+        // render_recorder.push_constant_vptr({
+        //     .data = ti.attachment_shader_data.data(),
+        //     .size = ti.attachment_shader_data.size(),
+        // });
         render_recorder.draw_mesh_tasks(1,1,1);
         ti.recorder = std::move(render_recorder).end_renderpass();
     }
@@ -137,7 +137,7 @@ auto main() -> int
             },
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {},
-            .push_constant_size = sizeof(DrawTri::attachment_shader_data_size()),
+            // .push_constant_size = sizeof(DrawTri::attachment_shader_data_size()),
             .name = "my pipeline",
         });
         if (result.is_err())
