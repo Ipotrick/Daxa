@@ -133,9 +133,9 @@ namespace daxa
     [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] ByteAddressBuffer ByteAddressBufferTable[];
     [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] RWByteAddressBuffer RWByteAddressBufferTable[];
 }
-#define daxa_SamplerState(SAMPLER_ID) SamplerStateTable[SAMPLER_ID.index()]
-#define daxa_ByteAddressBuffer(SAMPLER_ID) ByteAddressBufferTable[SAMPLER_ID.index()]
-#define daxa_RWByteAddressBuffer(SAMPLER_ID) RWByteAddressBufferTable[SAMPLER_ID.index()]
+#define daxa_SamplerState(SAMPLER_ID) daxa::SamplerStateTable[SAMPLER_ID.index()]
+#define daxa_ByteAddressBuffer(SAMPLER_ID) daxa::ByteAddressBufferTable[SAMPLER_ID.index()]
+#define daxa_RWByteAddressBuffer(SAMPLER_ID) daxa::RWByteAddressBufferTable[SAMPLER_ID.index()]
 
 #define daxa_StructuredBuffer(STRUCT_TYPE, BUFFER_ID) StructuredBuffer##STRUCT_TYPE##Table[BUFFER_ID.index()]
 
