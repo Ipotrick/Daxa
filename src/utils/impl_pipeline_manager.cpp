@@ -1594,7 +1594,7 @@ namespace daxa
             auto target_desc = slang::TargetDesc{};
             target_desc.format = SlangCompileTarget::SLANG_SPIRV;
             target_desc.profile = slang_backend.global_session->findProfile("spirv_1_4");
-            // target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
+            target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
             // NOTE(grundlett): Does GLSL here refer to SPIR-V?
             target_desc.forceGLSLScalarBufferLayout = true;
