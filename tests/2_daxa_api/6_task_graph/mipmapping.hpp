@@ -4,11 +4,11 @@
 
 namespace tests
 {
-    DAXA_DECL_TASK_HEAD_BEGIN(MipMapTaskHead, 2)
+    DAXA_DECL_TASK_HEAD_BEGIN(MipMapH, 2)
     DAXA_TH_IMAGE(TRANSFER_READ, REGULAR_2D, lower_mip)
     DAXA_TH_IMAGE(TRANSFER_WRITE, REGULAR_2D, higher_mip)
     DAXA_DECL_TASK_HEAD_END
-    struct MipMapTask : MipMapTaskHead
+    struct MipMapTask : MipMapH::Task
     {
         AttachmentViews views = {};
         struct Info
@@ -20,8 +20,8 @@ namespace tests
         void callback(daxa::TaskInterface tri)
         {
             tri.recorder.blit_image_to_image({
-                .src_image = tri.get(lower_mip).ids[0],
-                .dst_image = tri.get(higher_mip).ids[0],
+                .src_image = tri.get(AT.lower_mip).ids[0],
+                .dst_image = tri.get(AT.higher_mip).ids[0],
                 .src_slice = {
                     .mip_level = info.mip,
                     .base_array_layer = 0,
@@ -515,8 +515,8 @@ namespace tests
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
                                 new_task_graph.add_task(MipMapTask{
                                     .views = std::array{
-                                        daxa::attachment_view(MipMapTask::lower_mip, task_render_image.view().view({.base_mip_level = i})),
-                                        daxa::attachment_view(MipMapTask::higher_mip, task_render_image.view().view({.base_mip_level = i + 1})),
+                                        daxa::attachment_view(MipMapH::AT.lower_mip, task_render_image.view().view({.base_mip_level = i})),
+                                        daxa::attachment_view(MipMapH::AT.higher_mip, task_render_image.view().view({.base_mip_level = i + 1})),
                                     },
                                     .info = {
                                         .mip = i,

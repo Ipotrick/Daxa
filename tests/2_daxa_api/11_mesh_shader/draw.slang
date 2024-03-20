@@ -20,6 +20,11 @@ struct Vertex
   [[vk::location(0)]] float3 color;
 };
 
+struct Primitive
+{
+  [[vk::location(0)]] float3 tint;
+}
+
 const static uint MAX_VERTS = 3;
 const static uint MAX_PRIMS = 1;
 
@@ -28,8 +33,9 @@ const static uint MAX_PRIMS = 1;
 [shader("mesh")]
 void entry_mesh(
     in uint tig : SV_GroupIndex,
-    out vertices Vertex verts[MAX_VERTS],
-    out indices uint3 triangles[MAX_PRIMS])
+    OutputVertices<Vertex, MAX_VERTS> verts,
+    OutputIndices<uint3, MAX_PRIMS> triangles,
+    OutputPrimitives<Primitive, MAX_PRIMS> primitives)
 {
     const uint numVertices = 3;
     const uint numPrimitives = 1;
@@ -41,6 +47,7 @@ void entry_mesh(
 
     if(tig < numPrimitives) {
         triangles[tig] = uint3(0,1,2);
+        primitives[tig] = { float3(1,0,0) };
     }
 }
 
@@ -50,9 +57,9 @@ struct FragmentOut
 };
 
 [shader("fragment")]
-FragmentOut entry_fragment(in Vertex vertex)
+FragmentOut entry_fragment(in Vertex vertex, in Primitive prim)
 {
     FragmentOut frag_out;
-    frag_out.color = vertex.color;
+    frag_out.color = vertex.color * prim.tint;
     return frag_out;
 }

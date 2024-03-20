@@ -8,7 +8,7 @@ DAXA_TH_IMAGE(COMPUTE_SHADER_SAMPLED, REGULAR_2D, image1)
 DAXA_TH_BUFFER(COMPUTE_SHADER_READ, test_buffer_no_shader)
 DAXA_DECL_TASK_HEAD_END
 
-struct TestTask : TestTaskHead
+struct TestTask : TestTaskHead::Task
 {
     AttachmentViews views = {};
     void callback(daxa::TaskInterface ti)
@@ -16,31 +16,31 @@ struct TestTask : TestTaskHead
         // There are two ways to get the info for any attachment:
         {
             // daxa::TaskBufferAttachmentIndex index:
-            [[maybe_unused]] daxa::TaskBufferAttachmentInfo const & buffer0_attachment0 = ti.get(buffer0);
+            [[maybe_unused]] daxa::TaskBufferAttachmentInfo const & buffer0_attachment0 = ti.get(AT.buffer0);
             // daxa::TaskBufferView assigned to the buffer attachment:
             [[maybe_unused]] daxa::TaskBufferAttachmentInfo const & buffer0_attachment1 = ti.get(buffer0_attachment0.view);
         }
         // The Buffer Attachment info contents:
         {
-            [[maybe_unused]] daxa::BufferId id = ti.get(buffer0).ids[0];
-            [[maybe_unused]] char const * name = ti.get(buffer0).name;
-            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(buffer0).access;
-            [[maybe_unused]] u8 shader_array_size = ti.get(buffer0).shader_array_size;
-            [[maybe_unused]] bool shader_as_address = ti.get(buffer0).shader_as_address;
-            [[maybe_unused]] daxa::TaskBufferView view = ti.get(buffer0).view;
-            [[maybe_unused]] std::span<daxa::BufferId const> ids = ti.get(buffer0).ids;
+            [[maybe_unused]] daxa::BufferId id = ti.get(AT.buffer0).ids[0];
+            [[maybe_unused]] char const * name = ti.get(AT.buffer0).name;
+            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(AT.buffer0).access;
+            [[maybe_unused]] u8 shader_array_size = ti.get(AT.buffer0).shader_array_size;
+            [[maybe_unused]] bool shader_as_address = ti.get(AT.buffer0).shader_as_address;
+            [[maybe_unused]] daxa::TaskBufferView view = ti.get(AT.buffer0).view;
+            [[maybe_unused]] std::span<daxa::BufferId const> ids = ti.get(AT.buffer0).ids;
         }
         // The Image Attachment info contents:
         {
-            [[maybe_unused]] char const * name = ti.get(image0).name;
-            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(image0).access;
-            [[maybe_unused]] daxa::ImageViewType view_type = ti.get(image0).view_type;
-            [[maybe_unused]] u8 shader_array_size = ti.get(image0).shader_array_size;
-            [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(image0).shader_array_type;
-            [[maybe_unused]] daxa::ImageLayout layout = ti.get(image0).layout;
-            [[maybe_unused]] daxa::TaskImageView view = ti.get(image0).view;
-            [[maybe_unused]] std::span<daxa::ImageId const> ids = ti.get(image0).ids;
-            [[maybe_unused]] std::span<daxa::ImageViewId const> view_ids = ti.get(image0).view_ids;
+            [[maybe_unused]] char const * name = ti.get(AT.image0).name;
+            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(AT.image0).access;
+            [[maybe_unused]] daxa::ImageViewType view_type = ti.get(AT.image0).view_type;
+            [[maybe_unused]] u8 shader_array_size = ti.get(AT.image0).shader_array_size;
+            [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(AT.image0).shader_array_type;
+            [[maybe_unused]] daxa::ImageLayout layout = ti.get(AT.image0).layout;
+            [[maybe_unused]] daxa::TaskImageView view = ti.get(AT.image0).view;
+            [[maybe_unused]] std::span<daxa::ImageId const> ids = ti.get(AT.image0).ids;
+            [[maybe_unused]] std::span<daxa::ImageViewId const> view_ids = ti.get(AT.image0).view_ids;
         }
         // The attachment infos are also provided, directly via a span:
         for ([[maybe_unused]] daxa::TaskAttachmentInfo const & attach : ti.attachment_infos)
@@ -403,7 +403,7 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = ShaderIntegrationTaskHead::attachment_shader_data_size(),
+            .push_constant_size = sizeof(ShaderIntegrationTaskHead::AttachmentShaderBlob),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -416,7 +416,7 @@ namespace tests
         task_graph.use_persistent_image(task_image);
         task_graph.use_persistent_buffer(task_buffer);
 
-        struct WriteImage : ShaderIntegrationTaskHead
+        struct WriteImage : ShaderIntegrationTaskHead::Task
         {
             AttachmentViews views = {};
             std::shared_ptr<daxa::ComputePipeline> pipeline = {};
@@ -427,17 +427,18 @@ namespace tests
                 ti.recorder.dispatch({1, 1, 1});
             }
         };
+        using namespace ShaderIntegrationTaskHead;
         task_graph.add_task(WriteImage{
             .views = std::array{
-                daxa::attachment_view(WriteImage::settings, task_buffer),
-                daxa::attachment_view(WriteImage::image, task_image),
+                daxa::attachment_view(AT.settings, task_buffer),
+                daxa::attachment_view(AT.image, task_image),
             },
             .pipeline = compute_pipeline,
         });
         task_graph.add_task(WriteImage{
             .views = std::array{
-                daxa::attachment_view(WriteImage::settings, task_buffer),
-                daxa::attachment_view(WriteImage::image, task_image),
+                daxa::attachment_view(AT.settings, task_buffer),
+                daxa::attachment_view(AT.image, task_image),
             },
             .pipeline = compute_pipeline,
         });
@@ -653,26 +654,26 @@ namespace tests
 
         task_graph.use_persistent_image(persistent_task_image);
         task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY, persistent_task_image)},
+            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY, persistent_task_image)},
             .task = [&](daxa::TaskInterface const &) {},
             .name = "Task 1) read image",
         });
         task_graph.add_task({
             .attachments = {
-                daxa::inl_attachment(daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT, persistent_task_image),
+                daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT, persistent_task_image),
             },
             .task = [&](daxa::TaskInterface const &) {},
             .name = "Task 2) concurrent write read image",
         });
         task_graph.add_task({
             .attachments = {
-                daxa::inl_attachment(daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT, persistent_task_image),
+                daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT, persistent_task_image),
             },
             .task = [&](daxa::TaskInterface const &) {},
             .name = "Task 3) concurrent write read image",
         });
         task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY, persistent_task_image)},
+            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY, persistent_task_image)},
             .task = [&](daxa::TaskInterface const &) {},
             .name = "Task 4) read image",
         });
@@ -934,21 +935,21 @@ auto main() -> i32
 {
     // tests::concurrent_read_on_read();
     tests::read_on_readwriteconcurrent();
-    // tests::simplest();
-    // tests::execution();
-    // tests::write_read_image();
-    // tests::write_read_image_layer();
-    // tests::create_transfer_read_buffer();
-    // tests::initial_layout_access();
-    // tests::tracked_slice_barrier_collapsing();
-    // tests::correct_read_buffer_task_ordering();
-    // tests::sharing_persistent_image();
-    // tests::sharing_persistent_buffer();
-    // tests::transient_write_aliasing();
-    // tests::transient_resources();
-    // tests::shader_integration_inl_use();
-    // tests::test_concurrent_read_write_buffer();
-    // tests::test_concurrent_read_write_image();
-    // tests::test_concurrent_read_write_buffer_cross_graphs();
-    // tests::mipmapping();
+    tests::simplest();
+    tests::execution();
+    tests::write_read_image();
+    tests::write_read_image_layer();
+    tests::create_transfer_read_buffer();
+    tests::initial_layout_access();
+    tests::tracked_slice_barrier_collapsing();
+    tests::correct_read_buffer_task_ordering();
+    tests::sharing_persistent_image();
+    tests::sharing_persistent_buffer();
+    tests::transient_write_aliasing();
+    tests::transient_resources();
+    tests::shader_integration_inl_use();
+    tests::test_concurrent_read_write_buffer();
+    tests::test_concurrent_read_write_image();
+    tests::test_concurrent_read_write_buffer_cross_graphs();
+    tests::mipmapping();
 }
