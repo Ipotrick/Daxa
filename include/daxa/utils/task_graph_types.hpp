@@ -625,11 +625,11 @@ namespace daxa
     namespace HEAD_NAME                                                          \
     {                                                                            \
         static inline constexpr daxa::StringLiteral NAME = #HEAD_NAME;           \
-        static inline constexpr usize ATTACHMENT_COUNT = COUNT;                  \
+        static inline constexpr daxa::usize ATTACHMENT_COUNT = COUNT;            \
         struct AttachmentsStruct                                                 \
         {                                                                        \
           private:                                                               \
-            u32 cur_attach_index = {};                                           \
+            daxa::u32 cur_attach_index = {};                                     \
                                                                                  \
           public:                                                                \
             auto constexpr add_attachment(daxa::TaskBufferAttachment attachment) \
@@ -667,19 +667,19 @@ namespace daxa
     static inline constexpr auto AT = AttachmentsStruct{};                                         \
     struct alignas(daxa::get_asb_alignment(AT)) AttachmentShaderBlob                               \
     {                                                                                              \
-        std::array<uint8_t, daxa::get_asb_size(AT)> value = {};                                    \
+        std::array<daxa::u8, daxa::get_asb_size(AT)> value = {};                                   \
     };                                                                                             \
     struct Task : public daxa::IPartialTask                                                        \
     {                                                                                              \
         using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                           \
         static constexpr AttachmentsStruct AT = AttachmentsStruct{};                               \
-        static constexpr usize ATTACH_COUNT = ATTACHMENT_COUNT;                                    \
+        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                              \
         static auto name() -> std::string_view { return std::string_view{NAME.value, NAME.SIZE}; } \
         static auto attachments() -> std::span<daxa::TaskAttachment const>                         \
         {                                                                                          \
             return AT.attachment_decl_array;                                                       \
         }                                                                                          \
-        static auto attachment_shader_blob_size() -> u32                                           \
+        static auto attachment_shader_blob_size() -> daxa::u32                                     \
         {                                                                                          \
             return sizeof(daxa::get_asb_size(AT));                                                 \
         };                                                                                         \

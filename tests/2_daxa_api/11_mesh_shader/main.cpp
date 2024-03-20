@@ -37,19 +37,19 @@ struct WindowInfo
 
 #include "shared.inl"
 
-struct DrawTask : DrawTri
+struct DrawTask : DrawTri::Task
 {
     AttachmentViews views = {};
     std::shared_ptr<daxa::RasterPipeline> pipeline = {};
     void callback(daxa::TaskInterface ti)
     {
-        daxa::ImageInfo color_img_info = ti.device.info_image(ti.get(color).ids[0]).value();
+        daxa::ImageInfo color_img_info = ti.device.info_image(ti.get(AT.color).ids[0]).value();
         auto const size_x = color_img_info.size.x;
         auto const size_y = color_img_info.size.y;
         auto render_recorder = std::move(ti.recorder).begin_renderpass({
             .color_attachments = std::array{
                 daxa::RenderAttachmentInfo{
-                    .image_view = ti.get(color).view_ids[0],
+                    .image_view = ti.get(AT.color).view_ids[0],
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
                     .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
                 },
@@ -161,7 +161,7 @@ auto main() -> int
     // And a task to draw to the screen
     loop_task_graph.add_task(DrawTask{
         .views = std::array{
-            daxa::attachment_view(DrawTask::color, task_swapchain_image),
+            daxa::attachment_view(DrawTri::AT.color, task_swapchain_image),
         },
         .pipeline = pipeline,
     });
