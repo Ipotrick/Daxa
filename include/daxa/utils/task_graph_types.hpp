@@ -400,7 +400,7 @@ namespace daxa
         std::span<TaskAttachmentInfo const> attachment_infos = {};
         // optional:
         TransferMemoryPool * allocator = {};
-        std::span<std::byte> attachment_shader_data = {};
+        std::span<std::byte> attachment_shader_blob = {};
 
         TaskBufferAttachmentInfo const & get(TaskBufferAttachmentIndex index) const;
         TaskBufferAttachmentInfo const & get(TaskBufferView view) const;
@@ -416,7 +416,7 @@ namespace daxa
     inline namespace detail
     {
         template <typename T>
-        constexpr auto calculate_attachment_shader_data_size(std::span<T const> attachments) -> u32
+        constexpr auto calculate_attachment_shader_blob_size(std::span<T const> attachments) -> u32
         {
             u32 total = 0;
             for (auto const & attach : attachments)
@@ -442,9 +442,9 @@ namespace daxa
     {
         constexpr virtual ~ITask() {}
         /// TODO(pahrens): optimize:
-        constexpr virtual auto attachment_shader_data_size() const -> u32
+        constexpr virtual auto attachment_shader_blob_size() const -> u32
         {
-            return detail::calculate_attachment_shader_data_size(attachments());
+            return detail::calculate_attachment_shader_blob_size(attachments());
         };
         constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> = 0;
         constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> = 0;
@@ -519,9 +519,9 @@ namespace daxa
             return attachment_decl_array[index.value].value.image;
         }
 
-        static auto attachment_shader_data_size() -> u32
+        static auto attachment_shader_blob_size() -> u32
         {
-            return detail::calculate_attachment_shader_data_size(attachments());
+            return detail::calculate_attachment_shader_blob_size(attachments());
         };
 
         static constexpr inline usize ATTACH_COUNT = ATTACHMENT_COUNT;
@@ -679,7 +679,7 @@ namespace daxa
         {                                                                                          \
             return AT.attachment_decl_array;                                                       \
         }                                                                                          \
-        static auto attachment_shader_data_size() -> u32                                           \
+        static auto attachment_shader_blob_size() -> u32                                           \
         {                                                                                          \
             return sizeof(daxa::get_asb_size(AT));                                                 \
         };                                                                                         \
@@ -687,7 +687,7 @@ namespace daxa
     }                                                                                              \
     ;
 
-#define DAXA_TH_BLOB(HEAD_NAME, field_name)
+#define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
 
 #define DAXA_TH_IMAGE(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0)
 #define DAXA_TH_IMAGE_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1)

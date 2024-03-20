@@ -975,10 +975,10 @@ namespace daxa
 #endif // #if DAXA_VALIDATION
     }
 
-    auto write_attachment_shader_data(Device device, u32 data_size, std::span<TaskAttachmentInfo const> attachments) -> std::vector<std::byte>
+    auto write_attachment_shader_blob(Device device, u32 data_size, std::span<TaskAttachmentInfo const> attachments) -> std::vector<std::byte>
     {
-        std::vector<std::byte> attachment_shader_data = {};
-        attachment_shader_data.resize(data_size);
+        std::vector<std::byte> attachment_shader_blob = {};
+        attachment_shader_blob.resize(data_size);
         usize shader_byte_blob_offset = 0;
         auto upalign = [&](size_t align_size)
         {
@@ -1004,7 +1004,7 @@ namespace daxa
                         BufferId const buf_id = buffer_attach.ids[shader_array_i];
                         DeviceAddress const buf_address = device.get_device_address(buf_id).value();
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_u64)>>(buf_address);
-                        std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_u64));
+                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_u64));
                         shader_byte_blob_offset += sizeof(daxa_u64);
                     }
                 }
@@ -1015,7 +1015,7 @@ namespace daxa
                     {
                         BufferId const buf_id = buffer_attach.ids[shader_array_i];
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_BufferId)>>(buf_id);
-                        std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_BufferId));
+                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_BufferId));
                         shader_byte_blob_offset += sizeof(daxa_BufferId);
                     }
                 }
@@ -1029,7 +1029,7 @@ namespace daxa
                     {
                         ImageViewId const img_id = image_attach.view_ids[shader_array_i];
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_ImageViewIndex)>>(static_cast<uint32_t>(img_id.index));
-                        std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_ImageViewIndex));
+                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_ImageViewIndex));
                         shader_byte_blob_offset += sizeof(daxa_ImageViewIndex);
                     }
                 }
@@ -1040,12 +1040,12 @@ namespace daxa
                     {
                         ImageViewId const img_id = image_attach.view_ids[shader_array_i];
                         auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_ImageViewId)>>(img_id);
-                        std::memcpy(attachment_shader_data.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_ImageViewId));
+                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_ImageViewId));
                         shader_byte_blob_offset += sizeof(daxa_ImageViewId);
                     }
                 }
             });
-        return attachment_shader_data;
+        return attachment_shader_blob;
     }
 
     void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id)
@@ -1069,9 +1069,9 @@ namespace daxa
                 attach.view_ids = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
                 validate_task_image_runtime_data(task, attach);
             });
-        std::vector<std::byte> attachment_shader_data = write_attachment_shader_data(
+        std::vector<std::byte> attachment_shader_blob = write_attachment_shader_blob(
             info.device,
-            task.base_task->attachment_shader_data_size(),
+            task.base_task->attachment_shader_blob_size(),
             task.base_task->attachments());
         impl_runtime.current_task = &task;
         impl_runtime.recorder.begin_label({
@@ -1083,7 +1083,7 @@ namespace daxa
             .recorder = impl_runtime.recorder,
             .attachment_infos = task.base_task->attachments(),
             .allocator = this->staging_memory.has_value() ? &this->staging_memory.value() : nullptr,
-            .attachment_shader_data = attachment_shader_data,
+            .attachment_shader_blob = attachment_shader_blob,
         });
         impl_runtime.recorder.end_label();
     }

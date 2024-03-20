@@ -108,7 +108,7 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = TestShaderTaskHead::attachment_shader_data_size(),
+            .push_constant_size = TestShaderTaskHead::attachment_shader_blob_size(),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -137,7 +137,7 @@ namespace tests
             void callback(daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*pipeline);
-                ti.recorder.push_constant_vptr({ti.attachment_shader_data.data(), ti.attachment_shader_data.size()});
+                ti.recorder.push_constant_vptr({ti.attachment_shader_blob.data(), ti.attachment_shader_blob.size()});
                 ti.recorder.dispatch({1, 1, 1});
             }
         };

@@ -423,7 +423,7 @@ namespace tests
             void callback(daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*pipeline);
-                ti.recorder.push_constant_vptr({ti.attachment_shader_data.data(), ti.attachment_shader_data.size()});
+                ti.recorder.push_constant_vptr({ti.attachment_shader_blob.data(), ti.attachment_shader_blob.size()});
                 ti.recorder.dispatch({1, 1, 1});
             }
         };
