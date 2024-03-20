@@ -17,7 +17,7 @@ using Clock = std::chrono::high_resolution_clock;
     DAXA_TH_BUFFER(COMPUTE_SHADER_READ_WRITE, current)
     DAXA_TH_BUFFER(COMPUTE_SHADER_READ, previous)
     DAXA_DECL_TASK_HEAD_END
-    struct UpdateBoidsTask : UpdateBoids
+    struct UpdateBoidsTask : UpdateBoids::Task
     {
         AttachmentViews views = {};
         std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
@@ -25,8 +25,8 @@ using Clock = std::chrono::high_resolution_clock;
         {
             ti.recorder.set_pipeline(*update_boids_pipeline);
             ti.recorder.push_constant(UpdateBoidsPushConstant{
-                .boids_buffer = ti.device.get_device_address(ti.get(current).ids[0]).value(),
-                .old_boids_buffer = ti.device.get_device_address(ti.get(previous).ids[0]).value(),
+                .boids_buffer = ti.device.get_device_address(ti.get(AT.current).ids[0]).value(),
+                .old_boids_buffer = ti.device.get_device_address(ti.get(AT.previous).ids[0]).value(),
             });
             ti.recorder.dispatch({(MAX_BOIDS + 63) / 64, 1, 1});
         }
@@ -230,10 +230,11 @@ struct App : AppWindow<App>
         new_task_graph.use_persistent_image(task_swapchain_image);
         new_task_graph.use_persistent_buffer(task_boids_current);
         new_task_graph.use_persistent_buffer(task_boids_old);
+        using namespace UpdateBoids;
         new_task_graph.add_task(UpdateBoidsTask{
             .views = std::array{
-                daxa::attachment_view(UpdateBoidsTask::current, task_boids_current ),
-                daxa::attachment_view(UpdateBoidsTask::previous, task_boids_old ),
+                daxa::attachment_view( UpdateBoids::AT.current, task_boids_current ),
+                daxa::attachment_view( UpdateBoids::AT.previous, task_boids_old ),
             },
             .update_boids_pipeline = update_boids_pipeline,
         });
