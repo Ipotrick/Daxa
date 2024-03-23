@@ -65,5 +65,5 @@ If you prefer to interact in Discord over GitHub issues, Daxa has a [Discord ser
 - automatic default image view integrated into all images
 - controllable parent-child lifetime semantics
 - fully abstracts Vulkan, allows Daxa to have more control and be more convenient
-- deadImGui backend
+- dearImGui backend
 - transient memory pool utility object
