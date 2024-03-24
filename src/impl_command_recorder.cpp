@@ -257,6 +257,13 @@ void remember_ids(daxa_CommandRecorder self, Args... args)
 
 /// --- Begin API Functions ---
 
+auto daxa_cmd_set_rasterization_samples(daxa_CommandRecorder self, VkSampleCountFlagBits samples) -> daxa_Result
+{
+    daxa_cmd_flush_barriers(self);
+    self->device->vkCmdSetRasterizationSamplesEXT(self->current_command_data.vk_cmd_buffer, samples);
+    return DAXA_RESULT_SUCCESS;
+}
+
 auto daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder self, daxa_BufferCopyInfo const * info) -> daxa_Result
 {
     daxa_cmd_flush_barriers(self);
@@ -770,6 +777,12 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
             .storeOp = static_cast<VkAttachmentStoreOp>(in.store_op),
             .clearValue = in.clear_value.values,
         };
+        if (in.resolve.has_value)
+        {
+            out.resolveMode = static_cast<VkResolveModeFlagBits>(in.resolve.value.mode);
+            out.resolveImageView = self->device->slot(in.resolve.value.image).vk_image_view;
+            out.resolveImageLayout = std::bit_cast<VkImageLayout>(in.resolve.value.layout);
+        }
     };
 
     std::array<VkRenderingAttachmentInfo, COMMAND_LIST_COLOR_ATTACHMENT_MAX> vk_color_attachments = {};
@@ -850,6 +863,7 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     };
     vkCmdSetViewport(self->current_command_data.vk_cmd_buffer, 0, 1, &vk_viewport);
     vkCmdBeginRendering(self->current_command_data.vk_cmd_buffer, &vk_rendering_info);
+    self->device->vkCmdSetRasterizationSamplesEXT(self->current_command_data.vk_cmd_buffer, VK_SAMPLE_COUNT_1_BIT);
     self->in_renderpass = true;
     return DAXA_RESULT_SUCCESS;
 }

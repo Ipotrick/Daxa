@@ -123,6 +123,14 @@ namespace daxa
         float size = {};
     };
 
+    enum struct RasterizationSamples : u32
+    {
+        E1 = 0x00000001,
+        E2 = 0x00000002,
+        E4 = 0x00000004,
+        E8 = 0x00000008,
+    };
+
     struct RasterizerInfo
     {
         PrimitiveTopology primitive_topology = PrimitiveTopology::TRIANGLE_LIST;
@@ -137,8 +145,9 @@ namespace daxa
         f32 depth_bias_clamp = 0.0f;
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
-        u32 samples = 1;
         Optional<ConservativeRasterInfo> conservative_raster_info = {};
+        // When left as none, the pipeline will use the current msaa value of the command recorder.
+        Optional<RasterizationSamples> static_state_sample_count = {};
     };
 
     struct RenderAttachment

@@ -93,6 +93,9 @@ namespace daxa
         }
     };
 
+    struct NoneT { };
+    static inline constexpr NoneT None = NoneT{};
+
     template <typename T>
     struct Optional
     {
@@ -104,11 +107,18 @@ namespace daxa
         Optional() : m_value{}, m_has_value{false} {}
         Optional(Optional<T> const &) = default;
         Optional(T const & v) : m_value{v}, m_has_value{true} {}
+        Optional(NoneT const &) : m_value{}, m_has_value{} {}
         Optional<T> & operator=(Optional<T> const &) = default;
         Optional<T> & operator=(T const & v)
         {
             this->m_value = v;
             this->m_has_value = true;
+            return *this;
+        }
+        Optional<T> & operator=(NoneT const &)
+        {
+            this->m_value = {};
+            this->m_has_value = {};
             return *this;
         }
 

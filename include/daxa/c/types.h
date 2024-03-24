@@ -127,14 +127,14 @@ typedef enum
 
 /// ABI STABLE OPTIONAL TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Optional
-#define _DAXA_DECL_OPTIONAL(T) \
-    typedef struct             \
-    {                          \
-        T value;               \
-        daxa_Bool8 has_value;  \
-    } daxa_Optional##T;
+#define _DAXA_DECL_OPTIONAL(X)
 
-#define daxa_Optional(T) daxa_Optional##T
+#define daxa_Optional(T)      \
+    struct                    \
+    {                         \
+        T value;              \
+        daxa_Bool8 has_value; \
+    }
 
 #define _DAXA_FIXED_LIST_SIZE_T uint8_t
 

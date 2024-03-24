@@ -87,12 +87,29 @@ namespace daxa
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
+
     struct BufferClearInfo
     {
         BufferId buffer = {};
         usize offset = {};
         usize size = {};
         u32 clear_value = {};
+    };
+
+    enum struct ResolveMode
+    {
+        NONE = 0,
+        SAMPLE_ZERO = 0x00000001,
+        AVERAGE = 0x00000002,
+        MIN = 0x00000004,
+        MAX = 0x00000008,
+    };
+
+    struct AttachmentResolveInfo
+    {
+        ResolveMode mode = ResolveMode::AVERAGE;
+        ImageViewId image = {};
+        ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
     };
 
     struct RenderAttachmentInfo
@@ -102,6 +119,7 @@ namespace daxa
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
         ClearValue clear_value = {};
+        Optional<AttachmentResolveInfo> resolve = {};
     };
 
     struct RenderPassBeginInfo
@@ -293,6 +311,7 @@ namespace daxa
         void set_pipeline(RasterPipeline const & pipeline);
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
+        void set_rasterization_samples(RasterizationSamples info);
         void set_depth_bias(DepthBiasInfo const & info);
         void set_index_buffer(SetIndexBufferInfo const & info);
 

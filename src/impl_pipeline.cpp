@@ -96,12 +96,14 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .flags = {},
         .patchControlPoints = ret.info.tesselation.value_or(no_tess).control_points,
     };
-    // TODO(grundlett): Maybe check if samples is valid value?
     VkPipelineMultisampleStateCreateInfo const vk_multisample_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        .rasterizationSamples = static_cast<VkSampleCountFlagBits>(ret.info.raster.samples),
+        .rasterizationSamples = 
+            info->raster.static_state_sample_count.has_value ? 
+            info->raster.static_state_sample_count.value :
+            VK_SAMPLE_COUNT_1_BIT,
         .sampleShadingEnable = VK_FALSE,
         .minSampleShading = 1.0f,
         .pSampleMask = {},
@@ -208,11 +210,15 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .scissorCount = 1,
         .pScissors = &DEFAULT_SCISSOR,
     };
-    auto dynamic_state = std::array{
+    auto dynamic_state = std::vector{
         VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT,
         VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
         VkDynamicState::VK_DYNAMIC_STATE_DEPTH_BIAS,
     };
+    if (!info->raster.static_state_sample_count.has_value)
+    {
+        dynamic_state.push_back(VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT);
+    }
     VkPipelineDynamicStateCreateInfo const vk_dynamic_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
         .pNext = nullptr,
@@ -454,42 +460,42 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         return std::bit_cast<daxa_Result>(result);                                                      \
     }
 
-    u32 const raygen_count = ret.info.ray_gen_shaders.size();
+    u32 const raygen_count = static_cast<u32>(ret.info.ray_gen_shaders.size());
     for (FixedListSizeT i = 0; i < raygen_count; ++i)
     {
         auto stage = ret.info.ray_gen_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, RAYGEN)
     }
 
-    u32 const intersection_count = ret.info.intersection_shaders.size();
+    u32 const intersection_count = static_cast<u32>(ret.info.intersection_shaders.size());
     for (FixedListSizeT i = 0; i < intersection_count; ++i)
     {
         auto stage = ret.info.intersection_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, INTERSECTION)
     }
 
-    u32 const any_hit_count = ret.info.any_hit_shaders.size();
+    u32 const any_hit_count = static_cast<u32>(ret.info.any_hit_shaders.size());
     for (FixedListSizeT i = 0; i < any_hit_count; ++i)
     {
         auto stage = ret.info.any_hit_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, ANY_HIT)
     }
 
-    u32 const callable_count = ret.info.callable_shaders.size();
+    u32 const callable_count = static_cast<u32>(ret.info.callable_shaders.size());
     for (FixedListSizeT i = 0; i < callable_count; ++i)
     {
         auto stage = ret.info.callable_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, CALLABLE)
     }
 
-    u32 const closest_hit_count = ret.info.closest_hit_shaders.size();
+    u32 const closest_hit_count = static_cast<u32>(ret.info.closest_hit_shaders.size());
     for (FixedListSizeT i = 0; i < closest_hit_count; ++i)
     {
         auto stage = ret.info.closest_hit_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, CLOSEST_HIT)
     }
 
-    u32 const miss_hit_count = ret.info.miss_hit_shaders.size();
+    u32 const miss_hit_count = static_cast<u32>(ret.info.miss_hit_shaders.size());
     for (FixedListSizeT i = 0; i < miss_hit_count; ++i)
     {
         auto stage = ret.info.miss_hit_shaders.at(i);

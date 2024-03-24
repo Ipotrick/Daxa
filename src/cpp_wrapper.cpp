@@ -873,6 +873,12 @@ namespace daxa
             this->internal,
             r_cast<VkRect2D const *>(&info));
     }
+    
+    void RenderCommandRecorder::set_rasterization_samples(RasterizationSamples info)
+    {
+        auto result = daxa_cmd_set_rasterization_samples(this->internal, static_cast<VkSampleCountFlagBits>(info));
+        check_result(result, "failed in set_rasterization_samples");
+    }
 
     DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
     DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)

@@ -43,25 +43,25 @@ struct DrawTask : DrawTri::Task
     std::shared_ptr<daxa::RasterPipeline> pipeline = {};
     void callback(daxa::TaskInterface ti)
     {
-        daxa::ImageInfo color_img_info = ti.device.info_image(ti.get(AT.color).ids[0]).value();
+        daxa::ImageInfo color_img_info = ti.device.info_image(ti.get(AT.render_target).ids[0]).value();
         auto const size_x = color_img_info.size.x;
         auto const size_y = color_img_info.size.y;
         auto render_recorder = std::move(ti.recorder).begin_renderpass({
             .color_attachments = std::array{
                 daxa::RenderAttachmentInfo{
-                    .image_view = ti.get(AT.color).view_ids[0],
+                    .image_view = ti.get(AT.render_target).view_ids[0],
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
                     .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
+                    .resolve = daxa::AttachmentResolveInfo{
+                        .image = ti.get(AT.resolve_target).view_ids[0],
+                    },
                 },
             },
             .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
         });
+        render_recorder.set_rasterization_samples(daxa::RasterizationSamples::E4);
         render_recorder.set_pipeline(*pipeline);
-        // render_recorder.push_constant_vptr({
-        //     .data = ti.attachment_shader_blob.data(),
-        //     .size = ti.attachment_shader_blob.size(),
-        // });
-        render_recorder.draw_mesh_tasks(1,1,1);
+        render_recorder.draw_mesh_tasks(1, 1, 1);
         ti.recorder = std::move(render_recorder).end_renderpass();
     }
 };
@@ -111,6 +111,20 @@ auto main() -> int
         .name = "my swapchain",
     });
 
+    daxa::ImageId render_target = device.create_image({
+        .format = daxa::Format::B8G8R8A8_UNORM,
+        .size = {window_info.width, window_info.height, 1},
+        .sample_count = 4,
+        .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::TRANSFER_SRC,
+        .name = "render target",
+    });
+    daxa::TaskImage trender_image = daxa::TaskImage{{
+        .initial_images = {
+            .images = std::array{render_target},
+        },
+        .name = "render target",
+    }};
+
     auto pipeline_manager = daxa::PipelineManager({
         .device = device,
         .shader_compile_options = {
@@ -136,7 +150,7 @@ auto main() -> int
                 .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_fragment"},
             },
             .color_attachments = {{.format = swapchain.get_format()}},
-            .raster = {},
+            .raster = {.static_state_sample_count = daxa::None},
             // .push_constant_size = sizeof(DrawTri::attachment_shader_blob_size()),
             .name = "my pipeline",
         });
@@ -157,11 +171,13 @@ auto main() -> int
     });
 
     loop_task_graph.use_persistent_image(task_swapchain_image);
+    loop_task_graph.use_persistent_image(trender_image);
 
     // And a task to draw to the screen
     loop_task_graph.add_task(DrawTask{
         .views = std::array{
-            daxa::attachment_view(DrawTri::AT.color, task_swapchain_image),
+            daxa::attachment_view(DrawTri::AT.resolve_target, task_swapchain_image),
+            daxa::attachment_view(DrawTri::AT.render_target, trender_image),
         },
         .pipeline = pipeline,
     });

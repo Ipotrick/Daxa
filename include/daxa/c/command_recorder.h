@@ -151,11 +151,25 @@ static daxa_BufferClearInfo const DAXA_DEFAULT_BUFFER_CLEAR_INFO = DAXA_ZERO_INI
 
 typedef struct
 {
+    VkResolveModeFlagBits mode;
+    daxa_ImageViewId image;
+    daxa_ImageLayout layout;
+} daxa_AttachmentResolveInfo;
+
+static daxa_AttachmentResolveInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_RESOLVE_INFO = {
+    .mode = VK_RESOLVE_MODE_AVERAGE_BIT,
+    .image = {},
+    .layout = DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+};
+
+typedef struct
+{
     daxa_ImageViewId image_view;
     daxa_ImageLayout layout;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
     daxa_Variant(VkClearValue) clear_value;
+    daxa_Optional(daxa_AttachmentResolveInfo) resolve;
 } daxa_RenderAttachmentInfo;
 _DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
 _DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)
@@ -166,6 +180,7 @@ static daxa_RenderAttachmentInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     .store_op = VK_ATTACHMENT_STORE_OP_STORE,
     .clear_value = DAXA_ZERO_INIT,
+    .resolve = {.has_value = 0},
 };
 
 typedef struct
@@ -383,6 +398,8 @@ typedef struct
 
 static daxa_BuildAccelerationStucturesInfo const DAXA_DEFAULT_BUILD_ACCELERATION_STRUCTURES_INFO = DAXA_ZERO_INIT;
 
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_set_rasterization_samples(daxa_CommandRecorder cmd_enc, VkSampleCountFlagBits samples);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder cmd_enc, daxa_BufferCopyInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

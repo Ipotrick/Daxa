@@ -22,7 +22,7 @@ namespace daxa
             .depthBounds = VK_FALSE,
             .wideLines = VK_TRUE,
             .largePoints = VK_FALSE,
-            .alphaToOne = VK_FALSE,
+            .alphaToOne = VK_FALSE, 
             .multiViewport = VK_FALSE,
             .samplerAnisotropy = VK_TRUE, // Allows for anisotropic filtering.
             .textureCompressionETC2 = VK_FALSE,
@@ -65,10 +65,16 @@ namespace daxa
         this->variable_pointers = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES,
             .pNext = chain,
-            .variablePointersStorageBuffer = VK_TRUE, // SLANG WANTS THIS
-            .variablePointers = VK_TRUE, // SLANG WANTS THIS
+            .variablePointersStorageBuffer = VK_TRUE,   // SLANG WANTS THIS
+            .variablePointers = VK_TRUE,                // SLANG WANTS THIS
         };
         this->chain = r_cast<void *>(&this->variable_pointers);
+        this->dynamic_state3 = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT,
+            .pNext = chain,
+            .extendedDynamicState3RasterizationSamples = VK_TRUE,
+        };
+        this->chain = r_cast<void *>(&this->dynamic_state3);
         this->buffer_device_address = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = chain,
@@ -251,6 +257,7 @@ namespace daxa
         // NOTE(pahrens): Make sure to never exceed EXTENSION_LIST_MAX!
         this->size = 0;
         this->data[size++] = {VK_KHR_SWAPCHAIN_EXTENSION_NAME};
+        this->data[size++] = {VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME};
         if ((info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION) != 0u)
         {
             this->data[size++] = {VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME};

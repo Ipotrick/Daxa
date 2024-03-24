@@ -25,6 +25,7 @@ namespace daxa
         VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore = {};
         VkPhysicalDeviceScalarBlockLayoutFeatures scalar_layout = {};
         VkPhysicalDeviceVariablePointerFeatures variable_pointers = {};
+        VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamic_state3 = {};
         std::optional<VkPhysicalDeviceShaderFloat16Int8Features> shader_float16_int8 = {};
         std::optional<VkPhysicalDeviceRobustness2FeaturesEXT> robustness2 = {};
         std::optional<VkPhysicalDeviceVulkanMemoryModelFeatures> memory_model = {};

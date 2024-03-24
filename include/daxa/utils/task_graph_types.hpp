@@ -402,6 +402,15 @@ namespace daxa
         TransferMemoryPool * allocator = {};
         std::span<std::byte> attachment_shader_blob = {};
 
+
+        void assign_attachment_shader_blob(std::span<u8> arr)
+        {
+            std::memcpy(
+                arr.data(), 
+                attachment_shader_blob.data(), 
+                attachment_shader_blob.size());
+        }
+
         TaskBufferAttachmentInfo const & get(TaskBufferAttachmentIndex index) const;
         TaskBufferAttachmentInfo const & get(TaskBufferView view) const;
         TaskImageAttachmentInfo const & get(TaskImageAttachmentIndex index) const;
