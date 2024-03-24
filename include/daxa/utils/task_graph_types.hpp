@@ -157,6 +157,7 @@ namespace daxa
 
         auto is_empty() const -> bool;
         auto is_persistent() const -> bool;
+        auto is_null() const -> bool;
 
         auto operator<=>(TaskGPUResourceView const & other) const = default;
     };
@@ -166,6 +167,14 @@ namespace daxa
     struct TaskBufferView : public TaskGPUResourceView
     {
     };
+
+    static constexpr inline TaskBufferView NullTaskBuffer = []()
+    {
+        TaskBufferView ret = {};
+        ret.task_graph_index = std::numeric_limits<u32>::max();
+        ret.index = std::numeric_limits<u32>::max();
+        return ret;
+    }();
 
     struct TaskImageView : public TaskGPUResourceView
     {
@@ -179,6 +188,14 @@ namespace daxa
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskImageView const & other) const = default;
     };
+
+    static constexpr inline TaskImageView NullTaskImage = []()
+    {
+        TaskImageView ret = {};
+        ret.task_graph_index = std::numeric_limits<u32>::max();
+        ret.index = std::numeric_limits<u32>::max();
+        return ret;
+    }();
 
     struct ImageSliceState
     {
@@ -402,12 +419,11 @@ namespace daxa
         TransferMemoryPool * allocator = {};
         std::span<std::byte> attachment_shader_blob = {};
 
-
         void assign_attachment_shader_blob(std::span<u8> arr)
         {
             std::memcpy(
-                arr.data(), 
-                attachment_shader_blob.data(), 
+                arr.data(),
+                attachment_shader_blob.data(),
                 attachment_shader_blob.size());
         }
 

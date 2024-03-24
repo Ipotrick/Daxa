@@ -929,6 +929,44 @@ namespace tests
         device.destroy_buffer(buffer);
         device.collect_garbage();
     }
+
+    void optional_attachments()
+    {
+        // TEST:
+        //    1) CREATE image
+        //    2) WRITE image
+        //    3) READ image
+        AppContext app = {};
+        // Need to scope the task graphs lifetime.
+        // Task graph MUST die before we call wait_idle and collect_garbage.
+        auto task_graph = daxa::TaskGraph({
+            .device = app.device,
+            .record_debug_information = true,
+            .name = APPNAME_PREFIX("create-write-read image"),
+        });
+        // CREATE IMAGE
+        auto task_image = task_graph.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
+        // WRITE IMAGE 1
+        task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_image),
+                daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, daxa::NullTaskImage),
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, daxa::NullTaskBuffer),
+            },
+            .task = [](daxa::TaskInterface) {},
+            .name = APPNAME_PREFIX("write image 1"),
+        });
+        // READ_IMAGE 1
+        task_graph.add_task({
+            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, task_image)},
+            .task = [](daxa::TaskInterface) {},
+            .name = APPNAME_PREFIX("read image 1"),
+        });
+
+        task_graph.complete({});
+        task_graph.execute({});
+        std::cout << task_graph.get_debug_string() << std::endl;
+    }
 } //namespace tests
 
 auto main() -> i32
@@ -952,4 +990,5 @@ auto main() -> i32
     tests::test_concurrent_read_write_image();
     tests::test_concurrent_read_write_buffer_cross_graphs();
     tests::mipmapping();
+    tests::optional_attachments();
 }
