@@ -289,7 +289,14 @@ namespace daxa
 
     auto TaskGPUResourceView::is_persistent() const -> bool
     {
-        return task_graph_index == std::numeric_limits<u32>::max();
+        return task_graph_index == std::numeric_limits<u32>::max() && !is_null();
+    }
+
+    auto TaskGPUResourceView::is_null() const -> bool
+    {
+        return 
+            task_graph_index == std::numeric_limits<u32>::max() && 
+            index == std::numeric_limits<u32>::max();
     }
 
     auto to_string(TaskBufferAccess const & usage) -> std::string_view
@@ -667,8 +674,14 @@ namespace daxa
         return task_image_view;
     }
 
+    static inline constexpr std::array<BufferId, 64> NULL_BUF_ARRAY = {};
+
     auto ImplTaskGraph::get_actual_buffers(TaskBufferView id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>
     {
+        if (id.is_null())
+        {
+            return NULL_BUF_ARRAY;
+        }
         auto const & global_buffer = global_buffer_infos.at(id.index);
         if (global_buffer.is_persistent())
         {
@@ -683,8 +696,14 @@ namespace daxa
         }
     }
 
+    static inline constexpr std::array<ImageId, 64> NULL_IMG_ARRAY = {};
+
     auto ImplTaskGraph::get_actual_images(TaskImageView id, TaskGraphPermutation const & perm) const -> std::span<ImageId const>
     {
+        if (id.is_null())
+        {
+            return NULL_IMG_ARRAY;
+        }
         auto const & global_image = global_image_infos.at(id.index);
         if (global_image.is_persistent())
         {
@@ -701,6 +720,7 @@ namespace daxa
 
     auto ImplTaskGraph::id_to_local_id(TaskBufferView id) const -> TaskBufferView
     {
+        if (id.is_null()) return id;
         DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task buffer id. Please make sure to only use initialized task buffer ids.");
         if (id.is_persistent())
         {
@@ -724,6 +744,7 @@ namespace daxa
 
     auto ImplTaskGraph::id_to_local_id(TaskImageView id) const -> TaskImageView
     {
+        if (id.is_null()) return id;
         DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task image id. Please make sure to only use initialized task image ids.");
         if (id.is_persistent())
         {
@@ -804,13 +825,21 @@ namespace daxa
             [](u32, TaskBufferAttachmentInfo const &) {},
             [&](u32 task_image_attach_index, TaskImageAttachmentInfo const & image_attach)
             {
+                auto & view_cache = task.image_view_cache[task_image_attach_index];
+
+                if (image_attach.view.is_null())
+                {
+                    for (u32 index = 0; index < image_attach.shader_array_size; ++index)
+                    {
+                        view_cache.push_back(daxa::ImageViewId{});
+                    }
+                    return;
+                }
                 auto const slice = image_attach.translated_view.slice;
                 // The image id here is already the task graph local id.
                 // The persistent ids are converted to local ids in the add_task function.
                 auto const tid = image_attach.translated_view;
-
                 auto const actual_images = get_actual_images(tid, permutation);
-                auto & view_cache = task.image_view_cache[task_image_attach_index];
 
                 bool cache_valid = true;
                 if (image_attach.shader_array_type == TaskHeadImageArrayType::RUNTIME_IMAGES)
@@ -998,14 +1027,14 @@ namespace daxa
             {
                 if (buffer_attach.shader_as_address)
                 {
-                    upalign(sizeof(daxa_u64));
+                    upalign(sizeof(DeviceAddress));
                     for (u32 shader_array_i = 0; shader_array_i < buffer_attach.shader_array_size; ++shader_array_i)
                     {
                         BufferId const buf_id = buffer_attach.ids[shader_array_i];
-                        DeviceAddress const buf_address = device.get_device_address(buf_id).value();
-                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_u64)>>(buf_address);
-                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_u64));
-                        shader_byte_blob_offset += sizeof(daxa_u64);
+                        DeviceAddress const buf_address = buffer_attach.view.is_null() ? DeviceAddress{} : device.get_device_address(buf_id).value();
+                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(buf_address);
+                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
+                        shader_byte_blob_offset += sizeof(DeviceAddress);
                     }
                 }
                 else
@@ -1185,6 +1214,7 @@ namespace daxa
             task.attachments(),
             [&](u32, TaskBufferAttachmentInfo const & attach)
             {
+                if (attach.view.is_null()) return;
                 PerPermTaskBuffer const & task_buffer = perm.buffer_infos[attach.translated_view.index];
                 // If the latest access is in a previous submit scope, the earliest batch we can insert into is
                 // the current scopes first batch.
@@ -1213,6 +1243,7 @@ namespace daxa
             },
             [&](u32, TaskImageAttachmentInfo const & attach)
             {
+                if (attach.view.is_null()) return;
                 PerPermTaskImage const & task_image = perm.image_infos[attach.translated_view.index];
                 PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[attach.translated_view.index];
                 DAXA_DBG_ASSERT_TRUE_M(!task_image.swapchain_semaphore_waited_upon, "swapchain image is already presented!");
@@ -1439,6 +1470,7 @@ namespace daxa
             task.attachments(),
             [&](u32, TaskBufferAttachmentInfo const & attach)
             {
+                if (attach.view.is_null()) return;
                 if (attach.view.is_persistent())
                 {
                     buffer_infos[attach.translated_view.index].valid = true;
@@ -1446,6 +1478,7 @@ namespace daxa
             },
             [&](u32, TaskImageAttachmentInfo const & attach)
             {
+                if (attach.view.is_null()) return;
                 if (attach.view.is_persistent())
                 {
                     image_infos[attach.translated_view.index].valid = true;
@@ -1481,6 +1514,7 @@ namespace daxa
             task.attachments(),
             [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
             {
+                if (buffer_attach.view.is_null()) return;
                 PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_attach.translated_view.index];
                 auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(buffer_attach.access);
                 update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
@@ -1607,6 +1641,7 @@ namespace daxa
             },
             [&](u32, TaskImageAttachmentInfo & image_attach)
             {
+                if (image_attach.view.is_null()) return;
                 auto const & used_image_t_id = image_attach.translated_view;
                 auto const & used_image_t_access = image_attach.access;
                 auto const & initial_used_image_slice = image_attach.translated_view.slice;
@@ -2947,6 +2982,11 @@ namespace daxa
 
     void ImplTaskGraph::print_task_image_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskImageView local_id)
     {
+        if (local_id.is_null())
+        {
+            fmt::format_to(std::back_inserter(out), "{}task image [NULL]\n", indent);
+            return;
+        }
         auto const & glob_image = global_image_infos[local_id.index];
         std::string persistent_info;
         if (global_image_infos[local_id.index].is_persistent())
@@ -2970,6 +3010,11 @@ namespace daxa
 
     void ImplTaskGraph::print_task_buffer_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskBufferView local_id)
     {
+        if (local_id.is_null())
+        {
+            fmt::format_to(std::back_inserter(out), "{}task image [NULL]\n", indent);
+            return;
+        }
         auto const & glob_buffer = global_buffer_infos[local_id.index];
         std::string persistent_info;
         if (global_buffer_infos[local_id.index].is_persistent())

@@ -212,5 +212,6 @@ auto main() -> int
     }
 
     device.wait_idle();
+    device.destroy_image(render_target);
     device.collect_garbage();
 }

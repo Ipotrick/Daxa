@@ -81,10 +81,14 @@ namespace daxa
             task->attachments(),
             [&](u32 index_a, TaskBufferAttachmentInfo const & a)
             {
+                if (a.view.is_null())
+                    return;
                 for_each(
                     task->attachments(),
                     [&](u32 index_b, TaskBufferAttachmentInfo const & b)
                     {
+                        if (b.view.is_null())
+                            return;
                         if (index_a == index_b)
                             return;
                         [[maybe_unused]] bool const overlapping = a.view == b.view;
@@ -102,11 +106,15 @@ namespace daxa
             },
             [&](u32 index_a, TaskImageAttachmentInfo const & a)
             {
+                if (a.view.is_null())
+                    return;
                 for_each(
                     task->attachments(),
                     [&](u32, TaskBufferAttachmentInfo const &) {},
                     [&](u32 index_b, TaskImageAttachmentInfo const & b)
                     {
+                        if (b.view.is_null())
+                            return;
                         if (index_a == index_b)
                             return;
                         [[maybe_unused]] auto const intersect = a.view == b.view && a.view.slice.intersects(b.view.slice);
