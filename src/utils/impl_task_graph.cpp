@@ -885,6 +885,14 @@ namespace daxa
                         {
                             ImageViewInfo view_info = info.device.info_image_view(parent.default_view()).value();
                             ImageViewType const use_view_type = (image_attach.view_type != ImageViewType::MAX_ENUM) ? image_attach.view_type : view_info.type;
+                            if (parent.default_view() == daxa::ImageViewId{})
+                            {
+                                printf("bruh view\n");
+                            }
+                            if (parent == daxa::ImageId{})
+                            {
+                                printf("bruh image\n");
+                            }
 
                             // When the use image view parameters match the default view,
                             // then use the default view id and avoid creating a new id here.
