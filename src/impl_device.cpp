@@ -1522,6 +1522,17 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             vkDestroyDevice(self->vk_device, nullptr);
             return DAXA_RESULT_FAILED_TO_CREATE_NULL_BUFFER;
         }
+        if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
+        {
+            VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_BUFFER,
+                .objectHandle = std::bit_cast<uint64_t>(self->vk_null_buffer),
+                .pObjectName = "daxa null_buffer",
+            };
+            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
+        }
 
         *static_cast<decltype(buffer_data) *>(vma_allocation_info.pMappedData) = buffer_data;
     }
@@ -1561,6 +1572,17 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             vkDestroyDevice(self->vk_device, nullptr);
             return DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE;
         }
+        if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
+        {
+            VkDebugUtilsObjectNameInfoEXT const image_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_IMAGE,
+                .objectHandle = std::bit_cast<uint64_t>(self->vk_null_image),
+                .pObjectName = "daxa null_image",
+            };
+            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &image_name_info);
+        }
 
         VkImageViewCreateInfo const vk_image_view_create_info{
             .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
@@ -1594,6 +1616,17 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             vkDestroyCommandPool(self->vk_device, init_cmd_pool, nullptr);
             vkDestroyDevice(self->vk_device, nullptr);
             return DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE_VIEW;
+        }
+        if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
+        {
+            VkDebugUtilsObjectNameInfoEXT const image_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
+                .objectHandle = std::bit_cast<uint64_t>(self->vk_null_image_view),
+                .pObjectName = "daxa null_image_view",
+            };
+            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &image_name_info);
         }
 
         VkImageMemoryBarrier vk_image_mem_barrier = {
@@ -1671,6 +1704,17 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             vkDestroyDevice(self->vk_device, nullptr);
             return DAXA_RESULT_FAILED_TO_CREATE_NULL_SAMPLER;
         }
+        if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
+        {
+            VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
+                .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+                .pNext = nullptr,
+                .objectType = VK_OBJECT_TYPE_SAMPLER,
+                .objectHandle = std::bit_cast<uint64_t>(self->vk_null_sampler),
+                .pObjectName = "daxa null_sampler",
+            };
+            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &sampler_name_info);
+        }
     }
 
     {
@@ -1715,6 +1759,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             vkDestroyDevice(self->vk_device, nullptr);
             return DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER;
         }
+
     }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !self->info.name.view().empty())

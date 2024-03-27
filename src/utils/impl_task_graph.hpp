@@ -112,6 +112,8 @@ namespace daxa
     {
         std::unique_ptr<ITask> base_task = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
+        // Used to verify image view cache:
+        std::vector<std::vector<ImageId>> runtime_images_last_execution = {};
     };
 
     struct ImplPresentInfo

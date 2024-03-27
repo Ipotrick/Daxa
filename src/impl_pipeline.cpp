@@ -66,6 +66,17 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         DAXA_DECL_TRY_CREATE_MODULE(task, TASK_BIT_EXT)
         DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
     }
+    else
+    {
+        if (ret.info.mesh_shader_info.has_value() || ret.info.task_shader_info.has_value())
+        {
+            for (auto module : vk_shader_modules)                                                                               
+            {                                                                                                                   
+                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);                                                  
+            }                                                                                                                   
+            return DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED;                                                                          
+        }
+    }
 
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
     constexpr VkPipelineVertexInputStateCreateInfo vk_vertex_input_state{

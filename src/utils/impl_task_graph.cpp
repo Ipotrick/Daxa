@@ -825,13 +825,20 @@ namespace daxa
             [](u32, TaskBufferAttachmentInfo const &) {},
             [&](u32 task_image_attach_index, TaskImageAttachmentInfo const & image_attach)
             {
+                // TODO:
+                // Replace the validity check with a comparison of last execution actual images vs this frame actual images.
                 auto & view_cache = task.image_view_cache[task_image_attach_index];
+                auto & imgs_last_exec = task.runtime_images_last_execution[task_image_attach_index];
 
                 if (image_attach.view.is_null())
                 {
-                    for (u32 index = 0; index < image_attach.shader_array_size; ++index)
+                    // Initialize the view array once with null ids.
+                    if (image_attach.shader_array_size > 0 && view_cache.empty())
                     {
-                        view_cache.push_back(daxa::ImageViewId{});
+                        for (u32 index = 0; index < image_attach.shader_array_size; ++index)
+                        {
+                            view_cache.push_back(daxa::ImageViewId{});
+                        }
                     }
                     return;
                 }
@@ -841,36 +848,22 @@ namespace daxa
                 auto const tid = image_attach.translated_view;
                 auto const actual_images = get_actual_images(tid, permutation);
 
-                bool cache_valid = true;
-                if (image_attach.shader_array_type == TaskHeadImageArrayType::RUNTIME_IMAGES)
+                bool cache_valid = imgs_last_exec.size() == actual_images.size();
+                if (imgs_last_exec.size() == actual_images.size())
                 {
-                    cache_valid = actual_images.size() == view_cache.size();
-                    if (cache_valid)
+                    for (u32 i = 0; i < imgs_last_exec.size(); ++i)
                     {
-                        for (u32 index = 0; index < actual_images.size(); ++index)
-                        {
-                            cache_valid = cache_valid &&
-                                          info.device.is_id_valid(view_cache[index]) &&
-                                          info.device.is_id_valid(info.device.info_image_view(view_cache[index]).value().image) &&
-                                          info.device.info_image_view(view_cache[index]).value().image == actual_images[index];
-                        }
-                    }
-                }
-                else // image_attach.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS
-                {
-                    cache_valid = !view_cache.empty();
-                    if (cache_valid)
-                    {
-                        for (auto index : view_cache)
-                        {
-                            cache_valid = cache_valid &&
-                                          info.device.is_id_valid(index) &&
-                                          info.device.is_id_valid(info.device.info_image_view(index).value().image);
-                        }
+                        cache_valid = cache_valid && (imgs_last_exec[i] == actual_images[i]);
                     }
                 }
                 if (!cache_valid)
                 {
+                    imgs_last_exec.clear();
+                    // Save current runtime images for the next time tg updates the views.
+                    for (auto img : actual_images)
+                    {
+                        imgs_last_exec.push_back(img);
+                    }
                     validate_runtime_image_slice(*this, permutation, task_image_attach_index, tid.index, slice);
                     validate_image_attachs(*this, permutation, task_image_attach_index, tid.index, image_attach.access, task.base_task->name());
                     for (auto & view : view_cache)
@@ -892,6 +885,14 @@ namespace daxa
                         {
                             ImageViewInfo view_info = info.device.info_image_view(parent.default_view()).value();
                             ImageViewType const use_view_type = (image_attach.view_type != ImageViewType::MAX_ENUM) ? image_attach.view_type : view_info.type;
+                            if (parent.default_view() == daxa::ImageViewId{})
+                            {
+                                printf("bruh view\n");
+                            }
+                            if (parent == daxa::ImageId{})
+                            {
+                                printf("bruh image\n");
+                            }
 
                             // When the use image view parameters match the default view,
                             // then use the default view id and avoid creating a new id here.
@@ -1324,9 +1325,12 @@ namespace daxa
 
         std::vector<std::vector<ImageViewId>> view_cache = {};
         view_cache.resize(task->attachments().size(), {});
+        std::vector<std::vector<ImageId>> id_cache = {};
+        id_cache.resize(task->attachments().size(), {});
         auto impl_task = ImplTask{
             .base_task = std::move(task),
             .image_view_cache = std::move(view_cache),
+            .runtime_images_last_execution = std::move(id_cache),
         };
         translate_persistent_ids(impl, impl_task.base_task.get());
 

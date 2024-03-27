@@ -121,6 +121,7 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case daxa_Result::DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND: return "DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND";
     case daxa_Result::DAXA_RESULT_NO_PIPELINE_BOUND: return "DAXA_RESULT_NO_PIPELINE_BOUND";
     case daxa_Result::DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED: return "DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED";
+    case daxa_Result::DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED: return "DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED";
     case daxa_Result::DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
     default: return "UNIMPLEMENTED";
     }
