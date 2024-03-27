@@ -121,12 +121,10 @@ static daxa_ImageCopyInfo const DAXA_DEFAULT_IMAGE_COPY_INFO = {
     .extent = DAXA_ZERO_INIT,
 };
 
-// Make sure this stays abi compatible with daxa::ClearValue
-_DAXA_DECL_VARIANT(VkClearValue)
-
 typedef struct
 {
     daxa_ImageLayout image_layout;
+    // Make sure this stays abi compatible with daxa::ClearValue
     daxa_Variant(VkClearValue) clear_value;
     daxa_ImageId image;
     daxa_ImageMipArraySlice dst_slice;
@@ -171,8 +169,6 @@ typedef struct
     daxa_Variant(VkClearValue) clear_value;
     daxa_Optional(daxa_AttachmentResolveInfo) resolve;
 } daxa_RenderAttachmentInfo;
-_DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
-_DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)
 
 static daxa_RenderAttachmentInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .image_view = DAXA_ZERO_INIT,

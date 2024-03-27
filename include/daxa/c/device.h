@@ -141,7 +141,6 @@ typedef struct
     uint32_t shader_group_handle_alignment;
     uint32_t max_ray_hit_attribute_size;
 } daxa_RayTracingPipelineProperties;
-_DAXA_DECL_OPTIONAL(daxa_RayTracingPipelineProperties)
 
 // MUST BE ABI COMPATIBLE WITH VkPhysicalDeviceAccelerationStructurePropertiesKHR!
 typedef struct
@@ -155,7 +154,6 @@ typedef struct
     uint32_t max_descriptor_set_update_after_bind_acceleration_structures;
     uint32_t min_acceleration_structure_scratch_offset_alignment;
 } daxa_AccelerationStructureProperties;
-_DAXA_DECL_OPTIONAL(daxa_AccelerationStructureProperties)
 
 
 // MUST BE ABI COMPATIBLE WITH VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV!
@@ -163,7 +161,6 @@ typedef struct
 {
     uint32_t invocation_reorder_mode;
 } daxa_RayTracingInvocationReorderProperties;
-_DAXA_DECL_OPTIONAL(daxa_RayTracingInvocationReorderProperties)
 
 // Is NOT ABI Compatible with VkPhysicalDeviceMeshShaderPropertiesEXT!
 typedef struct
@@ -197,7 +194,6 @@ typedef struct
     daxa_Bool8 prefers_compact_vertex_output;
     daxa_Bool8 prefers_compact_primitive_output;
 } daxa_MeshShaderProperties;
-_DAXA_DECL_OPTIONAL(daxa_MeshShaderProperties)
 
 typedef struct
 {

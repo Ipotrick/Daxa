@@ -128,8 +128,6 @@ typedef enum
 
 /// ABI STABLE OPTIONAL TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Optional
-#define _DAXA_DECL_OPTIONAL(X)
-
 #define daxa_Optional(T)      \
     struct                    \
     {                         \
@@ -141,37 +139,31 @@ typedef enum
 
 /// ABI STABLE FIXED LIST TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::FixedList
-#define _DAXA_DECL_FIXED_LIST(T, CAPACITY) \
-    typedef struct                         \
-    {                                      \
-        T data[CAPACITY];                  \
-        _DAXA_FIXED_LIST_SIZE_T size;      \
-    } daxa_FixedList##T##CAPACITY;
+#define daxa_FixedList(T, CAPACITY)   \
+    struct                            \
+    {                                 \
+        T data[CAPACITY];             \
+        _DAXA_FIXED_LIST_SIZE_T size; \
+    }
 
-#define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
-
-#define _DAXA_DECL_SPAN_TO_CONST(T) \
-    typedef struct                  \
-    {                               \
-        T const * data;             \
-        size_t size;                \
-    } daxa_Span##T##ToConst;
-#define daxa_SpanToConst(T) daxa_Span##T##ToConst
+#define daxa_SpanToConst(T) \
+    struct                  \
+    {                       \
+        T const * data;     \
+        size_t size;        \
+    }
 
 #define _DAXA_VARIANT_INDEX_TYPE uint8_t
 
 /// ABI STABLE VARIANT TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Variant
-#define _DAXA_DECL_VARIANT(UNION)       \
-    typedef struct                      \
+#define daxa_Variant(UNION)             \
+    struct                              \
     {                                   \
         UNION values;                   \
         _DAXA_VARIANT_INDEX_TYPE index; \
-    } daxa_Variant##UNION;
+    }
 
-#define daxa_Variant(UNION) daxa_Variant##UNION
-
-_DAXA_DECL_FIXED_LIST(char, DAXA_SMALL_STRING_CAPACITY)
 typedef daxa_FixedList(char, DAXA_SMALL_STRING_CAPACITY) daxa_SmallString;
 
 typedef struct
