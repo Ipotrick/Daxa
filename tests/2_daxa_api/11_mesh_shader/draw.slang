@@ -22,7 +22,7 @@ struct Vertex
 
 struct Primitive
 {
-  [[vk::location(0)]] float3 tint;
+  [[vk::location(0)]] nointerpolation float3 tint;
 }
 
 const static uint MAX_VERTS = 3;
@@ -60,6 +60,6 @@ struct FragmentOut
 FragmentOut entry_fragment(in Vertex vertex, in Primitive prim)
 {
     FragmentOut frag_out;
-    frag_out.color = vertex.color * prim.tint;
+    frag_out.color = prim.tint;
     return frag_out;
 }
