@@ -843,6 +843,16 @@ namespace daxa
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
 
+    inline auto operator|(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewVariant
+    {
+        return std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>(index, view);
+    }
+
+    inline auto operator|(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewVariant
+    {
+        return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
+    }
+
     inline auto inl_attachment(TaskBufferAccess access, TaskBufferView view) -> TaskAttachmentInfo
     {
         TaskBufferAttachmentInfo buf = {};

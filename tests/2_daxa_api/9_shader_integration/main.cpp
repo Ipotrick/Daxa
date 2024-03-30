@@ -142,9 +142,9 @@ namespace tests
             }
         };
         task_graph.add_task(TestTask{
-            .views = std::array{
-                daxa::attachment_view( TestShaderTaskHead::AT.align_test_src, src ),
-                daxa::attachment_view( TestShaderTaskHead::AT.align_test_dst, dst ),
+            .views = std::array{ 
+                TestShaderTaskHead::AT.align_test_src | src,
+                TestShaderTaskHead::AT.align_test_dst | dst,
             },
             .pipeline = compute_pipeline,
         });
