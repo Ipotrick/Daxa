@@ -74,7 +74,7 @@ auto main() -> int
     auto * glfw_window_ptr = glfwCreateWindow(
         static_cast<daxa::i32>(window_info.width),
         static_cast<daxa::i32>(window_info.height),
-        "Daxa sample window name", nullptr, nullptr);
+        "Daxa mesh shader sample", nullptr, nullptr);
     glfwSetWindowUserPointer(glfw_window_ptr, &window_info);
     glfwSetWindowSizeCallback(
         glfw_window_ptr,

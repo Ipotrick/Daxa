@@ -16,7 +16,7 @@ DAXA_DECL_BUFFER_PTR(MyVertex)
 
 // First argument is the heads name. Its convention to end the name with a capital H
 // The secon argument is the number of attachments.
-DAXA_DECL_TASK_HEAD_BEGIN(DrawToSwapchainH, 2) 
+DAXA_DECL_TASK_HEAD_BEGIN(DrawToSwapchainH) 
 // The following line declares an image attachment.
 // The task image use is COLOR_ATTACHMENT, the required image view type is REGULAR_2D and the name is color_target.
 // Note that this attachment has no suffix _ID or _INDEX. This means its NOT in the shader struct!

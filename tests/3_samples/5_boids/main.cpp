@@ -13,7 +13,7 @@ using Clock = std::chrono::high_resolution_clock;
 
 // Update task:
 
-    DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids, 2)
+    DAXA_DECL_TASK_HEAD_BEGIN(UpdateBoids)
     DAXA_TH_BUFFER(COMPUTE_SHADER_READ_WRITE, current)
     DAXA_TH_BUFFER(COMPUTE_SHADER_READ, previous)
     DAXA_DECL_TASK_HEAD_END

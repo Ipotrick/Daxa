@@ -14,13 +14,13 @@ struct TestU64Alignment
 };
 DAXA_DECL_BUFFER_PTR(TestU64Alignment)
 
-DAXA_DECL_TASK_HEAD_BEGIN(TestShaderTaskHead, 2)
+DAXA_DECL_TASK_HEAD_BEGIN(TestShaderTaskHead)
 DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ,         daxa_BufferPtr(TestU64Alignment),   align_test_src)
 DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ_WRITE,   daxa_RWBufferPtr(TestU64Alignment), align_test_dst)
 DAXA_DECL_TASK_HEAD_END
 
 // Only used to check complication of All Task Head Uses:
-DAXA_DECL_TASK_HEAD_BEGIN(TestTaskHead, 8)
+DAXA_DECL_TASK_HEAD_BEGIN(TestTaskHead)
 // Declares used task image, that is NOT accessable within the shader.
 DAXA_TH_IMAGE(              TRANSFER_READ, REGULAR_2D,                      copy_read_img)
 // Declares used task buffer, that is NOT accessable within the shader.

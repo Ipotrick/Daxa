@@ -42,7 +42,7 @@
 
 // DAXA 3.0 Task-Head-Shader interface:
 #if DAXA_SHADER
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME, SIZE) \
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) \
     struct HEAD_NAME                         \
     {
 #define DAXA_TH_IMAGE(TASK_ACCESS, VIEW_TYPE, NAME)

@@ -1,54 +1,75 @@
-#include "daxa/daxa.inl"
-
-#include "shared.inl"
-
 const static float2 positions[3] = {
-  float2(0.0, -0.5),
-  float2(0.5, 0.5),
-  float2(-0.5, 0.5)
+    float2(0.0, -0.5),
+    float2(0.5, 0.5),
+    float2(-0.5, 0.5)
 };
 
-const static float3 colors[3] = {
-  float3(1.0, 1.0, 0.0),
-  float3(0.0, 1.0, 1.0),
-  float3(1.0, 0.0, 1.0)
-};
-
-struct Vertex
+interface VertexI
 {
-  float4 pos : SV_Position;
-  [[vk::location(0)]] float3 color;
+    [mutating]
+    func set_pos(float4 v);
+}
+
+interface PrimitiveI
+{
+    [mutating]
+    func set_tint(float3 v);
+}
+
+struct Vertex : VertexI
+{
+    float4 pos : SV_Position;
+    [mutating]
+    func set_pos(float4 v) { pos = v; }
 };
 
-struct Primitive
+struct Primitive : PrimitiveI
 {
-  [[vk::location(0)]] nointerpolation float3 tint;
+    [[vk::location(0)]] nointerpolation float3 tint;
+    [mutating]
+    func set_tint(float3 v) { tint = v; }
 }
 
 const static uint MAX_VERTS = 3;
 const static uint MAX_PRIMS = 1;
 
-[outputtopology("triangle")]
-[numthreads(3, 1, 1)]
-[shader("mesh")]
-void entry_mesh(
-    in uint tig : SV_GroupIndex,
-    OutputVertices<Vertex, MAX_VERTS> verts,
+void mesh_fn<V : VertexI, P : PrimitiveI>(    
+    in uint tig,
     OutputIndices<uint3, MAX_PRIMS> triangles,
-    OutputPrimitives<Primitive, MAX_PRIMS> primitives)
+    OutputVertices<V, MAX_VERTS> verts,
+    OutputPrimitives<P, MAX_PRIMS> primitives)
 {
     const uint numVertices = 3;
     const uint numPrimitives = 1;
     SetMeshOutputCounts(numVertices, numPrimitives);
 
     if(tig < numVertices) {
-        verts[tig] = {float4(positions[tig], 0, 1), colors[tig]};
+        V v;
+        if (V is Vertex)
+        {
+            Vertex v2 = reinterpret<Vertex>(v);
+            v2.pos = float4(positions[tig], 0, 1);
+            v = reinterpret<V>(v2);
+        }
+        verts[tig] = v;
     }
 
     if(tig < numPrimitives) {
         triangles[tig] = uint3(0,1,2);
-        primitives[tig] = { float3(1,0,0) };
+        primitives[tig].set_tint(float3(1,0,0));
     }
+}
+
+[outputtopology("triangle")]
+[numthreads(3, 1, 1)]
+[shader("mesh")]
+void entry_mesh(
+    in uint tig : SV_GroupIndex,
+    OutputIndices<uint3, MAX_PRIMS> triangles,
+    OutputVertices<Vertex, MAX_VERTS> verts,
+    OutputPrimitives<Primitive, MAX_PRIMS> primitives)
+{
+    mesh_fn(tig, triangles, verts, primitives);
 }
 
 struct FragmentOut
