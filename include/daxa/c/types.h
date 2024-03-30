@@ -104,6 +104,12 @@ typedef enum
     DAXA_RESULT_INVALID_TLAS_ID = (1 << 30) + 52,
     DAXA_RESULT_INVALID_BLAS_ID = (1 << 30) + 53,
     DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING = (1 << 30) + 54,
+    DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND = (1 << 30) + 55,
+    DAXA_RESULT_NO_RASTER_PIPELINE_BOUND = (1 << 30) + 56,
+    DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND = (1 << 30) + 57,
+    DAXA_RESULT_NO_PIPELINE_BOUND = (1 << 30) + 58,
+    DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED = (1 << 30) + 59,
+    DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED = (1 << 30) + 60,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
@@ -122,50 +128,42 @@ typedef enum
 
 /// ABI STABLE OPTIONAL TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Optional
-#define _DAXA_DECL_OPTIONAL(T) \
-    typedef struct             \
-    {                          \
-        T value;               \
-        daxa_Bool8 has_value;  \
-    } daxa_Optional##T;
-
-#define daxa_Optional(T) daxa_Optional##T
+#define daxa_Optional(T)      \
+    struct                    \
+    {                         \
+        T value;              \
+        daxa_Bool8 has_value; \
+    }
 
 #define _DAXA_FIXED_LIST_SIZE_T uint8_t
 
 /// ABI STABLE FIXED LIST TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::FixedList
-#define _DAXA_DECL_FIXED_LIST(T, CAPACITY) \
-    typedef struct                         \
-    {                                      \
-        T data[CAPACITY];                  \
-        _DAXA_FIXED_LIST_SIZE_T size;      \
-    } daxa_FixedList##T##CAPACITY;
+#define daxa_FixedList(T, CAPACITY)   \
+    struct                            \
+    {                                 \
+        T data[CAPACITY];             \
+        _DAXA_FIXED_LIST_SIZE_T size; \
+    }
 
-#define daxa_FixedList(T, CAPACITY) daxa_FixedList##T##CAPACITY
-
-#define _DAXA_DECL_SPAN_TO_CONST(T) \
-    typedef struct                  \
-    {                               \
-        T const * data;             \
-        size_t size;                \
-    } daxa_Span##T##ToConst;
-#define daxa_SpanToConst(T) daxa_Span##T##ToConst
+#define daxa_SpanToConst(T) \
+    struct                  \
+    {                       \
+        T const * data;     \
+        size_t size;        \
+    }
 
 #define _DAXA_VARIANT_INDEX_TYPE uint8_t
 
 /// ABI STABLE VARIANT TYPE.
 /// THIS TYPE MUST STAY IN SYNC WITH daxa::Variant
-#define _DAXA_DECL_VARIANT(UNION)       \
-    typedef struct                      \
+#define daxa_Variant(UNION)             \
+    struct                              \
     {                                   \
         UNION values;                   \
         _DAXA_VARIANT_INDEX_TYPE index; \
-    } daxa_Variant##UNION;
+    }
 
-#define daxa_Variant(UNION) daxa_Variant##UNION
-
-_DAXA_DECL_FIXED_LIST(char, DAXA_SMALL_STRING_CAPACITY)
 typedef daxa_FixedList(char, DAXA_SMALL_STRING_CAPACITY) daxa_SmallString;
 
 typedef struct

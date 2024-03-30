@@ -9,14 +9,12 @@ typedef struct
     uint32_t byte_code_size;
     daxa_SmallString entry_point;
 } daxa_ShaderInfo;
-_DAXA_DECL_OPTIONAL(daxa_ShaderInfo)
 
 // RAY TRACING PIPELINE
 typedef struct
 {
     daxa_ShaderInfo info;
 } daxa_RayTracingShaderInfo;
-_DAXA_DECL_SPAN_TO_CONST(daxa_RayTracingShaderInfo)
 
 typedef struct
 {
@@ -27,7 +25,6 @@ typedef struct
     uint32_t any_hit_shader_index;
     uint32_t intersection_shader_index;
 } daxa_RayTracingShaderGroupInfo;
-_DAXA_DECL_SPAN_TO_CONST(daxa_RayTracingShaderGroupInfo)
 
 static daxa_RayTracingShaderGroupInfo const DAXA_DEFAULT_RAY_TRACING_SHADER_GROUP_INFO = {
     .type = DAXA_ZERO_INIT,
@@ -86,7 +83,6 @@ typedef struct
     float min_depth_bounds;
     float max_depth_bounds;
 } daxa_DepthTestInfo;
-_DAXA_DECL_OPTIONAL(daxa_DepthTestInfo)
 
 static daxa_DepthTestInfo const DAXA_DEFAULT_DEPTH_TEST_INFO = {
     .depth_attachment_format = VK_FORMAT_UNDEFINED,
@@ -101,7 +97,6 @@ typedef struct
     VkConservativeRasterizationModeEXT mode;
     float size;
 } daxa_ConservativeRasterInfo;
-_DAXA_DECL_OPTIONAL(daxa_ConservativeRasterInfo)
 
 typedef struct
 {
@@ -117,8 +112,8 @@ typedef struct
     float depth_bias_clamp;
     float depth_bias_slope_factor;
     float line_width;
-    daxa_u32 samples;
     daxa_Optional(daxa_ConservativeRasterInfo) conservative_raster_info;
+    daxa_Optional(VkSampleCountFlagBits) static_state_sample_count;
 } daxa_RasterizerInfo;
 
 static daxa_RasterizerInfo const DAXA_DEFAULT_RASTERIZATION_INFO = {
@@ -134,8 +129,8 @@ static daxa_RasterizerInfo const DAXA_DEFAULT_RASTERIZATION_INFO = {
     .depth_bias_clamp = 0.0f,
     .depth_bias_slope_factor = 0.0f,
     .line_width = 1.0f,
-    .samples = 1,
     .conservative_raster_info = {.has_value = 0},
+    .static_state_sample_count = {.value = VK_SAMPLE_COUNT_1_BIT,.has_value = 1},
 };
 
 // should be moved in c++ from types to pipeline.hpp.
@@ -149,7 +144,6 @@ typedef struct
     VkBlendOp alpha_blend_op;
     VkColorComponentFlags color_write_mask;
 } daxa_BlendInfo;
-_DAXA_DECL_OPTIONAL(daxa_BlendInfo)
 
 static daxa_BlendInfo const DAXA_DEFAULT_BLEND_INFO = {
     .src_color_blend_factor = VK_BLEND_FACTOR_ONE,
@@ -166,14 +160,12 @@ typedef struct
     VkFormat format;
     daxa_Optional(daxa_BlendInfo) blend;
 } daxa_RenderAttachment;
-_DAXA_DECL_FIXED_LIST(daxa_RenderAttachment, 8)
 
 typedef struct
 {
     uint32_t control_points;
     VkTessellationDomainOrigin origin;
 } daxa_TesselationInfo;
-_DAXA_DECL_OPTIONAL(daxa_TesselationInfo)
 
 typedef struct
 {

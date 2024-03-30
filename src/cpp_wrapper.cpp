@@ -18,105 +18,111 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
 {
     switch (result)
     {
-    case DAXA_RESULT_SUCCESS: return "DAXA_RESULT_SUCCESS";
-    case DAXA_RESULT_NOT_READY: return "DAXA_RESULT_NOT_READY";
-    case DAXA_RESULT_TIMEOUT: return "DAXA_RESULT_TIMEOUT";
-    case DAXA_RESULT_EVENT_SET: return "DAXA_RESULT_EVENT_SET";
-    case DAXA_RESULT_EVENT_RESET: return "DAXA_RESULT_EVENT_RESET";
-    case DAXA_RESULT_INCOMPLETE: return "DAXA_RESULT_INCOMPLETE";
-    case DAXA_RESULT_ERROR_OUT_OF_HOST_MEMORY: return "DAXA_RESULT_ERROR_OUT_OF_HOST_MEMORY";
-    case DAXA_RESULT_ERROR_OUT_OF_DEVICE_MEMORY: return "DAXA_RESULT_ERROR_OUT_OF_DEVICE_MEMORY";
-    case DAXA_RESULT_ERROR_INITIALIZATION_FAILED: return "DAXA_RESULT_ERROR_INITIALIZATION_FAILED";
-    case DAXA_RESULT_ERROR_DEVICE_LOST: return "DAXA_RESULT_ERROR_DEVICE_LOST";
-    case DAXA_RESULT_ERROR_MEMORY_MAP_FAILED: return "DAXA_RESULT_ERROR_MEMORY_MAP_FAILED";
-    case DAXA_RESULT_ERROR_LAYER_NOT_PRESENT: return "DAXA_RESULT_ERROR_LAYER_NOT_PRESENT";
-    case DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT: return "DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT";
-    case DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT: return "DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT";
-    case DAXA_RESULT_ERROR_INCOMPATIBLE_DRIVER: return "DAXA_RESULT_ERROR_INCOMPATIBLE_DRIVER";
-    case DAXA_RESULT_ERROR_TOO_MANY_OBJECTS: return "DAXA_RESULT_ERROR_TOO_MANY_OBJECTS";
-    case DAXA_RESULT_ERROR_FORMAT_NOT_SUPPORTED: return "DAXA_RESULT_ERROR_FORMAT_NOT_SUPPORTED";
-    case DAXA_RESULT_ERROR_FRAGMENTED_POOL: return "DAXA_RESULT_ERROR_FRAGMENTED_POOL";
-    case DAXA_RESULT_ERROR_UNKNOWN: return "DAXA_RESULT_ERROR_UNKNOWN";
-    case DAXA_RESULT_ERROR_OUT_OF_POOL_MEMORY: return "DAXA_RESULT_ERROR_OUT_OF_POOL_MEMORY";
-    case DAXA_RESULT_ERROR_INVALID_EXTERNAL_HANDLE: return "DAXA_RESULT_ERROR_INVALID_EXTERNAL_HANDLE";
-    case DAXA_RESULT_ERROR_FRAGMENTATION: return "DAXA_RESULT_ERROR_FRAGMENTATION";
-    case DAXA_RESULT_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS: return "DAXA_RESULT_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";
-    case DAXA_RESULT_PIPELINE_COMPILE_REQUIRED: return "DAXA_RESULT_PIPELINE_COMPILE_REQUIRED";
-    case DAXA_RESULT_ERROR_SURFACE_LOST_KHR: return "DAXA_RESULT_ERROR_SURFACE_LOST_KHR";
-    case DAXA_RESULT_ERROR_NATIVE_WINDOW_IN_USE_KHR: return "DAXA_RESULT_ERROR_NATIVE_WINDOW_IN_USE_KHR";
-    case DAXA_RESULT_SUBOPTIMAL_KHR: return "DAXA_RESULT_SUBOPTIMAL_KHR";
-    case DAXA_RESULT_ERROR_OUT_OF_DATE_KHR: return "DAXA_RESULT_ERROR_OUT_OF_DATE_KHR";
-    case DAXA_RESULT_ERROR_INCOMPATIBLE_DISPLAY_KHR: return "DAXA_RESULT_ERROR_INCOMPATIBLE_DISPLAY_KHR";
-    case DAXA_RESULT_ERROR_VALIDATION_FAILED_EXT: return "DAXA_RESULT_ERROR_VALIDATION_FAILED_EXT";
-    case DAXA_RESULT_ERROR_INVALID_SHADER_NV: return "DAXA_RESULT_ERROR_INVALID_SHADER_NV";
-    case DAXA_RESULT_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR";
-    case DAXA_RESULT_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR";
-    case DAXA_RESULT_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR";
-    case DAXA_RESULT_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR";
-    case DAXA_RESULT_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR";
-    case DAXA_RESULT_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR";
-    case DAXA_RESULT_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: return "DAXA_RESULT_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT";
-    case DAXA_RESULT_ERROR_NOT_PERMITTED_KHR: return "DAXA_RESULT_ERROR_NOT_PERMITTED_KHR";
-    case DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: return "DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";
-    case DAXA_RESULT_THREAD_IDLE_KHR: return "DAXA_RESULT_THREAD_IDLE_KHR";
-    case DAXA_RESULT_THREAD_DONE_KHR: return "DAXA_RESULT_THREAD_DONE_KHR";
-    case DAXA_RESULT_OPERATION_DEFERRED_KHR: return "DAXA_RESULT_OPERATION_DEFERRED_KHR";
-    case DAXA_RESULT_OPERATION_NOT_DEFERRED_KHR: return "DAXA_RESULT_OPERATION_NOT_DEFERRED_KHR";
-    case DAXA_RESULT_MISSING_EXTENSION: return "DAXA_RESULT_MISSING_EXTENSION";
-    case DAXA_RESULT_INVALID_BUFFER_ID: return "DAXA_RESULT_INVALID_BUFFER_ID";
-    case DAXA_RESULT_INVALID_IMAGE_ID: return "DAXA_RESULT_INVALID_IMAGE_ID";
-    case DAXA_RESULT_INVALID_IMAGE_VIEW_ID: return "DAXA_RESULT_INVALID_IMAGE_VIEW_ID";
-    case DAXA_RESULT_INVALID_SAMPLER_ID: return "DAXA_RESULT_INVALID_SAMPLER_ID";
-    case DAXA_RESULT_BUFFER_DOUBLE_FREE: return "DAXA_RESULT_BUFFER_DOUBLE_FREE";
-    case DAXA_RESULT_IMAGE_DOUBLE_FREE: return "DAXA_RESULT_IMAGE_DOUBLE_FREE";
-    case DAXA_RESULT_IMAGE_VIEW_DOUBLE_FREE: return "DAXA_RESULT_IMAGE_VIEW_DOUBLE_FREE";
-    case DAXA_RESULT_SAMPLER_DOUBLE_FREE: return "DAXA_RESULT_SAMPLER_DOUBLE_FREE";
-    case DAXA_RESULT_INVALID_BUFFER_INFO: return "DAXA_RESULT_INVALID_BUFFER_INFO";
-    case DAXA_RESULT_INVALID_IMAGE_INFO: return "DAXA_RESULT_INVALID_IMAGE_INFO";
-    case DAXA_RESULT_INVALID_IMAGE_VIEW_INFO: return "DAXA_RESULT_INVALID_IMAGE_VIEW_INFO";
-    case DAXA_RESULT_INVALID_SAMPLER_INFO: return "DAXA_RESULT_INVALID_SAMPLER_INFO";
-    case DAXA_RESULT_COMMAND_LIST_COMPLETED: return "DAXA_RESULT_COMMAND_LIST_COMPLETED";
-    case DAXA_RESULT_COMMAND_LIST_NOT_COMPLETED: return "DAXA_RESULT_COMMAND_LIST_NOT_COMPLETED";
-    case DAXA_RESULT_INVALID_CLEAR_VALUE: return "DAXA_RESULT_INVALID_CLEAR_VALUE";
-    case DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE: return "DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE";
-    case DAXA_RESULT_BUFFER_NOT_DEVICE_VISIBLE: return "DAXA_RESULT_BUFFER_NOT_DEVICE_VISIBLE";
-    case DAXA_RESULT_INCOMPLETE_COMMAND_LIST: return "DAXA_RESULT_INCOMPLETE_COMMAND_LIST";
-    case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_BUFFER_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_BUFFER_COUNT";
-    case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_IMAGE_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_IMAGE_COUNT";
-    case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_SAMPLER_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_SAMPLER_COUNT";
-    case DAXA_RESULT_FAILED_TO_CREATE_NULL_BUFFER: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_BUFFER";
-    case DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE";
-    case DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE_VIEW: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE_VIEW";
-    case DAXA_RESULT_FAILED_TO_CREATE_NULL_SAMPLER: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_SAMPLER";
-    case DAXA_RESULT_FAILED_TO_CREATE_BUFFER: return "DAXA_RESULT_FAILED_TO_CREATE_BUFFER";
-    case DAXA_RESULT_FAILED_TO_CREATE_IMAGE: return "DAXA_RESULT_FAILED_TO_CREATE_IMAGE";
-    case DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW: return "DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW";
-    case DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW: return "DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW";
-    case DAXA_RESULT_FAILED_TO_CREATE_SAMPLER: return "DAXA_RESULT_FAILED_TO_CREATE_SAMPLER";
-    case DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER: return "DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER";
-    case DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS: return "DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS";
-    case DAXA_RESULT_INVALID_BUFFER_RANGE: return "DAXA_RESULT_INVALID_BUFFER_RANGE";
-    case DAXA_RESULT_INVALID_BUFFER_OFFSET: return "DAXA_RESULT_INVALID_BUFFER_OFFSET";
-    case DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND: return "DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND";
-    case DAXA_RESULT_RANGE_OUT_OF_BOUNDS: return "DAXA_RESULT_RANGE_OUT_OF_BOUNDS";
-    case DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND: return "DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND";
-    case DAXA_RESULT_EXCEEDED_MAX_BUFFERS: return "DAXA_RESULT_EXCEEDED_MAX_BUFFERS";
-    case DAXA_RESULT_EXCEEDED_MAX_IMAGES: return "DAXA_RESULT_EXCEEDED_MAX_IMAGES";
-    case DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS: return "DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS";
-    case DAXA_RESULT_EXCEEDED_MAX_SAMPLERS: return "DAXA_RESULT_EXCEEDED_MAX_SAMPLERS";
-    case DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE: return "DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE";
-    case DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID";
-    case DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID";
-    case DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID";
-    case DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID";
-    case DAXA_RESULT_INVALID_ACCELERATION_STRUCTURE_ID: return "DAXA_RESULT_INVALID_ACCELERATION_STRUCTURE_ID";
-    case DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES: return "DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES";
-    case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_RAYTRACING: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_RAYTRACING";
-    case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_MESH_SHADER: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_MESH_SHADER";
-    case DAXA_RESULT_INVALID_TLAS_ID: return "DAXA_RESULT_INVALID_TLAS_ID";
-    case DAXA_RESULT_INVALID_BLAS_ID: return "DAXA_RESULT_INVALID_BLAS_ID";
-    case DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING: return "DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING";
-    case DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
+    case daxa_Result::DAXA_RESULT_SUCCESS: return "DAXA_RESULT_SUCCESS";
+    case daxa_Result::DAXA_RESULT_NOT_READY: return "DAXA_RESULT_NOT_READY";
+    case daxa_Result::DAXA_RESULT_TIMEOUT: return "DAXA_RESULT_TIMEOUT";
+    case daxa_Result::DAXA_RESULT_EVENT_SET: return "DAXA_RESULT_EVENT_SET";
+    case daxa_Result::DAXA_RESULT_EVENT_RESET: return "DAXA_RESULT_EVENT_RESET";
+    case daxa_Result::DAXA_RESULT_INCOMPLETE: return "DAXA_RESULT_INCOMPLETE";
+    case daxa_Result::DAXA_RESULT_ERROR_OUT_OF_HOST_MEMORY: return "DAXA_RESULT_ERROR_OUT_OF_HOST_MEMORY";
+    case daxa_Result::DAXA_RESULT_ERROR_OUT_OF_DEVICE_MEMORY: return "DAXA_RESULT_ERROR_OUT_OF_DEVICE_MEMORY";
+    case daxa_Result::DAXA_RESULT_ERROR_INITIALIZATION_FAILED: return "DAXA_RESULT_ERROR_INITIALIZATION_FAILED";
+    case daxa_Result::DAXA_RESULT_ERROR_DEVICE_LOST: return "DAXA_RESULT_ERROR_DEVICE_LOST";
+    case daxa_Result::DAXA_RESULT_ERROR_MEMORY_MAP_FAILED: return "DAXA_RESULT_ERROR_MEMORY_MAP_FAILED";
+    case daxa_Result::DAXA_RESULT_ERROR_LAYER_NOT_PRESENT: return "DAXA_RESULT_ERROR_LAYER_NOT_PRESENT";
+    case daxa_Result::DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT: return "DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT";
+    case daxa_Result::DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT: return "DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT";
+    case daxa_Result::DAXA_RESULT_ERROR_INCOMPATIBLE_DRIVER: return "DAXA_RESULT_ERROR_INCOMPATIBLE_DRIVER";
+    case daxa_Result::DAXA_RESULT_ERROR_TOO_MANY_OBJECTS: return "DAXA_RESULT_ERROR_TOO_MANY_OBJECTS";
+    case daxa_Result::DAXA_RESULT_ERROR_FORMAT_NOT_SUPPORTED: return "DAXA_RESULT_ERROR_FORMAT_NOT_SUPPORTED";
+    case daxa_Result::DAXA_RESULT_ERROR_FRAGMENTED_POOL: return "DAXA_RESULT_ERROR_FRAGMENTED_POOL";
+    case daxa_Result::DAXA_RESULT_ERROR_UNKNOWN: return "DAXA_RESULT_ERROR_UNKNOWN";
+    case daxa_Result::DAXA_RESULT_ERROR_OUT_OF_POOL_MEMORY: return "DAXA_RESULT_ERROR_OUT_OF_POOL_MEMORY";
+    case daxa_Result::DAXA_RESULT_ERROR_INVALID_EXTERNAL_HANDLE: return "DAXA_RESULT_ERROR_INVALID_EXTERNAL_HANDLE";
+    case daxa_Result::DAXA_RESULT_ERROR_FRAGMENTATION: return "DAXA_RESULT_ERROR_FRAGMENTATION";
+    case daxa_Result::DAXA_RESULT_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS: return "DAXA_RESULT_ERROR_INVALID_OPAQUE_CAPTURE_ADDRESS";
+    case daxa_Result::DAXA_RESULT_PIPELINE_COMPILE_REQUIRED: return "DAXA_RESULT_PIPELINE_COMPILE_REQUIRED";
+    case daxa_Result::DAXA_RESULT_ERROR_SURFACE_LOST_KHR: return "DAXA_RESULT_ERROR_SURFACE_LOST_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_NATIVE_WINDOW_IN_USE_KHR: return "DAXA_RESULT_ERROR_NATIVE_WINDOW_IN_USE_KHR";
+    case daxa_Result::DAXA_RESULT_SUBOPTIMAL_KHR: return "DAXA_RESULT_SUBOPTIMAL_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_OUT_OF_DATE_KHR: return "DAXA_RESULT_ERROR_OUT_OF_DATE_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_INCOMPATIBLE_DISPLAY_KHR: return "DAXA_RESULT_ERROR_INCOMPATIBLE_DISPLAY_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_VALIDATION_FAILED_EXT: return "DAXA_RESULT_ERROR_VALIDATION_FAILED_EXT";
+    case daxa_Result::DAXA_RESULT_ERROR_INVALID_SHADER_NV: return "DAXA_RESULT_ERROR_INVALID_SHADER_NV";
+    case daxa_Result::DAXA_RESULT_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_IMAGE_USAGE_NOT_SUPPORTED_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PICTURE_LAYOUT_NOT_SUPPORTED_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PROFILE_OPERATION_NOT_SUPPORTED_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PROFILE_FORMAT_NOT_SUPPORTED_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_PROFILE_CODEC_NOT_SUPPORTED_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR: return "DAXA_RESULT_ERROR_VIDEO_STD_VERSION_NOT_SUPPORTED_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT: return "DAXA_RESULT_ERROR_INVALID_DRM_FORMAT_MODIFIER_PLANE_LAYOUT_EXT";
+    case daxa_Result::DAXA_RESULT_ERROR_NOT_PERMITTED_KHR: return "DAXA_RESULT_ERROR_NOT_PERMITTED_KHR";
+    case daxa_Result::DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT: return "DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT";
+    case daxa_Result::DAXA_RESULT_THREAD_IDLE_KHR: return "DAXA_RESULT_THREAD_IDLE_KHR";
+    case daxa_Result::DAXA_RESULT_THREAD_DONE_KHR: return "DAXA_RESULT_THREAD_DONE_KHR";
+    case daxa_Result::DAXA_RESULT_OPERATION_DEFERRED_KHR: return "DAXA_RESULT_OPERATION_DEFERRED_KHR";
+    case daxa_Result::DAXA_RESULT_OPERATION_NOT_DEFERRED_KHR: return "DAXA_RESULT_OPERATION_NOT_DEFERRED_KHR";
+    case daxa_Result::DAXA_RESULT_MISSING_EXTENSION: return "DAXA_RESULT_MISSING_EXTENSION";
+    case daxa_Result::DAXA_RESULT_INVALID_BUFFER_ID: return "DAXA_RESULT_INVALID_BUFFER_ID";
+    case daxa_Result::DAXA_RESULT_INVALID_IMAGE_ID: return "DAXA_RESULT_INVALID_IMAGE_ID";
+    case daxa_Result::DAXA_RESULT_INVALID_IMAGE_VIEW_ID: return "DAXA_RESULT_INVALID_IMAGE_VIEW_ID";
+    case daxa_Result::DAXA_RESULT_INVALID_SAMPLER_ID: return "DAXA_RESULT_INVALID_SAMPLER_ID";
+    case daxa_Result::DAXA_RESULT_BUFFER_DOUBLE_FREE: return "DAXA_RESULT_BUFFER_DOUBLE_FREE";
+    case daxa_Result::DAXA_RESULT_IMAGE_DOUBLE_FREE: return "DAXA_RESULT_IMAGE_DOUBLE_FREE";
+    case daxa_Result::DAXA_RESULT_IMAGE_VIEW_DOUBLE_FREE: return "DAXA_RESULT_IMAGE_VIEW_DOUBLE_FREE";
+    case daxa_Result::DAXA_RESULT_SAMPLER_DOUBLE_FREE: return "DAXA_RESULT_SAMPLER_DOUBLE_FREE";
+    case daxa_Result::DAXA_RESULT_INVALID_BUFFER_INFO: return "DAXA_RESULT_INVALID_BUFFER_INFO";
+    case daxa_Result::DAXA_RESULT_INVALID_IMAGE_INFO: return "DAXA_RESULT_INVALID_IMAGE_INFO";
+    case daxa_Result::DAXA_RESULT_INVALID_IMAGE_VIEW_INFO: return "DAXA_RESULT_INVALID_IMAGE_VIEW_INFO";
+    case daxa_Result::DAXA_RESULT_INVALID_SAMPLER_INFO: return "DAXA_RESULT_INVALID_SAMPLER_INFO";
+    case daxa_Result::DAXA_RESULT_COMMAND_LIST_COMPLETED: return "DAXA_RESULT_COMMAND_LIST_COMPLETED";
+    case daxa_Result::DAXA_RESULT_COMMAND_LIST_NOT_COMPLETED: return "DAXA_RESULT_COMMAND_LIST_NOT_COMPLETED";
+    case daxa_Result::DAXA_RESULT_INVALID_CLEAR_VALUE: return "DAXA_RESULT_INVALID_CLEAR_VALUE";
+    case daxa_Result::DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE: return "DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE";
+    case daxa_Result::DAXA_RESULT_BUFFER_NOT_DEVICE_VISIBLE: return "DAXA_RESULT_BUFFER_NOT_DEVICE_VISIBLE";
+    case daxa_Result::DAXA_RESULT_INCOMPLETE_COMMAND_LIST: return "DAXA_RESULT_INCOMPLETE_COMMAND_LIST";
+    case daxa_Result::DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_BUFFER_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_BUFFER_COUNT";
+    case daxa_Result::DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_IMAGE_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_IMAGE_COUNT";
+    case daxa_Result::DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_SAMPLER_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_SAMPLER_COUNT";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_NULL_BUFFER: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_BUFFER";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE_VIEW: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE_VIEW";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_NULL_SAMPLER: return "DAXA_RESULT_FAILED_TO_CREATE_NULL_SAMPLER";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_BUFFER: return "DAXA_RESULT_FAILED_TO_CREATE_BUFFER";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_IMAGE: return "DAXA_RESULT_FAILED_TO_CREATE_IMAGE";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW: return "DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW: return "DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_SAMPLER: return "DAXA_RESULT_FAILED_TO_CREATE_SAMPLER";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER: return "DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER";
+    case daxa_Result::DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS: return "DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS";
+    case daxa_Result::DAXA_RESULT_INVALID_BUFFER_RANGE: return "DAXA_RESULT_INVALID_BUFFER_RANGE";
+    case daxa_Result::DAXA_RESULT_INVALID_BUFFER_OFFSET: return "DAXA_RESULT_INVALID_BUFFER_OFFSET";
+    case daxa_Result::DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND: return "DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND";
+    case daxa_Result::DAXA_RESULT_RANGE_OUT_OF_BOUNDS: return "DAXA_RESULT_RANGE_OUT_OF_BOUNDS";
+    case daxa_Result::DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND: return "DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND";
+    case daxa_Result::DAXA_RESULT_EXCEEDED_MAX_BUFFERS: return "DAXA_RESULT_EXCEEDED_MAX_BUFFERS";
+    case daxa_Result::DAXA_RESULT_EXCEEDED_MAX_IMAGES: return "DAXA_RESULT_EXCEEDED_MAX_IMAGES";
+    case daxa_Result::DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS: return "DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS";
+    case daxa_Result::DAXA_RESULT_EXCEEDED_MAX_SAMPLERS: return "DAXA_RESULT_EXCEEDED_MAX_SAMPLERS";
+    case daxa_Result::DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE: return "DAXA_RESULT_DEVICE_SURFACE_UNSUPPORTED_PRESENT_MODE";
+    case daxa_Result::DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID";
+    case daxa_Result::DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID";
+    case daxa_Result::DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID";
+    case daxa_Result::DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID: return "DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID";
+    case daxa_Result::DAXA_RESULT_INVALID_ACCELERATION_STRUCTURE_ID: return "DAXA_RESULT_INVALID_ACCELERATION_STRUCTURE_ID";
+    case daxa_Result::DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES: return "DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES";
+    case daxa_Result::DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_RAYTRACING: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_RAYTRACING";
+    case daxa_Result::DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_MESH_SHADER: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_MESH_SHADER";
+    case daxa_Result::DAXA_RESULT_INVALID_TLAS_ID: return "DAXA_RESULT_INVALID_TLAS_ID";
+    case daxa_Result::DAXA_RESULT_INVALID_BLAS_ID: return "DAXA_RESULT_INVALID_BLAS_ID";
+    case daxa_Result::DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING: return "DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING";
+    case daxa_Result::DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND: return "DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND";
+    case daxa_Result::DAXA_RESULT_NO_RASTER_PIPELINE_BOUND: return "DAXA_RESULT_NO_RASTER_PIPELINE_BOUND";
+    case daxa_Result::DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND: return "DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND";
+    case daxa_Result::DAXA_RESULT_NO_PIPELINE_BOUND: return "DAXA_RESULT_NO_PIPELINE_BOUND";
+    case daxa_Result::DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED: return "DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED";
+    case daxa_Result::DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED: return "DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED";
+    case daxa_Result::DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
     default: return "UNIMPLEMENTED";
     }
 };
@@ -132,11 +138,11 @@ void check_result(daxa_Result result, char const * message, std::array<daxa_Resu
     if (!result_allowed)
     {
         std::cout << fmt::format(
-                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n",
+                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n\n",
                          daxa_result_to_string(result),
                          std::bit_cast<i32>(result),
                          message)
-                  << std::endl;
+                  << std::flush;
         throw std::runtime_error({});
     }
 }
@@ -245,7 +251,7 @@ namespace daxa
         return ret;
     }
 
-#define _DAXA_DECL_GPU_RES_FN(Name, name)                               \
+#define DAXA_DECL_GPU_RES_FN(Name, name)                                \
     auto Device::create_##name(Name##Info const & info) -> Name##Id     \
     {                                                                   \
         Name##Id id = {};                                               \
@@ -328,16 +334,16 @@ namespace daxa
             "failed to create blas from buffer");
         return id;
     }
-    _DAXA_DECL_GPU_RES_FN(Buffer, buffer)
-    _DAXA_DECL_GPU_RES_FN(Image, image)
-    _DAXA_DECL_GPU_RES_FN(ImageView, image_view)
-    _DAXA_DECL_GPU_RES_FN(Sampler, sampler)
-    _DAXA_DECL_GPU_RES_FN(Tlas, tlas)
-    _DAXA_DECL_GPU_RES_FN(Blas, blas)
+    DAXA_DECL_GPU_RES_FN(Buffer, buffer)
+    DAXA_DECL_GPU_RES_FN(Image, image)
+    DAXA_DECL_GPU_RES_FN(ImageView, image_view)
+    DAXA_DECL_GPU_RES_FN(Sampler, sampler)
+    DAXA_DECL_GPU_RES_FN(Tlas, tlas)
+    DAXA_DECL_GPU_RES_FN(Blas, blas)
 
     auto Device::get_device_address(BufferId id) const -> Optional<DeviceAddress>
     {
-        DeviceAddress ret;
+        DeviceAddress ret = 0;
         auto result = daxa_dvc_buffer_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
@@ -352,7 +358,7 @@ namespace daxa
 
     auto Device::get_device_address(TlasId id) const -> Optional<DeviceAddress>
     {
-        DeviceAddress ret;
+        DeviceAddress ret = 0;
         auto result = daxa_dvc_tlas_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_TlasId>(id),
@@ -367,7 +373,7 @@ namespace daxa
 
     auto Device::get_device_address(BlasId id) const -> Optional<DeviceAddress>
     {
-        DeviceAddress ret;
+        DeviceAddress ret = 0;
         auto result = daxa_dvc_blas_device_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BlasId>(id),
@@ -382,7 +388,7 @@ namespace daxa
 
     auto Device::get_host_address(BufferId id) const -> Optional<std::byte *>
     {
-        std::byte * ret;
+        std::byte * ret = nullptr;
         auto result = daxa_dvc_buffer_host_address(
             rc_cast<daxa_Device>(this->object),
             static_cast<daxa_BufferId>(id),
@@ -395,7 +401,7 @@ namespace daxa
         return {};
     }
 
-#define _DAXA_DECL_DVC_CREATE_FN(Name, name)                       \
+#define DAXA_DECL_DVC_CREATE_FN(Name, name)                        \
     auto Device::create_##name(Name##Info const & info) -> Name    \
     {                                                              \
         Name ret = {};                                             \
@@ -407,15 +413,15 @@ namespace daxa
         return ret;                                                \
     }
 
-    _DAXA_DECL_DVC_CREATE_FN(CommandRecorder, command_recorder)
-    _DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
-    _DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
-    _DAXA_DECL_DVC_CREATE_FN(RayTracingPipeline, ray_tracing_pipeline)
-    _DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
-    _DAXA_DECL_DVC_CREATE_FN(BinarySemaphore, binary_semaphore)
-    _DAXA_DECL_DVC_CREATE_FN(TimelineSemaphore, timeline_semaphore)
-    _DAXA_DECL_DVC_CREATE_FN(Event, event)
-    _DAXA_DECL_DVC_CREATE_FN(TimelineQueryPool, timeline_query_pool)
+    DAXA_DECL_DVC_CREATE_FN(CommandRecorder, command_recorder)
+    DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
+    DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
+    DAXA_DECL_DVC_CREATE_FN(RayTracingPipeline, ray_tracing_pipeline)
+    DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
+    DAXA_DECL_DVC_CREATE_FN(BinarySemaphore, binary_semaphore)
+    DAXA_DECL_DVC_CREATE_FN(TimelineSemaphore, timeline_semaphore)
+    DAXA_DECL_DVC_CREATE_FN(Event, event)
+    DAXA_DECL_DVC_CREATE_FN(TimelineQueryPool, timeline_query_pool)
 
     auto Device::info() const -> DeviceInfo const &
     {
@@ -430,7 +436,7 @@ namespace daxa
 
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
-        daxa_CommandSubmitInfo c_submit_info = {
+        daxa_CommandSubmitInfo const c_submit_info = {
             .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
             .command_lists = reinterpret_cast<daxa_ExecutableCommandList const *>(submit_info.command_lists.data()),
             .command_list_count = submit_info.command_lists.size(),
@@ -450,7 +456,7 @@ namespace daxa
 
     void Device::present_frame(PresentInfo const & info)
     {
-        daxa_PresentInfo c_present_info = {
+        daxa_PresentInfo const c_present_info = {
             .wait_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const *>(info.wait_binary_semaphores.data()),
             .wait_binary_semaphore_count = info.wait_binary_semaphores.size(),
             .swapchain = *reinterpret_cast<daxa_Swapchain const *>(&info.swapchain),
@@ -474,7 +480,7 @@ namespace daxa
 
     auto Device::get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>
     {
-        auto c_device = rc_cast<daxa_Device>(object);
+        auto * c_device = rc_cast<daxa_Device>(object);
         VkSurfaceKHR surface = {};
         auto result = create_surface(
             c_device->instance,
@@ -708,7 +714,7 @@ namespace daxa
 
     auto Swapchain::current_timeline_pair() const -> std::pair<TimelineSemaphore, u64>
     {
-        auto gpu_value = *r_cast<TimelineSemaphore const*>(daxa_swp_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
+        auto gpu_value = *r_cast<TimelineSemaphore const *>(daxa_swp_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
         auto cpu_value = daxa_swp_current_cpu_timeline_value(rc_cast<daxa_Swapchain>(this->object));
         return std::pair{gpu_value, cpu_value};
     }
@@ -742,7 +748,7 @@ namespace daxa
 
     /// --- Begin Pipelines
 
-     auto RayTracingPipeline::info() const -> RayTracingPipelineInfo const &
+    auto RayTracingPipeline::info() const -> RayTracingPipelineInfo const &
     {
         return *r_cast<RayTracingPipelineInfo const *>(rc_cast<daxa_RayTracingPipeline>(this->object));
     }
@@ -803,34 +809,30 @@ namespace daxa
 
     /// --- End Executable Commands
 
-
-
-
     /// --- Begin RenderCommandBuffer
 
-#define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(name, Info) \
-    void RenderCommandRecorder::name(Info const & info)    \
-    {                                                      \
-        daxa_cmd_##name(                                   \
-            this->internal,                                \
-            r_cast<daxa_##Info const *>(&info));           \
+#define DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(name, Info) \
+    void RenderCommandRecorder::name(Info const & info)   \
+    {                                                     \
+        daxa_cmd_##name(                                  \
+            this->internal,                               \
+            r_cast<daxa_##Info const *>(&info));          \
     }
-#define _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
-    void RenderCommandRecorder::name(Info const & info)                 \
-    {                                                                   \
-        auto result = daxa_cmd_##name(                                  \
-            this->internal,                                             \
-            r_cast<daxa_##Info const *>(&info));                        \
-        check_result(result, "failed in " #name);                       \
+#define DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
+    void RenderCommandRecorder::name(Info const & info)                \
+    {                                                                  \
+        auto result = daxa_cmd_##name(                                 \
+            this->internal,                                            \
+            r_cast<daxa_##Info const *>(&info));                       \
+        check_result(result, "failed in " #name);                      \
     }
 
-    RenderCommandRecorder::RenderCommandRecorder(RenderCommandRecorder && other)
+    RenderCommandRecorder::RenderCommandRecorder(RenderCommandRecorder && other) : internal{}
     {
-        internal = {};
         std::swap(this->internal, other.internal);
     }
 
-    RenderCommandRecorder & RenderCommandRecorder::operator=(RenderCommandRecorder && other)
+    auto RenderCommandRecorder::operator=(RenderCommandRecorder && other) -> RenderCommandRecorder &
     {
         if (internal != nullptr)
         {
@@ -872,13 +874,19 @@ namespace daxa
             this->internal,
             r_cast<VkRect2D const *>(&info));
     }
+    
+    void RenderCommandRecorder::set_rasterization_samples(RasterizationSamples info)
+    {
+        auto result = daxa_cmd_set_rasterization_samples(this->internal, static_cast<VkSampleCountFlagBits>(info));
+        check_result(result, "failed in set_rasterization_samples");
+    }
 
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw, DrawInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(set_depth_bias, DepthBiasInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(set_index_buffer, SetIndexBufferInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw, DrawInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER(draw_indexed, DrawIndexedInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
 
     void RenderCommandRecorder::draw_mesh_tasks(u32 x, u32 y, u32 z)
     {
@@ -886,8 +894,8 @@ namespace daxa
             this->internal,
             x, y, z);
     }
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
-    _DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
+    DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
 
     void RenderCommandRecorder::set_pipeline(RasterPipeline const & pipeline)
     {
@@ -896,39 +904,41 @@ namespace daxa
             *r_cast<daxa_RasterPipeline const *>(&pipeline));
     }
 
-    void RenderCommandRecorder::push_constant_vptr(void const * data, u32 size)
+    void RenderCommandRecorder::push_constant_vptr(PushConstantInfo const & info)
     {
-        daxa_cmd_push_constant(
-            this->internal, data, size);
+        auto c_info = std::bit_cast<daxa_PushConstantInfo>(info);
+        auto result = daxa_cmd_push_constant(
+            this->internal, &c_info);
+        check_result(result, "failed in push_constant_vptr");
     }
 
     /// --- End RenderCommandBuffer
 
     /// --- Begin CommandRecorder ---
 
-#define _DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
-    void CommandRecorder::name(Info const & info)   \
-    {                                               \
-        daxa_cmd_##name(                            \
-            this->internal,                         \
-            r_cast<daxa_##Info const *>(&info));    \
+#define DAXA_DECL_COMMAND_LIST_WRAPPER(name, Info) \
+    void CommandRecorder::name(Info const & info)  \
+    {                                              \
+        daxa_cmd_##name(                           \
+            this->internal,                        \
+            r_cast<daxa_##Info const *>(&info));   \
     }
-#define _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
-    void CommandRecorder::name(Info const & info)                \
-    {                                                            \
-        auto result = daxa_cmd_##name(                           \
-            this->internal,                                      \
-            r_cast<daxa_##Info const *>(&info));                 \
-        check_result(result, "failed in " #name);                \
+#define DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(name, Info) \
+    void CommandRecorder::name(Info const & info)               \
+    {                                                           \
+        auto result = daxa_cmd_##name(                          \
+            this->internal,                                     \
+            r_cast<daxa_##Info const *>(&info));                \
+        check_result(result, "failed in " #name);               \
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_buffer, BufferCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_image, BufferImageCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_buffer, ImageBufferCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_image, ImageCopyInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_buffer, BufferCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_buffer_to_image, BufferImageCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_buffer, ImageBufferCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(copy_image_to_image, ImageCopyInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(blit_image_to_image, ImageBlitInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_buffer, BufferClearInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(clear_image, ImageClearInfo)
     void CommandRecorder::build_acceleration_structures(BuildAccelerationStructuresInfo const & info)
     {
         auto result = daxa_cmd_build_acceleration_structures(
@@ -936,9 +946,9 @@ namespace daxa
             r_cast<daxa_BuildAccelerationStucturesInfo const *>(&info));
         check_result(result, "failed to build acceleration structures");
     }
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(pipeline_barrier, MemoryBarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(signal_event, EventSignalInfo)
 
     void CommandRecorder::wait_events(std::span<EventWaitInfo const> const & infos)
     {
@@ -946,32 +956,35 @@ namespace daxa
             this->internal, r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_event, ResetEventInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(wait_event, EventWaitInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(reset_event, ResetEventInfo)
 
-    void CommandRecorder::push_constant_vptr(void const * data, u32 size)
+    void CommandRecorder::push_constant_vptr(PushConstantInfo const & info)
     {
-        daxa_cmd_push_constant(
-            this->internal, data, size);
+        auto const c_info = std::bit_cast<daxa_PushConstantInfo>(info);
+        auto result = daxa_cmd_push_constant(
+            this->internal, &c_info);
+        check_result(result, "failed in push_constant_vptr");
     }
 
     void CommandRecorder::set_pipeline(ComputePipeline const & pipeline)
     {
         daxa_cmd_set_compute_pipeline(
             this->internal,
-            r_cast<daxa_ComputePipeline const *>(&pipeline));
+            *r_cast<daxa_ComputePipeline const *>(&pipeline));
     }
 
     void CommandRecorder::dispatch(DispatchInfo const & info)
     {
-        daxa_cmd_dispatch(
+        auto result = daxa_cmd_dispatch(
             this->internal,
             r_cast<daxa_DispatchInfo const *>(&info));
+        check_result(result, "failed in dispatch");
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(dispatch_indirect, DispatchIndirectInfo)
 
-#define _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name)  \
+#define DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name)   \
     void CommandRecorder::destroy_##name##_deferred(Name##Id id) \
     {                                                            \
         auto result = daxa_cmd_destroy_##name##_deferred(        \
@@ -979,10 +992,10 @@ namespace daxa
             static_cast<daxa_##Name##Id>(id));                   \
         check_result(result, "failed to destroy " #name);        \
     }
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
-    _DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(buffer, Buffer)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image, Image)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(image_view, ImageView)
+    DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(sampler, Sampler)
 
     auto CommandRecorder::begin_renderpass(RenderPassBeginInfo const & info) && -> RenderCommandRecorder
     {
@@ -996,8 +1009,7 @@ namespace daxa
         return ret;
     }
 
-    
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(trace_rays, TraceRaysInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(trace_rays, TraceRaysInfo)
 
     void CommandRecorder::set_pipeline(RayTracingPipeline const & pipeline)
     {
@@ -1006,9 +1018,9 @@ namespace daxa
             *r_cast<daxa_RayTracingPipeline const *>(&pipeline));
     }
 
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
-    _DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(write_timestamp, WriteTimestampInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(reset_timestamps, ResetTimestampsInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(begin_label, CommandLabelInfo)
 
     void CommandRecorder::end_label()
     {
@@ -1037,13 +1049,13 @@ namespace daxa
         }
     }
 
-    CommandRecorder::CommandRecorder(CommandRecorder && other)
+    CommandRecorder::CommandRecorder(CommandRecorder && other) : internal{}
     {
-        internal = {};
+
         std::swap(this->internal, other.internal);
     }
 
-    CommandRecorder & CommandRecorder::operator=(CommandRecorder && other)
+    auto CommandRecorder::operator=(CommandRecorder && other) -> CommandRecorder &
     {
         if (internal != nullptr)
         {
@@ -1595,7 +1607,7 @@ namespace daxa
             {
                 ret += " | ";
             }
-            ret += "COMPUTE_SHADER";
+            ret += "COMPUTE";
         }
         if ((flags & PipelineStageFlagBits::RAY_TRACING_SHADER) != PipelineStageFlagBits::NONE)
         {

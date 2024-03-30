@@ -1,6 +1,7 @@
 #pragma once
 
 #include <daxa/daxa.hpp>
+#include <variant>
 
 #include "task_graph.inl"
 
@@ -16,48 +17,6 @@ namespace daxa
     struct Device;
     struct CommandSubmitInfo;
     struct PresentInfo;
-
-    using TaskInputDefaultT = std::span<GenericTaskResourceUse>;
-
-    struct DAXA_EXPORT_CXX TaskInterfaceUses
-    {
-        auto operator[](TaskBufferView const & handle) const -> TaskBufferUse<> const &;
-        auto operator[](TaskImageView const & handle) const -> TaskImageUse<> const &;
-
-      protected:
-        friend struct ImplTaskRuntimeInterface;
-        friend struct TaskGraph;
-        friend struct ImplTaskGraph;
-        friend struct TaskInterface;
-        TaskInterfaceUses(void * a_backend);
-        void * backend = {};
-    };
-
-    struct DAXA_EXPORT_CXX TaskInterface
-    {
-        auto get_device() const -> Device &;
-        auto get_recorder() const -> CommandRecorder &;
-        auto get_allocator() const -> TransferMemoryPool &;
-
-        template <typename T>
-        void copy_task_head_to(T * dst) const
-        {
-            copy_task_head_to({reinterpret_cast<std::byte *>(dst), sizeof(T)});
-        }
-        auto allocate_task_head() -> std::optional<TransferMemoryPool::Allocation>;
-
-        TaskInterfaceUses uses;
-
-      protected:
-        friend struct ImplTaskRuntimeInterface;
-        friend struct TaskGraph;
-        friend struct ImplTaskGraph;
-        TaskInterface(void * a_backend);
-        void copy_task_head_to(std::span<std::byte> dst) const;
-        void * backend = {};
-    };
-
-    using TaskCallback = std::function<void(TaskInterface const &)>;
 
     struct TaskTransientBufferInfo
     {
@@ -88,14 +47,6 @@ namespace daxa
     {
         std::string alias = {};
         Variant<TaskBufferView, std::string> aliased_buffer = {};
-    };
-
-    template <typename TaskArgs>
-    struct TaskInfo
-    {
-        TaskArgs args = {};
-        TaskCallback task = {};
-        std::string name = {};
     };
 
     struct TaskGraphInfo
@@ -174,11 +125,50 @@ namespace daxa
         bool record_debug_string = {};
     };
 
+    /*
+         __/\__
+    . _  \\''//
+    -( )-/_||_\
+     .'. \_()_/
+      |  | . \
+      |  | .  \
+    . '. \_____\.
+    */
+
+
     struct InlineTaskInfo
     {
-        std::vector<GenericTaskResourceUse> uses = {};
-        TaskCallback task = {};
-        std::string name = {};
+        std::vector<TaskAttachmentInfo> attachments = {};
+        std::function<void(TaskInterface)> task = {};
+        std::string_view name = "unnamed";
+    };
+
+    struct InlineTask : ITask
+    {
+        InlineTask(InlineTaskInfo const & info)
+        {
+            _attachments = info.attachments;
+            _callback = info.task;
+            _name = info.name;
+        }
+        constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> override
+        {
+            return _attachments;
+        }
+        constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> override
+        {
+            return _attachments;
+        }
+        constexpr virtual std::string_view name() const override { return _name; };
+        virtual void callback(TaskInterface ti) override
+        {
+            _callback(ti);
+        };
+
+      private:
+        std::vector<TaskAttachmentInfo> _attachments = {};
+        std::function<void(TaskInterface)> _callback = {};
+        std::string_view _name = {};
     };
 
     struct ImplTaskGraph;
@@ -196,23 +186,60 @@ namespace daxa
         DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
         DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
 
-        template <typename Task>
-        void add_task(Task const & task)
+        template <typename TTask>
+            requires std::is_base_of_v<IPartialTask, TTask>
+        void add_task(TTask const & task)
         {
-            std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::PredeclaredTask<Task>>(task);
-            add_task(std::move(base_task));
+            using NoRefTTask = std::remove_reference_t<TTask>;
+            // DAXA_DBG_ASSERT_TRUE_M(task.attachments().size() == task.attachments()._offset, "Detected task attachment count differing from Task head declared attachment count!");
+            struct WrapperTask : ITask
+            {
+                NoRefTTask _task;
+                std::array<TaskAttachmentInfo, NoRefTTask::ATTACH_COUNT> _attachments = {};
+                WrapperTask(NoRefTTask const& task) : _task{task}
+                {
+                    for (u32 i = 0; i < NoRefTTask::ATTACH_COUNT; ++i)
+                    {
+                        if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::BUFFER)
+                        {
+                            TaskBufferAttachmentInfo info;
+                            info.name = NoRefTTask::attachments()[i].value.buffer.name,
+                            info.access = NoRefTTask::attachments()[i].value.buffer.access,
+                            info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size,
+                            info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address,
+                            info.view = get<TaskBufferView>(task.views.views[i]),
+                            _attachments[i] = info;
+                        }
+                        else if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::IMAGE)
+                        {
+                            TaskImageAttachmentInfo info;
+                            info.name = NoRefTTask::attachments()[i].value.image.name,
+                            info.access = NoRefTTask::attachments()[i].value.image.access,
+                            info.view_type = NoRefTTask::attachments()[i].value.image.view_type,
+                            info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size,
+                            info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type,
+                            info.shader_as_index = NoRefTTask::attachments()[i].value.image.shader_as_index,
+                            info.view = get<TaskImageView>(task.views.views[i]),
+                            _attachments[i] = info;
+                        }
+                        else
+                        {
+                            DAXA_DBG_ASSERT_TRUE_M(false, "Declared attachment count does not match actually declared attachment count");
+                        }
+                    }
+                }
+                constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> { return _attachments; }
+                constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> { return _attachments; }
+                constexpr virtual auto name() const -> std::string_view { return NoRefTTask::name(); }
+                virtual void callback(TaskInterface ti) { _task.callback(ti); };
+            };
+            auto wrapped_task = std::make_unique<WrapperTask>(task);
+            add_task(std::move(wrapped_task));
         }
-
-        inline void add_task(InlineTaskInfo && info)
+        void add_task(InlineTaskInfo const & inline_task_info)
         {
-            std::unique_ptr<detail::BaseTask> base_task = std::make_unique<detail::InlineTask>(
-                std::move(info.uses),
-                std::move(info.task),
-                std::move(info.name));
-            add_task(std::move(base_task));
+            add_task(std::make_unique<InlineTask>(inline_task_info));
         }
-
-        DAXA_EXPORT_CXX void add_preamble(TaskCallback callback);
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
         DAXA_EXPORT_CXX void submit(TaskSubmitInfo const & info);
@@ -222,8 +249,6 @@ namespace daxa
         DAXA_EXPORT_CXX void complete(TaskCompleteInfo const & info);
 
         DAXA_EXPORT_CXX void execute(ExecutionInfo const & info);
-        // TODO: Reimplement in another way.
-        // auto get_command_lists() -> std::vector<CommandRecorder>;
 
         DAXA_EXPORT_CXX auto get_debug_string() -> std::string;
         DAXA_EXPORT_CXX auto get_transient_memory_size() -> daxa::usize;
@@ -235,6 +260,6 @@ namespace daxa
         DAXA_EXPORT_CXX static auto dec_refcnt(ImplHandle const * object) -> u64;
 
       private:
-        DAXA_EXPORT_CXX void add_task(std::unique_ptr<detail::BaseTask> && base_task);
+        DAXA_EXPORT_CXX void add_task(std::unique_ptr<ITask> && task);
     };
 } // namespace daxa

@@ -11,9 +11,16 @@ namespace daxa
 {
     static inline constexpr usize CONSTANT_BUFFER_BINDINGS_COUNT = 8;
 
+    struct PushConstantInfo
+    {
+        void const * data = {};
+        u64 size = {};
+        u32 offset = {};
+    };
+
     struct CommandRecorderInfo
     {
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct ImageBlitInfo
@@ -80,12 +87,29 @@ namespace daxa
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
     };
+
     struct BufferClearInfo
     {
         BufferId buffer = {};
         usize offset = {};
         usize size = {};
         u32 clear_value = {};
+    };
+
+    enum struct ResolveMode
+    {
+        NONE = 0,
+        SAMPLE_ZERO = 0x00000001,
+        AVERAGE = 0x00000002,
+        MIN = 0x00000004,
+        MAX = 0x00000008,
+    };
+
+    struct AttachmentResolveInfo
+    {
+        ResolveMode mode = ResolveMode::AVERAGE;
+        ImageViewId image = {};
+        ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
     };
 
     struct RenderAttachmentInfo
@@ -95,6 +119,7 @@ namespace daxa
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
         ClearValue clear_value = {};
+        Optional<AttachmentResolveInfo> resolve = {};
     };
 
     struct RenderPassBeginInfo
@@ -212,7 +237,7 @@ namespace daxa
     struct CommandLabelInfo
     {
         std::array<f32, 4> label_color = {0.463f, 0.333f, 0.671f, 1.0f};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct SetUniformBufferInfo
@@ -273,15 +298,20 @@ namespace daxa
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
         [[nodiscard]] auto end_renderpass() && -> CommandRecorder;
 
-        void push_constant_vptr(void const * data, u32 size);
+        void push_constant_vptr(PushConstantInfo const & info);
         template <typename T>
-        void push_constant(T const & constant)
+        void push_constant(T const & constant, u32 offset = 0)
         {
-            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
+            push_constant_vptr({
+                .data = static_cast<void const *>(&constant),
+                .size = static_cast<u32>(sizeof(T)),
+                .offset = offset,
+            });
         }
         void set_pipeline(RasterPipeline const & pipeline);
         void set_viewport(ViewportInfo const & info);
         void set_scissor(Rect2D const & info);
+        void set_rasterization_samples(RasterizationSamples info);
         void set_depth_bias(DepthBiasInfo const & info);
         void set_index_buffer(SetIndexBufferInfo const & info);
 
@@ -349,11 +379,15 @@ namespace daxa
         void wait_event(EventWaitInfo const & info);
         void reset_event(ResetEventInfo const & info);
 
-        void push_constant_vptr(void const * data, u32 size);
+        void push_constant_vptr(PushConstantInfo const & info);
         template <typename T>
-        void push_constant(T const & constant)
+        void push_constant(T const & constant, u32 offset = 0)
         {
-            push_constant_vptr(&constant, static_cast<u32>(sizeof(T)));
+            push_constant_vptr({
+                .data = &constant,
+                .size = static_cast<u32>(sizeof(T)),
+                .offset = offset,
+            });
         }
         void set_pipeline(ComputePipeline const & pipeline);
         void dispatch(DispatchInfo const & info);

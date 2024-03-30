@@ -42,10 +42,10 @@
         "glslang"
       ]
     },
-    "utils-pipeline-manager-dxc": {
-      "description": "Build with dxc",
+    "utils-pipeline-manager-slang": {
+      "description": "Build with Slang",
       "dependencies": [
-        "dxc"
+        "shader-slang"
       ]
     },
     "utils-pipeline-manager-spirv-validation": {
@@ -83,7 +83,7 @@
   "builtin-baseline": "78ba9711d30c64a6b40462c72f356c681e2255f3",
   "vcpkg-configuration": {
     "overlay-ports": [
-      "./cmake/vcpkg-overlay-ports/dxc",
+      "./cmake/vcpkg-overlay-ports/shader-slang",
       "./cmake/vcpkg-overlay-ports/fsr2",
       "./cmake/vcpkg-overlay-ports/glfw3"
     ]

@@ -307,19 +307,19 @@ namespace daxa
                   auto create_info = daxa::RasterPipelineInfo{};
                   create_info.vertex_shader_info = daxa::ShaderInfo{.byte_code = imgui_vert_spv.data(), .byte_code_size = static_cast<u32>(imgui_vert_spv.size())};
                   // TODO(msakmary) Possibly add more UNORM swapchain formats or a bool flag that lets the user tell us if the target format is UNORM
-                  if(info.format == daxa::Format::R8G8B8A8_UNORM || info.format == daxa::Format::B8G8R8A8_UNORM)
+                  if (info.format == daxa::Format::R8G8B8A8_UNORM || info.format == daxa::Format::B8G8R8A8_UNORM)
                   {
-                       create_info.fragment_shader_info = daxa::ShaderInfo{
-                            .byte_code = imgui_gamma_frag_spv.data(),
-                            .byte_code_size = static_cast<u32>(imgui_gamma_frag_spv.size())
-                        };
+                      create_info.fragment_shader_info = daxa::ShaderInfo{
+                          .byte_code = imgui_gamma_frag_spv.data(),
+                          .byte_code_size = static_cast<u32>(imgui_gamma_frag_spv.size()),
+                      };
                   }
                   else
                   {
-                       create_info.fragment_shader_info = daxa::ShaderInfo{
-                            .byte_code = imgui_frag_spv.data(),
-                            .byte_code_size = static_cast<u32>(imgui_frag_spv.size())
-                        };
+                      create_info.fragment_shader_info = daxa::ShaderInfo{
+                          .byte_code = imgui_frag_spv.data(),
+                          .byte_code_size = static_cast<u32>(imgui_frag_spv.size()),
+                      };
                   }
                   create_info.color_attachments = std::array{daxa::RenderAttachment{
                       .format = info.format,
@@ -416,7 +416,7 @@ namespace daxa
             .image_view_id = font_sheet.default_view(),
             .sampler_id = this->font_sampler,
         });
-        io.Fonts->SetTexID(0);
+        io.Fonts->SetTexID(nullptr);
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()
@@ -429,7 +429,7 @@ namespace daxa
 
     void ImplImGuiRenderer::zero_ref_callback(ImplHandle const * handle)
     {
-        auto self = r_cast<ImplImGuiRenderer const *>(handle);
+        auto const * self = r_cast<ImplImGuiRenderer const *>(handle);
         delete self;
     }
 
@@ -499,7 +499,7 @@ daxa_f32vec4 linear_to_srgb(daxa_f32vec4 linear)
     daxa_f32vec3 color_linear = linear.rgb;
     daxa_f32vec3 selector = clamp(ceil(color_linear - 0.0031308), 0.0, 1.0); // 0 if under value, 1 if over
     daxa_f32vec3 under = 12.92 * color_linear;
-    daxa_f32vec3 over = (1.055) * pow(color_linear, daxa_f32vec3(1.0/2.4)) - 0.055;
+    daxa_f32vec3 over = (1.055) * pow(color_linear, daxa_f32vec3(1.0 / 2.4)) - 0.055;
     daxa_f32vec3 result = mix(under, over, selector);
     return daxa_f32vec4(result, linear.a);
 }
@@ -564,7 +564,7 @@ auto main() -> int
     };
     // NO GAMMA CORRECTION
     auto result = pipeline_manager.add_raster_pipeline(compile_info);
-    fmt::println("{}",result.to_string());
+    fmt::println("{}", result.to_string());
 
     auto vert_file = std::ifstream{"./imgui_pipeline.vert.spv", std::ios::binary};
     auto vert_size = std::filesystem::file_size("./imgui_pipeline.vert.spv");
@@ -583,7 +583,7 @@ auto main() -> int
     // WITH GAMMA CORRECTION
     compile_info.fragment_shader_info.value().compile_options.defines = {{"GAMMA_CORRECTION", "TRUE"}};
     result = pipeline_manager.add_raster_pipeline(compile_info);
-    fmt::println("{}",result.to_string());
+    fmt::println("{}", result.to_string());
 
     // vert is unchanged
     std::filesystem::remove("./imgui_pipeline.vert.spv");

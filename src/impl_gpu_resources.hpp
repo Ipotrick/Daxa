@@ -123,19 +123,20 @@ namespace daxa
             auto const version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
             // Slots that reached max version CAN NOT be recycled.
             // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
+            // Clear slot MUST HAPPEN before pushing into free list.
+            this->pages[page]->at(offset).first = {};
             if (version != DAXA_ID_VERSION_MASK /* this is the maximum value a version is allowed to reach */)
             {
+                std::unique_lock l{mut};
                 this->free_index_stack.push_back(id.index);
             }
-            // Clear slot:
-            this->pages[page]->at(offset).first = {};
         }
 
         /**
          * @brief   Creates a slot for a resource in the pool.
          *          Returned slots may be recycled but are guaranteed to have a unique index + version.
          *
-         * Only Threadsafe when:
+         * Must 
          * * mutable ptr to resource is only used in parallel
          *
          * @return The new resource slot and its id. Can fail if max resources is exceeded.
@@ -143,34 +144,40 @@ namespace daxa
         auto try_create_slot() -> std::optional<std::pair<GPUResourceId, ResourceT &>>
         {
             u32 index;
-            if (this->free_index_stack.empty())
             {
-                index = this->next_index++;
-                if (index == this->max_resources || index == MAX_RESOURCE_COUNT)
+                std::unique_lock l{mut};
+                if (this->free_index_stack.empty())
                 {
-                    return std::nullopt;
+                    index = this->next_index++;
+                    if (index >= this->max_resources || index >= MAX_RESOURCE_COUNT)
+                    {
+                        return std::nullopt;
+                    }
                 }
-            }
-            else
-            {
-                index = this->free_index_stack.back();
-                this->free_index_stack.pop_back();
+                else
+                {
+                    index = this->free_index_stack.back();
+                    this->free_index_stack.pop_back();
+                }
             }
 
             auto const page = static_cast<usize>(index) >> PAGE_BITS;
             auto const offset = static_cast<usize>(index) & PAGE_MASK;
 
-            if (!this->pages[page])
+            if (page >= this->valid_page_count.load(std::memory_order_seq_cst))
             {
-                this->pages[page] = std::make_unique<PageT>();
-                for (u32 i = 0; i < PAGE_SIZE; ++i)
+                std::unique_lock l{page_alloc_mtx};
+                if (page >= this->valid_page_count.load(std::memory_order_relaxed))
                 {
-                    this->pages[page]->at(i).second.store(1ull, std::memory_order_relaxed);
+                    this->pages[page] = std::make_unique<PageT>();
+                    for (u32 i = 0; i < PAGE_SIZE; ++i)
+                    {
+                        this->pages[page]->at(i).second.store(1ull, std::memory_order_relaxed);
+                    }
+                    // Needs to be sequential, so that the 0 writes to the versions are visible before the atomic op.
+                    this->valid_page_count.fetch_add(1, std::memory_order_seq_cst);
                 }
-                // Needs to be sequential, so that the 0 writes to the versions are visible before the atomic op.
-                this->valid_page_count.fetch_add(1, std::memory_order_seq_cst);
             }
-
             u64 version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
 
             auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = version};

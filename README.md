@@ -10,7 +10,7 @@ Daxa is my opinionated GPU API abstraction over Vulkan.
 
 Why would you want to use Daxa? These are some of the aspects of Daxa that set it apart from most other Vulkan abstractions:
 
-- Specifically designed for GPGPU programming and GPU-driven rendering. Daxa makes writing modern renderers simple and easy. It does not compromise for old hardware or old API concepts. Modern GPUs are the target (for Nvidia this is >=Turing, for AMD this is >=GCN3).
+- Specifically designed for GPGPU programming and GPU-driven rendering. Daxa makes writing modern renderers simple and easy. It does not compromise for old hardware or old API concepts. Modern GPUs are the target (for Nvidia this is >=Turing, for AMD this is >= RDNA1).
 
 - Fully bindless. Buffers, images, samplers, and acceleration structures are all exclusively accessed via a bindless API. The bindless API abstracts descriptors completely. There are no bindings, no descriptor sets, no set layouts, no descriptor pools, and no binding or set indices within shaders.
 
@@ -65,5 +65,5 @@ If you prefer to interact in Discord over GitHub issues, Daxa has a [Discord ser
 - automatic default image view integrated into all images
 - controllable parent-child lifetime semantics
 - fully abstracts Vulkan, allows Daxa to have more control and be more convenient
-- deadImGui backend
+- dearImGui backend
 - transient memory pool utility object

@@ -29,6 +29,9 @@ struct daxa_ImplDevice final : public ImplHandle
     VkDevice vk_device = {};
     VmaAllocator vma_allocator = {};
 
+    // Dynamic State:
+    PFN_vkCmdSetRasterizationSamplesEXT vkCmdSetRasterizationSamplesEXT = {};
+
     // Debug utils:
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
     PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};

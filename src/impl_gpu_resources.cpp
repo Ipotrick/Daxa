@@ -96,8 +96,8 @@ namespace daxa
         vkCreateDescriptorPool(device, &vk_descriptor_pool_create_info, nullptr, &this->vk_descriptor_pool);
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
         {
-            auto descriptor_pool_name = "mega descriptor pool";
-            VkDebugUtilsObjectNameInfoEXT descriptor_pool_name_info{
+            auto const * descriptor_pool_name = "mega descriptor pool";
+            VkDebugUtilsObjectNameInfoEXT const descriptor_pool_name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_DESCRIPTOR_POOL,
@@ -197,8 +197,8 @@ namespace daxa
         vkCreateDescriptorSetLayout(device, &vk_descriptor_set_layout_create_info, nullptr, &this->vk_descriptor_set_layout);
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
         {
-            auto name = "mega descriptor set layout";
-            VkDebugUtilsObjectNameInfoEXT name_info{
+            auto const * name = "mega descriptor set layout";
+            VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT,
@@ -219,8 +219,8 @@ namespace daxa
         vkAllocateDescriptorSets(device, &vk_descriptor_set_allocate_info, &this->vk_descriptor_set);
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
         {
-            auto name = "mega descriptor set";
-            VkDebugUtilsObjectNameInfoEXT name_info{
+            auto const * name = "mega descriptor set";
+            VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_DESCRIPTOR_SET,
@@ -244,8 +244,8 @@ namespace daxa
         vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, pipeline_layouts.data());
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
         {
-            auto name = "pipeline layout (push constant size 0)";
-            VkDebugUtilsObjectNameInfoEXT name_info{
+            auto const * name = "pipeline layout (push constant size 0)";
+            VkDebugUtilsObjectNameInfoEXT const name_info{
                 .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                 .pNext = nullptr,
                 .objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
@@ -268,7 +268,7 @@ namespace daxa
             if (vkSetDebugUtilsObjectNameEXT != nullptr)
             {
                 auto name = fmt::format("pipeline layout (push constant size {})", i * 4);
-                VkDebugUtilsObjectNameInfoEXT name_info{
+                VkDebugUtilsObjectNameInfoEXT const name_info{
                     .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
                     .pNext = nullptr,
                     .objectType = VK_OBJECT_TYPE_PIPELINE_LAYOUT,
@@ -335,9 +335,9 @@ namespace daxa
             }
             return ret;
         };
-        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, print_remaining("detected leaked buffers; not all buffers have been destroyed before destroying the device;", buffer_slots.pages));
-        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, print_remaining("detected leaked images; not all images have been destroyed before destroying the device;", image_slots.pages));
-        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("detected leaked samplers; not all samplers have been destroyed before destroying the device;", sampler_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, print_remaining("Detected leaked buffers; not all buffers have been destroyed before destroying the device;", buffer_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, print_remaining("Detected leaked images; not all images have been destroyed before destroying the device;", image_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("Detected leaked samplers; not all samplers have been destroyed before destroying the device;", sampler_slots.pages));
         for (usize i = 0; i < PIPELINE_LAYOUT_COUNT; ++i)
         {
             vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);

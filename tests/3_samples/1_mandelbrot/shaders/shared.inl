@@ -1,6 +1,6 @@
 #pragma once
 
-#include <daxa/daxa.inl>
+#include "daxa/daxa.inl"
 
 struct GpuInput
 {
@@ -13,5 +13,6 @@ struct ComputePush
 {
     daxa_ImageViewId image_id;
     daxa_BufferId input_buffer_id;
+    daxa_BufferPtr(GpuInput) ptr;
     daxa_u32vec2 frame_dim;
 };

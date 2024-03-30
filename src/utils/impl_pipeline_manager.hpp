@@ -2,19 +2,9 @@
 
 #include <daxa/utils/pipeline_manager.hpp>
 
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-#if defined(_WIN32)
-#include "Windows.h"
-#include "wrl/client.h"
-using namespace Microsoft::WRL;
-#include <dxcapi.h>
-#else
-#define SCARD_E_FILE_NOT_FOUND static_cast<HRESULT>(0x80100024)
-#define SCARD_E_INVALID_PARAMETER static_cast<HRESULT>(0x80100004)
-#include <dxc/dxcapi.h>
-template <typename T>
-using ComPtr = CComPtr<T>;
-#endif
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+#include <slang.h>
+#include <slang-com-ptr.h>
 #endif
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
@@ -97,14 +87,12 @@ namespace daxa
         GlslangBackend glslang_backend = {};
 #endif
 
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-        struct DxcBackend
+#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+        struct SlangBackend
         {
-            IDxcUtils * dxc_utils = nullptr;
-            IDxcCompiler3 * dxc_compiler = nullptr;
-            std::shared_ptr<IDxcIncludeHandler> dxc_includer = nullptr;
+            Slang::ComPtr<slang::IGlobalSession> global_session;
         };
-        DxcBackend dxc_backend = {};
+        SlangBackend slang_backend = {};
 #endif
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
@@ -127,12 +115,14 @@ namespace daxa
         auto reload_all() -> PipelineReloadResult;
         auto all_pipelines_valid() const -> bool;
 
+        auto try_load_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash) -> Result<std::vector<u32>>;
+        void save_shader_cache(std::filesystem::path const &out_folder, uint64_t shader_info_hash, std::vector<u32> const &spirv);
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
 
         auto get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
         auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
-        auto get_spirv_dxc(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+        auto get_spirv_slang(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
 
         static auto zero_ref_callback(ImplHandle const * handle);
     };

@@ -62,8 +62,8 @@ struct BaseApp : AppWindow<T>
             },
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
             .language = daxa::ShaderLanguage::GLSL,
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
-            .language = daxa::ShaderLanguage::HLSL,
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+            .language = daxa::ShaderLanguage::SLANG,
 #endif
             .enable_debug_info = true,
         },
@@ -85,7 +85,7 @@ struct BaseApp : AppWindow<T>
     f32 time = 0.0f, delta_time = 1.0f;
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
-    std::vector<daxa::GenericTaskResourceUse> imgui_task_uses{};
+    std::vector<daxa::TaskAttachmentInfo> imgui_task_attachments{};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -127,7 +127,6 @@ struct BaseApp : AppWindow<T>
 
     auto record_loop_task_graph() -> daxa::TaskGraph
     {
-        using namespace daxa::task_resource_uses;
         daxa::TaskGraph new_task_graph = daxa::TaskGraph({
             .device = device,
             .swapchain = swapchain,
@@ -136,19 +135,18 @@ struct BaseApp : AppWindow<T>
         });
         new_task_graph.use_persistent_image(task_swapchain_image);
 
-        using namespace daxa::task_resource_uses;
-        imgui_task_uses.push_back(ImageColorAttachment<>{task_swapchain_image});
         reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
-        new_task_graph.add_task({
-            .uses = imgui_task_uses,
-            .task = [this](daxa::TaskInterface ti)
+        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, task_swapchain_image));
+        auto imgui_task_info = daxa::InlineTaskInfo{
+            .attachments = std::move(imgui_task_attachments),
+            .task = [this](daxa::TaskInterface const & ti)
             {
-                auto& recorder = ti.get_recorder();
-                imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, ti.uses[task_swapchain_image].image(), AppWindow<T>::size_x, AppWindow<T>::size_y);
+                imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.get(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
             },
             .name = "ImGui Task",
-        });
+        };
+        new_task_graph.add_task(imgui_task_info);
 
         new_task_graph.submit({});
         new_task_graph.present({});

@@ -93,6 +93,9 @@ namespace daxa
         }
     };
 
+    struct NoneT { };
+    static inline constexpr NoneT None = NoneT{};
+
     template <typename T>
     struct Optional
     {
@@ -104,11 +107,18 @@ namespace daxa
         Optional() : m_value{}, m_has_value{false} {}
         Optional(Optional<T> const &) = default;
         Optional(T const & v) : m_value{v}, m_has_value{true} {}
+        Optional(NoneT const &) : m_value{}, m_has_value{} {}
         Optional<T> & operator=(Optional<T> const &) = default;
         Optional<T> & operator=(T const & v)
         {
             this->m_value = v;
             this->m_has_value = true;
+            return *this;
+        }
+        Optional<T> & operator=(NoneT const &)
+        {
+            this->m_value = {};
+            this->m_has_value = {};
             return *this;
         }
 
@@ -296,6 +306,7 @@ namespace daxa
 
     struct SmallString final : public FixedList<char, DAXA_SMALL_STRING_CAPACITY>
     {
+        using FixedList::FixedList;
         constexpr SmallString(char const * c_str)
         {
             while (c_str != nullptr && *c_str != 0)
@@ -1168,17 +1179,17 @@ namespace daxa
     struct Flags final
     {
         typename Properties::Data data;
-        [[nodiscard]] inline constexpr auto operator|=(Flags const & other) -> Flags &
+        inline constexpr auto operator|=(Flags const & other) -> Flags &
         {
             data |= other.data;
             return *this;
         }
-        [[nodiscard]] inline constexpr auto operator&=(Flags const & other) -> Flags &
+        inline constexpr auto operator&=(Flags const & other) -> Flags &
         {
             data &= other.data;
             return *this;
         }
-        [[nodiscard]] inline constexpr auto operator^=(Flags const & other) -> Flags &
+        inline constexpr auto operator^=(Flags const & other) -> Flags &
         {
             data ^= other.data;
             return *this;
@@ -1791,7 +1802,7 @@ namespace daxa
     struct TimelineQueryPoolInfo
     {
         u32 query_count = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct DAXA_EXPORT_CXX TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>

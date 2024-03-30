@@ -34,7 +34,7 @@ namespace daxa
         std::swap(this->claimed_size, other.claimed_size);
     }
 
-    TransferMemoryPool & TransferMemoryPool::operator=(TransferMemoryPool && other)
+    auto TransferMemoryPool::operator=(TransferMemoryPool && other) -> TransferMemoryPool &
     {
         if (!this->m_buffer.is_empty())
         {
@@ -133,6 +133,11 @@ namespace daxa
     auto TransferMemoryPool::timeline_value() const -> usize
     {
         return this->current_timeline_value;
+    }
+
+    auto TransferMemoryPool::inc_timeline_value() -> usize
+    {
+        return ++this->current_timeline_value;
     }
 
     void TransferMemoryPool::reclaim_unused_memory()

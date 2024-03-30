@@ -15,12 +15,12 @@ namespace daxa
 
     using TaskId = usize;
 
-    struct LastReadSplitBarrierIndex
+    struct LastConcurrentAccessSplitBarrierIndex
     {
         usize index;
     };
 
-    struct LastReadBarrierIndex
+    struct LastConcurrentAccessBarrierIndex
     {
         usize index;
     };
@@ -38,11 +38,18 @@ namespace daxa
         CombinedBatchIndex last_use;
     };
 
+    enum struct TaskAccessConcurrency
+    {
+        CONCURRENT,
+        EXCLUSIVE
+    };
+
     struct PerPermTaskBuffer
     {
         /// Every permutation always has all buffers but they are not necessarily valid in that permutation.
         /// This boolean is used to check this.
         bool valid = {};
+        TaskAccessConcurrency latest_access_concurrent = TaskAccessConcurrency::EXCLUSIVE;
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
@@ -51,7 +58,7 @@ namespace daxa
         Access first_access = AccessConsts::NONE;
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
-        Variant<Monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = Monostate{};
+        Variant<Monostate, LastConcurrentAccessSplitBarrierIndex, LastConcurrentAccessBarrierIndex> latest_concurrent_access_barrer_index = Monostate{};
         BufferId actual_buffer = {};
         ResourceLifetime lifetime = {};
         usize allocation_offset = {};
@@ -60,11 +67,12 @@ namespace daxa
     struct ExtendedImageSliceState
     {
         ImageSliceState state = {};
+        TaskAccessConcurrency latest_access_concurrent = TaskAccessConcurrency::EXCLUSIVE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
-        Variant<Monostate, LastReadSplitBarrierIndex, LastReadBarrierIndex> latest_access_read_barrier_index = Monostate{};
+        Variant<Monostate, LastConcurrentAccessSplitBarrierIndex, LastConcurrentAccessBarrierIndex> latest_concurrent_access_barrer_index = Monostate{};
     };
 
     struct PerPermTaskImage
@@ -77,6 +85,7 @@ namespace daxa
         std::vector<ExtendedImageSliceState> first_slice_states = {};
         // only for transient images
         ResourceLifetime lifetime = {};
+        ImageCreateFlags create_flags = ImageCreateFlagBits::NONE;
         ImageUsageFlags usage = ImageUsageFlagBits::NONE;
         ImageId actual_image = {};
         usize allocation_offset = {};
@@ -101,8 +110,10 @@ namespace daxa
 
     struct ImplTask
     {
-        std::unique_ptr<detail::BaseTask> base_task = {};
+        std::unique_ptr<ITask> base_task = {};
         std::vector<std::vector<ImageViewId>> image_view_cache = {};
+        // Used to verify image view cache:
+        std::vector<std::vector<ImageId>> runtime_images_last_execution = {};
     };
 
     struct ImplPresentInfo
@@ -130,8 +141,8 @@ namespace daxa
         std::optional<ImplPresentInfo> present_info = {};
     };
 
-    auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access>;
-    auto task_buffer_access_to_access(TaskBufferAccess const & access) -> Access;
+    auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>;
+    auto task_buffer_access_to_access(TaskBufferAccess const & access) -> std::pair<Access, TaskAccessConcurrency>;
 
     struct ImplTaskGraph;
 
@@ -153,14 +164,14 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(TaskId task_id, ImplTaskGraph & task_graph_impl, detail::BaseTask & task);
+        void add_task(ImplTaskGraph & task_graph_impl, ImplTask & impl_task, TaskId task_id);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
 
     struct ImplPersistentTaskBuffer final : ImplHandle
     {
-        ImplPersistentTaskBuffer(TaskBufferInfo const & a_info);
+        ImplPersistentTaskBuffer(TaskBufferInfo a_info);
         ~ImplPersistentTaskBuffer();
 
         TaskBufferInfo info = {};
@@ -310,7 +321,6 @@ namespace daxa
         static inline std::atomic_uint32_t exec_unique_next_index = 1;
         u32 unique_index = {};
 
-        TaskCallback preamble = {};
         TaskGraphInfo info;
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
@@ -337,7 +347,6 @@ namespace daxa
         std::array<bool, DAXA_TASK_GRAPH_MAX_CONDITIONALS> execution_time_current_conditionals = {};
 
         // post execution information:
-        usize last_execution_staging_timeline_value = 0;
         u32 chosen_permutation_last_execution = {};
         std::vector<ExecutableCommandList> left_over_command_lists = {};
         bool executed_once = {};
@@ -352,7 +361,6 @@ namespace daxa
         void update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation);
         void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
         void insert_pre_batch_barriers(TaskGraphPermutation & permutation);
-        void check_for_overlapping_use(detail::BaseTask & task);
         void create_transient_runtime_buffers(TaskGraphPermutation & permutation);
         void create_transient_runtime_images(TaskGraphPermutation & permutation);
         void allocate_transient_resources();

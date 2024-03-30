@@ -1,7 +1,7 @@
 #pragma once
 
-#if !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG && !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_PIPELINE_MANAGER_(GLSLANG|DXC) CMake option enabled, or request the utils-pipeline-manager-(glslang|dxc) feature in vcpkg"
+#if !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG && !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_PIPELINE_MANAGER_(GLSLANG|SLANG) CMake option enabled, or request the utils-pipeline-manager-(glslang|slang) feature in vcpkg"
 #endif
 
 #include <daxa/device.hpp>
@@ -13,7 +13,7 @@ namespace daxa
         std::filesystem::path path;
     };
 
-    // This string will only work if it is valid GLSL/HLSL
+    // This string will only work if it is valid GLSL/SLANG
     struct ShaderCode
     {
         std::string string;
@@ -30,7 +30,7 @@ namespace daxa
     enum struct ShaderLanguage
     {
         GLSL,
-        HLSL,
+        SLANG,
         MAX_ENUM = 0x7fffffff,
     };
 
@@ -45,6 +45,7 @@ namespace daxa
         std::vector<std::filesystem::path> root_paths = {};
         std::optional<std::filesystem::path> write_out_preprocessed_code = {};
         std::optional<std::filesystem::path> write_out_shader_binary = {};
+        std::optional<std::filesystem::path> spirv_cache_folder = {};
         std::optional<ShaderLanguage> language = {};
         std::vector<ShaderDefine> defines = {};
         std::optional<bool> enable_debug_info = {};

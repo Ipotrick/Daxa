@@ -16,6 +16,7 @@ namespace daxa
         struct PhysicalDeviceFeatureTable
     {
         VkPhysicalDeviceFeatures features = {};
+        VkPhysicalDeviceVulkan12Features features12 = {};
         VkPhysicalDeviceBufferDeviceAddressFeatures buffer_device_address = {};
         VkPhysicalDeviceDescriptorIndexingFeatures descriptor_indexing = {};
         VkPhysicalDeviceHostQueryResetFeatures host_query_reset = {};
@@ -23,6 +24,10 @@ namespace daxa
         VkPhysicalDeviceSynchronization2Features sync2 = {};
         VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore = {};
         VkPhysicalDeviceScalarBlockLayoutFeatures scalar_layout = {};
+        VkPhysicalDeviceVariablePointerFeatures variable_pointers = {};
+        VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamic_state3 = {};
+        std::optional<VkPhysicalDeviceShaderFloat16Int8Features> shader_float16_int8 = {};
+        std::optional<VkPhysicalDeviceRobustness2FeaturesEXT> robustness2 = {};
         std::optional<VkPhysicalDeviceVulkanMemoryModelFeatures> memory_model = {};
         std::optional<VkPhysicalDeviceShaderAtomicInt64Features> shader_atomic64 = {};
         std::optional<VkPhysicalDeviceShaderImageAtomicInt64FeaturesEXT> image_atomic64 = {};

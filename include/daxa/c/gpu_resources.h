@@ -6,8 +6,6 @@
 
 #include <daxa/c/types.h>
 
-_DAXA_DECL_OPTIONAL(daxa_TlasId)
-
 DAXA_EXPORT daxa_ImageViewId
 daxa_default_view(daxa_ImageId image);
 
@@ -231,7 +229,6 @@ typedef union
     daxa_BlasTriangleGeometryInfoSpan triangles;
     daxa_BlasAabbsGeometryInfoSpan aabbs;
 } daxa_BlasGeometryInfoSpansUnion;
-_DAXA_DECL_VARIANT(daxa_BlasGeometryInfoSpansUnion)
 
 typedef enum
 {

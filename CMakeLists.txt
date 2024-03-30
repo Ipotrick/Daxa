@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.21)
 
-include(cmake/warnings.cmake)
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/warnings.cmake")
 if(DAXA_USE_VCPKG)
-    include(cmake/vcpkg.cmake)
+    include("${CMAKE_CURRENT_LIST_DIR}/cmake/vcpkg.cmake")
 endif()
 
 if(DAXA_ENABLE_UTILS_TASK_GRAPH)
@@ -21,8 +21,8 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-glslang")
 endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-dxc")
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-slang")
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
@@ -157,18 +157,19 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
         PRIVATE
         glslang::glslang
         glslang::SPIRV
-        glslang::HLSL
     )
 endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC)
+if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC=true
+        DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG=true
     )
-    find_package(dxc CONFIG REQUIRED)
-    target_link_libraries(daxa
-        PRIVATE
-        dxc::dxc
+    find_package(shader-slang CONFIG REQUIRED)
+    target_link_libraries(daxa PRIVATE slang::slang)
+    # NOTE(grundlett): Really hacky. It appears there's no way to create plugin dll dependencies...
+    # see https://gitlab.kitware.com/cmake/cmake/-/issues/22993
+    add_custom_command(TARGET daxa POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:slang::glslang> $<TARGET_FILE_DIR:daxa>
     )
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
@@ -240,40 +241,6 @@ if(DAXA_ENABLE_TOOLS)
     target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa fmt::fmt)
 endif()
 
-# Packaging
-include(CMakePackageConfigHelpers)
-file(WRITE ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-@PACKAGE_INIT@
-include(${CMAKE_CURRENT_LIST_DIR}/daxa-targets.cmake)
-check_required_components(daxa)
-
-get_target_property(DAXA_PREV_DEFINITIONS daxa::daxa INTERFACE_COMPILE_DEFINITIONS)
-set_target_properties(daxa::daxa PROPERTIES
-  INTERFACE_COMPILE_DEFINITIONS "${DAXA_PREV_DEFINITIONS};DAXA_SHADER_INCLUDE_DIR=\"${PACKAGE_PREFIX_DIR}/include\""
-)
-]=])
-if(DAXA_ENABLE_UTILS_IMGUI)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(imgui CONFIG REQUIRED)
-]=])
+if(DAXA_INSTALL)
+    include("${CMAKE_CURRENT_LIST_DIR}/cmake/packaging.cmake")
 endif()
-configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
-    ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
-    INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa
-    NO_SET_AND_CHECK_MACRO)
-write_basic_package_version_file(
-    ${CMAKE_CURRENT_BINARY_DIR}/daxa-config-version.cmake
-    VERSION ${PROJECT_VERSION}
-    COMPATIBILITY SameMajorVersion)
-install(
-    FILES
-    ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
-    ${CMAKE_CURRENT_BINARY_DIR}/daxa-config-version.cmake
-    DESTINATION
-    ${CMAKE_INSTALL_DATADIR}/daxa)
-install(TARGETS daxa EXPORT daxa-targets)
-if(BUILD_SHARED_LIBS AND WIN32)
-    install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION bin OPTIONAL)
-endif()
-install(EXPORT daxa-targets DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa NAMESPACE daxa::)
-install(DIRECTORY ${PROJECT_SOURCE_DIR}/include/ TYPE INCLUDE)
