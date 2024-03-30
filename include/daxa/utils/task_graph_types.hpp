@@ -419,7 +419,7 @@ namespace daxa
         TransferMemoryPool * allocator = {};
         std::span<std::byte> attachment_shader_blob = {};
 
-        void assign_attachment_shader_blob(std::span<u8> arr)
+        void assign_attachment_shader_blob(std::span<u8> arr) const
         {
             std::memcpy(
                 arr.data(),
