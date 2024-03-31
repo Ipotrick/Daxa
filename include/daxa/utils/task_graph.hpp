@@ -135,7 +135,6 @@ namespace daxa
     . '. \_____\.
     */
 
-
     struct InlineTaskInfo
     {
         std::vector<TaskAttachmentInfo> attachments = {};
@@ -198,11 +197,13 @@ namespace daxa
             {
                 NoRefTTask _task;
                 std::array<TaskAttachmentInfo, NoRefTTask::ATTACH_COUNT> _attachments = {};
-                WrapperTask(NoRefTTask const& task) : _task{task}
+                WrapperTask(NoRefTTask const & task) : _task{task}
                 {
                     for (u32 i = 0; i < NoRefTTask::ATTACH_COUNT; ++i)
                     {
-                        if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::BUFFER)
+                        switch (NoRefTTask::attachments()[i].type)
+                        {
+                        case daxa::TaskAttachmentType::BUFFER:
                         {
                             TaskBufferAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.buffer.name;
@@ -212,7 +213,26 @@ namespace daxa
                             info.view = daxa::get<TaskBufferView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
-                        else if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::IMAGE)
+                        break;
+                        case daxa::TaskAttachmentType::TLAS:
+                        {
+                            TaskTlasAttachmentInfo info;
+                            info.name = NoRefTTask::attachments()[i].value.tlas.name;
+                            info.access = NoRefTTask::attachments()[i].value.tlas.access;
+                            info.view = daxa::get<TaskTlasView>(task.views.views[i]);
+                            _attachments[i] = info;
+                        }
+                        break;
+                        case daxa::TaskAttachmentType::BLAS:
+                        {
+                            TaskBlasAttachmentInfo info;
+                            info.name = NoRefTTask::attachments()[i].value.blas.name;
+                            info.access = NoRefTTask::attachments()[i].value.blas.access;
+                            info.view = daxa::get<TaskBlasView>(task.views.views[i]);
+                            _attachments[i] = info;
+                        }
+                        break;
+                        case daxa::TaskAttachmentType::IMAGE:
                         {
                             TaskImageAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.image.name;
@@ -224,9 +244,12 @@ namespace daxa
                             info.view = daxa::get<TaskImageView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
-                        else
+                        break;
+                        default:
                         {
                             DAXA_DBG_ASSERT_TRUE_M(false, "Declared attachment count does not match actually declared attachment count");
+                        }
+                        break;
                         }
                     }
                 }

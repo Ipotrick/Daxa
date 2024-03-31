@@ -25,7 +25,7 @@ namespace daxa
         ImageId image_id = {};
     };
 
-    DAXA_EXPORT_CXX [[nodiscard]] auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
 
     struct BinarySemaphoreInfo
     {
