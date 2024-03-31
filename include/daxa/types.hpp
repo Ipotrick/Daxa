@@ -80,6 +80,10 @@ namespace daxa
             return this->object != nullptr;
         }
 
+        auto get() -> HANDLE_T { return object; }
+
+        auto get() const -> HANDLE_T { return object; }
+
       protected:
         HANDLE_T object = {};
 

@@ -229,15 +229,19 @@ namespace daxa
     {
         struct Persistent
         {
-            TaskBuffer buffer = {};
+            std::variant<TaskBuffer, TaskBlas, TaskTlas> buffer_blas_tlas = {};
 
             auto get() -> ImplPersistentTaskBufferBlasTlas &
             {
-                return **r_cast<ImplPersistentTaskBufferBlasTlas **>(&buffer);
+                ImplPersistentTaskBufferBlasTlas * ret = {};
+                std::visit([&](auto & ptr){ ret = ptr.get();}, buffer_blas_tlas);
+                return *ret;
             }
             auto get() const -> ImplPersistentTaskBufferBlasTlas const &
             {
-                return **r_cast<ImplPersistentTaskBufferBlasTlas const * const *>(&buffer);
+                ImplPersistentTaskBufferBlasTlas const* ret = {};
+                std::visit([&](auto & ptr){ ret = ptr.get();}, buffer_blas_tlas);
+                return *ret;
             }
         };
         struct Transient
@@ -355,6 +359,8 @@ namespace daxa
         u32 record_conditional_states = {};
         std::vector<TaskGraphPermutation *> record_active_permutations = {};
         std::unordered_map<std::string, TaskBufferView> buffer_name_to_id = {};
+        std::unordered_map<std::string, TaskBlasView> blas_name_to_id = {};
+        std::unordered_map<std::string, TaskTlasView> tlas_name_to_id = {};
         std::unordered_map<std::string, TaskImageView> image_name_to_id = {};
 
         usize memory_block_size = {};
