@@ -43,7 +43,7 @@ namespace tests
             daxa::BlasId proc_blas = {};
             daxa::BufferId aabb_buffer = {};
             
-            daxa::BufferId blas_scratch_buffer = {};
+            daxa::TaskBuffer blas_scratch_buffer = {};
             daxa_u64 blas_scratch_buffer_size = 1024 * 1024 * 10;
             daxa_u64 blas_scratch_buffer_offset = 0;
             daxa_u32 acceleration_structure_scratch_offset_alignment = 0;
@@ -80,7 +80,6 @@ namespace tests
                     device.destroy_blas(proc_blas);
                     device.destroy_buffer(cam_buffer);
                     device.destroy_buffer(aabb_buffer);
-                    device.destroy_buffer(blas_scratch_buffer);
                     device.destroy_buffer(blas_buffer);
                 }
             }
@@ -124,10 +123,10 @@ namespace tests
                     .name = ("cam_buffer"),
                 });
 
-                blas_scratch_buffer = device.create_buffer({
+                blas_scratch_buffer = daxa::TaskBuffer{device,{
                     .size = blas_scratch_buffer_size,
                     .name = ("blas_scratch_buffer"),
-                });
+                }};
 
                 blas_buffer = device.create_buffer({
                     .size = blas_buffer_size,
@@ -211,7 +210,7 @@ namespace tests
                     std::cout << "blas_scratch_buffer_offset > blas_scratch_buffer_size" << std::endl;
                     abort();
                 }
-                blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value() + blas_scratch_buffer_offset;
+                blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer.get_state().buffers[0]).value() + blas_scratch_buffer_offset;
                 blas_scratch_buffer_offset += scratch_alignment_size;
 
                 daxa_u64 build_aligment_size = get_aligned(build_size_info.acceleration_structure_size, ACCELERATION_STRUCTURE_BUILD_OFFSET_ALIGMENT);
@@ -280,7 +279,7 @@ namespace tests
                     std::cout << "blas_scratch_buffer_offset > blas_scratch_buffer_size" << std::endl;
                     abort();
                 }
-                proc_blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer).value() + blas_scratch_buffer_offset;
+                proc_blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer.get_state().buffers[0]).value() + blas_scratch_buffer_offset;
                 blas_scratch_buffer_offset += scratch_alignment_size;
 
                 

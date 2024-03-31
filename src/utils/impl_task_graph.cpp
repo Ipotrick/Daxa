@@ -470,6 +470,16 @@ namespace daxa
     {
     }
 
+    ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(Device & device, BufferInfo const & a_info)
+        : actual_ids{std::vector<BufferId>{device.create_buffer(a_info)}},
+          latest_access{},
+          info{TaskBufferInfo{.name = a_info.name.c_str().data()}},
+          owned_buffer_device{device},
+          owned_buffer_info{a_info},
+          unique_index{ImplPersistentTaskBufferBlasTlas::exec_unique_next_index++}
+    {
+    }
+
     ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(TaskBlasInfo a_info)
         : actual_ids{std::vector<BlasId>{a_info.initial_blas.blas.begin(), a_info.initial_blas.blas.end()}},
           latest_access{a_info.initial_blas.latest_access},
@@ -489,7 +499,12 @@ namespace daxa
 
     void ImplPersistentTaskBufferBlasTlas::zero_ref_callback(ImplHandle const * handle)
     {
-        auto const * self = r_cast<ImplPersistentTaskBufferBlasTlas const *>(handle);
+        auto * self = rc_cast<ImplPersistentTaskBufferBlasTlas *>(handle);
+        if (self->owned_buffer_info.has_value())
+        {
+            BufferId const first_id = std::get<std::vector<BufferId>>(self->actual_ids)[0];
+            self->owned_buffer_device.value().destroy_buffer(first_id);
+        }
         delete self;
     }
 
@@ -498,6 +513,11 @@ namespace daxa
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
     {
         this->object = new ImplPersistentTaskBufferBlasTlas(info);
+    }
+    
+    TaskBuffer::TaskBuffer(daxa::Device & device, BufferInfo const & info)
+    {
+        this->object = new ImplPersistentTaskBufferBlasTlas(device, info);
     }
 
     auto TaskBuffer::view() const -> TaskBufferView

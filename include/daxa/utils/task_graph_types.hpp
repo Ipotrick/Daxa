@@ -967,8 +967,8 @@ namespace daxa
     struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBufferBlasTlas *>
     {
         TaskBuffer() = default;
-        // TaskBuffer(TaskBuffer const & tb) = default;
         TaskBuffer(TaskBufferInfo const & info);
+        TaskBuffer(daxa::Device & device, BufferInfo const & info);
 
         operator TaskBufferView() const;
 
