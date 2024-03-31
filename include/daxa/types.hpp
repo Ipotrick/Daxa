@@ -1497,10 +1497,10 @@ namespace daxa
         friend auto operator<=>(Access const &, Access const &) = default;
     };
 
-    DAXA_EXPORT_CXX [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
-    DAXA_EXPORT_CXX [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
+    [[nodiscard]] DAXA_EXPORT_CXX auto operator|(Access const & a, Access const & b) -> Access;
+    [[nodiscard]] DAXA_EXPORT_CXX auto operator&(Access const & a, Access const & b) -> Access;
 
-    DAXA_EXPORT_CXX [[nodiscard]] auto to_string(Access access) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Access access) -> std::string;
 
     namespace AccessConsts
     {
