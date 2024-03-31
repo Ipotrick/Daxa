@@ -135,7 +135,6 @@ namespace daxa
     . '. \_____\.
     */
 
-
     struct InlineTaskInfo
     {
         std::vector<TaskAttachmentInfo> attachments = {};
@@ -198,35 +197,59 @@ namespace daxa
             {
                 NoRefTTask _task;
                 std::array<TaskAttachmentInfo, NoRefTTask::ATTACH_COUNT> _attachments = {};
-                WrapperTask(NoRefTTask const& task) : _task{task}
+                WrapperTask(NoRefTTask const & task) : _task{task}
                 {
                     for (u32 i = 0; i < NoRefTTask::ATTACH_COUNT; ++i)
                     {
-                        if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::BUFFER)
+                        switch (NoRefTTask::attachments()[i].type)
+                        {
+                        case daxa::TaskAttachmentType::BUFFER:
                         {
                             TaskBufferAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.buffer.name,
-                            info.access = NoRefTTask::attachments()[i].value.buffer.access,
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size,
-                            info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address,
-                            info.view = get<TaskBufferView>(task.views.views[i]),
+                            info.name = NoRefTTask::attachments()[i].value.buffer.name;
+                            info.access = NoRefTTask::attachments()[i].value.buffer.access;
+                            info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size;
+                            info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address;
+                            info.view = daxa::get<TaskBufferView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
-                        else if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::IMAGE)
+                        break;
+                        case daxa::TaskAttachmentType::TLAS:
+                        {
+                            TaskTlasAttachmentInfo info;
+                            info.name = NoRefTTask::attachments()[i].value.tlas.name;
+                            info.access = NoRefTTask::attachments()[i].value.tlas.access;
+                            info.view = daxa::get<TaskTlasView>(task.views.views[i]);
+                            _attachments[i] = info;
+                        }
+                        break;
+                        case daxa::TaskAttachmentType::BLAS:
+                        {
+                            TaskBlasAttachmentInfo info;
+                            info.name = NoRefTTask::attachments()[i].value.blas.name;
+                            info.access = NoRefTTask::attachments()[i].value.blas.access;
+                            info.view = daxa::get<TaskBlasView>(task.views.views[i]);
+                            _attachments[i] = info;
+                        }
+                        break;
+                        case daxa::TaskAttachmentType::IMAGE:
                         {
                             TaskImageAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.image.name,
-                            info.access = NoRefTTask::attachments()[i].value.image.access,
-                            info.view_type = NoRefTTask::attachments()[i].value.image.view_type,
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size,
-                            info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type,
-                            info.shader_as_index = NoRefTTask::attachments()[i].value.image.shader_as_index,
-                            info.view = get<TaskImageView>(task.views.views[i]),
+                            info.name = NoRefTTask::attachments()[i].value.image.name;
+                            info.access = NoRefTTask::attachments()[i].value.image.access;
+                            info.view_type = NoRefTTask::attachments()[i].value.image.view_type;
+                            info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size;
+                            info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type;
+                            info.shader_as_index = NoRefTTask::attachments()[i].value.image.shader_as_index;
+                            info.view = daxa::get<TaskImageView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
-                        else
+                        break;
+                        default:
                         {
                             DAXA_DBG_ASSERT_TRUE_M(false, "Declared attachment count does not match actually declared attachment count");
+                        }
+                        break;
                         }
                     }
                 }
