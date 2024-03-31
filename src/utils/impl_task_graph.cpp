@@ -30,6 +30,44 @@ namespace daxa
         return iter->value.buffer;
     }
 
+    auto TaskInterface::get(TaskBlasAttachmentIndex index) const -> TaskBlasAttachmentInfo const &
+    {
+        return attachment_infos[index.value].value.blas;
+    }
+
+    auto TaskInterface::get(TaskBlasView view) const -> TaskBlasAttachmentInfo const &
+    {
+        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
+                                 { 
+            if (other.type == TaskAttachmentType::BLAS)
+            {
+                return other.value.blas.view == view || other.value.blas.translated_view == view;
+            }
+            return false; });
+        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task blas view as index for attachment!");
+
+        return iter->value.blas;
+    }
+    
+    auto TaskInterface::get(TaskTlasAttachmentIndex index) const -> TaskTlasAttachmentInfo const &
+    {
+        return attachment_infos[index.value].value.tlas;
+    }
+
+    auto TaskInterface::get(TaskTlasView view) const -> TaskTlasAttachmentInfo const &
+    {
+        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
+                                 { 
+            if (other.type == TaskAttachmentType::TLAS)
+            {
+                return other.value.tlas.view == view || other.value.tlas.translated_view == view;
+            }
+            return false; });
+        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task tlas view as index for attachment!");
+
+        return iter->value.tlas;
+    }
+
     auto TaskInterface::get(TaskImageAttachmentIndex index) const -> TaskImageAttachmentInfo const &
     {
         return attachment_infos[index.value].value.image;
