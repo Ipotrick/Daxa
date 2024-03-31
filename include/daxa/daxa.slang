@@ -139,13 +139,13 @@ namespace daxa
         return buffer_addresses[buffer_id.index()];
     }
 
-    #define _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(IMAGE_VIEW_TYPE)\
-        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::f32vec4> IMAGE_VIEW_TYPE##_ftable4[];\
-        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::u32vec4> IMAGE_VIEW_TYPE##_utable4[];\
-        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::i32vec4> IMAGE_VIEW_TYPE##_itable4[];\
-        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::f32vec4> IMAGE_VIEW_TYPE##_coherent_ftable4[];\
-        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::u32vec4> IMAGE_VIEW_TYPE##_coherent_utable4[];\
-        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::i32vec4> IMAGE_VIEW_TYPE##_coherent_itable4[];\
+    #define _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(BINDING, IMAGE_VIEW_TYPE)\
+        [[vk::binding(BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::f32vec4> IMAGE_VIEW_TYPE##_ftable4[];\
+        [[vk::binding(BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::u32vec4> IMAGE_VIEW_TYPE##_utable4[];\
+        [[vk::binding(BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::i32vec4> IMAGE_VIEW_TYPE##_itable4[];\
+        [[vk::binding(BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::f32vec4> IMAGE_VIEW_TYPE##_coherent_ftable4[];\
+        [[vk::binding(BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::u32vec4> IMAGE_VIEW_TYPE##_coherent_utable4[];\
+        [[vk::binding(BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::i32vec4> IMAGE_VIEW_TYPE##_coherent_itable4[];\
         extension IMAGE_VIEW_TYPE<float>\
         {\
             static IMAGE_VIEW_TYPE<daxa::f32vec4> get(daxa::ImageViewId i) { return IMAGE_VIEW_TYPE##_ftable4[i.index()]; }\
@@ -168,19 +168,20 @@ namespace daxa
             static IMAGE_VIEW_TYPE<daxa::i32vec4> get_coherent(daxa::ImageViewIndex i) { return IMAGE_VIEW_TYPE##_coherent_itable4[i.value]; }\
         }
     
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture1D)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture2D)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture3D)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture1DArray)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture2DArray)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture1D)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture2D)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture3D)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture1DArray)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture2DArray)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(TextureCube)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(TextureCubeArray)
-    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture2DMS)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_STORAGE_IMAGE_BINDING, RWTexture1D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_STORAGE_IMAGE_BINDING, RWTexture2D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_STORAGE_IMAGE_BINDING, RWTexture3D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_STORAGE_IMAGE_BINDING, RWTexture1DArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_STORAGE_IMAGE_BINDING, RWTexture2DArray)
+    
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, Texture1D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, Texture2D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, Texture3D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, Texture1DArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, Texture2DArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, TextureCube)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, TextureCubeArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(DAXA_SAMPLED_IMAGE_BINDING, Texture2DMS)
 } // namespace daxa
 
 // These are hopefully only temporary global namespace declarations:
