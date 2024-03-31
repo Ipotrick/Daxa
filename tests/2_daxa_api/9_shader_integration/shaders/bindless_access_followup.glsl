@@ -8,7 +8,8 @@ DAXA_DECL_PUSH_CONSTANT(BindlessTestFollowPush, push)
 void pass_by_value(daxa_BufferPtr(SomeStruct) b, daxa_ImageViewId i, daxa_SamplerId s)
 {
     const float buf_fetch = deref(b).value;
-    // Ids can also be cast to glsl resources like textureXX and samplerXX.
+    // Ids can be cast to glsl types directly.
+    // The casts are implemented via makros of the names daxa_##GLSL_TYPE for example: `daxa_texture2D(daxa_ImageViewId)`.
     const float tex_sample = texture(daxa_sampler2D(i,s),vec2(0,0)).r;
     const float tex_fetch = texelFetch(daxa_texture2D(i), ivec2(0,0), 0).r;
     debugPrintfEXT("buffer fetch: %f, texture sample: %f, texture fetch %f\n, ", buf_fetch, tex_sample, tex_fetch);

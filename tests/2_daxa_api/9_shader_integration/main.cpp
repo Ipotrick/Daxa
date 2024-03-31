@@ -108,7 +108,7 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = TestShaderTaskHead::attachment_shader_blob_size(),
+            .push_constant_size = sizeof(TestShaderTaskHead::AttachmentShaderBlob),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -130,7 +130,7 @@ namespace tests
         }};
         task_graph.use_persistent_buffer(dst);
 
-        struct TestTask : TestShaderTaskHead
+        struct TestTask : TestShaderTaskHead::Task
         {
             AttachmentViews views = {};
             std::shared_ptr<daxa::ComputePipeline> pipeline = {};
@@ -142,9 +142,9 @@ namespace tests
             }
         };
         task_graph.add_task(TestTask{
-            .views = std::array{
-                daxa::attachment_view( TestTask::align_test_src, src ),
-                daxa::attachment_view( TestTask::align_test_dst, dst ),
+            .views = std::array{ 
+                TestShaderTaskHead::AT.align_test_src | src,
+                TestShaderTaskHead::AT.align_test_dst | dst,
             },
             .pipeline = compute_pipeline,
         });

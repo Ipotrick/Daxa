@@ -971,7 +971,7 @@ namespace tests
 
 auto main() -> i32
 {
-    // tests::concurrent_read_on_read();
+    tests::concurrent_read_on_read();
     tests::read_on_readwriteconcurrent();
     tests::simplest();
     tests::execution();

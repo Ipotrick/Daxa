@@ -17,68 +17,54 @@
 #define DAXA_ID_VERSION_MASK ((uint64_t(1) << DAXA_ID_VERSION_BITS) - uint64_t(1))
 #define DAXA_ID_VERSION_OFFSTET DAXA_ID_INDEX_BITS
 
-typedef uint daxa_u32;
-typedef int daxa_i32;
-typedef uint64_t daxa_u64;
-typedef int64_t daxa_i64;
-typedef float daxa_f32;
-typedef double daxa_f64;
-typedef float2 daxa_f32vec2;
-typedef float2x2 daxa_f32mat2x2;
-typedef float3x2 daxa_f32mat2x3;
-typedef float4x2 daxa_f32mat2x4;
-typedef double2 daxa_f64vec2;
-typedef double2x2 daxa_f64mat2x2;
-typedef double3x2 daxa_f64mat2x3;
-typedef double4x2 daxa_f64mat2x4;
-typedef float3 daxa_f32vec3;
-typedef float2x3 daxa_f32mat3x2;
-typedef float3x3 daxa_f32mat3x3;
-typedef float4x3 daxa_f32mat3x4;
-typedef double3 daxa_f64vec3;
-typedef double2x3 daxa_f64mat3x2;
-typedef double3x3 daxa_f64mat3x3;
-typedef double4x3 daxa_f64mat3x4;
-typedef float4 daxa_f32vec4;
-typedef float2x4 daxa_f32mat4x2;
-typedef float3x4 daxa_f32mat4x3;
-typedef float4x4 daxa_f32mat4x4;
-typedef double4 daxa_f64vec4;
-typedef double2x4 daxa_f64mat4x2;
-typedef double3x4 daxa_f64mat4x3;
-typedef double4x4 daxa_f64mat4x4;
-typedef int2 daxa_i32vec2;
-typedef int2x2 daxa_i32mat2x2;
-typedef int3x2 daxa_i32mat2x3;
-typedef int4x2 daxa_i32mat2x4;
-typedef uint2 daxa_u32vec2;
-typedef uint2x2 daxa_u32mat2x2;
-typedef uint3x2 daxa_u32mat2x3;
-typedef uint4x2 daxa_u32mat2x4;
-typedef int3 daxa_i32vec3;
-typedef int2x3 daxa_i32mat3x2;
-typedef int3x3 daxa_i32mat3x3;
-typedef int4x3 daxa_i32mat3x4;
-typedef uint3 daxa_u32vec3;
-typedef uint2x3 daxa_u32mat3x2;
-typedef uint3x3 daxa_u32mat3x3;
-typedef uint4x3 daxa_u32mat3x4;
-typedef int4 daxa_i32vec4;
-typedef int2x4 daxa_i32mat4x2;
-typedef int3x4 daxa_i32mat4x3;
-typedef int4x4 daxa_i32mat4x4;
-typedef uint4 daxa_u32vec4;
-typedef uint2x4 daxa_u32mat4x2;
-typedef uint3x4 daxa_u32mat4x3;
-typedef uint4x4 daxa_u32mat4x4;
-typedef bool daxa_b32;
-typedef bool daxa_b32vec1;
-typedef bool2 daxa_b32vec2;
-typedef bool3 daxa_b32vec3;
-typedef bool4 daxa_b32vec4;
+#define _DAXA_DECL_VEC_TYPES(SLANG_TYPE, DAXA_TYPE) \
+    typedef SLANG_TYPE DAXA_TYPE;                   \
+    typedef SLANG_TYPE ## 1 DAXA_TYPE ## vec1;      \
+    typedef SLANG_TYPE ## 2 DAXA_TYPE ## vec2;      \
+    typedef SLANG_TYPE ## 3 DAXA_TYPE ## vec3;      \
+    typedef SLANG_TYPE ## 4 DAXA_TYPE ## vec4;
+
+#define _DAXA_DECL_MAT_TYPES(SLANG_TYPE, DAXA_TYPE)      \
+    typedef matrix<SLANG_TYPE, 1, 1> DAXA_TYPE ## mat1x1 \
+    typedef matrix<SLANG_TYPE, 2, 1> DAXA_TYPE ## mat1x2 \
+    typedef matrix<SLANG_TYPE, 3, 1> DAXA_TYPE ## mat1x3 \
+    typedef matrix<SLANG_TYPE, 4, 1> DAXA_TYPE ## mat1x4 \
+    typedef matrix<SLANG_TYPE, 1, 2> DAXA_TYPE ## mat2x1 \
+    typedef matrix<SLANG_TYPE, 2, 2> DAXA_TYPE ## mat2x2 \
+    typedef matrix<SLANG_TYPE, 3, 2> DAXA_TYPE ## mat2x3 \
+    typedef matrix<SLANG_TYPE, 4, 2> DAXA_TYPE ## mat2x4 \
+    typedef matrix<SLANG_TYPE, 1, 3> DAXA_TYPE ## mat3x1 \
+    typedef matrix<SLANG_TYPE, 2, 3> DAXA_TYPE ## mat3x2 \
+    typedef matrix<SLANG_TYPE, 3, 3> DAXA_TYPE ## mat3x3 \
+    typedef matrix<SLANG_TYPE, 4, 3> DAXA_TYPE ## mat3x4 \
+    typedef matrix<SLANG_TYPE, 1, 4> DAXA_TYPE ## mat4x1 \
+    typedef matrix<SLANG_TYPE, 2, 4> DAXA_TYPE ## mat4x2 \
+    typedef matrix<SLANG_TYPE, 3, 4> DAXA_TYPE ## mat4x3 \
+    typedef matrix<SLANG_TYPE, 4, 4> DAXA_TYPE ## mat4x4
+
+#define _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(SLANG_TYPE, DAXA_TYPE)\
+    _DAXA_DECL_VEC_TYPES(SLANG_TYPE ## 8_t, DAXA_TYPE ## 8)\
+    _DAXA_DECL_VEC_TYPES(SLANG_TYPE ## 16_t, DAXA_TYPE ## 16)\
+    _DAXA_DECL_VEC_TYPES(SLANG_TYPE ## 32_t, DAXA_TYPE ## 32)\
+    _DAXA_DECL_VEC_TYPES(SLANG_TYPE ## 64_t, DAXA_TYPE ## 64)\
+    _DAXA_DECL_MAT_TYPES(SLANG_TYPE ## 8_t, DAXA_TYPE ## 8)\
+    _DAXA_DECL_MAT_TYPES(SLANG_TYPE ## 16_t, DAXA_TYPE ## 16)\
+    _DAXA_DECL_MAT_TYPES(SLANG_TYPE ## 32_t, DAXA_TYPE ## 32)\
+    _DAXA_DECL_MAT_TYPES(SLANG_TYPE ## 64_t, DAXA_TYPE ## 64)
 
 namespace daxa
 {
+    _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(uint, u)
+    _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(int, i)
+    _DAXA_DECL_VEC_TYPES(half, f16)
+    _DAXA_DECL_VEC_TYPES(float, f32)
+    _DAXA_DECL_VEC_TYPES(double, f64)
+    _DAXA_DECL_MAT_TYPES(half, f16)
+    _DAXA_DECL_MAT_TYPES(float, f32)
+    _DAXA_DECL_MAT_TYPES(double, f64)
+    _DAXA_DECL_VEC_TYPES(bool, b32)
+    _DAXA_DECL_MAT_TYPES(bool, b32)
+    
     struct BufferId
     {
         daxa_u64 value;
@@ -108,6 +94,10 @@ namespace daxa
     struct ImageViewIndex
     {
         daxa_u32 value;
+        daxa_u32 index()
+        {
+            return value;
+        }
     };
 
     struct SamplerId
@@ -122,113 +112,95 @@ namespace daxa
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
-} // namespace daxa
-#define daxa_BufferId daxa::BufferId
-#define daxa_ImageViewId daxa::ImageViewId
-#define daxa_SamplerId daxa::SamplerId
-
-namespace daxa 
-{
+    
     [[vk::binding(DAXA_SAMPLER_BINDING, 0)]] SamplerState SamplerStateTable[];
+    extension SamplerState
+    {
+        static SamplerState get(daxa::SamplerId i) { return SamplerStateTable[i.index()]; }
+    }
+
     [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] ByteAddressBuffer ByteAddressBufferTable[];
+    extension ByteAddressBuffer
+    {
+        static ByteAddressBuffer get(daxa::BufferId i) { return ByteAddressBufferTable[i.index()]; }
+    }
+
     [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] RWByteAddressBuffer RWByteAddressBufferTable[];
-}
-#define daxa_SamplerState(SAMPLER_ID) daxa::SamplerStateTable[SAMPLER_ID.index()]
-#define daxa_ByteAddressBuffer(SAMPLER_ID) daxa::ByteAddressBufferTable[SAMPLER_ID.index()]
-#define daxa_RWByteAddressBuffer(SAMPLER_ID) daxa::RWByteAddressBufferTable[SAMPLER_ID.index()]
-
-#define daxa_StructuredBuffer(STRUCT_TYPE, BUFFER_ID) StructuredBuffer##STRUCT_TYPE##Table[BUFFER_ID.index()]
-
-#define _DAXA_DECL_TEXTURE_RET(TYPE, RET_TYPE) \
-    namespace daxa { [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]] TYPE<RET_TYPE> TYPE##RET_TYPE##Table[]; }
-#define _DAXA_DECL_RWTEXTURE_RET(TYPE, RET_TYPE) \
-    namespace daxa { [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] RW##TYPE<RET_TYPE> RW##TYPE##RET_TYPE##Table[]; }
-#define _DAXA_DECL_TEXTURE(TYPE)           \
-    _DAXA_DECL_TEXTURE_RET(TYPE, float4)   \
-    _DAXA_DECL_TEXTURE_RET(TYPE, uint4)    \
-    _DAXA_DECL_TEXTURE_RET(TYPE, int4)     \
-    _DAXA_DECL_RWTEXTURE_RET(TYPE, float4) \
-    _DAXA_DECL_RWTEXTURE_RET(TYPE, uint4)  \
-    _DAXA_DECL_RWTEXTURE_RET(TYPE, int4)
-#define _DAXA_DECL_TEXTURE_NO_RW(TYPE)   \
-    _DAXA_DECL_TEXTURE_RET(TYPE, float4) \
-    _DAXA_DECL_TEXTURE_RET(TYPE, uint4)  \
-    _DAXA_DECL_TEXTURE_RET(TYPE, int4)
-_DAXA_DECL_TEXTURE(Texture1D)
-_DAXA_DECL_TEXTURE(Texture1DArray)
-_DAXA_DECL_TEXTURE(Texture2D)
-_DAXA_DECL_TEXTURE(Texture2DArray)
-_DAXA_DECL_TEXTURE(Texture3D)
-_DAXA_DECL_TEXTURE_NO_RW(Texture2DMS)
-_DAXA_DECL_TEXTURE_NO_RW(TextureCube)
-_DAXA_DECL_TEXTURE_NO_RW(TextureCubeArray)
-
-#define daxa_RWTexture1D(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture1D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture1DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture1DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture2D(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture2D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture2DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture2DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_RWTexture3D(RET_TYPE, IMAGE_VIEW_ID) daxa::RWTexture3D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture1D(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture1D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture1DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture1DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture2D(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture2DArray(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2DArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture3D(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture3D##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_Texture2DMS(RET_TYPE, IMAGE_VIEW_ID) daxa::Texture2DMS##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_TextureCube(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCube##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-#define daxa_TextureCubeArray(RET_TYPE, IMAGE_VIEW_ID) daxa::TextureCubeArray##RET_TYPE##Table[IMAGE_VIEW_ID.index()]
-
-namespace daxa
-{
+    [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]] coherent RWByteAddressBuffer CoherentRWByteAddressBufferTable[];
+    extension RWByteAddressBuffer
+    {
+        static RWByteAddressBuffer get(daxa::BufferId i) { return RWByteAddressBufferTable[i.index()]; }
+        static RWByteAddressBuffer get_coherent(daxa::BufferId i) { return CoherentRWByteAddressBufferTable[i.index()]; }
+    }
+    
     [[vk::binding(DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING, 0)]] StructuredBuffer<daxa_u64> buffer_addresses;
     func id_to_address(daxa::BufferId buffer_id) -> daxa_u64
     {
         return buffer_addresses[buffer_id.index()];
     }
-}
 
-#define daxa_RWBufferPtr(STRUCT_TYPE) daxa_RWBufferPtrWrappper##STRUCT_TYPE*
-#define daxa_BufferPtr(STRUCT_TYPE) daxa_BufferPtrWrapper##STRUCT_TYPE*
+    #define _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(IMAGE_VIEW_TYPE)\
+        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::f32vec4> IMAGE_VIEW_TYPE##_ftable4[];\
+        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::u32vec4> IMAGE_VIEW_TYPE##_utable4[];\
+        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] IMAGE_VIEW_TYPE<daxa::i32vec4> IMAGE_VIEW_TYPE##_itable4[];\
+        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::f32vec4> IMAGE_VIEW_TYPE##_coherent_ftable4[];\
+        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::u32vec4> IMAGE_VIEW_TYPE##_coherent_utable4[];\
+        [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]] globallycoherent IMAGE_VIEW_TYPE<daxa::i32vec4> IMAGE_VIEW_TYPE##_coherent_itable4[];\
+        extension IMAGE_VIEW_TYPE<float>\
+        {\
+            static IMAGE_VIEW_TYPE<daxa::f32vec4> get(daxa::ImageViewId i) { return IMAGE_VIEW_TYPE##_ftable4[i.index()]; }\
+            static IMAGE_VIEW_TYPE<daxa::f32vec4> get_coherent(daxa::ImageViewId i) { return IMAGE_VIEW_TYPE##_coherent_ftable4[i.index()]; }\
+            static IMAGE_VIEW_TYPE<daxa::f32vec4> get(daxa::ImageViewIndex i) { return IMAGE_VIEW_TYPE##_ftable4[i.value]; }\
+            static IMAGE_VIEW_TYPE<daxa::f32vec4> get_coherent(daxa::ImageViewIndex i) { return IMAGE_VIEW_TYPE##_coherent_ftable4[i.value]; }\
+        }    \
+        extension IMAGE_VIEW_TYPE<uint>\
+        {\
+            static IMAGE_VIEW_TYPE<daxa::u32vec4> get(daxa::ImageViewId i) { return IMAGE_VIEW_TYPE##_utable4[i.index()]; }\
+            static IMAGE_VIEW_TYPE<daxa::u32vec4> get_coherent(daxa::ImageViewId i) { return IMAGE_VIEW_TYPE##_coherent_utable4[i.index()]; }\
+            static IMAGE_VIEW_TYPE<daxa::u32vec4> get(daxa::ImageViewIndex i) { return IMAGE_VIEW_TYPE##_utable4[i.value]; }\
+            static IMAGE_VIEW_TYPE<daxa::u32vec4> get_coherent(daxa::ImageViewIndex i) { return IMAGE_VIEW_TYPE##_coherent_utable4[i.value]; }\
+        }    \
+        extension IMAGE_VIEW_TYPE<int>\
+        {\
+            static IMAGE_VIEW_TYPE<daxa::i32vec4> get(daxa::ImageViewId i) { return IMAGE_VIEW_TYPE##_itable4[i.index()]; }\
+            static IMAGE_VIEW_TYPE<daxa::i32vec4> get_coherent(daxa::ImageViewId i) { return IMAGE_VIEW_TYPE##_coherent_itable4[i.index()]; }\
+            static IMAGE_VIEW_TYPE<daxa::i32vec4> get(daxa::ImageViewIndex i) { return IMAGE_VIEW_TYPE##_itable4[i.value]; }\
+            static IMAGE_VIEW_TYPE<daxa::i32vec4> get_coherent(daxa::ImageViewIndex i) { return IMAGE_VIEW_TYPE##_coherent_itable4[i.value]; }\
+        }
+    
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture1D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture2D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture3D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture1DArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(RWTexture2DArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture1D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture2D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture3D)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture1DArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture2DArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(TextureCube)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(TextureCubeArray)
+    _DAXA_DECL_TEXTURE_ACCESSOR_f32u32i32(Texture2DMS)
+} // namespace daxa
 
-#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
-#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)         \
-    struct daxa_RWBufferPtrWrappper##STRUCT_TYPE  \
-    {                                             \
-        STRUCT_TYPE value;                        \
-    };                                            \
-    struct daxa_BufferPtrWrapper##STRUCT_TYPE     \
-    {                                             \
-        STRUCT_TYPE value;                        \
-    };
-
-#define deref(PTR) (PTR.value)
-#define deref_i(PTR, INDEX) ((PTR + INDEX).value)
+// These are hopefully only temporary global namespace declarations:
+_DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(uint, daxa_u)
+_DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(int, daxa_i)
+_DAXA_DECL_VEC_TYPES(half, daxa_f16)
+_DAXA_DECL_VEC_TYPES(float, daxa_f32)
+_DAXA_DECL_VEC_TYPES(double, daxa_f64)
+_DAXA_DECL_MAT_TYPES(half, daxa_f16)
+_DAXA_DECL_MAT_TYPES(float, daxa_f32)
+_DAXA_DECL_MAT_TYPES(double, daxa_f64)
+_DAXA_DECL_VEC_TYPES(bool, daxa_b32)
+_DAXA_DECL_MAT_TYPES(bool, daxa_b32)
+typedef daxa::BufferId daxa_BufferId
+typedef daxa::ImageViewId daxa_ImageViewId
+typedef daxa::SamplerId daxa_SamplerId
+#define daxa_RWBufferPtr(STRUCT_TYPE) Ptr<STRUCT_TYPE>
+#define daxa_BufferPtr(STRUCT_TYPE) Ptr<STRUCT_TYPE>
+#define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
+#define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
+#define deref(PTR) (*PTR)
+#define deref_i(PTR, INDEX) PTR[INDEX]
 #define as_address(PTR) uint64_t(PTR)
-
-DAXA_DECL_BUFFER_PTR(daxa_f32)
-// DAXA_DECL_BUFFER_PTR(daxa_f32vec1) // covered by daxa_f32
-DAXA_DECL_BUFFER_PTR(daxa_f32vec2)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat2x2)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat2x3)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat2x4)
-DAXA_DECL_BUFFER_PTR(daxa_f32vec3)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat3x2)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat3x3)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat3x4)
-DAXA_DECL_BUFFER_PTR(daxa_f32vec4)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat4x2)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat4x3)
-DAXA_DECL_BUFFER_PTR(daxa_f32mat4x4)
-DAXA_DECL_BUFFER_PTR(daxa_i32)
-// DAXA_DECL_BUFFER_PTR(daxa_i32vec1) // covered by daxa_i32
-DAXA_DECL_BUFFER_PTR(daxa_i32vec2)
-DAXA_DECL_BUFFER_PTR(daxa_i32vec3)
-DAXA_DECL_BUFFER_PTR(daxa_i32vec4)
-DAXA_DECL_BUFFER_PTR(daxa_u32)
-// DAXA_DECL_BUFFER_PTR(daxa_u32vec1) // covered by daxa_u32
-DAXA_DECL_BUFFER_PTR(daxa_u32vec2)
-DAXA_DECL_BUFFER_PTR(daxa_u32vec3)
-DAXA_DECL_BUFFER_PTR(daxa_u32vec4)
-
-DAXA_DECL_BUFFER_PTR(daxa_BufferId)
-DAXA_DECL_BUFFER_PTR(daxa_ImageViewId)
-DAXA_DECL_BUFFER_PTR(daxa_SamplerId)

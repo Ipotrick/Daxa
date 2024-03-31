@@ -12,12 +12,17 @@ struct TestU64Alignment
     daxa_u32 i6[3];
     daxa_u64 i7;
 };
-DAXA_DECL_BUFFER_PTR(TestU64Alignment)
+DAXA_DECL_BUFFER_PTR_ALIGN(TestU64Alignment, 8)
 
 DAXA_DECL_TASK_HEAD_BEGIN(TestShaderTaskHead)
 DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ,         daxa_BufferPtr(TestU64Alignment),   align_test_src)
 DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ_WRITE,   daxa_RWBufferPtr(TestU64Alignment), align_test_dst)
 DAXA_DECL_TASK_HEAD_END
+
+struct TestShaderPush
+{
+    DAXA_TH_BLOB(TestShaderTaskHead, attachments)
+};
 
 // Only used to check complication of All Task Head Uses:
 DAXA_DECL_TASK_HEAD_BEGIN(TestTaskHead)
@@ -48,6 +53,14 @@ DAXA_DECL_TASK_HEAD_END
 //   daxa_BufferPtr(uint) shader_ptr_read_buf;
 //   daxa_BufferPtr(uint) shader_ptr_read_array_buf[2];
 // };
+
+struct TestTaskPush
+{
+    // The Shader blob can be referenced within shared files via the macro DAXA_TH_BLOB like so to declare shared structs:
+    // This will become `TestTaskHead attachments` in shader code and  `TestTaskHead::AttachmentShaderBlob attachments` in c++.
+    // Both have the exact same size and alignment, so code sharing works like normal.
+    DAXA_TH_BLOB(TestTaskHead, attachments)
+};
 
 // Test compilation of shared functions with shader shared types
 daxa_u32 test_fn_u32(daxa_u32 by_value)
