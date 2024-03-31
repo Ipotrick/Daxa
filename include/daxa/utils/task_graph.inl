@@ -63,7 +63,7 @@
     ;                           \
     }                           \
     ;
-#define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME field_name;
+#define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
 #else // glsl
 #define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) \
     struct HEAD_NAME                         \
