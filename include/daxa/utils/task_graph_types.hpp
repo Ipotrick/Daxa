@@ -550,8 +550,7 @@ namespace daxa
         TaskBufferAttachmentInfo,
         TaskBlasAttachmentInfo,
         TaskTlasAttachmentInfo,
-        TaskImageAttachmentInfo
-    >;
+        TaskImageAttachmentInfo>;
 
     struct DAXA_EXPORT_CXX TaskInterface
     {
@@ -582,10 +581,10 @@ namespace daxa
     };
 
     using TaskViewVariant = Variant<
-        std::pair<daxa::TaskBufferAttachmentIndex,  daxa::TaskBufferView>,
-        std::pair<daxa::TaskBlasAttachmentIndex,    daxa::TaskBlasView>,
-        std::pair<daxa::TaskTlasAttachmentIndex,    daxa::TaskTlasView>,
-        std::pair<daxa::TaskImageAttachmentIndex,   daxa::TaskImageView>>;
+        std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>,
+        std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>,
+        std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>,
+        std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>>;
 
     inline namespace detail
     {
@@ -670,11 +669,12 @@ namespace daxa
         }
         AttachmentViews() = default;
         std::array<Variant<
-            daxa::TaskBufferView, 
-            daxa::TaskBlasView, 
-            daxa::TaskTlasView, 
-            daxa::TaskImageView
-        >, ATTACHMENT_COUNT> views = {};
+                       daxa::TaskBufferView,
+                       daxa::TaskBlasView,
+                       daxa::TaskTlasView,
+                       daxa::TaskImageView>,
+                   ATTACHMENT_COUNT>
+            views = {};
     };
 
     template <usize ATTACHMENT_COUNT, StringLiteral NAME>
@@ -862,7 +862,7 @@ namespace daxa
             .access = daxa::TaskBlasAccess::TASK_ACCESS, \
         });
 
-#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS)          \
+#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS)     \
     daxa::TaskTlasAttachmentIndex const NAME =           \
         add_attachment(daxa::TaskTlasAttachment{         \
             .name = #NAME,                               \
@@ -916,8 +916,8 @@ namespace daxa
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
 #define DAXA_TH_BUFFER_ID_ARRAY(TASK_ACCESS, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
 #define DAXA_TH_BUFFER_PTR_ARRAY(TASK_ACCESS, PTR_TYPE, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
-#define DAXA_TH_BLAS(TASK_ACCESS, NAME, SIZE) _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)
-#define DAXA_TH_TLAS_PTR(TASK_ACCESS, PTR_TYPE, NAME, SIZE) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS)
+#define DAXA_TH_BLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)
+#define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS)
 
     template <typename BufFn, typename ImgFn>
     constexpr void for_each(std::span<TaskAttachmentInfo> attachments, BufFn && buf_fn, ImgFn && img_fn)
@@ -1054,7 +1054,7 @@ namespace daxa
         void set_tlas(TrackedTlas const & tlas);
         void swap_tlas(TaskTlas & other);
 
-    protected:
+      protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;
         static auto inc_refcnt(ImplHandle const * object) -> u64;
@@ -1102,11 +1102,10 @@ namespace daxa
     };
 
     using AttachmentViewPairVariant = Variant<
-        std::pair<TaskBufferAttachment, TaskBufferView>, 
-        std::pair<TaskBlasAttachment, TaskBlasView>, 
-        std::pair<TaskTlasAttachment, TaskTlasView>, 
-        std::pair<TaskImageAttachment, TaskImageView>
-    >;
+        std::pair<TaskBufferAttachment, TaskBufferView>,
+        std::pair<TaskBlasAttachment, TaskBlasView>,
+        std::pair<TaskTlasAttachment, TaskTlasView>,
+        std::pair<TaskImageAttachment, TaskImageView>>;
 
     inline auto attachment_view(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewVariant
     {
