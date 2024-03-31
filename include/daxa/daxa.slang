@@ -26,20 +26,20 @@
 
 #define _DAXA_DECL_MAT_TYPES(SLANG_TYPE, DAXA_TYPE)      \
     typedef matrix<SLANG_TYPE, 1, 1> DAXA_TYPE ## mat1x1 \
-    typedef matrix<SLANG_TYPE, 1, 2> DAXA_TYPE ## mat1x2 \
-    typedef matrix<SLANG_TYPE, 1, 3> DAXA_TYPE ## mat1x3 \
-    typedef matrix<SLANG_TYPE, 1, 4> DAXA_TYPE ## mat1x4 \
-    typedef matrix<SLANG_TYPE, 2, 1> DAXA_TYPE ## mat2x1 \
+    typedef matrix<SLANG_TYPE, 2, 1> DAXA_TYPE ## mat1x2 \
+    typedef matrix<SLANG_TYPE, 3, 1> DAXA_TYPE ## mat1x3 \
+    typedef matrix<SLANG_TYPE, 4, 1> DAXA_TYPE ## mat1x4 \
+    typedef matrix<SLANG_TYPE, 1, 2> DAXA_TYPE ## mat2x1 \
     typedef matrix<SLANG_TYPE, 2, 2> DAXA_TYPE ## mat2x2 \
-    typedef matrix<SLANG_TYPE, 2, 3> DAXA_TYPE ## mat2x3 \
-    typedef matrix<SLANG_TYPE, 2, 4> DAXA_TYPE ## mat2x4 \
-    typedef matrix<SLANG_TYPE, 3, 1> DAXA_TYPE ## mat3x1 \
-    typedef matrix<SLANG_TYPE, 3, 2> DAXA_TYPE ## mat3x2 \
+    typedef matrix<SLANG_TYPE, 3, 2> DAXA_TYPE ## mat2x3 \
+    typedef matrix<SLANG_TYPE, 4, 2> DAXA_TYPE ## mat2x4 \
+    typedef matrix<SLANG_TYPE, 1, 3> DAXA_TYPE ## mat3x1 \
+    typedef matrix<SLANG_TYPE, 2, 3> DAXA_TYPE ## mat3x2 \
     typedef matrix<SLANG_TYPE, 3, 3> DAXA_TYPE ## mat3x3 \
-    typedef matrix<SLANG_TYPE, 3, 4> DAXA_TYPE ## mat3x4 \
-    typedef matrix<SLANG_TYPE, 4, 1> DAXA_TYPE ## mat4x1 \
-    typedef matrix<SLANG_TYPE, 4, 2> DAXA_TYPE ## mat4x2 \
-    typedef matrix<SLANG_TYPE, 4, 3> DAXA_TYPE ## mat4x3 \
+    typedef matrix<SLANG_TYPE, 4, 3> DAXA_TYPE ## mat3x4 \
+    typedef matrix<SLANG_TYPE, 1, 4> DAXA_TYPE ## mat4x1 \
+    typedef matrix<SLANG_TYPE, 2, 4> DAXA_TYPE ## mat4x2 \
+    typedef matrix<SLANG_TYPE, 3, 4> DAXA_TYPE ## mat4x3 \
     typedef matrix<SLANG_TYPE, 4, 4> DAXA_TYPE ## mat4x4
 
 #define _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(SLANG_TYPE, DAXA_TYPE)\
@@ -62,6 +62,8 @@ namespace daxa
     _DAXA_DECL_MAT_TYPES(half, f16)
     _DAXA_DECL_MAT_TYPES(float, f32)
     _DAXA_DECL_MAT_TYPES(double, f64)
+    _DAXA_DECL_VEC_TYPES(bool, b32)
+    _DAXA_DECL_MAT_TYPES(bool, b32)
     
     struct BufferId
     {
@@ -190,6 +192,8 @@ _DAXA_DECL_VEC_TYPES(double, daxa_f64)
 _DAXA_DECL_MAT_TYPES(half, daxa_f16)
 _DAXA_DECL_MAT_TYPES(float, daxa_f32)
 _DAXA_DECL_MAT_TYPES(double, daxa_f64)
+_DAXA_DECL_VEC_TYPES(bool, daxa_b32)
+_DAXA_DECL_MAT_TYPES(bool, daxa_b32)
 typedef daxa::BufferId daxa_BufferId
 typedef daxa::ImageViewId daxa_ImageViewId
 typedef daxa::SamplerId daxa_SamplerId
@@ -197,6 +201,6 @@ typedef daxa::SamplerId daxa_SamplerId
 #define daxa_BufferPtr(STRUCT_TYPE) Ptr<STRUCT_TYPE>
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
-#define deref(PTR) PTR
+#define deref(PTR) (*PTR)
 #define deref_i(PTR, INDEX) PTR[INDEX]
 #define as_address(PTR) uint64_t(PTR)
