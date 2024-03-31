@@ -205,23 +205,23 @@ namespace daxa
                         if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::BUFFER)
                         {
                             TaskBufferAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.buffer.name,
-                            info.access = NoRefTTask::attachments()[i].value.buffer.access,
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size,
-                            info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address,
-                            info.view = get<TaskBufferView>(task.views.views[i]),
+                            info.name = NoRefTTask::attachments()[i].value.buffer.name;
+                            info.access = NoRefTTask::attachments()[i].value.buffer.access;
+                            info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size;
+                            info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address;
+                            info.view = daxa::get<TaskBufferView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
                         else if (NoRefTTask::attachments()[i].type == daxa::TaskAttachmentType::IMAGE)
                         {
                             TaskImageAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.image.name,
-                            info.access = NoRefTTask::attachments()[i].value.image.access,
-                            info.view_type = NoRefTTask::attachments()[i].value.image.view_type,
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size,
-                            info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type,
-                            info.shader_as_index = NoRefTTask::attachments()[i].value.image.shader_as_index,
-                            info.view = get<TaskImageView>(task.views.views[i]),
+                            info.name = NoRefTTask::attachments()[i].value.image.name;
+                            info.access = NoRefTTask::attachments()[i].value.image.access;
+                            info.view_type = NoRefTTask::attachments()[i].value.image.view_type;
+                            info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size;
+                            info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type;
+                            info.shader_as_index = NoRefTTask::attachments()[i].value.image.shader_as_index;
+                            info.view = daxa::get<TaskImageView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
                         else
