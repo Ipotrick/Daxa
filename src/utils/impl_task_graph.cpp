@@ -822,9 +822,57 @@ namespace daxa
 
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
             .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
-                .buffer = buffer}});
+                .buffer_blas_tlas = buffer,
+                },
+            });
         impl.persistent_buffer_index_to_local_index[buffer.view().index] = task_buffer_id.index;
         impl.buffer_name_to_id[buffer.info().name] = task_buffer_id;
+    }
+
+    void TaskGraph::use_persistent_blas(TaskBlas const & blas)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
+        DAXA_DBG_ASSERT_TRUE_M(!impl.blas_name_to_id.contains(blas.info().name), "task blas names must be unique");
+        TaskBlasView const task_blas_id{{.task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.global_buffer_infos.size())}};
+
+        for (auto & permutation : impl.permutations)
+        {
+            permutation.buffer_infos.push_back(PerPermTaskBuffer{
+                .valid = false,
+            });
+        }
+
+        impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
+            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
+                .buffer_blas_tlas = blas,
+                },
+            });
+        impl.persistent_buffer_index_to_local_index[blas.view().index] = task_blas_id.index;
+        impl.blas_name_to_id[blas.info().name] = task_blas_id;
+    }
+
+    void TaskGraph::use_persistent_tlas(TaskTlas const & tlas)
+    {
+        auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
+        DAXA_DBG_ASSERT_TRUE_M(!impl.tlas_name_to_id.contains(tlas.info().name), "task tlas names must be unique");
+        TaskTlasView const task_tlas_id{{.task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.global_buffer_infos.size())}};
+
+        for (auto & permutation : impl.permutations)
+        {
+            permutation.buffer_infos.push_back(PerPermTaskBuffer{
+                .valid = false,
+            });
+        }
+
+        impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
+            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
+                .buffer_blas_tlas = tlas,
+                },
+            });
+        impl.persistent_buffer_index_to_local_index[tlas.view().index] = task_tlas_id.index;
+        impl.tlas_name_to_id[tlas.info().name] = task_tlas_id;
     }
 
     void TaskGraph::use_persistent_image(TaskImage const & image)

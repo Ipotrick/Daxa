@@ -181,6 +181,8 @@ namespace daxa
         DAXA_EXPORT_CXX ~TaskGraph();
 
         DAXA_EXPORT_CXX void use_persistent_buffer(TaskBuffer const & buffer);
+        DAXA_EXPORT_CXX void use_persistent_blas(TaskBlas const & blas);
+        DAXA_EXPORT_CXX void use_persistent_tlas(TaskTlas const & tlas);
         DAXA_EXPORT_CXX void use_persistent_image(TaskImage const & image);
 
         DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
