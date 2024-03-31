@@ -59,7 +59,8 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Completed task graphs can not record new tasks");
     }
 
-    void validate_buffer_task_view(ITask const & task, u32 attach_index, TaskBufferAttachmentInfo const & attach)
+    template<typename BufferBlasTlasAttachmentT>
+    void validate_buffer_blas_tlas_task_view(ITask const & task, u32 attach_index, BufferBlasTlasAttachmentT const & attach)
     {
         DAXA_DBG_ASSERT_TRUE_M(
             !attach.view.is_empty(),
@@ -79,13 +80,13 @@ namespace daxa
     {
         for_each(
             task->attachments(),
-            [&](u32 index_a, TaskBufferAttachmentInfo const & a)
+            [&](u32 index_a, auto const & a)
             {
                 if (a.view.is_null())
                     return;
                 for_each(
                     task->attachments(),
-                    [&](u32 index_b, TaskBufferAttachmentInfo const & b)
+                    [&](u32 index_b, auto const & b)
                     {
                         if (b.view.is_null())
                             return;
@@ -110,7 +111,7 @@ namespace daxa
                     return;
                 for_each(
                     task->attachments(),
-                    [&](u32, TaskBufferAttachmentInfo const &) {},
+                    [&](u32, auto const &) {},
                     [&](u32 index_b, TaskImageAttachmentInfo const & b)
                     {
                         if (b.view.is_null())
@@ -131,14 +132,18 @@ namespace daxa
             });
     }
 
-    void validate_task_buffer_runtime_data(ImplTask & task, TaskBufferAttachmentInfo const & attach)
+    template<typename BufferBlasTlasT>
+    void validate_task_buffer_blas_tlas_runtime_data(ImplTask & task, BufferBlasTlasT const & attach)
     {
-        DAXA_DBG_ASSERT_TRUE_M(
-            attach.ids.size() >= attach.shader_array_size,
-            fmt::format("Detected invalid runtime buffer count.\n"
-                        "Attachment \"{}\" in task \"{}\" requires {} runtime buffer(s), but only {} runtime buffer(s) are present when executing task.\n"
-                        "Attachment runtime buffers must be at least as many as its shader array size!",
-                        attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
+        if constexpr (std::is_same_v<BufferBlasTlasT, TaskBufferAttachmentInfo>)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(
+                attach.ids.size() >= attach.shader_array_size,
+                fmt::format("Detected invalid runtime buffer count.\n"
+                            "Attachment \"{}\" in task \"{}\" requires {} runtime buffer(s), but only {} runtime buffer(s) are present when executing task.\n"
+                            "Attachment runtime buffers must be at least as many as its shader array size!",
+                            attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
+        }
     }
 
     void validate_task_image_runtime_data(ImplTask & task, TaskImageAttachmentInfo const & attach)

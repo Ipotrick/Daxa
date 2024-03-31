@@ -224,7 +224,8 @@ namespace tests
                 }
 
                 this->blas = device.create_blas_from_buffer({
-                    .blas_info = {   .size = build_size_info.acceleration_structure_size,
+                    .blas_info = {   
+                        .size = build_size_info.acceleration_structure_size,
                         .name = "test blas",
                     },
                     .buffer_id = blas_buffer,

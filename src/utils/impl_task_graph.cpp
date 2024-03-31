@@ -277,6 +277,9 @@ namespace daxa
         case TaskBufferAccess::HOST_TRANSFER_WRITE: return {{PipelineStageFlagBits::HOST, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::INDEX_READ: return {{PipelineStageFlagBits::INDEX_INPUT, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::DRAW_INDIRECT_INFO_READ: return {{PipelineStageFlagBits::DRAW_INDIRECT, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ: return {{PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE: return {{PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE: return {{PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
         return {};
@@ -340,10 +343,23 @@ namespace daxa
         case daxa::TaskBufferAccess::TRANSFER_WRITE: return std::string_view{"TRANSFER_WRITE"};
         case daxa::TaskBufferAccess::HOST_TRANSFER_READ: return std::string_view{"HOST_TRANSFER_READ"};
         case daxa::TaskBufferAccess::HOST_TRANSFER_WRITE: return std::string_view{"HOST_TRANSFER_WRITE"};
+        case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ: return std::string_view{"HOST_TACCELERATION_STRUCTURE_BUILD_READRANSFER_WRITE"};
+        case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_WRITE"};
+        case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_READ_WRITE"};
         case daxa::TaskBufferAccess::MAX_ENUM: return std::string_view{"MAX_ENUM"};
         default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
         }
         return "invalid";
+    }
+
+    auto to_string(TaskBlasAccess const & usage) -> std::string_view
+    {
+        return to_string(static_cast<TaskBufferAccess>(usage));
+    }
+
+    auto to_string(TaskTlasAccess const & usage) -> std::string_view
+    {
+        return to_string(static_cast<TaskBufferAccess>(usage));
     }
 
     auto to_string(TaskImageAccess const & usage) -> std::string_view
@@ -408,29 +424,47 @@ namespace daxa
         return "invalid";
     }
 
+    ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(TaskBufferInfo a_info)
+        : actual_ids{std::vector<BufferId>{a_info.initial_buffers.buffers.begin(), a_info.initial_buffers.buffers.end()}},
+          latest_access{a_info.initial_buffers.latest_access},
+          info{std::move(a_info)},
+          unique_index{ImplPersistentTaskBufferBlasTlas::exec_unique_next_index++}
+    {
+    }
+
+    ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(TaskBlasInfo a_info)
+        : actual_ids{std::vector<BlasId>{a_info.initial_blas.blas.begin(), a_info.initial_blas.blas.end()}},
+          latest_access{a_info.initial_blas.latest_access},
+          info{std::move(a_info)},
+          unique_index{ImplPersistentTaskBufferBlasTlas::exec_unique_next_index++}
+    {
+    }
+
+    ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(TaskTlasInfo a_info)
+        : actual_ids{std::vector<TlasId>{a_info.initial_tlas.tlas.begin(), a_info.initial_tlas.tlas.end()}},
+          latest_access{a_info.initial_tlas.latest_access},
+          info{std::move(a_info)},
+          unique_index{ImplPersistentTaskBufferBlasTlas::exec_unique_next_index++}
+    {
+    }
+    ImplPersistentTaskBufferBlasTlas::~ImplPersistentTaskBufferBlasTlas() = default;
+
+    void ImplPersistentTaskBufferBlasTlas::zero_ref_callback(ImplHandle const * handle)
+    {
+        auto const * self = r_cast<ImplPersistentTaskBufferBlasTlas const *>(handle);
+        delete self;
+    }
+
+    // --- TaskBuffer --- 
+
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
     {
-        this->object = new ImplPersistentTaskBuffer(info);
-    }
-
-    ImplPersistentTaskBuffer::ImplPersistentTaskBuffer(TaskBufferInfo a_info)
-        : info{std::move(a_info)},
-          actual_buffers{info.initial_buffers.buffers.begin(), info.initial_buffers.buffers.end()},
-          latest_access{info.initial_buffers.latest_access},
-          unique_index{ImplPersistentTaskBuffer::exec_unique_next_index++}
-    {
-    }
-    ImplPersistentTaskBuffer::~ImplPersistentTaskBuffer() = default;
-
-    void ImplPersistentTaskBuffer::zero_ref_callback(ImplHandle const * handle)
-    {
-        auto const * self = r_cast<ImplPersistentTaskBuffer const *>(handle);
-        delete self;
+        this->object = new ImplPersistentTaskBufferBlasTlas(info);
     }
 
     auto TaskBuffer::view() const -> TaskBufferView
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
         return TaskBufferView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
     }
 
@@ -441,32 +475,35 @@ namespace daxa
 
     auto TaskBuffer::info() const -> TaskBufferInfo const &
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
-        return impl.info;
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        return std::get<TaskBufferInfo>(impl.info);
     }
 
     auto TaskBuffer::get_state() const -> TrackedBuffers
     {
-        auto const & impl = *r_cast<ImplPersistentTaskBuffer const *>(this->object);
+        auto const & impl = *r_cast<ImplPersistentTaskBufferBlasTlas const *>(this->object);
         return TrackedBuffers{
-            .buffers = {impl.actual_buffers.data(), impl.actual_buffers.size()},
+            .buffers = {std::get<std::vector<BufferId>>(impl.actual_ids).data(), std::get<std::vector<BufferId>>(impl.actual_ids).size()},
             .latest_access = impl.latest_access,
         };
     }
 
     void TaskBuffer::set_buffers(TrackedBuffers const & buffers)
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
-        impl.actual_buffers.clear();
-        impl.actual_buffers.insert(impl.actual_buffers.end(), buffers.buffers.begin(), buffers.buffers.end());
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        auto & actual_buffers = std::get<std::vector<BufferId>>(impl.actual_ids);
+        actual_buffers.clear();
+        actual_buffers.insert(actual_buffers.end(), buffers.buffers.begin(), buffers.buffers.end());
         impl.latest_access = buffers.latest_access;
     }
 
     void TaskBuffer::swap_buffers(TaskBuffer & other)
     {
-        auto & impl = *r_cast<ImplPersistentTaskBuffer *>(this->object);
-        auto & impl_other = *r_cast<ImplPersistentTaskBuffer *>(other.object);
-        std::swap(impl.actual_buffers, impl_other.actual_buffers);
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        auto & actual_buffers = std::get<std::vector<BufferId>>(impl.actual_ids);
+        auto & impl_other = *r_cast<ImplPersistentTaskBufferBlasTlas *>(other.object);
+        auto & other_actual_buffers = std::get<std::vector<BufferId>>(impl_other.actual_ids);
+        std::swap(actual_buffers, other_actual_buffers);
         std::swap(impl.latest_access, impl_other.latest_access);
     }
 
@@ -478,9 +515,145 @@ namespace daxa
     auto TaskBuffer::dec_refcnt(ImplHandle const * object) -> u64
     {
         return object->dec_refcnt(
-            ImplPersistentTaskBuffer::zero_ref_callback,
+            ImplPersistentTaskBufferBlasTlas::zero_ref_callback,
             nullptr);
     }
+
+    // --- TaskBuffer End --- 
+
+
+    // --- TaskBlas --- 
+
+    TaskBlas::TaskBlas(TaskBlasInfo const & info)
+    {
+        this->object = new ImplPersistentTaskBufferBlasTlas(info);
+    }
+
+    auto TaskBlas::view() const -> TaskBlasView
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        return TaskBlasView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
+    }
+
+    TaskBlas::operator TaskBlasView() const
+    {
+        return view();
+    }
+
+    auto TaskBlas::info() const -> TaskBlasInfo const &
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        return std::get<TaskBlasInfo>(impl.info);
+    }
+
+    auto TaskBlas::get_state() const -> TrackedBlas
+    {
+        auto const & impl = *r_cast<ImplPersistentTaskBufferBlasTlas const *>(this->object);
+        return TrackedBlas{
+            .blas = {std::get<std::vector<BlasId>>(impl.actual_ids).data(), std::get<std::vector<BlasId>>(impl.actual_ids).size()},
+            .latest_access = impl.latest_access,
+        };
+    }
+
+    void TaskBlas::set_blas(TrackedBlas const & other_tracked)
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        auto & actual_ids = std::get<std::vector<BlasId>>(impl.actual_ids);
+        actual_ids.clear();
+        actual_ids.insert(actual_ids.end(), other_tracked.blas.begin(), other_tracked.blas.end());
+        impl.latest_access = other_tracked.latest_access;
+    }
+
+    void TaskBlas::swap_blas(TaskBlas & other)
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        auto & actual_buffers = std::get<std::vector<BufferId>>(impl.actual_ids);
+        auto & impl_other = *r_cast<ImplPersistentTaskBufferBlasTlas *>(other.object);
+        auto & other_actual_buffers = std::get<std::vector<BufferId>>(impl_other.actual_ids);
+        std::swap(actual_buffers, other_actual_buffers);
+        std::swap(impl.latest_access, impl_other.latest_access);
+    }
+
+    auto TaskBlas::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->inc_refcnt();
+    }
+
+    auto TaskBlas::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->dec_refcnt(
+            ImplPersistentTaskBufferBlasTlas::zero_ref_callback,
+            nullptr);
+    }
+
+    // --- TaskBlas End --- 
+
+
+    // --- TaskTlas --- 
+
+    TaskTlas::TaskTlas(TaskTlasInfo const & info)
+    {
+        this->object = new ImplPersistentTaskBufferBlasTlas(info);
+    }
+
+    auto TaskTlas::view() const -> TaskTlasView
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        return TaskTlasView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
+    }
+
+    TaskTlas::operator TaskTlasView() const
+    {
+        return view();
+    }
+
+    auto TaskTlas::info() const -> TaskTlasInfo const &
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        return std::get<TaskTlasInfo>(impl.info);
+    }
+
+    auto TaskTlas::get_state() const -> TrackedTlas
+    {
+        auto const & impl = *r_cast<ImplPersistentTaskBufferBlasTlas const *>(this->object);
+        return TrackedTlas{
+            .tlas = {std::get<std::vector<TlasId>>(impl.actual_ids).data(), std::get<std::vector<TlasId>>(impl.actual_ids).size()},
+            .latest_access = impl.latest_access,
+        };
+    }
+
+    void TaskTlas::set_tlas(TrackedTlas const & other_tracked)
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        auto & actual_ids = std::get<std::vector<BufferId>>(impl.actual_ids);
+        actual_ids.clear();
+        actual_ids.insert(actual_ids.end(), other_tracked.tlas.begin(), other_tracked.tlas.end());
+        impl.latest_access = other_tracked.latest_access;
+    }
+
+    void TaskTlas::swap_tlas(TaskTlas & other)
+    {
+        auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
+        auto & actual_buffers = std::get<std::vector<BufferId>>(impl.actual_ids);
+        auto & impl_other = *r_cast<ImplPersistentTaskBufferBlasTlas *>(other.object);
+        auto & other_actual_ids = std::get<std::vector<BufferId>>(impl_other.actual_ids);
+        std::swap(actual_buffers, other_actual_ids);
+        std::swap(impl.latest_access, impl_other.latest_access);
+    }
+
+    auto TaskTlas::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->inc_refcnt();
+    }
+
+    auto TaskTlas::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return object->dec_refcnt(
+            ImplPersistentTaskBufferBlasTlas::zero_ref_callback,
+            nullptr);
+    }
+
+    // --- TaskTlas End --- 
 
     TaskImage::TaskImage(TaskImageInfo const & a_info)
     {
@@ -674,27 +847,26 @@ namespace daxa
         return task_image_view;
     }
 
-    static inline constexpr std::array<BufferId, 64> NULL_BUF_ARRAY = {};
-
-    auto ImplTaskGraph::get_actual_buffers(TaskBufferView id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>
-    {
-        if (id.is_null())
-        {
-            return NULL_BUF_ARRAY;
-        }
-        auto const & global_buffer = global_buffer_infos.at(id.index);
-        if (global_buffer.is_persistent())
-        {
-            return {global_buffer.get_persistent().actual_buffers.data(),
-                    global_buffer.get_persistent().actual_buffers.size()};
-        }
-        else
-        {
-            auto const & perm_buffer = perm.buffer_infos.at(id.index);
-            DAXA_DBG_ASSERT_TRUE_M(perm_buffer.valid, "Can not get actual buffer - buffer is not valid in this permutation");
-            return {&perm_buffer.actual_buffer, 1};
-        }
-    }
+    // static inline constexpr std::array<BufferId, 64> NULL_BUF_ARRAY = {};
+    // auto ImplTaskGraph::get_actual_buffers(TaskBufferView id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>
+    // {
+    //     if (id.is_null())
+    //     {
+    //         return NULL_BUF_ARRAY;
+    //     }
+    //     auto const & global_buffer = global_buffer_infos.at(id.index);
+    //     if (global_buffer.is_persistent())
+    //     {
+    //         return {global_buffer.get_persistent().actual_buffers.data(),
+    //                 global_buffer.get_persistent().actual_buffers.size()};
+    //     }
+    //     else
+    //     {
+    //         auto const & perm_buffer = perm.buffer_infos.at(id.index);
+    //         DAXA_DBG_ASSERT_TRUE_M(perm_buffer.valid, "Can not get actual buffer - buffer is not valid in this permutation");
+    //         return {&perm_buffer.actual_id, 1};
+    //     }
+    // }
 
     static inline constexpr std::array<ImageId, 64> NULL_IMG_ARRAY = {};
 
@@ -715,30 +887,6 @@ namespace daxa
             auto const & perm_image = perm.image_infos.at(id.index);
             DAXA_DBG_ASSERT_TRUE_M(perm_image.valid, "Can not get actual image - image is not valid in this permutation");
             return {&perm_image.actual_image, 1};
-        }
-    }
-
-    auto ImplTaskGraph::id_to_local_id(TaskBufferView id) const -> TaskBufferView
-    {
-        if (id.is_null()) return id;
-        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task buffer id. Please make sure to only use initialized task buffer ids.");
-        if (id.is_persistent())
-        {
-            DAXA_DBG_ASSERT_TRUE_M(
-                persistent_buffer_index_to_local_index.contains(id.index),
-                fmt::format("Detected invalid access of persistent task buffer id ({}) in task graph \"{}\"; "
-                            "please make sure to declare persistent resource use to each task graph that uses this buffer with the function use_persistent_buffer!",
-                            id.index, info.name));
-            return TaskBufferView{{.task_graph_index = this->unique_index, .index = persistent_buffer_index_to_local_index.at(id.index)}};
-        }
-        else
-        {
-            DAXA_DBG_ASSERT_TRUE_M(
-                id.task_graph_index == this->unique_index,
-                fmt::format("Detected invalid access of transient task buffer id ({}) in task graph \"{}\"; "
-                            "please make sure that you only use transient buffers within the list they are created in!",
-                            id.index, info.name));
-            return TaskBufferView{{.task_graph_index = this->unique_index, .index = id.index}};
         }
     }
 
@@ -822,7 +970,7 @@ namespace daxa
     {
         for_each(
             task.base_task->attachments(),
-            [](u32, TaskBufferAttachmentInfo const &) {},
+            [](u32, auto const &) {},
             [&](u32 task_image_attach_index, TaskImageAttachmentInfo const & image_attach)
             {
                 // TODO:
@@ -952,25 +1100,27 @@ namespace daxa
             {
                 continue;
             }
-            auto const & runtime_buffers = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_buffers;
-            DAXA_DBG_ASSERT_TRUE_M(
-                !runtime_buffers.empty(),
-                fmt::format(
-                    "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
-                    impl.global_buffer_infos[local_buffer_i].get_name(),
-                    impl.info.name,
-                    PERSISTENT_RESOURCE_MESSAGE));
-            for (usize buffer_index = 0; buffer_index < runtime_buffers.size(); ++buffer_index)
-            {
+            auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_ids;
+            std::visit([&](auto const & runtime_ids){
                 DAXA_DBG_ASSERT_TRUE_M(
-                    impl.info.device.is_id_valid(runtime_buffers[buffer_index]),
+                    !runtime_ids.empty(),
                     fmt::format(
-                        "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
+                        "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
                         impl.global_buffer_infos[local_buffer_i].get_name(),
                         impl.info.name,
-                        buffer_index,
                         PERSISTENT_RESOURCE_MESSAGE));
-            }
+                for (usize buffer_index = 0; buffer_index < runtime_ids.size(); ++buffer_index)
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        impl.info.device.is_id_valid(runtime_ids[buffer_index]),
+                        fmt::format(
+                            "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
+                            impl.global_buffer_infos[local_buffer_i].get_name(),
+                            impl.info.name,
+                            buffer_index,
+                            PERSISTENT_RESOURCE_MESSAGE));
+                }
+            }, runtime_ids);
         }
         for (u32 local_image_i = 0; local_image_i < impl.global_image_infos.size(); ++local_image_i)
         {
@@ -1024,30 +1174,43 @@ namespace daxa
         };
         for_each(
             attachments,
-            [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
+            [&](u32, auto const & attach)
             {
-                if (buffer_attach.shader_as_address)
+                if constexpr (std::is_same_v<std::decay_t<decltype(attach)>, TaskBufferAttachmentInfo>)
                 {
-                    upalign(sizeof(DeviceAddress));
-                    for (u32 shader_array_i = 0; shader_array_i < buffer_attach.shader_array_size; ++shader_array_i)
+                    TaskBufferAttachmentInfo const & buffer_attach = attach;
+                    if (buffer_attach.shader_as_address)
                     {
-                        BufferId const buf_id = buffer_attach.ids[shader_array_i];
-                        DeviceAddress const buf_address = buffer_attach.view.is_null() ? DeviceAddress{} : device.get_device_address(buf_id).value();
-                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(buf_address);
-                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
-                        shader_byte_blob_offset += sizeof(DeviceAddress);
+                        upalign(sizeof(DeviceAddress));
+                        for (u32 shader_array_i = 0; shader_array_i < buffer_attach.shader_array_size; ++shader_array_i)
+                        {
+                            BufferId const buf_id = buffer_attach.ids[shader_array_i];
+                            DeviceAddress const buf_address = buffer_attach.view.is_null() ? DeviceAddress{} : device.get_device_address(buf_id).value();
+                            auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(buf_address);
+                            std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
+                            shader_byte_blob_offset += sizeof(DeviceAddress);
+                        }
+                    }
+                    else
+                    {
+                        upalign(sizeof(daxa_BufferId));
+                        for (u32 shader_array_i = 0; shader_array_i < buffer_attach.shader_array_size; ++shader_array_i)
+                        {
+                            BufferId const buf_id = buffer_attach.ids[shader_array_i];
+                            auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_BufferId)>>(buf_id);
+                            std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_BufferId));
+                            shader_byte_blob_offset += sizeof(daxa_BufferId);
+                        }
                     }
                 }
-                else
+                if constexpr (std::is_same_v<std::decay_t<decltype(attach)>, TaskTlasAttachmentInfo>)
                 {
-                    upalign(sizeof(daxa_BufferId));
-                    for (u32 shader_array_i = 0; shader_array_i < buffer_attach.shader_array_size; ++shader_array_i)
-                    {
-                        BufferId const buf_id = buffer_attach.ids[shader_array_i];
-                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_BufferId)>>(buf_id);
-                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_BufferId));
-                        shader_byte_blob_offset += sizeof(daxa_BufferId);
-                    }
+                    upalign(sizeof(DeviceAddress));
+                    TlasId const tlas_id = attach.ids[0];
+                    DeviceAddress const tlas_address = attach.view.is_null() ? DeviceAddress{} : device.get_device_address(tlas_id).value();
+                    auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(tlas_address);
+                    std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
+                    shader_byte_blob_offset += sizeof(DeviceAddress);
                 }
             },
             [&](u32, TaskImageAttachmentInfo const & image_attach)
@@ -1088,10 +1251,10 @@ namespace daxa
         update_image_view_cache(task, permutation);
         for_each(
             task.base_task->attachments(),
-            [&](u32, TaskBufferAttachmentInfo & attach)
+            [&](u32, auto & attach)
             {
-                attach.ids = this->get_actual_buffers(attach.translated_view, permutation);
-                validate_task_buffer_runtime_data(task, attach);
+                attach.ids = this->get_actual_buffer_blas_tlas(attach.translated_view, permutation);
+                validate_task_buffer_blas_tlas_runtime_data(task, attach);
             },
             [&](u32 index, TaskImageAttachmentInfo & attach)
             {
@@ -1213,7 +1376,7 @@ namespace daxa
 
         for_each(
             task.attachments(),
-            [&](u32, TaskBufferAttachmentInfo const & attach)
+            [&](u32, auto const & attach)
             {
                 if (attach.view.is_null()) return;
                 PerPermTaskBuffer const & task_buffer = perm.buffer_infos[attach.translated_view.index];
@@ -1224,7 +1387,7 @@ namespace daxa
                     return;
                 }
 
-                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(attach.access);
+                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.access));
                 // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
                 // TODO(msakmary): improve scheduling here to reorder reads in front of each other, respecting the last to read barrier if present!
                 // When a buffer has been read in a previous use AND the current task also reads the buffer,
@@ -1303,10 +1466,10 @@ namespace daxa
     {
         for_each(
             task->attachments(),
-            [&](u32 i, TaskBufferAttachmentInfo & attach)
+            [&](u32 i, auto & attach)
             {
-                validate_buffer_task_view(*task, i, attach);
-                attach.translated_view = impl.id_to_local_id(attach.view);
+                validate_buffer_blas_tlas_task_view(*task, i, attach);
+                attach.translated_view = impl.buffer_blas_tlas_id_to_local_id(attach.view);
             },
             [&](u32 i, TaskImageAttachmentInfo & attach)
             {
@@ -1472,7 +1635,7 @@ namespace daxa
         // Set persistent task resources to be valid for the permutation.
         for_each(
             task.attachments(),
-            [&](u32, TaskBufferAttachmentInfo const & attach)
+            [&](u32, auto const & attach)
             {
                 if (attach.view.is_null()) return;
                 if (attach.view.is_persistent())
@@ -1516,11 +1679,11 @@ namespace daxa
         // are combined into a single unit which is synchronized against other batches.
         for_each(
             task.attachments(),
-            [&](u32, TaskBufferAttachmentInfo const & buffer_attach)
+            [&](u32, auto const & buffer_attach)
             {
                 if (buffer_attach.view.is_null()) return;
                 PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_attach.translated_view.index];
-                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(buffer_attach.access);
+                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(buffer_attach.access));
                 update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
                 // For transient buffers, we need to record first and last use so that we can later name their allocations.
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_buffer_first_access below since
@@ -1959,7 +2122,7 @@ namespace daxa
             {
                 auto const & transient_info = daxa::get<PermIndepTaskBufferInfo::Transient>(glob_buffer.task_buffer_data);
 
-                perm_buffer.actual_buffer = info.device.create_buffer_from_memory_block(MemoryBlockBufferInfo{
+                std::get<BufferId>(perm_buffer.actual_id) = info.device.create_buffer_from_memory_block(MemoryBlockBufferInfo{
                     .buffer_info = BufferInfo{
                         .size = transient_info.info.size,
                         .name = transient_info.info.name,
@@ -2965,10 +3128,22 @@ namespace daxa
             for (u32 buffer_info_idx = 0; buffer_info_idx < static_cast<u32>(global_buffer_infos.size()); buffer_info_idx++)
             {
                 auto const & global_buffer = global_buffer_infos.at(buffer_info_idx);
-                auto const & perm_buffer = permutation.buffer_infos.at(buffer_info_idx);
-                if (!global_buffer.is_persistent() && perm_buffer.valid)
+                PerPermTaskBuffer const & perm_buffer = permutation.buffer_infos.at(buffer_info_idx);
+                if (!global_buffer.is_persistent() && 
+                    perm_buffer.valid)
                 {
-                    info.device.destroy_buffer(get_actual_buffers(TaskBufferView{{.task_graph_index = unique_index, .index = buffer_info_idx}}, permutation)[0]);
+                    if (auto const * id = std::get_if<BufferId>(&perm_buffer.actual_id))
+                    {
+                        info.device.destroy_buffer(*id);
+                    }
+                    if (auto const * id = std::get_if<BlasId>(&perm_buffer.actual_id))
+                    {
+                        info.device.destroy_blas(*id);
+                    }
+                    if (auto const * id = std::get_if<TlasId>(&perm_buffer.actual_id))
+                    {
+                        info.device.destroy_tlas(*id);
+                    }
                 }
             }
             // because transient images are owned by the task graph, we need to destroy them
@@ -3012,32 +3187,48 @@ namespace daxa
         }
     }
 
-    void ImplTaskGraph::print_task_buffer_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskBufferView local_id)
+    void ImplTaskGraph::print_task_buffer_blas_tlas_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskGPUResourceView local_id)
     {
         if (local_id.is_null())
         {
-            fmt::format_to(std::back_inserter(out), "{}task image [NULL]\n", indent);
+            fmt::format_to(std::back_inserter(out), "{}[NULL]\n", indent);
             return;
         }
         auto const & glob_buffer = global_buffer_infos[local_id.index];
+        auto const & actual_ids = get_actual_buffer_blas_tlas_generic(local_id, permutation);
+        std::string_view type_str = buffer_blas_tlas_str(local_id, permutation);
         std::string persistent_info;
         if (global_buffer_infos[local_id.index].is_persistent())
         {
             u32 const persistent_index = global_buffer_infos[local_id.index].get_persistent().unique_index;
             persistent_info = fmt::format(", persistent index: {}", persistent_index);
         }
-        fmt::format_to(std::back_inserter(out), "{}task buffer name: \"{}\", id: ({}){}\n", indent, glob_buffer.get_name(), to_string(local_id), persistent_info);
-        fmt::format_to(std::back_inserter(out), "{}runtime buffers:\n", indent);
-        {
+        fmt::format_to(std::back_inserter(out), "{}task {} name: \"{}\", id: ({}){}\n", indent, type_str, glob_buffer.get_name(), to_string(local_id), persistent_info);
+        fmt::format_to(std::back_inserter(out), "{}runtime {}:\n", indent, type_str);
+        std::visit([&](auto const & ids) {
             [[maybe_unused]] FormatIndent const d2{out, indent, true};
-            for (u32 child_i = 0; child_i < get_actual_buffers(local_id, permutation).size(); ++child_i)
+            for (u32 child_i = 0; child_i < ids.size(); ++child_i)
             {
-                auto const child_id = get_actual_buffers(local_id, permutation)[child_i];
-                auto const & child_info = info.device.info_buffer(child_id).value();
-                fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                auto const child_id = ids[child_i];
+                using ChildIdT = std::decay_t<decltype(child_id)>;
+                if constexpr (std::is_same_v<ChildIdT, BufferId>)
+                {
+                    auto const & child_info = info.device.info_buffer(child_id).value();
+                    fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                }
+                if constexpr (std::is_same_v<ChildIdT, BlasId>)
+                {
+                    auto const & child_info = info.device.info_blas(child_id).value();
+                    fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                }
+                if constexpr (std::is_same_v<ChildIdT, TlasId>)
+                {
+                    auto const & child_info = info.device.info_tlas(child_id).value();
+                    fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                }
             }
             print_separator_to(out, indent);
-        }
+        }, actual_ids);
     }
 
     void ImplTaskGraph::print_task_barrier_to(std::string & out, std::string & indent, TaskGraphPermutation const & permutation, usize index, bool const split_barrier)
@@ -3068,12 +3259,13 @@ namespace daxa
         [[maybe_unused]] FormatIndent const d0{out, indent, true};
         for_each(
             task.base_task->attachments(),
-            [&](u32, TaskBufferAttachmentInfo const & buf)
+            [&](u32, auto const & attach)
             {
-                auto [access, is_concurrent] = task_buffer_access_to_access(buf.access);
-                fmt::format_to(std::back_inserter(out), "{}buffer argument:\n", indent);
+                auto [access, is_concurrent] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.access));
+                std::string_view type_str = buffer_blas_tlas_str(attach.translated_view, permutation);
+                fmt::format_to(std::back_inserter(out), "{}{} argument:\n", indent, type_str);
                 fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
-                print_task_buffer_to(out, indent, permutation, buf.translated_view);
+                print_task_buffer_blas_tlas_to(out, indent, permutation, attach.translated_view);
                 print_separator_to(out, indent);
             },
             [&](u32, TaskImageAttachmentInfo const & img)
