@@ -625,9 +625,9 @@ namespace daxa
     void TaskBlas::swap_blas(TaskBlas & other)
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
-        auto & actual_buffers = std::get<std::vector<BufferId>>(impl.actual_ids);
+        auto & actual_buffers = std::get<std::vector<BlasId>>(impl.actual_ids);
         auto & impl_other = *r_cast<ImplPersistentTaskBufferBlasTlas *>(other.object);
-        auto & other_actual_buffers = std::get<std::vector<BufferId>>(impl_other.actual_ids);
+        auto & other_actual_buffers = std::get<std::vector<BlasId>>(impl_other.actual_ids);
         std::swap(actual_buffers, other_actual_buffers);
         std::swap(impl.latest_access, impl_other.latest_access);
     }
@@ -683,7 +683,7 @@ namespace daxa
     void TaskTlas::set_tlas(TrackedTlas const & other_tracked)
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
-        auto & actual_ids = std::get<std::vector<BufferId>>(impl.actual_ids);
+        auto & actual_ids = std::get<std::vector<TlasId>>(impl.actual_ids);
         actual_ids.clear();
         actual_ids.insert(actual_ids.end(), other_tracked.tlas.begin(), other_tracked.tlas.end());
         impl.latest_access = other_tracked.latest_access;
@@ -692,9 +692,9 @@ namespace daxa
     void TaskTlas::swap_tlas(TaskTlas & other)
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
-        auto & actual_buffers = std::get<std::vector<BufferId>>(impl.actual_ids);
+        auto & actual_buffers = std::get<std::vector<TlasId>>(impl.actual_ids);
         auto & impl_other = *r_cast<ImplPersistentTaskBufferBlasTlas *>(other.object);
-        auto & other_actual_ids = std::get<std::vector<BufferId>>(impl_other.actual_ids);
+        auto & other_actual_ids = std::get<std::vector<TlasId>>(impl_other.actual_ids);
         std::swap(actual_buffers, other_actual_ids);
         std::swap(impl.latest_access, impl_other.latest_access);
     }
