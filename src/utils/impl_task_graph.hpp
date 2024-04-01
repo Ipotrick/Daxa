@@ -486,7 +486,7 @@ namespace daxa
         auto id_to_local_id(TaskImageView id) const -> TaskImageView;
         void update_active_permutations();
         void update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation);
-        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id);
+        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, u32 batch_index, TaskBatchId in_batch_task_index, TaskId task_id);
         void insert_pre_batch_barriers(TaskGraphPermutation & permutation);
         void create_transient_runtime_buffers(TaskGraphPermutation & permutation);
         void create_transient_runtime_images(TaskGraphPermutation & permutation);

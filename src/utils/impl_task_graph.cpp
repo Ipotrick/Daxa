@@ -1347,7 +1347,7 @@ namespace daxa
         return attachment_shader_blob;
     }
 
-    void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, TaskBatchId in_batch_task_index, TaskId task_id)
+    void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, u32 batch_index, TaskBatchId in_batch_task_index, TaskId task_id)
     {
         // We always allow to reuse the last command list ONCE within the task callback.
         // When the get command list function is called in a task this is set to false.
@@ -1375,7 +1375,7 @@ namespace daxa
         impl_runtime.current_task = &task;
         impl_runtime.recorder.begin_label({
             .label_color = info.task_label_color,
-            .name = std::string("task ") + std::to_string(in_batch_task_index) + std::string(" \"") + std::string(task.base_task->name()) + std::string("\""),
+            .name = std::string("batch ") + std::to_string(batch_index) + std::string(" task ") + std::to_string(in_batch_task_index) + std::string(" \"") + std::string(task.base_task->name()) + std::string("\""),
         });
         task.base_task->callback(TaskInterface{
             .device = this->info.device,
@@ -2911,13 +2911,6 @@ namespace daxa
             usize batch_index = 0;
             for (auto & task_batch : submit_scope.task_batches)
             {
-                if (impl.info.enable_command_labels)
-                {
-                    impl_runtime.recorder.begin_label({
-                        .label_color = impl.info.task_batch_label_color,
-                        .name = impl.info.name + std::string(", s ") + std::to_string(submit_scope_index) + std::string(", b ") + std::to_string(batch_index),
-                    });
-                }
                 batch_index += 1;
                 // Wait on pipeline barriers before batch execution.
                 for (auto barrier_index : task_batch.pipeline_barrier_indices)
@@ -2998,7 +2991,7 @@ namespace daxa
                 usize task_index = 0;
                 for (TaskId const task_id : task_batch.tasks)
                 {
-                    impl.execute_task(impl_runtime, permutation, task_index, task_id);
+                    impl.execute_task(impl_runtime, permutation, batch_index, task_index, task_id);
                     task_index += 1;
                 }
                 if (impl.info.use_split_barriers)
@@ -3049,10 +3042,6 @@ namespace daxa
                             tl_image_barrier_infos.clear();
                         }
                     }
-                }
-                if (impl.info.enable_command_labels)
-                {
-                    impl_runtime.recorder.end_label();
                 }
             }
             for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
