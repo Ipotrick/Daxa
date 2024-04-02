@@ -1278,9 +1278,9 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     };
 
     PhysicalDeviceFeatureTable feature_table = {};
-    feature_table.initialize(info);
+    feature_table.initialize(info, self->physical_device_properties);
     PhysicalDeviceExtensionList extension_list = {};
-    extension_list.initialize(info);
+    extension_list.initialize(info, self->physical_device_properties);
 
     VkPhysicalDeviceFeatures2 physical_device_features_2{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
