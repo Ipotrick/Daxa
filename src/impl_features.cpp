@@ -2,7 +2,7 @@
 
 namespace daxa
 {
-    void PhysicalDeviceFeatureTable::initialize(daxa_DeviceInfo info)
+    void PhysicalDeviceFeatureTable::initialize(daxa_DeviceInfo info, daxa_DeviceProperties const & props)
     {
         this->features = {
             .robustBufferAccess = (info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u ? VK_TRUE : VK_FALSE,
@@ -22,7 +22,7 @@ namespace daxa
             .depthBounds = VK_FALSE,
             .wideLines = VK_TRUE,
             .largePoints = VK_FALSE,
-            .alphaToOne = VK_FALSE, 
+            .alphaToOne = VK_FALSE,
             .multiViewport = VK_FALSE,
             .samplerAnisotropy = VK_TRUE, // Allows for anisotropic filtering.
             .textureCompressionETC2 = VK_FALSE,
@@ -65,8 +65,8 @@ namespace daxa
         this->variable_pointers = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES,
             .pNext = chain,
-            .variablePointersStorageBuffer = VK_TRUE,   // SLANG WANTS THIS
-            .variablePointers = VK_TRUE,                // SLANG WANTS THIS
+            .variablePointersStorageBuffer = VK_TRUE, // SLANG WANTS THIS
+            .variablePointers = VK_TRUE,              // SLANG WANTS THIS
         };
         this->chain = r_cast<void *>(&this->variable_pointers);
         this->dynamic_state3 = {
@@ -243,16 +243,19 @@ namespace daxa
                 .rayTracingPositionFetch = VK_TRUE,
             };
             this->chain = r_cast<void *>(&this->ray_tracing_position_fetch.value());
-            ray_tracing_invocation_reorder = VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV{
-                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV,
-                .pNext = this->chain,
-                .rayTracingInvocationReorder = VK_TRUE,
-            };
-            this->chain = r_cast<void *>(&this->ray_tracing_invocation_reorder.value());
+            if (props.ray_tracing_invocation_reorder_properties.has_value)
+            {
+                ray_tracing_invocation_reorder = VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV{
+                    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV,
+                    .pNext = this->chain,
+                    .rayTracingInvocationReorder = VK_TRUE,
+                };
+                this->chain = r_cast<void *>(&this->ray_tracing_invocation_reorder.value());
+            }
         }
     }
 
-    void PhysicalDeviceExtensionList::initialize(daxa_DeviceInfo info)
+    void PhysicalDeviceExtensionList::initialize(daxa_DeviceInfo info, daxa_DeviceProperties const & props)
     {
         // NOTE(pahrens): Make sure to never exceed EXTENSION_LIST_MAX!
         this->size = 0;
@@ -281,7 +284,10 @@ namespace daxa
             this->data[size++] = {VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME};
             // TODO: different flags for different raytracing features.
             this->data[size++] = {VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME};
-            this->data[size++] = {VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME};
+            if (props.ray_tracing_invocation_reorder_properties.has_value)
+            {
+                this->data[size++] = {VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME};
+            }
         }
         if ((info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u || (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u)
         {
