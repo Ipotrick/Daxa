@@ -243,7 +243,7 @@ typedef uint32_t daxa_BuildAcclelerationStructureFlags;
 typedef struct
 {
     daxa_BuildAcclelerationStructureFlags flags;
-    bool update;
+    daxa_Bool8 update;
     daxa_TlasId src_tlas;
     daxa_TlasId dst_tlas;
     daxa_TlasInstanceInfo const * instances;
@@ -253,7 +253,7 @@ typedef struct
 
 static daxa_TlasBuildInfo const DAXA_DEFAULT_TLAS_BUILD_INFO = {
     .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
-    .update = false,
+    .update = 0,
     .src_tlas = DAXA_ZERO_INIT,
     .dst_tlas = DAXA_ZERO_INIT,
     .instances = DAXA_ZERO_INIT,
@@ -264,7 +264,7 @@ static daxa_TlasBuildInfo const DAXA_DEFAULT_TLAS_BUILD_INFO = {
 typedef struct
 {
     daxa_BuildAcclelerationStructureFlags flags;
-    bool update;
+    daxa_Bool8 update;
     daxa_BlasId src_blas;
     daxa_BlasId dst_blas;
     daxa_Variant(daxa_BlasGeometryInfoSpansUnion) geometries;
@@ -273,7 +273,7 @@ typedef struct
 
 static daxa_BlasBuildInfo const DAXA_DEFAULT_BLAS_BUILD_INFO = {
     .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
-    .update = false,
+    .update = 0,
     .src_blas = DAXA_ZERO_INIT,
     .dst_blas = DAXA_ZERO_INIT,
     .geometries = DAXA_ZERO_INIT,
