@@ -63,25 +63,25 @@ else()
 endif()
 
 add_library(daxa
-    "src/cpp_wrapper.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/cpp_wrapper.cpp"
 
-    "src/impl_device.cpp"
-    "src/impl_features.cpp"
-    "src/impl_instance.cpp"
-    "src/impl_core.cpp"
-    "src/impl_pipeline.cpp"
-    "src/impl_swapchain.cpp"
-    "src/impl_command_recorder.cpp"
-    "src/impl_gpu_resources.cpp"
-    "src/impl_sync.cpp"
-    "src/impl_dependencies.cpp"
-    "src/impl_timeline_query.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_device.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_features.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_instance.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_core.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_pipeline.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_swapchain.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_command_recorder.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_gpu_resources.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_sync.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_dependencies.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/impl_timeline_query.cpp"
 
-    "src/utils/impl_task_graph.cpp"
-    "src/utils/impl_imgui.cpp"
-    "src/utils/impl_fsr2.cpp"
-    "src/utils/impl_mem.cpp"
-    "src/utils/impl_pipeline_manager.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/utils/impl_task_graph.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/utils/impl_imgui.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/utils/impl_fsr2.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/utils/impl_mem.cpp"
+    "${CMAKE_CURRENT_LIST_DIR}/src/utils/impl_pipeline_manager.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
@@ -236,7 +236,7 @@ if(DAXA_ENABLE_TESTS)
 endif()
 
 if(DAXA_ENABLE_TOOLS)
-    add_executable(daxa_tools_compile_imgui_shaders "src/utils/impl_imgui.cpp")
+    add_executable(daxa_tools_compile_imgui_shaders "${CMAKE_CURRENT_LIST_DIR}/src/utils/impl_imgui.cpp")
     target_compile_definitions(daxa_tools_compile_imgui_shaders PRIVATE DAXA_COMPILE_IMGUI_SHADERS=true)
     target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa fmt::fmt)
 endif()
