@@ -98,7 +98,7 @@ namespace daxa
     };
 
     struct NoneT { };
-    static inline constexpr NoneT None = NoneT{};
+    static inline constexpr NoneT Nothing = NoneT{};
 
     template <typename T>
     struct Optional

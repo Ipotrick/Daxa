@@ -150,7 +150,7 @@ auto main() -> int
                 .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_fragment"},
             },
             .color_attachments = {{.format = swapchain.get_format()}},
-            .raster = {.static_state_sample_count = daxa::None},
+            .raster = {.static_state_sample_count = daxa::Nothing},
             // .push_constant_size = sizeof(DrawTri::attachment_shader_blob_size()),
             .name = "my pipeline",
         });
