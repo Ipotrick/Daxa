@@ -874,7 +874,7 @@ namespace daxa
             this->internal,
             r_cast<VkRect2D const *>(&info));
     }
-    
+
     void RenderCommandRecorder::set_rasterization_samples(RasterizationSamples info)
     {
         auto result = daxa_cmd_set_rasterization_samples(this->internal, static_cast<VkSampleCountFlagBits>(info));
@@ -1010,6 +1010,7 @@ namespace daxa
     }
 
     DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(trace_rays, TraceRaysInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(trace_rays_indirect, TraceRaysIndirectInfo)
 
     void CommandRecorder::set_pipeline(RayTracingPipeline const & pipeline)
     {
