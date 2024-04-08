@@ -29,6 +29,10 @@
 #if DAXA_BUILT_WITH_X11
 #include <X11/Xlib.h>
 #define VK_USE_PLATFORM_XLIB_KHR
+// NOTE(grundlett): Cope due to X11 defines
+#ifdef None
+#undef None
+#endif
 #endif
 #if DAXA_BUILT_WITH_WAYLAND
 // NOTE(grundlett) Somehow the Vulkan SDK may not include these
