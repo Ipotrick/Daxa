@@ -1573,7 +1573,6 @@ namespace daxa
         auto session = Slang::ComPtr<slang::ISession>{};
 
         {
-            // lock?
             auto search_paths_strings = std::vector<std::string>{};
             auto search_paths = std::vector<char const *>{};
             search_paths_strings.reserve(shader_info.compile_options.root_paths.size());
@@ -1593,6 +1592,7 @@ namespace daxa
 
             auto target_desc = slang::TargetDesc{};
             target_desc.format = SlangCompileTarget::SLANG_SPIRV;
+            auto session_lock = std::lock_guard{slang_backend.session_mtx};
             target_desc.profile = slang_backend.global_session->findProfile("spirv_1_4");
             target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
