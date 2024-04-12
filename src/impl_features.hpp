@@ -39,7 +39,7 @@ namespace daxa
         std::optional<VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV > ray_tracing_invocation_reorder = {};
         void * chain = {};
 
-        void initialize(daxa_DeviceInfo info);
+        void initialize(daxa_DeviceInfo info, daxa_DeviceProperties const &props);
     };
 
     struct PhysicalDeviceExtensionList
@@ -47,6 +47,6 @@ namespace daxa
         char const * data[EXTENSION_LIST_MAX] = {};
         u32 size = {};
 
-        void initialize(daxa_DeviceInfo info);
+        void initialize(daxa_DeviceInfo info, daxa_DeviceProperties const &props);
     };
 } // namespace daxa

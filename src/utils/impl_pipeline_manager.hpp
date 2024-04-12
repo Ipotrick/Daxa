@@ -90,7 +90,9 @@ namespace daxa
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
         struct SlangBackend
         {
-            Slang::ComPtr<slang::IGlobalSession> global_session;
+            // NOTE(grundlett): literally global session. Not sure if this is reasonable or not.
+            static inline Slang::ComPtr<slang::IGlobalSession> global_session;
+            static inline std::mutex session_mtx = {};
         };
         SlangBackend slang_backend = {};
 #endif
@@ -116,7 +118,7 @@ namespace daxa
         auto all_pipelines_valid() const -> bool;
 
         auto try_load_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash) -> Result<std::vector<u32>>;
-        void save_shader_cache(std::filesystem::path const &out_folder, uint64_t shader_info_hash, std::vector<u32> const &spirv);
+        void save_shader_cache(std::filesystem::path const & out_folder, uint64_t shader_info_hash, std::vector<u32> const & spirv);
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
 

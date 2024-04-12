@@ -428,7 +428,7 @@ auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_Buil
     vk_build_ranges_ptrs.reserve(primitive_counts_ptrs.size());
     for (auto const * prim_counts_ptr : primitive_counts_ptrs)
     {
-        u64 const prim_counts_start_idx = static_cast<u64>(prim_counts_ptr - primitive_counts.data()) / sizeof(u32);
+        u64 const prim_counts_start_idx = static_cast<u64>(prim_counts_ptr - primitive_counts.data());
         vk_build_ranges_ptrs.push_back(vk_build_ranges.data() + prim_counts_start_idx);
     }
     self->device->vkCmdBuildAccelerationStructuresKHR(
@@ -706,6 +706,32 @@ auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
         reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&hit_handle),
         reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&call_handle),
         info->width, info->height, info->depth);
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndirectInfo const * info) -> daxa_Result
+{
+    // TODO: Check if those offsets are in range?
+    if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
+    {
+        return DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND;
+    }
+    RayTracingShaderBindingTable const & binding_table = daxa::get<daxa_RayTracingPipeline>(self->current_pipeline)->info.shader_binding_table;
+    StridedDeviceAddressRegion raygen_handle = binding_table.raygen_region;
+    raygen_handle.address += binding_table.raygen_region.stride * info->raygen_handle_offset;
+    StridedDeviceAddressRegion miss_handle = binding_table.miss_region;
+    raygen_handle.address += binding_table.miss_region.stride * info->miss_handle_offset;
+    StridedDeviceAddressRegion hit_handle = binding_table.hit_region;
+    raygen_handle.address += binding_table.hit_region.stride * info->hit_handle_offset;
+    StridedDeviceAddressRegion call_handle = binding_table.callable_region;
+    raygen_handle.address += binding_table.callable_region.stride * info->callable_handle_offset;
+    self->device->vkCmdTraceRaysIndirectKHR(
+        self->current_command_data.vk_cmd_buffer,
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&raygen_handle),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&miss_handle),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&hit_handle),
+        reinterpret_cast<VkStridedDeviceAddressRegionKHR *>(&call_handle),
+        info->indirect_device_address);
     return DAXA_RESULT_SUCCESS;
 }
 

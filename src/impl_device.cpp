@@ -1278,9 +1278,9 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     };
 
     PhysicalDeviceFeatureTable feature_table = {};
-    feature_table.initialize(info);
+    feature_table.initialize(info, self->physical_device_properties);
     PhysicalDeviceExtensionList extension_list = {};
-    extension_list.initialize(info);
+    extension_list.initialize(info, self->physical_device_properties);
 
     VkPhysicalDeviceFeatures2 physical_device_features_2{
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2,
@@ -1335,6 +1335,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         self->vkCreateRayTracingPipelinesKHR = r_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCreateRayTracingPipelinesKHR"));
         self->vkGetRayTracingShaderGroupHandlesKHR = r_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetRayTracingShaderGroupHandlesKHR"));
         self->vkCmdTraceRaysKHR = r_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdTraceRaysKHR"));
+        self->vkCmdTraceRaysIndirectKHR = r_cast<PFN_vkCmdTraceRaysIndirectKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdTraceRaysIndirectKHR"));
     }
 
     vkGetDeviceQueue(self->vk_device, self->main_queue_family_index, 0, &self->main_queue_vk_queue);
@@ -1759,7 +1760,6 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             vkDestroyDevice(self->vk_device, nullptr);
             return DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER;
         }
-
     }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !self->info.name.view().empty())

@@ -6,7 +6,7 @@
 #include <daxa/c/gpu_resources.h>
 #include <daxa/c/pipeline.h>
 
-typedef struct 
+typedef struct
 {
     void const * data;
     uint64_t size;
@@ -189,8 +189,8 @@ typedef struct
 
 static daxa_RenderPassBeginInfo const DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = DAXA_ZERO_INIT;
 
-
-typedef struct {
+typedef struct
+{
     uint32_t width;
     uint32_t height;
     uint32_t depth;
@@ -202,6 +202,16 @@ typedef struct {
 
 static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = {0, 0, 0, 0, 0, 0, 0};
 
+typedef struct
+{
+    uint64_t indirect_device_address;
+    uint32_t raygen_handle_offset;
+    uint32_t miss_handle_offset;
+    uint32_t hit_handle_offset;
+    uint32_t callable_handle_offset;
+} daxa_TraceRaysIndirectInfo;
+
+static daxa_TraceRaysIndirectInfo const DAXA_DEFAULT_TRACE_RAYS_INDIRECT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -468,10 +478,11 @@ daxa_cmd_destroy_image_view_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageVie
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId id);
 
-
-
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_trace_rays(daxa_CommandRecorder cmd_enc, daxa_TraceRaysInfo const * info);
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_trace_rays_indirect(daxa_CommandRecorder cmd_enc, daxa_TraceRaysIndirectInfo const * info);
 
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
