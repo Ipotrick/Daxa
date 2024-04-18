@@ -349,6 +349,7 @@ namespace daxa
         recreate_ibuffer(4096);
 
         ImGuiIO & io = ImGui::GetIO();
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
         u8 * pixels = nullptr;
         i32 width = 0;
         i32 height = 0;
