@@ -63,6 +63,7 @@ namespace daxa
 
         ResourceLifetime lifetime = {};
         usize allocation_offset = {};
+        daxa::MemoryRequirements memory_requirements = {};
     };
 
     struct ExtendedImageSliceState
@@ -90,6 +91,7 @@ namespace daxa
         ImageUsageFlags usage = ImageUsageFlagBits::NONE;
         ImageId actual_image = {};
         usize allocation_offset = {};
+        daxa::MemoryRequirements memory_requirements = {};
     };
 
     struct TaskBarrier
@@ -248,7 +250,6 @@ namespace daxa
         {
             // TODO: Add Transient Blas and Tlas
             TaskTransientBufferInfo info = {};
-            MemoryRequirements memory_requirements = {};
         };
         Variant<Persistent, Transient> task_buffer_data;
 
@@ -296,7 +297,6 @@ namespace daxa
         struct Transient
         {
             TaskTransientImageInfo info = {};
-            MemoryRequirements memory_requirements = {};
         };
         Variant<Persistent, Transient> task_image_data;
 
