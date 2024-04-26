@@ -1653,7 +1653,7 @@ namespace daxa
         for (int32_t dependency_i = 0; dependency_i < dependency_n; ++dependency_i)
         {
             auto const * const dep_path = slangRequest->getDependencyFilePath(dependency_i);
-            if (std::strcmp(dep_path, "unknown") != 0)
+            if (std::strcmp(dep_path, "_daxa_slang_main") != 0)
             {
                 current_observed_hotload_files->insert({dep_path, std::chrono::file_clock::now()});
             }
