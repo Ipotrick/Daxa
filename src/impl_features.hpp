@@ -37,6 +37,7 @@ namespace daxa
         std::optional<VkPhysicalDeviceRayQueryFeaturesKHR> ray_query = {};
         std::optional<VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR> ray_tracing_position_fetch = {};
         std::optional<VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV > ray_tracing_invocation_reorder = {};
+        std::optional<VkPhysicalDeviceShaderAtomicFloatFeaturesEXT> shader_atomic_float = {};
         void * chain = {};
 
         void initialize(daxa_DeviceInfo info, daxa_DeviceProperties const &props);

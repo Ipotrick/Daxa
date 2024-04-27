@@ -1,5 +1,8 @@
 #define DAXA_RAY_TRACING 1
 #extension GL_EXT_ray_tracing : enable
+#if ATOMIC_FLOAT == 1
+#extension GL_EXT_shader_atomic_float : enable
+#endif
 #include <daxa/daxa.inl>
 
 #include "shared.inl"
@@ -67,6 +70,9 @@ layout(location = 0) rayPayloadEXT hitPayload prd;
     { 
         daxa_f32 tHit = hitObjectGetRayTMaxNV(hitObject);
         color = 1.0 / tHit * vec3(1.0, 1.0, 1.0);
+#if ATOMIC_FLOAT == 1
+        atomicAdd(deref(p.camera_buffer).hit_count, 1);
+#endif
     }
 
 #else
@@ -103,12 +109,18 @@ layout(location = 0) rayPayloadEXT hitPayload prd;
         // color = (bary_color * tHit) / (tMax * vec3(1.0, 1.0, 1.0));
         // color = bary_color;
         color = vec3(1.0, 1.0, 1.0);
+#if ATOMIC_FLOAT == 1
+        atomicAdd(deref(p.camera_buffer).hit_count, 1);
+#endif
     }
     else if (type == gl_RayQueryCommittedIntersectionGeneratedEXT)
     {
         // daxa_f32 tHit = rayQueryGetIntersectionTEXT(rayQuery, true);
         // color = 1.0 / tHit * vec3(1.0, 1.0, 1.0);
         color = vec3(1.0, 1.0, 1.0);
+#if ATOMIC_FLOAT == 1
+        atomicAdd(deref(p.camera_buffer).hit_count, 1);
+#endif
     }
 #endif
 
@@ -185,6 +197,9 @@ void main()
     
 
 #else
+#if ATOMIC_FLOAT == 1
+    prd.is_hit = false;
+#endif
     traceRayEXT(
         daxa_accelerationStructureEXT(p.tlas), // topLevelAccelerationStructure
         rayFlags,      // rayFlags
@@ -198,6 +213,13 @@ void main()
         tMax,          // ray max range
         0              // payload (location = 0)
     );
+#endif
+
+#if ATOMIC_FLOAT == 1
+    if(prd.is_hit)
+    {
+        atomicAdd(deref(p.camera_buffer).hit_count, 1);
+    }
 #endif
 
     // imageStore(daxa_image2D(p.swapchain), index, fromLinear(vec4(prd.hitValue, 1.0)));
@@ -338,6 +360,9 @@ void main()
 
     // Output the interpolated color
     prd.hitValue = interpolatedColor;
+#if ATOMIC_FLOAT == 1
+    prd.is_hit = true;
+#endif // HIT_TRIANGLE
 }
 
 #else // HIT_TRIANGLE
@@ -429,6 +454,9 @@ void main()
     }
 
     prd.hitValue = vec3(cLight.outIntensity * attenuation * (diffuse));
+#if ATOMIC_FLOAT == 1
+    prd.is_hit = true;
+#endif // ATOMIC_FLOAT
 #endif // DEBUG_NORMALS
 }
 

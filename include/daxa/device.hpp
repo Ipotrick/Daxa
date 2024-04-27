@@ -226,6 +226,7 @@ namespace daxa
         static inline constexpr DeviceFlags SHADER_FLOAT16 = {0x1 << 7};
         static inline constexpr DeviceFlags ROBUST_BUFFER_ACCESS = {0x1 << 9};
         static inline constexpr DeviceFlags ROBUST_IMAGE_ACCESS = {0x1 << 10};
+        static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 11};
     };
 
     struct DeviceFlags2
@@ -241,6 +242,7 @@ namespace daxa
         u32 shader_int8 : 1 = {};
         u32 robust_buffer_access : 1 = {};
         u32 robust_image_access : 1 = {};
+        u32 shader_atomic_float : 1 = {};
 
         operator DeviceFlags()
         {
