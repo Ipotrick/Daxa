@@ -1307,7 +1307,10 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
     }
 
     // Dynamic state:
-    self->vkCmdSetRasterizationSamplesEXT = r_cast<PFN_vkCmdSetRasterizationSamplesEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdSetRasterizationSamplesEXT"));
+    if ((self->info.flags & DeviceFlagBits::DYNAMIC_STATE_3) != InstanceFlagBits::NONE)
+    {
+        self->vkCmdSetRasterizationSamplesEXT = r_cast<PFN_vkCmdSetRasterizationSamplesEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdSetRasterizationSamplesEXT"));
+    }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
     {

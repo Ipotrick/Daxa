@@ -130,7 +130,7 @@ static daxa_RasterizerInfo const DAXA_DEFAULT_RASTERIZATION_INFO = {
     .depth_bias_slope_factor = 0.0f,
     .line_width = 1.0f,
     .conservative_raster_info = {.has_value = 0},
-    .static_state_sample_count = {.value = VK_SAMPLE_COUNT_1_BIT,.has_value = 1},
+    .static_state_sample_count = {.value = VK_SAMPLE_COUNT_1_BIT, .has_value = 1},
 };
 
 // should be moved in c++ from types to pipeline.hpp.
