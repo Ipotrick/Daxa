@@ -1234,7 +1234,7 @@ namespace daxa
 
             Result<std::vector<u32>> ret = Result<std::vector<u32>>("No shader was compiled");
 
-            assert(shader_info.compile_options.language.has_value() && "How did this happen? You mustn't provide a nullopt for the language");
+            DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.language.has_value(), "How did this happen? You mustn't provide a nullopt for the language");
 
             DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.language.has_value(), "You must have a shader language set when compiling GLSL");
             switch (shader_info.compile_options.language.value())

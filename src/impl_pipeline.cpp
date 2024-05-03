@@ -70,11 +70,11 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     {
         if (ret.info.mesh_shader_info.has_value() || ret.info.task_shader_info.has_value())
         {
-            for (auto module : vk_shader_modules)                                                                               
-            {                                                                                                                   
-                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);                                                  
-            }                                                                                                                   
-            return DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED;                                                                          
+            for (auto module : vk_shader_modules)
+            {
+                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
+            }
+            return DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED;
         }
     }
 
@@ -111,10 +111,10 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        .rasterizationSamples = 
-            info->raster.static_state_sample_count.has_value ? 
-            info->raster.static_state_sample_count.value :
-            VK_SAMPLE_COUNT_1_BIT,
+        .rasterizationSamples =
+            info->raster.static_state_sample_count.has_value
+                ? info->raster.static_state_sample_count.value
+                : VK_SAMPLE_COUNT_1_BIT,
         .sampleShadingEnable = VK_FALSE,
         .minSampleShading = 1.0f,
         .pSampleMask = {},
@@ -226,7 +226,8 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
         VkDynamicState::VK_DYNAMIC_STATE_DEPTH_BIAS,
     };
-    if (!info->raster.static_state_sample_count.has_value)
+    if ((ret.device->info.flags & DeviceFlagBits::DYNAMIC_STATE_3) != InstanceFlagBits::NONE &&
+        !info->raster.static_state_sample_count.has_value)
     {
         dynamic_state.push_back(VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT);
     }

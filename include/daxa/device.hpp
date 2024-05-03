@@ -226,7 +226,8 @@ namespace daxa
         static inline constexpr DeviceFlags SHADER_FLOAT16 = {0x1 << 7};
         static inline constexpr DeviceFlags ROBUST_BUFFER_ACCESS = {0x1 << 9};
         static inline constexpr DeviceFlags ROBUST_IMAGE_ACCESS = {0x1 << 10};
-        static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 11};
+        static inline constexpr DeviceFlags DYNAMIC_STATE_3 = {0x1 << 11};
+        static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 12};
     };
 
     struct DeviceFlags2
@@ -242,6 +243,7 @@ namespace daxa
         u32 shader_int8 : 1 = {};
         u32 robust_buffer_access : 1 = {};
         u32 robust_image_access : 1 = {};
+        u32 dynamic_state_3 : 1 = 1;
         u32 shader_atomic_float : 1 = {};
 
         operator DeviceFlags()
@@ -256,7 +258,8 @@ namespace daxa
         DeviceFlags flags =
             DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT |
             DeviceFlagBits::SHADER_ATOMIC64 |
-            DeviceFlagBits::IMAGE_ATOMIC64;
+            DeviceFlagBits::IMAGE_ATOMIC64 |
+            DeviceFlagBits::DYNAMIC_STATE_3;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
@@ -294,7 +297,7 @@ namespace daxa
         MemoryBlock & memory_block;
         usize offset = {};
     };
-    
+
     struct AccelerationStructureBuildSizesInfo
     {
         u64 acceleration_structure_size;

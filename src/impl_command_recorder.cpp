@@ -1,5 +1,6 @@
 #include "impl_command_recorder.hpp"
 
+#include <daxa/c/types.h>
 #include <utility>
 
 #include "impl_sync.hpp"
@@ -259,6 +260,10 @@ void remember_ids(daxa_CommandRecorder self, Args... args)
 
 auto daxa_cmd_set_rasterization_samples(daxa_CommandRecorder self, VkSampleCountFlagBits samples) -> daxa_Result
 {
+    if (self->device->vkCmdSetRasterizationSamplesEXT == nullptr)
+    {
+        return DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT;
+    }
     daxa_cmd_flush_barriers(self);
     self->device->vkCmdSetRasterizationSamplesEXT(self->current_command_data.vk_cmd_buffer, samples);
     return DAXA_RESULT_SUCCESS;
@@ -889,7 +894,10 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     };
     vkCmdSetViewport(self->current_command_data.vk_cmd_buffer, 0, 1, &vk_viewport);
     vkCmdBeginRendering(self->current_command_data.vk_cmd_buffer, &vk_rendering_info);
-    self->device->vkCmdSetRasterizationSamplesEXT(self->current_command_data.vk_cmd_buffer, VK_SAMPLE_COUNT_1_BIT);
+    if (self->device->vkCmdSetRasterizationSamplesEXT != nullptr)
+    {
+        self->device->vkCmdSetRasterizationSamplesEXT(self->current_command_data.vk_cmd_buffer, VK_SAMPLE_COUNT_1_BIT);
+    }
     self->in_renderpass = true;
     return DAXA_RESULT_SUCCESS;
 }
