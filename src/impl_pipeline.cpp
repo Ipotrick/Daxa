@@ -548,7 +548,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         }
         else
         { // NOTE: GENERAL. Checking stage ranges here.
-            if (shader_group.general_shader_index >= 0 &&
+            if (shader_group.general_shader_index != VK_SHADER_UNUSED_KHR &&
                 shader_group.general_shader_index < raygen_count)
             {
                 ray_gen_group_count++;
