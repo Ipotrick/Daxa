@@ -257,6 +257,27 @@ namespace daxa
                 this->chain = r_cast<void *>(&this->ray_tracing_invocation_reorder.value());
             }
         }
+        if((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT) != 0u)
+        {
+            // NOTE: This is a very new extension and might not be supported by all hardware.
+            this->shader_atomic_float = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT,
+                .pNext = this->chain,
+                .shaderBufferFloat32Atomics = VK_TRUE,
+                .shaderBufferFloat32AtomicAdd = VK_TRUE,
+                .shaderBufferFloat64Atomics = VK_FALSE, // No 64 bit support in daxa.
+                .shaderBufferFloat64AtomicAdd = VK_FALSE, // No 64 bit support in daxa.
+                .shaderSharedFloat32Atomics = VK_TRUE,
+                .shaderSharedFloat32AtomicAdd = VK_TRUE,
+                .shaderSharedFloat64Atomics = VK_FALSE, // No 64 bit support in daxa.
+                .shaderSharedFloat64AtomicAdd = VK_FALSE, // No 64 bit support in daxa.
+                .shaderImageFloat32Atomics = VK_TRUE,
+                .shaderImageFloat32AtomicAdd = VK_TRUE,
+                .sparseImageFloat32Atomics = VK_FALSE, // No sparse support in daxa.
+                .sparseImageFloat32AtomicAdd = VK_FALSE, // No sparse support in daxa.
+            };
+            this->chain = r_cast<void *>(&this->shader_atomic_float);
+        }
     }
 
     void PhysicalDeviceExtensionList::initialize(daxa_DeviceInfo info, daxa_DeviceProperties const & props)
@@ -299,6 +320,10 @@ namespace daxa
         if ((info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u || (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u)
         {
             this->data[size++] = {VK_EXT_ROBUSTNESS_2_EXTENSION_NAME};
+        }
+        if((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT) != 0u)
+        {
+            this->data[size++] = {VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME};
         }
     }
 } // namespace daxa

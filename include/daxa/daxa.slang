@@ -112,6 +112,21 @@ namespace daxa
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
+
+#if defined(DAXA_RAY_TRACING)
+    struct TlasId
+    {
+        daxa_u64 value;
+        daxa_u32 index()
+        {
+            return daxa_u32(DAXA_ID_INDEX_MASK & value);
+        }
+        daxa_u64 version()
+        {
+            return (value >> DAXA_ID_VERSION_OFFSTET);
+        }
+    };
+#endif // DAXA_RAY_TRACING
     
     [[vk::binding(DAXA_SAMPLER_BINDING, 0)]] SamplerState SamplerStateTable[];
     extension SamplerState
@@ -198,6 +213,9 @@ _DAXA_DECL_MAT_TYPES(bool, daxa_b32)
 typedef daxa::BufferId daxa_BufferId
 typedef daxa::ImageViewId daxa_ImageViewId
 typedef daxa::SamplerId daxa_SamplerId
+#if defined(DAXA_RAY_TRACING)
+typedef daxa::TlasId daxa_TlasId
+#endif // DAXA_RAY_TRACING
 #define daxa_RWBufferPtr(STRUCT_TYPE) Ptr<STRUCT_TYPE>
 #define daxa_BufferPtr(STRUCT_TYPE) Ptr<STRUCT_TYPE>
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)

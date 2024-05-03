@@ -228,6 +228,7 @@ typedef enum
     DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS = 0x1 << 9,
     DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS = 0x1 << 10,
     DAXA_DEVICE_FLAG_DYNAMIC_STATE_3 = 0x1 << 11,
+    DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT = 0x1 << 12,
 } daxa_DeviceFlagBits;
 
 typedef uint32_t daxa_DeviceFlags;

@@ -51,6 +51,7 @@ namespace tests
             daxa_u64 blas_buffer_size = 1024 * 1024 * 10;
             daxa_u64 blas_buffer_offset = 0;
             const daxa_u32 ACCELERATION_STRUCTURE_BUILD_OFFSET_ALIGMENT = 256; // NOTE: Requested by the spec
+            bool atomic_float = false;
 
             daxa_u32 frame = 0;
             daxa_u32 raygen_shader_binding_table_offset = 0;
@@ -87,10 +88,22 @@ namespace tests
             void initialize()
             {
                 daxa_ctx = daxa::create_instance({});
-                device = daxa_ctx.create_device({
-                    // Device flags make daxa automatically filter devices that do not have the required capabilities.
-                    .flags = daxa::DeviceFlagBits::RAY_TRACING,
-                });
+#if ACTIVATE_ATOMIC_FLOAT
+                atomic_float = true;
+#endif            
+                try {
+                    auto flags = daxa::DeviceFlagBits::RAY_TRACING | (atomic_float ? daxa::DeviceFlagBits::SHADER_ATOMIC_FLOAT : daxa::DeviceFlagBits::NONE);
+                    device = daxa_ctx.create_device({
+                        // Device flags make daxa automatically filter devices that do not have the required capabilities.
+                        .flags = flags,
+                    });
+                } catch (std::runtime_error const &err) {
+                    std::cout << "Device creation error: " << err.what() << std::endl;
+                    device = daxa_ctx.create_device({
+                        // Device flags make daxa automatically filter devices that do not have the required capabilities.
+                        .flags = daxa::DeviceFlagBits::RAY_TRACING,
+                    });
+                }
 
                 bool ray_tracing_supported = device.properties().ray_tracing_properties.has_value();
                 auto invocation_reorder_mode = device.properties().invocation_reorder_properties.has_value() ? device.properties().invocation_reorder_properties.value().invocation_reorder_mode : 0;
@@ -99,6 +112,7 @@ namespace tests
                 std::cout << "Choosen Device: " << device.properties().device_name <<
                             ", Ray Tracing: " <<  ray_tracing_supported_str <<
                             ", Invocation Reordering mode: " << invocation_reorder_mode  << std::endl;
+
                 swapchain = device.create_swapchain({
                     .native_window = get_native_handle(),
                     .native_window_platform = get_native_platform(),
@@ -426,21 +440,31 @@ namespace tests
                     prim_ray_gen_compile_info = daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"raytracing.glsl"},
                         .compile_options = {
-                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, daxa::ShaderDefine{"SER_ON", "1"}}},
+                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, daxa::ShaderDefine{"SER_ON", "1"}, atomic_float ?
+                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
+                            }},
+                        },
                     };
                     ray_gen_compile_info = daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"raytracing.glsl"},
                         .compile_options = {
-                            .defines = std::vector{daxa::ShaderDefine{"SER_ON", "1"}}},
+                            .defines = std::vector{daxa::ShaderDefine{"SER_ON", "1"}, atomic_float ? daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"}}},
                     };
                 } else {
                     prim_ray_gen_compile_info = daxa::ShaderCompileInfo{
                         .source = daxa::ShaderFile{"raytracing.glsl"},
                         .compile_options = {
-                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}}},
+                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, atomic_float ?
+                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
+                            }},
+                        }
                     };
                     ray_gen_compile_info = daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"raytracing.glsl"}
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .compile_options = {.defines = std::vector{daxa::ShaderDefine{"HIT_TRIANGLE", "1"}, atomic_float ?
+                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
+                            }}
+                        },
                     };
                 }
 
@@ -472,15 +496,19 @@ namespace tests
                         },
                         daxa::ShaderCompileInfo{
                             .source = daxa::ShaderFile{"raytracing.glsl"},
-                            .compile_options = {.defines = std::vector{daxa::ShaderDefine{"HIT_TRIANGLE", "1"}}},
-                        },
+                            .compile_options = {.defines = std::vector{daxa::ShaderDefine{"HIT_TRIANGLE", "1"}, atomic_float ?
+                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
+                            }}
+                        }},
                     },
                     .miss_hit_infos = {
                         daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"raytracing.glsl"}},
                         daxa::ShaderCompileInfo{
                             .source = daxa::ShaderFile{"raytracing.glsl"},
-                            .compile_options = {.defines = std::vector{daxa::ShaderDefine{"MISS_SHADOW", "1"}}},
-                        },
+                            .compile_options = {.defines = std::vector{daxa::ShaderDefine{"MISS_SHADOW", "1"}, atomic_float ?
+                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
+                            }}
+                        }},
                     },
                     // Groups are in order of their shader indices.
                     // NOTE: The order of the groups is important! raygen, miss, hit, callable
@@ -572,7 +600,7 @@ namespace tests
 
             auto get_inverse_projection_matrix(Camera const & cam) -> glm::mat4
             {
-                return glm::inverse(glm::perspective(glm::radians(cam.fov), (float)cam.width / (float)cam.height, cam._near, cam._far));
+                return glm::inverse(glm::perspective(glm::radians(cam.fov), static_cast<float>(cam.width) / static_cast<float>(cam.height), cam._near, cam._far));
             }
 
             void draw()
@@ -591,7 +619,11 @@ namespace tests
                 // Update camera buffer
                 CameraView camera_view = {
                     .inv_view = glm_mat4_to_daxa_f32mat4x4(get_inverse_view_matrix(my_camera)),
-                    .inv_proj = glm_mat4_to_daxa_f32mat4x4(get_inverse_projection_matrix(my_camera))};
+                    .inv_proj = glm_mat4_to_daxa_f32mat4x4(get_inverse_projection_matrix(my_camera))
+#if ACTIVATE_ATOMIC_FLOAT 
+                    ,.hit_count = 0.0f,
+#endif
+                    };
 
                 // NOTE: Vulkan has inverted y axis in NDC
                 camera_view.inv_proj.y.y *= -1;
@@ -603,7 +635,7 @@ namespace tests
                 });
                 defer { device.destroy_buffer(cam_staging_buffer); };
 
-                auto * buffer_ptr = device.get_host_address_as<daxa_f32mat4x4>(cam_staging_buffer).value();
+                auto * buffer_ptr = device.get_host_address_as<uint8_t>(cam_staging_buffer).value();
                 std::memcpy(buffer_ptr, &camera_view, cam_buffer_size);
 
                 auto recorder = device.create_command_recorder({
@@ -620,33 +652,6 @@ namespace tests
                     .dst_buffer = cam_buffer,
                     .size = cam_buffer_size,
                 });
-
-                // recorder.pipeline_barrier_image_transition({
-                //     .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-                //     .src_layout = daxa::ImageLayout::UNDEFINED,
-                //     .dst_layout = daxa::ImageLayout::GENERAL,
-                //     .image_id = swapchain_image,
-                // });
-
-                // recorder.set_pipeline(*comp_pipeline);
-
-                // daxa::u32 width = device.info_image(swapchain_image).value().size.x;
-                // daxa::u32 height = device.info_image(swapchain_image).value().size.y;
-                // recorder.push_constant(PushConstant{
-                //     .size = {width, height},
-                //     .tlas = tlas,
-                //     .swapchain = swapchain_image.default_view(),
-                // });
-                // daxa::u32 block_count_x = (width + 8 - 1) / 8;
-                // daxa::u32 block_count_y = (height + 8 - 1) / 8;
-                // recorder.dispatch({block_count_x, block_count_y, 1});
-
-                // recorder.pipeline_barrier_image_transition({
-                //     .src_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-                //     .src_layout = daxa::ImageLayout::GENERAL,
-                //     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
-                //     .image_id = swapchain_image,
-                // });
 
                 recorder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
@@ -673,6 +678,24 @@ namespace tests
                     .raygen_shader_binding_table_offset = raygen_shader_binding_table_offset,
                 });
 
+#if ACTIVATE_ATOMIC_FLOAT == 1      
+                recorder.pipeline_barrier({
+                    .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
+                    .dst_access = daxa::AccessConsts::TRANSFER_READ,
+                });
+
+                recorder.copy_buffer_to_buffer({
+                    .src_buffer = cam_buffer,
+                    .dst_buffer = cam_staging_buffer,
+                    .size = cam_buffer_size,
+                });
+
+                recorder.pipeline_barrier({
+                    .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .dst_access = daxa::AccessConsts::HOST_READ,
+                });
+#endif // ACTIVATE_ATOMIC_FLOAT
+
                 recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::GENERAL,
@@ -680,10 +703,10 @@ namespace tests
                     .image_id = swapchain_image,
                 });
 
-                recorder.pipeline_barrier({
-                    .src_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_READ,
-                });
+                // recorder.pipeline_barrier({
+                //     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+                //     .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_READ,
+                // });
 
                 auto executable_commands = recorder.complete_current_commands();
                 /// NOTE:
@@ -701,6 +724,13 @@ namespace tests
                     .wait_binary_semaphores = std::array{swapchain.current_present_semaphore()},
                     .swapchain = swapchain,
                 });
+
+#if ACTIVATE_ATOMIC_FLOAT == 1
+                device.wait_idle();
+                float hit_count = 0.0f;
+                std::memcpy(&hit_count, buffer_ptr + sizeof(CameraView) - sizeof(float), sizeof(float));
+                std::cout << "hit count: " << hit_count << " while ray tracing" << std::endl;
+#endif // ACTIVATE_ATOMIC_FLOAT
 
                 device.collect_garbage();
             }

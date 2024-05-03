@@ -4,11 +4,15 @@
 #include <daxa/daxa.inl>
 
 #define MAX_PRIMITIVES 2
+#define ACTIVATE_ATOMIC_FLOAT 1 // this will throws an exception if the device does not support atomic float
 
 struct CameraView
 {
     daxa_f32mat4x4 inv_view;
     daxa_f32mat4x4 inv_proj;
+#if ACTIVATE_ATOMIC_FLOAT == 1
+    daxa_f32 hit_count;
+#endif
 };
 DAXA_DECL_BUFFER_PTR(CameraView)
 
@@ -45,6 +49,9 @@ struct hitPayload
 {
     daxa_f32vec3 hitValue;
     daxa_u32 seed;
+#if ACTIVATE_ATOMIC_FLOAT == 1
+    daxa_b32 is_hit;
+#endif
 };
 
 struct Ray
