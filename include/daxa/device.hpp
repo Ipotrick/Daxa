@@ -242,7 +242,7 @@ namespace daxa
         u32 shader_int8 : 1 = {};
         u32 robust_buffer_access : 1 = {};
         u32 robust_image_access : 1 = {};
-        u32 dynamic_state_3 : 1 = {};
+        u32 dynamic_state_3 : 1 = 1;
 
         operator DeviceFlags()
         {
