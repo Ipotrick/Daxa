@@ -545,6 +545,12 @@ namespace daxa
             .latest_access = impl.latest_access,
         };
     }
+    
+    auto TaskBuffer::is_owning() const -> bool
+    {
+        auto const & impl = *r_cast<ImplPersistentTaskBufferBlasTlas const *>(this->object);
+        return impl.owned_buffer_device.has_value();
+    }
 
     void TaskBuffer::set_buffers(TrackedBuffers const & buffers)
     {

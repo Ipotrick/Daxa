@@ -978,6 +978,7 @@ namespace daxa
         /// @return reference to info of object.
         auto info() const -> TaskBufferInfo const &;
         auto get_state() const -> TrackedBuffers;
+        auto is_owning() const -> bool;
 
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
