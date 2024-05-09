@@ -31,10 +31,16 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         }
         vk_shader_modules.push_back(vk_shader_module);
         entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
+        VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+            .pNext = nullptr,
+            .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
+        };
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = {},
+            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstruct : nullptr,
+            .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
             .pName = entry_point_names.back()->c_str(),
@@ -339,14 +345,20 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         return std::bit_cast<daxa_Result>(module_result);
     }
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+    VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct
+    {
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+        .pNext = nullptr,
+        .requiredSubgroupSize = ret.info.shader_info.required_subgroup_size.value_or(0),
+    };
     VkComputePipelineCreateInfo const vk_compute_pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
         .stage = VkPipelineShaderStageCreateInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = {},
+            .pNext = ret.info.shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstruct : nullptr,
+            .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(ret.info.shader_info.create_flags),
             .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
             .module = vk_shader_module,
             .pName = ret.info.shader_info.entry_point.data(),
@@ -451,11 +463,17 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             return result;
         }
         vk_shader_modules.push_back(vk_shader_module);
-        entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
+        entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));        
+        VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct
+        {
+            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+            .pNext = nullptr,
+            .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
+        };
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = nullptr,
-            .flags = {},
+            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstruct : nullptr,
+            .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
             .pName = entry_point_names.back()->c_str(),
