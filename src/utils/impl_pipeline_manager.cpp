@@ -952,7 +952,16 @@ namespace daxa
             {
                 reloaded = true;
                 auto new_pipeline = create_raster_pipeline(compile_info);
-                if (new_pipeline.is_ok())
+                bool is_valid = true;
+                if (this->info.register_null_pipelines_when_first_compile_fails)
+                {
+                    is_valid = new_pipeline.is_ok() && new_pipeline.value().pipeline_ptr->is_valid();
+                }
+                else
+                {
+                    is_valid = new_pipeline.is_ok();
+                }
+                if (is_valid)
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
                 }
@@ -969,7 +978,16 @@ namespace daxa
             {
                 reloaded = true;
                 auto new_pipeline = create_ray_tracing_pipeline(compile_info);
-                if (new_pipeline.is_ok())
+                bool is_valid = true;
+                if (this->info.register_null_pipelines_when_first_compile_fails)
+                {
+                    is_valid = new_pipeline.is_ok() && new_pipeline.value().pipeline_ptr->is_valid();
+                }
+                else
+                {
+                    is_valid = new_pipeline.is_ok();
+                }
+                if (is_valid)
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
                 }
