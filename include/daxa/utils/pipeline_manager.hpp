@@ -49,6 +49,8 @@ namespace daxa
         std::optional<ShaderLanguage> language = {};
         std::vector<ShaderDefine> defines = {};
         std::optional<bool> enable_debug_info = {};
+        std::optional<ShaderCreateFlags> create_flags = {};
+        std::optional<u32> required_subgroup_size = {};
 
         void inherit(ShaderCompileOptions const & other);
     };
