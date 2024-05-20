@@ -185,6 +185,11 @@ namespace daxa
         u32 min_acceleration_structure_scratch_offset_alignment = {};
     };
 
+    struct InvocationReorderProperties
+    {
+        u32 invocation_reorder_mode = {};
+    };
+
     struct DeviceProperties
     {
         u32 vulkan_api_version = {};
@@ -198,6 +203,7 @@ namespace daxa
         Optional<MeshShaderDeviceProperties> mesh_shading_properties = {};
         Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
         Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
+        Optional<InvocationReorderProperties> invocation_reorder_properties = {};
     };
 
     DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
@@ -217,6 +223,11 @@ namespace daxa
         static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
         static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
         static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
+        static inline constexpr DeviceFlags SHADER_FLOAT16 = {0x1 << 7};
+        static inline constexpr DeviceFlags ROBUST_BUFFER_ACCESS = {0x1 << 9};
+        static inline constexpr DeviceFlags ROBUST_IMAGE_ACCESS = {0x1 << 10};
+        static inline constexpr DeviceFlags DYNAMIC_STATE_3 = {0x1 << 11};
+        static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 12};
     };
 
     struct DeviceFlags2
@@ -228,6 +239,12 @@ namespace daxa
         u32 image_atomic64 : 1 = 1;
         u32 vk_memory_model : 1 = {};
         u32 ray_tracing : 1 = {};
+        u32 shader_float16 : 1 = {};
+        u32 shader_int8 : 1 = {};
+        u32 robust_buffer_access : 1 = {};
+        u32 robust_image_access : 1 = {};
+        u32 dynamic_state_3 : 1 = 1;
+        u32 shader_atomic_float : 1 = {};
 
         operator DeviceFlags()
         {
@@ -248,14 +265,14 @@ namespace daxa
         DeviceFlags flags =
             DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT |
             DeviceFlagBits::SHADER_ATOMIC64 |
-            DeviceFlagBits::IMAGE_ATOMIC64;
+            DeviceFlagBits::IMAGE_ATOMIC64 |
+            DeviceFlagBits::DYNAMIC_STATE_3;
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 400;
         u32 max_allowed_acceleration_structures = 10'000;
-#endif
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct CommandSubmitInfo
@@ -386,6 +403,7 @@ namespace daxa
 
         [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
+        [[nodiscard]] auto create_ray_tracing_pipeline(RayTracingPipelineInfo const & info) -> RayTracingPipeline;
 
         [[nodiscard]] auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         [[nodiscard]] auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;

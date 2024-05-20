@@ -1,7 +1,7 @@
 #pragma once
 
-#if !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG && !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_DXC
-#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_PIPELINE_MANAGER_(GLSLANG|DXC) CMake option enabled, or request the utils-pipeline-manager-(glslang|dxc) feature in vcpkg"
+#if !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG && !DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_PIPELINE_MANAGER_(GLSLANG|SLANG) CMake option enabled, or request the utils-pipeline-manager-(glslang|slang) feature in vcpkg"
 #endif
 
 #include <daxa/device.hpp>
@@ -13,7 +13,7 @@ namespace daxa
         std::filesystem::path path;
     };
 
-    // This string will only work if it is valid GLSL/HLSL
+    // This string will only work if it is valid GLSL/SLANG
     struct ShaderCode
     {
         std::string string;
@@ -30,7 +30,7 @@ namespace daxa
     enum struct ShaderLanguage
     {
         GLSL,
-        HLSL,
+        SLANG,
         MAX_ENUM = 0x7fffffff,
     };
 
@@ -45,9 +45,12 @@ namespace daxa
         std::vector<std::filesystem::path> root_paths = {};
         std::optional<std::filesystem::path> write_out_preprocessed_code = {};
         std::optional<std::filesystem::path> write_out_shader_binary = {};
+        std::optional<std::filesystem::path> spirv_cache_folder = {};
         std::optional<ShaderLanguage> language = {};
         std::vector<ShaderDefine> defines = {};
         std::optional<bool> enable_debug_info = {};
+        std::optional<ShaderCreateFlags> create_flags = {};
+        std::optional<u32> required_subgroup_size = {};
 
         void inherit(ShaderCompileOptions const & other);
     };
@@ -56,6 +59,20 @@ namespace daxa
     {
         ShaderSource source = Monostate{};
         ShaderCompileOptions compile_options = {};
+    };
+
+    struct RayTracingPipelineCompileInfo
+    {
+        std::vector<ShaderCompileInfo> ray_gen_infos = {};
+        std::vector<ShaderCompileInfo> intersection_infos = {};
+        std::vector<ShaderCompileInfo> any_hit_infos = {};
+        std::vector<ShaderCompileInfo> callable_infos = {};
+        std::vector<ShaderCompileInfo> closest_hit_infos = {};
+        std::vector<ShaderCompileInfo> miss_hit_infos = {};
+        std::vector<RayTracingShaderGroupInfo> shader_groups_infos = {};
+        u32 max_ray_recursion_depth = {};
+        u32 push_constant_size = {};
+        std::string name = {};
     };
 
     struct ComputePipelineCompileInfo
@@ -114,8 +131,10 @@ namespace daxa
 
         PipelineManager(PipelineManagerInfo info);
 
+        auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
         auto add_compute_pipeline(ComputePipelineCompileInfo const & info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
+        void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
         void add_virtual_file(VirtualFileInfo const & info);

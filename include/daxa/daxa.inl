@@ -15,18 +15,18 @@
 #elif defined(GL_core_profile) // GLSL
 #define DAXA_SHADER 1
 #define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
-#elif defined(__HLSL_VERSION) // HLSL
+#else // SLANG
 #define DAXA_SHADER 1
-#define DAXA_SHADERLANG DAXA_SHADERLANG_HLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_SLANG
 #endif
 
 #if DAXA_SHADER
 #define DAXA_SHADERLANG_GLSL 1
-#define DAXA_SHADERLANG_HLSL 2
+#define DAXA_SHADERLANG_SLANG 2
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
 #include <daxa/daxa.glsl>
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
-#include <daxa/daxa.hlsl>
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#include "daxa/daxa.slang"
 #endif
 #else
 #if defined(_STDC_)

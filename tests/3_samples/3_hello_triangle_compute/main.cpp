@@ -11,7 +11,7 @@ struct App : BaseApp<App>
     std::shared_ptr<daxa::ComputePipeline> compute_pipeline = pipeline_manager.add_compute_pipeline({
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
         .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
 #endif
         .push_constant_size = sizeof(ComputePush),

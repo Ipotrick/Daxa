@@ -1,9 +1,13 @@
-#include <daxa/daxa.inl>
-#include <shared.inl>
+#include "daxa/daxa.inl"
+#include "shared.inl"
+import "custom file!!";
 
-#include "custom file!!"
+[[vk::push_constant]] ComputePush p;
 
-[[vk::push_constant]] const ComputePush p;
+struct Test
+{
+    GpuInput* value;
+};
 
 #define CENTER float2(-0.694008, -0.324998)
 #define SUBSAMPLES 2
@@ -15,11 +19,18 @@ float3 hsv2rgb(float3 c)
     return c.z * lerp(k.xxx, clamp(p - k.xxx, 0.0, 1.0), c.y);
 }
 
+float test(float t)
+{
+    return t + 1;
+}
+
 float3 mandelbrot_colored(float2 pixel_p)
 {
     float2 uv = pixel_p / float2(p.frame_dim.xy);
     uv = (uv - 0.5) * float2(float(p.frame_dim.x) / float(p.frame_dim.y), 1);
-    float time = daxa_StructuredBuffer(GpuInput, p.input_buffer_id)[0].time;
+    GpuInput gpu_input = *p.ptr;
+    test(p.ptr->time);
+    float time = gpu_input.time;
     float scale = 12.0 / (exp(time) + 0.0001);
     float2 z = uv * scale * 2 + CENTER;
     float2 c = z;
@@ -40,17 +51,16 @@ float3 mandelbrot_colored(float2 pixel_p)
         float sl = l - log2(log2(dot(z, z))) + 4.0;
         sl = pow(sl * 0.01, 1.0);
         col = hsv2rgb(float3(sl, 1, 1));
-#if MY_TOGGLE
-        col = 1 - col;
-#endif
+        if (MY_TOGGLE) {
+            col = 1 - col;
+        }
     }
     return col;
 }
 
-// clang-format off
+[shader("compute")]
 [numthreads(8, 8, 1)]
-void main(uint3 pixel_i : SV_DispatchThreadID)
-// clang-format on
+void entry_mandelbrot(uint3 pixel_i : SV_DispatchThreadID)
 {
     if (pixel_i.x >= p.frame_dim.x || pixel_i.y >= p.frame_dim.y)
         return;
@@ -65,5 +75,6 @@ void main(uint3 pixel_i : SV_DispatchThreadID)
         }
     }
     col *= 1.0 / float(SUBSAMPLES * SUBSAMPLES);
-    daxa_RWTexture2D(float4, p.image_id)[pixel_i.xy] = float4(col, 1);
+
+    RWTexture2D<float>::get(p.image_id)[pixel_i.xy].xyz = col;
 }

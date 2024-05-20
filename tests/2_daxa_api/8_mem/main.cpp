@@ -59,12 +59,13 @@ auto main() -> int
         // Need to specify give every subnmit using the mme util timeline semaphore and its value on submission.
         // This is nessecary for internal tracking.
 
+        auto signals = std::array{
+            std::pair{gpu_timeline, static_cast<uint64_t>(cpu_timeline)},
+            std::pair{tmem.timeline_semaphore(), static_cast<uint64_t>(tmem.timeline_value())},
+        };
         device.submit_commands({
             .command_lists = std::array{cmd.complete_current_commands()},
-            .signal_timeline_semaphores = std::array{
-                std::pair{gpu_timeline, static_cast<uint64_t>(cpu_timeline)},
-                std::pair{tmem.timeline_semaphore(), static_cast<uint64_t>(tmem.timeline_value())},
-            },
+            .signal_timeline_semaphores = signals,
         });
         cpu_timeline += 1;
     }

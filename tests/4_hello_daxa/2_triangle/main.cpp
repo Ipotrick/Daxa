@@ -9,6 +9,8 @@
 // called TaskGraph. We'll explain more below.
 #include <daxa/utils/task_graph.hpp>
 
+#include "shared.inl"
+
 #include <GLFW/glfw3.h>
 #if defined(_WIN32)
 #define GLFW_EXPOSE_NATIVE_WIN32
@@ -52,105 +54,159 @@ struct WindowInfo
     bool swapchain_out_of_date = false;
 };
 
-// We also create a couple files for the shader, the shared.inl and the main.glsl
-#include "shared.inl"
-
-void draw_to_swapchain_task(daxa::Device & device, daxa::CommandRecorder & recorder, std::shared_ptr<daxa::RasterPipeline> & pipeline, daxa::ImageId swapchain_image, daxa::BufferId buffer_id, daxa::u32 width, daxa::u32 height);
-
-struct UploadVertexDataTask
+void upload_vertces_data_task(daxa::TaskGraph & tg, daxa::TaskBufferView vertices)
 {
-    struct Uses
-    {
-        daxa::BufferTransferWrite vertex_buffer{};
-    } uses = {};
-    std::string_view name = "upload vertices";
-    void callback(daxa::TaskInterface ti)
-    {
-        auto & recorder = ti.get_recorder();
-        // This is the data we'll send to the GPU
-        auto data = std::array{
-            MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
-            MyVertex{.position = {+0.5f, +0.5f, 0.0f}, .color = {0.0f, 1.0f, 0.0f}},
-            MyVertex{.position = {+0.0f, -0.5f, 0.0f}, .color = {0.0f, 0.0f, 1.0f}},
-        };
+    tg.add_task({
+        // Listing the attachments for the task.
+        // Task graph needs this list to perform various convenience actions, such as
+        // - dynamically creating image views
+        // - initializing resources
+        // - generating sync
+        // - reordering tasks for better performance 
+        .attachments = {
+            daxa::inl_attachment(daxa::TaskBufferAccess::TRANSFER_WRITE, vertices),
+        },
+        // Callback of task.
+        // This is called once every frame when executing the graph.
+        .task = [=](daxa::TaskInterface ti)
+        {
+            // This is the data we'll send to the GPU
+            auto data = std::array{
+                MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
+                MyVertex{.position = {+0.5f, +0.5f, 0.0f}, .color = {0.0f, 1.0f, 0.0f}},
+                MyVertex{.position = {+0.0f, -0.5f, 0.0f}, .color = {0.0f, 0.0f, 1.0f}},
+            };
 
-        // In order to send the data to the GPU, we can create a
-        // staging buffer, which has host access, so that we can then
-        // issue a command to copy from this buffer to the dedicated
-        // GPU memory.
-        auto staging_buffer_id = ti.get_device().create_buffer({
-            .size = sizeof(data),
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .name = "my staging buffer",
-        });
-        // We can also ask the command list to destroy this temporary buffer,
-        // since we don't care about it living, but we DO need it to survive
-        // through its usage on the GPU (which won't happen until after these
-        // commands are submitted), so we tell the command list to destroy it
-        // in a deferred fashion.
-        recorder.destroy_buffer_deferred(staging_buffer_id);
-        // Instead of doing this manually, we could use one of Daxa's
-        // other useful utilities, "Mem", but it's simple enough for now.
+            // In order to send the data to the GPU, we can create a
+            // staging buffer, which has host access, so that we can then
+            // issue a command to copy from this buffer to the dedicated
+            // GPU memory.
+            auto staging_buffer_id = ti.device.create_buffer({
+                .size = sizeof(data),
+                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .name = "my staging buffer",
+            });
+            // We can also ask the command list to destroy this temporary buffer,
+            // since we don't care about it living, but we DO need it to survive
+            // through its usage on the GPU (which won't happen until after these
+            // commands are submitted), so we tell the command list to destroy it
+            // in a deferred fashion.
+            ti.recorder.destroy_buffer_deferred(staging_buffer_id);
+            // Instead of doing this manually, we could use one of Daxa's
+            // other useful utilities, "Mem", but it's simple enough for now.
 
-        // We then get the memory mapped pointer of the staging buffer, and
-        // write the data directly to it.
-        auto * buffer_ptr = ti.get_device().get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id).value();
-        *buffer_ptr = data;
+            // We then get the memory mapped pointer of the staging buffer, and
+            // write the data directly to it.
+            auto * buffer_ptr = ti.device.get_host_address_as<std::array<MyVertex, 3>>(staging_buffer_id).value();
+            *buffer_ptr = data;
 
-        // And finally, we can just copy the data from the staging buffer
-        // to the actual buffer.
-        recorder.copy_buffer_to_buffer({
-            .src_buffer = staging_buffer_id,
-            .dst_buffer = uses.vertex_buffer.buffer(),
-            .size = sizeof(data),
-        });
-    }
-};
+            // For every attachment, the task graph generates metadata.
+            // The interface lets you query infomation about the attachments via the get function.
+            // The get function returns attachment info for exactly the view that is used in the attachment list.
+            daxa::TaskBufferAttachmentInfo const & buffer_at_info = ti.get(vertices);
 
-struct DrawToSwapchainTask
+            // One of the things the interface gives you is the list of runtime buffer ids:
+            // Importantly these ids should be only retrieved by the task interface!
+            // DO NOT copy the daxa::BufferId for attachments into the task!
+            // The runtime ids can change between every frame.
+            std::span<daxa::BufferId const> runtime_ids = buffer_at_info.ids;
+
+            // We only have one runtime id for the vertices task buffer:
+            daxa::BufferId id = runtime_ids[0];
+
+            // And finally, we can just copy the data from the staging buffer
+            // to the actual buffer.
+            ti.recorder.copy_buffer_to_buffer({
+                .src_buffer = staging_buffer_id,
+                .dst_buffer = id,
+                .size = sizeof(data),
+            });
+
+            // We have shown this above way of uploading just as a showcase of the api.
+            // Daxa provides convenience upload functions for task interfaces:
+            //   allocate(ti, alloc info) -> Optional<Alloc>
+            //   allocate_fill(ti, cpu data reference) -> Optional<Alloc>
+            //   allocate_fill_copy(ti, cpu data reference, task buffer info) -> void
+            // All of these use an automatically managed linear allocator to device local host mapped memory.
+            // These allocations are ultra fast and their lifetime is automatically managed.
+            // The only downside is their size limit which is quite low.
+            // I highly recommend using these alloc functions for small data (~< 1kb).
+        },
+        .name = "upload vertices",
+    });
+}
+
+// We declare a static task in two Parts.
+// The first part is called the task "head".
+// The second part is the actual task class we declare. The task struct inherits from a partial task declared by the head.
+// This split might seems trange, especially that the heads are declared as makros.
+// This has a good reason: we can have task heads within shader/host shared .inl files!
+// The heads automatically declare a struct that is automatically filled by the task graph representing your attachments!
+// This is can be very convenient.
+// In order to make this properly work in c++ we had to wrap it all in preprocessor makros.
+// The head for DrawToSwapchainTask is declared within the shared file.
+
+// Check out the shader/c++ shared code in shared.inl
+
+struct DrawToSwapchainTask : DrawToSwapchainH::Task
 {
-    struct Uses
-    {
-        // We declare a vertex buffer read. Later we assign the task vertex buffer handle to this use.
-        daxa::BufferVertexShaderRead vertex_buffer{};
-        // We declare a color target. We will assign the swapchain task image to this later.
-        // The name `ImageColorAttachment<T_VIEW_TYPE = DEFAULT>` is a typedef for `daxa::TaskImageUse<daxa::TaskImageAccess::COLOR_ATTACHMENT, T_VIEW_TYPE>`.
-        daxa::ImageColorAttachment<> color_target{};
-        // daxa::ImageFragmentShaderStorageWriteOnly<> color_target{};
-    } uses = {};
+    // Must be declared in every task that inherits from a head.
+    AttachmentViews views = {};
     daxa::RasterPipeline * pipeline = {};
-    std::string_view name = "draw task";
     void callback(daxa::TaskInterface ti)
     {
-        auto & recorder = ti.get_recorder();
-        auto const size_x = ti.get_device().info_image(uses.color_target.image()).value().size.x;
-        auto const size_y = ti.get_device().info_image(uses.color_target.image()).value().size.y;
-        auto render_recorder = std::move(recorder).begin_renderpass({
+        {
+            // The task head declares a list of indices, one for each attachment.
+            // They are inside a constant under the heads namespace:
+            [[maybe_unused]] daxa::TaskImageAttachmentIndex image_attach_index = DrawToSwapchainH::AT.color_target;
+        }
+        {
+            // For convenience, each task that derives from the heads base task
+            // can also access it directly without the heads namespace:
+            [[maybe_unused]] daxa::TaskImageAttachmentIndex image_attach_index = AT.color_target;
+        }
+        // Just like for task image/buffer views, 
+        // the ti can give you all the info you need about every attachment via index:
+        daxa::TaskImageAttachmentInfo const & image_attach_info = ti.get(AT.color_target);
+
+        daxa::ImageInfo image_info = ti.device.info_image(image_attach_info.ids[0]).value();
+
+        // When starting a render pass via a rasterization pipeline, daxa "eats" a generic command recorder
+        // and turns it into a RenderCommandRecorder.
+        // Only the RenderCommandRecorder can record raster commands.
+        // The RenderCommandRecorder can only record commands that are valid within a render pass.
+        // This way daxa ensures typesafety for command recording.
+        daxa::RenderCommandRecorder render_recorder = std::move(ti.recorder).begin_renderpass({
             .color_attachments = std::array{
                 daxa::RenderAttachmentInfo{
-                    .image_view = uses.color_target.view(),
+                    .image_view = image_attach_info.view_ids[0],
                     .load_op = daxa::AttachmentLoadOp::CLEAR,
                     .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
                 },
             },
-            .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
+            .render_area = {.width = image_info.size.x, .height = image_info.size.y},
         });
         // Here, we'll bind the pipeline to be used in the draw call below
         render_recorder.set_pipeline(*pipeline);
-        // Set the push constant specifically for the following draw call...
-        render_recorder.push_constant(MyPushConstant{
-            .my_vertex_ptr = ti.get_device().get_device_address(uses.vertex_buffer.buffer()).value(),
-        });
+
+        // Very importantly, task graph packs up our attachment shader data into a byte blob.
+        // We need to pass this blob to our shader somehow.
+        // The typical way to do this is to assign the blob to the push constant.
+        MyPushConstant push = {};
+        ti.assign_attachment_shader_blob(push.attachments.value);
+        render_recorder.push_constant(push);
         // and issue the draw call with the desired number of vertices.
         render_recorder.draw({.vertex_count = 3});
-        recorder = std::move(render_recorder).end_renderpass();
+
+        // VERY IMPORTANT! A renderpass must be ended after finishing!
+        // The ending of a render pass returns back the original command recorder.
+        // Assign it back to the task interfaces command recorder.
+        ti.recorder = std::move(render_recorder).end_renderpass();
     }
 };
 
 auto main() -> int
 {
-    using namespace daxa::task_resource_uses;
-
     auto window_info = WindowInfo{.width = 800, .height = 600};
     glfwInit();
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
@@ -314,9 +370,9 @@ auto main() -> int
 
     // And a task to draw to the screen
     loop_task_graph.add_task(DrawToSwapchainTask{
-        .uses = {
-            .vertex_buffer = task_vertex_buffer.view(),
-            .color_target = task_swapchain_image.view(),
+        .views = std::array{
+            daxa::attachment_view(DrawToSwapchainH::AT.color_target, task_swapchain_image),
+            daxa::attachment_view(DrawToSwapchainH::AT.vertices, task_vertex_buffer),
         },
         .pipeline = pipeline.get(),
     });
@@ -359,21 +415,14 @@ auto main() -> int
         // This task graph uploads the vertex buffer.
         // Task Graph resources automatically link between graphcs at runtime,
         // so you dont need to be concerned about sync of the vertex buffer between the two graphs.
-        auto upload_task_graph = daxa::TaskGraph({
-            .device = device,
-            .name = "upload",
-        });
+        auto upload_task_graph = daxa::TaskGraph({ .device = device, .name = "upload", });
 
         upload_task_graph.use_persistent_buffer(task_vertex_buffer);
 
         // Now we can record our tasks!
 
         // First thing we'll do is record the upload task.
-        upload_task_graph.add_task(UploadVertexDataTask{
-            .uses = {
-                .vertex_buffer = task_vertex_buffer.view(),
-            },
-        });
+        upload_vertces_data_task(upload_task_graph, task_vertex_buffer);
 
         upload_task_graph.submit({});
         upload_task_graph.complete({});

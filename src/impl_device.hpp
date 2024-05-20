@@ -29,6 +29,9 @@ struct daxa_ImplDevice final : public ImplHandle
     VkDevice vk_device = {};
     VmaAllocator vma_allocator = {};
 
+    // Dynamic State:
+    PFN_vkCmdSetRasterizationSamplesEXT vkCmdSetRasterizationSamplesEXT = {};
+
     // Debug utils:
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
     PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
@@ -52,6 +55,10 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkCmdWriteAccelerationStructuresPropertiesKHR vkCmdWriteAccelerationStructuresPropertiesKHR = {};
     PFN_vkCmdBuildAccelerationStructuresKHR vkCmdBuildAccelerationStructuresKHR = {};
     PFN_vkGetAccelerationStructureDeviceAddressKHR vkGetAccelerationStructureDeviceAddressKHR = {};
+    PFN_vkCreateRayTracingPipelinesKHR vkCreateRayTracingPipelinesKHR = {};
+    PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR = {};
+    PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR = {};
+    PFN_vkCmdTraceRaysIndirectKHR vkCmdTraceRaysIndirectKHR = {};
 
     VkBuffer buffer_device_address_buffer = {};
     u64 * buffer_device_address_buffer_host_ptr = {};

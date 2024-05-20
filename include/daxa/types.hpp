@@ -80,6 +80,10 @@ namespace daxa
             return this->object != nullptr;
         }
 
+        auto get() -> HANDLE_T { return object; }
+
+        auto get() const -> HANDLE_T { return object; }
+
       protected:
         HANDLE_T object = {};
 
@@ -93,6 +97,9 @@ namespace daxa
         }
     };
 
+    struct NoneT { };
+    static inline constexpr NoneT None = NoneT{};
+
     template <typename T>
     struct Optional
     {
@@ -104,11 +111,18 @@ namespace daxa
         Optional() : m_value{}, m_has_value{false} {}
         Optional(Optional<T> const &) = default;
         Optional(T const & v) : m_value{v}, m_has_value{true} {}
+        Optional(NoneT const &) : m_value{}, m_has_value{} {}
         Optional<T> & operator=(Optional<T> const &) = default;
         Optional<T> & operator=(T const & v)
         {
             this->m_value = v;
             this->m_has_value = true;
+            return *this;
+        }
+        Optional<T> & operator=(NoneT const &)
+        {
+            this->m_value = {};
+            this->m_has_value = {};
             return *this;
         }
 
@@ -239,8 +253,64 @@ namespace daxa
         }
     };
 
+    template <typename T>
+    struct Span
+    {
+        T * m_data = {};
+        usize m_size = {};
+
+        Span() = default;
+        Span(T const * in_data, usize in_size) : m_data{in_data}, m_size{in_size} {}
+        template <typename T2, usize IN_SIZE>
+            requires std::same_as<T2, std::remove_cv_t<T>>
+        Span(std::array<T2, IN_SIZE> const & in) : m_data{in.data()}, m_size{in.size()} {}
+        [[nodiscard]] auto at(usize i) -> T &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(i < m_size, "INDEX OUT OF RANGE");
+            return this->m_data[i];
+        }
+        [[nodiscard]] auto at(usize i) const -> T const &
+        {
+            return this->m_data.at(i);
+        }
+        [[nodiscard]] auto operator[](usize i) -> T &
+        {
+            return this->m_data[i];
+        }
+        [[nodiscard]] auto operator[](usize i) const -> T const &
+        {
+            return this->m_data[i];
+        }
+        [[nodiscard]] auto size() const -> usize
+        {
+            return this->m_size;
+        }
+        [[nodiscard]] auto data() const -> T const *
+        {
+            return this->m_data.data();
+        }
+        [[nodiscard]] auto data() -> T *
+        {
+            return this->m_data.data();
+        }
+        [[nodiscard]] auto empty() const -> bool
+        {
+            return this->m_size == 0;
+        }
+        [[nodiscard]] auto back() -> T &
+        {
+            DAXA_DBG_ASSERT_TRUE_M(m_size > 0, "EMPTY");
+            return this->m_data[this->m_size - 1];
+        }
+        [[nodiscard]] auto span() const -> std::span<T const>
+        {
+            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+        }
+    };
+
     struct SmallString final : public FixedList<char, DAXA_SMALL_STRING_CAPACITY>
     {
+        using FixedList::FixedList;
         constexpr SmallString(char const * c_str)
         {
             while (c_str != nullptr && *c_str != 0)
@@ -1113,17 +1183,17 @@ namespace daxa
     struct Flags final
     {
         typename Properties::Data data;
-        [[nodiscard]] inline constexpr auto operator|=(Flags const & other) -> Flags &
+        inline constexpr auto operator|=(Flags const & other) -> Flags &
         {
             data |= other.data;
             return *this;
         }
-        [[nodiscard]] inline constexpr auto operator&=(Flags const & other) -> Flags &
+        inline constexpr auto operator&=(Flags const & other) -> Flags &
         {
             data &= other.data;
             return *this;
         }
-        [[nodiscard]] inline constexpr auto operator^=(Flags const & other) -> Flags &
+        inline constexpr auto operator^=(Flags const & other) -> Flags &
         {
             data ^= other.data;
             return *this;
@@ -1146,7 +1216,8 @@ namespace daxa
         }
         [[nodiscard]] inline constexpr auto operator<=>(Flags const & other) const = default;
 
-        operator bool() const {
+        operator bool() const
+        {
             return data != 0;
         }
     };
@@ -1413,6 +1484,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags TASK_SHADER = {0x00080000ull};
         static inline constexpr PipelineStageFlags MESH_SHADER = {0x00100000ull};
         static inline constexpr PipelineStageFlags ACCELERATION_STRUCTURE_BUILD = {0x02000000ull};
+        static inline constexpr PipelineStageFlags RAY_TRACING_SHADER = {0x00200000ull};
     };
 
     [[nodiscard]] auto to_string(PipelineStageFlags flags) -> std::string;
@@ -1425,10 +1497,10 @@ namespace daxa
         friend auto operator<=>(Access const &, Access const &) = default;
     };
 
-    DAXA_EXPORT_CXX [[nodiscard]] auto operator|(Access const & a, Access const & b) -> Access;
-    DAXA_EXPORT_CXX [[nodiscard]] auto operator&(Access const & a, Access const & b) -> Access;
+    [[nodiscard]] DAXA_EXPORT_CXX auto operator|(Access const & a, Access const & b) -> Access;
+    [[nodiscard]] DAXA_EXPORT_CXX auto operator&(Access const & a, Access const & b) -> Access;
 
-    DAXA_EXPORT_CXX [[nodiscard]] auto to_string(Access access) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Access access) -> std::string;
 
     namespace AccessConsts
     {
@@ -1459,6 +1531,7 @@ namespace daxa
         static inline constexpr Access TASK_SHADER_READ = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access MESH_SHADER_READ = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_READ = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access RAY_TRACING_SHADER_READ = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::READ};
 
         static inline constexpr Access TOP_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access DRAW_INDIRECT_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::WRITE};
@@ -1485,6 +1558,7 @@ namespace daxa
         static inline constexpr Access TASK_SHADER_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access MESH_SHADER_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_WRITE = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access RAY_TRACING_SHADER_WRITE = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::WRITE};
 
         static inline constexpr Access TOP_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access DRAW_INDIRECT_READ_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ_WRITE};
@@ -1511,6 +1585,7 @@ namespace daxa
         static inline constexpr Access TASK_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::TASK_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access MESH_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::MESH_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access ACCELERATION_STRUCTURE_BUILD_READ_WRITE = {.stages = PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access RAY_TRACING_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
     } // namespace AccessConsts
 
     enum struct SamplerAddressMode
@@ -1731,7 +1806,7 @@ namespace daxa
     struct TimelineQueryPoolInfo
     {
         u32 query_count = {};
-        SmallString name = "";
+        SmallString name = {};
     };
 
     struct DAXA_EXPORT_CXX TimelineQueryPool : ManagedPtr<TimelineQueryPool, daxa_TimelineQueryPool>
@@ -1758,5 +1833,21 @@ namespace daxa
         uint32 = 1,
         uint8 = 1000265000,
         none = 1000165000,
+    };
+
+    // TODO: distinguish between GENERAL(raygen, miss & callable) cause shader handles must be set in order (raygen, miss, hit, callable)?
+    enum struct ShaderGroup
+    {
+        GENERAL = 0,
+        TRIANGLES_HIT_GROUP = 1,
+        PROCEDURAL_HIT_GROUP = 2,
+        MAX_ENUM = 0x7fffffff,
+    };
+
+    enum struct InvocationReorderMode
+    {
+        NO_REORDER = 0,
+        ALLOW_REORDER = 1,
+        MAX_ENUM = 0x7fffffff,
     };
 } // namespace daxa

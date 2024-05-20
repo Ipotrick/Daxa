@@ -2,10 +2,10 @@
 
 namespace daxa
 {
-    void PhysicalDeviceFeatureTable::initialize(daxa_DeviceInfo info)
+    void PhysicalDeviceFeatureTable::initialize(daxa_DeviceInfo info, daxa_DeviceProperties const & props)
     {
         this->features = {
-            .robustBufferAccess = VK_FALSE,
+            .robustBufferAccess = (info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u ? VK_TRUE : VK_FALSE,
             .fullDrawIndexUint32 = VK_FALSE,
             .imageCubeArray = VK_TRUE,
             .independentBlend = VK_TRUE,
@@ -66,6 +66,13 @@ namespace daxa
             .inheritedQueries = VK_FALSE,
         };
         this->chain = nullptr;
+        this->variable_pointers = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES,
+            .pNext = chain,
+            .variablePointersStorageBuffer = VK_TRUE, // SLANG WANTS THIS
+            .variablePointers = VK_TRUE,              // SLANG WANTS THIS
+        };
+        this->chain = r_cast<void *>(&this->variable_pointers);
         this->buffer_device_address = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_FEATURES,
             .pNext = chain,
@@ -150,16 +157,53 @@ namespace daxa
             .timelineSemaphore = VK_TRUE,
         };
         this->chain = r_cast<void *>(&this->timeline_semaphore);
+        this->subgroup_size_control = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES,
+            .pNext = this->chain,
+            .subgroupSizeControl = VK_TRUE,
+            .computeFullSubgroups = VK_TRUE,
+        };
+        this->chain = r_cast<void *>(&this->subgroup_size_control);
         this->scalar_layout = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
             .pNext = this->chain,
             .scalarBlockLayout = VK_TRUE,
         };
         this->chain = r_cast<void *>(&this->scalar_layout);
-        auto vk_memory_model = VkPhysicalDeviceVulkanMemoryModelFeatures{};
-        if (info.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL)
+
+        if ((info.flags & DAXA_DEVICE_FLAG_DYNAMIC_STATE_3) != 0u)
         {
-            vk_memory_model = {
+            this->dynamic_state3 = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT,
+                .pNext = chain,
+                .extendedDynamicState3RasterizationSamples = VK_TRUE,
+            };
+            this->chain = r_cast<void *>(&this->dynamic_state3);
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_SHADER_FLOAT16) != 0u || (info.flags & DAXA_DEVICE_FLAG_SHADER_INT8) != 0u)
+        {
+            this->shader_float16_int8 = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_FLOAT16_INT8_FEATURES,
+                .pNext = this->chain,
+                .shaderFloat16 = (info.flags & DAXA_DEVICE_FLAG_SHADER_FLOAT16) != 0u ? VK_TRUE : VK_FALSE,
+                .shaderInt8 = (info.flags & DAXA_DEVICE_FLAG_SHADER_INT8) != 0u ? VK_TRUE : VK_FALSE,
+            };
+            this->chain = r_cast<void *>(&this->shader_float16_int8);
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u || (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u)
+        {
+            this->robustness2 = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ROBUSTNESS_2_FEATURES_EXT,
+                .pNext = this->chain,
+                .robustBufferAccess2 = (info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u ? VK_TRUE : VK_FALSE,
+                .robustImageAccess2 = (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u ? VK_TRUE : VK_FALSE,
+                .nullDescriptor = VK_FALSE,
+            };
+            this->chain = r_cast<void *>(&this->robustness2);
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL) != 0u)
+        {
+            this->memory_model = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VULKAN_MEMORY_MODEL_FEATURES,
                 .pNext = this->chain,
 #if !defined(__APPLE__)
@@ -168,9 +212,9 @@ namespace daxa
                 .vulkanMemoryModelAvailabilityVisibilityChains = VK_FALSE, // Low general gpu support.
 #endif
             };
-            this->chain = r_cast<void *>(&vk_memory_model);
+            this->chain = r_cast<void *>(&this->memory_model);
         }
-        if (info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64)
+        if ((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC64) != 0u)
         {
             this->shader_atomic64 = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_INT64_FEATURES,
@@ -180,7 +224,7 @@ namespace daxa
             };
             this->chain = r_cast<void *>(&this->shader_atomic64);
         }
-        if (info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64)
+        if ((info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64) != 0u)
         {
             this->image_atomic64 = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_IMAGE_ATOMIC_INT64_FEATURES_EXT,
@@ -190,7 +234,7 @@ namespace daxa
             };
             this->chain = r_cast<void *>(&this->image_atomic64);
         }
-        if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+        if ((info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0u)
         {
             this->mesh_shader = {
                 .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_FEATURES_EXT,
@@ -203,7 +247,7 @@ namespace daxa
             };
             this->chain = r_cast<void *>(&this->mesh_shader.value());
         }
-        if (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING)
+        if ((info.flags & DAXA_DEVICE_FLAG_RAY_TRACING) != 0u)
         {
             /// NOTE:
             /// These settings have been derived by the minimum supported features of gpu architectures:
@@ -236,10 +280,47 @@ namespace daxa
                 .rayQuery = VK_TRUE,
             };
             this->chain = r_cast<void *>(&this->ray_query.value());
+            // TODO: Maybe this should be enabled separately to raytracing:
+            this->ray_tracing_position_fetch = VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR{
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_POSITION_FETCH_FEATURES_KHR,
+                .pNext = this->chain,
+                .rayTracingPositionFetch = VK_TRUE,
+            };
+            this->chain = r_cast<void *>(&this->ray_tracing_position_fetch.value());
+            if (props.ray_tracing_invocation_reorder_properties.has_value)
+            {
+                ray_tracing_invocation_reorder = VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV{
+                    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_FEATURES_NV,
+                    .pNext = this->chain,
+                    .rayTracingInvocationReorder = VK_TRUE,
+                };
+                this->chain = r_cast<void *>(&this->ray_tracing_invocation_reorder.value());
+            }
+        }
+        if((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT) != 0u)
+        {
+            // NOTE: This is a very new extension and might not be supported by all hardware.
+            this->shader_atomic_float = {
+                .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_ATOMIC_FLOAT_FEATURES_EXT,
+                .pNext = this->chain,
+                .shaderBufferFloat32Atomics = VK_TRUE,
+                .shaderBufferFloat32AtomicAdd = VK_TRUE,
+                .shaderBufferFloat64Atomics = VK_FALSE, // No 64 bit support in daxa.
+                .shaderBufferFloat64AtomicAdd = VK_FALSE, // No 64 bit support in daxa.
+                .shaderSharedFloat32Atomics = VK_TRUE,
+                .shaderSharedFloat32AtomicAdd = VK_TRUE,
+                .shaderSharedFloat64Atomics = VK_FALSE, // No 64 bit support in daxa.
+                .shaderSharedFloat64AtomicAdd = VK_FALSE, // No 64 bit support in daxa.
+                .shaderImageFloat32Atomics = VK_TRUE,
+                .shaderImageFloat32AtomicAdd = VK_TRUE,
+                .sparseImageFloat32Atomics = VK_FALSE, // No sparse support in daxa.
+                .sparseImageFloat32AtomicAdd = VK_FALSE, // No sparse support in daxa.
+            };
+            this->chain = r_cast<void *>(&this->shader_atomic_float);
         }
     }
 
-    void PhysicalDeviceExtensionList::initialize(daxa_DeviceInfo info)
+    void PhysicalDeviceExtensionList::initialize(daxa_DeviceInfo info, daxa_DeviceProperties const & props)
     {
         // NOTE(pahrens): Make sure to never exceed EXTENSION_LIST_MAX!
         this->size = 0;
@@ -253,15 +334,23 @@ namespace daxa
         this->data[size++] = {"VK_KHR_portability_subset"};
 #endif
 
-        if (info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION)
+        if ((info.flags & DAXA_DEVICE_FLAG_DYNAMIC_STATE_3) != 0u)
+        {
+            this->data[size++] = {VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME};
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION) != 0u)
         {
             this->data[size++] = {VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME};
         }
-        if (info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT)
+        if ((info.flags & DAXA_DEVICE_FLAG_IMAGE_ATOMIC64) != 0u)
+        {
+            this->data[size++] = {VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME};
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_MESH_SHADER_BIT) != 0u)
         {
             this->data[size++] = {VK_EXT_MESH_SHADER_EXTENSION_NAME};
         }
-        if (info.flags & DAXA_DEVICE_FLAG_RAY_TRACING)
+        if ((info.flags & DAXA_DEVICE_FLAG_RAY_TRACING) != 0u)
         {
             this->data[size++] = {VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME};
             this->data[size++] = {VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME};
@@ -270,6 +359,20 @@ namespace daxa
             // Maybe this should be enabled separately to raytracing:
             this->data[size++] = {VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME};
             this->data[size++] = {VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME};
+            // TODO: different flags for different raytracing features.
+            this->data[size++] = {VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME};
+            if (props.ray_tracing_invocation_reorder_properties.has_value)
+            {
+                this->data[size++] = {VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME};
+            }
+        }
+        if ((info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u || (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u)
+        {
+            this->data[size++] = {VK_EXT_ROBUSTNESS_2_EXTENSION_NAME};
+        }
+        if((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT) != 0u)
+        {
+            this->data[size++] = {VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME};
         }
     }
 } // namespace daxa

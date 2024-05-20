@@ -8,6 +8,13 @@
 
 typedef struct
 {
+    void const * data;
+    uint64_t size;
+    uint32_t offset;
+} daxa_PushConstantInfo;
+
+typedef struct
+{
     daxa_SmallString name;
 } daxa_CommandRecorderInfo;
 
@@ -114,12 +121,10 @@ static daxa_ImageCopyInfo const DAXA_DEFAULT_IMAGE_COPY_INFO = {
     .extent = DAXA_ZERO_INIT,
 };
 
-// Make sure this stays abi compatible with daxa::ClearValue
-_DAXA_DECL_VARIANT(VkClearValue)
-
 typedef struct
 {
     daxa_ImageLayout image_layout;
+    // Make sure this stays abi compatible with daxa::ClearValue
     daxa_Variant(VkClearValue) clear_value;
     daxa_ImageId image;
     daxa_ImageMipArraySlice dst_slice;
@@ -144,14 +149,26 @@ static daxa_BufferClearInfo const DAXA_DEFAULT_BUFFER_CLEAR_INFO = DAXA_ZERO_INI
 
 typedef struct
 {
+    VkResolveModeFlagBits mode;
+    daxa_ImageViewId image;
+    daxa_ImageLayout layout;
+} daxa_AttachmentResolveInfo;
+
+static daxa_AttachmentResolveInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_RESOLVE_INFO = {
+    .mode = VK_RESOLVE_MODE_AVERAGE_BIT,
+    .image = {},
+    .layout = DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+};
+
+typedef struct
+{
     daxa_ImageViewId image_view;
     daxa_ImageLayout layout;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
     daxa_Variant(VkClearValue) clear_value;
+    daxa_Optional(daxa_AttachmentResolveInfo) resolve;
 } daxa_RenderAttachmentInfo;
-_DAXA_DECL_OPTIONAL(daxa_RenderAttachmentInfo)
-_DAXA_DECL_FIXED_LIST(daxa_RenderAttachmentInfo, 8)
 
 static daxa_RenderAttachmentInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .image_view = DAXA_ZERO_INIT,
@@ -159,6 +176,7 @@ static daxa_RenderAttachmentInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     .store_op = VK_ATTACHMENT_STORE_OP_STORE,
     .clear_value = DAXA_ZERO_INIT,
+    .resolve = {.has_value = 0},
 };
 
 typedef struct
@@ -170,6 +188,30 @@ typedef struct
 } daxa_RenderPassBeginInfo;
 
 static daxa_RenderPassBeginInfo const DAXA_DEFAULT_RENDERPASS_BEGIN_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
+    uint32_t width;
+    uint32_t height;
+    uint32_t depth;
+    uint32_t raygen_handle_offset;
+    uint32_t miss_handle_offset;
+    uint32_t hit_handle_offset;
+    uint32_t callable_handle_offset;
+} daxa_TraceRaysInfo;
+
+static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = {0, 0, 0, 0, 0, 0, 0};
+
+typedef struct
+{
+    uint64_t indirect_device_address;
+    uint32_t raygen_handle_offset;
+    uint32_t miss_handle_offset;
+    uint32_t hit_handle_offset;
+    uint32_t callable_handle_offset;
+} daxa_TraceRaysIndirectInfo;
+
+static daxa_TraceRaysIndirectInfo const DAXA_DEFAULT_TRACE_RAYS_INDIRECT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -363,6 +405,8 @@ typedef struct
 static daxa_BuildAccelerationStucturesInfo const DAXA_DEFAULT_BUILD_ACCELERATION_STRUCTURES_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_set_rasterization_samples(daxa_CommandRecorder cmd_enc, VkSampleCountFlagBits samples);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder cmd_enc, daxa_BufferCopyInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_copy_buffer_to_image(daxa_CommandRecorder cmd_enc, daxa_BufferImageCopyInfo const * info);
@@ -399,13 +443,16 @@ daxa_cmd_wait_event(daxa_CommandRecorder cmd_enc, daxa_EventWaitInfo const * inf
 DAXA_EXPORT void
 daxa_cmd_reset_event(daxa_CommandRecorder cmd_enc, daxa_ResetEventInfo const * info);
 
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, daxa_PushConstantInfo const * info);
 DAXA_EXPORT void
-daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, void const * data, uint32_t size);
+daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder cmd_enc, daxa_RayTracingPipeline pipeline);
 DAXA_EXPORT void
-daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline const * pipeline);
+daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline pipeline);
 DAXA_EXPORT void
 daxa_cmd_set_raster_pipeline(daxa_CommandRecorder cmd_enc, daxa_RasterPipeline pipeline);
-DAXA_EXPORT void
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_dispatch(daxa_CommandRecorder cmd_enc, daxa_DispatchInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_dispatch_indirect(daxa_CommandRecorder cmd_enc, daxa_DispatchIndirectInfo const * info);
@@ -431,12 +478,18 @@ daxa_cmd_destroy_image_view_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageVie
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId id);
 
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_trace_rays(daxa_CommandRecorder cmd_enc, daxa_TraceRaysInfo const * info);
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_cmd_trace_rays_indirect(daxa_CommandRecorder cmd_enc, daxa_TraceRaysIndirectInfo const * info);
+
 /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
 /// @param info parameters.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_begin_renderpass(daxa_CommandRecorder cmd_enc, daxa_RenderPassBeginInfo const * info);
-/// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
+/// @brief  Ends a renderpass scope akin to the dynamic rendering feature in vulkan.
 ///         Between the begin and end renderpass commands, the renderpass persists and draw-calls can be recorded.
 DAXA_EXPORT void
 daxa_cmd_end_renderpass(daxa_CommandRecorder cmd_enc);

@@ -1,17 +1,17 @@
 #pragma once
 
-#include <daxa/daxa.inl>
+#include "daxa/daxa.inl"
 
 struct GpuInput
 {
-    daxa_f32 time;
-    daxa_f32 delta_time;
+    daxa::f32 time;
+    daxa::f32 delta_time;
 };
-DAXA_DECL_BUFFER_PTR(GpuInput)
 
 struct ComputePush
 {
-    daxa_ImageViewId image_id;
-    daxa_BufferId input_buffer_id;
+    daxa::ImageViewId image_id;
+    daxa::BufferId input_buffer_id;
+    daxa_BufferPtr(GpuInput) ptr;
     daxa_u32vec2 frame_dim;
 };

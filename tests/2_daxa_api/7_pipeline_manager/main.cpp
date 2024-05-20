@@ -5,6 +5,7 @@ using namespace daxa::types;
 
 #include <iostream>
 #include <thread>
+#include <chrono>
 
 #define APPNAME "Daxa API Sample Pipeline Compiler"
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
@@ -93,6 +94,9 @@ namespace tests
     {
         daxa::PipelineManager pipeline_manager_ = daxa::PipelineManager({.device = device});
 
+        using Clock = std::chrono::high_resolution_clock;
+        auto t0 = Clock::now();
+
         for (u32 i = 0; i < 1000; ++i)
         {
             daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -103,6 +107,7 @@ namespace tests
                         DAXA_SAMPLE_PATH "/shaders",
                         "tests/0_common/shaders",
                     },
+                    .spirv_cache_folder = "my/shader/cache/folder",
                     .language = daxa::ShaderLanguage::GLSL,
                 },
                 .name = APPNAME_PREFIX("pipeline_manager"),
@@ -122,6 +127,9 @@ namespace tests
 
             std::shared_ptr<daxa::ComputePipeline> const compute_pipeline = compilation_result.value();
         }
+
+        auto t1 = Clock::now();
+        std::cout << "Duration: " << std::chrono::duration<float, std::milli>(t1 - t0).count() << "ms" << std::endl;
 
         return 0;
     }

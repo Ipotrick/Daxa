@@ -34,7 +34,7 @@ namespace daxa
         std::swap(this->claimed_size, other.claimed_size);
     }
 
-    TransferMemoryPool & TransferMemoryPool::operator=(TransferMemoryPool && other)
+    auto TransferMemoryPool::operator=(TransferMemoryPool && other) -> TransferMemoryPool &
     {
         if (!this->m_buffer.is_empty())
         {
@@ -135,6 +135,11 @@ namespace daxa
         return this->current_timeline_value;
     }
 
+    auto TransferMemoryPool::inc_timeline_value() -> usize
+    {
+        return ++this->current_timeline_value;
+    }
+
     void TransferMemoryPool::reclaim_unused_memory()
     {
         auto const current_gpu_timeline_value = this->gpu_timeline.value();
@@ -146,7 +151,7 @@ namespace daxa
         }
     }
 
-    auto TransferMemoryPool::timeline_semaphore() -> TimelineSemaphore
+    auto TransferMemoryPool::timeline_semaphore() -> TimelineSemaphore const &
     {
         return this->gpu_timeline;
     }

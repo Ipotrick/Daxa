@@ -7,9 +7,58 @@ typedef struct
 {
     uint32_t const * byte_code;
     uint32_t byte_code_size;
+    VkPipelineShaderStageCreateFlags create_flags;
+    daxa_Optional(uint32_t) required_subgroup_size;
     daxa_SmallString entry_point;
 } daxa_ShaderInfo;
-_DAXA_DECL_OPTIONAL(daxa_ShaderInfo)
+
+// RAY TRACING PIPELINE
+typedef struct
+{
+    daxa_ShaderInfo info;
+} daxa_RayTracingShaderInfo;
+
+typedef struct
+{
+    // TODO: daxa types?
+    VkRayTracingShaderGroupTypeKHR type;
+    uint32_t general_shader_index;
+    uint32_t closest_hit_shader_index;
+    uint32_t any_hit_shader_index;
+    uint32_t intersection_shader_index;
+} daxa_RayTracingShaderGroupInfo;
+
+static daxa_RayTracingShaderGroupInfo const DAXA_DEFAULT_RAY_TRACING_SHADER_GROUP_INFO = {
+    .type = DAXA_ZERO_INIT,
+    .general_shader_index = VK_SHADER_UNUSED_KHR,
+    .closest_hit_shader_index = VK_SHADER_UNUSED_KHR,
+    .any_hit_shader_index = VK_SHADER_UNUSED_KHR,
+    .intersection_shader_index = VK_SHADER_UNUSED_KHR,
+};
+
+typedef struct
+{
+    daxa_SpanToConst(daxa_RayTracingShaderInfo) ray_gen_stages;
+    daxa_SpanToConst(daxa_RayTracingShaderInfo) miss_stages;
+    daxa_SpanToConst(daxa_RayTracingShaderInfo) callable_stages;
+    daxa_SpanToConst(daxa_RayTracingShaderInfo) intersection_stages;
+    daxa_SpanToConst(daxa_RayTracingShaderInfo) closest_hit_stages;
+    daxa_SpanToConst(daxa_RayTracingShaderInfo) any_hit_stages;
+    daxa_SpanToConst(daxa_RayTracingShaderGroupInfo) shader_groups;
+    uint32_t max_ray_recursion_depth;
+    uint32_t push_constant_size;
+    daxa_SmallString name;
+} daxa_RayTracingPipelineInfo;
+
+DAXA_EXPORT daxa_RayTracingPipelineInfo const *
+daxa_ray_tracing_pipeline_info(daxa_RayTracingPipeline ray_tracing_pipeline);
+
+DAXA_EXPORT uint64_t
+daxa_ray_tracing_pipeline_inc_refcnt(daxa_RayTracingPipeline pipeline);
+DAXA_EXPORT uint64_t
+daxa_ray_tracing_pipeline_dec_refcnt(daxa_RayTracingPipeline pipeline);
+
+// COMPUTE PIPELINE
 
 typedef struct
 {
@@ -26,6 +75,8 @@ daxa_compute_pipeline_inc_refcnt(daxa_ComputePipeline pipeline);
 DAXA_EXPORT uint64_t
 daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline pipeline);
 
+// RASTER PIPELINE
+
 typedef struct
 {
     VkFormat depth_attachment_format;
@@ -34,9 +85,8 @@ typedef struct
     float min_depth_bounds;
     float max_depth_bounds;
 } daxa_DepthTestInfo;
-_DAXA_DECL_OPTIONAL(daxa_DepthTestInfo)
 
-static const daxa_DepthTestInfo DAXA_DEFAULT_DEPTH_TEST_INFO = {
+static daxa_DepthTestInfo const DAXA_DEFAULT_DEPTH_TEST_INFO = {
     .depth_attachment_format = VK_FORMAT_UNDEFINED,
     .enable_depth_write = 0,
     .depth_test_compare_op = VK_COMPARE_OP_LESS_OR_EQUAL,
@@ -49,7 +99,6 @@ typedef struct
     VkConservativeRasterizationModeEXT mode;
     float size;
 } daxa_ConservativeRasterInfo;
-_DAXA_DECL_OPTIONAL(daxa_ConservativeRasterInfo)
 
 typedef struct
 {
@@ -66,9 +115,10 @@ typedef struct
     float depth_bias_slope_factor;
     float line_width;
     daxa_Optional(daxa_ConservativeRasterInfo) conservative_raster_info;
+    daxa_Optional(VkSampleCountFlagBits) static_state_sample_count;
 } daxa_RasterizerInfo;
 
-static const daxa_RasterizerInfo DAXA_DEFAULT_RASTERIZATION_INFO = {
+static daxa_RasterizerInfo const DAXA_DEFAULT_RASTERIZATION_INFO = {
     .primitive_topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST,
     .primitive_restart_enable = 0,
     .polygon_mode = VK_POLYGON_MODE_FILL,
@@ -82,6 +132,7 @@ static const daxa_RasterizerInfo DAXA_DEFAULT_RASTERIZATION_INFO = {
     .depth_bias_slope_factor = 0.0f,
     .line_width = 1.0f,
     .conservative_raster_info = {.has_value = 0},
+    .static_state_sample_count = {.value = VK_SAMPLE_COUNT_1_BIT, .has_value = 1},
 };
 
 // should be moved in c++ from types to pipeline.hpp.
@@ -95,9 +146,8 @@ typedef struct
     VkBlendOp alpha_blend_op;
     VkColorComponentFlags color_write_mask;
 } daxa_BlendInfo;
-_DAXA_DECL_OPTIONAL(daxa_BlendInfo)
 
-static const daxa_BlendInfo DAXA_DEFAULT_BLEND_INFO = {
+static daxa_BlendInfo const DAXA_DEFAULT_BLEND_INFO = {
     .src_color_blend_factor = VK_BLEND_FACTOR_ONE,
     .dst_color_blend_factor = VK_BLEND_FACTOR_ZERO,
     .color_blend_op = VK_BLEND_OP_ADD,
@@ -112,14 +162,12 @@ typedef struct
     VkFormat format;
     daxa_Optional(daxa_BlendInfo) blend;
 } daxa_RenderAttachment;
-_DAXA_DECL_FIXED_LIST(daxa_RenderAttachment, 8)
 
 typedef struct
 {
     uint32_t control_points;
     VkTessellationDomainOrigin origin;
 } daxa_TesselationInfo;
-_DAXA_DECL_OPTIONAL(daxa_TesselationInfo)
 
 typedef struct
 {

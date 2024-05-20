@@ -1,3 +1,5 @@
+#include <daxa/daxa.inl>
+
 #include <shared.inl>
 
 DAXA_DECL_PUSH_CONSTANT(MyPushConstant, push)
@@ -7,7 +9,11 @@ DAXA_DECL_PUSH_CONSTANT(MyPushConstant, push)
 layout(location = 0) out daxa_f32vec3 v_col;
 void main()
 {
-    MyVertex vert = deref(push.my_vertex_ptr[gl_VertexIndex]);
+    // The attachment shader blob contains the declared represented type for each attachment.
+    // In the case of the vertices its a daxa_BufferPtr(MyVertex):
+    daxa_BufferPtr(MyVertex) vertices_ptr = push.attachments.vertices;
+    // Daxa provides convenience functions to deref the i'th element for each buffer ptr:
+    MyVertex vert = deref_i(push.attachments.vertices, gl_VertexIndex);
     gl_Position = daxa_f32vec4(vert.position, 1);
     v_col = vert.color;
 }
@@ -20,7 +26,6 @@ layout(location = 0) out daxa_f32vec4 color;
 void main()
 {
     color = daxa_f32vec4(v_col, 1);
-    // imageStore(daxa_image2D(push.my_output_image), daxa_i32vec2(gl_FragCoord.xy), daxa_f32vec4(v_col, 1));
 }
 
 #endif

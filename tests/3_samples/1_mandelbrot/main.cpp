@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define DAXA_SHADERLANG DAXA_SHADERLANG_SLANG
 #define APPNAME "Daxa Sample: Mandelbrot"
 #include <0_common/base_app.hpp>
 
@@ -14,20 +14,28 @@ struct App : BaseApp<App>
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 1
                 )",
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+                .contents = R"(static const bool MY_TOGGLE = true;)",
+#endif
             });
         }
         else
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 0
                 )",
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+                .contents = R"(static const bool MY_TOGGLE = false;)",
+#endif
             });
         }
     }
@@ -38,8 +46,13 @@ struct App : BaseApp<App>
         return pipeline_manager.add_compute_pipeline({
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
             .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_HLSL
-            .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+            .shader_info = {
+                .source = daxa::ShaderFile{"compute.slang"}, 
+                .compile_options = {
+                    .entry_point = "entry_mandelbrot",
+                },
+            },
 #endif
             .push_constant_size = sizeof(ComputePush),
             .name = "compute_pipeline",
@@ -83,6 +96,7 @@ struct App : BaseApp<App>
     {
         // ImGui_ImplGlfw_NewFrame();
         // ImGui::NewFrame();
+        // ImGui::ShowDemoWindow();
         // ImGui::Begin("Settings");
 
         // ImGui::Image(
@@ -152,27 +166,23 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskGraph & new_task_graph)
     {
-        using namespace daxa::task_resource_uses;
-
         new_task_graph.use_persistent_image(task_render_image);
         new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
 
-        using namespace daxa::task_resource_uses;
-        imgui_task_uses.push_back(ImageFragmentShaderSampled<>{task_render_image});
+        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, task_render_image));
 
         new_task_graph.add_task({
-            .uses = {
-                BufferHostTransferWrite{task_gpu_input_buffer},
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::HOST_TRANSFER_WRITE, task_gpu_input_buffer),
             },
-            .task = [this](daxa::TaskInterface runtime)
+            .task = [this](daxa::TaskInterface ti)
             {
-                auto& recorder = runtime.get_recorder();
-                recorder.reset_timestamps({
+                ti.recorder.reset_timestamps({
                     .query_pool = timeline_query_pool,
                     .start_index = 0,
                     .count = timeline_query_pool.info().query_count,
                 });
-                recorder.write_timestamp({
+                ti.recorder.write_timestamp({
                     .query_pool = timeline_query_pool,
                     .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
                     .query_index = 0,
@@ -182,10 +192,10 @@ struct App : BaseApp<App>
                     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("staging_gpu_input_buffer"),
                 });
-                recorder.destroy_buffer_deferred(staging_gpu_input_buffer);
+                ti.recorder.destroy_buffer_deferred(staging_gpu_input_buffer);
                 auto * buffer_ptr = device.get_host_address_as<GpuInput>(staging_gpu_input_buffer).value();
                 *buffer_ptr = gpu_input;
-                recorder.copy_buffer_to_buffer({
+                ti.recorder.copy_buffer_to_buffer({
                     .src_buffer = staging_gpu_input_buffer,
                     .dst_buffer = gpu_input_buffer,
                     .size = sizeof(GpuInput),
@@ -194,41 +204,40 @@ struct App : BaseApp<App>
             .name = ("Upload Input"),
         });
         new_task_graph.add_task({
-            .uses = {
-                BufferComputeShaderRead{task_gpu_input_buffer},
-                ImageComputeShaderStorageWriteOnly<>{task_render_image},
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_gpu_input_buffer),
+                daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_render_image),
             },
-            .task = [this](daxa::TaskInterface runtime)
+            .task = [this](daxa::TaskInterface ti)
             {
-                auto& recorder = runtime.get_recorder();
-                recorder.set_pipeline(*compute_pipeline);
-                recorder.push_constant(ComputePush{
+                ti.recorder.set_pipeline(*compute_pipeline);
+                ti.recorder.push_constant(ComputePush{
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
+                    .ptr = device.get_device_address(gpu_input_buffer).value(),
                     .frame_dim = {size_x, size_y},
                 });
-                recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
+                ti.recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
             },
             .name = ("Draw (Compute)"),
         });
         new_task_graph.add_task({
-            .uses = {
-                ImageTransferRead<>{task_render_image},
-                ImageTransferWrite<>{task_swapchain_image},
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_READ, task_render_image),
+                daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, task_swapchain_image),
             },
             .task = [this](daxa::TaskInterface ti)
             {
-                auto& recorder = ti.get_recorder();
-                recorder.blit_image_to_image({
-                    .src_image = ti.uses[task_render_image].image(),
+                ti.recorder.blit_image_to_image({
+                    .src_image = ti.get(task_render_image).ids[0],
                     .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
-                    .dst_image = ti.uses[task_swapchain_image].image(),
+                    .dst_image = ti.get(task_swapchain_image).ids[0],
                     .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
 
-                recorder.write_timestamp({
+                ti.recorder.write_timestamp({
                     .query_pool = timeline_query_pool,
                     .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
                     .query_index = 1,

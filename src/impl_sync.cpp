@@ -18,21 +18,22 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
-    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info_name.empty())
+    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.view().empty()))
     {
+        auto c_str = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
             .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = c_str.data(),
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_semaphore = new daxa_ImplBinarySemaphore{};
-    **out_semaphore = std::move(ret);
+    **out_semaphore = ret;
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -79,21 +80,22 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
-    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info_name.empty())
+    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.span().empty()))
     {
+        auto c_str = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
             .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = c_str.data(),
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_semaphore = new daxa_ImplTimelineSemaphore{};
-    **out_semaphore = std::move(ret);
+    **out_semaphore = ret;
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -168,21 +170,22 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
         return std::bit_cast<daxa_Result>(vk_result);
     }
     ret.vk_event = event;
-    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info_name.empty())
+    if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.view().empty()))
     {
+        auto c_str = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_EVENT,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_event),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = c_str.data(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_event = new daxa_ImplEvent{};
-    **out_event = std::move(ret);
+    **out_event = ret;
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -209,7 +212,7 @@ auto daxa_event_dec_refcnt(daxa_Event self) -> u64
 
 void daxa_ImplBinarySemaphore::zero_ref_callback(ImplHandle const * handle)
 {
-    auto self = rc_cast<daxa_BinarySemaphore>(handle);
+    auto * self = rc_cast<daxa_BinarySemaphore>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     self->device->main_queue_semaphore_zombies.emplace_back(
@@ -226,7 +229,7 @@ void daxa_ImplBinarySemaphore::zero_ref_callback(ImplHandle const * handle)
 void daxa_ImplTimelineSemaphore::zero_ref_callback(ImplHandle const * handle)
 {
     _DAXA_TEST_PRINT("daxa_ImplTimelineSemaphore::zero_ref_callback\n");
-    auto self = rc_cast<daxa_TimelineSemaphore>(handle);
+    auto * self = rc_cast<daxa_TimelineSemaphore>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     self->device->main_queue_semaphore_zombies.emplace_back(
@@ -242,7 +245,7 @@ void daxa_ImplTimelineSemaphore::zero_ref_callback(ImplHandle const * handle)
 
 void daxa_ImplEvent::zero_ref_callback(ImplHandle const * handle)
 {
-    auto self = rc_cast<daxa_Event>(handle);
+    auto * self = rc_cast<daxa_Event>(handle);
     std::unique_lock const lock{self->device->main_queue_zombies_mtx};
     u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
     self->device->main_queue_split_barrier_zombies.emplace_back(

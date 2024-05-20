@@ -12,19 +12,24 @@ struct TestU64Alignment
     daxa_u32 i6[3];
     daxa_u64 i7;
 };
-DAXA_DECL_BUFFER_PTR(TestU64Alignment)
+DAXA_DECL_BUFFER_PTR_ALIGN(TestU64Alignment, 8)
 
 DAXA_DECL_TASK_HEAD_BEGIN(TestShaderTaskHead)
-DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ, daxa_BufferPtr(TestU64Alignment), align_test_src)
-DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ_WRITE, daxa_RWBufferPtr(TestU64Alignment), align_test_dst)
+DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ,         daxa_BufferPtr(TestU64Alignment),   align_test_src)
+DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ_WRITE,   daxa_RWBufferPtr(TestU64Alignment), align_test_dst)
 DAXA_DECL_TASK_HEAD_END
+
+struct TestShaderPush
+{
+    DAXA_TH_BLOB(TestShaderTaskHead, attachments)
+};
 
 // Only used to check complication of All Task Head Uses:
 DAXA_DECL_TASK_HEAD_BEGIN(TestTaskHead)
 // Declares used task image, that is NOT accessable within the shader.
-DAXA_TH_IMAGE_NO_SHADER(    TRANSFER_READ,                                  copy_read_img)
+DAXA_TH_IMAGE(              TRANSFER_READ, REGULAR_2D,                      copy_read_img)
 // Declares used task buffer, that is NOT accessable within the shader.
-DAXA_TH_BUFFER_NO_SHADER(   TRANSFER_READ,                                  copy_read_buf)
+DAXA_TH_BUFFER(             TRANSFER_READ,                                  copy_read_buf)
 // Declares used task image, that is used as a storage image with type 2d, accessable in shader as glsl type image2D.
 DAXA_TH_IMAGE_ID(           COMPUTE_SHADER_STORAGE_READ_ONLY, REGULAR_2D,   shader_id_read_img)
 // Declares used task image usable in shader like above, but requires 2 runtime images. In shader it is exposed as an array of ids.
@@ -39,10 +44,6 @@ DAXA_TH_BUFFER_PTR(         COMPUTE_SHADER_READ, daxa_BufferPtr(uint),      shad
 DAXA_TH_BUFFER_PTR_ARRAY(   COMPUTE_SHADER_READ, daxa_BufferPtr(uint),      shader_ptr_read_array_buf, 2)
 DAXA_DECL_TASK_HEAD_END
 
-#if __cplusplus
-static_assert(sizeof(TestTaskHead) == 9 * 8, "ABI Size Error");
-#endif
-
 // The above task head will be translated to the following struct in glsl:
 // struct TestTaskHead {
 //   daxa_ImageViewId shader_id_read_img;
@@ -52,6 +53,14 @@ static_assert(sizeof(TestTaskHead) == 9 * 8, "ABI Size Error");
 //   daxa_BufferPtr(uint) shader_ptr_read_buf;
 //   daxa_BufferPtr(uint) shader_ptr_read_array_buf[2];
 // };
+
+struct TestTaskPush
+{
+    // The Shader blob can be referenced within shared files via the macro DAXA_TH_BLOB like so to declare shared structs:
+    // This will become `TestTaskHead attachments` in shader code and  `TestTaskHead::AttachmentShaderBlob attachments` in c++.
+    // Both have the exact same size and alignment, so code sharing works like normal.
+    DAXA_TH_BLOB(TestTaskHead, attachments)
+};
 
 // Test compilation of shared functions with shader shared types
 daxa_u32 test_fn_u32(daxa_u32 by_value)

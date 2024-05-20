@@ -6,8 +6,6 @@
 
 #include <daxa/c/types.h>
 
-_DAXA_DECL_OPTIONAL(daxa_TlasId)
-
 DAXA_EXPORT daxa_ImageViewId
 daxa_default_view(daxa_ImageId image);
 
@@ -231,7 +229,6 @@ typedef union
     daxa_BlasTriangleGeometryInfoSpan triangles;
     daxa_BlasAabbsGeometryInfoSpan aabbs;
 } daxa_BlasGeometryInfoSpansUnion;
-_DAXA_DECL_VARIANT(daxa_BlasGeometryInfoSpansUnion)
 
 typedef enum
 {
@@ -246,6 +243,8 @@ typedef uint32_t daxa_BuildAcclelerationStructureFlags;
 typedef struct
 {
     daxa_BuildAcclelerationStructureFlags flags;
+    daxa_Bool8 update;
+    daxa_TlasId src_tlas;
     daxa_TlasId dst_tlas;
     daxa_TlasInstanceInfo const * instances;
     uint32_t instance_count;
@@ -254,6 +253,8 @@ typedef struct
 
 static daxa_TlasBuildInfo const DAXA_DEFAULT_TLAS_BUILD_INFO = {
     .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
+    .update = 0,
+    .src_tlas = DAXA_ZERO_INIT,
     .dst_tlas = DAXA_ZERO_INIT,
     .instances = DAXA_ZERO_INIT,
     .instance_count = DAXA_ZERO_INIT,
@@ -263,6 +264,8 @@ static daxa_TlasBuildInfo const DAXA_DEFAULT_TLAS_BUILD_INFO = {
 typedef struct
 {
     daxa_BuildAcclelerationStructureFlags flags;
+    daxa_Bool8 update;
+    daxa_BlasId src_blas;
     daxa_BlasId dst_blas;
     daxa_Variant(daxa_BlasGeometryInfoSpansUnion) geometries;
     daxa_DeviceAddress scratch_data;
@@ -270,6 +273,8 @@ typedef struct
 
 static daxa_BlasBuildInfo const DAXA_DEFAULT_BLAS_BUILD_INFO = {
     .flags = DAXA_BUILD_ACCELERATION_STRUCTURE_PREFER_FAST_TRACE,
+    .update = 0,
+    .src_blas = DAXA_ZERO_INIT,
     .dst_blas = DAXA_ZERO_INIT,
     .geometries = DAXA_ZERO_INIT,
     .scratch_data = DAXA_ZERO_INIT,

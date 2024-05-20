@@ -19,7 +19,7 @@
                 "DAXA_ENABLE_UTILS_IMGUI": true,
                 "DAXA_ENABLE_UTILS_MEM": false,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG": true,
-                "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_DXC": false,
+                "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION": false,
                 "DAXA_ENABLE_UTILS_TASK_GRAPH": true,
                 "DAXA_ENABLE_TESTS": true,

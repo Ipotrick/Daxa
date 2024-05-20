@@ -21,7 +21,7 @@
 #define _DAXA_TEST_PRINT(...)
 
 #define DAXA_SHADERLANG_GLSL 1
-#define DAXA_SHADERLANG_HLSL 2
+#define DAXA_SHADERLANG_SLANG 2
 
 static uint32_t const DAXA_ID_INDEX_BITS = 20;
 static uint32_t const DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
@@ -32,9 +32,9 @@ static uint32_t const DAXA_ID_VERSION_OFFSET = 20;
 
 typedef struct daxa_ImplDevice * daxa_Device;
 typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
-typedef struct daxa_ImplCommandRecorder * daxa_CommandRecorder;
 typedef struct daxa_ImplExecutableCommandList * daxa_ExecutableCommandList;
 typedef struct daxa_ImplInstance * daxa_Instance;
+typedef struct daxa_ImplRayTracingPipeline * daxa_RayTracingPipeline;
 typedef struct daxa_ImplComputePipeline * daxa_ComputePipeline;
 typedef struct daxa_ImplRasterPipeline * daxa_RasterPipeline;
 typedef struct daxa_ImplSwapchain * daxa_Swapchain;
@@ -62,6 +62,11 @@ typedef struct
 {
     uint64_t value;
 } daxa_ImageViewId;
+
+typedef struct
+{
+    uint32_t value;
+} daxa_ImageViewIndex;
 
 typedef struct
 {
