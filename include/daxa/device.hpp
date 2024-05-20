@@ -256,6 +256,7 @@ namespace daxa
     {
         i32 (*selector)(DeviceProperties const & properties) = default_device_score;
 #if defined(__APPLE__)
+        // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         DeviceFlags flags = {};
         u32 max_allowed_images = 8;
         u32 max_allowed_buffers = 30;
@@ -267,11 +268,11 @@ namespace daxa
             DeviceFlagBits::SHADER_ATOMIC64 |
             DeviceFlagBits::IMAGE_ATOMIC64 |
             DeviceFlagBits::DYNAMIC_STATE_3;
-        // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
         u32 max_allowed_samplers = 400;
         u32 max_allowed_acceleration_structures = 10'000;
+#endif
         SmallString name = {};
     };
 

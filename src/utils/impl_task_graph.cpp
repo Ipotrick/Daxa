@@ -2307,7 +2307,7 @@ namespace daxa
                         .name = "Dummy to figure mem requirements",
                     };
                     permut_image.memory_requirements = info.device.get_memory_requirements({image_info});
-                    max_alignment_requirement = std::max(permut_image.memory_requirements.alignment, max_alignment_requirement);
+                    max_alignment_requirement = std::max<u64>(permut_image.memory_requirements.alignment, max_alignment_requirement);
                 }
             }
             for (u32 buffer_i = 0; buffer_i < permutation.buffer_infos.size(); ++buffer_i)
@@ -2324,7 +2324,7 @@ namespace daxa
                         .name = "Dummy to figure mem requirements",
                     };
                     permut_buffer.memory_requirements = info.device.get_memory_requirements({buffer_info});
-                    max_alignment_requirement = std::max(permut_buffer.memory_requirements.alignment, max_alignment_requirement);
+                    max_alignment_requirement = std::max<u64>(permut_buffer.memory_requirements.alignment, max_alignment_requirement);
                 }
             }
         }
