@@ -12,6 +12,7 @@ vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
     utils-pipeline-manager-slang WITH_UTILS_PIPELINE_MANAGER_SLANG
     utils-pipeline-manager-spirv-validation WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
     utils-task-graph WITH_UTILS_TASK_GRAPH
+    utils-fsr2 WITH_UTILS_FSR2
 )
 set(DAXA_DEFINES "-DDAXA_INSTALL=true")
 
@@ -32,6 +33,9 @@ if(WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
 endif()
 if(WITH_UTILS_TASK_GRAPH)
     list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_TASK_GRAPH=true")
+endif()
+if(WITH_UTILS_FSR2)
+    list(APPEND DAXA_DEFINES "-DDAXA_ENABLE_UTILS_FSR2=true")
 endif()
 
 vcpkg_configure_cmake(
