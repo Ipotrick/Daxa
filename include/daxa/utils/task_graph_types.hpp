@@ -28,6 +28,9 @@ namespace daxa
     enum struct TaskBufferAccess
     {
         NONE,
+        READ,
+        WRITE,
+        READ_WRITE,
         GRAPHICS_SHADER_READ,
         GRAPHICS_SHADER_WRITE,
         GRAPHICS_SHADER_READ_WRITE,
@@ -85,6 +88,9 @@ namespace daxa
     enum struct TaskBlasAccess
     {
         NONE = static_cast<u32>(TaskBufferAccess::NONE),
+        READ = static_cast<u32>(TaskBufferAccess::READ),
+        WRITE = static_cast<u32>(TaskBufferAccess::WRITE),
+        READ_WRITE = static_cast<u32>(TaskBufferAccess::READ_WRITE),
         TRANSFER_READ = static_cast<u32>(TaskBufferAccess::TRANSFER_READ),
         TRANSFER_WRITE = static_cast<u32>(TaskBufferAccess::TRANSFER_WRITE),
         HOST_TRANSFER_READ = static_cast<u32>(TaskBufferAccess::HOST_TRANSFER_READ),
@@ -100,6 +106,9 @@ namespace daxa
     enum struct TaskTlasAccess
     {
         NONE = static_cast<u32>(TaskBufferAccess::NONE),
+        READ = static_cast<u32>(TaskBufferAccess::READ),
+        WRITE = static_cast<u32>(TaskBufferAccess::WRITE),
+        READ_WRITE = static_cast<u32>(TaskBufferAccess::READ_WRITE),
         TRANSFER_READ = static_cast<u32>(TaskBufferAccess::TRANSFER_READ),
         TRANSFER_WRITE = static_cast<u32>(TaskBufferAccess::TRANSFER_WRITE),
         HOST_TRANSFER_READ = static_cast<u32>(TaskBufferAccess::HOST_TRANSFER_READ),
