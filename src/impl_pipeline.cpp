@@ -14,6 +14,11 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     std::vector<std::unique_ptr<std::string>> entry_point_names = {};
     std::vector<VkPipelineShaderStageCreateInfo> vk_pipeline_shader_stage_create_infos = {};
 
+    std::vector<VkPipelineShaderStageRequiredSubgroupSizeCreateInfo> require_subgroup_size_vkstructs = {};
+    // Necessary to prevent re-allocation
+    auto const MAXIMUM_GRAPHICS_STAGES = 6;
+    require_subgroup_size_vkstructs.reserve(MAXIMUM_GRAPHICS_STAGES);
+
     auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> VkResult
     {
         VkShaderModule vk_shader_module = nullptr;
@@ -31,15 +36,14 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         }
         vk_shader_modules.push_back(vk_shader_module);
         entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
-        VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct
-        {
+        require_subgroup_size_vkstructs.push_back({
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
             .pNext = nullptr,
             .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
-        };
+        });
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstruct : nullptr,
+            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstructs.back() : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
@@ -345,8 +349,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         return std::bit_cast<daxa_Result>(module_result);
     }
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
-    VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct
-    {
+    VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
         .pNext = nullptr,
         .requiredSubgroupSize = ret.info.shader_info.required_subgroup_size.value_or(0),
@@ -447,6 +450,21 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         }
     };
 
+    u32 const raygen_count = static_cast<u32>(ret.info.ray_gen_shaders.size());
+    u32 const intersection_count = static_cast<u32>(ret.info.intersection_shaders.size());
+    u32 const any_hit_count = static_cast<u32>(ret.info.any_hit_shaders.size());
+    u32 const callable_count = static_cast<u32>(ret.info.callable_shaders.size());
+    u32 const closest_hit_count = static_cast<u32>(ret.info.closest_hit_shaders.size());
+    u32 const miss_hit_count = static_cast<u32>(ret.info.miss_hit_shaders.size());
+    u32 const all_stages_count = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count + miss_hit_count;
+    u32 const first_callable_index = raygen_count + intersection_count + any_hit_count;
+    u32 const last_callable_index = raygen_count + intersection_count + any_hit_count + callable_count;
+    u32 const first_miss_index = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count;
+
+    std::vector<VkPipelineShaderStageRequiredSubgroupSizeCreateInfo> require_subgroup_size_vkstructs = {};
+    // Necessary to prevent re-allocation
+    require_subgroup_size_vkstructs.reserve(all_stages_count);
+
     auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> VkResult
     {
         VkShaderModule vk_shader_module = nullptr;
@@ -463,16 +481,15 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             return result;
         }
         vk_shader_modules.push_back(vk_shader_module);
-        entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));        
-        VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct
-        {
+        entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
+        require_subgroup_size_vkstructs.push_back({
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
             .pNext = nullptr,
             .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
-        };
+        });
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstruct : nullptr,
+            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstructs.back() : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
@@ -490,52 +507,41 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         return std::bit_cast<daxa_Result>(result);                                                      \
     }
 
-    u32 const raygen_count = static_cast<u32>(ret.info.ray_gen_shaders.size());
     for (FixedListSizeT i = 0; i < raygen_count; ++i)
     {
         auto stage = ret.info.ray_gen_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, RAYGEN)
     }
 
-    u32 const intersection_count = static_cast<u32>(ret.info.intersection_shaders.size());
     for (FixedListSizeT i = 0; i < intersection_count; ++i)
     {
         auto stage = ret.info.intersection_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, INTERSECTION)
     }
 
-    u32 const any_hit_count = static_cast<u32>(ret.info.any_hit_shaders.size());
     for (FixedListSizeT i = 0; i < any_hit_count; ++i)
     {
         auto stage = ret.info.any_hit_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, ANY_HIT)
     }
 
-    u32 const callable_count = static_cast<u32>(ret.info.callable_shaders.size());
     for (FixedListSizeT i = 0; i < callable_count; ++i)
     {
         auto stage = ret.info.callable_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, CALLABLE)
     }
 
-    u32 const closest_hit_count = static_cast<u32>(ret.info.closest_hit_shaders.size());
     for (FixedListSizeT i = 0; i < closest_hit_count; ++i)
     {
         auto stage = ret.info.closest_hit_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, CLOSEST_HIT)
     }
 
-    u32 const miss_hit_count = static_cast<u32>(ret.info.miss_hit_shaders.size());
     for (FixedListSizeT i = 0; i < miss_hit_count; ++i)
     {
         auto stage = ret.info.miss_hit_shaders.at(i);
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, MISS)
     }
-
-    u32 const all_stages_count = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count + miss_hit_count;
-    u32 const first_callable_index = raygen_count + intersection_count + any_hit_count;
-    u32 const last_callable_index = raygen_count + intersection_count + any_hit_count + callable_count;
-    u32 const first_miss_index = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count;
 
     // Raygen shader groups for handle creation
     u32 ray_gen_group_count = 0;

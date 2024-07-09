@@ -274,10 +274,19 @@ auto daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder self, daxa_BufferCopyIn
     daxa_cmd_flush_barriers(self);
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->src_buffer, info->dst_buffer)
     auto const * vk_buffer_copy = reinterpret_cast<VkBufferCopy const *>(&info->src_offset);
+    ImplBufferSlot const & src_slot = self->device->slot(info->src_buffer);
+    ImplBufferSlot const & dst_slot = self->device->slot(info->dst_buffer);
+    bool in_bounds = true;
+    in_bounds = in_bounds && ((static_cast<u64>(vk_buffer_copy->srcOffset) + static_cast<u64>(vk_buffer_copy->size)) <= static_cast<u64>(src_slot.info.size));
+    in_bounds = in_bounds && ((static_cast<u64>(vk_buffer_copy->dstOffset) + static_cast<u64>(vk_buffer_copy->size)) <= static_cast<u64>(dst_slot.info.size));
+    if (!in_bounds)
+    {
+        return DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS;
+    }
     vkCmdCopyBuffer(
         self->current_command_data.vk_cmd_buffer,
-        self->device->slot(info->src_buffer).vk_buffer,
-        self->device->slot(info->dst_buffer).vk_buffer,
+        src_slot.vk_buffer,
+        dst_slot.vk_buffer,
         1,
         vk_buffer_copy);
     return DAXA_RESULT_SUCCESS;

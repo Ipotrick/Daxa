@@ -15,6 +15,9 @@ namespace daxa
     {
         Device device;
         UpscaleSizeInfo size_info = {};
+        bool depth_inf = false;
+        bool depth_inv = false;
+        bool color_hdr = false;
     };
 
     struct UpscaleInfo
@@ -32,10 +35,10 @@ namespace daxa
 
         struct CameraInfo
         {
-            f32 near_plane;
-            f32 far_plane;
-            f32 vertical_fov;
+            f32 near_plane = {};
+            f32 far_plane = {};
+            f32 vertical_fov = {};
         };
-        CameraInfo camera_info;
+        CameraInfo camera_info = {};
     };
 } // namespace daxa
