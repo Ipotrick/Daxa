@@ -126,6 +126,13 @@ namespace daxa
             .timelineSemaphore = VK_TRUE,
         };
         this->chain = r_cast<void *>(&this->timeline_semaphore);
+        this->subgroup_size_control = {
+            .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_FEATURES,
+            .pNext = this->chain,
+            .subgroupSizeControl = VK_TRUE,
+            .computeFullSubgroups = VK_TRUE,
+        };
+        this->chain = r_cast<void *>(&this->subgroup_size_control);
         this->scalar_layout = {
             .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SCALAR_BLOCK_LAYOUT_FEATURES,
             .pNext = this->chain,

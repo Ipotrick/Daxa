@@ -64,7 +64,17 @@ namespace daxa
 
         // set up for later, when we resize
         fsr2_context_description.device = ffxGetDeviceVK(logical_device);
-        fsr2_context_description.flags = FFX_FSR2_ENABLE_AUTO_EXPOSURE;
+        fsr2_context_description.flags = {};
+        fsr2_context_description.flags |= FFX_FSR2_ENABLE_AUTO_EXPOSURE;
+        if (this->info.color_hdr) {
+            fsr2_context_description.flags |= FFX_FSR2_ENABLE_HIGH_DYNAMIC_RANGE;
+        }
+        if (this->info.depth_inv) {
+            fsr2_context_description.flags |= FFX_FSR2_ENABLE_DEPTH_INVERTED;
+        }
+        if (this->info.depth_inf) {
+            fsr2_context_description.flags |= FFX_FSR2_ENABLE_DEPTH_INFINITE;
+        }
 
         {
             [[maybe_unused]] FfxErrorCode const err = ffxFsr2ContextCreate(&fsr2_context, &fsr2_context_description);

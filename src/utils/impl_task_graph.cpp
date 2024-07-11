@@ -269,6 +269,9 @@ namespace daxa
         switch (access)
         {
         case TaskBufferAccess::NONE: return {{PipelineStageFlagBits::NONE, AccessTypeFlagBits::NONE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::READ: return {{PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::WRITE: return {{PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::READ_WRITE: return {{PipelineStageFlagBits::ALL_COMMANDS, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::GRAPHICS_SHADER_READ: return {{PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::GRAPHICS_SHADER_WRITE: return {{PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE: return {{PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
@@ -544,6 +547,12 @@ namespace daxa
             .buffers = {std::get<std::vector<BufferId>>(impl.actual_ids).data(), std::get<std::vector<BufferId>>(impl.actual_ids).size()},
             .latest_access = impl.latest_access,
         };
+    }
+    
+    auto TaskBuffer::is_owning() const -> bool
+    {
+        auto const & impl = *r_cast<ImplPersistentTaskBufferBlasTlas const *>(this->object);
+        return impl.owned_buffer_device.has_value();
     }
 
     void TaskBuffer::set_buffers(TrackedBuffers const & buffers)

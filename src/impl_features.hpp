@@ -23,6 +23,7 @@ namespace daxa
         VkPhysicalDeviceDynamicRenderingFeatures dynamic_rendering = {};
         VkPhysicalDeviceSynchronization2Features sync2 = {};
         VkPhysicalDeviceTimelineSemaphoreFeatures timeline_semaphore = {};
+        VkPhysicalDeviceSubgroupSizeControlFeatures subgroup_size_control = {};
         VkPhysicalDeviceScalarBlockLayoutFeatures scalar_layout = {};
         VkPhysicalDeviceVariablePointerFeatures variable_pointers = {};
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamic_state3 = {};

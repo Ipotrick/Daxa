@@ -10,7 +10,7 @@ if (VCPKG_TARGET_IS_WINDOWS)
 			ARCHIVE
 			URLS "https://github.com/shader-slang/slang/releases/download/v${VERSION}/slang-${VERSION}-win64.zip"
 			FILENAME "slang-${VERSION}-win64.zip"
-			SHA512 fa51c71f07eba4b6a6a13ff5e61729f4ef789447943df5dcfa728cd690c17ef44a2409c0a4180b8e70a0c6d3f248b668c0be72cb33d7373fbef9c3db31cbfae4
+			SHA512 c0878ea18e4ef8e9bfa37a3d2975b73dd3bce7c5ff117f5bb3b6fbf05b7cb95190fc253c03ccd8f17e377ab59bcab62cdaccaf00da5c1218a99dc84fffd4225a
 		)
 		set(SLANG_BIN_PATH "bin/windows-x64/release")
 	# elseif (VCPKG_TARGET_ARCHITECTURE MATCHES "x86")
@@ -179,7 +179,7 @@ vcpkg_from_github(
 	OUT_SOURCE_PATH SOURCE_PATH
 	REPO shader-slang/slang
 	REF v${VERSION}
-	SHA512 4a21214fe4c0991841c22447e1149a7a80466ac1f05ca63ffe51abfb60951b6694a4535e593f1cf8d06836d1d0f490804760913e09b95b8eab141b59b1fb42dc
+	SHA512 f43a669fe6a79f1b5f38d3344ed14a057be9003d86a00dcea1f874825a1d3e2af3216d054b9a7170a861e22cedf8809cd5c06bc24adf3062d9fe813327ff4e7e
 	HEAD_REF master
 )
 

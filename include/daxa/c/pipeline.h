@@ -7,6 +7,8 @@ typedef struct
 {
     uint32_t const * byte_code;
     uint32_t byte_code_size;
+    VkPipelineShaderStageCreateFlags create_flags;
+    daxa_Optional(uint32_t) required_subgroup_size;
     daxa_SmallString entry_point;
 } daxa_ShaderInfo;
 

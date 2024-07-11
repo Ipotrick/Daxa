@@ -5,10 +5,24 @@
 
 namespace daxa
 {
+    struct ShaderCreateFlagsProperties
+    {
+        using Data = u32;
+    };
+    using ShaderCreateFlags = Flags<ShaderCreateFlagsProperties>;
+    struct ShaderCreateFlagBits
+    {
+        static inline constexpr ShaderCreateFlags NONE = {0x00000000};
+        static inline constexpr ShaderCreateFlags ALLOW_VARYING_SUBGROUP_SIZE  = {0x00000001};
+        static inline constexpr ShaderCreateFlags REQUIRE_FULL_SUBGROUPS  = {0x00000002};
+    };
+
     struct ShaderInfo
     {
-        u32 const * byte_code;
-        u32 byte_code_size;
+        u32 const * byte_code = {};
+        u32 byte_code_size = {};
+        ShaderCreateFlags create_flags = {};
+        Optional<u32> required_subgroup_size = {};
         SmallString entry_point = "main";
     };
 
@@ -24,18 +38,18 @@ namespace daxa
 
     struct StridedDeviceAddressRegion
     {
-        DeviceAddress address;
-        u64 stride;
-        u64 size;
+        DeviceAddress address {};
+        u64 stride {};
+        u64 size {};
     };
 
     struct RayTracingShaderBindingTable
     {
         BufferId buffer_id; // TODO: find a better way to store this?
-        StridedDeviceAddressRegion raygen_region;
-        StridedDeviceAddressRegion miss_region;
-        StridedDeviceAddressRegion hit_region;
-        StridedDeviceAddressRegion callable_region;
+        StridedDeviceAddressRegion raygen_region = {};
+        StridedDeviceAddressRegion miss_region = {};
+        StridedDeviceAddressRegion hit_region = {};
+        StridedDeviceAddressRegion callable_region = {};
     };
 
     struct RayTracingPipelineInfo
