@@ -1,15 +1,23 @@
 #pragma once
 
+#define DAXA_RAY_TRACING 1
+#if defined(GL_core_profile) // GLSL
+#extension GL_EXT_ray_tracing : enable
+#extension GL_EXT_ray_query : enable
+#endif // GL_core_profile
+
+
 #include "daxa/daxa.inl"
 
 #define GRID_DIM 256
 #define GRID_SIZE (GRID_DIM * GRID_DIM * GRID_DIM)
 #define QUALITY 2
-//#define NUM_PARTICLES 8192 * QUALITY * QUALITY * QUALITY
-// #define NUM_PARTICLES 2048
-#define NUM_PARTICLES 512
-// #define NUM_PARTICLES 64
 #define SIM_LOOP_COUNT 25
+// #define NUM_PARTICLES 8192 * QUALITY * QUALITY * QUALITY
+// #define NUM_PARTICLES 16384 * QUALITY * QUALITY * QUALITY
+#define NUM_PARTICLES 32768 * QUALITY * QUALITY * QUALITY
+// #define NUM_PARTICLES 512
+// #define NUM_PARTICLES 64
 
 #define MPM_P2G_COMPUTE_X 64
 #define MPM_GRID_COMPUTE_X 4 
@@ -19,7 +27,7 @@
 #define MPM_SHADING_COMPUTE_X 8
 #define MPM_SHADING_COMPUTE_Y 8
 
-#define PARTICLE_RADIUS 0.01f
+#define PARTICLE_RADIUS 0.005f
 #define MIN_DIST 1e-6f
 #define MAX_DIST 1e10f
 #define EULER 2.71828
@@ -47,7 +55,6 @@ struct GpuInput
 
 struct Particle {
   daxa_u32 type;
-  daxa_f32vec3 x;
   daxa_f32vec3 v;
   daxa_f32mat3x3 F;
   daxa_f32mat3x3 C;
@@ -59,10 +66,16 @@ struct Cell {
   daxa_f32vec4 info;
 };
 
+struct Aabb {
+  daxa_f32vec3 min;
+  daxa_f32vec3 max;
+};
+
 DAXA_DECL_BUFFER_PTR(GpuInput)
 DAXA_DECL_BUFFER_PTR(Particle)
 DAXA_DECL_BUFFER_PTR(Cell)
 DAXA_DECL_BUFFER_PTR(Camera)
+DAXA_DECL_BUFFER_PTR(Aabb)
 
 struct ComputePush
 {
@@ -71,7 +84,9 @@ struct ComputePush
     daxa_BufferPtr(GpuInput) input_ptr;
     daxa_BufferPtr(Particle) particles;
     daxa_BufferPtr(Cell) cells;
+    daxa_BufferPtr(Aabb) aabbs;
     daxa_BufferPtr(Camera) camera;
+    daxa_TlasId tlas;
 };
 
 
@@ -93,6 +108,76 @@ struct Ray
 
 
 #if !defined(__cplusplus)
+
+#if defined(GL_core_profile) // GLSL
+#extension GL_EXT_shader_atomic_float : enable
+
+DAXA_DECL_PUSH_CONSTANT(ComputePush, p)
+
+layout(buffer_reference, scalar) buffer PARTICLE_BUFFER {Particle particles[]; }; // Particle buffer
+layout(buffer_reference, scalar) buffer CELL_BUFFER {Cell cells[]; }; // Positions of an object
+layout(buffer_reference, scalar) buffer AABB_BUFFER {Aabb aabbs[]; }; // Positions of an object
+
+
+Particle get_particle_by_index(daxa_u32 particle_index) {
+  PARTICLE_BUFFER particle_buffer =
+      PARTICLE_BUFFER(p.particles);
+  return particle_buffer.particles[particle_index];
+}
+
+Cell get_cell_by_index(daxa_u32 cell_index) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return cell_buffer.cells[cell_index];
+}
+
+Aabb get_aabb_by_index(daxa_u32 aabb_index) {
+  AABB_BUFFER aabb_buffer = AABB_BUFFER(p.aabbs);
+  return aabb_buffer.aabbs[aabb_index];
+}
+
+void set_particle_by_index(daxa_u32 particle_index, Particle particle) {
+  PARTICLE_BUFFER particle_buffer =
+      PARTICLE_BUFFER(p.particles);
+  particle_buffer.particles[particle_index] = particle;
+}
+
+void zeroed_out_cell_by_index(daxa_u32 cell_index) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  cell_buffer.cells[cell_index].info = vec4(0, 0, 0, 0);
+}
+
+void set_cell_by_index(daxa_u32 cell_index, Cell cell) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  cell_buffer.cells[cell_index] = cell;
+}
+
+float set_atomic_cell_x_by_index(daxa_u32 cell_index, float x) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return atomicAdd(cell_buffer.cells[cell_index].info.x, x);
+}
+
+float set_atomic_cell_y_by_index(daxa_u32 cell_index, float y) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return atomicAdd(cell_buffer.cells[cell_index].info.y, y);
+}
+
+float set_atomic_cell_z_by_index(daxa_u32 cell_index, float z) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return atomicAdd(cell_buffer.cells[cell_index].info.z, z);
+}
+
+float set_atomic_cell_w_by_index(daxa_u32 cell_index, float w) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return atomicAdd(cell_buffer.cells[cell_index].info.w, w);
+}
+
+void set_aabb_by_index(daxa_u32 aabb_index, Aabb aabb) {
+  AABB_BUFFER aabb_buffer = AABB_BUFFER(p.aabbs);
+  aabb_buffer.aabbs[aabb_index] = aabb;
+}
+#endif // GL_core_profile
+
+
 
 daxa_f32mat3x3 outer_product(daxa_f32vec3 a, daxa_f32vec3 b)
 {
@@ -392,8 +477,8 @@ daxa_f32mat3x3 update_deformation_gradient(daxa_f32mat3x3 F, daxa_f32mat3x3 C, f
 }
 
 
-daxa_f32mat3x3 calculate_p2g(inout Particle particle, float dt, float p_vol, float mu_0, float lambda_0, float inv_dx, out daxa_i32vec3 base_coord, out daxa_f32vec3 fx, out daxa_f32vec3 w[3]) {
-  daxa_f32vec3 particle_center = particle.x * inv_dx;
+daxa_f32mat3x3 calculate_p2g(inout Particle particle, Aabb aabb, float dt, float p_vol, float mu_0, float lambda_0, float inv_dx, out daxa_i32vec3 base_coord, out daxa_f32vec3 fx, out daxa_f32vec3 w[3]) {
+  daxa_f32vec3 particle_center = (aabb.min + aabb.max) * 0.5f * inv_dx;
   daxa_f32vec3 particle_center_dx = particle_center - daxa_f32vec3(0.5f, 0.5f, 0.5f);
 
   base_coord = daxa_i32vec3(particle_center_dx); // Floor
@@ -461,7 +546,7 @@ daxa_f32mat3x3 calculate_p2g(inout Particle particle, float dt, float p_vol, flo
 Ray get_ray_from_current_pixel(daxa_f32vec2 index, daxa_f32vec2 rt_size,
                                daxa_f32mat4x4 inv_view, daxa_f32mat4x4 inv_proj) {
 
-  const daxa_f32vec2 pixel_center = index;
+  const daxa_f32vec2 pixel_center = index + 0.5;
   const daxa_f32vec2 inv_UV = pixel_center / rt_size;
   daxa_f32vec2 d = inv_UV * 2.0 - 1.0;
 
@@ -481,6 +566,23 @@ Ray get_ray_from_current_pixel(daxa_f32vec2 index, daxa_f32vec2 rt_size,
 
 daxa_f32 compute_sphere_distance(daxa_f32vec3 p, daxa_f32vec3 center, daxa_f32 radius) {
     return length(p - center) - radius;
+}
+
+daxa_f32 hitSphere(daxa_f32vec3 center, daxa_f32 radius, Ray r)
+{
+  daxa_f32vec3  oc           = r.origin - center;
+  daxa_f32 a            = dot(r.direction, r.direction);
+  daxa_f32 b            = 2.0 * dot(oc, r.direction);
+  daxa_f32 c            = dot(oc, oc) - radius * radius;
+  daxa_f32 discriminant = b * b - 4 * a * c;
+  if(discriminant < 0)
+  {
+    return -1.0;
+  }
+  else
+  {
+    return (-b - sqrt(discriminant)) / (2.0 * a);
+  }
 }
 
 #endif // GLSL & HLSL

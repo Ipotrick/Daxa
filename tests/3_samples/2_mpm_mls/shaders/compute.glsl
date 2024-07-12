@@ -1,61 +1,5 @@
 #include <shared.inl>
-#extension GL_EXT_shader_atomic_float : enable
 // #include <custom file!!>
-
-DAXA_DECL_PUSH_CONSTANT(ComputePush, p)
-
-layout(buffer_reference, scalar) buffer PARTICLE_BUFFER {Particle particles[]; }; // Particle buffer
-layout(buffer_reference, scalar) buffer CELL_BUFFER {Cell cells[]; }; // Positions of an object
-
-
-
-Particle get_particle_by_index(daxa_u32 particle_index) {
-  PARTICLE_BUFFER particle_buffer =
-      PARTICLE_BUFFER(p.particles);
-  return particle_buffer.particles[particle_index];
-}
-
-Cell get_cell_by_index(daxa_u32 cell_index) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return cell_buffer.cells[cell_index];
-}
-
-void set_particle_by_index(daxa_u32 particle_index, Particle particle) {
-  PARTICLE_BUFFER particle_buffer =
-      PARTICLE_BUFFER(p.particles);
-  particle_buffer.particles[particle_index] = particle;
-}
-
-void zeroed_out_cell_by_index(daxa_u32 cell_index) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  cell_buffer.cells[cell_index].info = vec4(0, 0, 0, 0);
-}
-
-void set_cell_by_index(daxa_u32 cell_index, Cell cell) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  cell_buffer.cells[cell_index] = cell;
-}
-
-float set_atomic_cell_x_by_index(daxa_u32 cell_index, float x) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.x, x);
-}
-
-float set_atomic_cell_y_by_index(daxa_u32 cell_index, float y) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.y, y);
-}
-
-float set_atomic_cell_z_by_index(daxa_u32 cell_index, float z) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.z, z);
-}
-
-float set_atomic_cell_w_by_index(daxa_u32 cell_index, float w) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.w, w);
-}
-
 
 
 #if ZEROED_GRID_COMPUTE_FLAG == 1
@@ -102,11 +46,13 @@ void main()
 
   Particle particle = get_particle_by_index(pixel_i_x);
 
+  Aabb aabb = get_aabb_by_index(pixel_i_x);
+
   daxa_f32vec3 w[3];
   daxa_f32vec3 fx;
   daxa_i32vec3 base_coord;
 
-  mat3 stress = calculate_p2g(particle, dt, p_vol, mu_0, lambda_0, inv_dx, base_coord, fx, w);
+  mat3 stress = calculate_p2g(particle, aabb, dt, p_vol, mu_0, lambda_0, inv_dx, base_coord, fx, w);
 
   mat3 affine = stress + p_mass * particle.C;
 
@@ -212,8 +158,9 @@ void main()
   float dt = deref(config).dt;
 
   Particle particle = get_particle_by_index(pixel_i_x);
+  Aabb aabb = get_aabb_by_index(pixel_i_x);
 
-  vec3 particle_center = particle.x * inv_dx;
+  vec3 particle_center = (aabb.min + aabb.max) * 0.5f * inv_dx;
   vec3 particle_center_dx = particle_center - vec3(0.5f, 0.5f, 0.5f);
 
   ivec3 base_coord = ivec3(particle_center_dx); // Floor
@@ -259,7 +206,10 @@ void main()
     }
   }
 
-  particle.x += dt * particle.v; // advection
+  aabb.min += dt * particle.v;
+  aabb.max += dt * particle.v;
+
+  set_aabb_by_index(pixel_i_x, aabb);
 
   // TODO: optimize this write
   set_particle_by_index(pixel_i_x, particle);
@@ -295,7 +245,9 @@ void main()
         daxa_f32 min_dist = MAX_DIST;
         for (uint i = 0; i < deref(config).p_count; ++i) {
             Particle particle = get_particle_by_index(i);
-            daxa_f32 hit_dist = compute_sphere_distance(pos, particle.x, PARTICLE_RADIUS);
+            Aabb aabb = get_aabb_by_index(i);
+            daxa_f32vec3 p_center = (aabb.min + aabb.max) * 0.5f;
+            daxa_f32 hit_dist = compute_sphere_distance(pos, p_center, PARTICLE_RADIUS);
             if (hit_dist < min_dist) {
                 min_dist = hit_dist;
             }

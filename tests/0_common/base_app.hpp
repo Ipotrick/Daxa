@@ -41,7 +41,8 @@ struct BaseApp : AppWindow<T>
             }
             return score;
         },
-        .flags = daxa::DeviceFlagBits::SHADER_ATOMIC_FLOAT,
+        .flags = daxa::DeviceFlagBits::SHADER_ATOMIC_FLOAT | 
+            daxa::DeviceFlagBits::RAY_TRACING,
         .name = "device",
     });
 

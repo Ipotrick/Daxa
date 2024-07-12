@@ -1,4 +1,3 @@
-#include "daxa/daxa.inl"
 #include "shared.inl"
 import "custom file!!";
 
@@ -71,16 +70,17 @@ struct Test
   float lambda_0 = E * nu / ((1 + nu) * (1 - 2 * nu));  // Lame parameters
 
   Particle* particles = p.particles;
-
   Cell* cells = p.cells;
+  Aabb* aabbs = p.aabbs;
 
   Particle particle = particles[pixel_i.x];
+  Aabb aabb = aabbs[pixel_i.x];
 
   float3 w[3];
   float3 fx;
   int3 base_coord;
 
-  float3x3 stress = calculate_p2g(particle, dt, p_vol, mu_0, lambda_0, inv_dx, base_coord, fx, w);
+  float3x3 stress = calculate_p2g(particle, aabb, dt, p_vol, mu_0, lambda_0, inv_dx, base_coord, fx, w);
 
   float3x3 affine = stress + p_mass * particle.C;
 
@@ -194,12 +194,13 @@ struct Test
   float dt = config->dt;
 
   Particle* particles = p.particles;
+  Cell* cells = p.cells;
+  Aabb* aabbs = p.aabbs;
 
   Particle particle = particles[pixel_i.x];
-
-  Cell* cells = p.cells;
+  Ptr<Aabb> aabb = &aabbs[pixel_i.x];
   
-  float3 particle_center = particle.x * inv_dx;
+  float3 particle_center = (aabb->min + aabb->max) * 0.5f * inv_dx;
   float3 particle_center_dx = particle_center - float3(0.5f, 0.5f, 0.5f);
 
   int3 base_coord = int3(particle_center_dx); // Floor
@@ -245,7 +246,8 @@ struct Test
     }
   }
 
-  particle.x += dt * particle.v; // advection
+  aabb->min += particle.v * dt;
+  aabb->max += particle.v * dt;
 
   // TODO: optimize this write
   particles[pixel_i.x] = particle;
@@ -272,6 +274,7 @@ void entry_sphere_tracing(uint3 pixel_i : SV_DispatchThreadID)
     
     bool hit = false;
     Particle* particles = p.particles;
+    Aabb* aabbs = p.aabbs;
     GpuInput* config = p.input_ptr;
 
     while (t < MAX_DIST) {
@@ -279,7 +282,9 @@ void entry_sphere_tracing(uint3 pixel_i : SV_DispatchThreadID)
         daxa::f32 min_dist = MAX_DIST;
         for (uint i = 0; i < config->p_count; ++i) {
             Particle particle = particles[i];
-            daxa::f32 hit_dist = compute_sphere_distance(pos, particle.x, PARTICLE_RADIUS);
+            Aabb aabb = aabbs[i];
+            float3 p_center = (aabb.min + aabb.max) * 0.5f;
+            daxa::f32 hit_dist = compute_sphere_distance(pos, p_center, PARTICLE_RADIUS);
             if (hit_dist < min_dist) {
                 min_dist = hit_dist;
             }
