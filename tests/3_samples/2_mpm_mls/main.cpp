@@ -1,4 +1,6 @@
 #define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define DAXA_ATOMIC_FLOAT_FLAG
+#define DAXA_RAY_TRACING_FLAG
 #define APPNAME "Daxa Sample: MPM MLS"
 #include <0_common/base_app.hpp>
 
