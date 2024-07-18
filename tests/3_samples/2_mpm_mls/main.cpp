@@ -66,6 +66,7 @@ inline daxa_f32vec3 operator/(daxa_f32vec3 a, daxa_f32vec3 b)
 struct App : BaseApp<App>
 {
     bool my_toggle = true;
+    bool simulate = false;
     camera cam = {};
     daxa::TlasId tlas = {};
     daxa::BlasId blas = {};
@@ -463,7 +464,11 @@ struct App : BaseApp<App>
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
     void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
-    void on_key(i32 /*unused*/, i32 /*unused*/) {}
+    void on_key(i32 key, i32 action) {
+        if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
+            simulate = !simulate;
+        }
+    }
     void on_resize(u32 sx, u32 sy) 
     {
         minimized = (sx == 0 || sy == 0);
@@ -513,8 +518,8 @@ struct App : BaseApp<App>
                 auto * aabb_ptr = device.get_host_address_as<Aabb>(staging_aabb_buffer).value();
 
                 srand(static_cast<unsigned int>(std::time(NULL)));
-                float min_bound = 0.1f;
-                float max_bound = 0.9f;
+                const float min_bound = 0.5f;
+                const float max_bound = 0.9f;
 
                 for (u32 i = 0; i < NUM_PARTICLES; i++)
                 {
@@ -956,7 +961,10 @@ auto main() -> int
     while (true)
     {
         app.update_input_task();
-        app.update_sim();
+        if(app.simulate)
+            app.update_sim();
+        else 
+            app.device.wait_idle();
         // app.update_accel_struct_task();
         if (app.update())
         {

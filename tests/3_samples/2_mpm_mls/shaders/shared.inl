@@ -16,6 +16,7 @@
 // #define NUM_PARTICLES 8192 * QUALITY * QUALITY * QUALITY
 // #define NUM_PARTICLES 16384 * QUALITY * QUALITY * QUALITY
 #define NUM_PARTICLES 32768 * QUALITY * QUALITY * QUALITY
+// #define NUM_PARTICLES 65536 * QUALITY * QUALITY * QUALITY
 // #define NUM_PARTICLES 512
 // #define NUM_PARTICLES 64
 
@@ -27,7 +28,7 @@
 #define MPM_SHADING_COMPUTE_X 8
 #define MPM_SHADING_COMPUTE_Y 8
 
-#define PARTICLE_RADIUS 0.005f
+#define PARTICLE_RADIUS 0.0025f
 #define MIN_DIST 1e-6f
 #define MAX_DIST 1e10f
 #define EULER 2.71828
@@ -477,11 +478,13 @@ daxa_f32mat3x3 update_deformation_gradient(daxa_f32mat3x3 F, daxa_f32mat3x3 C, f
 }
 
 
-daxa_f32mat3x3 calculate_p2g(inout Particle particle, Aabb aabb, float dt, float p_vol, float mu_0, float lambda_0, float inv_dx, out daxa_i32vec3 base_coord, out daxa_f32vec3 fx, out daxa_f32vec3 w[3]) {
+
+daxa_i32vec3 calculate_particle_status(Aabb aabb, float inv_dx, out daxa_f32vec3 fx, out daxa_f32vec3 w[3]) {
+  
   daxa_f32vec3 particle_center = (aabb.min + aabb.max) * 0.5f * inv_dx;
   daxa_f32vec3 particle_center_dx = particle_center - daxa_f32vec3(0.5f, 0.5f, 0.5f);
 
-  base_coord = daxa_i32vec3(particle_center_dx); // Floor
+  daxa_i32vec3 base_coord = daxa_i32vec3(particle_center_dx); // Floor
 
   fx = particle_center - daxa_f32vec3(base_coord); // Fractional
 
@@ -493,6 +496,13 @@ daxa_f32mat3x3 calculate_p2g(inout Particle particle, Aabb aabb, float dt, float
   w[0] = daxa_f32vec3(0.5) * (x * x);
   w[1] = daxa_f32vec3(0.75) - (y * y);
   w[2] = daxa_f32vec3(0.5) * (z * z);
+
+  return base_coord;
+}
+
+
+
+daxa_f32mat3x3 calculate_p2g(inout Particle particle, float dt, float p_vol, float mu_0, float lambda_0, float inv_dx) {
 
   daxa_f32mat3x3 identity_matrix = daxa_f32mat3x3(1); // Identity matrix
 

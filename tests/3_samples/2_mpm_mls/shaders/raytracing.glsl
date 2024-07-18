@@ -59,6 +59,7 @@ void main()
   uint i = gl_PrimitiveID + gl_GeometryIndexEXT + gl_InstanceCustomIndexEXT;
 
   Aabb aabb = get_aabb_by_index(i);
+  Particle particle = get_particle_by_index(i);
 
   vec3 center = (aabb.min + aabb.max) * 0.5;
 
@@ -70,7 +71,8 @@ void main()
 
   // Diffuse
   float dotNL = max(dot(normal, L), 0.0);
-  vec3 sphere_color = vec3(0.3, 0.8, 1); // Sphere color
+  float gradient = max( 1.0 / length(particle.v), 1.0);
+  vec3 sphere_color = mix(vec3(1, 1, 1), vec3(0.3, 0.8, 1), gradient);
   vec3 diffuse = dotNL * sphere_color;
   vec3 specular = vec3(0);
   float attenuation = 0.3;

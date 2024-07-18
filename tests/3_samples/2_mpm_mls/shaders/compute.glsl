@@ -50,9 +50,9 @@ void main()
 
   daxa_f32vec3 w[3];
   daxa_f32vec3 fx;
-  daxa_i32vec3 base_coord;
+  daxa_i32vec3 base_coord = calculate_particle_status(aabb, inv_dx, fx, w);
 
-  mat3 stress = calculate_p2g(particle, aabb, dt, p_vol, mu_0, lambda_0, inv_dx, base_coord, fx, w);
+  mat3 stress = calculate_p2g(particle, dt, p_vol, mu_0, lambda_0, inv_dx);
 
   mat3 affine = stress + p_mass * particle.C;
 
@@ -159,22 +159,10 @@ void main()
 
   Particle particle = get_particle_by_index(pixel_i_x);
   Aabb aabb = get_aabb_by_index(pixel_i_x);
-
-  vec3 particle_center = (aabb.min + aabb.max) * 0.5f * inv_dx;
-  vec3 particle_center_dx = particle_center - vec3(0.5f, 0.5f, 0.5f);
-
-  ivec3 base_coord = ivec3(particle_center_dx); // Floor
-
-  vec3 fx = particle_center - vec3(base_coord); // Fractional
-
-  // Quadratic kernels Eqn. 123, with x=fx, fx-1,fx-2]
-  vec3 x = vec3(1.5) - fx;
-  vec3 y = fx - vec3(1.0);
-  vec3 z = fx - vec3(0.5);
-
-  vec3 w[3] = {vec3(0.5) * (x * x),
-                 vec3(0.75) - y * y,
-                 vec3(0.5) * (z * z)};
+  
+  daxa_f32vec3 w[3];
+  daxa_f32vec3 fx;
+  daxa_i32vec3 base_coord = calculate_particle_status(aabb, inv_dx, fx, w);
 
   particle.C = mat3(0);
   particle.v = vec3(0.f);
