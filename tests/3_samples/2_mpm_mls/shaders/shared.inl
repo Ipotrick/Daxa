@@ -64,7 +64,9 @@ struct Particle {
 
 
 struct Cell {
-  daxa_f32vec4 info;
+  daxa_f32vec3 v;
+  daxa_f32 m;
+  daxa_f32vec3 f;
 };
 
 struct Aabb {
@@ -144,7 +146,8 @@ void set_particle_by_index(daxa_u32 particle_index, Particle particle) {
 
 void zeroed_out_cell_by_index(daxa_u32 cell_index) {
   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  cell_buffer.cells[cell_index].info = vec4(0, 0, 0, 0);
+  cell_buffer.cells[cell_index].v = vec3(0, 0, 0);
+  cell_buffer.cells[cell_index].m = 0;
 }
 
 void set_cell_by_index(daxa_u32 cell_index, Cell cell) {
@@ -152,24 +155,39 @@ void set_cell_by_index(daxa_u32 cell_index, Cell cell) {
   cell_buffer.cells[cell_index] = cell;
 }
 
-float set_atomic_cell_x_by_index(daxa_u32 cell_index, float x) {
+daxa_f32 set_atomic_cell_vel_x_by_index(daxa_u32 cell_index, daxa_f32 x) {
   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.x, x);
+  return atomicAdd(cell_buffer.cells[cell_index].v.x, x);
 }
 
-float set_atomic_cell_y_by_index(daxa_u32 cell_index, float y) {
+daxa_f32 set_atomic_cell_vel_y_by_index(daxa_u32 cell_index, daxa_f32 y) {
   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.y, y);
+  return atomicAdd(cell_buffer.cells[cell_index].v.y, y);
 }
 
-float set_atomic_cell_z_by_index(daxa_u32 cell_index, float z) {
+daxa_f32 set_atomic_cell_vel_z_by_index(daxa_u32 cell_index, daxa_f32 z) {
   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.z, z);
+  return atomicAdd(cell_buffer.cells[cell_index].v.z, z);
 }
 
-float set_atomic_cell_w_by_index(daxa_u32 cell_index, float w) {
+daxa_f32 set_atomic_cell_mass_by_index(daxa_u32 cell_index, daxa_f32 w) {
   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].info.w, w);
+  return atomicAdd(cell_buffer.cells[cell_index].m, w);
+}
+
+daxa_f32 set_atomic_cell_force_x_by_index(daxa_u32 cell_index, daxa_f32 f) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return atomicAdd(cell_buffer.cells[cell_index].f.x, f);
+}
+
+daxa_f32 set_atomic_cell_force_y_by_index(daxa_u32 cell_index, daxa_f32 f) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return atomicAdd(cell_buffer.cells[cell_index].f.y, f);
+}
+
+daxa_f32 set_atomic_cell_force_z_by_index(daxa_u32 cell_index, daxa_f32 f) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return atomicAdd(cell_buffer.cells[cell_index].f.z, f);
 }
 
 void set_aabb_by_index(daxa_u32 aabb_index, Aabb aabb) {
@@ -183,6 +201,11 @@ void set_aabb_by_index(daxa_u32 aabb_index, Aabb aabb) {
 daxa_f32mat3x3 outer_product(daxa_f32vec3 a, daxa_f32vec3 b)
 {
     return daxa_f32mat3x3(a.x * b, a.y * b, a.z * b);
+}
+
+daxa_f32 trace(daxa_f32mat3x3 m)
+{
+    return m[0][0] + m[1][1] + m[2][2];
 }
 
 daxa_f32mat3x3 matmul(daxa_f32mat3x3 a, daxa_f32mat3x3 b) {
@@ -200,14 +223,14 @@ daxa_f32mat3x3 matmul(daxa_f32mat3x3 a, daxa_f32mat3x3 b) {
 }
 
 
-float rsqrt(float f)
+daxa_f32 rsqrt(daxa_f32 f)
 {
   return 1.0f / sqrt(f);
 }
 
-void swap(inout float a, inout float b)
+void swap(inout daxa_f32 a, inout daxa_f32 b)
 {
-  float temp = a;
+  daxa_f32 temp = a;
   a = b;
   b = temp;
 }
@@ -224,9 +247,9 @@ void swapColumns(inout daxa_f32mat3x3 mat, daxa_i32 col1, daxa_i32 col2)
 }
 
 // Function to normalize a vector and handle small magnitude cases
-daxa_f32vec3 normalizeSafe(daxa_f32vec3 v, float epsilon)
+daxa_f32vec3 normalizeSafe(daxa_f32vec3 v, daxa_f32 epsilon)
 {
-  float len = length(v);
+  daxa_f32 len = length(v);
   return len > epsilon ? v / len : daxa_f32vec3(1, 0, 0);
 }
 
@@ -245,7 +268,7 @@ void svd(daxa_f32mat3x3 A, out daxa_f32mat3x3 U, out daxa_f32mat3x3 S, out daxa_
   // Perform Jacobi iterations
   for (int sweep = 0; sweep < iters; sweep++)
   {
-      float Sch, Ssh, Stmp1, Stmp2, Stmp3, Stmp4, Stmp5;
+      daxa_f32 Sch, Ssh, Stmp1, Stmp2, Stmp3, Stmp4, Stmp5;
 
       // First rotation (zero out Ss21)
       Ssh = S[1][0] * One_Half;
@@ -266,8 +289,8 @@ void svd(daxa_f32mat3x3 A, out daxa_f32mat3x3 U, out daxa_f32mat3x3 S, out daxa_
       Sch = Sch * (1.0f - Stmp1) + Stmp1 * Cosine_Pi_Over_Eight;
       Stmp1 = Ssh * Ssh;
       Stmp2 = Sch * Sch;
-      float Sc = Stmp2 - Stmp1;
-      float Ss = 2.0f * Sch * Ssh;
+      daxa_f32 Sc = Stmp2 - Stmp1;
+      daxa_f32 Ss = 2.0f * Sch * Ssh;
 
       Stmp1 = Ss * S[2][0];
       Stmp2 = Ss * S[2][1];
@@ -285,7 +308,7 @@ void svd(daxa_f32mat3x3 A, out daxa_f32mat3x3 U, out daxa_f32mat3x3 S, out daxa_
       S[1][1] -= S[1][0] * 2.0f * Sch * Ssh;
       S[1][0] *= Sch * Sch - Ss * Ss;
 
-      float Sqvs = 1.0f, Sqvvx = 0.0f, Sqvvy = 0.0f, Sqvvz = 0.0f;
+      daxa_f32 Sqvs = 1.0f, Sqvvx = 0.0f, Sqvvy = 0.0f, Sqvvz = 0.0f;
 
       Stmp1 = Ssh * Sqvvx;
       Stmp2 = Ssh * Sqvvy;
@@ -395,7 +418,7 @@ void svd(daxa_f32mat3x3 A, out daxa_f32mat3x3 U, out daxa_f32mat3x3 S, out daxa_
   }
 
   // Sorting singular values and ensuring non-negative values
-  float sigma1 = S[0][0], sigma2 = S[1][1], sigma3 = S[2][2];
+  daxa_f32 sigma1 = S[0][0], sigma2 = S[1][1], sigma3 = S[2][2];
   if (sigma1 < sigma2)
   {
       swap(sigma1, sigma2);
@@ -460,26 +483,26 @@ daxa_f32vec4 mat4_vec4_mul(daxa_f32mat4x4 m, daxa_f32vec4 v) {
 #endif
 }
 
-daxa_f32mat3x3 calculate_stress(daxa_f32mat3x3 F, daxa_f32mat3x3 U, daxa_f32mat3x3 V, float mu, float la, float J) {
+daxa_f32mat3x3 calculate_stress(daxa_f32mat3x3 F, daxa_f32mat3x3 U, daxa_f32mat3x3 V, daxa_f32 mu, daxa_f32 la, daxa_f32 J) {
     daxa_f32mat3x3 V_T = transpose(V); // Transpuesta de V
     daxa_f32mat3x3 U_V_T = mat3_mul(U, V_T); // U @ V.transpose()
     daxa_f32mat3x3 F_T = transpose(F); // Transpuesta de F_dg[p]
 
     daxa_f32mat3x3 term1 = 2.0 * mu * mat3_mul((F - U_V_T), F_T); // 2 * mu * (F_dg[p] - U @ V.transpose()) @ F_dg[p].transpose()
     daxa_f32mat3x3 identity = daxa_f32mat3x3(1.0); // Matriz de identidad
-    daxa_f32mat3x3 term2 = identity * la * J * (J - 1.0); // ti.Matrix.identity(float, 3) * la * J * (J - 1)
+    daxa_f32mat3x3 term2 = identity * la * J * (J - 1.0); // ti.Matrix.identity(daxa_f32, 3) * la * J * (J - 1)
 
     return term1 + term2;
 }
 
-daxa_f32mat3x3 update_deformation_gradient(daxa_f32mat3x3 F, daxa_f32mat3x3 C, float dt) {
+daxa_f32mat3x3 update_deformation_gradient(daxa_f32mat3x3 F, daxa_f32mat3x3 C, daxa_f32 dt) {
     daxa_f32mat3x3 identity = daxa_f32mat3x3(1.0); // Matriz de identidad
     return element_wise_mul(identity + dt * C, F); // deformation gradient update
 }
 
 
 
-daxa_i32vec3 calculate_particle_status(Aabb aabb, float inv_dx, out daxa_f32vec3 fx, out daxa_f32vec3 w[3]) {
+daxa_i32vec3 calculate_particle_status(Aabb aabb, daxa_f32 inv_dx, out daxa_f32vec3 fx, out daxa_f32vec3 w[3]) {
   
   daxa_f32vec3 particle_center = (aabb.min + aabb.max) * 0.5f * inv_dx;
   daxa_f32vec3 particle_center_dx = particle_center - daxa_f32vec3(0.5f, 0.5f, 0.5f);
@@ -502,28 +525,28 @@ daxa_i32vec3 calculate_particle_status(Aabb aabb, float inv_dx, out daxa_f32vec3
 
 
 
-daxa_f32mat3x3 calculate_p2g(inout Particle particle, float dt, float p_vol, float mu_0, float lambda_0, float inv_dx) {
+daxa_f32mat3x3 calculate_p2g(inout Particle particle, daxa_f32 dt, daxa_f32 p_vol, daxa_f32 mu_0, daxa_f32 lambda_0, daxa_f32 inv_dx) {
 
   daxa_f32mat3x3 identity_matrix = daxa_f32mat3x3(1); // Identity matrix
 
   particle.F = update_deformation_gradient(particle.F, particle.C, dt); // deformation gradient update
 
   // Hardening coefficient: snow gets harder when compressed
-  float h = pow(EULER, 10 * (1 - particle.J));
-  // float h = 0.3f;
-  float mu = mu_0 * h;
-  float la = lambda_0 * h;
+  daxa_f32 h = pow(EULER, 10 * (1 - particle.J));
+  // daxa_f32 h = 0.3f;
+  daxa_f32 mu = mu_0 * h;
+  daxa_f32 la = lambda_0 * h;
   // WATER
   if (particle.type == MAT_WATER)
       mu = 0.0f;
 
   daxa_f32mat3x3 U, sig, V;
   svd(particle.F, U, sig, V, 5);
-  float J = 1.0f;
+  daxa_f32 J = 1.0f;
   // Calculate J
   for (uint i = 0; i < 3; ++i)
   {
-      float new_sigma = sig[i][i];
+      daxa_f32 new_sigma = sig[i][i];
       if (particle.type == MAT_SNOW)
       {
           new_sigma = min(max(sig[i][i], 1 - 2.5e-2), 1 + 4.5e-3);
@@ -552,6 +575,13 @@ daxa_f32mat3x3 calculate_p2g(inout Particle particle, float dt, float p_vol, flo
 
   return (-dt * p_vol * (4 * inv_dx * inv_dx)) * stress;
 }
+
+
+daxa_f32 calculate_p2g_water(inout Particle particle, daxa_f32 p_vol, daxa_f32 w_k, daxa_f32 w_gamma, daxa_f32 inv_dx) {
+  daxa_f32 stress = w_k * (1 - 1 / pow(particle.J, w_gamma));
+  return -p_vol * (4 * inv_dx * inv_dx) * stress;
+}
+
 
 Ray get_ray_from_current_pixel(daxa_f32vec2 index, daxa_f32vec2 rt_size,
                                daxa_f32mat4x4 inv_view, daxa_f32mat4x4 inv_proj) {

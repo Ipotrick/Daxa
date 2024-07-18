@@ -50,7 +50,7 @@ layout(location = 0) rayPayloadInEXT hitPayload prd;
 layout(location = 1) rayPayloadEXT bool is_shadowed;
 
 vec3 light_position = vec3(3, 5, -1);
-vec3 light_intensity = vec3(1.0);
+vec3 light_intensity = vec3(2.5);
 
 void main()
 {
@@ -103,7 +103,7 @@ void main()
 
       if (is_shadowed)
       {
-          attenuation = 0.3;
+          attenuation = 0.5;
       }
       else
       {

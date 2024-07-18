@@ -56,6 +56,13 @@ void main()
 
   mat3 affine = stress + p_mass * particle.C;
 
+  // float w_k = 50.f;
+  // float w_gamma = 5.0f;
+
+  // float stress = calculate_p2g_water(particle, p_vol, w_k, w_gamma, inv_dx);
+
+  // mat3 affine = p_mass * particle.C;
+
   // Transactional momentum
   vec3 mv = vec3(p_mass * particle.v);
 
@@ -83,10 +90,15 @@ void main()
 
               uint index = (coord.x + coord.y * deref(config).grid_dim.x + coord.z * deref(config).grid_dim.x * deref(config).grid_dim.y);
 
-              set_atomic_cell_x_by_index(index, velocity_mass.x);
-              set_atomic_cell_y_by_index(index, velocity_mass.y);
-              set_atomic_cell_z_by_index(index, velocity_mass.z);
-              set_atomic_cell_w_by_index(index, m);
+              vec3 force_stress = stress * dpos;
+
+              set_atomic_cell_vel_x_by_index(index, velocity_mass.x);
+              set_atomic_cell_vel_y_by_index(index, velocity_mass.y);
+              set_atomic_cell_vel_z_by_index(index, velocity_mass.z);
+              set_atomic_cell_mass_by_index(index, m);
+              // set_atomic_cell_force_x_by_index(index, force_stress.x);
+              // set_atomic_cell_force_y_by_index(index, force_stress.y);
+              // set_atomic_cell_force_z_by_index(index, force_stress.z);
           }
       }
   }
@@ -116,24 +128,25 @@ void main()
 
   Cell cell = get_cell_by_index(cell_index);
 
-  if(cell.info.w != 0) {
-    cell.info.xyz /= cell.info.w; // Normalize by mass
+  if(cell.m != 0) {
+    cell.v /= cell.m; // Normalize by mass
     // if cell velocity less than 0 and pixel_i.xyz < bound, set to 0
     bool bound_x =
-        (pixel_i.x < bound) && (cell.info.x < 0) || (pixel_i.x > deref(config).grid_dim.x - bound) && (cell.info.x > 0);
+        (pixel_i.x < bound) && (cell.v.x < 0) || (pixel_i.x > deref(config).grid_dim.x - bound) && (cell.v.x > 0);
     bool bound_y = 
-        (pixel_i.y < bound) && (cell.info.y < 0) || (pixel_i.y > deref(config).grid_dim.y - bound) && (cell.info.y > 0);
+        (pixel_i.y < bound) && (cell.v.y < 0) || (pixel_i.y > deref(config).grid_dim.y - bound) && (cell.v.y > 0);
     bool bound_z = 
-        (pixel_i.z < bound) && (cell.info.z < 0) || (pixel_i.z > deref(config).grid_dim.z - bound) && (cell.info.z > 0);
-    cell.info += dt * vec4(0, gravity, 0, 0); // Gravity
+        (pixel_i.z < bound) && (cell.v.z < 0) || (pixel_i.z > deref(config).grid_dim.z - bound) && (cell.v.z > 0);
+    // cell.v += dt * (vec3(0, gravity, 0) + cell.f / cell.m);
+    cell.v += dt * vec3(0, gravity, 0);
     if(bound_x) {
-      cell.info.x = 0;
+      cell.v.x = 0;
     }
     if(bound_y) {
-      cell.info.y = 0;
+      cell.v.y = 0;
     }
     if(bound_z) {
-      cell.info.z = 0;
+      cell.v.z = 0;
     }
 
     set_cell_by_index(cell_index, cell);
@@ -159,7 +172,7 @@ void main()
 
   Particle particle = get_particle_by_index(pixel_i_x);
   Aabb aabb = get_aabb_by_index(pixel_i_x);
-  
+
   daxa_f32vec3 w[3];
   daxa_f32vec3 fx;
   daxa_i32vec3 base_coord = calculate_particle_status(aabb, inv_dx, fx, w);
@@ -184,15 +197,18 @@ void main()
 
         uint index = coord.x + coord.y * deref(config).grid_dim.x + coord.z * deref(config).grid_dim.x * deref(config).grid_dim.y;
 
-        vec4 grid_value = get_cell_by_index(index).info;
+        vec3 grid_value = get_cell_by_index(index).v;
 
-        vec3 w_grid = vec3(grid_value.xyz * weight);
+        vec3 w_grid = vec3(grid_value * weight);
 
         particle.v += w_grid; // Velocity
-        particle.C += 4 * inv_dx * inv_dx * weight * outer_product(grid_value.xyz, dpos);
+        // particle.C += 4 * inv_dx * weight * outer_product(grid_value, dpos);
+        particle.C += 4 * inv_dx * inv_dx * weight * outer_product(grid_value, dpos);
       }
     }
   }
+
+  // particle.J *= 1.0f + dt * trace(particle.C);
 
   aabb.min += dt * particle.v;
   aabb.max += dt * particle.v;
