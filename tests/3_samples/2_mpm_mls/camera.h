@@ -9,8 +9,8 @@
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-const glm::vec3 INIT_FORWARD = {0, -0.5, -1};
-const glm::vec3 INIT_CAMERA_POS = {0.5, 1.25, 2.0};
+const glm::vec3 INIT_FORWARD = {0, -1.25, -1};
+const glm::vec3 INIT_CAMERA_POS = {0.5, 1.25, 1.5};
 const glm::vec3 INIT_CAMERA_UP = {0, 1, 0};
 
 const float INIT_CAMERA_FOV = 45.0f;

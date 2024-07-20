@@ -1,4 +1,6 @@
 #define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+// #define DAXA_SIMULATION_WATER_MPM_MLS
+// #define DAXA_SIMULATION_MANY_MATERIALS
 #define DAXA_ATOMIC_FLOAT_FLAG
 #define DAXA_RAY_TRACING_FLAG
 #define APPNAME "Daxa Sample: MPM MLS"
@@ -113,7 +115,11 @@ struct App : BaseApp<App>
             .shader_info = {
                 .source = daxa::ShaderFile{"compute.glsl"}, 
                 .compile_options = {
+#ifdef DAXA_SIMULATION_WATER_MPM_MLS
+                    .defines =  std::vector{daxa::ShaderDefine{"P2G_WATER_COMPUTE_FLAG", "1"}},
+#else 
                     .defines =  std::vector{daxa::ShaderDefine{"P2G_COMPUTE_FLAG", "1"}},
+#endif // DAXA_SIMULATION_WATER_MPM_MLS
                 }
             },
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
@@ -124,6 +130,28 @@ struct App : BaseApp<App>
         }).value();
     }();
     // clang-format on
+    
+#ifdef DAXA_SIMULATION_WATER_MPM_MLS
+        // clang-format off
+    std::shared_ptr<daxa::ComputePipeline> p2g_second_compute_pipeline = [this]() {
+        update_virtual_shader();
+        return pipeline_manager.add_compute_pipeline({
+#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+            .shader_info = {
+                .source = daxa::ShaderFile{"compute.glsl"}, 
+                .compile_options = {
+                    .defines =  std::vector{daxa::ShaderDefine{"P2G_WATER_SECOND_COMPUTE_FLAG", "1"}},
+                }
+            },
+#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+            .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_P2G"}},
+#endif
+            .push_constant_size = sizeof(ComputePush),
+            .name = "p2g_second_compute_pipeline",
+        }).value();
+    }();
+    // clang-format on
+#endif // DAXA_SIMULATION_WATER_MPM_MLS
 
     // clang-format off
     std::shared_ptr<daxa::ComputePipeline> grid_compute_pipeline = [this]() {
@@ -144,7 +172,7 @@ struct App : BaseApp<App>
         }).value();
     }();
     // clang-format on
-    
+
     // clang-format off
     std::shared_ptr<daxa::ComputePipeline> g2p_compute_pipeline = [this]() {
         update_virtual_shader();
@@ -153,7 +181,11 @@ struct App : BaseApp<App>
             .shader_info = {
                 .source = daxa::ShaderFile{"compute.glsl"}, 
                 .compile_options = {
+#ifdef DAXA_SIMULATION_WATER_MPM_MLS
+                    .defines =  std::vector{daxa::ShaderDefine{"G2P_WATER_COMPUTE_FLAG", "1"}},
+#else
                     .defines =  std::vector{daxa::ShaderDefine{"G2P_COMPUTE_FLAG", "1"}},
+#endif // DAXA_SIMULATION_WATER_MPM_MLS
                 }
             },
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
@@ -295,8 +327,41 @@ struct App : BaseApp<App>
         .size = sizeof(GpuInput),
         .name = "gpu_input_buffer",
     });
-    GpuInput gpu_input = { .p_count = NUM_PARTICLES, .grid_dim = {GRID_DIM, GRID_DIM, GRID_DIM}, .dt = 1e-4f, .dx = 1.0f / GRID_DIM, .inv_dx = GRID_DIM, .gravity = -9.8f};
+    GpuInput gpu_input = {
+        .p_count = NUM_PARTICLES, 
+        .grid_dim = {GRID_DIM, GRID_DIM, GRID_DIM},
+#ifdef DAXA_SIMULATION_WATER_MPM_MLS
+        .dt = 1e-3f,
+#else
+#if defined(DAXA_SIMULATION_MANY_MATERIALS)
+        .dt = 0.8e-4f,
+#else
+        .dt = 1e-4f,
+#endif
+#endif // DAXA_SIMULATION_WATER_MPM_MLS
+        .dx = 1.0f / GRID_DIM,
+        .inv_dx = GRID_DIM,
+        .gravity = -9.8f,
+        .frame_number = 0,
+        .mouse_pos = {0.0f, 0.0f},
+        .mouse_radius = 0.1f,
+        .max_velocity = 
+#if defined(DAXA_SIMULATION_MANY_MATERIALS)
+            4.0f
+#else
+            15.0f
+#endif
+        };
+
     daxa::TaskBuffer task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
+
+    daxa::BufferId gpu_status_buffer = device.create_buffer(daxa::BufferInfo{
+        .size = sizeof(GpuStatus),
+        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+        .name = "gpu_status_buffer",
+    });
+    GpuStatus* gpu_status = device.get_host_address_as<GpuStatus>(gpu_status_buffer).value();
+    daxa::TaskBuffer task_gpu_status_buffer{{.initial_buffers = {.buffers = std::array{gpu_status_buffer}}, .name = "status_buffer"}};
 
 
     daxa::usize particles_size = NUM_PARTICLES * sizeof(Particle);
@@ -328,17 +393,6 @@ struct App : BaseApp<App>
         .name = "camera_buffer",
     });
     daxa::TaskBuffer task_camera_buffer{{.initial_buffers = {.buffers = std::array{camera_buffer}}, .name = "camera_buffer_task"}};
-    
-    // daxa_u64 blas_scratch_buffer_size = 1024 * 1024 * 10;
-    // daxa::TaskBuffer blas_scratch_buffer = daxa::TaskBuffer{device,{
-    //                 .size = blas_scratch_buffer_size,
-    //                 .name = ("blas_scratch_buffer_task"),
-    //             }};
-    // daxa_u64 blas_buffer_size = 1024 * 1024 * 10;
-    // daxa::BufferId blas_buffer = device.create_buffer({
-    //     .size = blas_buffer_size,
-    //     .name = ("blas_buffer"),
-    // });
     /// create blas instances for tlas:
     daxa::BufferId blas_instances_buffer = device.create_buffer({
         .size = sizeof(daxa_BlasInstanceData),
@@ -395,11 +449,11 @@ struct App : BaseApp<App>
         device.destroy_blas(blas);
         device.destroy_sampler(sampler);
         device.destroy_buffer(gpu_input_buffer);
+        device.destroy_buffer(gpu_status_buffer);
         device.destroy_buffer(particles_buffer);
         device.destroy_buffer(grid_buffer);
         device.destroy_buffer(aabb_buffer);
         device.destroy_buffer(camera_buffer);
-        // device.destroy_buffer(blas_buffer);
         device.destroy_buffer(blas_instances_buffer);
         device.destroy_image(render_image);
     }
@@ -427,8 +481,7 @@ struct App : BaseApp<App>
     }
     void on_update()
     {
-        // gpu_input.time = time;
-        // gpu_input.delta_time = delta_time;
+        ++gpu_input.frame_number;
 
         auto reloaded_result = pipeline_manager.reload_all();
         if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
@@ -457,13 +510,25 @@ struct App : BaseApp<App>
         device.get_host_address_as<Camera>(camera_buffer).value()[0] = camera;
 
         build_accel_structs();
-        // loop_task_graph = record_loop_task_graph();
         loop_task_graph.execute({});
         device.collect_garbage();
     }
 
     void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
-    void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}
+    void on_mouse_button(i32 button, i32 action) {
+        if (button == GLFW_MOUSE_BUTTON_1)
+        {
+            double mouse_x, mouse_y;
+            glfwGetCursorPos(glfw_window_ptr, &mouse_x, &mouse_y);
+            // Click right button store the current mouse position
+            if (action == GLFW_PRESS) {
+                gpu_status->flags |= MOUSE_DOWN_FLAG;
+                gpu_input.mouse_pos = {static_cast<f32>(mouse_x), static_cast<f32>(mouse_y)};
+            } else if(action == GLFW_RELEASE) {
+                gpu_status->flags &= ~MOUSE_DOWN_FLAG;
+            }
+        }
+    }
     void on_key(i32 key, i32 action) {
         if(key == GLFW_KEY_SPACE && action == GLFW_PRESS) {
             simulate = !simulate;
@@ -518,11 +583,13 @@ struct App : BaseApp<App>
                 auto * aabb_ptr = device.get_host_address_as<Aabb>(staging_aabb_buffer).value();
 
                 srand(static_cast<unsigned int>(std::time(NULL)));
+
+#ifdef DAXA_SIMULATION_WATER_MPM_MLS
                 const float min_bound = 0.5f;
                 const float max_bound = 0.9f;
-
                 for (u32 i = 0; i < NUM_PARTICLES; i++)
                 {
+
                     particles_ptr[i] = {
                         .type = MAT_WATER,
                         .v = {0.0f, 0.0f, 0.0f},
@@ -544,6 +611,61 @@ struct App : BaseApp<App>
                     };
 
                 }
+#else 
+                const float min_bound_s = 0.1f;
+                const float max_bound_s = 0.2f;
+                const float min_bound_j = 0.35f;
+                const float max_bound_j = 0.45f;
+                const float min_bound_w = 0.6f;
+                const float max_bound_w = 0.9f;
+
+                u32 mat_count =
+#ifdef DAXA_SIMULATION_MANY_MATERIALS
+                    static_cast<u32>(MAT_COUNT);
+#else
+                    1;
+#endif
+
+                for (u32 i = 0; i < NUM_PARTICLES; i++)
+                {
+                    u32 type = static_cast<u32>(rand()) % mat_count;
+
+                    particles_ptr[i] = {
+                        .type = type,
+                        .v = {0.0f, 0.0f, 0.0f},
+                        .F = make_identity(),
+                        .C = make_zero(),
+                        .J = 1.0f,
+                    };
+
+                    auto min_bound = 0.1; 
+                    auto max_bound = 0.9;   
+
+                    if (type == MAT_SNOW) {
+                        min_bound = min_bound_s;
+                        max_bound = max_bound_s;
+                    } else if (type == MAT_JELLY) {
+                        min_bound = min_bound_j;
+                        max_bound = max_bound_j;
+                    } else if (type == MAT_WATER) {
+                        min_bound = min_bound_w;
+                        max_bound = max_bound_w;
+                    }
+                    
+                    
+                    daxa_f32vec3 x = {
+                        random_in_range(min_bound + PARTICLE_RADIUS, max_bound - PARTICLE_RADIUS), 
+                        random_in_range(min_bound + PARTICLE_RADIUS, max_bound - PARTICLE_RADIUS), 
+                        random_in_range(min_bound + PARTICLE_RADIUS, max_bound - PARTICLE_RADIUS)
+                    };
+
+                    aabb_ptr[i] = {
+                        .min = x - daxa_f32vec3{PARTICLE_RADIUS, PARTICLE_RADIUS, PARTICLE_RADIUS},
+                        .max = x + daxa_f32vec3{PARTICLE_RADIUS, PARTICLE_RADIUS, PARTICLE_RADIUS},
+                    };
+
+                }
+#endif // DAXA_SIMULATION_WATER_MPM_MLS
                 ti.recorder.copy_buffer_to_buffer({
                     .src_buffer = staging_particles_buffer,
                     .dst_buffer = particles_buffer,
@@ -562,6 +684,8 @@ struct App : BaseApp<App>
         upload_task_graph.submit({});
         upload_task_graph.complete({});
         upload_task_graph.execute({});
+
+        std::cout << "Particles uploaded: " << NUM_PARTICLES << '\n';
     }
 
 
@@ -575,6 +699,7 @@ struct App : BaseApp<App>
 
         input_task_graph.use_persistent_image(task_render_image);
         input_task_graph.use_persistent_buffer(task_gpu_input_buffer);
+        input_task_graph.use_persistent_buffer(task_gpu_status_buffer);
         input_task_graph.use_persistent_buffer(task_particles_buffer);
         input_task_graph.use_persistent_buffer(task_grid_buffer);
         input_task_graph.use_persistent_buffer(task_camera_buffer);
@@ -584,6 +709,7 @@ struct App : BaseApp<App>
         input_task_graph.add_task({
             .attachments = {
                 daxa::inl_attachment(daxa::TaskBufferAccess::HOST_TRANSFER_WRITE, task_gpu_input_buffer),
+                daxa::inl_attachment(daxa::TaskBufferAccess::HOST_TRANSFER_WRITE, task_gpu_status_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::HOST_TRANSFER_WRITE, task_particles_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::TRANSFER_WRITE, task_grid_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::HOST_TRANSFER_WRITE, task_camera_buffer),
@@ -603,6 +729,26 @@ struct App : BaseApp<App>
                     .dst_buffer = gpu_input_buffer,
                     .size = sizeof(GpuInput),
                 });
+
+                // auto staging_gpu_status_buffer = device.create_buffer({
+                //     .size = sizeof(GpuStatus),
+                //     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                //     .name = ("staging_gpu_status_buffer"),
+                // });
+
+                // ti.recorder.destroy_buffer_deferred(staging_gpu_status_buffer);
+
+                // auto * status_ptr = device.get_host_address_as<GpuStatus>(staging_gpu_status_buffer).value();
+
+                // *status_ptr = {
+                //     .flags = gpu_flags,
+                // };
+
+                // ti.recorder.copy_buffer_to_buffer({
+                //     .src_buffer = staging_gpu_status_buffer,
+                //     .dst_buffer = gpu_status_buffer,
+                //     .size = sizeof(GpuStatus),
+                // });
             },
             .name = ("Upload Input"),
         });
@@ -623,6 +769,7 @@ struct App : BaseApp<App>
 
         sim_task_graph.use_persistent_image(task_render_image);
         sim_task_graph.use_persistent_buffer(task_gpu_input_buffer);
+        sim_task_graph.use_persistent_buffer(task_gpu_status_buffer);
         sim_task_graph.use_persistent_buffer(task_particles_buffer);
         sim_task_graph.use_persistent_buffer(task_grid_buffer);
         sim_task_graph.use_persistent_buffer(task_aabb_buffer);
@@ -654,6 +801,7 @@ struct App : BaseApp<App>
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
                     .input_ptr = device.get_device_address(gpu_input_buffer).value(),
+                    .status_buffer_id = gpu_status_buffer,
                     .particles = device.get_device_address(particles_buffer).value(),
                     .cells = device.get_device_address(grid_buffer).value(),
                     .aabbs = device.get_device_address(aabb_buffer).value(),
@@ -664,6 +812,34 @@ struct App : BaseApp<App>
             },
             .name = ("P2G (Compute)"),
         });
+#ifdef DAXA_SIMULATION_WATER_MPM_MLS
+        sim_task_graph.add_task({
+            .attachments = {
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_gpu_input_buffer),
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE, task_particles_buffer),
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE, task_grid_buffer),
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_camera_buffer),
+                daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_render_image),
+            },
+            .task = [this](daxa::TaskInterface ti)
+            {
+                ti.recorder.set_pipeline(*p2g_second_compute_pipeline);
+                ti.recorder.push_constant(ComputePush{
+                    .image_id = render_image.default_view(),
+                    .input_buffer_id = gpu_input_buffer,
+                    .input_ptr = device.get_device_address(gpu_input_buffer).value(),
+                    .status_buffer_id = gpu_status_buffer,
+                    .particles = device.get_device_address(particles_buffer).value(),
+                    .cells = device.get_device_address(grid_buffer).value(),
+                    .aabbs = device.get_device_address(aabb_buffer).value(),
+                    .camera = device.get_device_address(camera_buffer).value(),
+                    .tlas = tlas,
+                });
+                ti.recorder.dispatch({(gpu_input.p_count + MPM_P2G_COMPUTE_X - 1) / MPM_P2G_COMPUTE_X});
+            },
+            .name = ("P2G Second (Compute)"),
+        });
+    #endif // DAXA_SIMULATION_WATER_MPM_MLS
         sim_task_graph.add_task({
             .attachments = {
                 daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_gpu_input_buffer),
@@ -680,6 +856,7 @@ struct App : BaseApp<App>
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
                     .input_ptr = device.get_device_address(gpu_input_buffer).value(),
+                    .status_buffer_id = gpu_status_buffer,
                     .particles = device.get_device_address(particles_buffer).value(),
                     .cells = device.get_device_address(grid_buffer).value(),
                     .aabbs = device.get_device_address(aabb_buffer).value(),
@@ -693,6 +870,7 @@ struct App : BaseApp<App>
         sim_task_graph.add_task({
             .attachments = {
                 daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_gpu_input_buffer),
+                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_gpu_status_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE, task_particles_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE, task_grid_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_camera_buffer),
@@ -706,6 +884,7 @@ struct App : BaseApp<App>
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
                     .input_ptr = device.get_device_address(gpu_input_buffer).value(),
+                    .status_buffer_id = gpu_status_buffer,
                     .particles = device.get_device_address(particles_buffer).value(),
                     .cells = device.get_device_address(grid_buffer).value(),
                     .aabbs = device.get_device_address(aabb_buffer).value(),
@@ -730,8 +909,8 @@ struct App : BaseApp<App>
     void update_sim() {
         for(int i = 0; i < SIM_LOOP_COUNT; i++) {
             _sim_task_graph.execute({});
-            device.wait_idle();
         }
+        device.wait_idle();
     }
 
     void build_accel_structs() {  
@@ -749,15 +928,6 @@ struct App : BaseApp<App>
             .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.   // Is also default
         };
         blas_build_sizes = device.get_blas_build_sizes(blas_build_info);
-        // blas_build_info.scratch_data = device.get_device_address(blas_scratch_buffer.get_state().buffers[0]).value();
-        
-        // blas = device.create_blas_from_buffer({
-        //     .blas_info = {   .size = blas_build_sizes.acceleration_structure_size,
-        //         .name = "blas",
-        //     },
-        //     .buffer_id = blas_buffer,
-        //     .offset = 0, // TODO: for more than one BLAS
-        // });
 
         blas = device.create_blas({
             .size = blas_build_sizes.acceleration_structure_size,
@@ -868,6 +1038,7 @@ struct App : BaseApp<App>
     {
         new_task_graph.use_persistent_image(task_render_image);
         new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
+        new_task_graph.use_persistent_buffer(task_gpu_status_buffer);
         new_task_graph.use_persistent_buffer(task_particles_buffer);
         new_task_graph.use_persistent_buffer(task_grid_buffer);
         new_task_graph.use_persistent_buffer(task_aabb_buffer);
@@ -893,6 +1064,7 @@ struct App : BaseApp<App>
         //             .image_id = render_image.default_view(),
         //             .input_buffer_id = gpu_input_buffer,
         //             .input_ptr = device.get_device_address(gpu_input_buffer).value(),
+                    // .status_buffer_id = gpu_status_buffer,
         //             .particles = device.get_device_address(particles_buffer).value(),
         //             .cells = device.get_device_address(grid_buffer).value(),
         //             .aabbs = device.get_device_address(aabb_buffer).value(),
@@ -906,6 +1078,7 @@ struct App : BaseApp<App>
         new_task_graph.add_task({
             .attachments = {
                 daxa::inl_attachment(daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ, task_gpu_input_buffer),
+                daxa::inl_attachment(daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ, task_gpu_status_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ_WRITE, task_particles_buffer),
                 daxa::inl_attachment(daxa::TaskBufferAccess::RAY_TRACING_SHADER_READ, task_camera_buffer),
                 daxa::inl_attachment(daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY, task_render_image),
@@ -919,6 +1092,7 @@ struct App : BaseApp<App>
                     .image_id = render_image.default_view(),
                     .input_buffer_id = gpu_input_buffer,
                     .input_ptr = device.get_device_address(gpu_input_buffer).value(),
+                    .status_buffer_id = gpu_status_buffer,
                     .particles = device.get_device_address(particles_buffer).value(),
                     .cells = device.get_device_address(grid_buffer).value(),
                     .aabbs = device.get_device_address(aabb_buffer).value(),
@@ -958,6 +1132,7 @@ auto main() -> int
 {
     App app = {};
     app.particle_set_position();
+    app.gpu_status->flags = 0;
     while (true)
     {
         app.update_input_task();

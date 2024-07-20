@@ -2,22 +2,166 @@
 // #include <custom file!!>
 
 
-#if ZEROED_GRID_COMPUTE_FLAG == 1
-layout(local_size_x = MPM_GRID_COMPUTE_X, local_size_y = MPM_GRID_COMPUTE_Y, local_size_z = MPM_GRID_COMPUTE_Z) in;
+#if P2G_WATER_COMPUTE_FLAG == 1
+// Main compute shader
+layout(local_size_x = MPM_P2G_COMPUTE_X, local_size_y = 1, local_size_z = 1) in;
 void main()
 {
-  uvec3 pixel_i = gl_GlobalInvocationID.xyz;
+  uint pixel_i_x = gl_GlobalInvocationID.x;
 
   daxa_BufferPtr(GpuInput) config = daxa_BufferPtr(GpuInput)(daxa_id_to_address(p.input_buffer_id));
 
-  if (pixel_i.x >= deref(config).grid_dim.x || pixel_i.y >= deref(config).grid_dim.y || pixel_i.z >= deref(config).grid_dim.z)
+  if (pixel_i_x >= deref(config).p_count)
   {
       return;
   }
 
-  uint cell_index = pixel_i.x + pixel_i.y * deref(config).grid_dim.x + pixel_i.z * deref(config).grid_dim.x * deref(config).grid_dim.y;
+  // float dx = deref(config).dx;
+  float inv_dx = deref(config).inv_dx;
+  float dt = deref(config).dt;
+  float p_mass = 1.0f;
 
-  zeroed_out_cell_by_index(cell_index);
+  Particle particle = get_particle_by_index(pixel_i_x);
+
+  Aabb aabb = get_aabb_by_index(pixel_i_x);
+
+  daxa_f32vec3 w[3];
+  daxa_f32vec3 fx;
+  daxa_i32vec3 base_coord = calculate_particle_status(aabb, inv_dx, fx, w);
+
+  mat3 affine = particle.C;
+
+  uvec3 array_grid = uvec3(base_coord);
+
+  // Scatter to grid
+  for (uint i = 0; i < 3; ++i)
+  {
+      for (uint j = 0; j < 3; ++j)
+      {
+          for (uint k = 0; k < 3; ++k)
+          {
+              uvec3 coord = array_grid + uvec3(i, j, k);
+              if (coord.x >= deref(config).grid_dim.x || coord.y >= deref(config).grid_dim.y || coord.z >= deref(config).grid_dim.z)
+              {
+                  continue;
+              }
+
+              vec3 dpos = (vec3(i, j, k) - fx);
+              float weight = w[i].x * w[j].y * w[k].z;
+              uint index = (coord.x + coord.y * deref(config).grid_dim.x + coord.z * deref(config).grid_dim.x * deref(config).grid_dim.y);
+
+              float m = weight * p_mass;
+              vec3 velocity_mass = m * (particle.v + affine * dpos);
+
+              set_atomic_cell_vel_x_by_index(index, velocity_mass.x);
+              set_atomic_cell_vel_y_by_index(index, velocity_mass.y);
+              set_atomic_cell_vel_z_by_index(index, velocity_mass.z);
+              set_atomic_cell_mass_by_index(index, m);
+          }
+      }
+  }
+}
+#elif P2G_WATER_SECOND_COMPUTE_FLAG == 1
+// Main compute shader
+layout(local_size_x = MPM_P2G_COMPUTE_X, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+  uint pixel_i_x = gl_GlobalInvocationID.x;
+
+  daxa_BufferPtr(GpuInput) config = daxa_BufferPtr(GpuInput)(daxa_id_to_address(p.input_buffer_id));
+
+  if (pixel_i_x >= deref(config).p_count)
+  {
+      return;
+  }
+
+  // float dx = deref(config).dx;
+  float inv_dx = deref(config).inv_dx;
+  float dt = deref(config).dt;
+  float p_mass = 1.0f;
+
+  
+  // fluid parameters
+  const float rest_density = 0.2f;
+  const float dynamic_viscosity = 0.1f;
+  // equation of state
+  const float eos_stiffness = 4.0f;
+  const float eos_power = 4;
+
+  Particle particle = get_particle_by_index(pixel_i_x);
+
+  Aabb aabb = get_aabb_by_index(pixel_i_x);
+
+  daxa_f32vec3 w[3];
+  daxa_f32vec3 fx;
+  daxa_i32vec3 base_coord = calculate_particle_status(aabb, inv_dx, fx, w);
+
+  uvec3 array_grid = uvec3(base_coord);
+
+  // estimating particle volume by summing up neighbourhood's weighted mass contribution
+  // MPM course, equation 152 
+  float density = 0.0f;
+  for (uint i = 0; i < 3; ++i)
+  {
+      for (uint j = 0; j < 3; ++j)
+      {
+          for (uint k = 0; k < 3; ++k)
+          {
+              uvec3 coord = array_grid + uvec3(i, j, k);
+              if (coord.x >= deref(config).grid_dim.x || coord.y >= deref(config).grid_dim.y || coord.z >= deref(config).grid_dim.z)
+              {
+                  continue;
+              }
+
+              float weight = w[i].x * w[j].y * w[k].z;
+              uint index = (coord.x + coord.y * deref(config).grid_dim.x + coord.z * deref(config).grid_dim.x * deref(config).grid_dim.y);
+
+              float mass = get_cell_mass_by_index(index);
+              float m = weight * mass;
+              density += m;
+          }
+      }
+  }
+
+  float p_vol = p_mass / density;
+
+  // end goal, constitutive equation for isotropic fluid: 
+  // stress = -pressure * I + viscosity * (velocity_gradient + velocity_gradient_transposed)
+
+  // Tait equation of state. i clamped it as a bit of a hack.
+  // clamping helps prevent particles absorbing into each other with negative pressures
+  float pressure = max(-0.1f, eos_stiffness * (pow(density /rest_density, eos_power) - 1));
+
+  // velocity gradient - CPIC eq. 17, where deriv of quadratic polynomial is linear
+  mat3 stress = mat3(-pressure) + dynamic_viscosity * (particle.C + transpose(particle.C));
+
+  mat3 eq_16_term_0 = -p_vol * 4 * stress * dt;
+
+  for (uint i = 0; i < 3; ++i)
+  {
+      for (uint j = 0; j < 3; ++j)
+      {
+          for (uint k = 0; k < 3; ++k)
+          {
+              uvec3 coord = array_grid + uvec3(i, j, k);
+              if (coord.x >= deref(config).grid_dim.x || coord.y >= deref(config).grid_dim.y || coord.z >= deref(config).grid_dim.z)
+              {
+                  continue;
+              }
+              
+              vec3 dpos = (vec3(i, j, k) - fx);
+              float weight = w[i].x * w[j].y * w[k].z;
+              uint index = (coord.x + coord.y * deref(config).grid_dim.x + coord.z * deref(config).grid_dim.x * deref(config).grid_dim.y);
+
+              // fused force + momentum contribution from MLS-MPM
+              vec3 momentum = (eq_16_term_0 * weight) * dpos;
+
+              set_atomic_cell_vel_x_by_index(index, momentum.x);
+              set_atomic_cell_vel_y_by_index(index, momentum.y);
+              set_atomic_cell_vel_z_by_index(index, momentum.z);
+          }
+      }
+  }
 }
 #elif P2G_COMPUTE_FLAG == 1
 // Main compute shader
@@ -90,7 +234,7 @@ void main()
 
               uint index = (coord.x + coord.y * deref(config).grid_dim.x + coord.z * deref(config).grid_dim.x * deref(config).grid_dim.y);
 
-              vec3 force_stress = stress * dpos;
+              // vec3 force_stress = stress * dpos;
 
               set_atomic_cell_vel_x_by_index(index, velocity_mass.x);
               set_atomic_cell_vel_y_by_index(index, velocity_mass.y);
@@ -106,7 +250,6 @@ void main()
   // TODO: optimize this write
   set_particle_by_index(pixel_i_x, particle);
 }
-
 #elif GRID_COMPUTE_FLAG == 1
 layout(local_size_x = MPM_GRID_COMPUTE_X, local_size_y = MPM_GRID_COMPUTE_Y, local_size_z = MPM_GRID_COMPUTE_Z) in;
 void main()
@@ -152,6 +295,105 @@ void main()
     set_cell_by_index(cell_index, cell);
   }
 }
+#elif G2P_WATER_COMPUTE_FLAG == 1
+// Main compute shader
+layout(local_size_x = MPM_P2G_COMPUTE_X, local_size_y = 1, local_size_z = 1) in;
+void main()
+{
+  uint pixel_i_x = gl_GlobalInvocationID.x;
+
+  daxa_BufferPtr(GpuInput) config = daxa_BufferPtr(GpuInput)(daxa_id_to_address(p.input_buffer_id));
+
+  if (pixel_i_x >= deref(config).p_count)
+  {
+      return;
+  }
+
+  float dx = deref(config).dx;
+  float inv_dx = deref(config).inv_dx;
+  float dt = deref(config).dt;
+  uint64_t frame_number = deref(config).frame_number;
+
+  Particle particle = get_particle_by_index(pixel_i_x);
+  Aabb aabb = get_aabb_by_index(pixel_i_x);
+
+  daxa_f32vec3 w[3];
+  daxa_f32vec3 fx;
+  daxa_i32vec3 base_coord = calculate_particle_status(aabb, inv_dx, fx, w);
+
+  particle.C = mat3(0);
+  particle.v = vec3(0.f);
+  
+  uvec3 array_grid = uvec3(base_coord);
+
+  for(uint i = 0; i < 3; ++i) {
+    for(uint j = 0; j < 3; ++j) {
+      for(uint k = 0; k < 3; ++k) {
+        uvec3 coord = array_grid + uvec3(i, j, k);
+        
+        if(coord.x >= deref(config).grid_dim.x || coord.y >= deref(config).grid_dim.y || coord.z >= deref(config).grid_dim.z) {
+          continue;
+        }
+
+        vec3 dpos = (vec3(i, j, k) - fx);
+        float weight = w[i].x * w[j].y * w[k].z;
+        uint index = coord.x + coord.y * deref(config).grid_dim.x + coord.z * deref(config).grid_dim.x * deref(config).grid_dim.y;
+
+        vec3 grid_value = get_cell_by_index(index).v;
+
+        vec3 w_grid = vec3(grid_value * weight);
+
+        particle.v += w_grid; // Velocity
+        particle.C += 4 * weight * outer_product(grid_value, dpos);
+      }
+    }
+  }
+
+  aabb.min += dt * particle.v;
+  aabb.max += dt * particle.v;
+
+  // int bounds = 4;
+  // const float tiny_displacement = 1e-9f;
+
+  // uint seed = tea(pixel_i_x, uint(frame_number));
+
+  // // Add a tiny bit displacement to avoid particles sticking together
+  // // check if particle is near the boundary using dx
+  // vec3 particle_displacement = vec3(0);
+  // if(aabb.min.x < (bounds * dx)) {
+  //   particle_displacement.x = tiny_displacement;
+  // } else if(aabb.max.x > (deref(config).grid_dim.x - bounds) * dx) {
+  //   particle_displacement.x = -tiny_displacement;
+  // } else {
+  //   particle_displacement.x = rnd_interval(seed, -tiny_displacement, tiny_displacement);
+  // }
+
+  // if(aabb.min.y < bounds * dx) {
+  //   particle_displacement.y = tiny_displacement;
+  // } else if(aabb.max.y > (deref(config).grid_dim.y - bounds) * dx) {
+  //   particle_displacement.y = -tiny_displacement;
+  // } else {
+  //   particle_displacement.y = rnd_interval(seed, -tiny_displacement, tiny_displacement);
+  // }
+
+  // if(aabb.min.z < bounds * dx) {
+  //   particle_displacement.z = tiny_displacement;
+  // } else if(aabb.max.z > (deref(config).grid_dim.z - bounds) * dx) {
+  //   particle_displacement.z = -tiny_displacement;
+  // } else {
+  //   particle_displacement.z = rnd_interval(seed, -tiny_displacement, tiny_displacement);
+  // }
+
+  // aabb.min += particle_displacement;
+  // aabb.max += particle_displacement;
+  
+
+  set_aabb_by_index(pixel_i_x, aabb);
+  
+
+  // TODO: optimize this write
+  set_particle_by_index(pixel_i_x, particle);
+}
 #elif G2P_COMPUTE_FLAG == 1
 // Main compute shader
 layout(local_size_x = MPM_P2G_COMPUTE_X, local_size_y = 1, local_size_z = 1) in;
@@ -165,6 +407,8 @@ void main()
   {
       return;
   }
+
+  daxa_BufferPtr(GpuStatus) status = daxa_BufferPtr(GpuStatus)(daxa_id_to_address(p.status_buffer_id));
 
   float dx = deref(config).dx;
   float inv_dx = deref(config).inv_dx;
@@ -212,6 +456,30 @@ void main()
 
   aabb.min += dt * particle.v;
   aabb.max += dt * particle.v;
+
+  vec3 pos = (aabb.min + aabb.max) * 0.5f;
+  const float wall_min = 3 * dx;
+  float wall_max = (float(deref(config).grid_dim.x) - 3) * dx;
+
+  // Repulsion force
+  if ((deref(status).flags & MOUSE_TARGET_FLAG) == MOUSE_TARGET_FLAG) {
+    if(all(greaterThan(deref(status).mouse_target, vec3(wall_min))) &&
+       all(lessThan(deref(status).mouse_target, vec3(wall_max)))){
+      vec3 dist = pos - deref(status).mouse_target;
+      if (dot(dist, dist) < deref(config).mouse_radius * deref(config).mouse_radius) {
+          vec3 force = normalize(dist) * 0.05f;
+          particle.v += force;
+      }
+    }
+  }
+
+  float max_v = deref(config).max_velocity;
+
+  // cap velocity
+  if (length(particle.v) > max_v) {
+    particle.v = normalize(particle.v) * max_v;
+  }
+
 
   set_aabb_by_index(pixel_i_x, aabb);
 

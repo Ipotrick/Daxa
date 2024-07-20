@@ -4,6 +4,7 @@
 #if defined(GL_core_profile) // GLSL
 #extension GL_EXT_ray_tracing : enable
 #extension GL_EXT_ray_query : enable
+#extension GL_ARB_gpu_shader_int64 : enable
 #endif // GL_core_profile
 
 
@@ -12,7 +13,7 @@
 #define GRID_DIM 256
 #define GRID_SIZE (GRID_DIM * GRID_DIM * GRID_DIM)
 #define QUALITY 2
-#define SIM_LOOP_COUNT 25
+#define SIM_LOOP_COUNT 30
 // #define NUM_PARTICLES 8192 * QUALITY * QUALITY * QUALITY
 // #define NUM_PARTICLES 16384 * QUALITY * QUALITY * QUALITY
 #define NUM_PARTICLES 32768 * QUALITY * QUALITY * QUALITY
@@ -32,11 +33,15 @@
 #define MIN_DIST 1e-6f
 #define MAX_DIST 1e10f
 #define EULER 2.71828
+// #define VOXEL_PARTICLES 1
+#define MOUSE_DOWN_FLAG (1u << 0)
+#define MOUSE_TARGET_FLAG (1u << 1)
 
 #define MAT_WATER 0
-#define MAT_SAND 1
-#define MAT_SNOW 2
-#define MAT_JELLY 3
+#define MAT_SNOW 1
+#define MAT_JELLY 2
+// #define MAT_SAND 4
+#define MAT_COUNT (MAT_JELLY + 1)
 
 struct Camera {
   daxa_f32mat4x4 inv_view;
@@ -52,6 +57,16 @@ struct GpuInput
   daxa_f32 dx;
   daxa_f32 inv_dx;
   daxa_f32 gravity;
+  daxa_u64 frame_number;
+  daxa_f32vec2 mouse_pos;
+  daxa_f32 mouse_radius;
+  daxa_f32 max_velocity;
+};
+
+struct GpuStatus 
+{
+  daxa_u32 flags;
+  daxa_f32vec3 mouse_target;
 };
 
 struct Particle {
@@ -66,7 +81,7 @@ struct Particle {
 struct Cell {
   daxa_f32vec3 v;
   daxa_f32 m;
-  daxa_f32vec3 f;
+  // daxa_f32vec3 f;
 };
 
 struct Aabb {
@@ -75,6 +90,7 @@ struct Aabb {
 };
 
 DAXA_DECL_BUFFER_PTR(GpuInput)
+DAXA_DECL_BUFFER_PTR(GpuStatus)
 DAXA_DECL_BUFFER_PTR(Particle)
 DAXA_DECL_BUFFER_PTR(Cell)
 DAXA_DECL_BUFFER_PTR(Camera)
@@ -84,10 +100,11 @@ struct ComputePush
 {
     daxa_ImageViewId image_id;
     daxa_BufferId input_buffer_id;
-    daxa_BufferPtr(GpuInput) input_ptr;
-    daxa_BufferPtr(Particle) particles;
-    daxa_BufferPtr(Cell) cells;
-    daxa_BufferPtr(Aabb) aabbs;
+    daxa_RWBufferPtr(GpuInput) input_ptr;
+    daxa_BufferId status_buffer_id;
+    daxa_RWBufferPtr(Particle) particles;
+    daxa_RWBufferPtr(Cell) cells;
+    daxa_RWBufferPtr(Aabb) aabbs;
     daxa_BufferPtr(Camera) camera;
     daxa_TlasId tlas;
 };
@@ -133,6 +150,16 @@ Cell get_cell_by_index(daxa_u32 cell_index) {
   return cell_buffer.cells[cell_index];
 }
 
+daxa_f32vec3 get_cell_vel_by_index(daxa_u32 cell_index) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return cell_buffer.cells[cell_index].v;
+}
+
+daxa_f32 get_cell_mass_by_index(daxa_u32 cell_index) {
+  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+  return cell_buffer.cells[cell_index].m;
+}
+
 Aabb get_aabb_by_index(daxa_u32 aabb_index) {
   AABB_BUFFER aabb_buffer = AABB_BUFFER(p.aabbs);
   return aabb_buffer.aabbs[aabb_index];
@@ -175,26 +202,70 @@ daxa_f32 set_atomic_cell_mass_by_index(daxa_u32 cell_index, daxa_f32 w) {
   return atomicAdd(cell_buffer.cells[cell_index].m, w);
 }
 
-daxa_f32 set_atomic_cell_force_x_by_index(daxa_u32 cell_index, daxa_f32 f) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].f.x, f);
-}
+// daxa_f32 set_atomic_cell_force_x_by_index(daxa_u32 cell_index, daxa_f32 f) {
+//   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+//   return atomicAdd(cell_buffer.cells[cell_index].f.x, f);
+// }
 
-daxa_f32 set_atomic_cell_force_y_by_index(daxa_u32 cell_index, daxa_f32 f) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].f.y, f);
-}
+// daxa_f32 set_atomic_cell_force_y_by_index(daxa_u32 cell_index, daxa_f32 f) {
+//   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+//   return atomicAdd(cell_buffer.cells[cell_index].f.y, f);
+// }
 
-daxa_f32 set_atomic_cell_force_z_by_index(daxa_u32 cell_index, daxa_f32 f) {
-  CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
-  return atomicAdd(cell_buffer.cells[cell_index].f.z, f);
-}
+// daxa_f32 set_atomic_cell_force_z_by_index(daxa_u32 cell_index, daxa_f32 f) {
+//   CELL_BUFFER cell_buffer = CELL_BUFFER(p.cells);
+//   return atomicAdd(cell_buffer.cells[cell_index].f.z, f);
+// }
 
 void set_aabb_by_index(daxa_u32 aabb_index, Aabb aabb) {
   AABB_BUFFER aabb_buffer = AABB_BUFFER(p.aabbs);
   aabb_buffer.aabbs[aabb_index] = aabb;
 }
 #endif // GL_core_profile
+
+
+
+// Generate a random unsigned int from two unsigned int values, using 16 pairs
+// of rounds of the Tiny Encryption Algorithm. See Zafar, Olano, and Curtis,
+// "GPU Random Numbers via the Tiny Encryption Algorithm"
+daxa_u32 tea(daxa_u32 val0, daxa_u32 val1)
+{
+  daxa_u32 v0 = val0;
+  daxa_u32 v1 = val1;
+  daxa_u32 s0 = 0;
+
+  for(daxa_u32 n = 0; n < 16; n++)
+  {
+    s0 += 0x9e3779b9;
+    v0 += ((v1 << 4) + 0xa341316c) ^ (v1 + s0) ^ ((v1 >> 5) + 0xc8013ea4);
+    v1 += ((v0 << 4) + 0xad90777d) ^ (v0 + s0) ^ ((v0 >> 5) + 0x7e95761e);
+  }
+
+  return v0;
+}
+
+
+// Generate a random unsigned int in [0, 2^24) given the previous RNG state
+// using the Numerical Recipes linear congruential generator
+daxa_u32 lcg(inout daxa_u32 prev)
+{
+  daxa_u32 LCG_A = 1664525u;
+  daxa_u32 LCG_C = 1013904223u;
+  prev       = (LCG_A * prev + LCG_C);
+  return prev & 0x00FFFFFF;
+}
+
+// Generate a random float in [0, 1) given the previous RNG state
+daxa_f32 rnd(inout daxa_u32 prev)
+{
+  return (daxa_f32(lcg(prev)) / daxa_f32(0x01000000));
+}
+
+daxa_f32 rnd_interval(inout daxa_u32 prev, daxa_f32 min, daxa_f32 max)
+{
+  return min + rnd(prev) * (max - min);
+}
+
 
 
 
@@ -533,7 +604,11 @@ daxa_f32mat3x3 calculate_p2g(inout Particle particle, daxa_f32 dt, daxa_f32 p_vo
 
   // Hardening coefficient: snow gets harder when compressed
   daxa_f32 h = pow(EULER, 10 * (1 - particle.J));
-  // daxa_f32 h = 0.3f;
+  if(particle.type == MAT_JELLY)
+      h = 1.0f;
+
+
+
   daxa_f32 mu = mu_0 * h;
   daxa_f32 la = lambda_0 * h;
   // WATER
@@ -623,6 +698,18 @@ daxa_f32 hitSphere(daxa_f32vec3 center, daxa_f32 radius, Ray r)
   {
     return (-b - sqrt(discriminant)) / (2.0 * a);
   }
+}
+
+daxa_f32 hitAabb(const Aabb aabb, const Ray r)
+{
+  daxa_f32vec3  invDir = 1.0 / r.direction;
+  daxa_f32vec3  tbot   = invDir * (aabb.min - r.origin);
+  daxa_f32vec3  ttop   = invDir * (aabb.max - r.origin);
+  daxa_f32vec3  tmin   = min(ttop, tbot);
+  daxa_f32vec3  tmax   = max(ttop, tbot);
+  daxa_f32 t0     = max(tmin.x, max(tmin.y, tmin.z));
+  daxa_f32 t1     = min(tmax.x, min(tmax.y, tmax.z));
+  return t1 > max(t0, 0.0) ? t0 : -1.0;
 }
 
 #endif // GLSL & HLSL

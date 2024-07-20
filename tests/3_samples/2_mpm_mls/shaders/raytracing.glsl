@@ -4,6 +4,7 @@ struct hitPayload
 {
   daxa_f32vec3 hit_value;
   daxa_u32 seed;
+  daxa_f32vec3 hit_pos;
 };
 
 #if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_RAYGEN
@@ -11,8 +12,13 @@ struct hitPayload
 layout(location = 0) rayPayloadEXT hitPayload prd;
 void main()
 {
+  daxa_BufferPtr(GpuInput) config = daxa_BufferPtr(GpuInput)(daxa_id_to_address(p.input_buffer_id));
+  
+  daxa_BufferPtr(GpuStatus) status = daxa_BufferPtr(GpuStatus)(daxa_id_to_address(p.status_buffer_id));
 
   prd.hit_value = daxa_f32vec3(0.0);
+  prd.seed = 0;
+  prd.hit_pos = daxa_f32vec3(MAX_DIST);
 
   const daxa_u32 cull_mask = 0xff;
   const daxa_u32 ray_flags = gl_RayFlagsNoneEXT;
@@ -43,6 +49,21 @@ void main()
   daxa_f32vec3 color = prd.hit_value;
 
   imageStore(daxa_image2D(p.image_id), daxa_i32vec2(gl_LaunchIDEXT.xy), vec4(color, 1.0));
+
+  if ((deref(status).flags & MOUSE_DOWN_FLAG) == MOUSE_DOWN_FLAG) {
+    if (gl_LaunchIDEXT.x == uint(deref(config).mouse_pos.x) && gl_LaunchIDEXT.y == uint(deref(config).mouse_pos.y))
+    {
+        if (prd.hit_pos != daxa_f32vec3(MAX_DIST))
+        {
+          deref(status).flags |= MOUSE_TARGET_FLAG;
+            deref(status).mouse_target = prd.hit_pos;
+        } 
+    }
+  }
+  else {
+    deref(status).flags &= ~MOUSE_TARGET_FLAG;
+  }
+
 }
 #elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_CLOSEST_HIT
 
@@ -56,6 +77,8 @@ void main()
 {
   vec3 world_pos = gl_WorldRayOriginEXT + gl_WorldRayDirectionEXT * gl_HitTEXT;
 
+  prd.hit_pos = world_pos;
+
   uint i = gl_PrimitiveID + gl_GeometryIndexEXT + gl_InstanceCustomIndexEXT;
 
   Aabb aabb = get_aabb_by_index(i);
@@ -66,13 +89,26 @@ void main()
   // Computing the normal at hit position
   vec3 normal = normalize(world_pos - center);
 
+#if defined(VOXEL_PARTICLES)
+  vec3 absN = abs(normal);
+  float maxC = max(max(absN.x, absN.y), absN.z);
+  normal     = (maxC == absN.x) ?
+                 vec3(sign(normal.x), 0, 0) :
+                 (maxC == absN.y) ? vec3(0, sign(normal.y), 0) : vec3(0, 0, sign(normal.z));
+#endif
+
   // Vector toward the light
   vec3 L = normalize(light_position - vec3(0));
 
   // Diffuse
   float dotNL = max(dot(normal, L), 0.0);
   float gradient = max( 1.0 / length(particle.v), 1.0);
-  vec3 sphere_color = mix(vec3(1, 1, 1), vec3(0.3, 0.8, 1), gradient);
+  vec3 sphere_color = vec3(1.0);
+  if(particle.type == MAT_WATER)
+    sphere_color = mix(vec3(0.9, 0.9, 1), vec3(0.3, 0.8, 1), gradient);
+  else if(particle.type == MAT_JELLY)
+    sphere_color = mix(vec3(1, 0.6, 0.6), vec3(1, 0.4, 0.4), gradient);
+    
   vec3 diffuse = dotNL * sphere_color;
   vec3 specular = vec3(0);
   float attenuation = 0.3;
@@ -161,11 +197,15 @@ void main()
 
   Aabb aabb = get_aabb_by_index(i);
 
+#if defined(VOXEL_PARTICLES)
+  tHit = hitAabb(aabb, ray);
+#else
   vec3 center = (aabb.min + aabb.max) * 0.5;
   // radius inside the AABB
   float radius = (aabb.max.x - aabb.min.x) * 0.5 * 0.9;
 
   tHit = hitSphere(center, radius, ray);
+#endif
 
   // Report hit point
   if (tHit > 0)
