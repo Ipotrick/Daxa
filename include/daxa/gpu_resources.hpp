@@ -2,6 +2,8 @@
 
 #include <daxa/types.hpp>
 
+#include <bit>
+
 namespace daxa
 {
     enum struct ImageViewType

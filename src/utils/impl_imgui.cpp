@@ -27,6 +27,7 @@ struct Push
 
 #include <cstring>
 #include <utility>
+#include <algorithm>
 
 void set_imgui_style()
 {

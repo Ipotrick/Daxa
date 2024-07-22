@@ -1,20 +1,13 @@
 #pragma once
 
 #include "daxa/c/core.h"
-#include <memory>
-#include <optional>
 #include <string_view>
 #include <vector>
-#include <filesystem>
-#include <functional>
-#include <chrono>
 #include <cstdint>
 #include <cstddef>
 #include <array>
-#include <atomic>
 #include <concepts>
 #include <span>
-#include <bit>
 
 #include <daxa/core.hpp>
 

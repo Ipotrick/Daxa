@@ -11,13 +11,9 @@
 
 #include <array>
 #include <string_view>
-#include <cstdint>
 #include <cstring>
-#include <iostream>
 #include <type_traits>
 #include <span>
-#include <memory>
-#include <vector>
 
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>

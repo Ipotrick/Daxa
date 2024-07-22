@@ -7,6 +7,8 @@
 #include <daxa/command_recorder.hpp>
 #include <daxa/sync.hpp>
 
+#include <bit>
+
 namespace daxa
 {
     enum struct DeviceType

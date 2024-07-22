@@ -1,15 +1,13 @@
 #pragma once
 
 #include <daxa/daxa.hpp>
-#include <variant>
+#include <functional>
 
-#include "task_graph.inl"
+#include "task_graph_types.hpp"
 
 #if !DAXA_BUILT_WITH_UTILS_TASK_GRAPH
 #error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled, or request the utils-task-graph feature in vcpkg"
 #endif
-
-#include "mem.hpp"
 
 namespace daxa
 {
