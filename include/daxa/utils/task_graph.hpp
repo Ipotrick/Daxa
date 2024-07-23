@@ -2,6 +2,7 @@
 
 #include <daxa/daxa.hpp>
 #include <functional>
+#include <memory>
 
 #include "task_graph_types.hpp"
 
