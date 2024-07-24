@@ -22,7 +22,7 @@ auto main() -> int
     daxa::TimelineSemaphore gpu_timeline = device.create_timeline_semaphore({
         .name = "timeline semaphpore",
     });
-    usize cpu_timeline = 1;
+    usize global_submit_timeline = 1;
     daxa::BufferId result_buffer = device.create_buffer({
         .size = sizeof(u32) * ELEMENT_COUNT * ITERATION_COUNT,
         .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
@@ -31,7 +31,7 @@ auto main() -> int
 
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
-        [[maybe_unused]] auto _timeout = gpu_timeline.wait_for_value(cpu_timeline - 1);
+        [[maybe_unused]] auto _timeout = gpu_timeline.wait_for_value(global_submit_timeline - 1);
         daxa::CommandRecorder cmd = device.create_command_recorder({});
         cmd.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_READ_WRITE | daxa::AccessConsts::HOST_WRITE,
@@ -60,14 +60,14 @@ auto main() -> int
         // This is nessecary for internal tracking.
 
         auto signals = std::array{
-            std::pair{gpu_timeline, cpu_timeline},
+            std::pair{gpu_timeline, global_submit_timeline},
             std::pair{tmem.timeline_semaphore(), tmem.timeline_value()},
         };
         device.submit_commands({
             .command_lists = std::array{cmd.complete_current_commands()},
             .signal_timeline_semaphores = signals,
         });
-        cpu_timeline += 1;
+        global_submit_timeline += 1;
     }
 
     daxa::CommandRecorder cmd = device.create_command_recorder({});

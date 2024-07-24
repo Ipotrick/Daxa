@@ -549,10 +549,10 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
 void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_ImplMemoryBlock *>(handle);
-    std::unique_lock const lock{self->device->main_queue_zombies_mtx};
-    u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    self->device->main_queue_memory_block_zombies.emplace_front(
-        main_queue_cpu_timeline_value,
+    std::unique_lock const lock{self->device->zombies_mtx};
+    u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+    self->device->memory_block_zombies.emplace_front(
+        submit_timeline_value,
         MemoryBlockZombie{
             .allocation = self->allocation,
         });

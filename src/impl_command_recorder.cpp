@@ -1282,11 +1282,11 @@ auto daxa_ImplCommandRecorder::generate_new_current_command_data() -> daxa_Resul
 void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_CommandRecorder>(handle);
-    u64 const main_queue_cpu_timeline = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    std::unique_lock const lock{self->device->main_queue_zombies_mtx};
+    u64 const submit_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+    std::unique_lock const lock{self->device->zombies_mtx};
     executable_cmd_list_execute_deferred_destructions(self->device, self->current_command_data);
     self->device->main_queue_command_list_zombies.emplace_front(
-        main_queue_cpu_timeline,
+        submit_timeline,
         CommandRecorderZombie{
             .vk_cmd_pool = self->vk_cmd_pool,
             .allocated_command_buffers = std::move(self->allocated_command_buffers),

@@ -9,6 +9,9 @@
 #include <daxa/c/swapchain.h>
 #include <daxa/c/sync.h>
 
+#define DAXA_MAX_COMPUTE_QUEUE_COUNT 8u
+#define DAXA_MAX_TRANSFER_QUEUE_COUNT 2u
+
 typedef enum
 {
     DAXA_DEVICE_TYPE_OTHER = 0,

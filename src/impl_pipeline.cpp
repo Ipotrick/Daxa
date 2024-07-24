@@ -818,10 +818,10 @@ void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
 {
     _DAXA_TEST_PRINT("ImplPipeline::zero_ref_callback\n");
     auto * self = rc_cast<ImplPipeline *>(handle);
-    std::unique_lock const lock{self->device->main_queue_zombies_mtx};
-    u64 const main_queue_cpu_timeline_value = self->device->main_queue_cpu_timeline.load(std::memory_order::relaxed);
-    self->device->main_queue_pipeline_zombies.emplace_front(
-        main_queue_cpu_timeline_value,
+    std::unique_lock const lock{self->device->zombies_mtx};
+    u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+    self->device->pipeline_zombies.emplace_front(
+        submit_timeline_value,
         PipelineZombie{
             .vk_pipeline = self->vk_pipeline,
         });
@@ -834,8 +834,8 @@ void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
     {
         auto buffer_id = rc_cast<daxa_ImplRayTracingPipeline *>(handle)->info.shader_binding_table.buffer_id;
         // This is not working because the great cleansing is done before the pipeline is destroyed
-        // self->device->main_queue_buffer_zombies.push_front({
-        //     main_queue_cpu_timeline_value,
+        // self->device->buffer_zombies.push_front({
+        //     submit_timeline_value,
         //     std::bit_cast<BufferId>(buffer_id),
         // });
         daxa_dvc_destroy_buffer(self->device, buffer_id);
