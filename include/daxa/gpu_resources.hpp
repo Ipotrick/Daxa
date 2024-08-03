@@ -103,6 +103,13 @@ namespace daxa
         static inline constexpr ImageCreateFlags ALLOW_ALIAS = {0x00000400};
     };
 
+    
+    enum struct SharingMode
+    {
+        EXCLUSIVE,
+        CONCURRENT,
+    };
+
     struct ImageInfo
     {
         ImageCreateFlags flags = ImageCreateFlagBits::NONE;
@@ -113,6 +120,7 @@ namespace daxa
         u32 array_layer_count = 1;
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
+        SharingMode sharing_mode = SharingMode::EXCLUSIVE;
         // Ignored when allocating with a memory block.
         MemoryFlags allocate_info = {};
         SmallString name = {};

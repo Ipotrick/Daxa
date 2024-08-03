@@ -270,8 +270,25 @@ namespace daxa
         SmallString name = {};
     };
 
+    enum struct Queue : u32
+    {
+        MAIN,
+        COMPUTE_0,
+        COMPUTE_1,
+        COMPUTE_2,
+        COMPUTE_3,
+        COMPUTE_4,
+        COMPUTE_5,
+        COMPUTE_6,
+        COMPUTE_7,
+        TRANSFER_0,
+        TRANSFER_1,
+        MAX_ENUM,
+    };
+
     struct CommandSubmitInfo
     {
+        Queue queue = daxa::Queue::MAIN;
         PipelineStageFlags wait_stages = {};
         std::span<ExecutableCommandList const> command_lists = {};
         std::span<BinarySemaphore const> wait_binary_semaphores = {};
@@ -320,6 +337,33 @@ namespace daxa
         BufferId buffer_id = {};
         u64 offset = {};
     };
+
+    // Returns the n'th compute queue enum value
+    constexpr inline auto compute_queue(u32 index) -> Queue { return static_cast<Queue>(static_cast<u32>(Queue::COMPUTE_0) + index); }
+
+    // Returns the n'th transfer queue enum value
+    constexpr inline auto transfer_queue(u32 index) -> Queue { return static_cast<Queue>(static_cast<u32>(Queue::TRANSFER_0) + index); }
+
+    // Returns the index of the queue enum value
+    constexpr inline auto queue_index(Queue queue) -> u32 { 
+        const u32 value = static_cast<u32>(queue);
+        if (value < static_cast<u32>(Queue::COMPUTE_0))
+        {
+            return 0;
+        }        
+        else if (value < static_cast<u32>(Queue::TRANSFER_0))
+        {
+            return value - static_cast<u32>(Queue::COMPUTE_0);
+        }
+        else if (value < static_cast<u32>(Queue::MAX_ENUM))
+        {
+            return value - static_cast<u32>(Queue::TRANSFER_0);
+        }
+        else
+        {
+            return ~0u;
+        }
+    }
 
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
@@ -412,6 +456,9 @@ namespace daxa
         /// @return reference to info of object.
         [[nodiscard]] auto info() const -> DeviceInfo const &;
         void wait_idle();
+
+        void queue_wait_idle(Queue queue);
+        auto queue_count(QueueFamily queue_count) -> u32;
 
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);

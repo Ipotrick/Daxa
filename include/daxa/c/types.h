@@ -4,6 +4,8 @@
 #include <vulkan/vulkan.h>
 #include <daxa/c/core.h>
 
+// TODO:    Rename errors based on their fatality!
+//          DAXA_RESULT_FATAL_ERROR should be the prefix for unrecoverable errors.
 typedef enum
 {
     DAXA_RESULT_SUCCESS = 0,
@@ -112,6 +114,9 @@ typedef enum
     DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED = (1 << 30) + 60,
     DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS = (1 << 30) + 61,
     DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND = (1 << 30) + 62,
+    DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE = (1 << 30) + 63,
+    DAXA_RESULT_ERROR_INVALID_QUEUE = (1 << 30) + 64,
+    DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH = (1 << 30) + 65,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 

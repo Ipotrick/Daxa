@@ -13,10 +13,21 @@ typedef struct
     uint32_t offset;
 } daxa_PushConstantInfo;
 
+typedef enum
+{
+    DAXA_QUEUE_FAMILY_MAIN,
+    DAXA_QUEUE_FAMILY_COMPUTE,
+    DAXA_QUEUE_FAMILY_TRANSFER,
+    DAXA_QUEUE_FAMILY_MAX_ENUM
+} daxa_QueueFamily;
+
 typedef struct
 {
+    daxa_QueueFamily queue_family;
     daxa_SmallString name;
 } daxa_CommandRecorderInfo;
+
+static daxa_CommandRecorderInfo const DAXA_DEFAULT_COMMAND_RECORDER_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {

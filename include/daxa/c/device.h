@@ -257,8 +257,25 @@ static daxa_DeviceInfo const DAXA_DEFAULT_DEVICE_INFO = {
     .name = DAXA_ZERO_INIT,
 };
 
+typedef enum
+{
+    DAXA_QUEUE_MAIN,
+    DAXA_QUEUE_COMPUTE_0,
+    DAXA_QUEUE_COMPUTE_1,
+    DAXA_QUEUE_COMPUTE_2,
+    DAXA_QUEUE_COMPUTE_3,
+    DAXA_QUEUE_COMPUTE_4,
+    DAXA_QUEUE_COMPUTE_5,
+    DAXA_QUEUE_COMPUTE_6,
+    DAXA_QUEUE_COMPUTE_7,
+    DAXA_QUEUE_TRANSFER_0,
+    DAXA_QUEUE_TRANSFER_1,
+    DAXA_QUEUE_MAX_ENUM
+} daxa_Queue;
+
 typedef struct
 {
+    daxa_Queue queue;
     VkPipelineStageFlags wait_stages;
     daxa_ExecutableCommandList const * command_lists;
     uint64_t command_list_count;
@@ -325,6 +342,58 @@ typedef struct
     uint64_t update_scratch_size;
     uint64_t build_scratch_size;
 } daxa_AccelerationStructureBuildSizesInfo;
+
+// Returns the n'th compute queue enum value
+DAXA_EXPORT inline daxa_Queue 
+daxa_compute_queue(daxa_u32 index) { return daxa_Queue(daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0) + index); }
+
+// Returns the n'th transfer queue enum value
+DAXA_EXPORT inline daxa_Queue 
+daxa_transfer_queue(daxa_u32 index) { return daxa_Queue(daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0) + index); }
+
+// Returns the index of the queue enum value
+DAXA_EXPORT inline daxa_u32 
+daxa_queue_index(daxa_Queue queue) { 
+    const daxa_u32 value = daxa_u32(queue);
+    if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0))
+    {
+        return 0;
+    }        
+    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0))
+    {
+        return value - daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0);
+    }
+    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_MAX_ENUM))
+    {
+        return value - daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0);
+    }
+    else
+    {
+        return DAXA_QUEUE_MAX_ENUM;
+    }
+}
+
+// Returns the index of the queue enum value
+DAXA_EXPORT inline daxa_QueueFamily 
+daxa_queue_family(daxa_Queue queue) { 
+    const daxa_u32 value = daxa_u32(queue);
+    if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0))
+    {
+        return DAXA_QUEUE_FAMILY_MAIN;
+    }        
+    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0))
+    {
+        return DAXA_QUEUE_FAMILY_COMPUTE;
+    }
+    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_MAX_ENUM))
+    {
+        return DAXA_QUEUE_FAMILY_TRANSFER;
+    }
+    else
+    {
+        return DAXA_QUEUE_FAMILY_MAX_ENUM;
+    }
+}
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);
@@ -444,6 +513,11 @@ DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 DAXA_EXPORT VkPhysicalDevice
 daxa_dvc_get_vk_physical_device(daxa_Device device);
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_queue_wait_idle(daxa_Device device, daxa_Queue queue);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_queue_count(daxa_Device device, daxa_QueueFamily queue_family, daxa_u32 * out_value);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_wait_idle(daxa_Device device);

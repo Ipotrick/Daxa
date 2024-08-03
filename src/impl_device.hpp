@@ -1,5 +1,11 @@
 #pragma once
 
+// TODO(pahrens):
+// - add queue kind
+// - add queue kind to command recorder creation
+// - add queue index validation function and use it in all queue functions
+// - add queue specific recorder types
+
 #include "impl_core.hpp"
 
 #include "impl_instance.hpp"
@@ -19,7 +25,7 @@ struct SubmitZombie
     std::vector<daxa_TimelineSemaphore> timeline_semaphores = {};
 };
 
-static inline constexpr u64 MAX_SUBMITS_IN_FLIGHT = 64;
+static inline constexpr u64 MAX_PENDING_SUBMISSIONS_PER_QUEUE = 64;
 static inline constexpr u64 MAIN_QUEUE_INDEX = 0;
 static inline constexpr u64 FIRST_COMPUTE_QUEUE_IDX = 1;
 static inline constexpr u64 FIRST_TRANSFER_QUEUE_IDX = FIRST_COMPUTE_QUEUE_IDX + DAXA_MAX_COMPUTE_QUEUE_COUNT;
@@ -78,8 +84,8 @@ struct daxa_ImplDevice final : public ImplHandle
     VmaAllocation vk_null_image_vma_allocation = {};
 
     // Command Buffer/Pool recycling:
-    std::mutex main_queue_command_pool_buffer_recycle_mtx = {};
-    CommandPoolPool buffer_pool_pool = {};
+    // Index with daxa_QueueFamily.
+    std::array<CommandPoolPool, 3> command_pool_pools = {};
 
     // Gpu Shader Resource Object table:
     GPUShaderResourceTable gpu_sro_table = {};
@@ -91,7 +97,7 @@ struct daxa_ImplDevice final : public ImplHandle
     // If the zombies global submit index is smaller then global index of all submits currently in flight (on all queues), we can safely clean the resource up.
     std::atomic_uint64_t global_submit_timeline = {};
     std::recursive_mutex zombies_mtx = {};
-    std::deque<std::pair<u64, CommandRecorderZombie>> main_queue_command_list_zombies = {};
+    std::deque<std::pair<u64, CommandRecorderZombie>> command_list_zombies = {};
     std::deque<std::pair<u64, BufferId>> buffer_zombies = {};
     std::deque<std::pair<u64, ImageId>> image_zombies = {};
     std::deque<std::pair<u64, ImageViewId>> image_view_zombies = {};
@@ -109,25 +115,34 @@ struct daxa_ImplDevice final : public ImplHandle
     // Queues
     struct ImplQueue
     {
-        u32 vk_queue_family_index = {};
+        u32 vk_queue_family_index = ~0u;
         VkQueue vk_queue = {};
         VkSemaphore gpu_queue_local_timeline = {};
-        std::atomic_uint64_t cpu_queue_local_timeline = {};
+        u64 cpu_queue_local_timeline = {};
         /// WARNING: In flight submit queues must be synchronized with queue_mtx!
-        ///          This is because collect garbage (which pops from the in_flight_submit_global_indices) can race with 
-        ///          submit operation running on another thread (which pushes into in_flight_submit_global_indices)
+        ///          This is because collect garbage (which pops from the pending_submits) can race with 
+        ///          submit operation running on another thread (which pushes into pending_submits)
         // Stores the global submission index of all in flight submits in the order they were made on this queue
-        std::array<u64, MAX_SUBMITS_IN_FLIGHT> in_flight_submit_global_indices = {};
-        u64 in_flight_submit_count = {};
+        std::deque<u64> pending_submits = {};
+
+        auto initialize(VkDevice vk_device, u32 queue_family_index, u32 queue_index) -> daxa_Result;
+        void cleanup(VkDevice device);
+        auto update_pending_submits(VkDevice vk_device) -> daxa_Result;
+        auto wait_for_oldest_pending_submit(VkDevice vk_device) -> daxa_Result;
+        void add_pending_submit(u64 current_device_timeline_value);
+        auto get_oldest_pending_submit() -> std::optional<u64>;
     };
+    std::array<ImplQueue, DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT + 1> queues = {};
+
+    struct ImplQueueFamily
+    {
+        u32 queue_count = {};
+        u32 vk_index = ~0u;
+    };
+    std::array<ImplQueueFamily, 3> queue_families = {};
     
-    u32 main_queue_family_index = ~0u;
-    u32 compute_queue_family_index = ~0u;
-    u32 transfer_queue_family_index = ~0u;
-    u32 compute_queue_count = ~0u;
-    u32 transfer_queue_count = ~0u;
-    std::array<ImplQueue, DAXA_MAX_TRANSFER_QUEUE_COUNT + DAXA_MAX_COMPUTE_QUEUE_COUNT + 1 /*main queue*/> queues = {};
-    u64 queue_count = {};
+    std::array<u32,3> valid_vk_queue_families = {};
+    u32 valid_vk_queue_family_count = {};
 
     auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice;
     auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice;

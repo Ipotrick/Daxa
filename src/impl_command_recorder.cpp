@@ -65,20 +65,10 @@ auto CommandPoolPool::get(daxa_Device device) -> VkCommandPool
             .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
             .pNext = nullptr,
             .flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-            .queueFamilyIndex = device->main_queue_family_index,
+            .queueFamilyIndex = this->queue_family_index,
         };
 
         vkCreateCommandPool(device->vk_device, &vk_command_pool_create_info, nullptr, &pool);
-
-        // TODO(command recorder): alloc command buffers inside the complete and construction functions of CommandRecorder!
-        // VkCommandBufferAllocateInfo const vk_command_buffer_allocate_info{
-        //     .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
-        //     .pNext = nullptr,
-        //     .commandPool = pool,
-        //     .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-        //     .commandBufferCount = 1,
-        // };
-        // vkAllocateCommandBuffers(device->vk_device, &vk_command_buffer_allocate_info, &buffer);
     }
     else
     {
@@ -1170,11 +1160,10 @@ void daxa_destroy_command_recorder(daxa_CommandRecorder self)
 
 auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderInfo const * info, daxa_CommandRecorder * out_cmd_list) -> daxa_Result
 {
-    VkCommandPool vk_cmd_pool = {};
-    {
-        std::unique_lock const l{device->main_queue_command_pool_buffer_recycle_mtx};
-        vk_cmd_pool = device->buffer_pool_pool.get(device);
-    }
+    VkCommandPool vk_cmd_pool = [&](){ 
+        std::unique_lock lock{device->command_pool_pools[info->queue_family].mtx};
+        return device->command_pool_pools[info->queue_family].get(device); 
+    }();
     auto ret = daxa_ImplCommandRecorder{};
     ret.device = device;
     ret.info = *info;
@@ -1182,10 +1171,8 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
     auto result = ret.generate_new_current_command_data();
     if (result != DAXA_RESULT_SUCCESS)
     {
-        {
-            std::unique_lock const l{device->main_queue_command_pool_buffer_recycle_mtx};
-            device->buffer_pool_pool.put_back(vk_cmd_pool);
-        }
+        std::unique_lock lock{device->command_pool_pools[info->queue_family].mtx};
+        device->command_pool_pools[info->queue_family].put_back(vk_cmd_pool);
         return result;
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
@@ -1285,7 +1272,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
     u64 const submit_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
     std::unique_lock const lock{self->device->zombies_mtx};
     executable_cmd_list_execute_deferred_destructions(self->device, self->current_command_data);
-    self->device->main_queue_command_list_zombies.emplace_front(
+    self->device->command_list_zombies.emplace_front(
         submit_timeline,
         CommandRecorderZombie{
             .vk_cmd_pool = self->vk_cmd_pool,

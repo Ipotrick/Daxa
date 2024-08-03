@@ -12,6 +12,9 @@
 #include "impl_instance.hpp"
 #include "impl_device.hpp"
 
+static_assert(sizeof(daxa::Queue) == sizeof(daxa_Queue));
+static_assert(alignof(daxa::Queue) == alignof(daxa_Queue));
+
 // --- Begin Helpers ---
 
 auto daxa_result_to_string(daxa_Result result) -> std::string_view
@@ -123,6 +126,9 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case daxa_Result::DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED: return "DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED";
     case daxa_Result::DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED: return "DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED";
     case daxa_Result::DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS: return "DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS";
+    case daxa_Result::DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND: return "DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND";
+    case daxa_Result::DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE: return "DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE";
+    case daxa_Result::DAXA_RESULT_ERROR_INVALID_QUEUE: return "DAXA_RESULT_ERROR_INVALID_QUEUE";
     case daxa_Result::DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
     default: return "UNIMPLEMENTED";
     }
@@ -435,9 +441,24 @@ namespace daxa
         check_result(result, "failed to wait idle device");
     }
 
+    void Device::queue_wait_idle(Queue queue)
+    {
+        auto result = daxa_dvc_queue_wait_idle(r_cast<daxa_Device>(this->object), static_cast<daxa_Queue>(queue));
+        check_result(result, "failed to queue wait idle device");
+    }
+
+    auto Device::queue_count(QueueFamily queue_family) -> u32
+    {
+        u32 out_value = {};
+        auto result = daxa_dvc_queue_count(r_cast<daxa_Device>(this->object), static_cast<daxa_QueueFamily>(queue_family), &out_value);
+        check_result(result, "failed to get queue count");
+        return out_value;
+    }
+
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
         daxa_CommandSubmitInfo const c_submit_info = {
+            .queue = static_cast<daxa_Queue>(submit_info.queue),
             .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
             .command_lists = reinterpret_cast<daxa_ExecutableCommandList const *>(submit_info.command_lists.data()),
             .command_list_count = submit_info.command_lists.size(),

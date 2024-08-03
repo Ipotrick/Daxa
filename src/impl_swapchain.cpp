@@ -303,7 +303,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         .imageUsage = usage.data,
         .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 1,
-        .pQueueFamilyIndices = &this->device->main_queue_family_index,
+        .pQueueFamilyIndices = &this->device->queues[DAXA_QUEUE_MAIN].vk_queue_family_index,
         .preTransform = static_cast<VkSurfaceTransformFlagBitsKHR>(info.present_operation),
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),

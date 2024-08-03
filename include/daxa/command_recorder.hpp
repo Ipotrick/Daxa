@@ -18,8 +18,16 @@ namespace daxa
         u32 offset = {};
     };
 
+    enum struct QueueFamily
+    {
+        MAIN,
+        COMPUTE,
+        TRANSFER
+    };
+
     struct CommandRecorderInfo
     {
+        QueueFamily queue_family = {};
         SmallString name = {};
     };
 
