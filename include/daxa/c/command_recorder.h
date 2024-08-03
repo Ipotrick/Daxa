@@ -6,6 +6,11 @@
 #include <daxa/c/gpu_resources.h>
 #include <daxa/c/pipeline.h>
 
+// TODO: investigate software command recording
+//   Might allow us some optimizations
+//   Allows for easier verification
+//   Allows for more predictable performance (move all vk recording ops to tight place in code)
+
 typedef struct
 {
     void const * data;

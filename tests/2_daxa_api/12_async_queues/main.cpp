@@ -34,6 +34,23 @@
 ///   There is no way to transfer ownership and as the exclusive ownership is mostly useful for renderpass write compression, 
 ///   the main queue is the default exlusively owning queue.
 ///
+/// CommandRecorder Types
+///   * daxa has four command recorders
+///   * CommandRecorder
+///     * can be used only for the main queue family
+///     * can record any command and can be morphed into a render command recorder
+///   * RenderCommandRecorder
+///     * can record commands that are only valid within a renderpass
+///     * created by generic command recorder
+///     * must be morphed back into a command recorder to finish a render pass
+///   * ComputeCommandRecorder
+///     * can only be used to record commands to the main and compute queues, NOT transfer queues.
+///     * can record any command allowed on transfer and compute queues and the main queue, does not allow recording of graphics commands.
+///   * TransferCommandRecorder
+///     * can be used to record commands to ANY queue
+///     * can only record commands that are valid on the transfer queue and all others.
+///   * allows for cheap compile time checks. Without these types, daxa would have to check the queue family for every command.
+///
 
 auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
 {
@@ -117,7 +134,10 @@ namespace tests
         {
             // Copy from index 0 to index 1
             // Command recorders queue family MUST match the queue it is submitted to.
-            auto rec = device.create_command_recorder({daxa::QueueFamily::COMPUTE});
+            // Commands for a transfer queue MUST ONLY be recorded by a transfer command recoder!
+            // A generic or compute command recorder can not record commands for a transfer queue!
+            // Tho transfer command recorders CAN record commands for any queue.
+            auto rec = device.create_transfer_command_recorder({daxa::QueueFamily::TRANSFER});
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             rec.copy_buffer_to_buffer({
                 .src_buffer = buffer,
@@ -129,7 +149,7 @@ namespace tests
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             auto commands = rec.complete_current_commands();
             device.submit_commands({
-                .queue = daxa::Queue::COMPUTE_1,
+                .queue = daxa::Queue::TRANSFER_0,
                 .command_lists = std::array{commands},
                 .signal_binary_semaphores = std::array{sema0},
             });
@@ -138,7 +158,9 @@ namespace tests
         {
             // Copy from index 1 to index 2
             // Command recorders queue family MUST match the queue it is submitted to.
-            auto rec = device.create_command_recorder({daxa::QueueFamily::COMPUTE});
+            // Commands for a compute queue can only be recorded by a compute or a transfer command recorder!
+            // A generic command recorder is not allowed to record commands for a compute queue!
+            auto rec = device.create_compute_command_recorder({daxa::QueueFamily::COMPUTE});
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_READ_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             rec.copy_buffer_to_buffer({
                 .src_buffer = buffer,
@@ -159,8 +181,10 @@ namespace tests
         
         {
             // Copy from index 2 to index 3
+            // Any command recorder type can be used to submit commands to the main queue.
             auto rec = device.create_command_recorder({
                 // daxa::QueueFamily::MAIN // The default is the main queue family
+                // The Queue MUST be main here as its a generic command recorder
             });
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_READ_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             rec.copy_buffer_to_buffer({
@@ -179,7 +203,7 @@ namespace tests
             });
         }   
 
-        // The semaphores make sure that the queues submissions are processed in the correct order (comp1 -> comp0 -> main).
+        // The semaphores make sure that the queues submissions are processed in the correct order (transfer0 -> comp0 -> main).
 
         // As the queues are synchronized via semaphores and the main queue is the last to run,
         // we can safely assume that all work is done, as soon as the main queue is drained.
@@ -373,7 +397,7 @@ namespace tests
                 loop_task_graph.execute({});
                 device.collect_garbage();
                 {
-                    auto rec = device.create_command_recorder({daxa::QueueFamily::COMPUTE});
+                    auto rec = device.create_compute_command_recorder({daxa::QueueFamily::COMPUTE});
                     auto cmds = rec.complete_current_commands();
                     device.submit_commands({
                         .queue = daxa::Queue::COMPUTE_0, 
