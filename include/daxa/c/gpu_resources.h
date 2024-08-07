@@ -124,7 +124,7 @@ static daxa_ImageInfo const DAXA_DEFAULT_IMAGE_INFO = {
     .array_layer_count = 1,
     .sample_count = 1,
     .usage = 0,
-    .sharing_mode = daxa_SharingMode::DAXA_SHARING_MODE_EXCLUSIVE,
+    .sharing_mode = DAXA_SHARING_MODE_EXCLUSIVE,
     .allocate_info = DAXA_MEMORY_FLAG_NONE,
     .name = {.data = DAXA_ZERO_INIT, .size = 0},
 };

@@ -265,17 +265,17 @@ typedef struct
     daxa_u32 index;
 } daxa_Queue;
 
-static daxa_Queue const DAXA_QUEUE_MAIN = daxa_Queue{ DAXA_QUEUE_FAMILY_MAIN, 0 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_0 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 0 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_1 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 1 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_2 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 2 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_3 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 3 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_4 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 4 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_5 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 5 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_6 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 6 };
-static daxa_Queue const DAXA_QUEUE_COMPUTE_7 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 7 };
-static daxa_Queue const DAXA_QUEUE_TRANSFER_0 = daxa_Queue{ DAXA_QUEUE_FAMILY_TRANSFER, 0 };
-static daxa_Queue const DAXA_QUEUE_TRANSFER_1 = daxa_Queue{ DAXA_QUEUE_FAMILY_TRANSFER, 1 };
+static daxa_Queue const DAXA_QUEUE_MAIN = { DAXA_QUEUE_FAMILY_MAIN, 0 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_0 = { DAXA_QUEUE_FAMILY_COMPUTE, 0 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_1 = { DAXA_QUEUE_FAMILY_COMPUTE, 1 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_2 = { DAXA_QUEUE_FAMILY_COMPUTE, 2 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_3 = { DAXA_QUEUE_FAMILY_COMPUTE, 3 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_4 = { DAXA_QUEUE_FAMILY_COMPUTE, 4 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_5 = { DAXA_QUEUE_FAMILY_COMPUTE, 5 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_6 = { DAXA_QUEUE_FAMILY_COMPUTE, 6 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_7 = { DAXA_QUEUE_FAMILY_COMPUTE, 7 };
+static daxa_Queue const DAXA_QUEUE_TRANSFER_0 = { DAXA_QUEUE_FAMILY_TRANSFER, 0 };
+static daxa_Queue const DAXA_QUEUE_TRANSFER_1 = { DAXA_QUEUE_FAMILY_TRANSFER, 1 };
 
 typedef struct
 {
