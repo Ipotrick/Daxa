@@ -485,7 +485,7 @@ namespace daxa
 
     void Device::queue_wait_idle(Queue queue)
     {
-        auto result = daxa_dvc_queue_wait_idle(r_cast<daxa_Device>(this->object), static_cast<daxa_Queue>(queue));
+        auto result = daxa_dvc_queue_wait_idle(r_cast<daxa_Device>(this->object), std::bit_cast<daxa_Queue>(queue));
         check_result(result, "failed to queue wait idle device");
     }
 
@@ -500,7 +500,7 @@ namespace daxa
     void Device::submit_commands(CommandSubmitInfo const & submit_info)
     {
         daxa_CommandSubmitInfo const c_submit_info = {
-            .queue = static_cast<daxa_Queue>(submit_info.queue),
+            .queue = std::bit_cast<daxa_Queue>(submit_info.queue),
             .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
             .command_lists = reinterpret_cast<daxa_ExecutableCommandList const *>(submit_info.command_lists.data()),
             .command_list_count = submit_info.command_lists.size(),
@@ -1773,6 +1773,16 @@ namespace daxa
     auto to_string(Access access) -> std::string
     {
         return fmt::format("stages: {}, type: {}", to_string(access.stages), to_string(access.type));
+    }
+
+    auto to_string(QueueFamily family) -> std::string_view
+    {
+        switch (family)
+        {
+            case QueueFamily::MAIN: return "MAIN";
+            case QueueFamily::COMPUTE: return "COMPUTE";
+            case QueueFamily::TRANSFER: return "TRANSFER";
+        };
     }
 
     /// --- End to_string ---

@@ -11,6 +11,9 @@
 
 namespace daxa
 {
+    static constexpr inline u32 MAX_COMPUTE_QUEUE_COUNT = 8u;
+    static constexpr inline u32 MAX_TRANSFER_QUEUE_COUNT = 2u;
+
     enum struct DeviceType
     {
         OTHER = 0,
@@ -206,6 +209,8 @@ namespace daxa
         Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
         Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
         Optional<InvocationReorderProperties> invocation_reorder_properties = {};
+        u32 compute_queue_count;
+        u32 transfer_queue_count;
     };
 
     DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
@@ -270,25 +275,27 @@ namespace daxa
         SmallString name = {};
     };
 
-    enum struct Queue : u32
+    struct Queue
     {
-        MAIN,
-        COMPUTE_0,
-        COMPUTE_1,
-        COMPUTE_2,
-        COMPUTE_3,
-        COMPUTE_4,
-        COMPUTE_5,
-        COMPUTE_6,
-        COMPUTE_7,
-        TRANSFER_0,
-        TRANSFER_1,
-        MAX_ENUM,
+        QueueFamily family = {};
+        u32 index = {};
     };
+
+    static constexpr inline Queue QUEUE_MAIN = Queue{ QueueFamily::MAIN, 0 };
+    static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{ QueueFamily::COMPUTE, 0 };
+    static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{ QueueFamily::COMPUTE, 1 };
+    static constexpr inline Queue QUEUE_COMPUTE_2 = Queue{ QueueFamily::COMPUTE, 2 };
+    static constexpr inline Queue QUEUE_COMPUTE_3 = Queue{ QueueFamily::COMPUTE, 3 };
+    static constexpr inline Queue QUEUE_COMPUTE_4 = Queue{ QueueFamily::COMPUTE, 4 };
+    static constexpr inline Queue QUEUE_COMPUTE_5 = Queue{ QueueFamily::COMPUTE, 5 };
+    static constexpr inline Queue QUEUE_COMPUTE_6 = Queue{ QueueFamily::COMPUTE, 6 };
+    static constexpr inline Queue QUEUE_COMPUTE_7 = Queue{ QueueFamily::COMPUTE, 7 };
+    static constexpr inline Queue QUEUE_TRANSFER_0 = Queue{ QueueFamily::TRANSFER, 0 };
+    static constexpr inline Queue QUEUE_TRANSFER_1 = Queue{ QueueFamily::TRANSFER, 1 };
 
     struct CommandSubmitInfo
     {
-        Queue queue = daxa::Queue::MAIN;
+        Queue queue = daxa::QUEUE_MAIN;
         PipelineStageFlags wait_stages = {};
         std::span<ExecutableCommandList const> command_lists = {};
         std::span<BinarySemaphore const> wait_binary_semaphores = {};
@@ -301,6 +308,7 @@ namespace daxa
     {
         std::span<BinarySemaphore const> wait_binary_semaphores = {};
         Swapchain swapchain;
+        Queue queue = QUEUE_MAIN;
     };
 
     struct MemoryBlockBufferInfo
@@ -337,33 +345,6 @@ namespace daxa
         BufferId buffer_id = {};
         u64 offset = {};
     };
-
-    // Returns the n'th compute queue enum value
-    constexpr inline auto compute_queue(u32 index) -> Queue { return static_cast<Queue>(static_cast<u32>(Queue::COMPUTE_0) + index); }
-
-    // Returns the n'th transfer queue enum value
-    constexpr inline auto transfer_queue(u32 index) -> Queue { return static_cast<Queue>(static_cast<u32>(Queue::TRANSFER_0) + index); }
-
-    // Returns the index of the queue enum value
-    constexpr inline auto queue_index(Queue queue) -> u32 { 
-        const u32 value = static_cast<u32>(queue);
-        if (value < static_cast<u32>(Queue::COMPUTE_0))
-        {
-            return 0;
-        }        
-        else if (value < static_cast<u32>(Queue::TRANSFER_0))
-        {
-            return value - static_cast<u32>(Queue::COMPUTE_0);
-        }
-        else if (value < static_cast<u32>(Queue::MAX_ENUM))
-        {
-            return value - static_cast<u32>(Queue::TRANSFER_0);
-        }
-        else
-        {
-            return ~0u;
-        }
-    }
 
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.

@@ -84,25 +84,21 @@ namespace tests
         std::cout << "Device has " << compute_queue_count << " async compute and " << transfer_queue_count << " async transfer queues.\n";
         std::cout << "Daxa's maximum for async compute queues is 8 and daxa's maximum for async transfer queues is 2.\n";
 
-        device.queue_wait_idle(daxa::Queue::MAIN);
+        device.queue_wait_idle(daxa::QUEUE_MAIN);
         for (daxa::u32 queue = 0; queue < compute_queue_count; ++queue)
         {
-            device.queue_wait_idle(daxa::compute_queue(queue));
+            device.queue_wait_idle(daxa::Queue{daxa::QueueFamily::COMPUTE, queue});
         }     
         for (daxa::u32 queue = 0; queue < transfer_queue_count; ++queue)
         {
-            // Get queue based on index.
-            daxa::Queue queue_enum = daxa::transfer_queue(queue);
-            // Query queues index.
-            queue = daxa::queue_index(queue_enum);
-            device.queue_wait_idle(queue_enum);
+            device.queue_wait_idle(daxa::Queue{daxa::QueueFamily::TRANSFER, queue});
         }   
 
         bool found_error = false;
         try
         {
             /// NOTE: This should fail. This is an intentional error.
-            device.queue_wait_idle(daxa::transfer_queue(800u));
+            device.queue_wait_idle(daxa::Queue{daxa::QueueFamily::COMPUTE, 800});
         }  
         catch(std::runtime_error e)
         {
@@ -134,7 +130,7 @@ namespace tests
         {
             // Copy from index 0 to index 1
             // Command recorders queue family MUST match the queue it is submitted to.
-            // Commands for a transfer queue MUST ONLY be recorded by a transfer command recoder!
+            // Commands for a transfer queue MUST ONLY be recorded by a transfer command recorder!
             // A generic or compute command recorder can not record commands for a transfer queue!
             // Tho transfer command recorders CAN record commands for any queue.
             auto rec = device.create_transfer_command_recorder({daxa::QueueFamily::TRANSFER});
@@ -149,7 +145,7 @@ namespace tests
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             auto commands = rec.complete_current_commands();
             device.submit_commands({
-                .queue = daxa::Queue::TRANSFER_0,
+                .queue = daxa::QUEUE_TRANSFER_0,
                 .command_lists = std::array{commands},
                 .signal_binary_semaphores = std::array{sema0},
             });
@@ -172,7 +168,7 @@ namespace tests
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             auto commands = rec.complete_current_commands();
             device.submit_commands({
-                .queue = daxa::Queue::COMPUTE_1,
+                .queue = daxa::QUEUE_COMPUTE_1,
                 .command_lists = std::array{commands},
                 .signal_binary_semaphores = std::array{sema1},
                 .wait_binary_semaphores = std::array{sema0},
@@ -207,7 +203,7 @@ namespace tests
 
         // As the queues are synchronized via semaphores and the main queue is the last to run,
         // we can safely assume that all work is done, as soon as the main queue is drained.
-        device.queue_wait_idle(daxa::Queue::MAIN);
+        device.queue_wait_idle(daxa::QUEUE_MAIN);
 
         daxa::u32 result = device.get_host_address_as<daxa::u32>(buffer).value()[3];
         DAXA_DBG_ASSERT_TRUE_M(result == initial_value, "operations resulted in incorrect final result!");
@@ -400,7 +396,7 @@ namespace tests
                     auto rec = device.create_compute_command_recorder({daxa::QueueFamily::COMPUTE});
                     auto cmds = rec.complete_current_commands();
                     device.submit_commands({
-                        .queue = daxa::Queue::COMPUTE_0, 
+                        .queue = daxa::QUEUE_COMPUTE_0, 
                         .command_lists = std::array{cmds},
                     });
                 }

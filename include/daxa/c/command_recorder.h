@@ -6,10 +6,13 @@
 #include <daxa/c/gpu_resources.h>
 #include <daxa/c/pipeline.h>
 
-// TODO: investigate software command recording
-//   Might allow us some optimizations
-//   Allows for easier verification
-//   Allows for more predictable performance (move all vk recording ops to tight place in code)
+/// TODO: investigate software command recording
+///   Might allow us some optimizations
+///   Allows for easier verification
+///   Allows for more predictable performance (move all vk recording ops to tight place in code)
+
+/// WARNING:
+///   Checks for command types against queue family only performed in c++ api!!
 
 typedef struct
 {
@@ -17,14 +20,6 @@ typedef struct
     uint64_t size;
     uint32_t offset;
 } daxa_PushConstantInfo;
-
-typedef enum
-{
-    DAXA_QUEUE_FAMILY_MAIN,
-    DAXA_QUEUE_FAMILY_COMPUTE,
-    DAXA_QUEUE_FAMILY_TRANSFER,
-    DAXA_QUEUE_FAMILY_MAX_ENUM
-} daxa_QueueFamily;
 
 typedef struct
 {

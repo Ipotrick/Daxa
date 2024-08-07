@@ -32,6 +32,12 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         return result;
     }
 
+    if (info->queue_family >= DAXA_QUEUE_FAMILY_MAX_ENUM || device->queue_families[info->queue_family].queue_count == 0)
+    {
+        ret.full_cleanup();
+        return DAXA_RESULT_ERROR_INVALID_QUEUE_FAMILY;
+    }
+
     // Save supported present modes.
     u32 present_mode_count = {};
     auto vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -303,7 +309,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         .imageUsage = usage.data,
         .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 1,
-        .pQueueFamilyIndices = &this->device->queues[DAXA_QUEUE_MAIN].vk_queue_family_index,
+        .pQueueFamilyIndices = &this->device->get_queue(DAXA_QUEUE_MAIN).vk_queue_family_index,
         .preTransform = static_cast<VkSurfaceTransformFlagBitsKHR>(info.present_operation),
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),

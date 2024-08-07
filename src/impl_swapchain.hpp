@@ -34,7 +34,6 @@
 /// WARNING: The swapchain only works on the main queue! It is directly tied to it.
 ///
 /// TODO: investigate if wsi is improved enough to use zombies for swapchain.
-/// TODO: add multi queue support to swapchains if feasable.
 struct daxa_ImplSwapchain final : ImplHandle
 {
     daxa_Device device = {};

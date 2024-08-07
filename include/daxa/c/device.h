@@ -212,6 +212,8 @@ typedef struct
     daxa_Optional(daxa_RayTracingPipelineProperties) ray_tracing_pipeline_properties;
     daxa_Optional(daxa_AccelerationStructureProperties) acceleration_structure_properties;
     daxa_Optional(daxa_RayTracingInvocationReorderProperties) ray_tracing_invocation_reorder_properties;
+    daxa_u32 compute_queue_count;
+    daxa_u32 transfer_queue_count;
 } daxa_DeviceProperties;
 
 DAXA_EXPORT int32_t
@@ -257,21 +259,23 @@ static daxa_DeviceInfo const DAXA_DEFAULT_DEVICE_INFO = {
     .name = DAXA_ZERO_INIT,
 };
 
-typedef enum
+typedef struct
 {
-    DAXA_QUEUE_MAIN,
-    DAXA_QUEUE_COMPUTE_0,
-    DAXA_QUEUE_COMPUTE_1,
-    DAXA_QUEUE_COMPUTE_2,
-    DAXA_QUEUE_COMPUTE_3,
-    DAXA_QUEUE_COMPUTE_4,
-    DAXA_QUEUE_COMPUTE_5,
-    DAXA_QUEUE_COMPUTE_6,
-    DAXA_QUEUE_COMPUTE_7,
-    DAXA_QUEUE_TRANSFER_0,
-    DAXA_QUEUE_TRANSFER_1,
-    DAXA_QUEUE_MAX_ENUM
+    daxa_QueueFamily family;
+    daxa_u32 index;
 } daxa_Queue;
+
+static daxa_Queue const DAXA_QUEUE_MAIN = daxa_Queue{ DAXA_QUEUE_FAMILY_MAIN, 0 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_0 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 0 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_1 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 1 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_2 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 2 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_3 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 3 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_4 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 4 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_5 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 5 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_6 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 6 };
+static daxa_Queue const DAXA_QUEUE_COMPUTE_7 = daxa_Queue{ DAXA_QUEUE_FAMILY_COMPUTE, 7 };
+static daxa_Queue const DAXA_QUEUE_TRANSFER_0 = daxa_Queue{ DAXA_QUEUE_FAMILY_TRANSFER, 0 };
+static daxa_Queue const DAXA_QUEUE_TRANSFER_1 = daxa_Queue{ DAXA_QUEUE_FAMILY_TRANSFER, 1 };
 
 typedef struct
 {
@@ -296,6 +300,7 @@ typedef struct
     daxa_BinarySemaphore const * wait_binary_semaphores;
     uint64_t wait_binary_semaphore_count;
     daxa_Swapchain swapchain;
+    daxa_Queue queue;
 } daxa_PresentInfo;
 
 static daxa_PresentInfo const DAXA_DEFAULT_PRESENT_INFO = DAXA_ZERO_INIT;
@@ -342,58 +347,6 @@ typedef struct
     uint64_t update_scratch_size;
     uint64_t build_scratch_size;
 } daxa_AccelerationStructureBuildSizesInfo;
-
-// Returns the n'th compute queue enum value
-DAXA_EXPORT inline daxa_Queue 
-daxa_compute_queue(daxa_u32 index) { return daxa_Queue(daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0) + index); }
-
-// Returns the n'th transfer queue enum value
-DAXA_EXPORT inline daxa_Queue 
-daxa_transfer_queue(daxa_u32 index) { return daxa_Queue(daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0) + index); }
-
-// Returns the index of the queue enum value
-DAXA_EXPORT inline daxa_u32 
-daxa_queue_index(daxa_Queue queue) { 
-    const daxa_u32 value = daxa_u32(queue);
-    if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0))
-    {
-        return 0;
-    }        
-    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0))
-    {
-        return value - daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0);
-    }
-    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_MAX_ENUM))
-    {
-        return value - daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0);
-    }
-    else
-    {
-        return DAXA_QUEUE_MAX_ENUM;
-    }
-}
-
-// Returns the index of the queue enum value
-DAXA_EXPORT inline daxa_QueueFamily 
-daxa_queue_family(daxa_Queue queue) { 
-    const daxa_u32 value = daxa_u32(queue);
-    if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_COMPUTE_0))
-    {
-        return DAXA_QUEUE_FAMILY_MAIN;
-    }        
-    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_TRANSFER_0))
-    {
-        return DAXA_QUEUE_FAMILY_COMPUTE;
-    }
-    else if (value < daxa_u32(daxa_Queue::DAXA_QUEUE_MAX_ENUM))
-    {
-        return DAXA_QUEUE_FAMILY_TRANSFER;
-    }
-    else
-    {
-        return DAXA_QUEUE_FAMILY_MAX_ENUM;
-    }
-}
 
 DAXA_EXPORT VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);

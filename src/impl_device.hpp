@@ -1,11 +1,5 @@
 #pragma once
 
-// TODO(pahrens):
-// - add queue kind
-// - add queue kind to command recorder creation
-// - add queue index validation function and use it in all queue functions
-// - add queue specific recorder types
-
 #include "impl_core.hpp"
 
 #include "impl_instance.hpp"
@@ -115,6 +109,8 @@ struct daxa_ImplDevice final : public ImplHandle
     // Queues
     struct ImplQueue
     {
+        daxa_QueueFamily family = {};
+        u32 queue_index = {};
         u32 vk_queue_family_index = ~0u;
         VkQueue vk_queue = {};
         VkSemaphore gpu_queue_local_timeline = {};
@@ -132,7 +128,22 @@ struct daxa_ImplDevice final : public ImplHandle
         void add_pending_submit(u64 current_device_timeline_value);
         auto get_oldest_pending_submit() -> std::optional<u64>;
     };
-    std::array<ImplQueue, DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT + 1> queues = {};
+    std::array<ImplQueue, DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT + 1> queues = {
+        ImplQueue{DAXA_QUEUE_FAMILY_MAIN, 0},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 0},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 1},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 2},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 3},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 4},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 5},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 6},
+        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 7},
+        ImplQueue{DAXA_QUEUE_FAMILY_TRANSFER, 0},
+        ImplQueue{DAXA_QUEUE_FAMILY_TRANSFER, 1},
+    };
+
+    auto get_queue(daxa_Queue queue) -> ImplQueue&;
+    auto valid_queue(daxa_Queue queue) -> bool;
 
     struct ImplQueueFamily
     {
