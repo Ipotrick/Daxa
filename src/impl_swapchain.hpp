@@ -12,6 +12,7 @@
 ///
 /// IMPORTANT INFORMATION REGARDING SEMAPHORES IN WSI:
 /// binary semaphore in acquire MUST be un-signaled when recording actions ON THE CPU!
+/// Because of this, we need frames_in_flight+1 semaphores for the acquire
 ///
 /// We need two binary semaphores here:
 /// The acquire semaphore and the present semaphore.

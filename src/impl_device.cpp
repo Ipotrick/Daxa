@@ -44,6 +44,23 @@ namespace
         return vk_image_create_info;
     }
     using namespace daxa::types;
+
+    inline auto BUFFER_USE_FLAGS(daxa_Device self) -> VkBufferUsageFlags
+    {
+        auto result = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
+                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                      VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                      VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+        if ((self->info.flags & DeviceFlagBits::RAY_TRACING) != DeviceFlagBits::NONE)
+        {
+            result |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
+                      VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
+                      VK_BUFFER_USAGE_SHADER_BINDING_TABLE_BIT_KHR;
+        }
+        return result;
+    }
 } // namespace
 
 auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_BufferId * out_id, daxa_MemoryBlock opt_memory_block, usize opt_offset) -> daxa_Result
@@ -72,7 +89,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
         .pNext = nullptr,
         .flags = {},
         .size = static_cast<VkDeviceSize>(ret.info.size),
-        .usage = BUFFER_USE_FLAGS,
+        .usage = BUFFER_USE_FLAGS(self),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 1,
         .pQueueFamilyIndices = &self->main_queue_family_index,
@@ -492,7 +509,7 @@ auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const
         .pNext = nullptr,
         .flags = {},
         .size = static_cast<VkDeviceSize>(info->size),
-        .usage = BUFFER_USE_FLAGS,
+        .usage = BUFFER_USE_FLAGS(self),
         .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 1,
         .pQueueFamilyIndices = &self->main_queue_family_index,
@@ -820,42 +837,42 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
     return DAXA_RESULT_SUCCESS;
 }
 
-#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME, vk_name, VK_NAME)                        \
-    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id) -> daxa_Result                            \
-    {                                                                                                            \
-        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                 \
-        auto success = self->gpu_sro_table.SLOT_NAME.try_zombify(std::bit_cast<GPUResourceId>(id));              \
-        if (success)                                                                                             \
-        {                                                                                                        \
-            self->zombify_##name(std::bit_cast<Name##Id>(id));                                                   \
-            return DAXA_RESULT_SUCCESS;                                                                          \
-        }                                                                                                        \
-        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
-    }                                                                                                            \
-    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id, daxa_##Name##Info * out_info) -> daxa_Result \
-    {                                                                                                            \
-        /*NOTE: THIS CAN RACE. BUT IT IS OK AS ITS A POD AND WE CHECK IF ITS VALID AFTER THE COPY!*/             \
-        auto info_copy = self->slot(id).info;                                                                    \
-        if (daxa_dvc_is_##name##_valid(self, id))                                                                \
-        {                                                                                                        \
-            *out_info = info_copy;                                                                               \
-            return DAXA_RESULT_SUCCESS;                                                                          \
-        }                                                                                                        \
-        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
-    }                                                                                                            \
-    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id, VK_NAME * out_vk_handle) -> daxa_Result    \
-    {                                                                                                            \
-        if (daxa_dvc_is_##name##_valid(self, id))                                                                \
-        {                                                                                                        \
-            *out_vk_handle = self->slot(id).vk_##vk_name;                                                        \
-            return DAXA_RESULT_SUCCESS;                                                                          \
-        }                                                                                                        \
-        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                  \
-    }                                                                                                            \
-    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id) -> daxa_Bool8                          \
-    {                                                                                                            \
-        return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                              \
-            std::bit_cast<daxa::GPUResourceId>(id)));                                                            \
+#define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME, vk_name, VK_NAME)                      \
+    auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id)->daxa_Result                            \
+    {                                                                                                          \
+        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                               \
+        auto success = self->gpu_sro_table.SLOT_NAME.try_zombify(std::bit_cast<GPUResourceId>(id));            \
+        if (success)                                                                                           \
+        {                                                                                                      \
+            self->zombify_##name(std::bit_cast<Name##Id>(id));                                                 \
+            return DAXA_RESULT_SUCCESS;                                                                        \
+        }                                                                                                      \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
+    }                                                                                                          \
+    auto daxa_dvc_info_##name(daxa_Device self, daxa_##Name##Id id, daxa_##Name##Info * out_info)->daxa_Result \
+    {                                                                                                          \
+        /*NOTE: THIS CAN RACE. BUT IT IS OK AS ITS A POD AND WE CHECK IF ITS VALID AFTER THE COPY!*/           \
+        auto info_copy = self->slot(id).info;                                                                  \
+        if (daxa_dvc_is_##name##_valid(self, id))                                                              \
+        {                                                                                                      \
+            *out_info = info_copy;                                                                             \
+            return DAXA_RESULT_SUCCESS;                                                                        \
+        }                                                                                                      \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
+    }                                                                                                          \
+    auto daxa_dvc_get_vk_##name(daxa_Device self, daxa_##Name##Id id, VK_NAME * out_vk_handle)->daxa_Result    \
+    {                                                                                                          \
+        if (daxa_dvc_is_##name##_valid(self, id))                                                              \
+        {                                                                                                      \
+            *out_vk_handle = self->slot(id).vk_##vk_name;                                                      \
+            return DAXA_RESULT_SUCCESS;                                                                        \
+        }                                                                                                      \
+        return DAXA_RESULT_INVALID_##NAME##_ID;                                                                \
+    }                                                                                                          \
+    auto daxa_dvc_is_##name##_valid(daxa_Device self, daxa_##Name##Id id)->daxa_Bool8                          \
+    {                                                                                                          \
+        return std::bit_cast<daxa_Bool8>(self->gpu_sro_table.SLOT_NAME.is_id_valid(                            \
+            std::bit_cast<daxa::GPUResourceId>(id)));                                                          \
     }
 
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(buffer, Buffer, BUFFER, buffer_slots, buffer, VkBuffer)
@@ -1424,8 +1441,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
         return DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_SAMPLER_COUNT;
     }
 
-    VmaVulkanFunctions const vma_vulkan_functions
-    {
+    VmaVulkanFunctions const vma_vulkan_functions{
         .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
         .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
         .vkGetPhysicalDeviceProperties = {},
@@ -1493,7 +1509,7 @@ auto daxa_ImplDevice::create(daxa_Instance instance, daxa_DeviceInfo const & inf
             .pNext = nullptr,
             .flags = {},
             .size = sizeof(u8) * 4,
-            .usage = BUFFER_USE_FLAGS,
+            .usage = BUFFER_USE_FLAGS(self),
             .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
             .queueFamilyIndexCount = 1,
             .pQueueFamilyIndices = &self->main_queue_family_index,

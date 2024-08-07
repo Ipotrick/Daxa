@@ -97,7 +97,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         return result;
     }
     // We have an acquire semaphore for each frame in flight.
-    for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight; i++)
+    for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight + 1; i++)
     {
         BinarySemaphore sema = {};
         daxa_BinarySemaphoreInfo const sema_info = {};
@@ -181,7 +181,7 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
             std::max<i64>(
                 0,
                 static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight))));
-    self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % self->info.max_allowed_frames_in_flight;
+    self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % (self->info.max_allowed_frames_in_flight + 1);
     BinarySemaphore & acquire_semaphore = self->acquire_semaphores[self->acquire_semaphore_index];
     auto result = vkAcquireNextImageKHR(
         self->device->vk_device,
