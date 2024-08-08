@@ -8,6 +8,7 @@
 #include <array>
 #include <concepts>
 #include <span>
+#include <limits>
 
 #include <daxa/core.hpp>
 

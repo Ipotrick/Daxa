@@ -11,6 +11,8 @@
 
 #include <daxa/c/device.h>
 
+#include <atomic>
+
 using namespace daxa;
 
 struct SubmitZombie
@@ -116,7 +118,7 @@ struct daxa_ImplDevice final : public ImplHandle
         VkSemaphore gpu_queue_local_timeline = {};
         u64 cpu_queue_local_timeline = {};
         /// WARNING: In flight submit queues must be synchronized with queue_mtx!
-        ///          This is because collect garbage (which pops from the pending_submits) can race with 
+        ///          This is because collect garbage (which pops from the pending_submits) can race with
         ///          submit operation running on another thread (which pushes into pending_submits)
         // Stores the global submission index of all in flight submits in the order they were made on this queue
         std::deque<u64> pending_submits = {};
@@ -151,7 +153,7 @@ struct daxa_ImplDevice final : public ImplHandle
         u32 vk_index = ~0u;
     };
     std::array<ImplQueueFamily, 3> queue_families = {};
-    
+
     std::array<u32,3> valid_vk_queue_families = {};
     u32 valid_vk_queue_family_count = {};
 
