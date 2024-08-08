@@ -131,8 +131,9 @@ auto daxa_ImplDevice::ImplQueue::wait_for_oldest_pending_submit(VkDevice vk_devi
         VkSemaphoreWaitInfo wait_info{
             .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
             .pNext = nullptr,
-            .pSemaphores = &this->gpu_queue_local_timeline,
+            .flags = {},
             .semaphoreCount = 1,
+            .pSemaphores = &this->gpu_queue_local_timeline,
             .pValues = &timeline_value,
         };
         auto result = static_cast<daxa_Result>(vkWaitSemaphores(vk_device, &wait_info, ~0ull));

@@ -4,6 +4,8 @@
 
 #include <daxa/gpu_resources.hpp>
 
+#include <atomic>
+
 namespace daxa
 {
     struct ImplBufferSlot
@@ -125,7 +127,7 @@ namespace daxa
          * @brief   Creates a slot for a resource in the pool.
          *          Returned slots may be recycled but are guaranteed to have a unique index + version.
          *
-         * Must 
+         * Must
          * * mutable ptr to resource is only used in parallel
          *
          * @return The new resource slot and its id. Can fail if max resources is exceeded.
