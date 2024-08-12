@@ -198,6 +198,79 @@ typedef struct
     daxa_Bool8 prefers_compact_primitive_output;
 } daxa_MeshShaderProperties;
 
+typedef enum
+{
+    DAXA_MISSING_REQUIRED_VK_FEATURE_none,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_imageCubeArray,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_independentBlend,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_tessellationShader,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_multiDrawIndirect,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_depthClamp,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_fillModeNonSolid,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_wideLines,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_samplerAnisotropy,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_fragmentStoresAndAtomics,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageImageMultisample,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageImageReadWithoutFormat,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageImageWriteWithoutFormat,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_shaderInt64,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_variablePointersStorageBuffer,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_variablePointers,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_bufferDeviceAddress,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_bufferDeviceAddressCaptureReplay,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_bufferDeviceAddressMultiDevice,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_shaderSampledImageArrayNonUniformIndexing,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageBufferArrayNonUniformIndexing,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageImageArrayNonUniformIndexing,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingSampledImageUpdateAfterBind,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingStorageImageUpdateAfterBind,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingStorageBufferUpdateAfterBind,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingUpdateUnusedWhilePending,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingPartiallyBound,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_runtimeDescriptorArray,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_hostQueryReset,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_dynamicRendering,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_synchronization2,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_timelineSemaphore,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_subgroupSizeControl,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_computeFullSubgroups,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_scalarBlockLayout,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_accelerationStructureCaptureReplay,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_vulkanMemoryModel,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_robustBufferAccess2,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_robustImageAccess2,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_MAX_ENUM
+} daxa_MissingRequiredVkFeature;
+
+typedef enum
+{
+    DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY = 0x1 << 0,
+    DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY = 0x1 << 1,
+    DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_VK_MEMORY_MODEL = 0x1 << 2,
+    DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2 = 0x1 << 3,
+} daxa_DeviceExplicitFeatureFlagBits;
+
+typedef daxa_DeviceExplicitFeatureFlagBits daxa_DeviceExplicitFeatureFlags;
+
+typedef enum
+{
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER =  0x1 << 0,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING =  0x1 << 1,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE =  0x1 << 2,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER =  0x1 << 3,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH =  0x1 << 4,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION =  0x1 << 5,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64 =  0x1 << 6,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64 =  0x1 << 7,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16 =  0x1 << 8,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_INT8 =  0x1 << 9,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3 =  0x1 << 10,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT =  0x1 << 11,
+    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SWAPCHAIN =  0x1 << 12,
+} daxa_DeviceImplicitFeatureFlagBits;
+
+typedef daxa_DeviceImplicitFeatureFlagBits daxa_DeviceImplicitFeatureFlags;
+
 typedef struct
 {
     uint32_t vulkan_api_version;
@@ -214,6 +287,9 @@ typedef struct
     daxa_Optional(daxa_RayTracingInvocationReorderProperties) ray_tracing_invocation_reorder_properties;
     daxa_u32 compute_queue_count;
     daxa_u32 transfer_queue_count;
+    daxa_DeviceImplicitFeatureFlags implicit_features;
+    daxa_DeviceExplicitFeatureFlags explicit_features;
+    daxa_MissingRequiredVkFeature missing_required_feature;
 } daxa_DeviceProperties;
 
 DAXA_EXPORT int32_t
@@ -252,6 +328,27 @@ typedef struct
 static daxa_DeviceInfo const DAXA_DEFAULT_DEVICE_INFO = {
     .selector = &daxa_default_device_score,
     .flags = DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT,
+    .max_allowed_images = 10000,
+    .max_allowed_buffers = 10000,
+    .max_allowed_samplers = 400,
+    .max_allowed_acceleration_structures = 10000,
+    .name = DAXA_ZERO_INIT,
+};
+
+typedef struct
+{
+    daxa_u32 physical_device_index;                     // Index into list of devices returned from daxa_instance_list_devices_properties.
+    daxa_DeviceExplicitFeatureFlags explicit_features;  // Explicit features must be manually enabled.
+    uint32_t max_allowed_images;
+    uint32_t max_allowed_buffers;
+    uint32_t max_allowed_samplers;
+    uint32_t max_allowed_acceleration_structures;
+    daxa_SmallString name;
+} daxa_DeviceInfo2;
+
+static daxa_DeviceInfo2 const DAXA_DEFAULT_DEVICE_INFO_2 = {
+    .physical_device_index = ~0u,
+    .explicit_features = DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY,
     .max_allowed_images = 10000,
     .max_allowed_buffers = 10000,
     .max_allowed_samplers = 400,

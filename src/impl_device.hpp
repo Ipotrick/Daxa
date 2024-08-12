@@ -8,6 +8,7 @@
 #include "impl_swapchain.hpp"
 #include "impl_gpu_resources.hpp"
 #include "impl_timeline_query.hpp"
+#include "impl_features.hpp"
 
 #include <daxa/c/device.h>
 
@@ -30,9 +31,10 @@ struct daxa_ImplDevice final : public ImplHandle
 {
     // General data:
     daxa_Instance instance = {};
-    DeviceInfo info = {};
+    DeviceInfo2 info = {};
     VkPhysicalDevice vk_physical_device = {};
     daxa_DeviceProperties physical_device_properties = {};
+    PhysicalDeviceFeaturesStruct physical_device_features = {};
     VkDevice vk_device = {};
     VmaAllocator vma_allocator = {};
 
@@ -43,7 +45,6 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT = {};
     PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
     PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
-    PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
 
     // Mesh shader:
     PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT = {};
@@ -182,8 +183,7 @@ struct daxa_ImplDevice final : public ImplHandle
     void zombify_tlas(TlasId id);
     void zombify_blas(BlasId id);
 
-    // TODO: Give physical device in info so that this function can be removed.
-    // TODO: Better device selection.
+    static auto create_2(daxa_Instance instance, daxa_DeviceInfo2 const& info, ImplPhysicalDevice const & physical_device, daxa_DeviceProperties const & properties, daxa_Device device) -> daxa_Result;
     static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
     static void zero_ref_callback(ImplHandle const * handle);
 };

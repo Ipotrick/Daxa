@@ -39,4 +39,16 @@ daxa_instance_info(daxa_Instance instance);
 DAXA_EXPORT VkInstance
 daxa_instance_get_vk_instance(daxa_Instance instance);
 
+/// NEW: device creation/selection 2:
+
+DAXA_EXPORT void
+daxa_instance_list_devices_properties(daxa_Instance instance, daxa_DeviceProperties const** properties, daxa_u32 * property_count);
+
+// Fills field physical_device_index in info. 
+DAXA_EXPORT daxa_Result
+daxa_instance_choose_device(daxa_Instance instance, daxa_DeviceInfo2 * info);
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_instance_create_device_2(daxa_Instance instance, daxa_DeviceInfo2 const * info, daxa_Device * out_device);
+
 #endif // #ifndef __DAXA_INSTANCE_H__

@@ -195,26 +195,6 @@ namespace daxa
         u32 invocation_reorder_mode = {};
     };
 
-    struct DeviceProperties
-    {
-        u32 vulkan_api_version = {};
-        u32 driver_version = {};
-        u32 vendor_id = {};
-        u32 device_id = {};
-        DeviceType device_type = {};
-        u8 device_name[256U] = {};
-        u8 pipeline_cache_uuid[16U] = {};
-        DeviceLimits limits = {};
-        Optional<MeshShaderDeviceProperties> mesh_shading_properties = {};
-        Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
-        Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
-        Optional<InvocationReorderProperties> invocation_reorder_properties = {};
-        u32 compute_queue_count;
-        u32 transfer_queue_count;
-    };
-
-    DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
-
     struct DeviceFlagsProperties
     {
         using Data = u32;
@@ -259,9 +239,131 @@ namespace daxa
         }
     };
 
+    enum struct DeviceSupportProblem
+    {
+        NONE,
+        IMAGE_CUBE_ARRAY,
+        INDEPENDENT_BLEND,
+        TESSELLATION_SHADER,
+        MULTI_DRAW_INDIRECT,
+        DEPTH_CLAMP,
+        FILL_MODE_NON_SOLID,
+        WIDE_LINES,
+        SAMPLER_ANISOTROPY,
+        FRAGMENT_STORES_AND_ATOMICS,
+        SHADER_STORAGE_IMAGE_MULTISAMPLE,
+        SHADER_STORAGE_IMAGE_READ_WITHOUT_FORMAT,
+        SHADER_STORAGE_IMAGE_WRITE_WITHOUT_FORMAT,
+        SHADER_INT64,
+        VARIABLE_POINTERS_STORAGE_BUFFER,
+        VARIABLE_POINTERS,
+        BUFFER_DEVICE_ADDRESS,
+        BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY,
+        BUFFER_DEVICE_ADDRESS_MULTI_DEVICE,
+        SHADER_SAMPLED_IMAGE_ARRAY_NON_UNIFORM_INDEXING,
+        SHADER_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING,
+        SHADER_STORAGE_IMAGE_ARRAY_NON_UNIFORM_INDEXING,
+        DESCRIPTOR_BINDING_SAMPLED_IMAGE_UPDATE_AFTER_BIND,
+        DESCRIPTOR_BINDING_STORAGE_IMAGE_UPDATE_AFTER_BIND,
+        DESCRIPTOR_BINDING_STORAGE_BUFFER_UPDATE_AFTER_BIND,
+        DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING,
+        DESCRIPTOR_BINDING_PARTIALLY_BOUND,
+        RUNTIME_DESCRIPTOR_ARRAY,
+        HOST_QUERY_RESET,
+        DYNAMIC_RENDERING,
+        SYNCHRONIZATION2,
+        TIMELINE_SEMAPHORE,
+        SUBGROUP_SIZE_CONTROL,
+        COMPUTE_FULL_SUBGROUPS,
+        SCALAR_BLOCK_LAYOUT,
+        ACCELERATION_STRUCTURE_CAPTURE_REPLAY,
+        VULKAN_MEMORY_MODEL,
+        ROBUST_BUFFER_ACCESS2,
+        ROBUST_IMAGE_ACCESS2,
+        MAX_ENUM
+    };
+
+    struct DeviceExplicitFeatureProperties
+    {
+        using Data = u32;
+    };
+    using DeviceExplicitFeatureFlags = Flags<DeviceExplicitFeatureProperties>;
+    struct DeviceExplicitFeatureFlagBits
+    {
+        static inline constexpr DeviceExplicitFeatureFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY = {0x1 << 0};
+        static inline constexpr DeviceExplicitFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {0x1 << 1};
+        static inline constexpr DeviceExplicitFeatureFlags VK_MEMORY_MODEL = {0x1 << 2};
+        static inline constexpr DeviceExplicitFeatureFlags ROBUST_BUFFER_ACCESS = {0x1 << 3};
+        static inline constexpr DeviceExplicitFeatureFlags ROBUST_IMAGE_ACCESS = {0x1 << 4};
+        static inline constexpr DeviceExplicitFeatureFlags LAST = {ROBUST_IMAGE_ACCESS};
+    };
+
+    struct DeviceFeatureProperties
+    {
+        using Data = u32;
+    };
+    using DeviceFeatureFlags = Flags<DeviceFeatureProperties>;
+    struct DeviceFeatureFlagBits
+    {
+        static inline constexpr DeviceFeatureFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY = {DeviceExplicitFeatureFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY.data};
+        static inline constexpr DeviceFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {DeviceExplicitFeatureFlagBits::ACCELERATION_STRUCTURE_CAPTURE_REPLAY.data};
+        static inline constexpr DeviceFeatureFlags VK_MEMORY_MODEL = {DeviceExplicitFeatureFlagBits::VK_MEMORY_MODEL.data};
+        static inline constexpr DeviceFeatureFlags ROBUST_BUFFER_ACCESS = {DeviceExplicitFeatureFlagBits::ROBUST_BUFFER_ACCESS.data};
+        static inline constexpr DeviceFeatureFlags ROBUST_IMAGE_ACCESS = {DeviceExplicitFeatureFlagBits::ROBUST_IMAGE_ACCESS.data};
+        static inline constexpr DeviceFeatureFlags MESH_SHADER_BIT = {DeviceExplicitFeatureFlagBits::LAST.data << 1};
+        static inline constexpr DeviceFeatureFlags ACCELERATION_STRUCTURE = {DeviceExplicitFeatureFlagBits::LAST.data << 2};
+        static inline constexpr DeviceFeatureFlags RAY_TRACING_PIPELINE = {DeviceExplicitFeatureFlagBits::LAST.data << 3};
+        static inline constexpr DeviceFeatureFlags RAY_TRACING_INVOCATION_REORDER = {DeviceExplicitFeatureFlagBits::LAST.data << 4};
+        static inline constexpr DeviceFeatureFlags CONSERVATIVE_RASTERIZATION = {DeviceExplicitFeatureFlagBits::LAST.data << 5};
+        static inline constexpr DeviceFeatureFlags SHADER_ATOMIC64 = {DeviceExplicitFeatureFlagBits::LAST.data << 6};
+        static inline constexpr DeviceFeatureFlags IMAGE_ATOMIC64 = {DeviceExplicitFeatureFlagBits::LAST.data << 7};
+        static inline constexpr DeviceFeatureFlags SHADER_FLOAT16 = {DeviceExplicitFeatureFlagBits::LAST.data << 8};
+        static inline constexpr DeviceFeatureFlags SHADER_INT8 = {DeviceExplicitFeatureFlagBits::LAST.data << 9};
+        static inline constexpr DeviceFeatureFlags DYNAMIC_STATE_3 = {DeviceExplicitFeatureFlagBits::LAST.data << 10};
+        static inline constexpr DeviceFeatureFlags SHADER_ATOMIC_FLOAT = {DeviceExplicitFeatureFlagBits::LAST.data << 11};
+    };
+
+    struct DeviceProperties
+    {
+        u32 vulkan_api_version = {};
+        u32 driver_version = {};
+        u32 vendor_id = {};
+        u32 device_id = {};
+        DeviceType device_type = {};
+        u8 device_name[256U] = {};
+        u8 pipeline_cache_uuid[16U] = {};
+        DeviceLimits limits = {};
+        Optional<MeshShaderDeviceProperties> mesh_shading_properties = {};
+        Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
+        Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
+        Optional<InvocationReorderProperties> invocation_reorder_properties = {};
+        u32 compute_queue_count = {};
+        u32 transfer_queue_count = {};
+        DeviceFeatureFlags feature_flags = {};
+        DeviceSupportProblem support_problem = {};
+    };
+
+    DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
+
     struct DeviceInfo
     {
         i32 (*selector)(DeviceProperties const & properties) = default_device_score;
+        DeviceFlags flags =
+            DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT |
+            DeviceFlagBits::SHADER_ATOMIC64 |
+            DeviceFlagBits::IMAGE_ATOMIC64 |
+            DeviceFlagBits::DYNAMIC_STATE_3;
+        // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
+        u32 max_allowed_images = 10'000;
+        u32 max_allowed_buffers = 10'000;
+        u32 max_allowed_samplers = 400;
+        u32 max_allowed_acceleration_structures = 10'000;
+        SmallString name = {};
+    };
+
+    struct DeviceInfo2
+    {
+        u32 physical_device_index = ~0u;
         DeviceFlags flags =
             DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT |
             DeviceFlagBits::SHADER_ATOMIC64 |
@@ -281,17 +383,17 @@ namespace daxa
         u32 index = {};
     };
 
-    static constexpr inline Queue QUEUE_MAIN = Queue{ QueueFamily::MAIN, 0 };
-    static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{ QueueFamily::COMPUTE, 0 };
-    static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{ QueueFamily::COMPUTE, 1 };
-    static constexpr inline Queue QUEUE_COMPUTE_2 = Queue{ QueueFamily::COMPUTE, 2 };
-    static constexpr inline Queue QUEUE_COMPUTE_3 = Queue{ QueueFamily::COMPUTE, 3 };
-    static constexpr inline Queue QUEUE_COMPUTE_4 = Queue{ QueueFamily::COMPUTE, 4 };
-    static constexpr inline Queue QUEUE_COMPUTE_5 = Queue{ QueueFamily::COMPUTE, 5 };
-    static constexpr inline Queue QUEUE_COMPUTE_6 = Queue{ QueueFamily::COMPUTE, 6 };
-    static constexpr inline Queue QUEUE_COMPUTE_7 = Queue{ QueueFamily::COMPUTE, 7 };
-    static constexpr inline Queue QUEUE_TRANSFER_0 = Queue{ QueueFamily::TRANSFER, 0 };
-    static constexpr inline Queue QUEUE_TRANSFER_1 = Queue{ QueueFamily::TRANSFER, 1 };
+    static constexpr inline Queue QUEUE_MAIN = Queue{QueueFamily::MAIN, 0};
+    static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{QueueFamily::COMPUTE, 0};
+    static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{QueueFamily::COMPUTE, 1};
+    static constexpr inline Queue QUEUE_COMPUTE_2 = Queue{QueueFamily::COMPUTE, 2};
+    static constexpr inline Queue QUEUE_COMPUTE_3 = Queue{QueueFamily::COMPUTE, 3};
+    static constexpr inline Queue QUEUE_COMPUTE_4 = Queue{QueueFamily::COMPUTE, 4};
+    static constexpr inline Queue QUEUE_COMPUTE_5 = Queue{QueueFamily::COMPUTE, 5};
+    static constexpr inline Queue QUEUE_COMPUTE_6 = Queue{QueueFamily::COMPUTE, 6};
+    static constexpr inline Queue QUEUE_COMPUTE_7 = Queue{QueueFamily::COMPUTE, 7};
+    static constexpr inline Queue QUEUE_TRANSFER_0 = Queue{QueueFamily::TRANSFER, 0};
+    static constexpr inline Queue QUEUE_TRANSFER_1 = Queue{QueueFamily::TRANSFER, 1};
 
     struct CommandSubmitInfo
     {
