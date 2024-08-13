@@ -46,7 +46,7 @@ namespace daxa
             .shaderCullDistance = VK_FALSE,
             .shaderFloat64 = VK_FALSE,
             .shaderInt64 = VK_TRUE, // Used for buffer device address math.
-            .shaderInt16 = VK_FALSE,
+            .shaderInt16 = VK_TRUE,
             .shaderResourceResidency = VK_FALSE,
             .shaderResourceMinLod = VK_FALSE,
             .sparseBinding = VK_FALSE,
@@ -158,6 +158,27 @@ namespace daxa
                 .shaderInt8 = (info.flags & DAXA_DEVICE_FLAG_SHADER_INT8) != 0u ? VK_TRUE : VK_FALSE,
             };
             this->chain = r_cast<void *>(&this->shader_float16_int8);
+
+            if ((info.flags & DAXA_DEVICE_FLAG_SHADER_INT8) != 0u)
+            {
+                this->storage_int8 = {
+                    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_8BIT_STORAGE_FEATURES,
+                    .pNext = this->chain,
+                    .storageBuffer8BitAccess = VK_TRUE,
+                    // .uniformAndStorageBuffer8BitAccess = VK_TRUE,
+                    // .storagePushConstant8 = VK_TRUE,
+                };
+                this->chain = r_cast<void *>(&this->storage_int8);
+
+                this->storage_int16 = {
+                    .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_16BIT_STORAGE_FEATURES,
+                    .pNext = this->chain,
+                    .storageBuffer16BitAccess = VK_TRUE,
+                    // .uniformAndStorageBuffer16BitAccess = VK_TRUE,
+                    // .storagePushConstant16 = VK_TRUE,
+                };
+                this->chain = r_cast<void *>(&this->storage_int16);
+            }
         }
         if ((info.flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS) != 0u || (info.flags & DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS) != 0u)
         {
@@ -328,9 +349,13 @@ namespace daxa
         {
             this->data[size++] = {VK_EXT_ROBUSTNESS_2_EXTENSION_NAME};
         }
-        if((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT) != 0u)
+        if ((info.flags & DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT) != 0u)
         {
             this->data[size++] = {VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME};
         }
+
+        this->data[size++] = {"VK_NVX_binary_import"};
+        this->data[size++] = {"VK_NVX_image_view_handle"};
+        this->data[size++] = {"VK_KHR_push_descriptor"};
     }
 } // namespace daxa

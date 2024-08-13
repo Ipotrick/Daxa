@@ -22,9 +22,9 @@
 #endif
 
 #if defined(_WIN32)
-#define VK_USE_PLATFORM_WIN32_KHR
+// #define VK_USE_PLATFORM_WIN32_KHR
 #define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
+// #define NOMINMAX
 #elif defined(__linux__)
 #if DAXA_BUILT_WITH_X11
 #include <X11/Xlib.h>
@@ -45,7 +45,7 @@
 // INCLUDE ORDER MUST STAY LIKE THIS:
 #include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
+#include <vma/vk_mem_alloc.h>
 #include <daxa/c/daxa.h>
 
 using namespace daxa;

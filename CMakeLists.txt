@@ -59,7 +59,7 @@ if(DAXA_ENABLE_STATIC_ANALYSIS)
 else()
     # TODO(capi): re-enable when not dealing with the compile errors.
     # Also, the features in the CMakePresets are disabled for now
-    set(CMAKE_UNITY_BUILD true)
+    # set(CMAKE_UNITY_BUILD true)
 endif()
 
 add_library(daxa
@@ -102,9 +102,11 @@ endif()
 
 target_compile_features(daxa PUBLIC cxx_std_20)
 
-find_package(Vulkan REQUIRED)
-find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
+find_package(Vulkan REQUIRED COMPONENTS glslang SPIRV-Tools)
+# find_package(VulkanMemoryAllocator CONFIG REQUIRED)
+# find_package(fmt CONFIG REQUIRED)
+
+# message(FATAL_ERROR " - ${Vulkan_shaderc_combined_FOUND}")
 
 include(GNUInstallDirs)
 
@@ -151,12 +153,17 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
         PUBLIC
         DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG=true
     )
-    find_package(glslang CONFIG REQUIRED)
+    # find_package(glslang CONFIG REQUIRED)
     find_package(Threads REQUIRED)
     target_link_libraries(daxa
-        PRIVATE
-        glslang::glslang
-        glslang::SPIRV
+        PUBLIC
+        $<$<CONFIG:Debug>:$ENV{VULKAN_SDK}/Lib/shaderc_combinedd.lib>
+        $<$<CONFIG:Release>:$ENV{VULKAN_SDK}/Lib/shaderc_combined.lib>
+        $<$<CONFIG:RelWithDebInfo>:$ENV{VULKAN_SDK}/Lib/shaderc_combined.lib>
+        # Vulkan::glslang
+        # Vulkan::glslang-spirv
+        # glslang::glslang
+        # glslang::SPIRV
     )
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
@@ -192,13 +199,14 @@ endif()
 
 target_link_libraries(daxa
     PRIVATE
-    GPUOpen::VulkanMemoryAllocator
+    # GPUOpen::VulkanMemoryAllocator
     Vulkan::Vulkan
     fmt::fmt
 )
 
 target_include_directories(daxa
     PUBLIC
+    ${VMA_DIR}/include
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )
@@ -229,7 +237,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     endif()
 endif()
 
-set_project_warnings(daxa)
+# set_project_warnings(daxa)
 
 if(DAXA_ENABLE_TESTS)
     add_subdirectory(tests)

@@ -28,6 +28,8 @@ namespace daxa
         VkPhysicalDeviceVariablePointerFeatures variable_pointers = {};
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT dynamic_state3 = {};
         std::optional<VkPhysicalDeviceShaderFloat16Int8Features> shader_float16_int8 = {};
+        std::optional<VkPhysicalDevice8BitStorageFeatures> storage_int8 = {};
+        std::optional<VkPhysicalDevice16BitStorageFeatures> storage_int16 = {};
         std::optional<VkPhysicalDeviceRobustness2FeaturesEXT> robustness2 = {};
         std::optional<VkPhysicalDeviceVulkanMemoryModelFeatures> memory_model = {};
         std::optional<VkPhysicalDeviceShaderAtomicInt64Features> shader_atomic64 = {};
