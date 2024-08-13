@@ -244,4 +244,12 @@ typedef enum
     DAXA_QUEUE_FAMILY_MAX_ENUM
 } daxa_QueueFamily;
 
+typedef struct
+{
+    VkStridedDeviceAddressRegionKHR raygen_region;
+    VkStridedDeviceAddressRegionKHR miss_region;
+    VkStridedDeviceAddressRegionKHR hit_region;
+    VkStridedDeviceAddressRegionKHR callable_region;
+} daxa_RayTracingShaderBindingTable;
+
 #endif // #ifndef __DAXA_TYPES_H__

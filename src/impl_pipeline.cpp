@@ -423,9 +423,14 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
 {
     _DAXA_TEST_PRINT("daxa_dvc_create_ray_tracing_pipeline\n");
     daxa_ImplRayTracingPipeline ret = {};
-    ret.is_rt_pipeline = true;
     ret.device = device;
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
+
+    ret.shader_groups.resize(ret.info.shader_groups.size());
+    for (int i = 0; i < ret.shader_groups.size(); ++i)
+    {
+        ret.shader_groups[i] = ret.info.shader_groups[i];
+    }
 
     // Check if ray tracing is supported
     if ((device->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
@@ -543,6 +548,97 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, MISS)
     }
 
+    // Shader groups
+    for (u32 i = 0; i < ret.info.shader_groups.size(); ++i)
+    {
+        auto shader_group = ret.info.shader_groups.at(i);
+        auto const group = VkRayTracingShaderGroupCreateInfoKHR{
+            .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .type = static_cast<VkRayTracingShaderGroupTypeKHR>(shader_group.type),
+            .generalShader = shader_group.general_shader_index,
+            .closestHitShader = shader_group.closest_hit_shader_index,
+            .anyHitShader = shader_group.any_hit_shader_index,
+            .intersectionShader = shader_group.intersection_shader_index,
+        };
+        groups.push_back(group);
+    }
+
+    u32 const group_count = static_cast<u32>(groups.size());
+    u32 const stages_count = static_cast<u32>(stages.size());
+
+    ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+    VkRayTracingPipelineCreateInfoKHR const vk_ray_tracing_pipeline_create_info{
+        .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .flags = {},
+        .stageCount = stages_count,
+        .pStages = stages.data(),
+        .groupCount = group_count,
+        .pGroups = groups.data(),
+        .maxPipelineRayRecursionDepth = std::min(ret.info.max_ray_recursion_depth, ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.max_ray_recursion_depth),
+        .pLibraryInfo = nullptr,
+        .pLibraryInterface = nullptr,
+        .pDynamicState = nullptr,
+        .layout = ret.vk_pipeline_layout,
+        .basePipelineHandle = VK_NULL_HANDLE,
+        .basePipelineIndex = 0,
+    };
+    auto pipeline_result = ret.device->vkCreateRayTracingPipelinesKHR(
+        ret.device->vk_device,
+        VK_NULL_HANDLE,
+        VK_NULL_HANDLE,
+        1u,
+        &vk_ray_tracing_pipeline_create_info,
+        nullptr,
+        &ret.vk_pipeline);
+
+    if (pipeline_result != VK_SUCCESS)
+    {
+        return std::bit_cast<daxa_Result>(pipeline_result);
+    }
+    if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
+    {
+        auto name_cstr = ret.info.name.c_str();
+        VkDebugUtilsObjectNameInfoEXT const name_info{
+            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
+            .pNext = nullptr,
+            .objectType = VK_OBJECT_TYPE_PIPELINE,
+            .objectHandle = std::bit_cast<uint64_t>(ret.vk_pipeline),
+            .pObjectName = name_cstr.data(),
+        };
+        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
+    }
+    ret.strong_count = 1;
+    device->inc_weak_refcnt();
+    *out_pipeline = new daxa_ImplRayTracingPipeline{};
+    **out_pipeline = ret;
+    return DAXA_RESULT_SUCCESS;
+}
+
+inline auto get_aligned(u64 operand, u64 granularity) -> u64
+{
+    return ((operand + (granularity - 1)) & ~(granularity - 1));
+}
+
+auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeline, daxa_RayTracingShaderBindingTable * out_sbt, daxa_BufferId * out_buffer) -> daxa_Result
+{
+    // This function creates 4 buffers, for raygen, miss, hit(chit+int+any) and callable shader.
+    // Each buffer will have the handle + 'data (if any)', .. n-times they have entries in the pipeline.
+    auto & info = pipeline->info;
+    auto * device = pipeline->device;
+
+    u32 const raygen_count = static_cast<u32>(info.ray_gen_shaders.size());
+    u32 const intersection_count = static_cast<u32>(info.intersection_shaders.size());
+    u32 const any_hit_count = static_cast<u32>(info.any_hit_shaders.size());
+    u32 const callable_count = static_cast<u32>(info.callable_shaders.size());
+    u32 const closest_hit_count = static_cast<u32>(info.closest_hit_shaders.size());
+    u32 const miss_hit_count = static_cast<u32>(info.miss_hit_shaders.size());
+    u32 const all_stages_count = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count + miss_hit_count;
+    u32 const first_callable_index = raygen_count + intersection_count + any_hit_count;
+    u32 const last_callable_index = raygen_count + intersection_count + any_hit_count + callable_count;
+    u32 const first_miss_index = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count;
+
     // Raygen shader groups for handle creation
     u32 ray_gen_group_count = 0;
     // Miss shader groups for handle creation
@@ -553,10 +649,10 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     u32 callable_group_count = 0;
 
     // Shader groups
-    for (u32 i = 0; i < ret.info.shader_groups.size(); ++i)
+    for (u32 i = 0; i < pipeline->shader_groups.size(); ++i)
     {
-        auto shader_group = ret.info.shader_groups.at(i);
-        VkRayTracingShaderGroupCreateInfoKHR const group{
+        auto shader_group = pipeline->shader_groups.at(i);
+        auto const group = VkRayTracingShaderGroupCreateInfoKHR{
             .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
             .pNext = nullptr,
             .type = static_cast<VkRayTracingShaderGroupTypeKHR>(shader_group.type),
@@ -592,205 +688,238 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
                 return DAXA_RESULT_ERROR_INVALID_SHADER_NV;
             }
         }
-
-        groups.push_back(group);
     }
+    // Those will be dynamic
+    u32 const ray_count_number = ray_gen_group_count;
+    u32 const miss_count_number = miss_group_count;
+    u32 const hit_count_number = hit_group_count;
+    u32 const callable_count_number = callable_group_count;
+    u32 const handle_count = ray_count_number + miss_count_number + hit_count_number + callable_count_number;
+    u32 const handle_size = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
+    u32 const handle_stride = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
 
-    u32 const group_count = static_cast<u32>(groups.size());
-    u32 const stages_count = static_cast<u32>(stages.size());
+    // The SBT (buffer) need to have starting groups to be aligned and handles in the group to be aligned.
+    u64 const handle_size_aligned = get_aligned(handle_size, handle_stride);
 
-    ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
-    VkRayTracingPipelineCreateInfoKHR const vk_ray_tracing_pipeline_create_info{
-        .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
-        .pNext = nullptr,
-        .flags = {},
-        .stageCount = stages_count,
-        .pStages = stages.data(),
-        .groupCount = group_count,
-        .pGroups = groups.data(),
-        .maxPipelineRayRecursionDepth = std::min(ret.info.max_ray_recursion_depth, ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.max_ray_recursion_depth),
-        .pLibraryInfo = nullptr,
-        .pLibraryInterface = nullptr,
-        .pDynamicState = nullptr,
-        .layout = ret.vk_pipeline_layout,
-        .basePipelineHandle = VK_NULL_HANDLE,
-        .basePipelineIndex = 0,
-    };
-    auto pipeline_result = ret.device->vkCreateRayTracingPipelinesKHR(
-        ret.device->vk_device,
-        VK_NULL_HANDLE,
-        VK_NULL_HANDLE,
-        1u,
-        &vk_ray_tracing_pipeline_create_info,
-        nullptr,
-        &ret.vk_pipeline);
+    auto & raygen_region = out_sbt->raygen_region;
+    auto & miss_region = out_sbt->miss_region;
+    auto & hit_region = out_sbt->hit_region;
+    auto & callable_region = out_sbt->callable_region;
 
-    // Create ray tracing shader group handles
-    if (pipeline_result == VK_SUCCESS)
+    raygen_region.stride = get_aligned(ray_count_number * handle_size_aligned, handle_stride);
+    raygen_region.size = raygen_region.stride * ray_count_number; // The size member of pRayGenShaderBindingTable must be equal to its stride member
+    miss_region.stride = handle_size_aligned;
+    miss_region.size = get_aligned(miss_count_number * handle_size_aligned, handle_stride);
+    hit_region.stride = handle_size_aligned;
+    hit_region.size = get_aligned(hit_count_number * handle_size_aligned, handle_stride);
+    callable_region.stride = handle_size_aligned;
+    callable_region.size = get_aligned(callable_count_number * handle_size_aligned, handle_stride);
+
+    // Get the shader group handles
+    u32 const data_size = handle_count * handle_size;
+    std::vector<uint8_t> shader_handle_storage(data_size);
+    // Allocate a buffer for storing the SBT.
+    VkDeviceSize const sbt_size = raygen_region.size + miss_region.size + hit_region.size + callable_region.size;
+    // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkGetRayTracingShaderGroupHandlesNV.html
+    auto vk_result = device->vkGetRayTracingShaderGroupHandlesKHR(
+        device->vk_device,
+        pipeline->vk_pipeline,
+        0,
+        handle_count,
+        sbt_size,
+        shader_handle_storage.data());
+
+    if (vk_result == VK_SUCCESS)
     {
-        // This function creates 4 buffers, for raygen, miss, hit(chit+int+any) and callable shader.
-        // Each buffer will have the handle + 'data (if any)', .. n-times they have entries in the pipeline.
-
-        // Those will be dynamic
-        u32 const ray_count_number = ray_gen_group_count;
-        u32 const miss_count_number = miss_group_count;
-        u32 const hit_count_number = hit_group_count;
-        u32 const callable_count_number = callable_group_count;
-        u32 const handle_count = ray_count_number + miss_count_number + hit_count_number + callable_count_number;
-        u32 const handle_size = ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
-        u32 const handle_stride = ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
-
-        auto get_aligned = [&](u64 operand, u64 granularity) -> u64
-        {
-            return ((operand + (granularity - 1)) & ~(granularity - 1));
-        };
-
-        // The SBT (buffer) need to have starting groups to be aligned and handles in the group to be aligned.
-        u64 const handle_size_aligned = get_aligned(handle_size, handle_stride);
-
-        auto & raygen_region = ret.info.shader_binding_table.raygen_region;
-        auto & miss_region = ret.info.shader_binding_table.miss_region;
-        auto & hit_region = ret.info.shader_binding_table.hit_region;
-        auto & callable_region = ret.info.shader_binding_table.callable_region;
-
-        raygen_region.stride = get_aligned(ray_count_number * handle_size_aligned, handle_stride);
-        raygen_region.size = raygen_region.stride * ray_count_number; // The size member of pRayGenShaderBindingTable must be equal to its stride member
-        miss_region.stride = handle_size_aligned;
-        miss_region.size = get_aligned(miss_count_number * handle_size_aligned, handle_stride);
-        hit_region.stride = handle_size_aligned;
-        hit_region.size = get_aligned(hit_count_number * handle_size_aligned, handle_stride);
-        callable_region.stride = handle_size_aligned;
-        callable_region.size = get_aligned(callable_count_number * handle_size_aligned, handle_stride);
-
-        // Get the shader group handles
-        u32 const data_size = handle_count * handle_size;
-        std::vector<uint8_t> shader_handle_storage(data_size);
+        auto name_cstr = info.name.c_str();
         // Allocate a buffer for storing the SBT.
-        VkDeviceSize const sbt_size = raygen_region.size + miss_region.size + hit_region.size + callable_region.size;
-        // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkGetRayTracingShaderGroupHandlesNV.html
-        pipeline_result = ret.device->vkGetRayTracingShaderGroupHandlesKHR(
-            ret.device->vk_device,
-            ret.vk_pipeline,
-            0,
-            handle_count,
-            sbt_size,
-            shader_handle_storage.data());
-
-        if (pipeline_result == VK_SUCCESS)
+        auto sbt_info = daxa_BufferInfo{
+            .size = sbt_size,
+            .allocate_info = DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE,
+            .name = std::bit_cast<daxa_SmallString>(name_cstr),
+        };
+        // TODO: We need to store the buffer id somewhere, so we can destroy after the pipeline is destroyed
+        auto & sbt_buffer_id = *out_buffer;
+        auto daxa_result = daxa_dvc_create_buffer(device, &sbt_info, r_cast<daxa_BufferId *>(&sbt_buffer_id));
+        if (daxa_result == DAXA_RESULT_SUCCESS)
         {
 
-            auto name_cstr = ret.info.name.c_str();
-            // Allocate a buffer for storing the SBT.
-            auto stb_info = daxa_BufferInfo{
-                .size = sbt_size,
-                .allocate_info = DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE,
-                .name = std::bit_cast<daxa_SmallString>(name_cstr),
-            };
-            // TODO: We need to store the buffer id somewhere, so we can destroy after the pipeline is destroyed
-            auto & stb_buffer_id = ret.info.shader_binding_table.buffer_id;
-            auto daxa_result = daxa_dvc_create_buffer(device, &stb_info, r_cast<daxa_BufferId *>(&stb_buffer_id));
-            if (daxa_result == DAXA_RESULT_SUCCESS)
+            u8 * sbt_buffer_ptr = nullptr;
+            daxa_result = daxa_dvc_buffer_host_address(device, sbt_buffer_id, reinterpret_cast<void **>(&sbt_buffer_ptr));
+            if (daxa_result != DAXA_RESULT_SUCCESS)
             {
-
-                u8 * sbt_buffer_ptr = nullptr;
-                daxa_result = daxa_dvc_buffer_host_address(device, stb_buffer_id, reinterpret_cast<void **>(&sbt_buffer_ptr));
-                if (daxa_result != DAXA_RESULT_SUCCESS)
-                {
-                    // TODO: Check this
-                    auto destroy_buffer_result = daxa_dvc_destroy_buffer(device, stb_buffer_id);
-                    pipeline_result = VK_ERROR_OUT_OF_HOST_MEMORY;
-                    return std::bit_cast<daxa_Result>(pipeline_result);
-                }
-
-                // Find the SBT addresses of each group
-                VkDeviceAddress sbt_address = 0;
-
-                daxa_result = daxa_dvc_buffer_device_address(device, stb_buffer_id, reinterpret_cast<daxa_DeviceAddress *>(&sbt_address));
-                if (daxa_result != DAXA_RESULT_SUCCESS)
-                {
-                    // TODO: Check this
-                    auto destroy_buffer_result = daxa_dvc_destroy_buffer(device, stb_buffer_id);
-                    pipeline_result = VK_ERROR_OUT_OF_DEVICE_MEMORY;
-                    return std::bit_cast<daxa_Result>(pipeline_result);
-                }
-                raygen_region.address = sbt_address;
-                miss_region.address = sbt_address + raygen_region.size;
-                hit_region.address = sbt_address + raygen_region.size + miss_region.size;
-                callable_region.address = sbt_address + raygen_region.size + miss_region.size + hit_region.size;
-
-                u64 offset = 0;
-                // Iterator through the shader handles and store them in the SBT
-                u8 * sbt_ptr_iterator = sbt_buffer_ptr;
-                // Raygen shaders load data
-                for (u32 c = 0; c < ray_count_number; c++)
-                {
-                    std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
-                    sbt_ptr_iterator += raygen_region.stride;
-                    offset += handle_size;
-                }
-
-                // Miss shaders (base ptr + raygen size)
-                sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size;
-                // Miss shaders load data
-                for (u32 c = 0; c < miss_count_number; c++)
-                {
-                    std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
-                    sbt_ptr_iterator += miss_region.stride;
-                    offset += handle_size;
-                }
-
-                // Hit shaders (base ptr + raygen size + miss size)
-                sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size + miss_region.size;
-                // Closest-hit + any-hit + intersection shaders load data
-                for (u32 c = 0; c < hit_count_number; c++)
-                {
-                    std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
-                    sbt_ptr_iterator += hit_region.stride;
-                    offset += handle_size;
-                }
-
-                // Callable shaders (base ptr + raygen size + miss size + hit size)
-                sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size + miss_region.size + hit_region.size;
-                // Callable shaders load data
-                for (u32 c = 0; c < callable_count_number; c++)
-                {
-                    std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
-                    sbt_ptr_iterator += callable_region.stride;
-                    offset += handle_size;
-                }
+                // TODO: Check this
+                auto destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer_id);
+                return std::bit_cast<daxa_Result>(VK_ERROR_OUT_OF_HOST_MEMORY);
             }
-            else
+
+            // Find the SBT addresses of each group
+            VkDeviceAddress sbt_address = 0;
+
+            daxa_result = daxa_dvc_buffer_device_address(device, sbt_buffer_id, reinterpret_cast<daxa_DeviceAddress *>(&sbt_address));
+            if (daxa_result != DAXA_RESULT_SUCCESS)
             {
-                // TODO: check this
-                device->gpu_sro_table.buffer_slots.try_zombify(stb_buffer_id);
-                // DAXA_RESULT_FAILED_TO_CREATE_BUFFER;
-                pipeline_result = VK_ERROR_INITIALIZATION_FAILED;
-                return std::bit_cast<daxa_Result>(pipeline_result);
+                // TODO: Check this
+                auto destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer_id);
+                return std::bit_cast<daxa_Result>(VK_ERROR_OUT_OF_DEVICE_MEMORY);
             }
+            raygen_region.deviceAddress = sbt_address;
+            miss_region.deviceAddress = sbt_address + raygen_region.size;
+            hit_region.deviceAddress = sbt_address + raygen_region.size + miss_region.size;
+            callable_region.deviceAddress = sbt_address + raygen_region.size + miss_region.size + hit_region.size;
+
+            u64 offset = 0;
+            // Iterator through the shader handles and store them in the SBT
+            u8 * sbt_ptr_iterator = sbt_buffer_ptr;
+            // Raygen shaders load data
+            for (u32 c = 0; c < ray_count_number; c++)
+            {
+                std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
+                sbt_ptr_iterator += raygen_region.stride;
+                offset += handle_size;
+            }
+
+            // Miss shaders (base ptr + raygen size)
+            sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size;
+            // Miss shaders load data
+            for (u32 c = 0; c < miss_count_number; c++)
+            {
+                std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
+                sbt_ptr_iterator += miss_region.stride;
+                offset += handle_size;
+            }
+
+            // Hit shaders (base ptr + raygen size + miss size)
+            sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size + miss_region.size;
+            // Closest-hit + any-hit + intersection shaders load data
+            for (u32 c = 0; c < hit_count_number; c++)
+            {
+                std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
+                sbt_ptr_iterator += hit_region.stride;
+                offset += handle_size;
+            }
+
+            // Callable shaders (base ptr + raygen size + miss size + hit size)
+            sbt_ptr_iterator = sbt_buffer_ptr + raygen_region.size + miss_region.size + hit_region.size;
+            // Callable shaders load data
+            for (u32 c = 0; c < callable_count_number; c++)
+            {
+                std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
+                sbt_ptr_iterator += callable_region.stride;
+                offset += handle_size;
+            }
+        }
+        else
+        {
+            // DAXA_RESULT_FAILED_TO_CREATE_BUFFER;
+            return daxa_result;
         }
     }
 
-    if (pipeline_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(pipeline_result);
-    }
-    if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
-    {
-        auto name_cstr = ret.info.name.c_str();
-        VkDebugUtilsObjectNameInfoEXT const name_info{
-            .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
-            .pNext = nullptr,
-            .objectType = VK_OBJECT_TYPE_PIPELINE,
-            .objectHandle = std::bit_cast<uint64_t>(ret.vk_pipeline),
-            .pObjectName = name_cstr.data(),
-        };
-        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
-    }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
-    *out_pipeline = new daxa_ImplRayTracingPipeline{};
-    **out_pipeline = ret;
     return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void * out_blob) -> daxa_Result
+{
+    auto * device = pipeline->device;
+    auto & info = pipeline->info;
+
+    u32 const raygen_count = static_cast<u32>(info.ray_gen_shaders.size());
+    u32 const intersection_count = static_cast<u32>(info.intersection_shaders.size());
+    u32 const any_hit_count = static_cast<u32>(info.any_hit_shaders.size());
+    u32 const callable_count = static_cast<u32>(info.callable_shaders.size());
+    u32 const closest_hit_count = static_cast<u32>(info.closest_hit_shaders.size());
+    u32 const miss_hit_count = static_cast<u32>(info.miss_hit_shaders.size());
+    u32 const all_stages_count = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count + miss_hit_count;
+    u32 const first_callable_index = raygen_count + intersection_count + any_hit_count;
+    u32 const last_callable_index = raygen_count + intersection_count + any_hit_count + callable_count;
+    u32 const first_miss_index = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count;
+
+    // Raygen shader groups for handle creation
+    u32 ray_gen_group_count = 0;
+    // Miss shader groups for handle creation
+    u32 miss_group_count = 0;
+    // Hit shader groups for handle creation
+    u32 hit_group_count = 0;
+    // Callable shader groups for handle creation
+    u32 callable_group_count = 0;
+
+    // Shader groups
+    for (u32 i = 0; i < pipeline->shader_groups.size(); ++i)
+    {
+        auto shader_group = pipeline->shader_groups.at(i);
+        auto const group = VkRayTracingShaderGroupCreateInfoKHR{
+            .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .type = static_cast<VkRayTracingShaderGroupTypeKHR>(shader_group.type),
+            .generalShader = shader_group.general_shader_index,
+            .closestHitShader = shader_group.closest_hit_shader_index,
+            .anyHitShader = shader_group.any_hit_shader_index,
+            .intersectionShader = shader_group.intersection_shader_index,
+        };
+
+        if (shader_group.type == ShaderGroup::TRIANGLES_HIT_GROUP || shader_group.type == ShaderGroup::PROCEDURAL_HIT_GROUP)
+        {
+            hit_group_count++;
+        }
+        else
+        { // NOTE: GENERAL. Checking stage ranges here.
+            if (shader_group.general_shader_index != VK_SHADER_UNUSED_KHR &&
+                shader_group.general_shader_index < raygen_count)
+            {
+                ray_gen_group_count++;
+            }
+            else if (shader_group.general_shader_index >= first_miss_index &&
+                     shader_group.general_shader_index < all_stages_count)
+            {
+                miss_group_count++;
+            }
+            else if (shader_group.general_shader_index >= first_callable_index &&
+                     shader_group.general_shader_index < last_callable_index)
+            {
+                callable_group_count++;
+            }
+            else
+            {
+                return DAXA_RESULT_ERROR_INVALID_SHADER_NV;
+            }
+        }
+    }
+    // Those will be dynamic
+    u32 const ray_count_number = ray_gen_group_count;
+    u32 const miss_count_number = miss_group_count;
+    u32 const hit_count_number = hit_group_count;
+    u32 const callable_count_number = callable_group_count;
+    u32 const handle_count = ray_count_number + miss_count_number + hit_count_number + callable_count_number;
+    u32 const handle_size = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
+    u32 const handle_stride = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
+
+    u64 const handle_size_aligned = get_aligned(handle_size, handle_stride);
+
+    auto raygen_region_stride = get_aligned(ray_count_number * handle_size_aligned, handle_stride);
+    auto raygen_region_size = raygen_region_stride * ray_count_number; // The size member of pRayGenShaderBindingTable must be equal to its stride member
+    // miss_region.stride = handle_size_aligned;
+    auto miss_region_size = get_aligned(miss_count_number * handle_size_aligned, handle_stride);
+    // hit_region.stride = handle_size_aligned;
+    auto hit_region_size = get_aligned(hit_count_number * handle_size_aligned, handle_stride);
+    // callable_region.stride = handle_size_aligned;
+    auto callable_region_size = get_aligned(callable_count_number * handle_size_aligned, handle_stride);
+
+    // Get the shader group handles
+    u32 const data_size = handle_count * handle_size;
+    // std::vector<uint8_t> shader_handle_storage(data_size);
+    // Allocate a buffer for storing the SBT.
+    VkDeviceSize const sbt_size = raygen_region_size + miss_region_size + hit_region_size + callable_region_size;
+
+    auto vk_result = device->vkGetRayTracingShaderGroupHandlesKHR(
+        device->vk_device,
+        pipeline->vk_pipeline,
+        0,
+        handle_count,
+        sbt_size,
+        out_blob);
+
+    return static_cast<daxa_Result>(vk_result);
 }
 
 auto daxa_ray_tracing_pipeline_info(daxa_RayTracingPipeline self) -> daxa_RayTracingPipelineInfo const *
@@ -828,18 +957,6 @@ void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
     self->device->dec_weak_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
-
-    // TODO: Figure out if this is a good way to handle this.
-    if (self->is_rt_pipeline)
-    {
-        auto buffer_id = rc_cast<daxa_ImplRayTracingPipeline *>(handle)->info.shader_binding_table.buffer_id;
-        // This is not working because the great cleansing is done before the pipeline is destroyed
-        // self->device->buffer_zombies.push_front({
-        //     submit_timeline_value,
-        //     std::bit_cast<BufferId>(buffer_id),
-        // });
-        daxa_dvc_destroy_buffer(self->device, buffer_id);
-    }
     delete self;
 }
 

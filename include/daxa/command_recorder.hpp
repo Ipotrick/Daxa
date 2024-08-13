@@ -140,6 +140,7 @@ namespace daxa
         uint32_t miss_shader_binding_table_offset = {};
         uint32_t miss_shader_binding_table_stride = {};
         uint32_t hit_shader_binding_table_offset = {};
+        RayTracingShaderBindingTable shader_binding_table;
     };
 
     struct TraceRaysIndirectInfo
@@ -149,6 +150,7 @@ namespace daxa
         uint32_t miss_shader_binding_table_offset = {};
         uint32_t miss_shader_binding_table_stride = {};
         uint32_t hit_shader_binding_table_offset = {};
+        RayTracingShaderBindingTable shader_binding_table;
     };
 
     struct DispatchInfo
