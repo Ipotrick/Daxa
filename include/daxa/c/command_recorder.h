@@ -209,6 +209,7 @@ typedef struct
     uint32_t miss_handle_offset;
     uint32_t hit_handle_offset;
     uint32_t callable_handle_offset;
+    daxa_RayTracingShaderBindingTable shader_binding_table;
 } daxa_TraceRaysInfo;
 
 static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = {0, 0, 0, 0, 0, 0, 0};
@@ -220,6 +221,7 @@ typedef struct
     uint32_t miss_handle_offset;
     uint32_t hit_handle_offset;
     uint32_t callable_handle_offset;
+    daxa_RayTracingShaderBindingTable shader_binding_table;
 } daxa_TraceRaysIndirectInfo;
 
 static daxa_TraceRaysIndirectInfo const DAXA_DEFAULT_TRACE_RAYS_INDIRECT_INFO = DAXA_ZERO_INIT;

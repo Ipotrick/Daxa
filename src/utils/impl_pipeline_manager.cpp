@@ -1048,6 +1048,14 @@ namespace daxa
                 return false;
             }
         }
+
+        for (RayTracingPipelineState const & raytracing_pipeline_state : this->ray_tracing_pipelines)
+        {
+            if (!raytracing_pipeline_state.pipeline_ptr->is_valid())
+            {
+                return false;
+            }
+        }
         return true;
     }
 

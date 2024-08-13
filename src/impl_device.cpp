@@ -1270,7 +1270,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
         {
             if (!queue.pending_submits.empty())
             {
-                std::min(min_pending_device_timeline_value_of_all_queues, queue.pending_submits.front());
+                min_pending_device_timeline_value_of_all_queues = std::min(min_pending_device_timeline_value_of_all_queues, queue.pending_submits.front());
             }
         }
     }
@@ -1281,12 +1281,13 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
         {
             auto & [timeline_value, object] = zombies.back();
 
-            // All queues caught up the the time of destruction for this zombie.
-            if (timeline_value <= min_pending_device_timeline_value_of_all_queues)
+            if (timeline_value >= min_pending_device_timeline_value_of_all_queues)
             {
-                cleanup_fn(object);
-                zombies.pop_back();
+                break;
             }
+
+            cleanup_fn(object);
+            zombies.pop_back();
         }
     };
     check_and_cleanup_gpu_resources(
@@ -1364,7 +1365,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             auto & [timeline_value, zombie] = self->command_list_zombies.back();
 
             // Zombies are sorted. When we see a single zombie that is too young, we can dismiss the rest as they are the same age or even younger.
-            if (timeline_value > min_pending_device_timeline_value_of_all_queues)
+            if (timeline_value >= min_pending_device_timeline_value_of_all_queues)
             {
                 break;
             }
