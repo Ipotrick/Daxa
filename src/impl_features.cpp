@@ -166,6 +166,7 @@ namespace daxa
     };
 
     constexpr static std::array REQUIRED_FEATURES = std::array{
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderStorageImageMultisample), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_STORAGE_IMAGE_MULTISAMPLE},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.imageCubeArray), DAXA_MISSING_REQUIRED_VK_FEATURE_IMAGE_CUBE_ARRAY},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.independentBlend), DAXA_MISSING_REQUIRED_VK_FEATURE_INDEPENDENT_BLEND},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.tessellationShader), DAXA_MISSING_REQUIRED_VK_FEATURE_TESSELLATION_SHADER},
@@ -313,6 +314,7 @@ namespace daxa
     constexpr static std::array PHYSICAL_DEVICE_ROBUSTNESS_2_EXT_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_robustness2_features_ext.robustBufferAccess2),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_robustness2_features_ext.robustImageAccess2),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.robustBufferAccess),
     };
 
     constexpr static std::array PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_VK_FEATURES = std::array{
