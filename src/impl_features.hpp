@@ -52,7 +52,7 @@ namespace daxa
             physical_device_ray_tracing_pipeline_khr,
             physical_device_ray_query_khr,
             physical_device_ray_tracing_position_fetch_khr,
-            physical_device_extended_dynamic_state3_ext,
+            physical_device_extended_dynamic_state_3_ext,
             physical_device_robustness2_ext,
             physical_device_shader_image_atomic_int64_ext,
             physical_device_mesh_shader_ext,
@@ -70,7 +70,7 @@ namespace daxa
             VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME,
             VK_KHR_RAY_QUERY_EXTENSION_NAME,
             VK_KHR_RAY_TRACING_POSITION_FETCH_EXTENSION_NAME,
-            VK_EXT_EXTENDED_DYNAMIC_STATE_2_EXTENSION_NAME,
+            VK_EXT_EXTENDED_DYNAMIC_STATE_3_EXTENSION_NAME,
             VK_EXT_ROBUSTNESS_2_EXTENSION_NAME,
             VK_EXT_SHADER_IMAGE_ATOMIC_INT64_EXTENSION_NAME,
             VK_EXT_MESH_SHADER_EXTENSION_NAME,
@@ -116,11 +116,11 @@ namespace daxa
         void initialize(PhysicalDeviceExtensionsStruct const & extensions);
     };
 
-    auto create_feature_flags(PhysicalDeviceFeaturesStruct const & physical_device_features) -> std::pair<daxa_DeviceImplicitFeatureFlags, daxa_DeviceExplicitFeatureFlags>;
+    auto create_feature_flags(PhysicalDeviceFeaturesStruct const & physical_device_features) -> std::pair<daxa_ImplicitFeatureFlags, daxa_ExplicitFeatureFlags>;
 
     auto create_problem_flags(PhysicalDeviceFeaturesStruct const & physical_device_features) -> daxa_MissingRequiredVkFeature;
 
-    void fill_create_features(PhysicalDeviceFeaturesStruct & device_create_features, daxa_DeviceImplicitFeatureFlags feature, daxa_DeviceExplicitFeatureFlags explicit_features);
+    void fill_create_features(PhysicalDeviceFeaturesStruct & device_create_features, daxa_ImplicitFeatureFlags feature, daxa_ExplicitFeatureFlags explicit_features);
 
     struct DevicePropertiesStruct
     {

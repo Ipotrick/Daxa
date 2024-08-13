@@ -60,7 +60,7 @@ namespace
                       VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
                       VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
                       VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
-        if ((self->info.flags & DeviceFlagBits::RAY_TRACING) != DeviceFlagBits::NONE)
+        if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
         {
             result |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
                       VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_STORAGE_BIT_KHR |
@@ -478,7 +478,7 @@ auto create_acceleration_structure_helper(
 {
     // --- Begin Parameter Validation ---
 
-    if ((self->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
     {
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
@@ -654,7 +654,7 @@ auto daxa_dvc_get_tlas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
-    if ((self->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
     {
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
@@ -694,7 +694,7 @@ auto daxa_dvc_get_blas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
-    if ((self->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
     {
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
@@ -1027,9 +1027,9 @@ auto daxa_dvc_blas_device_address(daxa_Device self, daxa_BlasId id, daxa_DeviceA
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_dvc_info(daxa_Device self) -> daxa_DeviceInfo const *
+auto daxa_dvc_info(daxa_Device self) -> daxa_DeviceInfo2 const *
 {
-    return r_cast<daxa_DeviceInfo const *>(&self->info);
+    return r_cast<daxa_DeviceInfo2 const *>(&self->info);
 }
 
 auto daxa_dvc_get_vk_device(daxa_Device self) -> VkDevice
@@ -1385,7 +1385,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
 
 auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
 {
-    return &device->physical_device_properties;
+    return &device->properties;
 }
 
 auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
@@ -1414,25 +1414,25 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     // Set properties and feature variables:
     auto self = out_device;
     self->vk_physical_device = physical_device.vk_handle;
-    self->physical_device_properties = properties;
+    self->properties = properties;
     self->instance = instance;
     self->info = std::bit_cast<DeviceInfo2>(info);
 
     // Verify DeviceOptions:
-    if (self->info.max_allowed_buffers > self->physical_device_properties.limits.max_descriptor_set_storage_buffers || self->info.max_allowed_buffers == 0)
+    if (self->info.max_allowed_buffers > self->properties.limits.max_descriptor_set_storage_buffers || self->info.max_allowed_buffers == 0)
     {
         result = DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_BUFFER_COUNT;
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    auto const max_device_supported_images_in_set = std::min(self->physical_device_properties.limits.max_descriptor_set_sampled_images, self->physical_device_properties.limits.max_descriptor_set_storage_images);
+    auto const max_device_supported_images_in_set = std::min(self->properties.limits.max_descriptor_set_sampled_images, self->properties.limits.max_descriptor_set_storage_images);
     if (self->info.max_allowed_buffers > max_device_supported_images_in_set || self->info.max_allowed_buffers == 0)
     {
         result = DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_IMAGE_COUNT;
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    if (self->info.max_allowed_samplers > self->physical_device_properties.limits.max_descriptor_set_samplers || self->info.max_allowed_samplers == 0)
+    if (self->info.max_allowed_samplers > self->properties.limits.max_descriptor_set_samplers || self->info.max_allowed_samplers == 0)
     {
         result = DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_SAMPLER_COUNT;
     }
@@ -1440,7 +1440,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
 
     if (physical_device.features.physical_device_acceleration_structure_features_khr.accelerationStructure)
     {
-        if (self->info.max_allowed_acceleration_structures > self->physical_device_properties.acceleration_structure_properties.value.max_descriptor_set_update_after_bind_acceleration_structures ||
+        if (self->info.max_allowed_acceleration_structures > self->properties.acceleration_structure_properties.value.max_descriptor_set_update_after_bind_acceleration_structures ||
             self->info.max_allowed_acceleration_structures == 0)
         {
             result = DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_ACCELERATION_STRUCTURE_COUNT;
@@ -1569,7 +1569,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
 
     // Query ext function pointers
     {
-        if (properties.implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3)
+        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3)
         {
             self->vkCmdSetRasterizationSamplesEXT = r_cast<PFN_vkCmdSetRasterizationSamplesEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdSetRasterizationSamplesEXT"));
         }
@@ -1581,14 +1581,14 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             self->vkCmdEndDebugUtilsLabelEXT = r_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
         }
 
-        if (properties.implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
+        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
         {
             self->vkCmdDrawMeshTasksEXT = r_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksEXT"));
             self->vkCmdDrawMeshTasksIndirectEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
             self->vkCmdDrawMeshTasksIndirectCountEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
         }
 
-        if (properties.implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
+        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
         {
             self->vkGetAccelerationStructureBuildSizesKHR = r_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetAccelerationStructureBuildSizesKHR"));
             self->vkCreateAccelerationStructureKHR = r_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCreateAccelerationStructureKHR"));
@@ -1598,7 +1598,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             self->vkGetAccelerationStructureDeviceAddressKHR = r_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetAccelerationStructureDeviceAddressKHR"));
         }
 
-        if (properties.implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
+        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
         {
             self->vkCreateRayTracingPipelinesKHR = r_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCreateRayTracingPipelinesKHR"));
             self->vkCmdTraceRaysKHR = r_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdTraceRaysKHR"));
@@ -2029,7 +2029,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         self->info.max_allowed_buffers,
         self->info.max_allowed_images,
         self->info.max_allowed_samplers,
-        (properties.implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) ? self->info.max_allowed_acceleration_structures : (~0u),
+        (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) ? self->info.max_allowed_acceleration_structures : (~0u),
         self->vk_device,
         self->buffer_device_address_buffer,
         self->vkSetDebugUtilsObjectNameEXT);

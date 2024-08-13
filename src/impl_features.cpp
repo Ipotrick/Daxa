@@ -65,10 +65,10 @@ namespace daxa
         chain = static_cast<void *>(&physical_device_scalar_block_layout_features);
 
         physical_device_variable_pointer_features.pNext = chain;
-        physical_device_variable_pointer_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES;
+        physical_device_variable_pointer_features.sType = VK_STR`UCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES;
         chain = static_cast<void *>(&physical_device_variable_pointer_features);
 
-        if (extensions.extensions_present[extensions.physical_device_extended_dynamic_state3_ext])
+        if (extensions.extensions_present[extensions.physical_device_extended_dynamic_state_3_ext])
         {
             physical_device_extended_dynamic_state3_features_ext.pNext = chain;
             physical_device_extended_dynamic_state3_features_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_EXTENDED_DYNAMIC_STATE_3_FEATURES_EXT;
@@ -209,18 +209,18 @@ namespace daxa
         daxa_DeviceImplicitFeatureFlagBits flag = {};
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_mesh_shader_features_ext.meshShader),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_mesh_shader_features_ext.taskShader),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.accelerationStructure),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.descriptorBindingAccelerationStructureUpdateAfterBind),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_ray_query_features_khr.rayQuery),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.accelerationStructure),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.descriptorBindingAccelerationStructureUpdateAfterBind),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_ray_query_features_khr.rayQuery),
@@ -230,7 +230,7 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_ray_tracing_pipeline_features_khr.rayTraversalPrimitiveCulling),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.accelerationStructure),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.descriptorBindingAccelerationStructureUpdateAfterBind),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_ray_query_features_khr.rayQuery),
@@ -238,7 +238,7 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_ray_tracing_invocation_reorder_features_nv.rayTracingInvocationReorder),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.accelerationStructure),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_acceleration_structure_features_khr.descriptorBindingAccelerationStructureUpdateAfterBind),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_ray_query_features_khr.rayQuery),
@@ -246,36 +246,36 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_ray_tracing_position_fetch_features_khr.rayTracingPositionFetch),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, conservative_rasterization),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_int64_features.shaderBufferInt64Atomics),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_int64_features.shaderSharedInt64Atomics),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_image_atomic_int64_features_ext.shaderImageInt64Atomics),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_float16_int8_features.shaderFloat16),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_INT8_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT8_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_float16_int8_features.shaderInt8),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_extended_dynamic_state3_features_ext.extendedDynamicState3RasterizationSamples),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, swapchain),
     };
 
-    constexpr static std::array DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT_VK_FEATURES = std::array{
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_float_features_ext.shaderBufferFloat32Atomics),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_float_features_ext.shaderBufferFloat32AtomicAdd),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_float_features_ext.shaderSharedFloat32Atomics),
@@ -285,19 +285,19 @@ namespace daxa
     };
 
     constexpr static std::array IMPLICIT_FEATURES = std::array{
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_INT8_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_INT8},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT},
-        ImplicitFeature{DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES, DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SWAPCHAIN},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT8_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT8},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN},
     };
 
     // === Explicit Features ===
@@ -340,9 +340,9 @@ namespace daxa
 
     // === Feature Processing ===
 
-    auto create_feature_flags(PhysicalDeviceFeaturesStruct const & physical_device_features) -> std::pair<daxa_DeviceImplicitFeatureFlags, daxa_DeviceExplicitFeatureFlags>
+    auto create_feature_flags(PhysicalDeviceFeaturesStruct const & physical_device_features) -> std::pair<daxa_ImplicitFeatureFlags, daxa_ExplicitFeatureFlags>
     {
-        daxa_DeviceImplicitFeatureFlags implicit_flags = {};
+        daxa_ImplicitFeatureFlags implicit_flags = {};
         daxa_DeviceExplicitFeatureFlagBits explicit_flags = {};
         std::byte const * address = reinterpret_cast<std::byte const *>(&physical_device_features);
         for (auto const & feature : IMPLICIT_FEATURES)
@@ -355,7 +355,7 @@ namespace daxa
             }
             if (all_set)
             {
-                implicit_flags = static_cast<daxa_DeviceImplicitFeatureFlags>(implicit_flags | feature.flag);
+                implicit_flags = static_cast<daxa_ImplicitFeatureFlags>(implicit_flags | feature.flag);
             }
         }
         for (auto const & feature : EXPLICIT_FEATURES)
@@ -392,8 +392,8 @@ namespace daxa
 
     void fill_create_features(
         PhysicalDeviceFeaturesStruct & device_create_features,
-        daxa_DeviceImplicitFeatureFlags implicit_feature_flags,
-        daxa_DeviceExplicitFeatureFlags explicit_feature_flags)
+        daxa_ImplicitFeatureFlags implicit_feature_flags,
+        daxa_ExplicitFeatureFlags explicit_feature_flags)
     {
         std::byte * const address = reinterpret_cast<std::byte *>(&device_create_features);
         for (auto const & feature : REQUIRED_FEATURES)
@@ -429,28 +429,28 @@ namespace daxa
     {
         void * chain = {};
 
-        if (implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
+        if (implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
         {
             physical_device_ray_tracing_pipeline_properties_khr.pNext = chain;
             physical_device_ray_tracing_pipeline_properties_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
             chain = static_cast<void *>(&physical_device_ray_tracing_pipeline_properties_khr);
         }
 
-        if (implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
+        if (implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
         {
             physical_device_acceleration_structure_properties_khr.pNext = chain;
             physical_device_acceleration_structure_properties_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
             chain = static_cast<void *>(&physical_device_acceleration_structure_properties_khr);
         }
 
-        if (implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER)
+        if (implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER)
         {
             physical_device_ray_tracing_invocation_reorder_properties_nv.pNext = chain;
             physical_device_ray_tracing_invocation_reorder_properties_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
             chain = static_cast<void *>(&physical_device_ray_tracing_invocation_reorder_properties_nv);
         }
 
-        if (implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
+        if (implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
         {
             physical_device_mesh_shader_properties_ext.pNext = chain;
             physical_device_mesh_shader_properties_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
@@ -481,7 +481,7 @@ namespace daxa
             r_cast<std::byte const *>(&properties_struct.physical_device_properties_2) + sizeof(void *) * 2 /* skip sType and pNext */,
             offsetof(daxa_DeviceProperties, mesh_shader_properties));
 
-        if (out->implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
+        if (out->implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
         {
             out->ray_tracing_pipeline_properties.has_value = 1;
             std::memcpy(
@@ -489,7 +489,7 @@ namespace daxa
                 r_cast<std::byte const *>(&properties_struct.physical_device_ray_tracing_pipeline_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
                 sizeof(daxa_RayTracingPipelineProperties));
         }
-        if (out->implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
+        if (out->implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
         {
             out->acceleration_structure_properties.has_value = 1;
             std::memcpy(
@@ -497,7 +497,7 @@ namespace daxa
                 r_cast<std::byte const *>(&properties_struct.physical_device_acceleration_structure_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
                 sizeof(daxa_AccelerationStructureProperties));
         }
-        if (out->implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER)
+        if (out->implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER)
         {
             out->ray_tracing_invocation_reorder_properties.has_value = 1;
             std::memcpy(
@@ -505,7 +505,7 @@ namespace daxa
                 r_cast<std::byte const *>(&properties_struct.physical_device_ray_tracing_invocation_reorder_properties_nv) + sizeof(void *) * 2, // skip sType and pNext
                 sizeof(daxa_RayTracingInvocationReorderProperties));
         }
-        if (out->implicit_features & DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
+        if (out->implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
         {
             out->mesh_shader_properties.has_value = 1;
             std::memcpy(

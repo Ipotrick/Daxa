@@ -250,26 +250,26 @@ typedef enum
     DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2 = 0x1 << 3,
 } daxa_DeviceExplicitFeatureFlagBits;
 
-typedef daxa_DeviceExplicitFeatureFlagBits daxa_DeviceExplicitFeatureFlags;
+typedef daxa_DeviceExplicitFeatureFlagBits daxa_ExplicitFeatureFlags;
 
 typedef enum
 {
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_MESH_SHADER =  0x1 << 0,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING =  0x1 << 1,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE =  0x1 << 2,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER =  0x1 << 3,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH =  0x1 << 4,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION =  0x1 << 5,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64 =  0x1 << 6,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64 =  0x1 << 7,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16 =  0x1 << 8,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_INT8 =  0x1 << 9,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3 =  0x1 << 10,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT =  0x1 << 11,
-    DAXA_DEVICE_IMPLICIT_FEATURE_FLAG_SWAPCHAIN =  0x1 << 12,
+    DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER =  0x1 << 0,
+    DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING =  0x1 << 1,
+    DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE =  0x1 << 2,
+    DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_INVOCATION_REORDER =  0x1 << 3,
+    DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_POSITION_FETCH =  0x1 << 4,
+    DAXA_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION =  0x1 << 5,
+    DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_INT64 =  0x1 << 6,
+    DAXA_IMPLICIT_FEATURE_FLAG_IMAGE_ATOMIC64 =  0x1 << 7,
+    DAXA_IMPLICIT_FEATURE_FLAG_SHADER_FLOAT16 =  0x1 << 8,
+    DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT8 =  0x1 << 9,
+    DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3 =  0x1 << 10,
+    DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT =  0x1 << 11,
+    DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN =  0x1 << 12,
 } daxa_DeviceImplicitFeatureFlagBits;
 
-typedef daxa_DeviceImplicitFeatureFlagBits daxa_DeviceImplicitFeatureFlags;
+typedef daxa_DeviceImplicitFeatureFlagBits daxa_ImplicitFeatureFlags;
 
 typedef struct
 {
@@ -287,8 +287,8 @@ typedef struct
     daxa_Optional(daxa_RayTracingInvocationReorderProperties) ray_tracing_invocation_reorder_properties;
     daxa_u32 compute_queue_count;
     daxa_u32 transfer_queue_count;
-    daxa_DeviceImplicitFeatureFlags implicit_features;
-    daxa_DeviceExplicitFeatureFlags explicit_features;
+    daxa_ImplicitFeatureFlags implicit_features;
+    daxa_ExplicitFeatureFlags explicit_features;
     daxa_MissingRequiredVkFeature missing_required_feature;
 } daxa_DeviceProperties;
 
@@ -338,7 +338,7 @@ static daxa_DeviceInfo const DAXA_DEFAULT_DEVICE_INFO = {
 typedef struct
 {
     daxa_u32 physical_device_index;                     // Index into list of devices returned from daxa_instance_list_devices_properties.
-    daxa_DeviceExplicitFeatureFlags explicit_features;  // Explicit features must be manually enabled.
+    daxa_ExplicitFeatureFlags explicit_features;  // Explicit features must be manually enabled.
     uint32_t max_allowed_images;
     uint32_t max_allowed_buffers;
     uint32_t max_allowed_samplers;
@@ -557,8 +557,6 @@ daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa_Even
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool);
 
-DAXA_EXPORT daxa_DeviceInfo const *
-daxa_dvc_info(daxa_Device device);
 DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 DAXA_EXPORT VkPhysicalDevice
@@ -577,6 +575,9 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_collect_garbage(daxa_Device device);
+
+DAXA_EXPORT daxa_DeviceInfo2 const *
+daxa_dvc_info(daxa_Device device);
 DAXA_EXPORT daxa_DeviceProperties const *
 daxa_dvc_properties(daxa_Device device);
 

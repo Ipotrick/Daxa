@@ -239,7 +239,7 @@ namespace daxa
         }
     };
 
-    enum struct DeviceSupportProblem
+    enum struct MissingRequiredVkFeature
     {
         NONE,
         IMAGE_CUBE_ARRAY,
@@ -283,44 +283,39 @@ namespace daxa
         MAX_ENUM
     };
 
-    struct DeviceExplicitFeatureProperties
+    struct ExplicitFeatureProperties
     {
         using Data = u32;
     };
-    using DeviceExplicitFeatureFlags = Flags<DeviceExplicitFeatureProperties>;
-    struct DeviceExplicitFeatureFlagBits
+    using ExplicitFeatureFlags = Flags<ExplicitFeatureProperties>;
+    struct ExplicitFeatureFlagBits
     {
-        static inline constexpr DeviceExplicitFeatureFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY = {0x1 << 0};
-        static inline constexpr DeviceExplicitFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {0x1 << 1};
-        static inline constexpr DeviceExplicitFeatureFlags VK_MEMORY_MODEL = {0x1 << 2};
-        static inline constexpr DeviceExplicitFeatureFlags ROBUST_BUFFER_ACCESS = {0x1 << 3};
-        static inline constexpr DeviceExplicitFeatureFlags ROBUST_IMAGE_ACCESS = {0x1 << 4};
-        static inline constexpr DeviceExplicitFeatureFlags LAST = {ROBUST_IMAGE_ACCESS};
+        static inline constexpr ExplicitFeatureFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY = {0x1 << 0};
+        static inline constexpr ExplicitFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {0x1 << 1};
+        static inline constexpr ExplicitFeatureFlags VK_MEMORY_MODEL = {0x1 << 2};
+        static inline constexpr ExplicitFeatureFlags ROBUSTNESS_2 = {0x1 << 3};
     };
 
-    struct DeviceFeatureProperties
+    struct ImplicitFeatureProperties
     {
         using Data = u32;
     };
-    using DeviceFeatureFlags = Flags<DeviceFeatureProperties>;
-    struct DeviceFeatureFlagBits
+    using ImplicitFeatureFlags = Flags<ImplicitFeatureProperties>;
+    struct ImplicitFeatureFlagBits
     {
-        static inline constexpr DeviceFeatureFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY = {DeviceExplicitFeatureFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY.data};
-        static inline constexpr DeviceFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {DeviceExplicitFeatureFlagBits::ACCELERATION_STRUCTURE_CAPTURE_REPLAY.data};
-        static inline constexpr DeviceFeatureFlags VK_MEMORY_MODEL = {DeviceExplicitFeatureFlagBits::VK_MEMORY_MODEL.data};
-        static inline constexpr DeviceFeatureFlags ROBUST_BUFFER_ACCESS = {DeviceExplicitFeatureFlagBits::ROBUST_BUFFER_ACCESS.data};
-        static inline constexpr DeviceFeatureFlags ROBUST_IMAGE_ACCESS = {DeviceExplicitFeatureFlagBits::ROBUST_IMAGE_ACCESS.data};
-        static inline constexpr DeviceFeatureFlags MESH_SHADER_BIT = {DeviceExplicitFeatureFlagBits::LAST.data << 1};
-        static inline constexpr DeviceFeatureFlags ACCELERATION_STRUCTURE = {DeviceExplicitFeatureFlagBits::LAST.data << 2};
-        static inline constexpr DeviceFeatureFlags RAY_TRACING_PIPELINE = {DeviceExplicitFeatureFlagBits::LAST.data << 3};
-        static inline constexpr DeviceFeatureFlags RAY_TRACING_INVOCATION_REORDER = {DeviceExplicitFeatureFlagBits::LAST.data << 4};
-        static inline constexpr DeviceFeatureFlags CONSERVATIVE_RASTERIZATION = {DeviceExplicitFeatureFlagBits::LAST.data << 5};
-        static inline constexpr DeviceFeatureFlags SHADER_ATOMIC64 = {DeviceExplicitFeatureFlagBits::LAST.data << 6};
-        static inline constexpr DeviceFeatureFlags IMAGE_ATOMIC64 = {DeviceExplicitFeatureFlagBits::LAST.data << 7};
-        static inline constexpr DeviceFeatureFlags SHADER_FLOAT16 = {DeviceExplicitFeatureFlagBits::LAST.data << 8};
-        static inline constexpr DeviceFeatureFlags SHADER_INT8 = {DeviceExplicitFeatureFlagBits::LAST.data << 9};
-        static inline constexpr DeviceFeatureFlags DYNAMIC_STATE_3 = {DeviceExplicitFeatureFlagBits::LAST.data << 10};
-        static inline constexpr DeviceFeatureFlags SHADER_ATOMIC_FLOAT = {DeviceExplicitFeatureFlagBits::LAST.data << 11};
+        static inline constexpr ImplicitFeatureFlags MESH_SHADER = {0x1 << 0};
+        static inline constexpr ImplicitFeatureFlags BASIC_RAY_TRACING = {0x1 << 1};
+        static inline constexpr ImplicitFeatureFlags RAY_TRACING_PIPELINE = {0x1 << 2};
+        static inline constexpr ImplicitFeatureFlags RAY_TRACING_INVOCATION_REORDER = {0x1 << 3};
+        static inline constexpr ImplicitFeatureFlags RAY_TRACING_POSITION_FETCH = {0x1 << 4};
+        static inline constexpr ImplicitFeatureFlags CONSERVATIVE_RASTERIZATION = {0x1 << 5};
+        static inline constexpr ImplicitFeatureFlags SHADER_ATOMIC_INT64 = {0x1 << 6};
+        static inline constexpr ImplicitFeatureFlags IMAGE_ATOMIC64 = {0x1 << 7};
+        static inline constexpr ImplicitFeatureFlags SHADER_FLOAT16 = {0x1 << 8};
+        static inline constexpr ImplicitFeatureFlags SHADER_INT8 = {0x1 << 9};
+        static inline constexpr ImplicitFeatureFlags DYNAMIC_STATE_3 = {0x1 << 10};
+        static inline constexpr ImplicitFeatureFlags SHADER_ATOMIC_FLOAT = {0x1 << 11};
+        static inline constexpr ImplicitFeatureFlags SWAPCHAIN = {0x1 << 12};
     };
 
     struct DeviceProperties
@@ -339,8 +334,9 @@ namespace daxa
         Optional<InvocationReorderProperties> invocation_reorder_properties = {};
         u32 compute_queue_count = {};
         u32 transfer_queue_count = {};
-        DeviceFeatureFlags feature_flags = {};
-        DeviceSupportProblem support_problem = {};
+        ImplicitFeatureFlags implicit_features;
+        ExplicitFeatureFlags explicit_features;
+        MissingRequiredVkFeature missing_required_feature;
     };
 
     DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
@@ -364,11 +360,7 @@ namespace daxa
     struct DeviceInfo2
     {
         u32 physical_device_index = ~0u;
-        DeviceFlags flags =
-            DeviceFlagBits::BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT |
-            DeviceFlagBits::SHADER_ATOMIC64 |
-            DeviceFlagBits::IMAGE_ATOMIC64 |
-            DeviceFlagBits::DYNAMIC_STATE_3;
+        ExplicitFeatureFlags explicit_features = {};
         // Make sure your device actually supports the max numbers, as device creation will fail otherwise.
         u32 max_allowed_images = 10'000;
         u32 max_allowed_buffers = 10'000;
@@ -536,10 +528,6 @@ namespace daxa
         [[nodiscard]] auto create_event(EventInfo const & info) -> Event;
         [[nodiscard]] auto create_timeline_query_pool(TimelineQueryPoolInfo const & info) -> TimelineQueryPool;
 
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the device is destroyed.
-        /// @return reference to info of object.
-        [[nodiscard]] auto info() const -> DeviceInfo const &;
         void wait_idle();
 
         void queue_wait_idle(Queue queue);
@@ -559,6 +547,10 @@ namespace daxa
         ///   you can freely record those in parallel with collect_garbage
         void collect_garbage();
 
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the device is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() const -> DeviceInfo2 const &;
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to device properties

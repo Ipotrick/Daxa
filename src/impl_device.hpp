@@ -33,7 +33,7 @@ struct daxa_ImplDevice final : public ImplHandle
     daxa_Instance instance = {};
     DeviceInfo2 info = {};
     VkPhysicalDevice vk_physical_device = {};
-    daxa_DeviceProperties physical_device_properties = {};
+    daxa_DeviceProperties properties = {};
     PhysicalDeviceFeaturesStruct physical_device_features = {};
     VkDevice vk_device = {};
     VmaAllocator vma_allocator = {};

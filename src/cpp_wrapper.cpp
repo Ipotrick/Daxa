@@ -129,6 +129,13 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case daxa_Result::DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND: return "DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND";
     case daxa_Result::DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE: return "DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE";
     case daxa_Result::DAXA_RESULT_ERROR_INVALID_QUEUE: return "DAXA_RESULT_ERROR_INVALID_QUEUE";
+    case daxa_Result::DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH: return "DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH";
+    case daxa_Result::DAXA_RESULT_ERROR_PRESENT_QUEUE_FAMILY_MISMATCH: return "DAXA_RESULT_ERROR_PRESENT_QUEUE_FAMILY_MISMATCH";
+    case daxa_Result::DAXA_RESULT_ERROR_INVALID_QUEUE_FAMILY: return "DAXA_RESULT_ERROR_INVALID_QUEUE_FAMILY";
+    case daxa_Result::DAXA_RESULT_ERROR_INVALID_DEVICE_INDEX: return "DAXA_RESULT_ERROR_INVALID_DEVICE_INDEX";
+    case daxa_Result::DAXA_RESULT_ERROR_DEVICE_NOT_SUPPORTED: return "DAXA_RESULT_ERROR_DEVICE_NOT_SUPPORTED";
+    case daxa_Result::DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_ACCELERATION_STRUCTURE_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_ACCELERATION_STRUCTURE_COUNT";
+    case daxa_Result::DAXA_RESULT_ERROR_NO_SUITABLE_DEVICE_FOUND: return "DAXA_RESULT_ERROR_NO_SUITABLE_DEVICE_FOUND";
     case daxa_Result::DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
     default: return "UNIMPLEMENTED";
     }
@@ -472,9 +479,9 @@ namespace daxa
     DAXA_DECL_DVC_CREATE_FN(Event, event)
     DAXA_DECL_DVC_CREATE_FN(TimelineQueryPool, timeline_query_pool)
 
-    auto Device::info() const -> DeviceInfo const &
+    auto Device::info() const -> DeviceInfo2 const &
     {
-        return *r_cast<DeviceInfo const *>(daxa_dvc_info(rc_cast<daxa_Device>(this->object)));
+        return *r_cast<DeviceInfo2 const *>(daxa_dvc_info(rc_cast<daxa_Device>(this->object)));
     }
 
     void Device::wait_idle()

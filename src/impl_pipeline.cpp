@@ -71,7 +71,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     DAXA_DECL_TRY_CREATE_MODULE(tesselation_control, TESSELLATION_CONTROL_BIT)
     DAXA_DECL_TRY_CREATE_MODULE(tesselation_evaluation, TESSELLATION_EVALUATION_BIT)
     DAXA_DECL_TRY_CREATE_MODULE(fragment, FRAGMENT_BIT)
-    if ((ret.device->info.flags & DeviceFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
+    if ((ret.device->properties.implicit_features & ImplicitFeatureFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
     {
         DAXA_DECL_TRY_CREATE_MODULE(task, TASK_BIT_EXT)
         DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
@@ -155,7 +155,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     };
     if (
         ret.info.raster.conservative_raster_info.has_value() &&
-        ((ret.device->info.flags & DeviceFlagBits::CONSERVATIVE_RASTERIZATION) != DeviceFlagBits::NONE))
+        (device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_CONSERVATIVE_RASTERIZATION))
     {
         // TODO(grundlett): Ask Patrick why this doesn't work
         // auto vk_instance = ret.device->instance->vk_instance;
@@ -236,7 +236,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
         VkDynamicState::VK_DYNAMIC_STATE_DEPTH_BIAS,
     };
-    if ((ret.device->info.flags & DeviceFlagBits::DYNAMIC_STATE_3) != InstanceFlagBits::NONE &&
+    if ((device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3) &&
         !info->raster.static_state_sample_count.has_value)
     {
         dynamic_state.push_back(VK_DYNAMIC_STATE_RASTERIZATION_SAMPLES_EXT);
@@ -428,7 +428,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
 
     // Check if ray tracing is supported
-    if ((device->info.flags & DeviceFlagBits::RAY_TRACING) == DeviceFlagBits::NONE)
+    if (device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
     {
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
@@ -608,7 +608,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         .pStages = stages.data(),
         .groupCount = group_count,
         .pGroups = groups.data(),
-        .maxPipelineRayRecursionDepth = std::min(ret.info.max_ray_recursion_depth, ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.max_ray_recursion_depth),
+        .maxPipelineRayRecursionDepth = std::min(ret.info.max_ray_recursion_depth, ret.device->properties.ray_tracing_pipeline_properties.value.max_ray_recursion_depth),
         .pLibraryInfo = nullptr,
         .pLibraryInterface = nullptr,
         .pDynamicState = nullptr,
@@ -637,8 +637,8 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         u32 const hit_count_number = hit_group_count;
         u32 const callable_count_number = callable_group_count;
         u32 const handle_count = ray_count_number + miss_count_number + hit_count_number + callable_count_number;
-        u32 const handle_size = ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
-        u32 const handle_stride = ret.device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
+        u32 const handle_size = ret.device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
+        u32 const handle_stride = ret.device->properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
 
         auto get_aligned = [&](u64 operand, u64 granularity) -> u64
         {
