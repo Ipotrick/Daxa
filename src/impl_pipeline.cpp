@@ -891,8 +891,8 @@ auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline 
     u32 const hit_count_number = hit_group_count;
     u32 const callable_count_number = callable_group_count;
     u32 const handle_count = ray_count_number + miss_count_number + hit_count_number + callable_count_number;
-    u32 const handle_size = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
-    u32 const handle_stride = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
+    u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
+    u32 const handle_stride = device->properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
 
     u64 const handle_size_aligned = get_aligned(handle_size, handle_stride);
 
