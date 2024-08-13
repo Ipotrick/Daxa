@@ -188,6 +188,26 @@ namespace daxa
         return ret;
     }
 
+    auto Instance::create_device_2(DeviceInfo2 const & info) -> Device
+    {
+        Device ret = {};
+        check_result(daxa_instance_create_device_2(
+                         r_cast<daxa_Instance>(this->object),
+                         r_cast<daxa_DeviceInfo2 const *>(&info),
+                         r_cast<daxa_Device *>(&ret)),
+                     "failed to create device");
+        return ret;
+    }
+
+    void Instance::choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 & inout_info)
+    {
+        check_result(daxa_instance_choose_device(
+                         r_cast<daxa_Instance>(this->object),
+                         static_cast<daxa_ImplicitFeatureFlags>(desired_features.data),
+                         r_cast<daxa_DeviceInfo2 *>(&inout_info)),
+                     "failed to find fitting device");
+    }
+
     auto Instance::info() const -> InstanceInfo const &
     {
         return *r_cast<InstanceInfo const *>(daxa_instance_info(rc_cast<daxa_Instance>(this->object)));

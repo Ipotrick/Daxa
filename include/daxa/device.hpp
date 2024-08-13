@@ -195,48 +195,27 @@ namespace daxa
         u32 invocation_reorder_mode = {};
     };
 
+    
     struct DeviceFlagsProperties
     {
         using Data = u32;
     };
     using DeviceFlags = Flags<DeviceFlagsProperties>;
-    struct DeviceFlagBits
+    struct [[deprecated]] DeviceFlagBits
     {
-        static inline constexpr DeviceFlags NONE = {0x00000000};
-        static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
-        static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
-        static inline constexpr DeviceFlags MESH_SHADER = {0x1 << 2};
-        static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
-        static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
-        static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
-        static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
-        static inline constexpr DeviceFlags SHADER_FLOAT16 = {0x1 << 7};
-        static inline constexpr DeviceFlags ROBUST_BUFFER_ACCESS = {0x1 << 9};
-        static inline constexpr DeviceFlags ROBUST_IMAGE_ACCESS = {0x1 << 10};
-        static inline constexpr DeviceFlags DYNAMIC_STATE_3 = {0x1 << 11};
-        static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 12};
-    };
-
-    struct DeviceFlags2
-    {
-        u32 buffer_device_address_capture_replay_bit : 1 = 1;
-        u32 conservative_rasterization : 1 = {};
-        u32 mesh_shader_bit : 1 = {};
-        u32 shader_atomic64 : 1 = 1;
-        u32 image_atomic64 : 1 = 1;
-        u32 vk_memory_model : 1 = {};
-        u32 ray_tracing : 1 = {};
-        u32 shader_float16 : 1 = {};
-        u32 shader_int8 : 1 = {};
-        u32 robust_buffer_access : 1 = {};
-        u32 robust_image_access : 1 = {};
-        u32 dynamic_state_3 : 1 = 1;
-        u32 shader_atomic_float : 1 = {};
-
-        operator DeviceFlags()
-        {
-            return std::bit_cast<DeviceFlags>(*this);
-        }
+        [[deprecated]] static inline constexpr DeviceFlags NONE = {0x00000000};
+        [[deprecated]] static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
+        [[deprecated]] static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
+        [[deprecated]] static inline constexpr DeviceFlags MESH_SHADER = {0x1 << 2};
+        [[deprecated]] static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
+        [[deprecated]] static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
+        [[deprecated]] static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
+        [[deprecated]] static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
+        [[deprecated]] static inline constexpr DeviceFlags SHADER_FLOAT16 = {0x1 << 7};
+        [[deprecated]] static inline constexpr DeviceFlags ROBUST_BUFFER_ACCESS = {0x1 << 9};
+        [[deprecated]] static inline constexpr DeviceFlags ROBUST_IMAGE_ACCESS = {0x1 << 10};
+        [[deprecated]] static inline constexpr DeviceFlags DYNAMIC_STATE_3 = {0x1 << 11};
+        [[deprecated]] static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 12};
     };
 
     enum struct MissingRequiredVkFeature
@@ -339,9 +318,10 @@ namespace daxa
         MissingRequiredVkFeature missing_required_feature;
     };
 
+    [[deprecated]]
     DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
 
-    struct DeviceInfo
+    struct [[deprecated]] DeviceInfo
     {
         i32 (*selector)(DeviceProperties const & properties) = default_device_score;
         DeviceFlags flags =

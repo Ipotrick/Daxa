@@ -125,15 +125,15 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * leg
     daxa_DeviceInfo2 info = {};
     if (legacy_info->flags & DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)
     {
-        info.explicit_features = DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY;
+        info.explicit_features = DAXA_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY;
     }
     if (legacy_info->flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL)
     {
-        info.explicit_features = DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_VK_MEMORY_MODEL;
+        info.explicit_features = DAXA_EXPLICIT_FEATURE_FLAG_VK_MEMORY_MODEL;
     }
     if (legacy_info->flags & DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS)
     {
-        info.explicit_features = DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2;
+        info.explicit_features = DAXA_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2;
     }
     info.max_allowed_buffers = legacy_info->max_allowed_buffers;
     info.max_allowed_images = legacy_info->max_allowed_images;
@@ -152,7 +152,7 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * leg
     {
         auto & props = self->device_properties[i];
 
-        bool no_support_problems = props.missing_required_feature == DAXA_MISSING_REQUIRED_VK_FEATURE_none;
+        bool no_support_problems = props.missing_required_feature == DAXA_MISSING_REQUIRED_VK_FEATURE_NONE;
 
         bool matches_info =
             info.max_allowed_buffers <= props.limits.max_descriptor_set_storage_buffers &&
@@ -205,14 +205,14 @@ void daxa_instance_list_devices_properties(daxa_Instance self, daxa_DeviceProper
     *property_count = static_cast<u32>(self->device_properties.size());
 }
 
-auto daxa_instance_choose_device(daxa_Instance self, daxa_DeviceInfo2 * info) -> daxa_Result
+auto daxa_instance_choose_device(daxa_Instance self, daxa_ImplicitFeatureFlags desired_implicit_features, daxa_DeviceInfo2 * info) -> daxa_Result
 {
     info->physical_device_index = ~0u;
     for (u32 i = 0; i < self->device_properties.size(); ++i)
     {
         auto & props = self->device_properties[i];
 
-        bool no_support_problems = props.missing_required_feature == DAXA_MISSING_REQUIRED_VK_FEATURE_none;
+        bool const no_support_problems = props.missing_required_feature == DAXA_MISSING_REQUIRED_VK_FEATURE_NONE;
 
         bool matches_info =
             info->max_allowed_buffers <= props.limits.max_descriptor_set_storage_buffers &&
@@ -226,9 +226,10 @@ auto daxa_instance_choose_device(daxa_Instance self, daxa_DeviceInfo2 * info) ->
                                props.acceleration_structure_properties.value.max_descriptor_set_update_after_bind_acceleration_structures;
         }
 
-        bool matches_explicit_features = (info->explicit_features & props.explicit_features) == info->explicit_features;
+        bool const matches_explicit_features = (info->explicit_features & props.explicit_features) == info->explicit_features;
+        bool const matches_implicit_features = (desired_implicit_features & props.implicit_features) == desired_implicit_features;
 
-        if (no_support_problems && matches_info && matches_explicit_features)
+        if (no_support_problems && matches_info && matches_explicit_features && matches_implicit_features)
         {
             info->physical_device_index = i;
             return DAXA_RESULT_SUCCESS;
@@ -257,7 +258,7 @@ auto daxa_instance_create_device_2(daxa_Instance self, daxa_DeviceInfo2 const * 
     }
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    if (self->device_properties[device_i].missing_required_feature != DAXA_MISSING_REQUIRED_VK_FEATURE_none)
+    if (self->device_properties[device_i].missing_required_feature != DAXA_MISSING_REQUIRED_VK_FEATURE_NONE)
     {
         result = DAXA_RESULT_ERROR_DEVICE_NOT_SUPPORTED;
     }

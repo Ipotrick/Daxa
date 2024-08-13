@@ -65,7 +65,7 @@ namespace daxa
         chain = static_cast<void *>(&physical_device_scalar_block_layout_features);
 
         physical_device_variable_pointer_features.pNext = chain;
-        physical_device_variable_pointer_features.sType = VK_STR`UCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES;
+        physical_device_variable_pointer_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VARIABLE_POINTER_FEATURES;
         chain = static_cast<void *>(&physical_device_variable_pointer_features);
 
         if (extensions.extensions_present[extensions.physical_device_extended_dynamic_state_3_ext])
@@ -166,37 +166,37 @@ namespace daxa
     };
 
     constexpr static std::array REQUIRED_FEATURES = std::array{
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.imageCubeArray), DAXA_MISSING_REQUIRED_VK_FEATURE_imageCubeArray},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.independentBlend), DAXA_MISSING_REQUIRED_VK_FEATURE_independentBlend},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.tessellationShader), DAXA_MISSING_REQUIRED_VK_FEATURE_tessellationShader},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.multiDrawIndirect), DAXA_MISSING_REQUIRED_VK_FEATURE_multiDrawIndirect},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.depthClamp), DAXA_MISSING_REQUIRED_VK_FEATURE_depthClamp},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.fillModeNonSolid), DAXA_MISSING_REQUIRED_VK_FEATURE_fillModeNonSolid},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.wideLines), DAXA_MISSING_REQUIRED_VK_FEATURE_wideLines},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.samplerAnisotropy), DAXA_MISSING_REQUIRED_VK_FEATURE_samplerAnisotropy},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.fragmentStoresAndAtomics), DAXA_MISSING_REQUIRED_VK_FEATURE_fragmentStoresAndAtomics},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderStorageImageReadWithoutFormat), DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageImageReadWithoutFormat},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderStorageImageWriteWithoutFormat), DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageImageWriteWithoutFormat},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderInt64), DAXA_MISSING_REQUIRED_VK_FEATURE_shaderInt64},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_variable_pointer_features.variablePointersStorageBuffer), DAXA_MISSING_REQUIRED_VK_FEATURE_variablePointersStorageBuffer},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_variable_pointer_features.variablePointers), DAXA_MISSING_REQUIRED_VK_FEATURE_variablePointers},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_buffer_device_address_features.bufferDeviceAddress), DAXA_MISSING_REQUIRED_VK_FEATURE_bufferDeviceAddress},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.shaderSampledImageArrayNonUniformIndexing), DAXA_MISSING_REQUIRED_VK_FEATURE_shaderSampledImageArrayNonUniformIndexing},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.shaderStorageBufferArrayNonUniformIndexing), DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageBufferArrayNonUniformIndexing},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.shaderStorageImageArrayNonUniformIndexing), DAXA_MISSING_REQUIRED_VK_FEATURE_shaderStorageImageArrayNonUniformIndexing},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingSampledImageUpdateAfterBind), DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingSampledImageUpdateAfterBind},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingStorageImageUpdateAfterBind), DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingStorageImageUpdateAfterBind},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingStorageBufferUpdateAfterBind), DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingStorageBufferUpdateAfterBind},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingUpdateUnusedWhilePending), DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingUpdateUnusedWhilePending},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingPartiallyBound), DAXA_MISSING_REQUIRED_VK_FEATURE_descriptorBindingPartiallyBound},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.runtimeDescriptorArray), DAXA_MISSING_REQUIRED_VK_FEATURE_runtimeDescriptorArray},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_host_query_reset_features.hostQueryReset), DAXA_MISSING_REQUIRED_VK_FEATURE_hostQueryReset},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_dynamic_rendering_features.dynamicRendering), DAXA_MISSING_REQUIRED_VK_FEATURE_dynamicRendering},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_synchronization2_features.synchronization2), DAXA_MISSING_REQUIRED_VK_FEATURE_synchronization2},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_timeline_semaphore_features.timelineSemaphore), DAXA_MISSING_REQUIRED_VK_FEATURE_timelineSemaphore},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.subgroupSizeControl), DAXA_MISSING_REQUIRED_VK_FEATURE_subgroupSizeControl},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.computeFullSubgroups), DAXA_MISSING_REQUIRED_VK_FEATURE_computeFullSubgroups},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_scalar_block_layout_features.scalarBlockLayout), DAXA_MISSING_REQUIRED_VK_FEATURE_scalarBlockLayout},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.imageCubeArray), DAXA_MISSING_REQUIRED_VK_FEATURE_IMAGE_CUBE_ARRAY},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.independentBlend), DAXA_MISSING_REQUIRED_VK_FEATURE_INDEPENDENT_BLEND},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.tessellationShader), DAXA_MISSING_REQUIRED_VK_FEATURE_TESSELLATION_SHADER},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.multiDrawIndirect), DAXA_MISSING_REQUIRED_VK_FEATURE_MULTI_DRAW_INDIRECT},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.depthClamp), DAXA_MISSING_REQUIRED_VK_FEATURE_DEPTH_CLAMP},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.fillModeNonSolid), DAXA_MISSING_REQUIRED_VK_FEATURE_FILL_MODE_NON_SOLID},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.wideLines), DAXA_MISSING_REQUIRED_VK_FEATURE_WIDE_LINES},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.samplerAnisotropy), DAXA_MISSING_REQUIRED_VK_FEATURE_SAMPLER_ANISOTROPY},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.fragmentStoresAndAtomics), DAXA_MISSING_REQUIRED_VK_FEATURE_FRAGMENT_STORES_AND_ATOMICS},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderStorageImageReadWithoutFormat), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_STORAGE_IMAGE_READ_WITHOUT_FORMAT},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderStorageImageWriteWithoutFormat), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_STORAGE_IMAGE_WRITE_WITHOUT_FORMAT},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderInt64), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_INT64},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_variable_pointer_features.variablePointersStorageBuffer), DAXA_MISSING_REQUIRED_VK_FEATURE_VARIABLE_POINTERS_STORAGE_BUFFER},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_variable_pointer_features.variablePointers), DAXA_MISSING_REQUIRED_VK_FEATURE_VARIABLE_POINTERS},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_buffer_device_address_features.bufferDeviceAddress), DAXA_MISSING_REQUIRED_VK_FEATURE_BUFFER_DEVICE_ADDRESS},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.shaderSampledImageArrayNonUniformIndexing), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_SAMPLED_IMAGE_ARRAY_NON_UNIFORM_INDEXING},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.shaderStorageBufferArrayNonUniformIndexing), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_STORAGE_BUFFER_ARRAY_NON_UNIFORM_INDEXING},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.shaderStorageImageArrayNonUniformIndexing), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_STORAGE_IMAGE_ARRAY_NON_UNIFORM_INDEXING},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingSampledImageUpdateAfterBind), DAXA_MISSING_REQUIRED_VK_FEATURE_DESCRIPTOR_BINDING_SAMPLED_IMAGE_UPDATE_AFTER_BIND},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingStorageImageUpdateAfterBind), DAXA_MISSING_REQUIRED_VK_FEATURE_DESCRIPTOR_BINDING_STORAGE_IMAGE_UPDATE_AFTER_BIND},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingStorageBufferUpdateAfterBind), DAXA_MISSING_REQUIRED_VK_FEATURE_DESCRIPTOR_BINDING_STORAGE_BUFFER_UPDATE_AFTER_BIND},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingUpdateUnusedWhilePending), DAXA_MISSING_REQUIRED_VK_FEATURE_DESCRIPTOR_BINDING_UPDATE_UNUSED_WHILE_PENDING},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.descriptorBindingPartiallyBound), DAXA_MISSING_REQUIRED_VK_FEATURE_DESCRIPTOR_BINDING_PARTIALLY_BOUND},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_descriptor_indexing_features.runtimeDescriptorArray), DAXA_MISSING_REQUIRED_VK_FEATURE_RUNTIME_DESCRIPTOR_ARRAY},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_host_query_reset_features.hostQueryReset), DAXA_MISSING_REQUIRED_VK_FEATURE_HOST_QUERY_RESET},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_dynamic_rendering_features.dynamicRendering), DAXA_MISSING_REQUIRED_VK_FEATURE_DYNAMIC_RENDERING},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_synchronization2_features.synchronization2), DAXA_MISSING_REQUIRED_VK_FEATURE_SYNCHRONIZATION2},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_timeline_semaphore_features.timelineSemaphore), DAXA_MISSING_REQUIRED_VK_FEATURE_TIMELINE_SEMAPHORE},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.subgroupSizeControl), DAXA_MISSING_REQUIRED_VK_FEATURE_SUBGROUP_SIZE_CONTROL},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.computeFullSubgroups), DAXA_MISSING_REQUIRED_VK_FEATURE_COMPUTE_FULL_SUBGROUPS},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_scalar_block_layout_features.scalarBlockLayout), DAXA_MISSING_REQUIRED_VK_FEATURE_SCALAR_BLOCK_LAYOUT},
     };
 
     // === Implicit Features ===
@@ -332,10 +332,10 @@ namespace daxa
     };
 
     constexpr static std::array EXPLICIT_FEATURES = std::array{
-        ExplicitFeature{PHYSICAL_DEVICE_ROBUSTNESS_2_EXT_VK_FEATURES, DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2},
-        ExplicitFeature{PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_VK_FEATURES, DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY},
-        ExplicitFeature{PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_CAPTURE_REPLAY_VK_FEATURES, DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY},
-        ExplicitFeature{PHYSICAL_DEVICE_VK_MEMORY_MODEL_VK_FEATURES, DAXA_DEVICE_EXPLICIT_FEATURE_FLAG_VK_MEMORY_MODEL},
+        ExplicitFeature{PHYSICAL_DEVICE_ROBUSTNESS_2_EXT_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2},
+        ExplicitFeature{PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY},
+        ExplicitFeature{PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_CAPTURE_REPLAY_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY},
+        ExplicitFeature{PHYSICAL_DEVICE_VK_MEMORY_MODEL_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_VK_MEMORY_MODEL},
     };
 
     // === Feature Processing ===

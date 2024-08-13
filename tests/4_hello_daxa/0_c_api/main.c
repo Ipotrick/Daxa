@@ -30,7 +30,7 @@ int main(void)
     // {
     //     daxa_DeviceProperties const * device_properties = devices + i;
     //     daxa_Bool8 const suitable = 
-    //         device_properties->problems == DAXA_MISSING_REQUIRED_VK_FEATURE_none &&
+    //         device_properties->problems == DAXA_MISSING_REQUIRED_VK_FEATURE_NONE &&
     //         device_properties->mesh_shader_properties.has_value;
     //     if (suitable)
     //     {`
@@ -50,7 +50,7 @@ int main(void)
     // device_info.physical_device_index = choosen_device_index;
 
     // Automatic Selection:
-    handle_daxa_result(daxa_instance_choose_device(instance, &device_info));
+    handle_daxa_result(daxa_instance_choose_device(instance, DAXA_IMPLICIT_FEATURE_FLAG_NONE, &device_info));
 
     handle_daxa_result(daxa_instance_create_device_2(instance, &device_info, &device));
 
