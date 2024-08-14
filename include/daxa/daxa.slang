@@ -126,6 +126,12 @@ namespace daxa
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
     };
+
+    [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
+    extension RaytracingAccelerationStructure
+    {
+        static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
+    }
 #endif // DAXA_RAY_TRACING
     
     [[vk::binding(DAXA_SAMPLER_BINDING, 0)]] SamplerState SamplerStateTable[];

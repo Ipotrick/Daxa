@@ -1320,12 +1320,24 @@ namespace daxa
                 }
                 if constexpr (std::is_same_v<std::decay_t<decltype(attach)>, TaskTlasAttachmentInfo>)
                 {
-                    upalign(sizeof(DeviceAddress));
-                    TlasId const tlas_id = attach.ids[0];
-                    DeviceAddress const tlas_address = attach.view.is_null() ? DeviceAddress{} : device.get_device_address(tlas_id).value();
-                    auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(tlas_address);
-                    std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
-                    shader_byte_blob_offset += sizeof(DeviceAddress);
+                    TaskTlasAttachmentInfo const & tlas_attach = attach;
+                    if(tlas_attach.shader_as_address)
+                    {
+                        upalign(sizeof(DeviceAddress));
+                        TlasId const tlas_id = attach.ids[0];
+                        DeviceAddress const tlas_address = attach.view.is_null() ? DeviceAddress{} : device.get_device_address(tlas_id).value();
+                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(DeviceAddress)>>(tlas_address);
+                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(DeviceAddress));
+                        shader_byte_blob_offset += sizeof(DeviceAddress);
+                    }
+                    else 
+                    {
+                        upalign(sizeof(daxa_TlasId));
+                        TlasId const tlas_id = tlas_attach.ids[0];
+                        auto mini_blob = std::bit_cast<std::array<std::byte, sizeof(daxa_TlasId)>>(tlas_id);
+                        std::memcpy(attachment_shader_blob.data() + shader_byte_blob_offset, &mini_blob, sizeof(daxa_TlasId));
+                        shader_byte_blob_offset += sizeof(daxa_TlasId);
+                    }
                 }
             },
             [&](u32, TaskImageAttachmentInfo const & image_attach)

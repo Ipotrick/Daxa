@@ -652,15 +652,6 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     for (u32 i = 0; i < pipeline->shader_groups.size(); ++i)
     {
         auto shader_group = pipeline->shader_groups.at(i);
-        auto const group = VkRayTracingShaderGroupCreateInfoKHR{
-            .sType = VK_STRUCTURE_TYPE_RAY_TRACING_SHADER_GROUP_CREATE_INFO_KHR,
-            .pNext = nullptr,
-            .type = static_cast<VkRayTracingShaderGroupTypeKHR>(shader_group.type),
-            .generalShader = shader_group.general_shader_index,
-            .closestHitShader = shader_group.closest_hit_shader_index,
-            .anyHitShader = shader_group.any_hit_shader_index,
-            .intersectionShader = shader_group.intersection_shader_index,
-        };
 
         if (shader_group.type == ShaderGroup::TRIANGLES_HIT_GROUP || shader_group.type == ShaderGroup::PROCEDURAL_HIT_GROUP)
         {
@@ -695,25 +686,26 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     u32 const hit_count_number = hit_group_count;
     u32 const callable_count_number = callable_group_count;
     u32 const handle_count = ray_count_number + miss_count_number + hit_count_number + callable_count_number;
-    u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
-    u32 const handle_stride = device->properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
+    u32 const handle_size = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
+    u32 const group_base_alignment = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_base_alignment;
+    u32 const shader_group_handle_alignment = device->physical_device_properties.ray_tracing_pipeline_properties.value.shader_group_handle_alignment;
 
     // The SBT (buffer) need to have starting groups to be aligned and handles in the group to be aligned.
-    u64 const handle_size_aligned = get_aligned(handle_size, handle_stride);
+    u64 const handle_size_aligned = get_aligned(handle_size, shader_group_handle_alignment);
 
     auto & raygen_region = out_sbt->raygen_region;
     auto & miss_region = out_sbt->miss_region;
     auto & hit_region = out_sbt->hit_region;
     auto & callable_region = out_sbt->callable_region;
 
-    raygen_region.stride = get_aligned(ray_count_number * handle_size_aligned, handle_stride);
-    raygen_region.size = raygen_region.stride * ray_count_number; // The size member of pRayGenShaderBindingTable must be equal to its stride member
+    raygen_region.stride = get_aligned(handle_size_aligned, group_base_alignment);
+    raygen_region.size = raygen_region.stride; // The size member of pRayGenShaderBindingTable must be equal to its stride member
     miss_region.stride = handle_size_aligned;
-    miss_region.size = get_aligned(miss_count_number * handle_size_aligned, handle_stride);
+    miss_region.size = get_aligned(miss_count_number * handle_size_aligned, group_base_alignment);
     hit_region.stride = handle_size_aligned;
-    hit_region.size = get_aligned(hit_count_number * handle_size_aligned, handle_stride);
+    hit_region.size = get_aligned(hit_count_number * handle_size_aligned, group_base_alignment);
     callable_region.stride = handle_size_aligned;
-    callable_region.size = get_aligned(callable_count_number * handle_size_aligned, handle_stride);
+    callable_region.size = get_aligned(callable_count_number * handle_size_aligned, group_base_alignment);
 
     // Get the shader group handles
     u32 const data_size = handle_count * handle_size;
@@ -794,6 +786,7 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
             // Closest-hit + any-hit + intersection shaders load data
             for (u32 c = 0; c < hit_count_number; c++)
             {
+
                 std::memcpy(sbt_ptr_iterator, shader_handle_storage.data() + offset, handle_size);
                 sbt_ptr_iterator += hit_region.stride;
                 offset += handle_size;

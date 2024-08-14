@@ -305,6 +305,7 @@ namespace daxa
     {
         char const * name = {};
         TaskTlasAccess access = {};
+        bool shader_as_address = {};
     };
 
     struct TaskImageAttachment
@@ -427,7 +428,7 @@ namespace daxa
             {
             case TaskAttachmentType::BUFFER: return value.buffer.shader_array_size * 8;
             case TaskAttachmentType::BLAS: return 0;
-            case TaskAttachmentType::TLAS: return 1;
+            case TaskAttachmentType::TLAS: return 8;
             case TaskAttachmentType::IMAGE: return value.image.shader_array_size * (value.image.shader_as_index ? 4 : 8);
             default: return 0;
             }
@@ -867,12 +868,12 @@ namespace daxa
             .access = daxa::TaskBlasAccess::TASK_ACCESS, \
         });
 
-#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS)     \
+#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)     \
     daxa::TaskTlasAttachmentIndex const NAME =           \
         add_attachment(daxa::TaskTlasAttachment{         \
             .name = #NAME,                               \
             .access = daxa::TaskTlasAccess::TASK_ACCESS, \
-        });
+            __VA_ARGS__});
 
 #define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)     \
     daxa::TaskImageAttachmentIndex const NAME =           \
@@ -922,7 +923,8 @@ namespace daxa
 #define DAXA_TH_BUFFER_ID_ARRAY(TASK_ACCESS, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
 #define DAXA_TH_BUFFER_PTR_ARRAY(TASK_ACCESS, PTR_TYPE, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
 #define DAXA_TH_BLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)
-#define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS)
+#define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_as_address = true)
+#define DAXA_TH_TLAS_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_as_address = false)
 
     template <typename BufFn, typename ImgFn>
     constexpr void for_each(std::span<TaskAttachmentInfo> attachments, BufFn && buf_fn, ImgFn && img_fn)
@@ -1185,6 +1187,7 @@ namespace daxa
         tlas.name = "inline attachment";
         tlas.access = access;
         tlas.view = view;
+        tlas.shader_as_address = false;
         TaskAttachmentInfo info = {};
         info.type = daxa::TaskAttachmentType::TLAS;
         info.value.tlas = tlas;
