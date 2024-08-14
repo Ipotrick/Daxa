@@ -246,7 +246,14 @@ namespace daxa
         // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
         std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
-        void initialize(u32 max_buffers, u32 max_images, u32 max_samplers, u32 max_acceleration_structures, VkDevice device, VkBuffer device_address_buffer, PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT);
+        auto initialize(
+            u32 max_buffers, 
+            u32 max_images, 
+            u32 max_samplers, 
+            u32 max_acceleration_structures,
+            VkDevice device, 
+            VkBuffer device_address_buffer, 
+            PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT) -> daxa_Result;
         void cleanup(VkDevice device);
     };
 
