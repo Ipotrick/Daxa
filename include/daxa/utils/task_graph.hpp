@@ -218,6 +218,7 @@ namespace daxa
                             TaskTlasAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.tlas.name;
                             info.access = NoRefTTask::attachments()[i].value.tlas.access;
+                            info.shader_as_address = NoRefTTask::attachments()[i].value.tlas.shader_as_address;
                             info.view = daxa::get<TaskTlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
