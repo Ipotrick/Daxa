@@ -478,7 +478,7 @@ auto create_acceleration_structure_helper(
 {
     // --- Begin Parameter Validation ---
 
-    if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
+    if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
@@ -654,7 +654,7 @@ auto daxa_dvc_get_tlas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
-    if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
+    if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
@@ -694,7 +694,7 @@ auto daxa_dvc_get_blas_build_sizes(
     daxa_AccelerationStructureBuildSizesInfo * out)
     -> daxa_Result
 {
-    if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
+    if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
