@@ -76,5 +76,6 @@ void entry_mandelbrot(uint3 pixel_i : SV_DispatchThreadID)
     }
     col *= 1.0 / float(SUBSAMPLES * SUBSAMPLES);
 
-    RWTexture2D<float>::get(p.image_id)[pixel_i.xy].xyz = col;
+    RWTexture2D<float3> tex = daxa::storage_images[p.image_id.index()];
+    tex[pixel_i.xy] = col;
 }
