@@ -107,29 +107,21 @@ struct daxa_ImplDevice final : public ImplHandle
     std::deque<std::pair<u64, TimelineQueryPoolZombie>> timeline_query_pool_zombies = {};
     std::deque<std::pair<u64, MemoryBlockZombie>> memory_block_zombies = {};
 
-    // Used to sync access to the queues submits in flight lists.
-    std::recursive_mutex queue_mtx = {};
     // Queues
     struct ImplQueue
     {
+        // Constant after initialization:
         daxa_QueueFamily family = {};
         u32 queue_index = {};
         u32 vk_queue_family_index = ~0u;
         VkQueue vk_queue = {};
         VkSemaphore gpu_queue_local_timeline = {};
-        u64 cpu_queue_local_timeline = {};
-        /// WARNING: In flight submit queues must be synchronized with queue_mtx!
-        ///          This is because collect garbage (which pops from the pending_submits) can race with
-        ///          submit operation running on another thread (which pushes into pending_submits)
-        // Stores the global submission index of all in flight submits in the order they were made on this queue
-        std::deque<u64> pending_submits = {};
+        // atomically synchronized:
+        std::atomic_uint64_t latest_pending_submit_timeline_value = {};
 
         auto initialize(VkDevice vk_device, u32 queue_family_index, u32 queue_index) -> daxa_Result;
         void cleanup(VkDevice device);
-        auto update_pending_submits(VkDevice vk_device) -> daxa_Result;
-        auto wait_for_oldest_pending_submit(VkDevice vk_device) -> daxa_Result;
-        void add_pending_submit(u64 current_device_timeline_value);
-        auto get_oldest_pending_submit() -> std::optional<u64>;
+        auto get_oldest_pending_submit(VkDevice vk_device, std::optional<u64> & out) -> daxa_Result;
     };
     std::array<ImplQueue, DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT + 1> queues = {
         ImplQueue{DAXA_QUEUE_FAMILY_MAIN, 0},

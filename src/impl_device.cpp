@@ -102,66 +102,23 @@ void daxa_ImplDevice::ImplQueue::cleanup(VkDevice device)
     }
 }
 
-auto daxa_ImplDevice::ImplQueue::update_pending_submits(VkDevice vk_device) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit(VkDevice vk_device, std::optional<u64> & out) -> daxa_Result
 {
     if (this->gpu_queue_local_timeline)
     {
-        u64 gpu_timeline = {};
-        daxa_Result result = static_cast<daxa_Result>(vkGetSemaphoreCounterValue(vk_device, this->gpu_queue_local_timeline, &gpu_timeline));
-        if (result != DAXA_RESULT_SUCCESS)
-        {
-            return result;
-        }
+        u64 latest_gpu = {};
+        auto result = static_cast<daxa_Result>(vkGetSemaphoreCounterValue(vk_device, this->gpu_queue_local_timeline, &latest_gpu));
+        _DAXA_RETURN_IF_ERROR(result, result);
+        
+        u64 latest_cpu = this->latest_pending_submit_timeline_value.load(std::memory_order::acquire);
 
-        auto new_pending_submit_count = this->cpu_queue_local_timeline - gpu_timeline;
-        auto completed_submits = this->pending_submits.size() - new_pending_submit_count;
-        for (u64 i = 0; i < completed_submits; ++i)
+        bool const cpu_ahead_of_gpu = latest_cpu > latest_gpu;
+        if (cpu_ahead_of_gpu)
         {
-            this->pending_submits.pop_front();
+            out = latest_gpu;
         }
     }
     return DAXA_RESULT_SUCCESS;
-}
-
-auto daxa_ImplDevice::ImplQueue::wait_for_oldest_pending_submit(VkDevice vk_device) -> daxa_Result
-{
-    if (this->gpu_queue_local_timeline && this->pending_submits.size() > 0)
-    {
-        u64 timeline_value = this->cpu_queue_local_timeline - (this->pending_submits.size() - 1);
-        VkSemaphoreWaitInfo wait_info{
-            .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
-            .pNext = nullptr,
-            .flags = {},
-            .semaphoreCount = 1,
-            .pSemaphores = &this->gpu_queue_local_timeline,
-            .pValues = &timeline_value,
-        };
-        auto result = static_cast<daxa_Result>(vkWaitSemaphores(vk_device, &wait_info, ~0ull));
-        if (result != DAXA_RESULT_SUCCESS)
-        {
-            return result;
-        }
-        this->pending_submits.pop_front();
-    }
-    return DAXA_RESULT_SUCCESS;
-}
-
-void daxa_ImplDevice::ImplQueue::add_pending_submit(u64 current_device_timeline_value)
-{
-    if (this->gpu_queue_local_timeline)
-    {
-        this->pending_submits.push_back(current_device_timeline_value);
-        this->cpu_queue_local_timeline += 1;
-    }
-}
-
-auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit() -> std::optional<u64>
-{
-    if (this->gpu_queue_local_timeline && !this->pending_submits.empty())
-    {
-        return this->pending_submits.front();
-    }
-    return std::nullopt;
 }
 
 auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_BufferId * out_id, daxa_MemoryBlock opt_memory_block, usize opt_offset) -> daxa_Result
@@ -1121,13 +1078,8 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     }
 
     daxa_ImplDevice::ImplQueue & queue = self->get_queue(info->queue);
-    u64 queue_cpu_timeline = 0;
-    u64 const main_timeline_cpu = self->global_submit_timeline.fetch_add(1) + 1;
-    {
-        std::unique_lock queue_lock{self->queue_mtx};
-        queue.add_pending_submit(main_timeline_cpu);
-        queue_cpu_timeline = queue.cpu_queue_local_timeline;
-    }
+    u64 const current_timeline_value = self->global_submit_timeline.fetch_add(1) + 1;
+    queue.latest_pending_submit_timeline_value.store(current_timeline_value);
 
     for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
@@ -1145,7 +1097,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     // Add main queue timeline signaling as first timeline semaphore signaling:
     submit_semaphore_signals.push_back(queue.gpu_queue_local_timeline);
-    submit_semaphore_signal_values.push_back(queue_cpu_timeline);
+    submit_semaphore_signal_values.push_back(current_timeline_value);
 
     for (auto const & pair : std::span{info->signal_timeline_semaphores, info->signal_timeline_semaphore_count})
     {
@@ -1249,29 +1201,15 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
     std::unique_lock lock{self->zombies_mtx};
 
     u64 min_pending_device_timeline_value_of_all_queues = std::numeric_limits<u64>::max();
-    // TODO(pahrens):
-    //   0. lock all queues
-    //   2. read all queues current gpu timeline semaphore value
-    //   3. pop all pending submits smaller then the queues current timeline value
-    //   4. min all the top pending submits for all queues
-    //   5. use this min value to guard destructions instead of main queues value
+    for (auto & queue : self->queues)
     {
-        std::unique_lock lock{self->queue_mtx};
-        for (auto & queue : self->queues)
-        {
-            auto result = queue.update_pending_submits(self->vk_device);
-            if (result != DAXA_RESULT_SUCCESS)
-            {
-                return result;
-            }
-        }
+        std::optional<u64> latest_pending_submit = {};
+        auto result = queue.get_oldest_pending_submit(self->vk_device, latest_pending_submit);
+        _DAXA_RETURN_IF_ERROR(result, result)
 
-        for (auto & queue : self->queues)
+        if (latest_pending_submit.has_value())
         {
-            if (!queue.pending_submits.empty())
-            {
-                min_pending_device_timeline_value_of_all_queues = std::min(min_pending_device_timeline_value_of_all_queues, queue.pending_submits.front());
-            }
+            min_pending_device_timeline_value_of_all_queues = std::min(min_pending_device_timeline_value_of_all_queues, latest_pending_submit.value());
         }
     }
 
