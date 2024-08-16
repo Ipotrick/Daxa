@@ -208,6 +208,14 @@ namespace daxa
                      "failed to find fitting device");
     }
 
+    auto Instance::list_devices_properties() -> std::span<daxa::DeviceProperties const>
+    {
+        auto const * props = (daxa_DeviceProperties const *)nullptr;
+        auto prop_n = daxa_u32{};
+        daxa_instance_list_devices_properties(r_cast<daxa_Instance>(this->object), &props, &prop_n);
+        return std::span<daxa::DeviceProperties const>{(daxa::DeviceProperties const *)props, prop_n};
+    }
+
     auto Instance::info() const -> InstanceInfo const &
     {
         return *r_cast<InstanceInfo const *>(daxa_instance_info(rc_cast<daxa_Instance>(this->object)));
@@ -1824,9 +1832,9 @@ namespace daxa
     {
         switch (family)
         {
-            case QueueFamily::MAIN: return "MAIN";
-            case QueueFamily::COMPUTE: return "COMPUTE";
-            case QueueFamily::TRANSFER: return "TRANSFER";
+        case QueueFamily::MAIN: return "MAIN";
+        case QueueFamily::COMPUTE: return "COMPUTE";
+        case QueueFamily::TRANSFER: return "TRANSFER";
         };
     }
 

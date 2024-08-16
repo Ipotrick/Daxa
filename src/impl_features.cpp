@@ -275,15 +275,15 @@ namespace daxa
     constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT8_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_float16_int8_features.shaderInt8),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_8bit_storage_features.storageBuffer8BitAccess),
-        offsetof(PhysicalDeviceFeaturesStruct, physical_device_8bit_storage_features.uniformAndStorageBuffer8BitAccess),
-        offsetof(PhysicalDeviceFeaturesStruct, physical_device_8bit_storage_features.storagePushConstant8),
+        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_8bit_storage_features.uniformAndStorageBuffer8BitAccess),
+        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_8bit_storage_features.storagePushConstant8),
     };
 
     constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderInt16),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.storageBuffer16BitAccess),
-        offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.uniformAndStorageBuffer16BitAccess),
-        offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.storagePushConstant16),
+        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.uniformAndStorageBuffer16BitAccess),
+        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.storagePushConstant16),
     };
 
     constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3_VK_FEATURES = std::array{

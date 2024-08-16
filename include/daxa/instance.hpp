@@ -40,6 +40,7 @@ namespace daxa
         /// Picks first supported device that satisfies the given device info and desired implicit features.
         /// Writes selected device index directly into the inout device info.
         void choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 & inout_info);
+        auto list_devices_properties() -> std::span<daxa::DeviceProperties const>;
 
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
