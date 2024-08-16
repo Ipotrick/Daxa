@@ -2312,7 +2312,7 @@ template <typename T>
 void zombiefy(daxa_Device self, T id, auto & slots, auto & zombies)
 {
     [[maybe_unused]] auto & slot = slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
-    if constexpr (std::is_same_v<T, daxa_BufferId> || std::is_same_v<T, daxa_ImageId>)
+    if constexpr (std::is_same_v<T, BufferId> || std::is_same_v<T, ImageId>)
     {
         if (slot.opt_memory_block != nullptr)
         {
@@ -2321,7 +2321,7 @@ void zombiefy(daxa_Device self, T id, auto & slots, auto & zombies)
                 self->instance);
         }
     }
-    if constexpr (std::is_same_v<T, daxa_TlasId> || std::is_same_v<T, daxa_BlasId>)
+    if constexpr (std::is_same_v<T, TlasId> || std::is_same_v<T, BlasId>)
     {
         if (slot.owns_buffer)
         {
