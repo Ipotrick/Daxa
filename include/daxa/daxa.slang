@@ -157,12 +157,29 @@ namespace daxa
 } // namespace daxa
 
 #define _DAXA_DECL_TEX_EXTENSION(TYPE, TABLE)\
-__generic<T, let N: int> extension TYPE<vector<T,N>>\
+__generic<T> extension TYPE<T>\
 {\
-    static TYPE<vector<T,N>> get(daxa::ImageViewId i) { return TABLE[i.index()]; }\
-    static TYPE<vector<T,N>> get_coherent(daxa::ImageViewId i) { return TABLE[i.index()]; }\
-    static TYPE<vector<T,N>> get(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
-    static TYPE<vector<T,N>> get_coherent(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
+    static TYPE<T> get(daxa::ImageViewId i) { return TABLE[i.index()]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE[i.index()]; }\
+    static TYPE<T> get(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
+}\
+namespace daxa\
+{\
+    __generic<T>\
+    struct TYPE ## Id\
+    {\
+        ImageViewId id;\
+        TYPE<T> get() { return TYPE<T>::get(id); }\
+        TYPE<T> get_coherent() { return TYPE<T>::get_coherent(id); }\
+    };    \
+    __generic<T>\
+    struct TYPE ## Idx\
+    {\
+        ImageViewIndex index;\
+        TYPE<T> get() { return TYPE<T>::get(index); }\
+        TYPE<T> get_coherent() { return TYPE<T>::get_coherent(index); }\
+    };\
 }
 
 _DAXA_DECL_TEX_EXTENSION(RWTexture1D, daxa::storage_images)
@@ -179,6 +196,7 @@ _DAXA_DECL_TEX_EXTENSION(Texture2DArray, daxa::sampled_images)
 _DAXA_DECL_TEX_EXTENSION(TextureCube, daxa::sampled_images)
 _DAXA_DECL_TEX_EXTENSION(TextureCubeArray, daxa::sampled_images)
 _DAXA_DECL_TEX_EXTENSION(Texture2DMS, daxa::sampled_images)
+
 
 // These are hopefully only temporary global namespace declarations:
 _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(uint, daxa_u)

@@ -40,8 +40,38 @@
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa_DeviceAddress
 
-#elif defined(__cplusplus)
+#else
 #include <daxa/daxa.hpp>
+namespace daxa
+{
+    template<typename T> using RWTexture1DId = daxa_ImageViewId;
+    template<typename T> using RWTexture1DIdx = daxa_ImageViewIndex;
+    template<typename T> using RWTexture2DId = daxa_ImageViewId;
+    template<typename T> using RWTexture2DIdx = daxa_ImageViewIndex;
+    template<typename T> using RWTexture3DId = daxa_ImageViewId;
+    template<typename T> using RWTexture3DIdx = daxa_ImageViewIndex;
+    template<typename T> using RWTexture1DArrayId = daxa_ImageViewId;
+    template<typename T> using RWTexture1DArrayIdx = daxa_ImageViewIndex;
+    template<typename T> using RWTexture2DArrayId = daxa_ImageViewId;
+    template<typename T> using RWTexture2DArrayIdx = daxa_ImageViewIndex;
+    
+    template<typename T> using Texture1DId = daxa_ImageViewId;
+    template<typename T> using Texture1DIdx = daxa_ImageViewIndex;
+    template<typename T> using Texture2DId = daxa_ImageViewId;
+    template<typename T> using Texture2DIdx = daxa_ImageViewIndex;
+    template<typename T> using Texture3DId = daxa_ImageViewId;
+    template<typename T> using Texture3DIdx = daxa_ImageViewIndex;
+    template<typename T> using Texture1DArrayId = daxa_ImageViewId;
+    template<typename T> using Texture1DArrayIdx = daxa_ImageViewIndex;
+    template<typename T> using Texture2DArrayId = daxa_ImageViewId;
+    template<typename T> using Texture2DArrayIdx = daxa_ImageViewIndex;
+    template<typename T> using TextureCubeId = daxa_ImageViewId;
+    template<typename T> using TextureCubeIdx = daxa_ImageViewIndex;
+    template<typename T> using TextureCubeArrayId = daxa_ImageViewId;
+    template<typename T> using TextureCubeArrayIdx = daxa_ImageViewIndex;
+    template<typename T> using Texture2DMSId = daxa_ImageViewId;
+    template<typename T> using Texture2DMSIdx = daxa_ImageViewIndex;
+}
 
 /// @brief Buffer ptr enable is ignored in c++.
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
