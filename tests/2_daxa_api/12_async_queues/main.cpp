@@ -273,10 +273,13 @@ namespace tests
 
             daxa::Instance instance = daxa::create_instance({});
 
-            daxa::Device device = instance.create_device({
-                .flags = daxa::DeviceFlags2{.mesh_shader_bit = 1},
-                .name = "my device",
-            });
+            daxa::DeviceInfo2 device_info = [&](){
+                daxa::DeviceInfo2 ret = {.name = "testing device"};
+                instance.choose_device(daxa::ImplicitFeatureFlagBits::MESH_SHADER, ret);
+                return ret;
+            }();
+
+            daxa::Device device = instance.create_device_2(device_info);
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = native_window_handle,

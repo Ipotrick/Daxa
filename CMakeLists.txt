@@ -136,10 +136,10 @@ if(DAXA_ENABLE_UTILS_IMGUI)
         PUBLIC
         DAXA_BUILT_WITH_UTILS_IMGUI=true
     )
-    find_package(imgui CONFIG REQUIRED)
+    # find_package(imgui CONFIG REQUIRED)
     target_link_libraries(daxa
         PUBLIC
-        imgui::imgui
+        imgui
     )
 endif()
 if(DAXA_ENABLE_UTILS_MEM)
