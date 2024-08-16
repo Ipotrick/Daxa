@@ -269,6 +269,7 @@ typedef enum
     DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3 =  0x1 << 10,
     DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT =  0x1 << 11,
     DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN =  0x1 << 12,
+    DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16 =  0x1 << 13,
 } daxa_DeviceImplicitFeatureFlagBits;
 
 typedef daxa_DeviceImplicitFeatureFlagBits daxa_ImplicitFeatureFlags;

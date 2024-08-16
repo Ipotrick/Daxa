@@ -58,6 +58,10 @@ namespace daxa
             physical_device_mesh_shader_ext,
             physical_device_ray_tracing_invocation_reorder_nv,
             physical_device_shader_atomic_float_ext,
+            // Used by DLSS
+            physical_device_push_descriptor_khr,
+            physical_device_binary_import_nvx,
+            physical_device_image_view_handle_nvx,
             COUNT
         };
         constexpr static std::array<char const *, COUNT> extension_names = {
@@ -76,6 +80,10 @@ namespace daxa
             VK_EXT_MESH_SHADER_EXTENSION_NAME,
             VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME,
             VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
+            // Used by DLSS
+            VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+            VK_NVX_BINARY_IMPORT_EXTENSION_NAME,
+            VK_NVX_IMAGE_VIEW_HANDLE_EXTENSION_NAME,
         };
         char const * extension_name_list[COUNT] = {};
         u32 extension_name_list_size = {};
@@ -98,6 +106,8 @@ namespace daxa
         VkPhysicalDeviceVariablePointerFeatures physical_device_variable_pointer_features = {};
         VkPhysicalDeviceExtendedDynamicState3FeaturesEXT physical_device_extended_dynamic_state3_features_ext = {};
         VkPhysicalDeviceShaderFloat16Int8Features physical_device_shader_float16_int8_features = {};
+        VkPhysicalDevice8BitStorageFeatures physical_device_8bit_storage_features = {};
+        VkPhysicalDevice16BitStorageFeatures physical_device_16bit_storage_features = {};
         VkPhysicalDeviceRobustness2FeaturesEXT physical_device_robustness2_features_ext = {};
         VkPhysicalDeviceVulkanMemoryModelFeatures physical_device_vulkan_memory_model_features = {};
         VkPhysicalDeviceShaderAtomicInt64Features physical_device_shader_atomic_int64_features = {};
@@ -132,6 +142,6 @@ namespace daxa
 
         void initialize(daxa_DeviceImplicitFeatureFlagBits implicit_features);
     };
-    
+
     void fill_daxa_device_properties(PhysicalDeviceExtensionsStruct const & extensions, PhysicalDeviceFeaturesStruct const & features, VkPhysicalDevice physical_device, daxa_DeviceProperties * out);
 } // namespace daxa
