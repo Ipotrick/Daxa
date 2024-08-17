@@ -153,7 +153,24 @@ namespace daxa
         static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
     }
 #endif // DAXA_RAY_TRACING
-    
+
+    extension ByteAddressBuffer
+    {
+        static ByteAddressBuffer get(daxa::BufferId i) { return buffers[i.index()]; }
+        static ByteAddressBuffer get_coherent(daxa::BufferId i) { return buffers[i.index()]; }
+    };    
+
+    extension RWByteAddressBuffer
+    {
+        static RWByteAddressBuffer get(daxa::BufferId i) { return buffers[i.index()]; }
+        static RWByteAddressBuffer get_coherent(daxa::BufferId i) { return buffers[i.index()]; }
+    };    
+
+    extension SamplerState
+    {
+        static SamplerState get(daxa::SamplerId i) { return samplers[i.index()]; }
+    }
+
 } // namespace daxa
 
 #define _DAXA_DECL_TEX_EXTENSION(TYPE, TABLE)\
