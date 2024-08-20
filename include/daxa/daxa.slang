@@ -92,6 +92,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
         daxa_u64 device_address()
         {
             return buffer_addresses[index()];
@@ -109,6 +113,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
     };
 
     struct ImageViewIndex
@@ -117,6 +125,10 @@ namespace daxa
         daxa_u32 index()
         {
             return value;
+        }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
         }
     };
 
@@ -131,6 +143,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
     };
 
 #if defined(DAXA_RAY_TRACING)
@@ -144,6 +160,10 @@ namespace daxa
         daxa_u64 version()
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
+        }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
         }
     };
 
