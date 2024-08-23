@@ -27,9 +27,6 @@ endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
 endif()
-if(DAXA_ENABLE_TESTS)
-    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
-endif()
 
 project(daxa VERSION 2.0.0)
 
@@ -201,12 +198,12 @@ target_link_libraries(daxa
     PRIVATE
     # GPUOpen::VulkanMemoryAllocator
     Vulkan::Vulkan
-    fmt::fmt
 )
 
 target_include_directories(daxa
+    PRIVATE
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/src>
     PUBLIC
-    ${VMA_DIR}/include
     $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
 )

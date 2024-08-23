@@ -1835,6 +1835,7 @@ namespace daxa
         case QueueFamily::MAIN: return "MAIN";
         case QueueFamily::COMPUTE: return "COMPUTE";
         case QueueFamily::TRANSFER: return "TRANSFER";
+        default: return "UNKNOWN";
         };
     }
 

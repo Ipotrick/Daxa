@@ -11,6 +11,8 @@
 #include <map>
 #include <deque>
 #include <cstring>
+#define FMT_HEADER_ONLY
+#define FMT_UNICODE 0
 #include <fmt/format.h>
 
 #if DAXA_VALIDATION

@@ -160,7 +160,7 @@ namespace daxa
             }
             m_size = static_cast<FixedListSizeT>(in_size);
         }
-        template <usize IN_SIZE>
+        template <daxa::usize IN_SIZE>
             requires(IN_SIZE <= CAPACITY)
         FixedList(std::array<T, IN_SIZE> const & in)
         {
