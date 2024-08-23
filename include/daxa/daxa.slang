@@ -92,6 +92,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
         daxa_u64 device_address()
         {
             return buffer_addresses[index()];
@@ -109,6 +113,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
     };
 
     struct ImageViewIndex
@@ -117,6 +125,10 @@ namespace daxa
         daxa_u32 index()
         {
             return value;
+        }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
         }
     };
 
@@ -130,6 +142,10 @@ namespace daxa
         daxa_u64 version()
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
+        }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
         }
     };
 
@@ -145,6 +161,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
     };
 
     [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
@@ -153,7 +173,24 @@ namespace daxa
         static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
     }
 #endif // DAXA_RAY_TRACING
-    
+
+    extension ByteAddressBuffer
+    {
+        static ByteAddressBuffer get(daxa::BufferId i) { return buffers[i.index()]; }
+        static ByteAddressBuffer get_coherent(daxa::BufferId i) { return buffers[i.index()]; }
+    };    
+
+    extension RWByteAddressBuffer
+    {
+        static RWByteAddressBuffer get(daxa::BufferId i) { return buffers[i.index()]; }
+        static RWByteAddressBuffer get_coherent(daxa::BufferId i) { return buffers[i.index()]; }
+    };    
+
+    extension SamplerState
+    {
+        static SamplerState get(daxa::SamplerId i) { return samplers[i.index()]; }
+    }
+
 } // namespace daxa
 
 #define _DAXA_DECL_TEX_EXTENSION(TYPE, TABLE)\

@@ -44,33 +44,33 @@
 #include <daxa/daxa.hpp>
 namespace daxa
 {
-    template<typename T> using RWTexture1DId = daxa_ImageViewId;
-    template<typename T> using RWTexture1DIdx = daxa_ImageViewIndex;
-    template<typename T> using RWTexture2DId = daxa_ImageViewId;
-    template<typename T> using RWTexture2DIdx = daxa_ImageViewIndex;
-    template<typename T> using RWTexture3DId = daxa_ImageViewId;
-    template<typename T> using RWTexture3DIdx = daxa_ImageViewIndex;
-    template<typename T> using RWTexture1DArrayId = daxa_ImageViewId;
-    template<typename T> using RWTexture1DArrayIdx = daxa_ImageViewIndex;
-    template<typename T> using RWTexture2DArrayId = daxa_ImageViewId;
-    template<typename T> using RWTexture2DArrayIdx = daxa_ImageViewIndex;
+    template<typename T> struct RWTexture1DId : daxa_ImageViewId {};
+    template<typename T> struct RWTexture1DIdx : daxa_ImageViewIndex {};
+    template<typename T> struct RWTexture2DId : daxa_ImageViewId {};
+    template<typename T> struct RWTexture2DIdx : daxa_ImageViewIndex {};
+    template<typename T> struct RWTexture3DId : daxa_ImageViewId {};
+    template<typename T> struct RWTexture3DIdx : daxa_ImageViewIndex {};
+    template<typename T> struct RWTexture1DArrayId : daxa_ImageViewId {};
+    template<typename T> struct RWTexture1DArrayIdx : daxa_ImageViewIndex {};
+    template<typename T> struct RWTexture2DArrayId : daxa_ImageViewId {};
+    template<typename T> struct RWTexture2DArrayIdx : daxa_ImageViewIndex {};
     
-    template<typename T> using Texture1DId = daxa_ImageViewId;
-    template<typename T> using Texture1DIdx = daxa_ImageViewIndex;
-    template<typename T> using Texture2DId = daxa_ImageViewId;
-    template<typename T> using Texture2DIdx = daxa_ImageViewIndex;
-    template<typename T> using Texture3DId = daxa_ImageViewId;
-    template<typename T> using Texture3DIdx = daxa_ImageViewIndex;
-    template<typename T> using Texture1DArrayId = daxa_ImageViewId;
-    template<typename T> using Texture1DArrayIdx = daxa_ImageViewIndex;
-    template<typename T> using Texture2DArrayId = daxa_ImageViewId;
-    template<typename T> using Texture2DArrayIdx = daxa_ImageViewIndex;
-    template<typename T> using TextureCubeId = daxa_ImageViewId;
-    template<typename T> using TextureCubeIdx = daxa_ImageViewIndex;
-    template<typename T> using TextureCubeArrayId = daxa_ImageViewId;
-    template<typename T> using TextureCubeArrayIdx = daxa_ImageViewIndex;
-    template<typename T> using Texture2DMSId = daxa_ImageViewId;
-    template<typename T> using Texture2DMSIdx = daxa_ImageViewIndex;
+    template<typename T> struct Texture1DId : daxa_ImageViewId {};
+    template<typename T> struct Texture1DIdx : daxa_ImageViewIndex {};
+    template<typename T> struct Texture2DId : daxa_ImageViewId {};
+    template<typename T> struct Texture2DIdx : daxa_ImageViewIndex {};
+    template<typename T> struct Texture3DId : daxa_ImageViewId {};
+    template<typename T> struct Texture3DIdx : daxa_ImageViewIndex {};
+    template<typename T> struct Texture1DArrayId : daxa_ImageViewId {};
+    template<typename T> struct Texture1DArrayIdx : daxa_ImageViewIndex {};
+    template<typename T> struct Texture2DArrayId : daxa_ImageViewId {};
+    template<typename T> struct Texture2DArrayIdx : daxa_ImageViewIndex {};
+    template<typename T> struct TextureCubeId : daxa_ImageViewId {};
+    template<typename T> struct TextureCubeIdx : daxa_ImageViewIndex {};
+    template<typename T> struct TextureCubeArrayId : daxa_ImageViewId {};
+    template<typename T> struct TextureCubeArrayIdx : daxa_ImageViewIndex {};
+    template<typename T> struct Texture2DMSId : daxa_ImageViewId {};
+    template<typename T> struct Texture2DMSIdx : daxa_ImageViewIndex {};
 }
 
 /// @brief Buffer ptr enable is ignored in c++.
