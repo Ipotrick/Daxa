@@ -567,7 +567,7 @@ namespace daxa
         TransferMemoryPool * allocator = {};
         std::span<std::byte> attachment_shader_blob = {};
 
-        void assign_attachment_shader_blob(std::span<u8> arr) const
+        void assign_attachment_shader_blob(std::span<std::byte> arr) const
         {
             std::memcpy(
                 arr.data(),
@@ -890,7 +890,16 @@ namespace daxa
     static inline constexpr auto const & AT = ATTACHMENTS;                                                     \
     struct alignas(daxa::get_asb_alignment(AT)) AttachmentShaderBlob                                           \
     {                                                                                                          \
-        std::array<daxa::u8, daxa::get_asb_size(AT)> value = {};                                               \
+        std::array<std::byte, daxa::get_asb_size(AT)> value = {};                                              \
+        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                              \
+        {                                                                                                      \
+            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                 \
+            for (daxa::u32 i = 0; i < data.size(); ++i)                                                        \
+            {                                                                                                  \
+                this->value[i] = data[i];                                                                      \
+            }                                                                                                  \
+            return *this;                                                                                      \
+        }                                                                                                      \
     };                                                                                                         \
     struct Task : public daxa::IPartialTask                                                                    \
     {                                                                                                          \
@@ -912,35 +921,140 @@ namespace daxa
 
 #define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
 
-    namespace detail {
-        template<typename T> struct _ViewTypeOf_RWTexture1DId { constexpr static ImageViewType V = ImageViewType::REGULAR_1D; };
-        template<typename T> struct _ViewTypeOf_RWTexture1DIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_1D; };
-        template<typename T> struct _ViewTypeOf_RWTexture2DId { constexpr static ImageViewType V = ImageViewType::REGULAR_2D; };
-        template<typename T> struct _ViewTypeOf_RWTexture2DIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_2D; };
-        template<typename T> struct _ViewTypeOf_RWTexture3DId { constexpr static ImageViewType V = ImageViewType::REGULAR_3D; };
-        template<typename T> struct _ViewTypeOf_RWTexture3DIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_3D; };
-        template<typename T> struct _ViewTypeOf_RWTexture1DArrayId { constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY; };
-        template<typename T> struct _ViewTypeOf_RWTexture1DArrayIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY; };
-        template<typename T> struct _ViewTypeOf_RWTexture2DArrayId { constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY; };
-        template<typename T> struct _ViewTypeOf_RWTexture2DArrayIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY; };
-        
-        template<typename T> struct _ViewTypeOf_Texture1DId { constexpr static ImageViewType V = ImageViewType::REGULAR_1D; };
-        template<typename T> struct _ViewTypeOf_Texture1DIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_1D; };
-        template<typename T> struct _ViewTypeOf_Texture2DId { constexpr static ImageViewType V = ImageViewType::REGULAR_2D; };
-        template<typename T> struct _ViewTypeOf_Texture2DIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_2D; };
-        template<typename T> struct _ViewTypeOf_Texture3DId { constexpr static ImageViewType V = ImageViewType::REGULAR_3D; };
-        template<typename T> struct _ViewTypeOf_Texture3DIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_3D; };
-        template<typename T> struct _ViewTypeOf_Texture1DArrayId { constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY; };
-        template<typename T> struct _ViewTypeOf_Texture1DArrayIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY; };
-        template<typename T> struct _ViewTypeOf_Texture2DArrayId { constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY; };
-        template<typename T> struct _ViewTypeOf_Texture2DArrayIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY; };
-        template<typename T> struct _ViewTypeOf_TextureCubeId { constexpr static ImageViewType V = ImageViewType::CUBE; };
-        template<typename T> struct _ViewTypeOf_TextureCubeIdx { constexpr static ImageViewType V = ImageViewType::CUBE; };
-        template<typename T> struct _ViewTypeOf_TextureCubeArrayId { constexpr static ImageViewType V = ImageViewType::CUBE_ARRAY; };
-        template<typename T> struct _ViewTypeOf_TextureCubeArrayIdx { constexpr static ImageViewType V = ImageViewType::CUBE_ARRAY; };
-        template<typename T> struct _ViewTypeOf_Texture2DMSId { constexpr static ImageViewType V = ImageViewType::REGULAR_2D; };
-        template<typename T> struct _ViewTypeOf_Texture2DMSIdx { constexpr static ImageViewType V = ImageViewType::REGULAR_2D; };
-    }
+    namespace detail
+    {
+        template <typename T>
+        struct _ViewTypeOf_RWTexture1DId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture1DIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture2DId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture2DIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture3DId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_3D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture3DIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_3D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture1DArrayId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture1DArrayIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture2DArrayId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_RWTexture2DArrayIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY;
+        };
+
+        template <typename T>
+        struct _ViewTypeOf_Texture1DId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture1DIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture2DId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture2DIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture3DId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_3D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture3DIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_3D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture1DArrayId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture1DArrayIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_1D_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture2DArrayId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture2DArrayIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_TextureCubeId
+        {
+            constexpr static ImageViewType V = ImageViewType::CUBE;
+        };
+        template <typename T>
+        struct _ViewTypeOf_TextureCubeIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::CUBE;
+        };
+        template <typename T>
+        struct _ViewTypeOf_TextureCubeArrayId
+        {
+            constexpr static ImageViewType V = ImageViewType::CUBE_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_TextureCubeArrayIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::CUBE_ARRAY;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture2DMSId
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D;
+        };
+        template <typename T>
+        struct _ViewTypeOf_Texture2DMSIdx
+        {
+            constexpr static ImageViewType V = ImageViewType::REGULAR_2D;
+        };
+    } // namespace detail
 
 #define DAXA_TH_IMAGE(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0)
 
@@ -949,10 +1063,10 @@ namespace daxa
 #define DAXA_TH_IMAGE_ID_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE)
 #define DAXA_TH_IMAGE_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
 
-#define DAXA_TH_IMAGE_TYPED_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_ ## VIEW_TYPE::V, .shader_array_size = 1)
-#define DAXA_TH_IMAGE_TYPED_INDEX(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_ ## VIEW_TYPE::V, .shader_array_size = 1, .shader_as_index = true)
-#define DAXA_TH_IMAGE_TYPED_ID_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_ ## VIEW_TYPE::V, .shader_array_size = SIZE)
-#define DAXA_TH_IMAGE_TYPED_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_ ## VIEW_TYPE::V, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
+#define DAXA_TH_IMAGE_TYPED_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_##VIEW_TYPE::V, .shader_array_size = 1)
+#define DAXA_TH_IMAGE_TYPED_INDEX(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_##VIEW_TYPE::V, .shader_array_size = 1, .shader_as_index = true)
+#define DAXA_TH_IMAGE_TYPED_ID_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_##VIEW_TYPE::V, .shader_array_size = SIZE)
+#define DAXA_TH_IMAGE_TYPED_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::detail::_ViewTypeOf_##VIEW_TYPE::V, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
 
 #define DAXA_TH_BUFFER(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 0)
 #define DAXA_TH_BUFFER_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)

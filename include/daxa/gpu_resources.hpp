@@ -163,6 +163,7 @@ namespace daxa
     using GeometryFlags = Flags<GeometryFlagsProperties>;
     struct GeometryFlagBits
     {
+        static inline constexpr GeometryFlags NONE = {0};
         static inline constexpr GeometryFlags OPAQUE = {0x1 << 0};
         static inline constexpr GeometryFlags NO_DUPLICATE_ANY_HIT_INVOCATION = {0x1 << 1};
     };
