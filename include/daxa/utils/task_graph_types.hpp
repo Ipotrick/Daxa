@@ -558,6 +558,19 @@ namespace daxa
         TaskTlasAttachmentInfo,
         TaskImageAttachmentInfo>;
 
+    template<typename T>
+    concept TaskBufferIndexOrView = std::is_same_v<T, TaskBufferAttachmentIndex> || std::is_same_v<T, TaskBufferView>;
+    template<typename T>
+    concept TaskBlasIndexOrView = std::is_same_v<T, TaskBlasAttachmentIndex> || std::is_same_v<T, TaskBlasView>;
+    template<typename T>
+    concept TaskTlasIndexOrView = std::is_same_v<T, TaskTlasAttachmentIndex> || std::is_same_v<T, TaskTlasView>;
+    template<typename T>
+    concept TaskImageIndexOrView = std::is_same_v<T, TaskImageAttachmentIndex> || std::is_same_v<T, TaskImageView>;
+    template<typename T>
+    concept TaskIndexOrView = TaskBufferIndexOrView<T> || TaskBlasIndexOrView<T> || TaskTlasIndexOrView<T> || TaskImageIndexOrView<T>;
+    template<typename T>
+    concept TaskBufferBlasOrTlasIndexOrView = TaskBufferIndexOrView<T> || TaskBlasIndexOrView<T> || TaskTlasIndexOrView<T>;
+
     struct DAXA_EXPORT_CXX TaskInterface
     {
         Device & device;
@@ -575,15 +588,32 @@ namespace daxa
                 attachment_shader_blob.size());
         }
 
-        TaskBufferAttachmentInfo const & get(TaskBufferAttachmentIndex index) const;
-        TaskBufferAttachmentInfo const & get(TaskBufferView view) const;
-        TaskBlasAttachmentInfo const & get(TaskBlasAttachmentIndex index) const;
-        TaskBlasAttachmentInfo const & get(TaskBlasView view) const;
-        TaskTlasAttachmentInfo const & get(TaskTlasAttachmentIndex index) const;
-        TaskTlasAttachmentInfo const & get(TaskTlasView view) const;
-        TaskImageAttachmentInfo const & get(TaskImageAttachmentIndex index) const;
-        TaskImageAttachmentInfo const & get(TaskImageView view) const;
-        TaskAttachmentInfo const & get(usize index) const;
+        auto get(TaskBufferAttachmentIndex index) const -> TaskBufferAttachmentInfo const &;
+        auto get(TaskBufferView view) const -> TaskBufferAttachmentInfo const &;
+        auto get(TaskBlasAttachmentIndex index) const -> TaskBlasAttachmentInfo const &;
+        auto get(TaskBlasView view) const -> TaskBlasAttachmentInfo const &;
+        auto get(TaskTlasAttachmentIndex index) const -> TaskTlasAttachmentInfo const &;
+        auto get(TaskTlasView view) const -> TaskTlasAttachmentInfo const &;
+        auto get(TaskImageAttachmentIndex index) const -> TaskImageAttachmentInfo const &;
+        auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
+        auto get(usize index) const -> TaskAttachmentInfo const &;
+
+        auto info(TaskIndexOrView auto tresource, u32 array_index = 0)
+        {
+            return this->device.info(this->get(tresource).ids[array_index]);
+        }
+        auto info_image_view(TaskImageIndexOrView auto timage, u32 array_index = 0) -> Optional<ImageViewInfo>
+        {
+            return this->device.info_image_view(this->get(timage).view_ids[array_index]);
+        }
+        auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) -> Optional<DeviceAddress>
+        {
+            return this->device.device_address(this->get(tresource).ids[array_index]);
+        }
+        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) -> Optional<std::byte*>
+        {
+            return this->device.buffer_host_address(this->get(tbuffer).ids[array_index]);
+        }
     };
 
     using TaskViewVariant = Variant<
