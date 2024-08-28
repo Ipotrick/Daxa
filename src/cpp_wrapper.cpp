@@ -199,13 +199,23 @@ namespace daxa
         return ret;
     }
 
-    void Instance::choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 & inout_info)
+    auto Instance::choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 const& p_info) -> DeviceInfo2
     {
+        auto info = p_info;
         check_result(daxa_instance_choose_device(
                          r_cast<daxa_Instance>(this->object),
                          static_cast<daxa_ImplicitFeatureFlags>(desired_features.data),
-                         r_cast<daxa_DeviceInfo2 *>(&inout_info)),
+                         r_cast<daxa_DeviceInfo2 *>(&info)),
                      "failed to find fitting device");
+        return info;
+    }
+    
+    auto Instance::list_devices_properties() -> std::span<DeviceProperties const>
+    {
+        DeviceProperties const * data = {};
+        u32 size = {};
+        daxa_instance_list_devices_properties(r_cast<daxa_Instance>(this->object), r_cast<daxa_DeviceProperties const**>(&data), &size);
+        return {data, size};
     }
 
     auto Instance::info() const -> InstanceInfo const &

@@ -268,6 +268,7 @@ namespace daxa
     using ExplicitFeatureFlags = Flags<ExplicitFeatureProperties>;
     struct ExplicitFeatureFlagBits
     {
+        static inline constexpr ExplicitFeatureFlags NONE = {0};
         static inline constexpr ExplicitFeatureFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY = {0x1 << 0};
         static inline constexpr ExplicitFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {0x1 << 1};
         static inline constexpr ExplicitFeatureFlags VK_MEMORY_MODEL = {0x1 << 2};
@@ -281,6 +282,7 @@ namespace daxa
     using ImplicitFeatureFlags = Flags<ImplicitFeatureProperties>;
     struct ImplicitFeatureFlagBits
     {
+        static inline constexpr ImplicitFeatureFlags NONE = {0};
         static inline constexpr ImplicitFeatureFlags MESH_SHADER = {0x1 << 0};
         static inline constexpr ImplicitFeatureFlags BASIC_RAY_TRACING = {0x1 << 1};
         static inline constexpr ImplicitFeatureFlags RAY_TRACING_PIPELINE = {0x1 << 2};

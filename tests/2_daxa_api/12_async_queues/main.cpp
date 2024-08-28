@@ -77,7 +77,7 @@ namespace tests
     void basics()
     {
         daxa::Instance instance = daxa::create_instance({});
-        daxa::Device device = instance.create_device({});
+        daxa::Device device = instance.create_device_2(instance.choose_device({}, daxa::DeviceInfo2{}));
         
         daxa::u32 compute_queue_count = device.queue_count(daxa::QueueFamily::COMPUTE);
         daxa::u32 transfer_queue_count = device.queue_count(daxa::QueueFamily::TRANSFER);
@@ -111,7 +111,7 @@ namespace tests
     void simple_submit_chain()
     {
         daxa::Instance instance = daxa::create_instance({});
-        daxa::Device device = instance.create_device({});
+        daxa::Device device = instance.create_device_2(instance.choose_device({}, {}));
 
         daxa::ExecutableCommandList commands = {};
         {
@@ -125,7 +125,7 @@ namespace tests
         constexpr daxa::u32 initial_value = 42u;
         // Make buffer for a u32[4] array and write some data into the first element
         auto buffer = device.create_buffer({sizeof(daxa::u32) * 4, daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, "buffer"});
-        *device.get_host_address_as<daxa::u32>(buffer).value() = initial_value;    
+        *device.buffer_host_address_as<daxa::u32>(buffer).value() = initial_value;    
 
         {
             // Copy from index 0 to index 1
@@ -205,7 +205,7 @@ namespace tests
         // we can safely assume that all work is done, as soon as the main queue is drained.
         device.queue_wait_idle(daxa::QUEUE_MAIN);
 
-        daxa::u32 result = device.get_host_address_as<daxa::u32>(buffer).value()[3];
+        daxa::u32 result = device.buffer_host_address_as<daxa::u32>(buffer).value()[3];
         DAXA_DBG_ASSERT_TRUE_M(result == initial_value, "operations resulted in incorrect final result!");
 
         device.destroy_buffer(buffer);
@@ -226,7 +226,7 @@ namespace tests
             std::shared_ptr<daxa::RasterPipeline> pipeline = {};
             void callback(daxa::TaskInterface ti)
             {
-                daxa::ImageInfo color_img_info = ti.device.info_image(ti.get(AT.render_target).ids[0]).value();
+                daxa::ImageInfo color_img_info = ti.info(AT.render_target).value();
                 auto const size_x = color_img_info.size.x;
                 auto const size_y = color_img_info.size.y;
                 auto render_recorder = std::move(ti.recorder).begin_renderpass({
@@ -272,14 +272,7 @@ namespace tests
             auto native_window_platform = get_native_platform(glfw_window_ptr);
 
             daxa::Instance instance = daxa::create_instance({});
-
-            daxa::DeviceInfo2 device_info = [&](){
-                daxa::DeviceInfo2 ret = {.name = "testing device"};
-                instance.choose_device(daxa::ImplicitFeatureFlagBits::MESH_SHADER, ret);
-                return ret;
-            }();
-
-            daxa::Device device = instance.create_device_2(device_info);
+            daxa::Device device = instance.create_device_2(instance.choose_device(daxa::ImplicitFeatureFlagBits::MESH_SHADER, {}));
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window = native_window_handle,

@@ -11,9 +11,7 @@ static inline constexpr usize ELEMENT_COUNT = {17};
 auto main() -> int
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
-    daxa::Device device = daxa_ctx.create_device({
-        .name = "device",
-    });
+    daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
     daxa::TransferMemoryPool tmem{daxa::TransferMemoryPoolInfo{
         .device = device,
         .capacity = 256,
@@ -83,7 +81,7 @@ auto main() -> int
 
     device.wait_idle();
 
-    u32 const * elements = device.get_host_address_as<u32>(result_buffer).value();
+    u32 const * elements = device.buffer_host_address_as<u32>(result_buffer).value();
     for (u32 iteration = 0; iteration < ITERATION_COUNT; ++iteration)
     {
         for (u32 element = 0; element < ELEMENT_COUNT; ++element)

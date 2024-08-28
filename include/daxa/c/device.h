@@ -294,7 +294,7 @@ typedef struct
     daxa_MissingRequiredVkFeature missing_required_feature;
 } daxa_DeviceProperties;
 
-/// WARNING: DEPRECATED, use daxa_instance_create_device_2 and daxa_DeviceInfo2 instead!
+/// DEPRECATED: use daxa_instance_create_device_2 and daxa_DeviceInfo2 instead!
 DAXA_EXPORT int32_t
 daxa_default_device_score(daxa_DeviceProperties const * properties);
 

@@ -558,17 +558,17 @@ namespace daxa
         TaskTlasAttachmentInfo,
         TaskImageAttachmentInfo>;
 
-    template<typename T>
+    template <typename T>
     concept TaskBufferIndexOrView = std::is_same_v<T, TaskBufferAttachmentIndex> || std::is_same_v<T, TaskBufferView>;
-    template<typename T>
+    template <typename T>
     concept TaskBlasIndexOrView = std::is_same_v<T, TaskBlasAttachmentIndex> || std::is_same_v<T, TaskBlasView>;
-    template<typename T>
+    template <typename T>
     concept TaskTlasIndexOrView = std::is_same_v<T, TaskTlasAttachmentIndex> || std::is_same_v<T, TaskTlasView>;
-    template<typename T>
+    template <typename T>
     concept TaskImageIndexOrView = std::is_same_v<T, TaskImageAttachmentIndex> || std::is_same_v<T, TaskImageView>;
-    template<typename T>
+    template <typename T>
     concept TaskIndexOrView = TaskBufferIndexOrView<T> || TaskBlasIndexOrView<T> || TaskTlasIndexOrView<T> || TaskImageIndexOrView<T>;
-    template<typename T>
+    template <typename T>
     concept TaskBufferBlasOrTlasIndexOrView = TaskBufferIndexOrView<T> || TaskBlasIndexOrView<T> || TaskTlasIndexOrView<T>;
 
     struct DAXA_EXPORT_CXX TaskInterface
@@ -578,9 +578,9 @@ namespace daxa
         std::span<TaskAttachmentInfo const> attachment_infos = {};
         // optional:
         TransferMemoryPool * allocator = {};
-        std::span<std::byte> attachment_shader_blob = {};
+        std::span<std::byte const> attachment_shader_blob = {};
 
-        void assign_attachment_shader_blob(std::span<std::byte> arr) const
+        [[deprecated]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
         {
             std::memcpy(
                 arr.data(),
@@ -602,15 +602,15 @@ namespace daxa
         {
             return this->device.info(this->get(tresource).ids[array_index]);
         }
-        auto info_image_view(TaskImageIndexOrView auto timage, u32 array_index = 0) -> Optional<ImageViewInfo>
+        auto image_view_info(TaskImageIndexOrView auto timage, u32 array_index = 0) -> Optional<ImageViewInfo>
         {
-            return this->device.info_image_view(this->get(timage).view_ids[array_index]);
+            return this->device.image_view_info(this->get(timage).view_ids[array_index]);
         }
         auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) -> Optional<DeviceAddress>
         {
             return this->device.device_address(this->get(tresource).ids[array_index]);
         }
-        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) -> Optional<std::byte*>
+        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) -> Optional<std::byte *>
         {
             return this->device.buffer_host_address(this->get(tbuffer).ids[array_index]);
         }
@@ -930,6 +930,11 @@ namespace daxa
             }                                                                                                  \
             return *this;                                                                                      \
         }                                                                                                      \
+        AttachmentShaderBlob() = default;                                                                      \
+        AttachmentShaderBlob(std::span<std::byte const> data)                                                  \
+        {                                                                                                      \
+            *this = data;                                                                                      \
+        }                                                                                                      \
     };                                                                                                         \
     struct Task : public daxa::IPartialTask                                                                    \
     {                                                                                                          \
@@ -951,7 +956,7 @@ namespace daxa
 
 #define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
 
-    namespace detail
+    inline namespace detail
     {
         template <typename T>
         struct _ViewTypeOf_RWTexture1DId
