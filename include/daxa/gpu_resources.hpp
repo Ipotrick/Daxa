@@ -6,6 +6,7 @@
 
 namespace daxa
 {
+
     enum struct ImageViewType
     {
         REGULAR_1D = 0,
@@ -49,6 +50,13 @@ namespace daxa
         struct ImageViewId : public GPUResourceId
         {
             constexpr operator daxa_ImageViewId() const { return std::bit_cast<daxa_ImageViewId>(*this); }
+        };
+
+        // Shader only
+        struct ImageViewIndex
+        {
+            u32 value = {};
+            constexpr operator daxa_ImageViewIndex() const { return std::bit_cast<daxa_ImageViewIndex>(*this); }
         };
 
         template <ImageViewType VIEW_TYPE>
@@ -103,7 +111,6 @@ namespace daxa
         static inline constexpr ImageCreateFlags ALLOW_ALIAS = {0x00000400};
     };
 
-    
     enum struct SharingMode
     {
         EXCLUSIVE,
@@ -209,7 +216,7 @@ namespace daxa
         static inline constexpr AccelerationStructureBuildFlags ALLOW_COMPACTION = {0x00000002};
         static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_TRACE = {0x00000004};
         static inline constexpr AccelerationStructureBuildFlags PREFER_FAST_BUILD = {0x00000008};
-        static inline constexpr AccelerationStructureBuildFlags LOW_MEMORY =  {0x00000010};
+        static inline constexpr AccelerationStructureBuildFlags LOW_MEMORY = {0x00000010};
         static inline constexpr AccelerationStructureBuildFlags ALLOW_DATA_ACCESS = {0x00000800};
     };
 
@@ -247,4 +254,52 @@ namespace daxa
         u64 size = {};
         SmallString name = {};
     };
+
+#define _DAXA_DECL_SLANG_TYPED_ID_INDEX(NAME, VIEW_TYPE)                        \
+    template <typename T>                                                       \
+    struct NAME##Id                                                             \
+    {                                                                           \
+        ImageViewIndex index = {};                                              \
+        constexpr static ImageViewType IMAGE_VIEW_TYPE = VIEW_TYPE;             \
+        constexpr static bool SHADER_INDEX32 = true;                            \
+        NAME##Id() = default;                                                   \
+        NAME##Id(daxa_ImageViewId c_id)                                         \
+        {                                                                       \
+            index = {static_cast<u32>(std::bit_cast<ImageViewId>(c_id).index)}; \
+        }                                                                       \
+        NAME##Id(ImageViewId id)                                                \
+        {                                                                       \
+            index = {static_cast<u32>(id.index)};                               \
+        }                                                                       \
+    };                                                                          \
+    template <typename T>                                                       \
+    struct NAME##Index                                                          \
+    {                                                                           \
+        ImageViewId id = {};                                                    \
+        constexpr static ImageViewType IMAGE_VIEW_TYPE = VIEW_TYPE;             \
+        constexpr static bool SHADER_INDEX32 = false;                           \
+        NAME##Index() = default;                                                \
+        NAME##Index(daxa_ImageViewId c_id)                                      \
+        {                                                                       \
+            id = std::bit_cast<ImageViewId>(c_id);                              \
+        }                                                                       \
+        NAME##Index(ImageViewId id)                                             \
+        {                                                                       \
+            id = id;                                                            \
+        }                                                                       \
+    };
+
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture1D, ImageViewType::REGULAR_1D)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture2D, ImageViewType::REGULAR_2D)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture3D, ImageViewType::REGULAR_3D)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture1DArray, ImageViewType::REGULAR_1D_ARRAY)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture2DArray, ImageViewType::REGULAR_2D_ARRAY)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture1D, ImageViewType::REGULAR_1D)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture2D, ImageViewType::REGULAR_2D)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture3D, ImageViewType::REGULAR_3D)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture1DArray, ImageViewType::REGULAR_1D_ARRAY)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture2DArray, ImageViewType::REGULAR_2D_ARRAY)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(TextureCube, ImageViewType::CUBE)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(TextureCubeArray, ImageViewType::CUBE_ARRAY)
+    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture2DMS, ImageViewType::REGULAR_2D)
 } // namespace daxa
