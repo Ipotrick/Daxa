@@ -200,21 +200,21 @@ namespace daxa
         using Data = u32;
     };
     using DeviceFlags = Flags<DeviceFlagsProperties>;
-    struct [[deprecated]] DeviceFlagBits
+    struct [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] DeviceFlagBits
     {
-        [[deprecated]] static inline constexpr DeviceFlags NONE = {0x00000000};
-        [[deprecated]] static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
-        [[deprecated]] static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
-        [[deprecated]] static inline constexpr DeviceFlags MESH_SHADER = {0x1 << 2};
-        [[deprecated]] static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
-        [[deprecated]] static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
-        [[deprecated]] static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
-        [[deprecated]] static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
-        [[deprecated]] static inline constexpr DeviceFlags SHADER_FLOAT16 = {0x1 << 7};
-        [[deprecated]] static inline constexpr DeviceFlags ROBUST_BUFFER_ACCESS = {0x1 << 9};
-        [[deprecated]] static inline constexpr DeviceFlags ROBUST_IMAGE_ACCESS = {0x1 << 10};
-        [[deprecated]] static inline constexpr DeviceFlags DYNAMIC_STATE_3 = {0x1 << 11};
-        [[deprecated]] static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 12};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags NONE = {0x00000000};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = {0x1 << 0};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags CONSERVATIVE_RASTERIZATION = {0x1 << 1};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags MESH_SHADER = {0x1 << 2};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags SHADER_ATOMIC64 = {0x1 << 3};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags IMAGE_ATOMIC64 = {0x1 << 4};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags VK_MEMORY_MODEL = {0x1 << 5};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags RAY_TRACING = {0x1 << 6};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags SHADER_FLOAT16 = {0x1 << 7};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags ROBUST_BUFFER_ACCESS = {0x1 << 9};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags ROBUST_IMAGE_ACCESS = {0x1 << 10};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags DYNAMIC_STATE_3 = {0x1 << 11};
+        [[deprecated("Use ExplicitFeatureFlags or ImplicitFeatureFlags instead")]] static inline constexpr DeviceFlags SHADER_ATOMIC_FLOAT = {0x1 << 12};
     };
 
     enum struct MissingRequiredVkFeature
@@ -319,9 +319,9 @@ namespace daxa
         MissingRequiredVkFeature missing_required_feature;
     };
 
-    [[deprecated]] DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
+    [[deprecated("Use create_device_2 and Instance::choose_device instead")]] DAXA_EXPORT_CXX auto default_device_score(DeviceProperties const & device_props) -> i32;
 
-    struct [[deprecated]] DeviceInfo
+    struct [[deprecated("Use DeviceInfo2 instead")]] DeviceInfo
     {
         i32 (*selector)(DeviceProperties const & properties) = default_device_score;
         DeviceFlags flags =
@@ -579,54 +579,27 @@ namespace daxa
 
         /// DEPRECATED:
 
-        // DEPRECATED: USE tlas_build_sizes OR as_build_sizes INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_tlas_build_sizes(TlasBuildInfo const & info) { return tlas_build_sizes(info); }
-
-        // DEPRECATED: USE blas_build_sizes OR as_build_sizes INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_blas_build_sizes(BlasBuildInfo const & info) { return blas_build_sizes(info); }
-
-        // DEPRECATED: USE buffer_memory_requirements OR memory_requirements INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const { return buffer_memory_requirements(info); }
-
-        // DEPRECATED: USE image_memory_requirements OR memory_requirements INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const { return image_memory_requirements(info); }
-
-        // DEPRECATED: USE buffer_info OR info INSTEAD!
-        [[deprecated]] [[nodiscard]] auto info_buffer(BufferId id) const { return buffer_info(id); }
-
-        // DEPRECATED: USE image_info OR info INSTEAD!
-        [[deprecated]] [[nodiscard]] auto info_image(ImageId id) const { return image_info(id); }
-
-        // DEPRECATED: USE image_view_info OR info INSTEAD!
-        [[deprecated]] [[nodiscard]] auto info_image_view(ImageViewId id) const { return image_view_info(id); }
-
-        // DEPRECATED: USE sampler_info OR info INSTEAD!
-        [[deprecated]] [[nodiscard]] auto info_sampler(SamplerId id) const { return sampler_info(id); }
-
-        // DEPRECATED: USE tlas_info OR info INSTEAD!
-        [[deprecated]] [[nodiscard]] auto info_tlas(TlasId id) const { return tlas_info(id); }
-
-        // DEPRECATED: USE blas_info OR info INSTEAD!
-        [[deprecated]] [[nodiscard]] auto info_blas(BlasId id) const { return blas_info(id); }
+        [[deprecated("Use tlas_build_sizes or as_build_sizes Instead")]] [[nodiscard]] auto get_tlas_build_sizes(TlasBuildInfo const & info) { return tlas_build_sizes(info); }
+        [[deprecated("Use blas_build_sizes or as_build_sizes Instead")]] [[nodiscard]] auto get_blas_build_sizes(BlasBuildInfo const & info) { return blas_build_sizes(info); }
+        [[deprecated("Use buffer_memory_requirements or memory_requirements Instead")]] [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const { return buffer_memory_requirements(info); }
+        [[deprecated("Use image_memory_requirements or memory_requirements Instead")]] [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const { return image_memory_requirements(info); }
+        [[deprecated("Use buffer_info or info instead")]] [[nodiscard]] auto info_buffer(BufferId id) const { return buffer_info(id); }
+        [[deprecated("Use image_info or info instead")]] [[nodiscard]] auto info_image(ImageId id) const { return image_info(id); }
+        [[deprecated("Use image_view_info or info instead")]] [[nodiscard]] auto info_image_view(ImageViewId id) const { return image_view_info(id); }
+        [[deprecated("Use sampler_info or info instead")]] [[nodiscard]] auto info_sampler(SamplerId id) const { return sampler_info(id); }
+        [[deprecated("Use tlas_info or info instead")]] [[nodiscard]] auto info_tlas(TlasId id) const { return tlas_info(id); }
+        [[deprecated("Use blas_info or info instead")]] [[nodiscard]] auto info_blas(BlasId id) const { return blas_info(id); }
 
         template <typename T>
-        /// DEPRECATED: USE buffer_host_address_as INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_host_address_as(BufferId id) const
+        [[deprecated("Use buffer_host_address_as instead")]] [[nodiscard]] auto get_host_address_as(BufferId id) const
         {
             return buffer_host_address_as<T>(id);
         }
 
-        /// DEPRECATED: USE buffer_host_address INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_host_address(BufferId id) const { return buffer_host_address(id); }
-
-        /// DEPRECATED: USE buffer_device_address OR device_address INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_device_address(BufferId id) const { return buffer_device_address(id); }
-
-        /// DEPRECATED: USE blas_device_address OR device_address INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_device_address(BlasId id) const { return blas_device_address(id); }
-
-        /// DEPRECATED: USE tlas_device_address OR device_address INSTEAD!
-        [[deprecated]] [[nodiscard]] auto get_device_address(TlasId id) const { return tlas_device_address(id); }
+        [[deprecated("Use buffer_host_address instead")]] [[nodiscard]] auto get_host_address(BufferId id) const { return buffer_host_address(id); }
+        [[deprecated("Use buffer_device_address or device_address instead")]] [[nodiscard]] auto get_device_address(BufferId id) const { return buffer_device_address(id); }
+        [[deprecated("Use blas_device_address or device_address instead")]] [[nodiscard]] auto get_device_address(BlasId id) const { return blas_device_address(id); }
+        [[deprecated("Use tlas_device_address or device_address instead")]] [[nodiscard]] auto get_device_address(TlasId id) const { return tlas_device_address(id); }
 
       protected:
         template <typename T, typename H_T>

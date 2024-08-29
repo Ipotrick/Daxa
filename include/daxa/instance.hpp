@@ -30,7 +30,7 @@ namespace daxa
     {
         Instance() = default;
 
-        [[deprecated]] [[nodiscard]] auto create_device(DeviceInfo const & device_info) -> Device;
+        [[deprecated("Use create_device_2 instead")]] [[nodiscard]] auto create_device(DeviceInfo const & device_info) -> Device;
         [[nodiscard]] auto create_device_2(DeviceInfo2 const & device_info) -> Device;
 
         /// Convenience function to pick a physical device.
