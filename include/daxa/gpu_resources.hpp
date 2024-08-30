@@ -257,33 +257,33 @@ namespace daxa
 
 #define _DAXA_DECL_SLANG_TYPED_ID_INDEX(NAME, VIEW_TYPE)                        \
     template <typename T>                                                       \
-    struct NAME##Id                                                             \
+    struct NAME##Index                                                          \
     {                                                                           \
         ImageViewIndex index = {};                                              \
         constexpr static ImageViewType IMAGE_VIEW_TYPE = VIEW_TYPE;             \
         constexpr static bool SHADER_INDEX32 = true;                            \
-        NAME##Id() = default;                                                   \
-        NAME##Id(daxa_ImageViewId c_id)                                         \
+        NAME##Index() = default;                                                \
+        NAME##Index(daxa_ImageViewId c_id)                                      \
         {                                                                       \
             index = {static_cast<u32>(std::bit_cast<ImageViewId>(c_id).index)}; \
         }                                                                       \
-        NAME##Id(ImageViewId id)                                                \
+        NAME##Index(ImageViewId id)                                             \
         {                                                                       \
             index = {static_cast<u32>(id.index)};                               \
         }                                                                       \
     };                                                                          \
     template <typename T>                                                       \
-    struct NAME##Index                                                          \
+    struct NAME##Id                                                             \
     {                                                                           \
         ImageViewId id = {};                                                    \
         constexpr static ImageViewType IMAGE_VIEW_TYPE = VIEW_TYPE;             \
         constexpr static bool SHADER_INDEX32 = false;                           \
-        NAME##Index() = default;                                                \
-        NAME##Index(daxa_ImageViewId c_id)                                      \
+        NAME##Id() = default;                                                   \
+        NAME##Id(daxa_ImageViewId c_id)                                         \
         {                                                                       \
             id = std::bit_cast<ImageViewId>(c_id);                              \
         }                                                                       \
-        NAME##Index(ImageViewId id)                                             \
+        NAME##Id(ImageViewId id)                                                \
         {                                                                       \
             id = id;                                                            \
         }                                                                       \
