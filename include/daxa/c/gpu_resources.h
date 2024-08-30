@@ -34,6 +34,7 @@ typedef struct
 typedef struct
 {
     size_t size;
+    size_t alignment;
     // Ignored when allocating with a memory block.
     daxa_MemoryFlags allocate_info;
     daxa_SmallString name;
@@ -112,6 +113,7 @@ typedef struct
 
 static daxa_BufferInfo const DAXA_DEFAULT_BUFFER_INFO = {
     .size = 0,
+    .alignment = 0,
     .allocate_info = DAXA_MEMORY_FLAG_NONE,
     .name = {.data = DAXA_ZERO_INIT, .size = 0},
 };

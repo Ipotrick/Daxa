@@ -84,6 +84,7 @@ namespace daxa
     struct BufferInfo
     {
         usize size = {};
+        usize alignment = {};
         // Ignored when allocating with a memory block.
         MemoryFlags allocate_info = {};
         SmallString name = {};

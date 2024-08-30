@@ -188,10 +188,11 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             .priority = 0.5f,
         };
 
-        result = static_cast<daxa_Result>(vmaCreateBuffer(
+        result = static_cast<daxa_Result>(vmaCreateBufferWithAlignment(
             self->vma_allocator,
             &vk_buffer_create_info,
             &vma_allocation_create_info,
+            info->alignment,
             &ret.vk_buffer,
             &ret.vma_allocation,
             &vma_allocation_info));
