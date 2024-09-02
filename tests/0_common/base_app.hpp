@@ -27,7 +27,7 @@ template <typename T>
 struct BaseApp : AppWindow<T>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
-    daxa::Device device = = [&]()
+    daxa::Device device = [&]()
     {
         daxa::DeviceInfo2 info = {.name = "default device"};
         daxa::ImplicitFeatureFlags required_features = {};
@@ -37,7 +37,7 @@ struct BaseApp : AppWindow<T>
 #if defined(DAXA_RAY_TRACING_FLAG)
         required_features |= daxa::ImplicitFeatureFlags::BASIC_RAY_TRACING;
 #endif
-        daxa_ctx.choose_device(required_features, info);
+        info = daxa_ctx.choose_device(required_features, info);
         return daxa_ctx.create_device_2(info);
     }();
 
