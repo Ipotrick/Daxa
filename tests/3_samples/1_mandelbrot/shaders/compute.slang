@@ -76,5 +76,5 @@ void entry_mandelbrot(uint3 pixel_i : SV_DispatchThreadID)
     }
     col *= 1.0 / float(SUBSAMPLES * SUBSAMPLES);
 
-    p.image_id.get()[pixel_i.xy] = col;
+    p.image_id.get()[pixel_i.xy] = float4(col, 1);
 }

@@ -211,12 +211,14 @@ struct App : BaseApp<App>
             .task = [this](daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*compute_pipeline);
-                ti.recorder.push_constant(ComputePush{
-                    .image_id = render_image.default_view(),
-                    .input_buffer_id = gpu_input_buffer,
-                    .ptr = device.device_address(gpu_input_buffer).value(),
+                auto t = this->render_image.default_view();
+                auto p = ComputePush{
+                    .image_id = t,
+                    .input_buffer_id = this->gpu_input_buffer,
+                    .ptr = device.device_address(this->gpu_input_buffer).value(),
                     .frame_dim = {size_x, size_y},
-                });
+                };
+                ti.recorder.push_constant(p);
                 ti.recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
             },
             .name = ("Draw (Compute)"),

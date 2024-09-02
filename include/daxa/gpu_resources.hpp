@@ -255,51 +255,78 @@ namespace daxa
         SmallString name = {};
     };
 
-#define _DAXA_DECL_SLANG_TYPED_ID_INDEX(NAME, VIEW_TYPE)                        \
-    template <typename T>                                                       \
-    struct NAME##Index                                                          \
-    {                                                                           \
-        ImageViewIndex index = {};                                              \
-        constexpr static ImageViewType IMAGE_VIEW_TYPE = VIEW_TYPE;             \
-        constexpr static bool SHADER_INDEX32 = true;                            \
-        NAME##Index() = default;                                                \
-        NAME##Index(daxa_ImageViewId c_id)                                      \
-        {                                                                       \
-            index = {static_cast<u32>(std::bit_cast<ImageViewId>(c_id).index)}; \
-        }                                                                       \
-        NAME##Index(ImageViewId id)                                             \
-        {                                                                       \
-            index = {static_cast<u32>(id.index)};                               \
-        }                                                                       \
-    };                                                                          \
-    template <typename T>                                                       \
-    struct NAME##Id                                                             \
-    {                                                                           \
-        ImageViewId id = {};                                                    \
-        constexpr static ImageViewType IMAGE_VIEW_TYPE = VIEW_TYPE;             \
-        constexpr static bool SHADER_INDEX32 = false;                           \
-        NAME##Id() = default;                                                   \
-        NAME##Id(daxa_ImageViewId c_id)                                         \
-        {                                                                       \
-            id = std::bit_cast<ImageViewId>(c_id);                              \
-        }                                                                       \
-        NAME##Id(ImageViewId id)                                                \
-        {                                                                       \
-            id = id;                                                            \
-        }                                                                       \
+    template <typename T, ImageViewType T_IMAGE_VIEW_TYPE>
+    struct TextureIndex
+    {
+        ImageViewIndex index = {};
+        constexpr static ImageViewType IMAGE_VIEW_TYPE = T_IMAGE_VIEW_TYPE;
+        constexpr static bool SHADER_INDEX32 = true;
+        TextureIndex() = default;
+        TextureIndex(daxa_ImageViewId c_id) : index{static_cast<u32>(std::bit_cast<ImageViewId>(c_id).index)} {}
+        TextureIndex(ImageViewId id) : index{static_cast<u32>(id.index)} {}
+    };
+    template <typename T, ImageViewType T_IMAGE_VIEW_TYPE>
+    struct TextureId
+    {
+        ImageViewId id = {};
+        constexpr static ImageViewType IMAGE_VIEW_TYPE = T_IMAGE_VIEW_TYPE;
+        constexpr static bool SHADER_INDEX32 = false;
+        TextureId() = default;
+        TextureId(daxa_ImageViewId c_id) : id{std::bit_cast<ImageViewId>(c_id)} {}
+        TextureId(ImageViewId id) : id{id} {}
     };
 
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture1D, ImageViewType::REGULAR_1D)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture2D, ImageViewType::REGULAR_2D)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture3D, ImageViewType::REGULAR_3D)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture1DArray, ImageViewType::REGULAR_1D_ARRAY)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(RWTexture2DArray, ImageViewType::REGULAR_2D_ARRAY)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture1D, ImageViewType::REGULAR_1D)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture2D, ImageViewType::REGULAR_2D)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture3D, ImageViewType::REGULAR_3D)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture1DArray, ImageViewType::REGULAR_1D_ARRAY)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture2DArray, ImageViewType::REGULAR_2D_ARRAY)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(TextureCube, ImageViewType::CUBE)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(TextureCubeArray, ImageViewType::CUBE_ARRAY)
-    _DAXA_DECL_SLANG_TYPED_ID_INDEX(Texture2DMS, ImageViewType::REGULAR_2D)
+    template <typename T>
+    using RWTexture1DIndex = TextureIndex<T, ImageViewType::REGULAR_1D>;
+    template <typename T>
+    using RWTexture2DIndex = TextureIndex<T, ImageViewType::REGULAR_2D>;
+    template <typename T>
+    using RWTexture3DIndex = TextureIndex<T, ImageViewType::REGULAR_3D>;
+    template <typename T>
+    using RWTexture1DArrayIndex = TextureIndex<T, ImageViewType::REGULAR_1D_ARRAY>;
+    template <typename T>
+    using RWTexture2DArrayIndex = TextureIndex<T, ImageViewType::REGULAR_2D_ARRAY>;
+    template <typename T>
+    using Texture1DIndex = TextureIndex<T, ImageViewType::REGULAR_1D>;
+    template <typename T>
+    using Texture2DIndex = TextureIndex<T, ImageViewType::REGULAR_2D>;
+    template <typename T>
+    using Texture3DIndex = TextureIndex<T, ImageViewType::REGULAR_3D>;
+    template <typename T>
+    using Texture1DArrayIndex = TextureIndex<T, ImageViewType::REGULAR_1D_ARRAY>;
+    template <typename T>
+    using Texture2DArrayIndex = TextureIndex<T, ImageViewType::REGULAR_2D_ARRAY>;
+    template <typename T>
+    using TextureCubeIndex = TextureIndex<T, ImageViewType::CUBE>;
+    template <typename T>
+    using TextureCubeArrayIndex = TextureIndex<T, ImageViewType::CUBE_ARRAY>;
+    template <typename T>
+    using Texture2DMSIndex = TextureIndex<T, ImageViewType::REGULAR_2D>;
+
+    template <typename T>
+    using RWTexture1DId = TextureId<T, ImageViewType::REGULAR_1D>;
+    template <typename T>
+    using RWTexture2DId = TextureId<T, ImageViewType::REGULAR_2D>;
+    template <typename T>
+    using RWTexture3DId = TextureId<T, ImageViewType::REGULAR_3D>;
+    template <typename T>
+    using RWTexture1DArrayId = TextureId<T, ImageViewType::REGULAR_1D_ARRAY>;
+    template <typename T>
+    using RWTexture2DArrayId = TextureId<T, ImageViewType::REGULAR_2D_ARRAY>;
+    template <typename T>
+    using Texture1DId = TextureId<T, ImageViewType::REGULAR_1D>;
+    template <typename T>
+    using Texture2DId = TextureId<T, ImageViewType::REGULAR_2D>;
+    template <typename T>
+    using Texture3DId = TextureId<T, ImageViewType::REGULAR_3D>;
+    template <typename T>
+    using Texture1DArrayId = TextureId<T, ImageViewType::REGULAR_1D_ARRAY>;
+    template <typename T>
+    using Texture2DArrayId = TextureId<T, ImageViewType::REGULAR_2D_ARRAY>;
+    template <typename T>
+    using TextureCubeId = TextureId<T, ImageViewType::CUBE>;
+    template <typename T>
+    using TextureCubeArrayId = TextureId<T, ImageViewType::CUBE_ARRAY>;
+    template <typename T>
+    using Texture2DMSId = TextureId<T, ImageViewType::REGULAR_2D>;
 } // namespace daxa
