@@ -543,10 +543,8 @@ namespace daxa
                     .byte_code = spv_results->back().value().data(),
                     .byte_code_size = static_cast<u32>(spv_results->back().value().size()),
                     .create_flags = shader_compile_info.compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
-                    .required_subgroup_size = 
-                        shader_compile_info.compile_options.required_subgroup_size.has_value() ? 
-                        Optional{shader_compile_info.compile_options.required_subgroup_size.value()} : 
-                        daxa::None,
+                    .required_subgroup_size =
+                        shader_compile_info.compile_options.required_subgroup_size.has_value() ? Optional{shader_compile_info.compile_options.required_subgroup_size.value()} : daxa::None,
                 });
                 if (shader_compile_info.compile_options.entry_point.has_value() && (shader_compile_info.compile_options.language != ShaderLanguage::SLANG))
                 {
@@ -605,12 +603,10 @@ namespace daxa
         (*pipe_result.pipeline_ptr) = this->info.device.create_compute_pipeline({
             .shader_info = {
                 .byte_code = spirv_result.value().data(),
-                .byte_code_size = static_cast<u32>(spirv_result.value().size()),                    
+                .byte_code_size = static_cast<u32>(spirv_result.value().size()),
                 .create_flags = a_info.shader_info.compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
-                .required_subgroup_size = 
-                    a_info.shader_info.compile_options.required_subgroup_size.has_value() ? 
-                    Optional{a_info.shader_info.compile_options.required_subgroup_size.value()} : 
-                    daxa::None,
+                .required_subgroup_size =
+                    a_info.shader_info.compile_options.required_subgroup_size.has_value() ? Optional{a_info.shader_info.compile_options.required_subgroup_size.value()} : daxa::None,
                 .entry_point = entry_point,
             },
             .push_constant_size = a_info.push_constant_size,
@@ -679,12 +675,10 @@ namespace daxa
                 }
                 *final_shader_info = daxa::ShaderInfo{
                     .byte_code = spv_result->value().data(),
-                    .byte_code_size = static_cast<u32>(spv_result->value().size()),                    
+                    .byte_code_size = static_cast<u32>(spv_result->value().size()),
                     .create_flags = pipe_result_shader_info->value().compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
-                    .required_subgroup_size = 
-                        pipe_result_shader_info->value().compile_options.required_subgroup_size.has_value() ? 
-                        Optional{pipe_result_shader_info->value().compile_options.required_subgroup_size.value()} : 
-                        daxa::None,
+                    .required_subgroup_size =
+                        pipe_result_shader_info->value().compile_options.required_subgroup_size.has_value() ? Optional{pipe_result_shader_info->value().compile_options.required_subgroup_size.value()} : daxa::None,
                 };
                 if (pipe_result_shader_info->value().compile_options.language != ShaderLanguage::SLANG)
                 {
@@ -1333,7 +1327,8 @@ namespace daxa
             std::replace(name.begin(), name.end(), '/', '_');
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
-            name = name + "." + std::string{stage_string(shader_stage)} + "." + shader_info.compile_options.entry_point.value() + ".spv";
+            std::replace(name.begin(), name.end(), '.', '_');
+            name = name + "_" + std::string{stage_string(shader_stage)} + "_" + shader_info.compile_options.entry_point.value() + ".spirv";
             auto out_folder = shader_info.compile_options.write_out_shader_binary.value();
             std::filesystem::create_directories(out_folder);
             std::ofstream ofs(out_folder / name, std::ios_base::trunc | std::ios_base::binary);
@@ -1553,12 +1548,23 @@ namespace daxa
         bool const use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false);
 
         shader.setStringsWithLengthsAndNames(&source_cstr, nullptr, &name_cstr, 1);
-        shader.setEntryPoint("main");
+        auto entry_point = shader_info.compile_options.entry_point.value_or("main");
+        shader.setEntryPoint(entry_point.c_str());
+        shader.setSourceEntryPoint(entry_point.c_str());
         shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
-        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_5);
+        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
 
-        // NOTE: For some reason, this causes a crash in GLSLANG
-        // shader.setDebugInfo(use_debug_info);
+        glslang::SpvOptions spv_options{};
+        spv_options.generateDebugInfo = use_debug_info; // -g
+        // spv_options.emitNonSemanticShaderDebugInfo = use_debug_info; // -gV
+        // if (spv_options.emitNonSemanticShaderDebugInfo)
+        //     spv_options.emitNonSemanticShaderDebugSource = use_debug_info; // -gVS
+        spv_options.stripDebugInfo = !use_debug_info;
+
+        if (spv_options.emitNonSemanticShaderDebugInfo)
+            shader.setDebugInfo(use_debug_info);
+
+        spv_options.disableOptimizer = use_debug_info;
 
         GlslangFileIncluder includer;
         includer.impl_pipeline_manager = this;
@@ -1605,12 +1611,7 @@ namespace daxa
         }
 
         spv::SpvBuildLogger logger;
-        glslang::SpvOptions spv_options{};
-        spv_options.generateDebugInfo = use_debug_info;
 
-        // spv_options.emitNonSemanticShaderDebugInfo = use_debug_info;
-
-        spv_options.stripDebugInfo = !use_debug_info;
         std::vector<u32> spv;
         glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
         return Result<std::vector<u32>>(spv);

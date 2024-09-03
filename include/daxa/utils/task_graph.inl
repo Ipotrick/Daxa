@@ -1,5 +1,5 @@
 #pragma once
-#include "../daxa.inl"
+#include <daxa/daxa.inl>
 
 /**
  * DAXA_TH_IMAGE:

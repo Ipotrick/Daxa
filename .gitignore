@@ -10,7 +10,7 @@
 # shader bytecode
 *.fspv
 *.vspv
-*.spv
+*.spirv
 
 ### C++ ###
 # Prerequisites
