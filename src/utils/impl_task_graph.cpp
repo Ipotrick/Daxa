@@ -473,16 +473,6 @@ namespace daxa
     {
     }
 
-    ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(Device & device, BufferInfo const & a_info)
-        : actual_ids{std::vector<BufferId>{device.create_buffer(a_info)}},
-          latest_access{},
-          info{TaskBufferInfo{.name = a_info.name.c_str().data()}},
-          owned_buffer_device{device},
-          owned_buffer_info{a_info},
-          unique_index{ImplPersistentTaskBufferBlasTlas::exec_unique_next_index++}
-    {
-    }
-
     ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(TaskBlasInfo a_info)
         : actual_ids{std::vector<BlasId>{a_info.initial_blas.blas.begin(), a_info.initial_blas.blas.end()}},
           latest_access{a_info.initial_blas.latest_access},
@@ -503,11 +493,6 @@ namespace daxa
     void ImplPersistentTaskBufferBlasTlas::zero_ref_callback(ImplHandle const * handle)
     {
         auto * self = rc_cast<ImplPersistentTaskBufferBlasTlas *>(handle);
-        if (self->owned_buffer_info.has_value())
-        {
-            BufferId const first_id = std::get<std::vector<BufferId>>(self->actual_ids)[0];
-            self->owned_buffer_device.value().destroy_buffer(first_id);
-        }
         delete self;
     }
 
@@ -516,11 +501,6 @@ namespace daxa
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
     {
         this->object = new ImplPersistentTaskBufferBlasTlas(info);
-    }
-    
-    TaskBuffer::TaskBuffer(daxa::Device & device, BufferInfo const & info)
-    {
-        this->object = new ImplPersistentTaskBufferBlasTlas(device, info);
     }
 
     auto TaskBuffer::view() const -> TaskBufferView
@@ -547,12 +527,6 @@ namespace daxa
             .buffers = {std::get<std::vector<BufferId>>(impl.actual_ids).data(), std::get<std::vector<BufferId>>(impl.actual_ids).size()},
             .latest_access = impl.latest_access,
         };
-    }
-    
-    auto TaskBuffer::is_owning() const -> bool
-    {
-        auto const & impl = *r_cast<ImplPersistentTaskBufferBlasTlas const *>(this->object);
-        return impl.owned_buffer_device.has_value();
     }
 
     void TaskBuffer::set_buffers(TrackedBuffers const & buffers)
@@ -1205,38 +1179,38 @@ namespace daxa
         constexpr std::string_view PERSISTENT_RESOURCE_MESSAGE = {
             "when executing a task graph, all used persistent resources must be backed by at least one and exclusively "
             "valid runtime resources"};
-        for (u32 local_buffer_i = 0; local_buffer_i < impl.global_buffer_infos.size(); ++local_buffer_i)
-        {
-            if (!permutation.buffer_infos[local_buffer_i].valid)
-            {
-                continue;
-            }
-            if (!impl.global_buffer_infos.at(local_buffer_i).is_persistent())
-            {
-                continue;
-            }
-            auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_ids;
-            std::visit([&](auto const & runtime_ids){
-                DAXA_DBG_ASSERT_TRUE_M(
-                    !runtime_ids.empty(),
-                    fmt::format(
-                        "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
-                        impl.global_buffer_infos[local_buffer_i].get_name(),
-                        impl.info.name,
-                        PERSISTENT_RESOURCE_MESSAGE));
-                for (usize buffer_index = 0; buffer_index < runtime_ids.size(); ++buffer_index)
-                {
-                    DAXA_DBG_ASSERT_TRUE_M(
-                        impl.info.device.is_id_valid(runtime_ids[buffer_index]),
-                        fmt::format(
-                            "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
-                            impl.global_buffer_infos[local_buffer_i].get_name(),
-                            impl.info.name,
-                            buffer_index,
-                            PERSISTENT_RESOURCE_MESSAGE));
-                }
-            }, runtime_ids);
-        }
+        // for (u32 local_buffer_i = 0; local_buffer_i < impl.global_buffer_infos.size(); ++local_buffer_i)
+        // {
+        //     if (!permutation.buffer_infos[local_buffer_i].valid)
+        //     {
+        //         continue;
+        //     }
+        //     if (!impl.global_buffer_infos.at(local_buffer_i).is_persistent())
+        //     {
+        //         continue;
+        //     }
+        //     auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_ids;
+        //     std::visit([&](auto const & runtime_ids){
+        //         DAXA_DBG_ASSERT_TRUE_M(
+        //             !runtime_ids.empty(),
+        //             fmt::format(
+        //                 "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
+        //                 impl.global_buffer_infos[local_buffer_i].get_name(),
+        //                 impl.info.name,
+        //                 PERSISTENT_RESOURCE_MESSAGE));
+        //         for (usize buffer_index = 0; buffer_index < runtime_ids.size(); ++buffer_index)
+        //         {
+        //             DAXA_DBG_ASSERT_TRUE_M(
+        //                 impl.info.device.is_id_valid(runtime_ids[buffer_index]),
+        //                 fmt::format(
+        //                     "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
+        //                     impl.global_buffer_infos[local_buffer_i].get_name(),
+        //                     impl.info.name,
+        //                     buffer_index,
+        //                     PERSISTENT_RESOURCE_MESSAGE));
+        //         }
+        //     }, runtime_ids);
+        // }
         for (u32 local_image_i = 0; local_image_i < impl.global_image_infos.size(); ++local_image_i)
         {
             if (!permutation.image_infos[local_image_i].valid)

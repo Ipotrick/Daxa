@@ -176,7 +176,6 @@ namespace daxa
     struct ImplPersistentTaskBufferBlasTlas final : ImplHandle
     {
         ImplPersistentTaskBufferBlasTlas(TaskBufferInfo a_info);
-        ImplPersistentTaskBufferBlasTlas(Device & device, BufferInfo const & a_info);
         ImplPersistentTaskBufferBlasTlas(TaskBlasInfo a_info);
         ImplPersistentTaskBufferBlasTlas(TaskTlasInfo a_info);
         ~ImplPersistentTaskBufferBlasTlas();
@@ -194,9 +193,6 @@ namespace daxa
             TaskBlasInfo,
             TaskTlasInfo
         > info = {};
-
-        Optional<Device> owned_buffer_device = {};
-        Optional<BufferInfo> owned_buffer_info = {};
 
         // Used to allocate id - because all persistent resources have unique id we need a single point
         // from which they are generated

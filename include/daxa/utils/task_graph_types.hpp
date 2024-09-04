@@ -975,7 +975,6 @@ namespace daxa
     {
         TaskBuffer() = default;
         TaskBuffer(TaskBufferInfo const & info);
-        TaskBuffer(daxa::Device & device, BufferInfo const & info);
 
         operator TaskBufferView() const;
 
@@ -985,7 +984,6 @@ namespace daxa
         /// @return reference to info of object.
         auto info() const -> TaskBufferInfo const &;
         auto get_state() const -> TrackedBuffers;
-        auto is_owning() const -> bool;
 
         void set_buffers(TrackedBuffers const & buffers);
         void swap_buffers(TaskBuffer & other);
