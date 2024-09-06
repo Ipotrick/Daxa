@@ -64,6 +64,17 @@ namespace daxa
         ShaderCompileOptions compile_options = {};
     };
 
+    struct ShaderCompileInfo2
+    {
+        ShaderSource source = Monostate{};
+        std::optional<std::string> entry_point = {};
+        std::optional<ShaderLanguage> language = {};
+        std::vector<ShaderDefine> defines = {};
+        std::optional<bool> enable_debug_info = {};
+        std::optional<ShaderCreateFlags> create_flags = {};
+        std::optional<u32> required_subgroup_size = {};
+    };
+
     struct RayTracingPipelineCompileInfo
     {
         std::vector<ShaderCompileInfo> ray_gen_infos = {};
@@ -81,6 +92,20 @@ namespace daxa
     struct ComputePipelineCompileInfo
     {
         ShaderCompileInfo shader_info = {};
+        u32 push_constant_size = {};
+        std::string name = {};
+    };
+
+    // Future replacement for ComputePipelineCompileInfo on daxa 3.1 release.
+    struct ComputePipelineCompileInfo2
+    {
+        ShaderSource source = Monostate{};
+        std::optional<std::string> entry_point = {};
+        std::optional<ShaderLanguage> language = {};
+        std::vector<ShaderDefine> defines = {};
+        std::optional<bool> enable_debug_info = {};
+        std::optional<ShaderCreateFlags> create_flags = {};
+        std::optional<u32> required_subgroup_size = {};
         u32 push_constant_size = {};
         std::string name = {};
     };
@@ -110,6 +135,19 @@ namespace daxa
         std::string name = {};
     };
 
+    struct PipelineManagerInfo2
+    {
+        Device device;
+        std::vector<std::filesystem::path> root_paths = {};
+        std::optional<std::filesystem::path> write_out_preprocessed_code = {};
+        std::optional<std::filesystem::path> write_out_spirv = {};
+        std::optional<std::filesystem::path> spirv_cache_folder = {};
+        ShaderCompileInfo2 default_shader_compile_info = {};
+        bool register_null_pipelines_when_first_compile_fails = false;
+        std::function<void(std::string &, std::filesystem::path const & path)> custom_preprocessor = {};
+        std::string name = {};
+    };
+
     struct VirtualFileInfo
     {
         std::string name = {};
@@ -133,9 +171,11 @@ namespace daxa
         PipelineManager() = default;
 
         PipelineManager(PipelineManagerInfo info);
+        PipelineManager(PipelineManagerInfo2 info);
 
         auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
-        auto add_compute_pipeline(ComputePipelineCompileInfo const & info) -> Result<std::shared_ptr<ComputePipeline>>;
+        auto add_compute_pipeline(ComputePipelineCompileInfo && info) -> Result<std::shared_ptr<ComputePipeline>>;
+        auto add_compute_pipeline2(ComputePipelineCompileInfo2 && info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
