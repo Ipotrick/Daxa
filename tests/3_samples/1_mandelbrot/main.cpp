@@ -43,19 +43,14 @@ struct App : BaseApp<App>
     // clang-format off
     std::shared_ptr<daxa::ComputePipeline> compute_pipeline = [this]() {
         update_virtual_shader();
-        return pipeline_manager.add_compute_pipeline({
+        return pipeline_manager.add_compute_pipeline2({
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-            .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
+            .source = daxa::ShaderFile{"compute.glsl"},
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
-            .shader_info = {
-                .source = daxa::ShaderFile{"compute.slang"}, 
-                .compile_options = {
-                    .entry_point = "entry_mandelbrot",
-                },
-            },
+            .source = daxa::ShaderFile{"compute.slang"}, 
+            .entry_point = "entry_mandelbrot",
 #endif
             .push_constant_size = sizeof(ComputePush),
-            .name = "compute_pipeline",
         }).value();
     }();
     // clang-format on

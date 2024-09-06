@@ -108,14 +108,14 @@ namespace daxa
         Optional(Optional<T> const &) = default;
         Optional(T const & v) : m_value{v}, m_has_value{true} {}
         Optional(NoneT const &) : m_value{}, m_has_value{} {}
-        Optional<T> & operator=(Optional<T> const &) = default;
-        Optional<T> & operator=(T const & v)
+        auto operator=(Optional<T> const &) -> Optional<T>& = default;
+        auto operator=(T const & v) -> Optional<T>&
         {
             this->m_value = v;
             this->m_has_value = true;
             return *this;
         }
-        Optional<T> & operator=(NoneT const &)
+       auto operator=(NoneT const &) -> Optional<T> & 
         {
             this->m_value = {};
             this->m_has_value = {};
@@ -338,7 +338,7 @@ namespace daxa
             }
         }
         SmallString(SmallString const & other) = default;
-        SmallString & operator=(SmallString const & other) = default;
+        auto operator=(SmallString const & other) -> SmallString & = default;
         [[nodiscard]] auto view() const -> std::string_view
         {
             return {this->m_data.data(), static_cast<usize>(this->m_size)};

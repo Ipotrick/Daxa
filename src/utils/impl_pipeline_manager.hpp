@@ -52,7 +52,7 @@ namespace daxa
             RAY_CALLABLE,
         };
 
-        PipelineManagerInfo info = {};
+        PipelineManagerInfo2 info = {};
 
         std::vector<std::filesystem::path> current_seen_shader_files = {};
         ShaderFileTimeSet * current_observed_hotload_files = nullptr;
@@ -68,7 +68,7 @@ namespace daxa
             ShaderFileTimeSet observed_hotload_files = {};
         };
 
-        using ComputePipelineState = PipelineState<ComputePipeline, ComputePipelineCompileInfo>;
+        using ComputePipelineState = PipelineState<ComputePipeline, ComputePipelineCompileInfo2>;
         using RasterPipelineState = PipelineState<RasterPipeline, RasterPipelineCompileInfo>;
         using RayTracingPipelineState = PipelineState<RayTracingPipeline, RayTracingPipelineCompileInfo>;
 
@@ -76,11 +76,12 @@ namespace daxa
         std::vector<RasterPipelineState> raster_pipelines;
         std::vector<RayTracingPipelineState> ray_tracing_pipelines;
 
+        // COMMENT(pahrens): epic code
         // TODO(grundlett): Maybe make the pipeline compiler *internally* thread-safe!
         // This variable is accessed by the includer, which makes that not thread-safe
         // PipelineManager is still externally thread-safe. You can create as many
         // PipelineManagers from as many threads as you'd like!
-        ShaderCompileInfo const * current_shader_info = nullptr;
+        ShaderCompileInfo2 const * current_shader_info = nullptr;
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         struct GlslangBackend
@@ -103,11 +104,11 @@ namespace daxa
         spvtools::SpirvTools spirv_tools = spvtools::SpirvTools{SPV_ENV_VULKAN_1_3};
 #endif
 
-        ImplPipelineManager(PipelineManagerInfo && a_info);
+        ImplPipelineManager(PipelineManagerInfo2 && a_info);
         ~ImplPipelineManager();
 
         auto create_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<RayTracingPipelineState>;
-        auto create_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<ComputePipelineState>;
+        auto create_compute_pipeline(ComputePipelineCompileInfo2 const & a_info) -> Result<ComputePipelineState>;
         auto create_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<RasterPipelineState>;
         auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RayTracingPipeline>>;
         auto add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>;
@@ -124,9 +125,11 @@ namespace daxa
         auto full_path_to_file(std::filesystem::path const & path) -> Result<std::filesystem::path>;
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
 
-        auto get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
-        auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
-        auto get_spirv_slang(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+
+        auto hash_shader_info(std::string const & source_string, ShaderCompileInfo2 const & compile_options, ImplPipelineManager::ShaderStage shader_stage) -> uint64_t;
+        auto get_spirv(ShaderCompileInfo2 const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
+        auto get_spirv_glslang(ShaderCompileInfo2 const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+        auto get_spirv_slang(ShaderCompileInfo2 const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
 
         static auto zero_ref_callback(ImplHandle const * handle);
     };

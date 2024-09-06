@@ -187,6 +187,32 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
 
 namespace daxa
 {
+    auto compute2_to_shader_compile_info2(ComputePipelineCompileInfo2 const & src) -> ShaderCompileInfo2
+    {
+        ShaderCompileInfo2 ret = {};
+        ret.source = src.source;
+        ret.entry_point = src.entry_point;
+        ret.language = src.language;
+        ret.defines = src.defines;
+        ret.enable_debug_info = src.enable_debug_info;
+        ret.create_flags = src.create_flags;
+        ret.required_subgroup_size = src.required_subgroup_size;
+        return ret;
+    }
+
+    auto upgrade_shader_compile_info(ShaderCompileInfo const & src) -> ShaderCompileInfo2
+    {
+        ShaderCompileInfo2 ret = {};
+        ret.source = src.source;
+        ret.entry_point = src.compile_options.entry_point;
+        ret.language = src.compile_options.language;
+        ret.defines = src.compile_options.defines;
+        ret.enable_debug_info = src.compile_options.enable_debug_info;
+        ret.create_flags = src.compile_options.create_flags;
+        ret.required_subgroup_size = src.compile_options.required_subgroup_size;
+        return ret;
+    }
+
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
     class GlslangFileIncluder : public glslang::TShader::Includer
     {
@@ -324,46 +350,53 @@ namespace
 
 namespace daxa
 {
-    void ShaderCompileOptions::inherit(ShaderCompileOptions const & other)
+    void inherit_shader_compile_options(auto & dst, auto const & src)
     {
-        if (!this->entry_point.has_value())
+        if (!dst.entry_point.has_value())
         {
-            this->entry_point = other.entry_point;
+            dst.entry_point = src.entry_point;
         }
-        if (!this->write_out_preprocessed_code.has_value())
+        if (!dst.language.has_value())
         {
-            this->write_out_preprocessed_code = other.write_out_preprocessed_code;
+            dst.language = src.language;
         }
-        if (!this->write_out_shader_binary.has_value())
+        if (!dst.enable_debug_info.has_value())
         {
-            this->write_out_shader_binary = other.write_out_shader_binary;
+            dst.enable_debug_info = src.enable_debug_info;
         }
-        if (!this->spirv_cache_folder.has_value())
+        if (!dst.create_flags.has_value())
         {
-            this->spirv_cache_folder = other.spirv_cache_folder;
+            dst.create_flags = src.create_flags;
         }
-        if (!this->language.has_value())
+        if (!dst.required_subgroup_size.has_value())
         {
-            this->language = other.language;
-        }
-        if (!this->enable_debug_info.has_value())
-        {
-            this->enable_debug_info = other.enable_debug_info;
-        }
-        if (!this->create_flags.has_value())
-        {
-            this->create_flags = other.create_flags;
-        }
-        if (!this->required_subgroup_size.has_value())
-        {
-            this->required_subgroup_size = other.required_subgroup_size;
+            dst.required_subgroup_size = src.required_subgroup_size;
         }
 
-        this->root_paths.insert(this->root_paths.begin(), other.root_paths.begin(), other.root_paths.end());
-        this->defines.insert(this->defines.end(), other.defines.begin(), other.defines.end());
+        dst.defines.insert(dst.defines.end(), src.defines.begin(), src.defines.end());
     }
 
-    PipelineManager::PipelineManager(PipelineManagerInfo info)
+    PipelineManager::PipelineManager(PipelineManagerInfo old_info)
+    {
+        PipelineManagerInfo2 info = {};
+        info.device = old_info.device;
+        info.root_paths = old_info.shader_compile_options.root_paths;
+        info.write_out_preprocessed_code = old_info.shader_compile_options.write_out_preprocessed_code;
+        info.write_out_spirv = old_info.shader_compile_options.write_out_shader_binary;
+        info.spirv_cache_folder = old_info.shader_compile_options.spirv_cache_folder;
+        info.default_shader_compile_info.entry_point = old_info.shader_compile_options.entry_point;
+        info.default_shader_compile_info.language = old_info.shader_compile_options.language;
+        info.default_shader_compile_info.defines = old_info.shader_compile_options.defines;
+        info.default_shader_compile_info.enable_debug_info = old_info.shader_compile_options.enable_debug_info;
+        info.default_shader_compile_info.create_flags = old_info.shader_compile_options.create_flags;
+        info.default_shader_compile_info.required_subgroup_size = old_info.shader_compile_options.required_subgroup_size;
+        info.register_null_pipelines_when_first_compile_fails = old_info.register_null_pipelines_when_first_compile_fails;
+        info.custom_preprocessor = old_info.custom_preprocessor;
+        info.name = old_info.name;
+        this->object = new ImplPipelineManager{std::move(info)};
+    }
+
+    PipelineManager::PipelineManager(PipelineManagerInfo2 info)
     {
         this->object = new ImplPipelineManager{std::move(info)};
     }
@@ -373,11 +406,80 @@ namespace daxa
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
         return impl.add_ray_tracing_pipeline(info);
     }
+    
+    auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo && a_info) -> Result<std::shared_ptr<ComputePipeline>>
+    {
+        ComputePipelineCompileInfo2 info = {};
+        info.source = std::move(a_info.shader_info.source);
+        info.entry_point = std::move(a_info.shader_info.compile_options.entry_point);
+        info.language = std::move(a_info.shader_info.compile_options.language);
+        info.defines = std::move(a_info.shader_info.compile_options.defines);
+        info.enable_debug_info = std::move(a_info.shader_info.compile_options.enable_debug_info);
+        info.create_flags = std::move(a_info.shader_info.compile_options.create_flags);
+        info.required_subgroup_size = std::move(a_info.shader_info.compile_options.required_subgroup_size);
+        info.push_constant_size = std::move(a_info.push_constant_size);
+        info.name = std::move(a_info.name);
+        this->add_compute_pipeline2(std::move(info));
+    }
 
-    auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & info) -> Result<std::shared_ptr<ComputePipeline>>
+    auto PipelineManager::add_compute_pipeline2(ComputePipelineCompileInfo2 && a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
-        return impl.add_compute_pipeline(info);
+        DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.source), "must provide shader source");
+
+        auto m_info = std::move(a_info);
+
+        if (m_info.entry_point->empty())
+        {
+            m_info.entry_point = "main";
+        }
+
+        if (daxa::holds_alternative<daxa::ShaderFile>(m_info.source) && !m_info.language.has_value())
+        {
+            auto const & shader_file = daxa::get<daxa::ShaderFile>(m_info.source);
+            auto const shader_file_string = shader_file.path.filename().string();
+            bool is_slang_file = false;
+            is_slang_file |= shader_file_string.ends_with(".hlslh");
+            is_slang_file |= shader_file_string.ends_with(".hlsl");
+            is_slang_file |= shader_file_string.ends_with(".slang");
+            is_slang_file |= shader_file_string.ends_with(".slangh");
+            bool is_glsl_file = false;
+            is_glsl_file |= shader_file_string.ends_with(".glsl");
+            is_glsl_file |= shader_file_string.ends_with(".glslh");
+            if (is_slang_file)
+            {
+                m_info.language = ShaderLanguage::SLANG;
+            }            
+            if (is_glsl_file)
+            {
+                m_info.language = ShaderLanguage::GLSL;
+            }
+        }
+
+        // For compute pipelines, insert a default name based on filename and entry.
+        if (daxa::holds_alternative<daxa::ShaderFile>(m_info.source) && m_info.name.empty())
+        {
+            auto const & shader_file = daxa::get<daxa::ShaderFile>(m_info.source);
+            m_info.name = (shader_file.path.string() + "::") + m_info.entry_point.value();
+        }
+
+        inherit_shader_compile_options(m_info, impl.info.default_shader_compile_info);
+        auto pipe_result = impl.create_compute_pipeline(m_info);
+        if (pipe_result.is_err())
+        {
+            return Result<std::shared_ptr<ComputePipeline>>(pipe_result.m);
+        }
+        impl.compute_pipelines.push_back(pipe_result.value());
+        if (impl.info.register_null_pipelines_when_first_compile_fails)
+        {
+            auto result = Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
+            result.m = std::move(pipe_result.m);
+            return result;
+        }
+        else
+        {
+            return Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        }
     }
 
     auto PipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>
@@ -425,20 +527,20 @@ namespace daxa
     static std::mutex glslang_init_mtx;
     static i32 pipeline_manager_count = 0;
 
-    ImplPipelineManager::ImplPipelineManager(PipelineManagerInfo && a_info)
+    ImplPipelineManager::ImplPipelineManager(PipelineManagerInfo2 && a_info)
         : info{std::move(a_info)}
     {
-        if (!this->info.shader_compile_options.entry_point.has_value())
+        if (!this->info.default_shader_compile_info.entry_point.has_value())
         {
-            this->info.shader_compile_options.entry_point = std::optional<std::string>{"main"};
+            this->info.default_shader_compile_info.entry_point = std::optional<std::string>{"main"};
         }
-        if (!this->info.shader_compile_options.language.has_value())
+        if (!this->info.default_shader_compile_info.language.has_value())
         {
-            this->info.shader_compile_options.language = std::optional<ShaderLanguage>{ShaderLanguage::GLSL};
+            this->info.default_shader_compile_info.language = std::optional<ShaderLanguage>{ShaderLanguage::GLSL};
         }
-        if (!this->info.shader_compile_options.enable_debug_info.has_value())
+        if (!this->info.default_shader_compile_info.enable_debug_info.has_value())
         {
-            this->info.shader_compile_options.enable_debug_info = {false};
+            this->info.default_shader_compile_info.enable_debug_info = {false};
         }
 
         {
@@ -525,7 +627,7 @@ namespace daxa
         {
             for (auto & shader_compile_info : *pipe_result_shader_info)
             {
-                auto spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
+                auto spv_result = get_spirv(upgrade_shader_compile_info(shader_compile_info), pipe_result.info.name, stage);
                 if (spv_result.is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
@@ -544,10 +646,8 @@ namespace daxa
                     .byte_code = spv_results->back().value().data(),
                     .byte_code_size = static_cast<u32>(spv_results->back().value().size()),
                     .create_flags = shader_compile_info.compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
-                    .required_subgroup_size = 
-                        shader_compile_info.compile_options.required_subgroup_size.has_value() ? 
-                        Optional{shader_compile_info.compile_options.required_subgroup_size.value()} : 
-                        daxa::None,
+                    .required_subgroup_size =
+                        shader_compile_info.compile_options.required_subgroup_size.has_value() ? Optional{shader_compile_info.compile_options.required_subgroup_size.value()} : daxa::None,
                 });
                 if (shader_compile_info.compile_options.entry_point.has_value() && (shader_compile_info.compile_options.language != ShaderLanguage::SLANG))
                 {
@@ -567,7 +667,7 @@ namespace daxa
         return Result<RayTracingPipelineState>(std::move(pipe_result));
     }
 
-    auto ImplPipelineManager::create_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<ComputePipelineState>
+    auto ImplPipelineManager::create_compute_pipeline(ComputePipelineCompileInfo2 const & a_info) -> Result<ComputePipelineState>
     {
         if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -584,7 +684,7 @@ namespace daxa
             .observed_hotload_files = {},
         };
         this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
-        auto spirv_result = get_spirv(pipe_result.info.shader_info, pipe_result.info.name, ShaderStage::COMP);
+        auto spirv_result = get_spirv(compute2_to_shader_compile_info2(pipe_result.info), pipe_result.info.name, ShaderStage::COMP);
         if (spirv_result.is_err())
         {
             if (this->info.register_null_pipelines_when_first_compile_fails)
@@ -599,19 +699,17 @@ namespace daxa
             }
         }
         char const * entry_point = "main";
-        if (a_info.shader_info.compile_options.entry_point.has_value() && a_info.shader_info.compile_options.language != ShaderLanguage::SLANG)
+        if (a_info.entry_point.has_value() && a_info.language != ShaderLanguage::SLANG)
         {
-            entry_point = a_info.shader_info.compile_options.entry_point.value().c_str();
+            entry_point = a_info.entry_point.value().c_str();
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_compute_pipeline({
             .shader_info = {
                 .byte_code = spirv_result.value().data(),
-                .byte_code_size = static_cast<u32>(spirv_result.value().size()),                    
-                .create_flags = a_info.shader_info.compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
-                .required_subgroup_size = 
-                    a_info.shader_info.compile_options.required_subgroup_size.has_value() ? 
-                    Optional{a_info.shader_info.compile_options.required_subgroup_size.value()} : 
-                    daxa::None,
+                .byte_code_size = static_cast<u32>(spirv_result.value().size()),
+                .create_flags = a_info.create_flags.value_or(ShaderCreateFlagBits::NONE),
+                .required_subgroup_size =
+                    a_info.required_subgroup_size.has_value() ? Optional{a_info.required_subgroup_size.value()} : daxa::None,
                 .entry_point = entry_point,
             },
             .push_constant_size = a_info.push_constant_size,
@@ -664,7 +762,7 @@ namespace daxa
         {
             if (pipe_result_shader_info->has_value())
             {
-                *spv_result = get_spirv(pipe_result_shader_info->value(), pipe_result.info.name, stage);
+                *spv_result = get_spirv(upgrade_shader_compile_info(pipe_result_shader_info->value()), pipe_result.info.name, stage);
                 if (spv_result->is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
@@ -680,12 +778,10 @@ namespace daxa
                 }
                 *final_shader_info = daxa::ShaderInfo{
                     .byte_code = spv_result->value().data(),
-                    .byte_code_size = static_cast<u32>(spv_result->value().size()),                    
+                    .byte_code_size = static_cast<u32>(spv_result->value().size()),
                     .create_flags = pipe_result_shader_info->value().compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
-                    .required_subgroup_size = 
-                        pipe_result_shader_info->value().compile_options.required_subgroup_size.has_value() ? 
-                        Optional{pipe_result_shader_info->value().compile_options.required_subgroup_size.value()} : 
-                        daxa::None,
+                    .required_subgroup_size =
+                        pipe_result_shader_info->value().compile_options.required_subgroup_size.has_value() ? Optional{pipe_result_shader_info->value().compile_options.required_subgroup_size.value()} : daxa::None,
                 };
                 if (pipe_result_shader_info->value().compile_options.language != ShaderLanguage::SLANG)
                 {
@@ -701,29 +797,18 @@ namespace daxa
     {
         // DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
         auto modified_info = a_info;
-        for (auto & shader_compile_info : modified_info.ray_gen_infos)
+        std::array shader_infos = {&modified_info.ray_gen_infos,
+                                   &modified_info.intersection_infos,
+                                   &modified_info.any_hit_infos,
+                                   &modified_info.callable_infos,
+                                   &modified_info.closest_hit_infos,
+                                   &modified_info.miss_hit_infos};
+        for (auto & infos : shader_infos)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.intersection_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.any_hit_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.callable_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.closest_hit_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
-        }
-        for (auto & shader_compile_info : modified_info.miss_hit_infos)
-        {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            for (auto & shader_compile_info : *infos)
+            {
+                inherit_shader_compile_options(shader_compile_info.compile_options, this->info.default_shader_compile_info);
+            }
         }
 
         auto pipe_result = create_ray_tracing_pipeline(modified_info);
@@ -744,28 +829,28 @@ namespace daxa
         }
     }
 
-    auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
-    {
-        DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
-        auto modified_info = a_info;
-        modified_info.shader_info.compile_options.inherit(this->info.shader_compile_options);
-        auto pipe_result = create_compute_pipeline(modified_info);
-        if (pipe_result.is_err())
-        {
-            return Result<std::shared_ptr<ComputePipeline>>(pipe_result.m);
-        }
-        this->compute_pipelines.push_back(pipe_result.value());
-        if (this->info.register_null_pipelines_when_first_compile_fails)
-        {
-            auto result = Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
-            result.m = std::move(pipe_result.m);
-            return result;
-        }
-        else
-        {
-            return Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
-        }
-    }
+    // auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
+    // {
+    //     DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
+    //     auto modified_info = a_info;
+    //     inherit_shader_compile_options(modified_info.shader_info.compile_options, this->info.default_shader_compile_info)
+    //     auto pipe_result = create_compute_pipeline(modified_info);
+    //     if (pipe_result.is_err())
+    //     {
+    //         return Result<std::shared_ptr<ComputePipeline>>(pipe_result.m);
+    //     }
+    //     this->compute_pipelines.push_back(pipe_result.value());
+    //     if (this->info.register_null_pipelines_when_first_compile_fails)
+    //     {
+    //         auto result = Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
+    //         result.m = std::move(pipe_result.m);
+    //         return result;
+    //     }
+    //     else
+    //     {
+    //         return Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
+    //     }
+    // }
 
     auto ImplPipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>
     {
@@ -782,7 +867,7 @@ namespace daxa
         {
             if (shader_compile_info->has_value())
             {
-                shader_compile_info->value().compile_options.inherit(this->info.shader_compile_options);
+                inherit_shader_compile_options(shader_compile_info->value().compile_options, this->info.default_shader_compile_info);
             }
         }
         auto pipe_result = create_raster_pipeline(modified_info);
@@ -1063,7 +1148,7 @@ namespace daxa
         return true;
     }
 
-    static auto hash_shader_info(std::string const & source_string, ShaderCompileOptions const & compile_options, ImplPipelineManager::ShaderStage shader_stage) -> uint64_t
+    auto ImplPipelineManager::hash_shader_info(std::string const & source_string, ShaderCompileInfo2 const & compile_options, ImplPipelineManager::ShaderStage shader_stage) -> uint64_t
     {
         auto result = uint64_t{};
 
@@ -1072,14 +1157,14 @@ namespace daxa
             return h1 ^ (h2 << 1);
         };
 
-        auto hash_shader_compile_options = [&hash_combine](ShaderCompileOptions const & options) -> uint64_t
+        auto hash_shader_compile_options = [this, &hash_combine](ShaderCompileInfo2 const & options) -> uint64_t
         {
             auto result = uint64_t{};
             if (options.entry_point.has_value())
             {
                 result = hash_combine(result, std::hash<std::string>{}(options.entry_point.value()));
             }
-            for (auto const & path : options.root_paths)
+            for (auto const & path : this->info.root_paths)
             {
                 result = hash_combine(result, std::hash<std::string>{}(path.string()));
             }
@@ -1230,7 +1315,7 @@ namespace daxa
         return Result<std::vector<u32>>(std::string_view{"no cache found"});
     }
 
-    auto ImplPipelineManager::get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv(ShaderCompileInfo2 const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>
     {
         // TODO: Not internally threadsafe
         current_shader_info = &shader_info;
@@ -1275,10 +1360,10 @@ namespace daxa
             }
 
             // TODO: Test if this is slow, as it's not needed if there's no shader cache.
-            auto shader_info_hash = hash_shader_info(code.string, shader_info.compile_options, shader_stage);
-            if (shader_info.compile_options.spirv_cache_folder.has_value())
+            auto shader_info_hash = hash_shader_info(code.string, shader_info, shader_stage);
+            if (this->info.spirv_cache_folder.has_value())
             {
-                auto cache_ret = try_load_shader_cache(shader_info.compile_options.spirv_cache_folder.value(), shader_info_hash);
+                auto cache_ret = try_load_shader_cache(this->info.spirv_cache_folder.value(), shader_info_hash);
                 if (cache_ret.is_ok())
                 {
                     return cache_ret;
@@ -1287,10 +1372,10 @@ namespace daxa
 
             Result<std::vector<u32>> ret = Result<std::vector<u32>>("No shader was compiled");
 
-            DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.language.has_value(), "How did this happen? You mustn't provide a nullopt for the language");
+            DAXA_DBG_ASSERT_TRUE_M(shader_info.language.has_value(), "How did this happen? You mustn't provide a nullopt for the language");
 
-            DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.language.has_value(), "You must have a shader language set when compiling GLSL");
-            switch (shader_info.compile_options.language.value())
+            DAXA_DBG_ASSERT_TRUE_M(shader_info.language.has_value(), "You must have a shader language set when compiling GLSL");
+            switch (shader_info.language.value())
             {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
             case ShaderLanguage::GLSL:
@@ -1312,9 +1397,9 @@ namespace daxa
             }
 
             spirv = ret.value();
-            if (shader_info.compile_options.spirv_cache_folder.has_value())
+            if (this->info.spirv_cache_folder.has_value())
             {
-                save_shader_cache(shader_info.compile_options.spirv_cache_folder.value(), shader_info_hash, spirv);
+                save_shader_cache(this->info.spirv_cache_folder.value(), shader_info_hash, spirv);
             }
         }
         current_shader_info = nullptr;
@@ -1329,13 +1414,13 @@ namespace daxa
             name = shader_file->path.string();
         }
 
-        if (shader_info.compile_options.write_out_shader_binary.has_value())
+        if (this->info.write_out_spirv.has_value())
         {
             std::replace(name.begin(), name.end(), '/', '_');
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
-            name = name + "." + std::string{stage_string(shader_stage)} + "." + shader_info.compile_options.entry_point.value() + ".spv";
-            auto out_folder = shader_info.compile_options.write_out_shader_binary.value();
+            name = name + "." + std::string{stage_string(shader_stage)} + "." + shader_info.entry_point.value() + ".spv";
+            auto out_folder = this->info.write_out_spirv.value();
             std::filesystem::create_directories(out_folder);
             std::ofstream ofs(out_folder / name, std::ios_base::trunc | std::ios_base::binary);
             ofs.write(r_cast<char const *>(spirv.data()), static_cast<std::streamsize>(spirv.size() * 4));
@@ -1377,7 +1462,7 @@ namespace daxa
         std::filesystem::path potential_path;
         if (this->current_shader_info != nullptr)
         {
-            for (auto const & root : this->current_shader_info->compile_options.root_paths)
+            for (auto const & root : this->info.root_paths)
             {
                 potential_path.clear();
                 potential_path = root / path;
@@ -1389,7 +1474,7 @@ namespace daxa
         }
         else
         {
-            for (auto & root : this->info.shader_compile_options.root_paths)
+            for (auto & root : this->info.root_paths)
             {
                 potential_path.clear();
                 potential_path = root / path;
@@ -1445,7 +1530,7 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
-    auto ImplPipelineManager::get_spirv_glslang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] std::string const & debug_name_opt, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_glslang([[maybe_unused]] ShaderCompileInfo2 const & shader_info, [[maybe_unused]] std::string const & debug_name_opt, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         auto translate_shader_stage = [](ShaderStage stage) -> EShLanguage
@@ -1522,7 +1607,7 @@ namespace daxa
 
         preamble += "#extension GL_GOOGLE_include_directive : enable\n";
         preamble += "#extension GL_KHR_memory_scope_semantics : enable\n";
-        for (auto const & shader_define : shader_info.compile_options.defines)
+        for (auto const & shader_define : shader_info.defines)
         {
             if (!shader_define.value.empty())
             {
@@ -1551,7 +1636,7 @@ namespace daxa
         auto const * source_cstr = source_str.c_str();
         auto const * name_cstr = name.c_str();
 
-        bool const use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false);
+        bool const use_debug_info = shader_info.enable_debug_info.value_or(false);
 
         shader.setStringsWithLengthsAndNames(&source_cstr, nullptr, &name_cstr, 1);
         shader.setEntryPoint("main");
@@ -1568,13 +1653,13 @@ namespace daxa
 
         static constexpr int SHADER_VERSION = 460;
 
-        if (shader_info.compile_options.write_out_preprocessed_code.has_value())
+        if (this->info.write_out_preprocessed_code.has_value())
         {
             std::replace(name.begin(), name.end(), '/', '_');
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
             std::string const file_name = std::string("preprocessed_") + name + "." + std::string(shader_stage_string(shader_stage));
-            auto out_folder = shader_info.compile_options.write_out_preprocessed_code.value();
+            auto out_folder = this->info.write_out_preprocessed_code.value();
             std::filesystem::create_directories(out_folder);
             auto filepath = out_folder / file_name;
             std::string preprocessed_result = {};
@@ -1620,7 +1705,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineManager::get_spirv_slang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_slang([[maybe_unused]] ShaderCompileInfo2 const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
         auto session = Slang::ComPtr<slang::ISession>{};
@@ -1628,17 +1713,17 @@ namespace daxa
         {
             auto search_paths_strings = std::vector<std::string>{};
             auto search_paths = std::vector<char const *>{};
-            search_paths_strings.reserve(shader_info.compile_options.root_paths.size());
-            search_paths.reserve(shader_info.compile_options.root_paths.size());
-            for (auto const & path : shader_info.compile_options.root_paths)
+            search_paths_strings.reserve(this->info.root_paths.size());
+            search_paths.reserve(this->info.root_paths.size());
+            for (auto const & path : this->info.root_paths)
             {
                 search_paths_strings.push_back(path.string());
                 search_paths.push_back(search_paths_strings.back().c_str());
             }
 
             auto macros = std::vector<slang::PreprocessorMacroDesc>{};
-            macros.reserve(shader_info.compile_options.defines.size());
-            for (auto const & [name, value] : shader_info.compile_options.defines)
+            macros.reserve(shader_info.defines.size());
+            for (auto const & [name, value] : shader_info.defines)
             {
                 macros.push_back({name.c_str(), value.c_str()});
             }
@@ -1720,7 +1805,7 @@ namespace daxa
         {
             auto * entry_refl = spReflection_getEntryPointByIndex(refl, i);
             auto const * entry_name = spReflectionEntryPoint_getName(entry_refl);
-            if (strcmp(entry_name, shader_info.compile_options.entry_point.value().c_str()) == 0)
+            if (strcmp(entry_name, shader_info.entry_point.value().c_str()) == 0)
             {
                 entry_point_index = i;
                 break;
@@ -1728,7 +1813,7 @@ namespace daxa
         }
         if (entry_point_index == -1)
         {
-            return Result<std::vector<u32>>(error_message_prefix + "Failed to find entry point '" + shader_info.compile_options.entry_point.value() + "' in module");
+            return Result<std::vector<u32>>(error_message_prefix + "Failed to find entry point '" + shader_info.entry_point.value() + "' in module");
         }
 
         slangRequest->getModule(translationUnitIndex, shader_module.writeRef());
