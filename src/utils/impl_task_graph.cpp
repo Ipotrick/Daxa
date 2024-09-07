@@ -1097,7 +1097,11 @@ namespace daxa
                             .dst_image = ti.get(dst_i).ids[runtime_img],
                             .src_slice = array_copy_slice,
                             .dst_slice = array_copy_slice,
-                            .extent = ti.info(src_i, runtime_img).value().size,
+                            .extent = {
+                                std::max(1u, ti.info(src_i, runtime_img).value().size.x >> mip),
+                                std::max(1u, ti.info(src_i, runtime_img).value().size.y >> mip),
+                                std::max(1u, ti.info(src_i, runtime_img).value().size.z >> mip),
+                            }
                         });
                     }
                 }

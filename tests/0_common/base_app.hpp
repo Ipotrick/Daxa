@@ -19,8 +19,8 @@ using Clock = std::chrono::high_resolution_clock;
 #endif
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-#if !defined(DAXA_SHADERLANG)
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#if !defined(DAXA_LANGUAGE)
+#define DAXA_LANGUAGE DAXA_LANGUAGE_GLSL
 #endif
 
 template <typename T>
@@ -57,9 +57,9 @@ struct BaseApp : AppWindow<T>
                 DAXA_SAMPLE_PATH "/shaders",
                 "tests/0_common/shaders",
             },
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if DAXA_LANGUAGE == DAXA_LANGUAGE_GLSL
             .language = daxa::ShaderLanguage::GLSL,
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif DAXA_LANGUAGE == DAXA_LANGUAGE_SLANG
             .language = daxa::ShaderLanguage::SLANG,
 #endif
             .enable_debug_info = true,

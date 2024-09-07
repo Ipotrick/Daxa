@@ -1333,7 +1333,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    [[nodiscard]] auto to_string(ImageLayout layout) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageLayout layout) -> std::string_view;
 
     struct DAXA_EXPORT_CXX ImageMipArraySlice
     {
@@ -1350,7 +1350,7 @@ namespace daxa
         [[nodiscard]] auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
     };
 
-    [[nodiscard]] auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
 
     struct DAXA_EXPORT_CXX ImageArraySlice
     {
@@ -1365,7 +1365,7 @@ namespace daxa
         [[nodiscard]] auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 
-    [[nodiscard]] auto to_string(ImageArraySlice image_array_slice) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageArraySlice image_array_slice) -> std::string;
 
     struct DAXA_EXPORT_CXX ImageSlice
     {
@@ -1380,7 +1380,7 @@ namespace daxa
         [[nodiscard]] auto contained_in(ImageArraySlice const & slice) const -> bool;
     };
 
-    auto to_string(ImageSlice image_slice) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageSlice image_slice) -> std::string;
 
     enum struct Filter
     {

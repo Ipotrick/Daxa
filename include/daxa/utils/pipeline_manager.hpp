@@ -174,8 +174,8 @@ namespace daxa
         PipelineManager(PipelineManagerInfo2 info);
 
         auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
-        auto add_compute_pipeline(ComputePipelineCompileInfo && info) -> Result<std::shared_ptr<ComputePipeline>>;
-        auto add_compute_pipeline2(ComputePipelineCompileInfo2 && info) -> Result<std::shared_ptr<ComputePipeline>>;
+        auto add_compute_pipeline(ComputePipelineCompileInfo info) -> Result<std::shared_ptr<ComputePipeline>>;
+        auto add_compute_pipeline2(ComputePipelineCompileInfo2 info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
         void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
