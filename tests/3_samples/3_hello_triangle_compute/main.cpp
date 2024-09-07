@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define DAXA_LANGUAGE DAXA_LANGUAGE_GLSL
 #define APPNAME "Daxa Sample: HelloTriangle Compute"
 #include <0_common/base_app.hpp>
 
@@ -9,9 +9,9 @@ struct App : BaseApp<App>
 {
     // clang-format off
     std::shared_ptr<daxa::ComputePipeline> compute_pipeline = pipeline_manager.add_compute_pipeline({
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if DAXA_LANGUAGE == DAXA_LANGUAGE_GLSL
         .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif DAXA_LANGUAGE == DAXA_LANGUAGE_SLANG
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
 #endif
         .push_constant_size = sizeof(ComputePush),
