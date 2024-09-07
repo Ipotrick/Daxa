@@ -962,26 +962,153 @@ namespace daxa
         return task_image_view;
     }
 
-    // static inline constexpr std::array<BufferId, 64> NULL_BUF_ARRAY = {};
-    // auto ImplTaskGraph::get_actual_buffers(TaskBufferView id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>
-    // {
-    //     if (id.is_null())
-    //     {
-    //         return NULL_BUF_ARRAY;
-    //     }
-    //     auto const & global_buffer = global_buffer_infos.at(id.index);
-    //     if (global_buffer.is_persistent())
-    //     {
-    //         return {global_buffer.get_persistent().actual_buffers.data(),
-    //                 global_buffer.get_persistent().actual_buffers.size()};
-    //     }
-    //     else
-    //     {
-    //         auto const & perm_buffer = perm.buffer_infos.at(id.index);
-    //         DAXA_DBG_ASSERT_TRUE_M(perm_buffer.valid, "Can not get actual buffer - buffer is not valid in this permutation");
-    //         return {&perm_buffer.actual_id, 1};
-    //     }
-    // }
+    DAXA_EXPORT_CXX auto TaskGraph::transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo const &
+    {
+        ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!transient.is_persistent(), "given view must be transient");
+        DAXA_DBG_ASSERT_TRUE_M(transient.task_graph_index == impl.unique_index, "given view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(transient.index < impl.global_buffer_infos.size(), "given view has invalid index");
+
+        return daxa::get<PermIndepTaskBufferInfo::Transient>(impl.global_buffer_infos.at(transient.index).task_buffer_data).info;
+    }
+
+    DAXA_EXPORT_CXX auto TaskGraph::transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo const &
+    {
+        ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(!transient.is_persistent(), "given view must be transient");
+        DAXA_DBG_ASSERT_TRUE_M(transient.task_graph_index == impl.unique_index, "given view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(transient.index < impl.global_image_infos.size(), "given view has invalid index");
+
+        return daxa::get<PermIndepTaskImageInfo::Transient>(impl.global_image_infos.at(transient.index).task_image_data).info;
+    }
+
+    DAXA_EXPORT_CXX void TaskGraph::clear_buffer(TaskBufferClearInfo const & info)
+    {
+        ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(info.view.task_graph_index == impl.unique_index, "given view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(info.view.index < impl.global_buffer_infos.size(), "given view has invalid index");
+
+        add_task(InlineTaskInfo{
+            .attachments = { inl_attachment(TaskBufferAccess::TRANSFER_WRITE, info.view) },
+            .task = [=, clear_value = info.clear_value](TaskInterface ti)
+            {
+                for (u32 runtime_buf = 0; runtime_buf < ti.get(TaskBufferAttachmentIndex{0}).ids.size(); ++runtime_buf)
+                {
+                    ti.recorder.clear_buffer(BufferClearInfo{
+                        .buffer = ti.get(TaskBufferAttachmentIndex{0}).ids[runtime_buf],
+                        .size = ti.info(TaskBufferAttachmentIndex{0}, runtime_buf).value().size,
+                        .clear_value = clear_value,
+                    });
+                }
+            },
+            .name = std::string("clear buffer: ") + std::string(impl.global_buffer_infos.at(info.view.index).get_name()),
+        });
+    }
+
+    DAXA_EXPORT_CXX void TaskGraph::clear_image(TaskImageClearInfo const & info)
+    {
+        ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(info.view.task_graph_index == impl.unique_index, "given view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(info.view.index < impl.global_image_infos.size(), "given view has invalid index");
+
+        add_task(InlineTaskInfo{
+            .attachments = { inl_attachment(TaskImageAccess::TRANSFER_WRITE, info.view) },
+            .task = [=, clear_value = info.clear_value, clear_slice = info.view.slice](TaskInterface ti)
+            {
+                for (u32 runtime_img = 0; runtime_img < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_img)
+                {
+                    ti.recorder.clear_image(ImageClearInfo{
+                        .clear_value = clear_value,
+                        .dst_image = ti.get(TaskImageAttachmentIndex{0}).ids[runtime_img],
+                        .dst_slice = clear_slice,
+                    });
+                }
+            },
+            .name = std::string("clear image: ") + std::string(impl.global_image_infos.at(info.view.index).get_name()),
+        });
+    }
+
+    DAXA_EXPORT_CXX void TaskGraph::copy_buffer_to_buffer(TaskBufferView src, TaskBufferView dst)
+    {
+        ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(src.task_graph_index == impl.unique_index, "given src view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(src.index < impl.global_buffer_infos.size(), "given src view has invalid index");
+        DAXA_DBG_ASSERT_TRUE_M(dst.task_graph_index == impl.unique_index, "given dst view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(dst.index < impl.global_buffer_infos.size(), "given dst view has invalid index");
+
+        auto src_i = TaskBufferAttachmentIndex{0};
+        auto dst_i = TaskBufferAttachmentIndex{1};
+
+        add_task(InlineTaskInfo{
+            .attachments = { 
+                inl_attachment(TaskBufferAccess::TRANSFER_READ, src),
+                inl_attachment(TaskBufferAccess::TRANSFER_WRITE, dst),
+            },
+            .task = [=](TaskInterface ti)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(ti.get(src_i).ids.size() == ti.get(dst_i).ids.size(), "given src and dst must have the same number of runtime resources");
+                for (u32 runtime_buf = 0; runtime_buf < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_buf)
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_buf).value().size == ti.info(dst_i, runtime_buf).value().size, "given src and dst must have the same size");
+                    ti.recorder.copy_buffer_to_buffer(BufferCopyInfo{    
+                        .src_buffer = ti.get(src_i).ids[runtime_buf],
+                        .dst_buffer = ti.get(src_i).ids[runtime_buf],
+                        .size = ti.info(src_i, runtime_buf).value().size,
+                    });
+                }
+            },
+            .name = 
+                std::string("copy ") +
+                std::string(impl.global_buffer_infos.at(src.index).get_name()) +
+                " to " +
+                std::string(impl.global_buffer_infos.at(dst.index).get_name()),
+        });
+    }
+
+    DAXA_EXPORT_CXX void TaskGraph::copy_image_to_image(TaskImageView src, TaskImageView dst)
+    {
+        ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        DAXA_DBG_ASSERT_TRUE_M(src.task_graph_index == impl.unique_index, "given src view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(src.index < impl.global_image_infos.size(), "given src view has invalid index");
+        DAXA_DBG_ASSERT_TRUE_M(dst.task_graph_index == impl.unique_index, "given dst view must be created by the given task graph");
+        DAXA_DBG_ASSERT_TRUE_M(dst.index < impl.global_image_infos.size(), "given dst view has invalid index");
+
+        auto src_i = TaskImageAttachmentIndex{0};
+        auto dst_i = TaskImageAttachmentIndex{1};
+
+        add_task(InlineTaskInfo{
+            .attachments = { 
+                inl_attachment(TaskImageAccess::TRANSFER_READ, src),
+                inl_attachment(TaskImageAccess::TRANSFER_WRITE, dst),
+            },
+            .task = [=, copy_slice = src.slice](TaskInterface ti)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(ti.get(src_i).ids.size() == ti.get(dst_i).ids.size(), "given src and dst must have the same number of runtime resources");
+                for (u32 runtime_img = 0; runtime_img < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_img)
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().size == ti.info(dst_i, runtime_img).value().size, "given src and dst must have the same size");
+                    DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().array_layer_count == ti.info(dst_i, runtime_img).value().array_layer_count, "given src and dst must have the same array layer count");
+                    DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().mip_level_count == ti.info(dst_i, runtime_img).value().mip_level_count, "given src and dst must have the same mip level count");
+                    for (u32 mip = copy_slice.base_mip_level; mip < (copy_slice.base_mip_level + copy_slice.level_count); ++ mip)
+                    {
+                        const ImageArraySlice array_copy_slice = ImageArraySlice::slice(dst.slice, mip);
+                        ti.recorder.copy_image_to_image(ImageCopyInfo{    
+                            .src_image = ti.get(src_i).ids[runtime_img],
+                            .dst_image = ti.get(dst_i).ids[runtime_img],
+                            .src_slice = array_copy_slice,
+                            .dst_slice = array_copy_slice,
+                            .extent = ti.info(src_i, runtime_img).value().size,
+                        });
+                    }
+                }
+            },
+            .name = 
+                std::string("copy ") +
+                std::string(impl.global_image_infos.at(src.index).get_name()) +
+                " to " +
+                std::string(impl.global_image_infos.at(dst.index).get_name()),
+        });
+    }
 
     static inline constexpr std::array<ImageId, 64> NULL_IMG_ARRAY = {};
 
