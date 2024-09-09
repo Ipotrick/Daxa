@@ -1550,7 +1550,7 @@ namespace daxa
         shader.setStringsWithLengthsAndNames(&source_cstr, nullptr, &name_cstr, 1);
         auto entry_point = shader_info.compile_options.entry_point.value_or("main");
         shader.setEntryPoint(entry_point.c_str());
-        shader.setSourceEntryPoint(entry_point.c_str());
+        shader.setSourceEntryPoint(shader_stage == ShaderStage::COMP ? "main" : entry_point.c_str());
         shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
         shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
 
