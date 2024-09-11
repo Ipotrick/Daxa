@@ -206,7 +206,7 @@ namespace daxa
                         {
                             TaskBufferAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.buffer.name;
-                            info.access = NoRefTTask::attachments()[i].value.buffer.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.buffer.task_access;
                             info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size;
                             info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address;
                             info.view = daxa::get<TaskBufferView>(task.views.views[i]);
@@ -217,7 +217,7 @@ namespace daxa
                         {
                             TaskTlasAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.tlas.name;
-                            info.access = NoRefTTask::attachments()[i].value.tlas.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.tlas.task_access;
                             info.shader_as_address = NoRefTTask::attachments()[i].value.tlas.shader_as_address;
                             info.view = daxa::get<TaskTlasView>(task.views.views[i]);
                             _attachments[i] = info;
@@ -227,7 +227,7 @@ namespace daxa
                         {
                             TaskBlasAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.blas.name;
-                            info.access = NoRefTTask::attachments()[i].value.blas.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.blas.task_access;
                             info.view = daxa::get<TaskBlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -236,7 +236,7 @@ namespace daxa
                         {
                             TaskImageAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.image.name;
-                            info.access = NoRefTTask::attachments()[i].value.image.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.image.task_access;
                             info.view_type = NoRefTTask::attachments()[i].value.image.view_type;
                             info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size;
                             info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type;
