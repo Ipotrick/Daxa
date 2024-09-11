@@ -1,9 +1,11 @@
-#define DAXA_LANGUAGE DAXA_LANGUAGE_SLANG
+
 #define APPNAME "Daxa Sample: Sphere tracing"
 #include <0_common/base_app.hpp>
 
 using namespace daxa::types;
 #include "shaders/shared.inl"
+
+#define SHADER_LANGUAGE DAXA_LANGUAGE_SLANG
 
 struct App : BaseApp<App>
 {
@@ -14,12 +16,12 @@ struct App : BaseApp<App>
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
-#if DAXA_LANGUAGE == DAXA_LANGUAGE_GLSL
+#if SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 1
                 )",
-#elif DAXA_LANGUAGE == DAXA_LANGUAGE_SLANG
+#elif SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
                 .contents = R"(static const bool MY_TOGGLE = true;)",
 #endif
             });
@@ -28,12 +30,12 @@ struct App : BaseApp<App>
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
-#if DAXA_LANGUAGE == DAXA_LANGUAGE_GLSL
+#if SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 0
                 )",
-#elif DAXA_LANGUAGE == DAXA_LANGUAGE_SLANG
+#elif SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
                 .contents = R"(static const bool MY_TOGGLE = false;)",
 #endif
             });
@@ -44,9 +46,9 @@ struct App : BaseApp<App>
     std::shared_ptr<daxa::ComputePipeline> compute_pipeline = [this]() {
         update_virtual_shader();
         return pipeline_manager.add_compute_pipeline2({
-#if DAXA_LANGUAGE == DAXA_LANGUAGE_GLSL
+#if SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .source = daxa::ShaderFile{"compute.glsl"},
-#elif DAXA_LANGUAGE == DAXA_LANGUAGE_SLANG
+#elif SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .source = daxa::ShaderFile{"compute.slang"}, 
             .entry_point = "entry_mandelbrot",
 #endif
