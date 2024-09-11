@@ -1214,7 +1214,7 @@ namespace daxa
         }
         [[nodiscard]] inline constexpr auto operator<=>(Flags const & other) const = default;
 
-        operator bool() const
+        constexpr operator bool() const
         {
             return data != 0;
         }
