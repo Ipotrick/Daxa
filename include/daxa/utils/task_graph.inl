@@ -42,7 +42,7 @@
 
 // DAXA 3.0 Task-Head-Shader interface:
 #if DAXA_SHADER
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#if DAXA_LANGUAGE == DAXA_LANGUAGE_SLANG
 #define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) \
     namespace HEAD_NAME                      \
     {                                        \

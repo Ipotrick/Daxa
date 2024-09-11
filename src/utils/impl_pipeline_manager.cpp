@@ -406,7 +406,7 @@ namespace daxa
         return impl.add_ray_tracing_pipeline(info);
     }
     
-    auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo && a_info) -> Result<std::shared_ptr<ComputePipeline>>
+    auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
         ComputePipelineCompileInfo2 info = {};
         info.source = std::move(a_info.shader_info.source);
@@ -418,17 +418,17 @@ namespace daxa
         info.required_subgroup_size = std::move(a_info.shader_info.compile_options.required_subgroup_size);
         info.push_constant_size = std::move(a_info.push_constant_size);
         info.name = std::move(a_info.name);
-        this->add_compute_pipeline2(std::move(info));
+        return this->add_compute_pipeline2(std::move(info));
     }
 
-    auto PipelineManager::add_compute_pipeline2(ComputePipelineCompileInfo2 && a_info) -> Result<std::shared_ptr<ComputePipeline>>
+    auto PipelineManager::add_compute_pipeline2(ComputePipelineCompileInfo2 a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.source), "must provide shader source");
 
         auto m_info = std::move(a_info);
 
-        if (m_info.entry_point->empty())
+        if (!m_info.entry_point.has_value())
         {
             m_info.entry_point = "main";
         }
