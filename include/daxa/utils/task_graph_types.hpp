@@ -793,48 +793,48 @@ namespace daxa
     ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⡙⠓⠻⠶⠽⢮⣶⣥⣷⣭⣾⣥⣯⡵⠯⠼⠗⠛⠋⣉⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     */
 
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                                                    \
-    namespace HEAD_NAME                                                                         \
-    {                                                                                           \
-        static inline constexpr char NAME[] = #HEAD_NAME;                                       \
-        template <daxa::usize ATTACHMENT_COUNT>                                                 \
-        struct AttachmentsStruct                                                                \
-        {                                                                                       \
-            daxa::u32 declared_attachments_count = {};                                          \
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                                              \
+    namespace HEAD_NAME                                                                   \
+    {                                                                                     \
+        static inline constexpr char NAME[] = #HEAD_NAME;                                 \
+        template <daxa::usize ATTACHMENT_COUNT>                                           \
+        struct AttachmentsStruct                                                          \
+        {                                                                                 \
+            daxa::u32 declared_attachments_count = {};                                    \
             std::array<daxa::TaskAttachment, ATTACHMENT_COUNT> declared_attachments = {}; \
-                                                                                                \
-            auto constexpr add_attachment(auto attachment) -> daxa::u32                         \
-            {                                                                                   \
+                                                                                          \
+            auto constexpr add_attachment(auto attachment) -> daxa::u32                   \
+            {                                                                             \
                 declared_attachments.at(declared_attachments_count) = attachment;         \
-                return declared_attachments_count++;                                            \
+                return declared_attachments_count++;                                      \
             }
 
-#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)     \
-    daxa::TaskBufferAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskBufferAttachment{        \
-            .name = #NAME,                                 \
-            .access = daxa::TaskBufferAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)          \
+    daxa::TaskBufferAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskBufferAttachment{             \
+            .name = #NAME,                                      \
+            .task_access = daxa::TaskBufferAccess::TASK_ACCESS, \
             __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)          \
-    daxa::TaskBlasAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskBlasAttachment{        \
-            .name = #NAME,                               \
-            .access = daxa::TaskBlasAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)               \
+    daxa::TaskBlasAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskBlasAttachment{             \
+            .name = #NAME,                                    \
+            .task_access = daxa::TaskBlasAccess::TASK_ACCESS, \
         })};
 
-#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)     \
-    daxa::TaskTlasAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskTlasAttachment{        \
-            .name = #NAME,                               \
-            .access = daxa::TaskTlasAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)          \
+    daxa::TaskTlasAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskTlasAttachment{             \
+            .name = #NAME,                                    \
+            .task_access = daxa::TaskTlasAccess::TASK_ACCESS, \
             __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)     \
-    daxa::TaskImageAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskImageAttachment{        \
-            .name = #NAME,                                \
-            .access = daxa::TaskImageAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)          \
+    daxa::TaskImageAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskImageAttachment{             \
+            .name = #NAME,                                     \
+            .task_access = daxa::TaskImageAccess::TASK_ACCESS, \
             __VA_ARGS__})};
 
 #define DAXA_DECL_TASK_HEAD_END                                                                                      \
@@ -864,7 +864,7 @@ namespace daxa
         static auto name() -> std::string_view { return std::string_view{NAME}; }                                    \
         static auto attachments() -> std::span<daxa::TaskAttachment const>                                           \
         {                                                                                                            \
-            return AT.declared_attachments;                                                                    \
+            return AT.declared_attachments;                                                                          \
         }                                                                                                            \
     };                                                                                                               \
     }                                                                                                                \
