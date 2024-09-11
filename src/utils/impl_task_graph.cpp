@@ -1259,7 +1259,7 @@ namespace daxa
                         imgs_last_exec.push_back(img);
                     }
                     validate_runtime_image_slice(*this, permutation, task_image_attach_index, tid.index, slice);
-                    validate_image_attachs(*this, permutation, task_image_attach_index, tid.index, image_attach.access, task.base_task->name());
+                    validate_image_attachs(*this, permutation, task_image_attach_index, tid.index, image_attach.task_access, task.base_task->name());
                     for (auto & view : view_cache)
                     {
                         if (info.device.is_id_valid(view))
@@ -1645,7 +1645,7 @@ namespace daxa
                     return;
                 }
 
-                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.access));
+                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.task_access));
                 // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
                 // TODO(msakmary): improve scheduling here to reorder reads in front of each other, respecting the last to read barrier if present!
                 // When a buffer has been read in a previous use AND the current task also reads the buffer,
@@ -1683,7 +1683,7 @@ namespace daxa
                     }
                 }
 
-                auto [this_task_image_layout, this_task_image_access, current_access_concurrent] = task_image_access_to_layout_access(attach.access);
+                auto [this_task_image_layout, this_task_image_access, current_access_concurrent] = task_image_access_to_layout_access(attach.task_access);
                 // As image subresources can be in different layouts and also different synchronization scopes,
                 // we need to track these image ranges individually.
                 for (ExtendedImageSliceState const & tracked_slice : task_image.last_slice_states)
@@ -1937,15 +1937,16 @@ namespace daxa
         // are combined into a single unit which is synchronized against other batches.
         for_each(
             task.attachments(),
-            [&](u32, auto const & buffer_attach)
+            [&](u32, auto & buffer_attach)
             {
                 if (buffer_attach.view.is_null()) return;
                 PerPermTaskBuffer & task_buffer = this->buffer_infos[buffer_attach.translated_view.index];
-                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(buffer_attach.access));
+                auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(buffer_attach.task_access));
                 update_buffer_first_access(task_buffer, batch_index, current_submit_scope_index, current_buffer_access);
                 // For transient buffers, we need to record first and last use so that we can later name their allocations.
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_buffer_first_access below since
                 // they both overlap in what they are doing
+                buffer_attach.access = current_buffer_access;
                 if (!task_graph_impl.global_buffer_infos.at(buffer_attach.translated_view.index).is_persistent())
                 {
                     auto & buffer_first_use = task_buffer.lifetime.first_use;
@@ -2068,7 +2069,7 @@ namespace daxa
             {
                 if (image_attach.view.is_null()) return;
                 auto const & used_image_t_id = image_attach.translated_view;
-                auto const & used_image_t_access = image_attach.access;
+                auto const & used_image_t_access = image_attach.task_access;
                 auto const & initial_used_image_slice = image_attach.translated_view.slice;
                 PerPermTaskImage & task_image = this->image_infos[used_image_t_id.index];
                 // For transient images we need to record first and last use so that we can later name their allocations
@@ -2103,6 +2104,7 @@ namespace daxa
                 task_image.create_flags |= view_type_to_create_flags(image_attach.view_type);
                 auto [current_image_layout, current_image_access, current_access_concurrency] = task_image_access_to_layout_access(used_image_t_access);
                 image_attach.layout = current_image_layout;
+                image_attach.access = current_image_access;
                 // Now this seems strange, why would be need multiple current use slices, as we only have one here.
                 // This is because when we intersect this slice with the tracked slices, we get an intersection and a rest.
                 // We need to then test the rest against all the remaining tracked uses,
@@ -3513,7 +3515,7 @@ namespace daxa
             task.base_task->attachments(),
             [&](u32, auto const & attach)
             {
-                auto [access, is_concurrent] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.access));
+                auto [access, is_concurrent] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.task_access));
                 std::string_view type_str = buffer_blas_tlas_str(attach.translated_view, permutation);
                 fmt::format_to(std::back_inserter(out), "{}{} argument:\n", indent, type_str);
                 fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
@@ -3522,7 +3524,7 @@ namespace daxa
             },
             [&](u32, TaskImageAttachmentInfo const & img)
             {
-                auto [layout, access, is_concurrent] = task_image_access_to_layout_access(img.access);
+                auto [layout, access, is_concurrent] = task_image_access_to_layout_access(img.task_access);
                 fmt::format_to(std::back_inserter(out), "{}image argument:\n", indent);
                 fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
                 fmt::format_to(std::back_inserter(out), "{}layout: {}\n", indent, to_string(layout));

@@ -331,7 +331,8 @@ namespace daxa
     {
         using INDEX_TYPE = typename TaskBufferAttachmentIndex;
         char const * name = {};
-        TaskBufferAccess access = {};
+        TaskBufferAccess task_access = {};
+        Access access = {};
         u8 shader_array_size = {};
         bool shader_as_address = {};
     };
@@ -340,14 +341,16 @@ namespace daxa
     {
         using INDEX_TYPE = typename TaskBlasAttachmentIndex;
         char const * name = {};
-        TaskBlasAccess access = {};
+        TaskBlasAccess task_access = {};
+        Access access = {};
     };
 
     struct TaskTlasAttachment
     {
         using INDEX_TYPE = typename TaskTlasAttachmentIndex;
         char const * name = {};
-        TaskTlasAccess access = {};
+        TaskTlasAccess task_access = {};
+        Access access = {};
         bool shader_as_address = {};
     };
 
@@ -355,7 +358,8 @@ namespace daxa
     {
         using INDEX_TYPE = typename TaskImageAttachmentIndex;
         char const * name = {};
-        TaskImageAccess access = {};
+        TaskImageAccess task_access = {};
+        Access access = {};
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
         bool shader_as_index = {};
@@ -1125,7 +1129,7 @@ namespace daxa
     {
         TaskBufferAttachmentInfo buf = {};
         buf.name = "inline attachment";
-        buf.access = access;
+        buf.task_access = access;
         buf.shader_array_size = 0;
         buf.shader_as_address = false;
         buf.view = view;
@@ -1139,7 +1143,7 @@ namespace daxa
     {
         TaskBlasAttachmentInfo blas = {};
         blas.name = "inline attachment";
-        blas.access = access;
+        blas.task_access = access;
         blas.view = view;
         TaskAttachmentInfo info = {};
         info.type = daxa::TaskAttachmentType::BLAS;
@@ -1151,7 +1155,7 @@ namespace daxa
     {
         TaskTlasAttachmentInfo tlas = {};
         tlas.name = "inline attachment";
-        tlas.access = access;
+        tlas.task_access = access;
         tlas.view = view;
         tlas.shader_as_address = false;
         TaskAttachmentInfo info = {};
@@ -1164,7 +1168,7 @@ namespace daxa
     {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
-        img.access = access;
+        img.task_access = access;
         img.view_type = daxa::ImageViewType::MAX_ENUM;
         img.shader_array_size = 0;
         img.view = view;
@@ -1178,7 +1182,7 @@ namespace daxa
     {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
-        img.access = access;
+        img.task_access = access;
         img.view_type = view_type;
         img.shader_array_size = 0;
         img.view = view;
