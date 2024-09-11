@@ -147,6 +147,10 @@ namespace daxa
         {
             return value == 0;
         }
+        SamplerState get()
+        {
+            return samplers[index()];
+        }
     };
 
 #if defined(DAXA_RAY_TRACING)
