@@ -356,7 +356,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
             .name = this->info_name.c_str(),
         };
         ImageId id = {};
-        auto result = this->device->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, usage, image_info, &id);
+        result = this->device->new_swapchain_image(swapchain_images[i], vk_surface_format.format, i, usage, image_info, &id);
         _DAXA_RETURN_IF_ERROR(result, result)
         
         this->images[i] = id;
