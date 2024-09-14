@@ -199,7 +199,7 @@ namespace daxa
         return ret;
     }
 
-    auto Instance::choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 const& p_info) -> DeviceInfo2
+    auto Instance::choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 const & p_info) -> DeviceInfo2
     {
         auto info = p_info;
         check_result(daxa_instance_choose_device(
@@ -209,12 +209,12 @@ namespace daxa
                      "failed to find fitting device");
         return info;
     }
-    
+
     auto Instance::list_devices_properties() -> std::span<DeviceProperties const>
     {
         DeviceProperties const * data = {};
         u32 size = {};
-        daxa_instance_list_devices_properties(r_cast<daxa_Instance>(this->object), r_cast<daxa_DeviceProperties const**>(&data), &size);
+        daxa_instance_list_devices_properties(r_cast<daxa_Instance>(this->object), r_cast<daxa_DeviceProperties const **>(&data), &size);
         return {data, size};
     }
 
@@ -295,43 +295,43 @@ namespace daxa
         return ret;
     }
 
-#define DAXA_DECL_GPU_RES_FN(Name, name)                                \
-    auto Device::create_##name(Name##Info const & info) -> Name##Id     \
-    {                                                                   \
-        Name##Id id = {};                                               \
-        check_result(                                                   \
-            daxa_dvc_create_##name(                                     \
-                r_cast<daxa_Device>(this->object),                      \
-                r_cast<daxa_##Name##Info const *>(&info),               \
-                r_cast<daxa_##Name##Id *>(&id)),                        \
-            "failed to create " #name);                                 \
-        return id;                                                      \
-    }                                                                   \
-    void Device::destroy_##name(Name##Id id)                            \
-    {                                                                   \
-        auto result = daxa_dvc_destroy_##name(                          \
-            r_cast<daxa_Device>(this->object),                          \
-            static_cast<daxa_##Name##Id>(id));                          \
-        check_result(result, "invalid resource id");                    \
-    }                                                                   \
-    auto Device::is_##name##_id_valid(Name##Id id) const -> bool        \
-    {                                                                   \
-        return daxa_dvc_is_##name##_valid(                              \
-            rc_cast<daxa_Device>(this->object),                         \
-            static_cast<daxa_##Name##Id>(id));                          \
-    }                                                                   \
-    auto Device::name##_info(Name##Id id) const -> Optional<Name##Info> \
-    {                                                                   \
-        Name##Info info = {};                                           \
-        auto result = daxa_dvc_info_##name(                             \
-            rc_cast<daxa_Device>(this->object),                         \
-            static_cast<daxa_##Name##Id>(id),                           \
-            r_cast<daxa_##Name##Info *>(&info));                        \
-        if (result == DAXA_RESULT_SUCCESS)                              \
-        {                                                               \
-            return {info};                                              \
-        }                                                               \
-        return {};                                                      \
+#define DAXA_DECL_GPU_RES_FN(Name, name)                              \
+    auto Device::create_##name(Name##Info const & info)->Name##Id     \
+    {                                                                 \
+        Name##Id id = {};                                             \
+        check_result(                                                 \
+            daxa_dvc_create_##name(                                   \
+                r_cast<daxa_Device>(this->object),                    \
+                r_cast<daxa_##Name##Info const *>(&info),             \
+                r_cast<daxa_##Name##Id *>(&id)),                      \
+            "failed to create " #name);                               \
+        return id;                                                    \
+    }                                                                 \
+    void Device::destroy_##name(Name##Id id)                          \
+    {                                                                 \
+        auto result = daxa_dvc_destroy_##name(                        \
+            r_cast<daxa_Device>(this->object),                        \
+            static_cast<daxa_##Name##Id>(id));                        \
+        check_result(result, "invalid resource id");                  \
+    }                                                                 \
+    auto Device::is_##name##_id_valid(Name##Id id) const->bool        \
+    {                                                                 \
+        return daxa_dvc_is_##name##_valid(                            \
+            rc_cast<daxa_Device>(this->object),                       \
+            static_cast<daxa_##Name##Id>(id));                        \
+    }                                                                 \
+    auto Device::name##_info(Name##Id id) const->Optional<Name##Info> \
+    {                                                                 \
+        Name##Info info = {};                                         \
+        auto result = daxa_dvc_info_##name(                           \
+            rc_cast<daxa_Device>(this->object),                       \
+            static_cast<daxa_##Name##Id>(id),                         \
+            r_cast<daxa_##Name##Info *>(&info));                      \
+        if (result == DAXA_RESULT_SUCCESS)                            \
+        {                                                             \
+            return {info};                                            \
+        }                                                             \
+        return {};                                                    \
     }
 
     auto Device::create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId
@@ -446,7 +446,7 @@ namespace daxa
     }
 
 #define DAXA_DECL_DVC_CREATE_FN(Name, name)                        \
-    auto Device::create_##name(Name##Info const & info) -> Name    \
+    auto Device::create_##name(Name##Info const & info)->Name      \
     {                                                              \
         Name ret = {};                                             \
         check_result(daxa_dvc_create_##name(                       \
@@ -1839,7 +1839,7 @@ namespace daxa
         case QueueFamily::MAIN: return "MAIN";
         case QueueFamily::COMPUTE: return "COMPUTE";
         case QueueFamily::TRANSFER: return "TRANSFER";
-        };
+        }
     }
 
     /// --- End to_string ---
