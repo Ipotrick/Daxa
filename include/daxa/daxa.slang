@@ -215,7 +215,7 @@ namespace daxa\
         TYPE<T> get_coherent() { return TYPE<T>::get_coherent(id); }\
     };    \
     __generic<T>\
-    struct TYPE ## Idx\
+    struct TYPE ## Index\
     {\
         ImageViewIndex index;\
         TYPE<T> get() { return TYPE<T>::get(index); }\
