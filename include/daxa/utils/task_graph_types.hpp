@@ -316,13 +316,6 @@ namespace daxa
     template <typename T>
     concept TaskBufferBlasOrTlasIndexOrView = TaskBufferIndexOrView<T> || TaskBlasIndexOrView<T> || TaskTlasIndexOrView<T>;
 
-    template <typename T>
-    concept TaskAttachmentIndex =
-        std::is_same_v<T, TaskBufferAttachmentIndex> ||
-        std::is_same_v<T, TaskBlasAttachmentIndex> ||
-        std::is_same_v<T, TaskTlasAttachmentIndex> ||
-        std::is_same_v<T, TaskImageAttachmentIndex>;
-
     struct UndefinedAttachment
     {
     };
@@ -398,6 +391,13 @@ namespace daxa
         TaskHeadImageArrayType shader_array_type = {};
         TaskImageView view = {};
     };
+
+    template <typename T>
+    concept IsTaskAttachment =
+        std::is_same_v<T, TaskBufferAttachment> ||
+        std::is_same_v<T, TaskBlasAttachment> ||
+        std::is_same_v<T, TaskTlasAttachment> ||
+        std::is_same_v<T, TaskImageAttachment>;
 
     struct TaskAttachment
     {
@@ -731,8 +731,8 @@ namespace daxa
     struct PartialTask : IPartialTask
     {
         /// NOTE: Used to add attachments and declate named constant indices to the added attachment.
-        template <TaskAttachmentIndex IndexT>
-        static auto add_attachment(IndexT const & attach) -> IndexT::INDEX_TYPE
+        template <IsTaskAttachment AttachT>
+        static auto add_attachment(AttachT const & attach) -> AttachT::INDEX_TYPE
         {
             declared_attachments.at(cur_attach_index) = attach;
             return {cur_attach_index++};

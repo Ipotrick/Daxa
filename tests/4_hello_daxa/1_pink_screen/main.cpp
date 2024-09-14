@@ -70,8 +70,8 @@ auto main() -> int
     // The device info contains explicit data.
     // These are settings of the choosen gpu, what resource limits, explicit features, name etc you want for the device.
     daxa::DeviceInfo2 device_info = {
-        .max_allowed_buffers = 1024,
         .explicit_features = {},
+        .max_allowed_buffers = 1024,
         .name = "my device",
     };
 
@@ -99,7 +99,8 @@ auto main() -> int
         // These features pose no downsides, so they are always enabled when present.
         // We must check if the gpu supports the implicit features we want for the device.
         daxa::ImplicitFeatureFlags required_implicit_features = {};
-        if (!(properties.explicit_features & required_explicit_features) || !(properties.implicit_features & required_implicit_features))
+        if (((properties.explicit_features & required_explicit_features) != required_explicit_features) ||
+            ((properties.implicit_features & required_implicit_features) != required_implicit_features))
         {
             continue;
         }
@@ -109,7 +110,7 @@ auto main() -> int
         {
             continue;
         }
-        
+
         // If a device fulfills all our requirements, we pick it:
         device_info.physical_device_index = i;
         break;
