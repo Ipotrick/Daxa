@@ -1175,7 +1175,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(Format format) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Format format) -> std::string_view;
 
     template <typename Properties>
     struct Flags final
@@ -1279,7 +1279,7 @@ namespace daxa
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
     };
 
-    [[nodiscard]] auto to_string(ImageUsageFlags const &) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageUsageFlags const &) -> std::string;
 
     struct MemoryFlagsProperties
     {
@@ -1446,7 +1446,7 @@ namespace daxa
         static inline constexpr AccessTypeFlags READ_WRITE = READ | WRITE;
     };
 
-    [[nodiscard]] auto to_string(AccessTypeFlags flags) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(AccessTypeFlags flags) -> std::string;
 
     struct PipelineStageFlagsProperties
     {
@@ -1485,7 +1485,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags RAY_TRACING_SHADER = {0x00200000ull};
     };
 
-    [[nodiscard]] auto to_string(PipelineStageFlags flags) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(PipelineStageFlags flags) -> std::string;
 
     struct Access
     {
@@ -1856,5 +1856,5 @@ namespace daxa
         TRANSFER
     };
 
-    auto to_string(QueueFamily family) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily family) -> std::string_view;
 } // namespace daxa
