@@ -1379,6 +1379,7 @@ namespace daxa
             .attachment_infos = task.base_task->attachments(),
             .allocator = this->staging_memory.has_value() ? &this->staging_memory.value() : nullptr,
             .attachment_shader_blob = attachment_shader_blob,
+            .task_name = task.base_task->name(),
         });
         impl_runtime.recorder.end_label();
     }
