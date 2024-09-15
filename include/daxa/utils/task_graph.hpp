@@ -82,6 +82,8 @@ namespace daxa
         ///         This memory is used internally as well as by tasks via the TaskInterface::get_allocator().
         ///         Setting the size to 0, disables a few task list features but also eliminates the memory allocation.
         u32 staging_memory_pool_size = 262'144; // 2^16 bytes.
+        // Useful for debugging tools that are invisible to the graph.
+        daxa::ImageUsageFlags additional_transient_image_usage_flags = {};
         std::string name = {};
     };
 
