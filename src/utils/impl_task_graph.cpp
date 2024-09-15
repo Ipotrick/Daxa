@@ -950,6 +950,7 @@ namespace daxa
             permutation.image_infos.emplace_back(PerPermTaskImage{
                 .valid = permutation.active,
                 .swapchain_semaphore_waited_upon = false,
+                .usage = impl.info.additional_transient_image_usage_flags,
             });
         }
 
