@@ -119,22 +119,22 @@ struct daxa_ImplDevice final : public ImplHandle
         // atomically synchronized:
         std::atomic_uint64_t latest_pending_submit_timeline_value = {};
 
-        auto initialize(VkDevice vk_device, u32 queue_family_index, u32 queue_index) -> daxa_Result;
+        auto initialize(VkDevice vk_device) -> daxa_Result;
         void cleanup(VkDevice device);
         auto get_oldest_pending_submit(VkDevice vk_device, std::optional<u64> & out) -> daxa_Result;
     };
     std::array<ImplQueue, DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT + 1> queues = {
-        ImplQueue{DAXA_QUEUE_FAMILY_MAIN, 0},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 0},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 1},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 2},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 3},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 4},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 5},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 6},
-        ImplQueue{DAXA_QUEUE_FAMILY_COMPUTE, 7},
-        ImplQueue{DAXA_QUEUE_FAMILY_TRANSFER, 0},
-        ImplQueue{DAXA_QUEUE_FAMILY_TRANSFER, 1},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_MAIN, .queue_index = 0},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 0},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 1},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 2},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 3},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 4},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 5},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 6},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 7},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_TRANSFER, .queue_index = 0},
+        ImplQueue{.family = DAXA_QUEUE_FAMILY_TRANSFER, .queue_index = 1},
     };
 
     auto get_queue(daxa_Queue queue) -> ImplQueue&;

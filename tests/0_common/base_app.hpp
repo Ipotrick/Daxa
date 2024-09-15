@@ -1,4 +1,5 @@
 #pragma once
+#define SAMPLE_SHADER_LANGUAGE DAXA_LANGUAGE_GLSL
 
 #include <0_common/window.hpp>
 
@@ -19,10 +20,6 @@ using Clock = std::chrono::high_resolution_clock;
 #endif
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
 
-#if !defined(DAXA_LANGUAGE)
-#define DAXA_LANGUAGE DAXA_LANGUAGE_GLSL
-#endif
-
 template <typename T>
 struct BaseApp : AppWindow<T>
 {
@@ -32,10 +29,10 @@ struct BaseApp : AppWindow<T>
         daxa::DeviceInfo2 info = {.name = "default device"};
         daxa::ImplicitFeatureFlags required_features = {};
 #if defined(DAXA_ATOMIC_FLOAT_FLAG)
-        required_features |= daxa::ImplicitFeatureFlags::SHADER_ATOMIC_FLOAT;
+        required_features |= daxa::ImplicitFeatureFlagBits::SHADER_ATOMIC_FLOAT;
 #endif
 #if defined(DAXA_RAY_TRACING_FLAG)
-        required_features |= daxa::ImplicitFeatureFlags::BASIC_RAY_TRACING;
+        required_features |= daxa::ImplicitFeatureFlagBits::BASIC_RAY_TRACING;
 #endif
         info = daxa_ctx.choose_device(required_features, info);
         return daxa_ctx.create_device_2(info);
@@ -57,9 +54,9 @@ struct BaseApp : AppWindow<T>
                 DAXA_SAMPLE_PATH "/shaders",
                 "tests/0_common/shaders",
             },
-#if DAXA_LANGUAGE == DAXA_LANGUAGE_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .language = daxa::ShaderLanguage::GLSL,
-#elif DAXA_LANGUAGE == DAXA_LANGUAGE_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .language = daxa::ShaderLanguage::SLANG,
 #endif
             .enable_debug_info = true,

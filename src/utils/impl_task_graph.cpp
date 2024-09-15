@@ -1500,7 +1500,7 @@ namespace daxa
         return attachment_shader_blob;
     }
 
-    void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, u32 batch_index, TaskBatchId in_batch_task_index, TaskId task_id)
+    void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id)
     {
         // We always allow to reuse the last command list ONCE within the task callback.
         // When the get command list function is called in a task this is set to false.
@@ -3473,12 +3473,12 @@ namespace daxa
                 }
                 if constexpr (std::is_same_v<ChildIdT, BlasId>)
                 {
-                    auto const & child_info = info.device.info_blas(child_id).value();
+                    auto const & child_info = info.device.blas_info(child_id).value();
                     fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
                 if constexpr (std::is_same_v<ChildIdT, TlasId>)
                 {
-                    auto const & child_info = info.device.info_tlas(child_id).value();
+                    auto const & child_info = info.device.tlas_info(child_id).value();
                     fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
             }

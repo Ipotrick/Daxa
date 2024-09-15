@@ -268,6 +268,7 @@ auto daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder self, daxa_BufferCopyIn
     in_bounds = in_bounds && ((static_cast<u64>(vk_buffer_copy->dstOffset) + static_cast<u64>(vk_buffer_copy->size)) <= static_cast<u64>(dst_slot.info.size));
     if (!in_bounds)
     {
+        _DAXA_DEBUG_BREAK
         return DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS;
     }
     vkCmdCopyBuffer(

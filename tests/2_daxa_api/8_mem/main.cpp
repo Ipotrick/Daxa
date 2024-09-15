@@ -37,7 +37,7 @@ auto main() -> int
         });
 
         // Can allocate anywhere in the frame with imediately available staging memory.
-        daxa::TransferMemoryPool::Allocation alloc = tmem.allocate(ELEMENT_COUNT, 8).value();
+        daxa::TransferMemoryPool::Allocation alloc = tmem.allocate(ELEMENT_COUNT * sizeof(uint32_t), 8).value();
         for (u32 i = 0; i < ELEMENT_COUNT; ++i)
         {
             // The Allocation provides a host pointer to the memory.
