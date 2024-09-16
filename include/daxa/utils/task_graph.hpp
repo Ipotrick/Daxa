@@ -84,6 +84,9 @@ namespace daxa
         u32 staging_memory_pool_size = 262'144; // 2^16 bytes.
         // Useful for debugging tools that are invisible to the graph.
         daxa::ImageUsageFlags additional_transient_image_usage_flags = {};
+        // Useful for reflection/ debugging.
+        std::function<void(daxa::TaskInterface)> pre_task_callback = {};
+        std::function<void(daxa::TaskInterface)> post_task_callback = {};
         std::string name = {};
     };
 
