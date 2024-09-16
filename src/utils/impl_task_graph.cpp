@@ -1373,14 +1373,23 @@ namespace daxa
             .label_color = info.task_label_color,
             .name = std::string("batch ") + std::to_string(batch_index) + std::string(" task ") + std::to_string(in_batch_task_index) + std::string(" \"") + std::string(task.base_task->name()) + std::string("\""),
         });
-        task.base_task->callback(TaskInterface{
+        auto interface = TaskInterface{
             .device = this->info.device,
             .recorder = impl_runtime.recorder,
             .attachment_infos = task.base_task->attachments(),
             .allocator = this->staging_memory.has_value() ? &this->staging_memory.value() : nullptr,
             .attachment_shader_blob = attachment_shader_blob,
             .task_name = task.base_task->name(),
-        });
+        };
+        if (info.pre_task_callback)
+        {
+            info.pre_task_callback(interface);
+        }
+        task.base_task->callback(interface);
+        if (info.post_task_callback)
+        {
+            info.post_task_callback(interface);
+        }
         impl_runtime.recorder.end_label();
     }
 
