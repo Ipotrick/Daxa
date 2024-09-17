@@ -49,6 +49,7 @@ namespace daxa
         struct ImageViewId : public GPUResourceId
         {
             constexpr operator daxa_ImageViewId() const { return std::bit_cast<daxa_ImageViewId>(*this); }
+            constexpr operator daxa_ImageViewIndex() const { return daxa_ImageViewIndex(index); }
         };
 
         template <ImageViewType VIEW_TYPE>
