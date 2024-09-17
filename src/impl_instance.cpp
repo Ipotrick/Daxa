@@ -188,7 +188,7 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * leg
     
     if (rated_devices.empty())
     {
-        return DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND, DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND)
     }
 
     std::sort(rated_devices.begin(), rated_devices.end(), [](auto a, auto b){ return a.rating > b.rating; });

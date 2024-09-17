@@ -751,12 +751,12 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
 
     // Find the SBT addresses of each group
     VkDeviceAddress sbt_address = 0;
-    auto const get_device_address_result = daxa_dvc_buffer_device_address(device, sbt_buffer_id, reinterpret_cast<daxa_DeviceAddress *>(&sbt_address));
-    if (get_device_address_result != DAXA_RESULT_SUCCESS)
+    auto const device_address_result = daxa_dvc_buffer_device_address(device, sbt_buffer_id, reinterpret_cast<daxa_DeviceAddress *>(&sbt_address));
+    if (device_address_result != DAXA_RESULT_SUCCESS)
     {
         auto const destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer_id);
         _DAXA_RETURN_IF_ERROR(destroy_buffer_result, destroy_buffer_result);
-        return get_device_address_result;
+        return device_address_result;
     }
     raygen_region.deviceAddress = sbt_address;
     miss_region.deviceAddress = sbt_address + raygen_region.size;

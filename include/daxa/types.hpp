@@ -91,7 +91,9 @@ namespace daxa
         }
     };
 
-    struct NoneT { };
+    struct NoneT
+    {
+    };
     static inline constexpr NoneT None = NoneT{};
 
     template <typename T>
@@ -257,7 +259,9 @@ namespace daxa
         Span(T const * in_data, usize in_size) : m_data{in_data}, m_size{in_size} {}
         template <typename T2, usize IN_SIZE>
             requires std::same_as<T2, std::remove_cv_t<T>>
-        Span(std::array<T2, IN_SIZE> const & in) : m_data{in.data()}, m_size{in.size()} {}
+        Span(std::array<T2, IN_SIZE> const & in) : m_data{in.data()}, m_size{in.size()}
+        {
+        }
         [[nodiscard]] auto at(usize i) -> T &
         {
             DAXA_DBG_ASSERT_TRUE_M(i < m_size, "INDEX OUT OF RANGE");
@@ -621,7 +625,7 @@ namespace daxa
         } // namespace v1
 
         struct variant_npos_t {
-            template <class T> constexpr auto operator==(T idx) const noexcept -> bool { return idx == std::numeric_limits<T>::max(); }
+            template <class T> constexpr auto operator==(T index) const noexcept -> bool { return index == std::numeric_limits<T>::max(); }
         };
 
         template <class T>

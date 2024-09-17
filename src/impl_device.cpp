@@ -55,11 +55,11 @@ namespace
     inline auto create_buffer_use_flags(daxa_Device self) -> VkBufferUsageFlags
     {
         VkBufferUsageFlags result = VK_BUFFER_USAGE_SHADER_DEVICE_ADDRESS_BIT |
-                      VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
-                      VK_BUFFER_USAGE_TRANSFER_DST_BIT |
-                      VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
-                      VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
-                      VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
+                                    VK_BUFFER_USAGE_TRANSFER_SRC_BIT |
+                                    VK_BUFFER_USAGE_TRANSFER_DST_BIT |
+                                    VK_BUFFER_USAGE_STORAGE_BUFFER_BIT |
+                                    VK_BUFFER_USAGE_INDEX_BUFFER_BIT |
+                                    VK_BUFFER_USAGE_INDIRECT_BUFFER_BIT;
         if (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
         {
             result |= VK_BUFFER_USAGE_ACCELERATION_STRUCTURE_BUILD_INPUT_READ_ONLY_BIT_KHR |
@@ -87,11 +87,17 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device, u32 queue_family
 
     this->vk_queue_family_index = queue_family_index;
     vkGetDeviceQueue(vk_device, queue_family_index, queue_index, &this->vk_queue);
+    daxa_Result result = DAXA_RESULT_SUCCESS;
     if (this->vk_queue == VK_NULL_HANDLE)
     {
-        return DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE;
+        result = DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE;
     }
-    return static_cast<daxa_Result>(vkCreateSemaphore(vk_device, &vk_semaphore_create_info, nullptr, &this->gpu_queue_local_timeline));
+    _DAXA_RETURN_IF_ERROR(result, result)
+
+    result = static_cast<daxa_Result>(vkCreateSemaphore(vk_device, &vk_semaphore_create_info, nullptr, &this->gpu_queue_local_timeline));
+    _DAXA_RETURN_IF_ERROR(result, result)
+
+    return result;
 }
 
 void daxa_ImplDevice::ImplQueue::cleanup(VkDevice device)
@@ -109,7 +115,7 @@ auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit(VkDevice vk_device, s
         u64 latest_gpu = {};
         auto result = static_cast<daxa_Result>(vkGetSemaphoreCounterValue(vk_device, this->gpu_queue_local_timeline, &latest_gpu));
         _DAXA_RETURN_IF_ERROR(result, result);
-        
+
         u64 latest_cpu = this->latest_pending_submit_timeline_value.load(std::memory_order::acquire);
 
         bool const cpu_ahead_of_gpu = latest_cpu > latest_gpu;
@@ -130,19 +136,26 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     // Size must be larger then one.
     parameters_valid = parameters_valid && info->size > 0;
     if (!parameters_valid)
-        return DAXA_RESULT_INVALID_BUFFER_INFO;
+    {
+        result = DAXA_RESULT_INVALID_BUFFER_INFO;
+    }
+    _DAXA_RETURN_IF_ERROR(result, result)
 
     // --- End Parameter Validation ---
 
     auto slot_opt = self->gpu_sro_table.buffer_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXCEEDED_MAX_BUFFERS;
+        result = DAXA_RESULT_EXCEEDED_MAX_BUFFERS;
     }
+    _DAXA_RETURN_IF_ERROR(result, result)
+
     auto [id, ret] = slot_opt.value();
 
-    defer{
-        if (result != DAXA_RESULT_SUCCESS) {
+    defer
+    {
+        if (result != DAXA_RESULT_SUCCESS)
+        {
             self->gpu_sro_table.buffer_slots.unsafe_destroy_zombie_slot(id);
             if (ret.vk_buffer)
             {
@@ -272,10 +285,13 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
     auto slot_opt = self->gpu_sro_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXCEEDED_MAX_IMAGES;
+        result = DAXA_RESULT_EXCEEDED_MAX_IMAGES;
     }
+    _DAXA_RETURN_IF_ERROR(result, result)
+
     auto [id, ret] = slot_opt.value();
-    defer{
+    defer
+    {
         if (result != DAXA_RESULT_SUCCESS)
         {
             if (ret.vk_image)
@@ -428,18 +444,22 @@ auto create_acceleration_structure_helper(
 
     if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
-        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+        result = DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
+    _DAXA_RETURN_IF_ERROR(result, result);
 
     // --- End Parameter Validation ---
 
     auto slot_opt = table.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES;
+        result = DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES;
     }
+    _DAXA_RETURN_IF_ERROR(result, result);
+
     auto [id, ret] = slot_opt.value();
-    defer{
+    defer
+    {
         if (result != DAXA_RESULT_SUCCESS)
         {
             table.unsafe_destroy_zombie_slot(id);
@@ -604,7 +624,7 @@ auto daxa_dvc_get_tlas_build_sizes(
 {
     if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
-        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING, DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING);
     }
     std::vector<VkAccelerationStructureBuildGeometryInfoKHR> vk_build_geometry_infos = {};
     std::vector<VkAccelerationStructureGeometryKHR> vk_geometry_infos = {};
@@ -644,7 +664,7 @@ auto daxa_dvc_get_blas_build_sizes(
 {
     if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
-        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING, DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING);
     }
     std::vector<VkAccelerationStructureBuildGeometryInfoKHR> vk_build_geometry_infos = {};
     std::vector<VkAccelerationStructureGeometryKHR> vk_geometry_infos = {};
@@ -754,10 +774,11 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     auto slot_opt = self->gpu_sro_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
     {
-        return DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS, DAXA_RESULT_EXCEEDED_MAX_IMAGE_VIEWS);
     }
     auto [id, image_slot] = slot_opt.value();
-    defer{
+    defer
+    {
         if (result != DAXA_RESULT_SUCCESS)
         {
             self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
@@ -825,7 +846,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 
     if (!(info->mipmap_filter != VkFilter::VK_FILTER_CUBIC_IMG))
     {
-        return DAXA_RESULT_INVALID_SAMPLER_INFO;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_SAMPLER_INFO, DAXA_RESULT_INVALID_SAMPLER_INFO);
     }
 
     /// --- End Validation ---
@@ -835,7 +856,8 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
         return DAXA_RESULT_EXCEEDED_MAX_SAMPLERS;
     }
     auto [id, ret] = slot_opt.value();
-    defer{
+    defer
+    {
         if (result != DAXA_RESULT_SUCCESS)
         {
             self->gpu_sro_table.sampler_slots.unsafe_destroy_zombie_slot(id);
@@ -949,7 +971,7 @@ auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_Dev
 {
     if (!daxa_dvc_is_buffer_valid(self, id))
     {
-        return DAXA_RESULT_INVALID_BUFFER_ID;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_BUFFER_ID, DAXA_RESULT_INVALID_BUFFER_ID);
     }
     *out_addr = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<BufferId>(id)).device_address);
     return DAXA_RESULT_SUCCESS;
@@ -959,7 +981,7 @@ auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId id, void ** ou
 {
     if (!daxa_dvc_is_buffer_valid(self, id))
     {
-        return DAXA_RESULT_INVALID_BUFFER_ID;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_BUFFER_ID, DAXA_RESULT_INVALID_BUFFER_ID);
     }
     if (self->slot(std::bit_cast<BufferId>(id)).host_address == 0)
     {
@@ -973,7 +995,7 @@ auto daxa_dvc_tlas_device_address(daxa_Device self, daxa_TlasId id, daxa_DeviceA
 {
     if (!daxa_dvc_is_tlas_valid(self, id))
     {
-        return DAXA_RESULT_INVALID_TLAS_ID;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_TLAS_ID, DAXA_RESULT_INVALID_TLAS_ID);
     }
     *out_addr = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<TlasId>(id)).device_address);
     return DAXA_RESULT_SUCCESS;
@@ -983,7 +1005,7 @@ auto daxa_dvc_blas_device_address(daxa_Device self, daxa_BlasId id, daxa_DeviceA
 {
     if (!daxa_dvc_is_blas_valid(self, id))
     {
-        return DAXA_RESULT_INVALID_BLAS_ID;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_BLAS_ID, DAXA_RESULT_INVALID_BLAS_ID);
     }
     *out_addr = static_cast<daxa_DeviceAddress>(self->slot(std::bit_cast<BlasId>(id)).device_address);
     return DAXA_RESULT_SUCCESS;
@@ -1013,11 +1035,11 @@ auto daxa_dvc_queue_wait_idle(daxa_Device self, daxa_Queue queue) -> daxa_Result
 {
     if (!self->valid_queue(queue))
     {
-        return DAXA_RESULT_ERROR_INVALID_QUEUE;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
     if (queue.index >= self->queue_families[queue.family].queue_count)
     {
-        return DAXA_RESULT_ERROR_INVALID_QUEUE;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
     return std::bit_cast<daxa_Result>(vkQueueWaitIdle(self->get_queue(queue).vk_queue));
 }
@@ -1026,7 +1048,7 @@ auto daxa_dvc_queue_count(daxa_Device self, daxa_QueueFamily queue_family, u32 *
 {
     if (queue_family >= DAXA_QUEUE_FAMILY_MAX_ENUM)
     {
-        return DAXA_RESULT_ERROR_INVALID_QUEUE;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
     *out_value = self->queue_families[queue_family].queue_count;
     return DAXA_RESULT_SUCCESS;
@@ -1036,48 +1058,48 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 {
     if (!self->valid_queue(info->queue))
     {
-        return DAXA_RESULT_ERROR_INVALID_QUEUE;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
 
     std::shared_lock lifetime_lock{self->gpu_sro_table.lifetime_lock};
 
     if (static_cast<u32>(info->queue.index) >= self->queue_families[info->queue.family].queue_count)
     {
-        return DAXA_RESULT_ERROR_INVALID_QUEUE;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
 
     for (daxa_ExecutableCommandList commands : std::span{info->command_lists, info->command_list_count})
     {
         if (commands->cmd_recorder->info.queue_family != info->queue.family)
         {
-            return DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH, DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH);
         }
         for (BufferId id : commands->data.used_buffers)
         {
             if (!daxa_dvc_is_buffer_valid(self, id))
             {
-                return DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID;
+                _DAXA_RETURN_IF_ERROR(DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID, DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID);
             }
         }
         for (ImageId id : commands->data.used_images)
         {
             if (!daxa_dvc_is_image_valid(self, id))
             {
-                return DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID;
+                _DAXA_RETURN_IF_ERROR(DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID, DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID);
             }
         }
         for (ImageViewId id : commands->data.used_image_views)
         {
             if (!daxa_dvc_is_image_view_valid(self, id))
             {
-                return DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID;
+                _DAXA_RETURN_IF_ERROR(DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID);
             }
         }
         for (SamplerId id : commands->data.used_samplers)
         {
             if (!daxa_dvc_is_sampler_valid(self, id))
             {
-                return DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID;
+                _DAXA_RETURN_IF_ERROR(DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID, DAXA_RESULT_COMMAND_REFERENCES_INVALID_SAMPLER_ID);
             }
         }
     }
@@ -1155,11 +1177,8 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
         .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signals.size()),
         .pSignalSemaphores = submit_semaphore_signals.data(),
     };
-    auto result = vkQueueSubmit(queue.vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE);
-    if (result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(result);
-    }
+    auto result = static_cast<daxa_Result>(vkQueueSubmit(queue.vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE));
+    _DAXA_RETURN_IF_ERROR(result, result)
 
     std::unique_lock const lock{self->zombies_mtx};
 
@@ -1170,11 +1189,11 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
 {
     if (info->queue.family != static_cast<daxa_QueueFamily>(info->swapchain->info.queue_family))
     {
-        return DAXA_RESULT_ERROR_PRESENT_QUEUE_FAMILY_MISMATCH;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_PRESENT_QUEUE_FAMILY_MISMATCH, DAXA_RESULT_ERROR_PRESENT_QUEUE_FAMILY_MISMATCH)
     }
     if (!self->valid_queue(info->queue))
     {
-        return DAXA_RESULT_ERROR_INVALID_QUEUE;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE)
     }
     // used to synchronize with previous submits:
     std::vector<VkSemaphore> submit_semaphore_waits = {};
@@ -1195,7 +1214,8 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
         .pResults = {},
     };
 
-    auto result = vkQueuePresentKHR(self->get_queue(info->queue).vk_queue, &present_info);
+    auto result = static_cast<daxa_Result>(vkQueuePresentKHR(self->get_queue(info->queue).vk_queue, &present_info));
+    _DAXA_RETURN_IF_ERROR(result, result)
 
     return std::bit_cast<daxa_Result>(result);
 }
@@ -1965,8 +1985,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         }
     }
 
-    // TODO: Add error management!
-    self->gpu_sro_table.initialize(
+    result = self->gpu_sro_table.initialize(
         self->info.max_allowed_buffers,
         self->info.max_allowed_images,
         self->info.max_allowed_samplers,
@@ -1974,6 +1993,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         self->vk_device,
         self->buffer_device_address_buffer,
         self->vkSetDebugUtilsObjectNameEXT);
+    _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
 
     result = static_cast<daxa_Result>(vkEndCommandBuffer(init_cmd_buffer));
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
@@ -2000,7 +2020,6 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
 
     return DAXA_RESULT_SUCCESS;
 }
-
 
 auto daxa_ImplDevice::get_queue(daxa_Queue queue) -> daxa_ImplDevice::ImplQueue &
 {
@@ -2047,14 +2066,15 @@ auto daxa_ImplDevice::validate_image_slice(daxa_ImageMipArraySlice const & slice
     }
 }
 
-auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info) -> std::pair<daxa_Result, ImageId>
+auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info, ImageId * out) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
 
     auto slot_opt = this->gpu_sro_table.image_slots.try_create_slot();
     DAXA_DBG_ASSERT_TRUE_M(slot_opt.has_value(), "CRITICAL INTERNAL ERROR, EXCEEDED MAX IMAGES IN SWAPCHAIN CREATION");
     auto [id, ret] = slot_opt.value();
-    defer{
+    defer
+    {
         if (result != DAXA_RESULT_SUCCESS)
         {
             gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
@@ -2101,10 +2121,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     ret.info = *r_cast<daxa_ImageInfo const *>(&image_info);
     result = static_cast<daxa_Result>(vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view));
-    if (result != VK_SUCCESS)
-    {
-        return {std::bit_cast<daxa_Result>(result), ImageId{}};
-    }
+    _DAXA_RETURN_IF_ERROR(result, result)
 
     if ((this->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !image_info.name.empty())
     {
@@ -2134,7 +2151,9 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
         write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
     }
 
-    return {DAXA_RESULT_SUCCESS, ImageId{id}};
+    *out = ImageId{id};
+
+    return result;
 }
 
 void daxa_ImplDevice::cleanup_buffer(BufferId id)
@@ -2290,8 +2309,8 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     delete self;
 }
 
-template<typename T>
-void zombiefy(daxa_Device self, T id, auto& slots, auto& zombies)
+template <typename T>
+void zombiefy(daxa_Device self, T id, auto & slots, auto & zombies)
 {
     [[maybe_unused]] auto & slot = slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
     if constexpr (std::is_same_v<T, BufferId> || std::is_same_v<T, ImageId>)
@@ -2313,7 +2332,7 @@ void zombiefy(daxa_Device self, T id, auto& slots, auto& zombies)
     u64 const submit_timeline_value = self->global_submit_timeline.load(std::memory_order::relaxed);
     {
         std::unique_lock const lock{self->zombies_mtx};
-        zombies.push_front(std::pair{submit_timeline_value, id });
+        zombies.push_front(std::pair{submit_timeline_value, id});
     }
 }
 

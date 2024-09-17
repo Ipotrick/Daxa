@@ -229,13 +229,10 @@ void remember_ids(daxa_CommandRecorder self, Args... args)
     (remember_ids(self, args), ...);
 }
 
-#define _DAXA_CHECK_IDS(...)                                  \
-    {                                                         \
-        auto _DAXA_CHECK_IDS_RESULT = check_ids(__VA_ARGS__); \
-        if (_DAXA_CHECK_IDS_RESULT != DAXA_RESULT_SUCCESS)    \
-        {                                                     \
-            return _DAXA_CHECK_IDS_RESULT;                    \
-        }                                                     \
+#define _DAXA_CHECK_IDS(...)                                                  \
+    {                                                                         \
+        auto _DAXA_CHECK_IDS_RESULT = check_ids(__VA_ARGS__);                 \
+        _DAXA_RETURN_IF_ERROR(_DAXA_CHECK_IDS_RESULT, _DAXA_CHECK_IDS_RESULT) \
     }
 
 #define _DAXA_REMEMBER_IDS(...) remember_ids(__VA_ARGS__);
@@ -380,10 +377,12 @@ auto daxa_cmd_blit_image_to_image(daxa_CommandRecorder self, daxa_ImageBlitInfo 
 
 auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_BuildAccelerationStucturesInfo const * info) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
     if ((self->device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
-        return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+        result = DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
+    _DAXA_RETURN_IF_ERROR(result, result)
     daxa_cmd_flush_barriers(self);
     for (auto const & tb_info : std::span{info->tlas_build_infos, info->tlas_build_info_count})
     {
@@ -440,7 +439,7 @@ auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_Buil
         static_cast<u32>(vk_build_geometry_infos.size()),
         vk_build_geometry_infos.data(),
         vk_build_ranges_ptrs.data());
-    return DAXA_RESULT_SUCCESS;
+    return result;
 }
 
 auto daxa_cmd_clear_buffer(daxa_CommandRecorder self, daxa_BufferClearInfo const * info) -> daxa_Result
@@ -1160,9 +1159,10 @@ void daxa_destroy_command_recorder(daxa_CommandRecorder self)
 
 auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderInfo const * info, daxa_CommandRecorder * out_cmd_list) -> daxa_Result
 {
-    VkCommandPool vk_cmd_pool = [&](){ 
+    VkCommandPool vk_cmd_pool = [&]()
+    {
         std::unique_lock lock{device->command_pool_pools[info->queue_family].mtx};
-        return device->command_pool_pools[info->queue_family].get(device); 
+        return device->command_pool_pools[info->queue_family].get(device);
     }();
     auto ret = daxa_ImplCommandRecorder{};
     ret.device = device;

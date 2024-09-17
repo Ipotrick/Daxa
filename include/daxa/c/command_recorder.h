@@ -212,7 +212,7 @@ typedef struct
     daxa_RayTracingShaderBindingTable shader_binding_table;
 } daxa_TraceRaysInfo;
 
-static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = {0, 0, 0, 0, 0, 0, 0};
+static daxa_TraceRaysInfo const DAXA_DEFAULT_TRACE_RAYS_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {

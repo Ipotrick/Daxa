@@ -92,6 +92,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
         daxa_u64 device_address()
         {
             return buffer_addresses[index()];
@@ -109,6 +113,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
     };
 
     struct ImageViewIndex
@@ -117,6 +125,10 @@ namespace daxa
         daxa_u32 index()
         {
             return value;
+        }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
         }
     };
 
@@ -130,6 +142,10 @@ namespace daxa
         daxa_u64 version()
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
+        }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
         }
     };
 
@@ -145,6 +161,10 @@ namespace daxa
         {
             return (value >> DAXA_ID_VERSION_OFFSTET);
         }
+        daxa_b32 is_empty()
+        {
+            return value == 0;
+        }
     };
 
     [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
@@ -153,8 +173,67 @@ namespace daxa
         static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
     }
 #endif // DAXA_RAY_TRACING
-    
+
+    extension ByteAddressBuffer
+    {
+        static ByteAddressBuffer get(daxa::BufferId i) { return buffers[i.index()]; }
+        static ByteAddressBuffer get_coherent(daxa::BufferId i) { return buffers[i.index()]; }
+    };    
+
+    extension RWByteAddressBuffer
+    {
+        static RWByteAddressBuffer get(daxa::BufferId i) { return buffers[i.index()]; }
+        static RWByteAddressBuffer get_coherent(daxa::BufferId i) { return buffers[i.index()]; }
+    };    
+
+    extension SamplerState
+    {
+        static SamplerState get(daxa::SamplerId i) { return samplers[i.index()]; }
+    }
+
 } // namespace daxa
+
+#define _DAXA_DECL_TEX_EXTENSION(TYPE, TABLE)\
+__generic<T> extension TYPE<T>\
+{\
+    static TYPE<T> get(daxa::ImageViewId i) { return TABLE[i.index()]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE[i.index()]; }\
+    static TYPE<T> get(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
+}\
+namespace daxa\
+{\
+    __generic<T>\
+    struct TYPE ## Id\
+    {\
+        ImageViewId id;\
+        TYPE<T> get() { return TYPE<T>::get(id); }\
+        TYPE<T> get_coherent() { return TYPE<T>::get_coherent(id); }\
+    };    \
+    __generic<T>\
+    struct TYPE ## Idx\
+    {\
+        ImageViewIndex index;\
+        TYPE<T> get() { return TYPE<T>::get(index); }\
+        TYPE<T> get_coherent() { return TYPE<T>::get_coherent(index); }\
+    };\
+}
+
+_DAXA_DECL_TEX_EXTENSION(RWTexture1D, daxa::storage_images)
+_DAXA_DECL_TEX_EXTENSION(RWTexture2D, daxa::storage_images)
+_DAXA_DECL_TEX_EXTENSION(RWTexture3D, daxa::storage_images)
+_DAXA_DECL_TEX_EXTENSION(RWTexture1DArray, daxa::storage_images)
+_DAXA_DECL_TEX_EXTENSION(RWTexture2DArray, daxa::storage_images)
+    
+_DAXA_DECL_TEX_EXTENSION(Texture1D, daxa::sampled_images)
+_DAXA_DECL_TEX_EXTENSION(Texture2D, daxa::sampled_images)
+_DAXA_DECL_TEX_EXTENSION(Texture3D, daxa::sampled_images)
+_DAXA_DECL_TEX_EXTENSION(Texture1DArray, daxa::sampled_images)
+_DAXA_DECL_TEX_EXTENSION(Texture2DArray, daxa::sampled_images)
+_DAXA_DECL_TEX_EXTENSION(TextureCube, daxa::sampled_images)
+_DAXA_DECL_TEX_EXTENSION(TextureCubeArray, daxa::sampled_images)
+_DAXA_DECL_TEX_EXTENSION(Texture2DMS, daxa::sampled_images)
+
 
 // These are hopefully only temporary global namespace declarations:
 _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(uint, daxa_u)
