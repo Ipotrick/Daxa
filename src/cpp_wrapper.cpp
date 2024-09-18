@@ -137,7 +137,7 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case daxa_Result::DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_ACCELERATION_STRUCTURE_COUNT: return "DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_ACCELERATION_STRUCTURE_COUNT";
     case daxa_Result::DAXA_RESULT_ERROR_NO_SUITABLE_DEVICE_FOUND: return "DAXA_RESULT_ERROR_NO_SUITABLE_DEVICE_FOUND";
     case daxa_Result::DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
-    default: return "UNIMPLEMENTED";
+    default: return "UNIMPLEMENTED CASE";
     }
 };
 
@@ -1242,8 +1242,8 @@ namespace daxa
         case ImageLayout::TRANSFER_DST_OPTIMAL: return "TRANSFER_DST_OPTIMAL";
         case ImageLayout::READ_ONLY_OPTIMAL: return "READ_ONLY_OPTIMAL";
         case ImageLayout::ATTACHMENT_OPTIMAL: return "ATTACHMENT_OPTIMAL";
-        case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";
-        default: DAXA_DBG_ASSERT_TRUE_M(false, "invalid ImageLayout");
+        case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";    
+        default: return "UNIMPLEMENTED CASE";
         }
         return "invalid ImageLayout";
     }
@@ -1591,7 +1591,7 @@ namespace daxa
         case Format::PVRTC1_4BPP_SRGB_BLOCK_IMG: return "PVRTC1_4BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_2BPP_SRGB_BLOCK_IMG: return "PVRTC2_2BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_4BPP_SRGB_BLOCK_IMG: return "PVRTC2_4BPP_SRGB_BLOCK_IMG";
-        default: return "unknown";
+        default: return "UNIMPLEMENTED CASE";
         }
     }
 
