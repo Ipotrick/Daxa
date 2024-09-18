@@ -388,7 +388,7 @@ namespace daxa
         case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_WRITE"};
         case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_READ_WRITE"};
         case daxa::TaskBufferAccess::MAX_ENUM: return std::string_view{"MAX_ENUM"};
-        default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+        default: return std::string_view{"UNIMPLEMENTED CASE"};
         }
         return "invalid";
     }
@@ -409,45 +409,55 @@ namespace daxa
         {
         case daxa::TaskImageAccess::NONE: return std::string_view{"NONE"};
         case daxa::TaskImageAccess::GRAPHICS_SHADER_SAMPLED: return std::string_view{"GRAPHICS_SHADER_SAMPLED"};
-        case daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE: return std::string_view{"GRAPHICS_SHADER_STORAGE_READ_WRITE"};
         case daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"GRAPHICS_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY: return std::string_view{"GRAPHICS_SHADER_STORAGE_READ_ONLY"};
+        case daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE: return std::string_view{"GRAPHICS_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED: return std::string_view{"COMPUTE_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"COMPUTE_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY: return std::string_view{"COMPUTE_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE: return std::string_view{"COMPUTE_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::RAY_TRACING_SHADER_SAMPLED: return std::string_view{"RAY_TRACING_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"RAY_TRACING_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY: return std::string_view{"RAY_TRACING_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE: return std::string_view{"RAY_TRACING_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::TASK_SHADER_SAMPLED: return std::string_view{"TASK_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"TASK_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY: return std::string_view{"TASK_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE: return std::string_view{"TASK_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::MESH_SHADER_SAMPLED: return std::string_view{"MESH_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::MESH_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"MESH_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::MESH_SHADER_STORAGE_READ_ONLY: return std::string_view{"MESH_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE: return std::string_view{"MESH_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::VERTEX_SHADER_SAMPLED: return std::string_view{"VERTEX_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"VERTEX_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY: return std::string_view{"VERTEX_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE: return std::string_view{"VERTEX_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_SAMPLED: return std::string_view{"TESSELLATION_CONTROL_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY: return std::string_view{"TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE: return std::string_view{"TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED: return std::string_view{"TESSELLATION_EVALUATION_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY: return std::string_view{"TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE: return std::string_view{"TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::GEOMETRY_SHADER_SAMPLED: return std::string_view{"GEOMETRY_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"GEOMETRY_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_ONLY: return std::string_view{"GEOMETRY_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE: return std::string_view{"GEOMETRY_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED: return std::string_view{"FRAGMENT_SHADER_SAMPLED"};
         case daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_WRITE_ONLY: return std::string_view{"FRAGMENT_SHADER_STORAGE_WRITE_ONLY"};
         case daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_ONLY: return std::string_view{"FRAGMENT_SHADER_STORAGE_READ_ONLY"};
         case daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE: return std::string_view{"FRAGMENT_SHADER_STORAGE_READ_WRITE"};
+        case daxa::TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT: return std::string_view{"FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT"};
         case daxa::TaskImageAccess::TRANSFER_READ: return std::string_view{"TRANSFER_READ"};
         case daxa::TaskImageAccess::TRANSFER_WRITE: return std::string_view{"TRANSFER_WRITE"};
         case daxa::TaskImageAccess::COLOR_ATTACHMENT: return std::string_view{"COLOR_ATTACHMENT"};
@@ -460,9 +470,9 @@ namespace daxa
         case daxa::TaskImageAccess::RESOLVE_WRITE: return std::string_view{"RESOLVE_WRITE"};
         case daxa::TaskImageAccess::PRESENT: return std::string_view{"PRESENT"};
         case daxa::TaskImageAccess::MAX_ENUM: return std::string_view{"MAX_ENUM"};
-        default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+        default: return std::string_view{"UNIMPLEMENTED CASE"};
         }
-        return "invalid";
+        return std::string_view{"UNIMPLEMENTED CASE"};
     }
 
     ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(TaskBufferInfo a_info)

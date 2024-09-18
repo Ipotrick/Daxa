@@ -79,7 +79,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskBufferAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBufferAccess const & usage) -> std::string_view;
 
     enum struct TaskBlasAccess
     {
@@ -97,7 +97,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskBlasAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBlasAccess const & usage) -> std::string_view;
 
     enum struct TaskTlasAccess
     {
@@ -125,7 +125,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskTlasAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskTlasAccess const & usage) -> std::string_view;
 
     enum struct TaskImageAccess
     {
@@ -194,7 +194,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskImageAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskImageAccess const & usage) -> std::string_view;
 
     using TaskResourceIndex = u32;
 
@@ -210,7 +210,7 @@ namespace daxa
         auto operator<=>(TaskGPUResourceView const & other) const = default;
     };
 
-    auto to_string(TaskGPUResourceView const & id) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskGPUResourceView const & id) -> std::string;
 
     struct TaskBufferView : public TaskGPUResourceView
     {
