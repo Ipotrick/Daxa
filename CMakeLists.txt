@@ -99,7 +99,7 @@ endif()
 
 target_compile_features(daxa PUBLIC cxx_std_20)
 
-find_package(Vulkan REQUIRED COMPONENTS glslang SPIRV-Tools)
+find_package(Vulkan REQUIRED)
 # find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 # find_package(fmt CONFIG REQUIRED)
 
