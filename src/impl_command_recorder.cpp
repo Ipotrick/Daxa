@@ -268,8 +268,7 @@ auto daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder self, daxa_BufferCopyIn
     in_bounds = in_bounds && ((static_cast<u64>(vk_buffer_copy->dstOffset) + static_cast<u64>(vk_buffer_copy->size)) <= static_cast<u64>(dst_slot.info.size));
     if (!in_bounds)
     {
-        _DAXA_DEBUG_BREAK
-        return DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS, DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS);
     }
     vkCmdCopyBuffer(
         self->current_command_data.vk_cmd_buffer,
@@ -447,6 +446,12 @@ auto daxa_cmd_clear_buffer(daxa_CommandRecorder self, daxa_BufferClearInfo const
 {
     daxa_cmd_flush_barriers(self);
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->buffer)
+    ImplBufferSlot const & dst_slot = self->device->slot(info->buffer);
+    bool const in_bounds = ((static_cast<u64>(info->offset) + static_cast<u64>(info->size)) <= static_cast<u64>(dst_slot.info.size));
+    if (!in_bounds)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS, DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS);
+    }
     vkCmdFillBuffer(
         self->current_command_data.vk_cmd_buffer,
         self->device->slot(info->buffer).vk_buffer,

@@ -176,14 +176,32 @@ namespace daxa
 
     struct TaskBufferClearInfo
     {
-        TaskBufferView view = {};
+        TaskBufferView buffer = {};
+        u64 offset = {};
+        u64 size = ~0ull; // default clears all
         u32 clear_value = {};
+        std::string_view name = {};
     };
 
     struct TaskImageClearInfo
     {
         TaskImageView view = {};
         ClearValue clear_value = std::array{0u, 0u, 0u, 0u};
+        std::string_view name = {};
+    };
+
+    struct TaskBufferCopyInfo
+    {
+        TaskBufferView src = {};
+        TaskBufferView dst = {};
+        std::string_view name = {};
+    };
+
+    struct TaskImageCopyInfo
+    {
+        TaskImageView src = {};
+        TaskImageView dst = {};
+        std::string_view name = {};
     };
 
     struct ImplTaskGraph;
@@ -209,8 +227,8 @@ namespace daxa
         DAXA_EXPORT_CXX void clear_buffer(TaskBufferClearInfo const & info);
         DAXA_EXPORT_CXX void clear_image(TaskImageClearInfo const & info);
 
-        DAXA_EXPORT_CXX void copy_buffer_to_buffer(TaskBufferView src, TaskBufferView dst);
-        DAXA_EXPORT_CXX void copy_image_to_image(TaskImageView src, TaskImageView dst);
+        DAXA_EXPORT_CXX void copy_buffer_to_buffer(TaskBufferCopyInfo const & info);
+        DAXA_EXPORT_CXX void copy_image_to_image(TaskImageCopyInfo const & info);
 
         template <typename TTask>
             requires std::is_base_of_v<IPartialTask, TTask>
