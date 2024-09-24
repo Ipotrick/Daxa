@@ -8,36 +8,6 @@ namespace tests
     DAXA_TH_IMAGE(TRANSFER_READ, REGULAR_2D, lower_mip)
     DAXA_TH_IMAGE(TRANSFER_WRITE, REGULAR_2D, higher_mip)
     DAXA_DECL_TASK_HEAD_END
-    struct MipMapTask : MipMapH::Task
-    {
-        AttachmentViews views = {};
-        struct Info
-        {
-            u32 mip = {};
-            std::array<i32, 3> mip_size = {};
-            std::array<i32, 3> next_mip_size = {};
-        } info = {};
-        void callback(daxa::TaskInterface tri)
-        {
-            tri.recorder.blit_image_to_image({
-                .src_image = tri.get(AT.lower_mip).ids[0],
-                .dst_image = tri.get(AT.higher_mip).ids[0],
-                .src_slice = {
-                    .mip_level = info.mip,
-                    .base_array_layer = 0,
-                    .layer_count = 1,
-                },
-                .src_offsets = {{{0, 0, 0}, {info.mip_size[0], info.mip_size[1], info.mip_size[2]}}},
-                .dst_slice = {
-                    .mip_level = info.mip + 1,
-                    .base_array_layer = 0,
-                    .layer_count = 1,
-                },
-                .dst_offsets = {{{0, 0, 0}, {info.next_mip_size[0], info.next_mip_size[1], info.next_mip_size[2]}}},
-                .filter = daxa::Filter::LINEAR,
-            });
-        }
-    };
 
     void mipmapping()
     {
@@ -511,15 +481,22 @@ namespace tests
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
-                                new_task_graph.add_task(MipMapTask{
+                                new_task_graph.add_task(daxa::InlineTaskWithHead<MipMapH::Task>{
                                     .views = std::array{
-                                        daxa::attachment_view(MipMapH::AT.lower_mip, task_render_image.view().view({.base_mip_level = i})),
-                                        daxa::attachment_view(MipMapH::AT.higher_mip, task_render_image.view().view({.base_mip_level = i + 1})),
+                                        MipMapH::AT.lower_mip | task_render_image.view().view({.base_mip_level = i}),
+                                        MipMapH::AT.higher_mip | task_render_image.view().view({.base_mip_level = i + 1}),
                                     },
-                                    .info = {
-                                        .mip = i,
-                                        .mip_size = mip_size,
-                                        .next_mip_size = next_mip_size,
+                                    .task = [=](daxa::TaskInterface ti)
+                                    {
+                                        ti.recorder.blit_image_to_image({
+                                            .src_image = ti.get(MipMapH::AT.lower_mip).ids[0],
+                                            .dst_image = ti.get(MipMapH::AT.higher_mip).ids[0],
+                                            .src_slice = { .mip_level = i },
+                                            .src_offsets = {{{0, 0, 0}, {mip_size[0], mip_size[1], mip_size[2]}}},
+                                            .dst_slice = { .mip_level = i + 1 },
+                                            .dst_offsets = {{{0, 0, 0}, {next_mip_size[0], next_mip_size[1], next_mip_size[2]}}},
+                                            .filter = daxa::Filter::LINEAR,
+                                        });
                                     },
                                 });
                                 mip_size = next_mip_size;
