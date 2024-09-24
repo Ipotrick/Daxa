@@ -174,6 +174,17 @@ namespace daxa
         std::string_view _name = {};
     };
 
+    template<typename TaskHeadTaskT>
+    struct InlineTaskWithHead : TaskHeadTaskT
+    {
+        TaskHeadTaskT::AttachmentViews views = {};
+        std::function<void(daxa::TaskInterface)> task = {};
+        void callback(daxa::TaskInterface ti)
+        {
+            task(ti);
+        }
+    };
+
     struct TaskBufferClearInfo
     {
         TaskBufferView buffer = {};
