@@ -249,7 +249,7 @@ auto daxa_cmd_set_rasterization_samples(daxa_CommandRecorder self, VkSampleCount
 {
     if (self->device->vkCmdSetRasterizationSamplesEXT == nullptr)
     {
-        return DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT, DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT);
     }
     daxa_cmd_flush_barriers(self);
     self->device->vkCmdSetRasterizationSamplesEXT(self->current_command_data.vk_cmd_buffer, samples);
@@ -474,7 +474,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
     {
         if (!is_image_depth_stencil)
         {
-            return DAXA_RESULT_INVALID_CLEAR_VALUE;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_CLEAR_VALUE, DAXA_RESULT_INVALID_CLEAR_VALUE);
         }
         VkImageSubresourceRange const sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
         vkCmdClearDepthStencilImage(
@@ -489,7 +489,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
     {
         if (is_image_depth_stencil)
         {
-            return DAXA_RESULT_INVALID_CLEAR_VALUE;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_CLEAR_VALUE, DAXA_RESULT_INVALID_CLEAR_VALUE);
         }
         VkImageSubresourceRange const sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
         vkCmdClearColorImage(
@@ -641,7 +641,7 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
     daxa_cmd_flush_barriers(self);
     if (daxa::holds_alternative<daxa_ImplCommandRecorder::NoPipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_PIPELINE_BOUND, DAXA_RESULT_NO_PIPELINE_BOUND);
     }
     VkPipelineLayout vk_pipeline_layout = {};
     u32 current_pipeline_push_constant_size = {};
@@ -662,7 +662,7 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
     }
     if (current_pipeline_push_constant_size < (info->offset + info->size))
     {
-        return DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED);
     }
     vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, info->offset, static_cast<u32>(info->size), info->data);
     return DAXA_RESULT_SUCCESS;
@@ -697,7 +697,7 @@ auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND, DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND);
     }
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
@@ -723,7 +723,7 @@ auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndir
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND, DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND);
     }
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
@@ -749,7 +749,7 @@ auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND, DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND);
     }
     vkCmdDispatch(self->current_command_data.vk_cmd_buffer, info->x, info->y, info->z);
     return DAXA_RESULT_SUCCESS;
@@ -760,7 +760,7 @@ auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirect
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer)
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND, DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND);
     }
     vkCmdDispatchIndirect(self->current_command_data.vk_cmd_buffer, self->device->slot(info->indirect_buffer).vk_buffer, info->offset);
     return DAXA_RESULT_SUCCESS;
@@ -825,11 +825,11 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     {
         if (daxa_dvc_is_image_view_valid(self->device, info->color_attachments.data[i].image_view) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_VIEW_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_INVALID_IMAGE_VIEW_ID);
         }
         if (daxa_dvc_is_image_valid(self->device, self->device->slot(info->color_attachments.data[i].image_view).info.image) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
         }
         fill_rendering_attachment_info(info->color_attachments.data[i], vk_color_attachments.at(i));
     }
@@ -838,11 +838,11 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     {
         if (daxa_dvc_is_image_view_valid(self->device, info->depth_attachment.value.image_view) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_VIEW_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_INVALID_IMAGE_VIEW_ID);
         }
         if (daxa_dvc_is_image_valid(self->device, self->device->slot(info->depth_attachment.value.image_view).info.image) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
         }
         fill_rendering_attachment_info(info->depth_attachment.value, depth_attachment_info);
     };
@@ -851,11 +851,11 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     {
         if (daxa_dvc_is_image_view_valid(self->device, info->stencil_attachment.value.image_view) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_VIEW_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_INVALID_IMAGE_VIEW_ID);
         }
         if (daxa_dvc_is_image_valid(self->device, self->device->slot(info->stencil_attachment.value.image_view).info.image) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
         }
         fill_rendering_attachment_info(info->stencil_attachment.value, stencil_attachment_info);
     };
