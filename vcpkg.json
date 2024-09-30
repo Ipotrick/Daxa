@@ -80,10 +80,9 @@
       ]
     }
   },
-  "builtin-baseline": "78ba9711d30c64a6b40462c72f356c681e2255f3",
+  "builtin-baseline": "26eafc0e73bf7c35cace8263733671fc99ddf286",
   "vcpkg-configuration": {
     "overlay-ports": [
-      "./cmake/vcpkg-overlay-ports/shader-slang",
       "./cmake/vcpkg-overlay-ports/fsr2",
       "./cmake/vcpkg-overlay-ports/glfw3"
     ]
