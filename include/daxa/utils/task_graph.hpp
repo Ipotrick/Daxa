@@ -143,7 +143,7 @@ namespace daxa
     {
         std::vector<TaskAttachmentInfo> attachments = {};
         std::function<void(TaskInterface)> task = {};
-        std::string_view name = "unnamed";
+        std::string name = "unnamed";
     };
 
     struct InlineTask : ITask
@@ -171,7 +171,7 @@ namespace daxa
       private:
         std::vector<TaskAttachmentInfo> _attachments = {};
         std::function<void(TaskInterface)> _callback = {};
-        std::string_view _name = {};
+        std::string _name = {};
     };
 
     template<typename TaskHeadTaskT>
