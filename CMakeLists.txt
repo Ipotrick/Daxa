@@ -31,7 +31,7 @@ if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
 
-project(daxa VERSION 3.0.1)
+project(daxa VERSION 3.0.2)
 
 if(DAXA_ENABLE_STATIC_ANALYSIS)
     set(CPPCHECK_TEMPLATE "gcc")
