@@ -194,6 +194,10 @@ if(DAXA_ENABLE_UTILS_TASK_GRAPH)
         DAXA_BUILT_WITH_UTILS_TASK_GRAPH=true
     )
 endif()
+if(TARGET tlib)
+    target_compile_definitions(daxa PRIVATE DAXA_BUILT_WITH_TLIB=true)
+    target_link_libraries(daxa PRIVATE tlib)
+endif()
 
 target_link_libraries(daxa
     PRIVATE

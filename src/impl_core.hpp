@@ -50,6 +50,15 @@
 #include <vma/vk_mem_alloc.h>
 #include <daxa/c/daxa.h>
 
+#if DAXA_BUILT_WITH_TLIB
+#include <tlib/app/tprofiler.h>
+#define PROFILE_SCOPE(name) TProfileZoneCpu tlibProfileZone(##name)
+#define PROFILE_FUNC() TProfileZoneCpu tlibProfileZone(__FUNCTION__)
+#else
+#define PROFILE_SCOPE(name)
+#define PROFILE_FUNC()
+#endif
+
 using namespace daxa;
 
 // --- Begin Helpers ---

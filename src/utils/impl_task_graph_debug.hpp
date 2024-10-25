@@ -59,7 +59,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Completed task graphs can not record new tasks");
     }
 
-    template<typename BufferBlasTlasAttachmentT>
+    template <typename BufferBlasTlasAttachmentT>
     void validate_buffer_blas_tlas_task_view(ITask const & task, u32 attach_index, BufferBlasTlasAttachmentT const & attach)
     {
         DAXA_DBG_ASSERT_TRUE_M(
@@ -78,6 +78,7 @@ namespace daxa
 
     void validate_overlapping_attachment_views(ImplTaskGraph const & impl, ITask const * task)
     {
+#if DAXA_VALIDATION
         for_each(
             task->attachments(),
             [&](u32 index_a, auto const & a)
@@ -130,11 +131,13 @@ namespace daxa
                                 task->name()));
                     });
             });
+#endif
     }
 
-    template<typename BufferBlasTlasT>
+    template <typename BufferBlasTlasT>
     void validate_task_buffer_blas_tlas_runtime_data(ImplTask & task, BufferBlasTlasT const & attach)
     {
+#if DAXA_VALIDATION
         if constexpr (std::is_same_v<BufferBlasTlasT, TaskBufferAttachmentInfo>)
         {
             DAXA_DBG_ASSERT_TRUE_M(
@@ -144,10 +147,12 @@ namespace daxa
                             "Attachment runtime buffers must be at least as many as its shader array size!",
                             attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
         }
+#endif
     }
 
     void validate_task_image_runtime_data(ImplTask & task, TaskImageAttachmentInfo const & attach)
     {
+#if DAXA_VALIDATION
         if (attach.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS)
         {
             DAXA_DBG_ASSERT_TRUE_M(
@@ -166,6 +171,7 @@ namespace daxa
                             "Attachment runntime image count must be at least the shader array size for array attachments!",
                             attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
         }
+#endif
     }
     // void validate_
 } // namespace daxa

@@ -72,7 +72,7 @@ namespace daxa
         ///         Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two separate task graphs.
         usize permutation_condition_count = {};
         /// @brief  Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
-        bool enable_command_labels = true;
+        bool enable_command_labels = false;
         std::array<f32, 4> task_graph_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
         std::array<f32, 4> task_batch_label_color = {0.563f, 0.433f, 0.771f, 1.0f};
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
