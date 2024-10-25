@@ -7,6 +7,11 @@
 #include "impl_device.hpp"
 #include "impl_core.hpp"
 
+#undef PROFILE_FUNC
+#undef PROFILE_SCOPE
+#define PROFILE_FUNC()
+#define PROFILE_SCOPE(x)
+
 /// --- Begin Helpers ---
 
 auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
