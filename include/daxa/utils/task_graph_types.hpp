@@ -329,7 +329,7 @@ namespace daxa
 
     struct TaskBufferAttachment
     {
-        using INDEX_TYPE = typename TaskBufferAttachmentIndex;
+        using INDEX_TYPE = TaskBufferAttachmentIndex;
         char const * name = {};
         TaskBufferAccess task_access = {};
         Access access = {};
@@ -339,7 +339,7 @@ namespace daxa
 
     struct TaskBlasAttachment
     {
-        using INDEX_TYPE = typename TaskBlasAttachmentIndex;
+        using INDEX_TYPE = TaskBlasAttachmentIndex;
         char const * name = {};
         TaskBlasAccess task_access = {};
         Access access = {};
@@ -347,7 +347,7 @@ namespace daxa
 
     struct TaskTlasAttachment
     {
-        using INDEX_TYPE = typename TaskTlasAttachmentIndex;
+        using INDEX_TYPE = TaskTlasAttachmentIndex;
         char const * name = {};
         TaskTlasAccess task_access = {};
         Access access = {};
@@ -356,7 +356,7 @@ namespace daxa
 
     struct TaskImageAttachment
     {
-        using INDEX_TYPE = typename TaskImageAttachmentIndex;
+        using INDEX_TYPE = TaskImageAttachmentIndex;
         char const * name = {};
         TaskImageAccess task_access = {};
         Access access = {};

@@ -24,9 +24,15 @@
 #endif
 
 #if defined(_WIN32)
-// #define VK_USE_PLATFORM_WIN32_KHR
+#ifndef VK_USE_PLATFORM_WIN32_KHR
+#define VK_USE_PLATFORM_WIN32_KHR
+#endif
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
-// #define NOMINMAX
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
 #elif defined(__linux__)
 #if DAXA_BUILT_WITH_X11
 #include <X11/Xlib.h>
@@ -52,7 +58,7 @@
 
 #if DAXA_BUILT_WITH_TLIB
 #include <tlib/app/tprofiler.h>
-#define PROFILE_SCOPE(name) TProfileZoneCpu tlibProfileZone(##name)
+#define PROFILE_SCOPE(name) TProfileZoneCpu tlibProfileZone(name)
 #define PROFILE_FUNC() TProfileZoneCpu tlibProfileZone(__FUNCTION__)
 #else
 #define PROFILE_SCOPE(name)
