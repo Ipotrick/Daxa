@@ -7,6 +7,7 @@
 #include "impl_device.hpp"
 #include "impl_core.hpp"
 
+// NOTE: Removed profiling for all commands for now
 #undef PROFILE_FUNC
 #undef PROFILE_SCOPE
 #define PROFILE_FUNC()

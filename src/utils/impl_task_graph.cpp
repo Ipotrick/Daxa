@@ -1060,7 +1060,7 @@ namespace daxa
 
     void ImplTaskGraph::update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation)
     {
-        PROFILE_FUNC();
+        // PROFILE_FUNC();
         for_each(
             task.base_task->attachments(),
             [](u32, auto const &) {},
@@ -1180,7 +1180,7 @@ namespace daxa
     void validate_runtime_resources([[maybe_unused]] ImplTaskGraph const & impl, [[maybe_unused]] TaskGraphPermutation const & permutation)
     {
 #if DAXA_VALIDATION
-        PROFILE_FUNC();
+        // PROFILE_FUNC();
         constexpr std::string_view PERSISTENT_RESOURCE_MESSAGE = {
             "when executing a task graph, all used persistent resources must be backed by at least one and exclusively "
             "valid runtime resources"};
@@ -1349,7 +1349,7 @@ namespace daxa
 
     void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, u32 batch_index, TaskBatchId in_batch_task_index, TaskId task_id)
     {
-        PROFILE_FUNC();
+        // PROFILE_FUNC();
         // We always allow to reuse the last command list ONCE within the task callback.
         // When the get command list function is called in a task this is set to false.
         // TODO(refactor): create discrete validation functions and call them before doing any work here.
@@ -1357,7 +1357,7 @@ namespace daxa
         ImplTask & task = tasks[task_id];
         update_image_view_cache(task, permutation);
         {
-            PROFILE_SCOPE("get attachments");
+            // PROFILE_SCOPE("get attachments");
             for_each(
                 task.base_task->attachments(),
                 [&](u32, auto & attach)
@@ -1374,7 +1374,7 @@ namespace daxa
         }
         std::vector<std::byte> attachment_shader_blob;
         {
-            PROFILE_SCOPE("Create shader blob");
+            // PROFILE_SCOPE("Create shader blob");
             attachment_shader_blob = write_attachment_shader_blob(
                 info.device,
                 task.base_task->attachment_shader_blob_size(),
@@ -1389,7 +1389,7 @@ namespace daxa
             });
         }
         {
-            PROFILE_SCOPE("Create Interface and call pre/post task");
+            // PROFILE_SCOPE("Create Interface and call pre/post task");
             auto interface = TaskInterface{
                 .device = this->info.device,
                 .recorder = impl_runtime.recorder,
@@ -2716,7 +2716,7 @@ namespace daxa
     {
         // Persistent resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not manageable.
-        PROFILE_FUNC();
+        // PROFILE_FUNC();
         std::string out;
         std::string indent;
         if (impl.info.record_debug_information)
@@ -2946,7 +2946,7 @@ namespace daxa
         usize submit_scope_index = 0;
         for (auto & submit_scope : permutation.batch_submit_scopes)
         {
-            PROFILE_SCOPE("Task Batch");
+            // PROFILE_SCOPE("Task Batch");
             if (impl.info.enable_command_labels)
             {
                 impl_runtime.recorder.begin_label({
@@ -2958,7 +2958,7 @@ namespace daxa
             for (auto & task_batch : submit_scope.task_batches)
             {
                 {
-                    PROFILE_SCOPE("Insert pipeline barrier commands");
+                    // PROFILE_SCOPE("Insert pipeline barrier commands");
                     batch_index += 1;
                     // Wait on pipeline barriers before batch execution.
                     for (auto barrier_index : task_batch.pipeline_barrier_indices)
@@ -3045,7 +3045,7 @@ namespace daxa
                 }
                 if (impl.info.use_split_barriers)
                 {
-                    PROFILE_SCOPE("Insert split barrier commands");
+                    // PROFILE_SCOPE("Insert split barrier commands");
                     // Reset all waited upon split barriers here.
                     for (auto barrier_index : task_batch.wait_split_barrier_indices)
                     {
@@ -3095,7 +3095,7 @@ namespace daxa
                 }
             }
             {
-                PROFILE_SCOPE("Insert last minute barrier commands");
+                // PROFILE_SCOPE("Insert last minute barrier commands");
                 for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
                 {
                     TaskBarrier & barrier = permutation.barriers[barrier_index];
@@ -3179,7 +3179,6 @@ namespace daxa
                     signal_timeline_semaphores.emplace_back(impl.staging_memory->timeline_semaphore(), impl.staging_memory->inc_timeline_value());
                 }
                 {
-                    PROFILE_SCOPE("submit commands");
                     daxa::CommandSubmitInfo const submit_info = {
                         .wait_stages = wait_stages,
                         .command_lists = commands,
