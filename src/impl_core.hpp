@@ -11,6 +11,7 @@
 #include <map>
 #include <deque>
 #include <cstring>
+#include <memory>
 #define FMT_HEADER_ONLY
 #define FMT_UNICODE 0
 #include <fmt/format.h>
