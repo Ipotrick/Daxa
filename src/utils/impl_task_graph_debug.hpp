@@ -1,7 +1,7 @@
 #pragma once
 
 #include "impl_task_graph.hpp"
-#include <fmt/format.h>
+#include <format>
 namespace daxa
 {
     enum struct Level
@@ -16,7 +16,7 @@ namespace daxa
     {
         char const last = indent.back();
         indent.back() = '#';
-        fmt::format_to(std::back_inserter(out), "{}--------------------------------\n", indent);
+        std::format_to(std::back_inserter(out), "{}--------------------------------\n", indent);
         indent.back() = last;
     }
 
@@ -64,7 +64,7 @@ namespace daxa
     {
         DAXA_DBG_ASSERT_TRUE_M(
             !attach.view.is_empty(),
-            fmt::format("Detected unassigned task buffer view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+            std::format("Detected unassigned task buffer view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
                         attach.name, attach_index, to_string(attach.task_access), task.name()));
     }
 
@@ -72,7 +72,7 @@ namespace daxa
     {
         DAXA_DBG_ASSERT_TRUE_M(
             !attach.view.is_empty(),
-            fmt::format("Detected unassigned task image view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+            std::format("Detected unassigned task image view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
                         attach.name, attach_index, to_string(attach.task_access), task.name()));
     }
 
@@ -96,7 +96,7 @@ namespace daxa
                         [[maybe_unused]] bool const overlapping = a.view == b.view;
                         DAXA_DBG_ASSERT_TRUE_M(
                             !overlapping,
-                            fmt::format(
+                            std::format(
                                 "Detected overlapping attachment buffer views;\n"
                                 "Attachments \"{}\" and \"{}\" both refer to the same task buffer \"{}\" in task \"{}\";\n"
                                 "All buffer attachments must refer to different buffers within each task!",
@@ -122,7 +122,7 @@ namespace daxa
                         [[maybe_unused]] auto const intersect = a.view == b.view && a.view.slice.intersects(b.view.slice);
                         DAXA_DBG_ASSERT_TRUE_M(
                             !intersect,
-                            fmt::format(
+                            std::format(
                                 "Detected overlapping attachment image views.\n"
                                 "Attachments \"{}\" and \"{}\" refer overlapping slices ({} and {}) to the same task image \"{}\" in task \"{}\";"
                                 "All task image attachment views and their slices must refer to disjoint parts of images within each task!",
@@ -142,7 +142,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 attach.ids.size() >= attach.shader_array_size,
-                fmt::format("Detected invalid runtime buffer count.\n"
+                std::format("Detected invalid runtime buffer count.\n"
                             "Attachment \"{}\" in task \"{}\" requires {} runtime buffer(s), but only {} runtime buffer(s) are present when executing task.\n"
                             "Attachment runtime buffers must be at least as many as its shader array size!",
                             attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
@@ -157,7 +157,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 attach.ids.size() >= 1,
-                fmt::format("Detected invalid runtime image count.\n"
+                std::format("Detected invalid runtime image count.\n"
                             "Attachment \"{}\" in task \"{}\" requires at least 1 runtime image, but no runtime images are present when executing task.\n"
                             "Attachment runntime image count must be at least one for mip-array attachments!",
                             attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));
@@ -166,7 +166,7 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(
                 attach.ids.size() >= attach.shader_array_size,
-                fmt::format("Detected invalid runtime image count.\n"
+                std::format("Detected invalid runtime image count.\n"
                             "Attachment \"{}\" in task \"{}\" requires at least {} runtime image(s), but only {} runtime images are present when executing task.\n"
                             "Attachment runntime image count must be at least the shader array size for array attachments!",
                             attach.name, task.base_task->name(), attach.shader_array_size, attach.ids.size()));

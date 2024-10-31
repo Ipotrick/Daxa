@@ -1,8 +1,6 @@
 #include <daxa/utils/task_graph_debug.hpp>
 
-#define FMT_HEADER_ONLY
-#define FMT_UNICODE 0
-#include <fmt/format.h>
+#include <format>
 
 #include <iostream>
 
@@ -480,7 +478,7 @@ void TgDebugContext::cleanup()
 
 auto format_vec4_rows_float(daxa_f32vec4 vec) -> std::string
 {
-    return fmt::format("R: {:10.7}\nG: {:10.7}\nB: {:10.7}\nA: {:10.7}",
+    return std::format("R: {:10.7}\nG: {:10.7}\nB: {:10.7}\nA: {:10.7}",
                        vec.x,
                        vec.y,
                        vec.z,
@@ -493,13 +491,13 @@ auto format_vec4_rows(Vec4Union vec_union, ScalarKind scalar_kind) -> std::strin
     case ScalarKind::FLOAT:
         return format_vec4_rows_float(vec_union._float);
     case ScalarKind::INT:
-        return fmt::format("R: {:11}\nG: {:11}\nB: {:11}\nA: {:11}",
+        return std::format("R: {:11}\nG: {:11}\nB: {:11}\nA: {:11}",
                            vec_union._int.x,
                            vec_union._int.y,
                            vec_union._int.z,
                            vec_union._int.w);
     case ScalarKind::UINT:
-        return fmt::format("R: {:11}\nG: {:11}\nB: {:11}\nA: {:11}",
+        return std::format("R: {:11}\nG: {:11}\nB: {:11}\nA: {:11}",
                            vec_union._uint.x,
                            vec_union._uint.y,
                            vec_union._uint.z,

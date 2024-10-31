@@ -462,7 +462,7 @@ namespace daxa
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     persistent_buffer_index_to_local_index.contains(id.index),
-                    fmt::format("Detected invalid access of persistent task buffer id ({}) in task graph \"{}\"; "
+                    std::format("Detected invalid access of persistent task buffer id ({}) in task graph \"{}\"; "
                                 "please make sure to declare persistent resource use to each task graph that uses this buffer with the function use_persistent_buffer!",
                                 id.index, info.name));
                 return TaskIdT{{.task_graph_index = this->unique_index, .index = persistent_buffer_index_to_local_index.at(id.index)}};
@@ -471,7 +471,7 @@ namespace daxa
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     id.task_graph_index == this->unique_index,
-                    fmt::format("Detected invalid access of transient task buffer id ({}) in task graph \"{}\"; "
+                    std::format("Detected invalid access of transient task buffer id ({}) in task graph \"{}\"; "
                                 "please make sure that you only use transient buffers within the list they are created in!",
                                 id.index, info.name));
                 return TaskIdT{{.task_graph_index = this->unique_index, .index = id.index}};
