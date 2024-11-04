@@ -1539,6 +1539,7 @@ namespace daxa
             .allocator = this->staging_memory.has_value() ? &this->staging_memory.value() : nullptr,
             .attachment_shader_blob = attachment_shader_blob,
             .task_name = task.base_task->name(),
+            .task_index = task_id,
         };
         if (info.pre_task_callback)
         {
@@ -1661,19 +1662,27 @@ namespace daxa
 
                 auto [current_buffer_access, current_access_concurrency] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.task_access));
                 // Every other access (NONE, READ_WRITE, WRITE) are interpreted as writes in this context.
-                // TODO(msakmary): improve scheduling here to reorder reads in front of each other, respecting the last to read barrier if present!
                 // When a buffer has been read in a previous use AND the current task also reads the buffer,
                 // we must insert the task at or after the last use batch.
-                usize current_buffer_first_possible_batch_index = task_buffer.latest_access_batch_index;
                 // When two buffer accesses intersect, we potentially need to insert a ner barrier or modify an existing barrier.
                 // If the access is a read on read or a rw_concurrent on rw_concurrent, the task is still allowed within the same batch as the task of the previous access.
                 // This means that two tasks reading from buffer X are allowed within the same batch, using the same barrier.
                 // If they are not inserted within the same batch due to dependencies of other attachments, daxa will still reuse the barriers.
                 // This is only possible for read write concurrent and read access sequences!
                 AccessRelation<decltype(task_buffer)> relation{task_buffer, current_buffer_access, current_access_concurrency};
-                if (!relation.are_both_read && !relation.are_both_rw_concurrent && !relation.is_previous_none)
+                usize current_buffer_first_possible_batch_index = 0;
+                if (relation.is_previous_none)
                 {
-                    current_buffer_first_possible_batch_index += 1;
+                    current_buffer_first_possible_batch_index = task_buffer.latest_access_batch_index;
+                }
+                else if (relation.are_both_concurrent && (task_buffer.latest_concurrent_sequence_start_batch != ~0u))
+                {
+                    // N following concurrent accesses are allowed to be reordered to any point within a concurrent access sequence.
+                    current_buffer_first_possible_batch_index = task_buffer.latest_concurrent_sequence_start_batch;
+                }
+                else
+                {
+                    current_buffer_first_possible_batch_index = task_buffer.latest_access_batch_index + 1;
                 }
                 first_possible_batch_index = std::max(first_possible_batch_index, current_buffer_first_possible_batch_index);
             },
@@ -1713,16 +1722,25 @@ namespace daxa
                         continue;
                     }
                     // Tasks are always shedules after or with the tasks they depend on.
-                    usize current_image_first_possible_batch_index = tracked_slice.latest_access_batch_index;
                     // When two image accesses intersect, we potentially need to insert a ner barrier or modify an existing barrier.
                     // If the access is a read on read or a rw_concurrent on rw_concurrent, the task is still allowed within the same batch as the task of the previous access.
                     // This means that two tasks reading from image X are allowed within the same batch, using the same barrier.
                     // If they are not inserted within the same batch due to dependencies of other attachments, daxa will still reuse the barriers.
                     // This is only possible for read write concurrent and read access sequences!
                     AccessRelation<decltype(tracked_slice)> relation{tracked_slice, this_task_image_access, current_access_concurrent, tracked_slice.state.latest_layout, this_task_image_layout};
-                    if (!relation.are_both_read_and_same_layout && !relation.are_both_rw_concurrent_and_same_layout)
+                    usize current_image_first_possible_batch_index = 0;                
+                    if (relation.is_previous_none)
                     {
-                        current_image_first_possible_batch_index += 1;
+                        current_image_first_possible_batch_index = tracked_slice.latest_access_batch_index;
+                    }
+                    else if (relation.are_both_concurrent_and_same_layout && (tracked_slice.latest_concurrent_sequence_start_batch != ~0u))
+                    {
+                        // N following concurrent accesses are allowed to be reordered to any point within a concurrent access sequence.
+                        current_image_first_possible_batch_index = tracked_slice.latest_concurrent_sequence_start_batch;
+                    }
+                    else
+                    {
+                        current_image_first_possible_batch_index = tracked_slice.latest_access_batch_index + 1;
                     }
                     first_possible_batch_index = std::max(first_possible_batch_index, current_image_first_possible_batch_index);
                 }
@@ -2048,6 +2066,7 @@ namespace daxa
                             {
                                 // In an uninterrupted sequence of concurrent accesses we need to remember the fist concurrent access and the barrier.
                                 task_buffer.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
+                                task_buffer.latest_concurrent_sequence_start_batch = batch_index;
                             }
                         }
                         else
@@ -2073,6 +2092,7 @@ namespace daxa
                             {
                                 // In an uninterrupted sequence of concurrent accesses we need to remember the fist concurrent access and the barrier.
                                 task_buffer.latest_concurrent_access_barrer_index = LastConcurrentAccessSplitBarrierIndex{split_barrier_index};
+                                task_buffer.latest_concurrent_sequence_start_batch = batch_index;
                             }
                         }
                     }
@@ -2261,6 +2281,7 @@ namespace daxa
                                     // As the new access is a read we remember our barrier index,
                                     // So that potential future reads after this can reuse this barrier.
                                     ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessBarrierIndex{barrier_index};
+                                    ret_new_use_tracked_slice.latest_concurrent_sequence_start_batch = batch_index;
                                 }
                             }
                             else
@@ -2290,6 +2311,7 @@ namespace daxa
                                     // Need to remember the first concurrent access.
                                     // In case of multiple concurrent accesses following on each other, the first barrier in the sequence can be reused for all accesses.
                                     ret_new_use_tracked_slice.latest_concurrent_access_barrer_index = LastConcurrentAccessSplitBarrierIndex{split_barrier_index};
+                                    ret_new_use_tracked_slice.latest_concurrent_sequence_start_batch = batch_index;
                                 }
                             }
                         }
