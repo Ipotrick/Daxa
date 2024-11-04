@@ -590,6 +590,7 @@ namespace daxa
         TransferMemoryPool * allocator = {};
         std::span<std::byte const> attachment_shader_blob = {};
         std::string_view task_name = {};
+        usize task_index = {};
 
         [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
         {
