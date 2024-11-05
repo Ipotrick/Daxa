@@ -609,19 +609,19 @@ namespace daxa
         auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
-        auto info(TaskIndexOrView auto tresource, u32 array_index = 0)
+        auto info(TaskIndexOrView auto tresource, u32 array_index = 0) const
         {
             return this->device.info(this->get(tresource).ids[array_index]);
         }
-        auto image_view_info(TaskImageIndexOrView auto timage, u32 array_index = 0) -> Optional<ImageViewInfo>
+        auto image_view_info(TaskImageIndexOrView auto timage, u32 array_index = 0) const -> Optional<ImageViewInfo>
         {
             return this->device.image_view_info(this->get(timage).view_ids[array_index]);
         }
-        auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) -> Optional<DeviceAddress>
+        auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) const -> Optional<DeviceAddress>
         {
             return this->device.device_address(this->get(tresource).ids[array_index]);
         }
-        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) -> Optional<std::byte *>
+        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) const -> Optional<std::byte *>
         {
             return this->device.buffer_host_address(this->get(tbuffer).ids[array_index]);
         }
