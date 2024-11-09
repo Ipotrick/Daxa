@@ -269,7 +269,8 @@ namespace daxa
         }
         [[nodiscard]] auto at(usize i) const -> T const &
         {
-            return this->m_data.at(i);
+            DAXA_DBG_ASSERT_TRUE_M(i < m_size, "INDEX OUT OF RANGE");
+            return this->m_data[i];
         }
         [[nodiscard]] auto operator[](usize i) -> T &
         {
