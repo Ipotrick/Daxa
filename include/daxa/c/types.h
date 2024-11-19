@@ -248,12 +248,23 @@ typedef enum
     DAXA_QUEUE_FAMILY_MAX_ENUM
 } daxa_QueueFamily;
 
-typedef struct
+typedef enum 
 {
-    VkStridedDeviceAddressRegionKHR raygen_region;
-    VkStridedDeviceAddressRegionKHR miss_region;
-    VkStridedDeviceAddressRegionKHR hit_region;
-    VkStridedDeviceAddressRegionKHR callable_region;
-} daxa_RayTracingShaderBindingTable;
+    DAXA_EXT_SHADER_GROUP__RAYGEN,
+    DAXA_EXT_SHADER_GROUP__MISS,
+    DAXA_EXT_SHADER_GROUP__TRIANGLE,
+    DAXA_EXT_SHADER_GROUP__PROCEDURAL,
+    DAXA_EXT_SHADER_GROUP__CALLABLE,
+    DAXA_EXT_SHADER_GROUP__MAX_ENUM,
+} daxa_ExtendedShaderGroupType;
+
+typedef enum 
+{
+    DAXA_SHADER_GROUP_RAYGEN,
+    DAXA_SHADER_GROUP_MISS,
+    DAXA_SHADER_GROUP_HIT,
+    DAXA_SHADER_GROUP_CALLABLE,
+    DAXA_SHADER_GROUP_MAX_ENUM,
+} daxa_ShaderGroupType;
 
 #endif // #ifndef __DAXA_TYPES_H__
