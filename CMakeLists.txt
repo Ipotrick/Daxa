@@ -127,17 +127,28 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
         DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG=true
     )
     # find_package(glslang CONFIG REQUIRED)
+
+    set(GLSLANG_WRAPPER_SOURCES
+        "src/utils/glslang_wrapper/wrapper.cpp"
+        "src/utils/glslang_wrapper/wrapper.hpp"
+    )
+
+    add_library(${PROJECT_NAME}_glslang_wrapper SHARED)
+    target_sources(${PROJECT_NAME}_glslang_wrapper PRIVATE ${GLSLANG_WRAPPER_SOURCES})
+    target_compile_features(${PROJECT_NAME}_glslang_wrapper PUBLIC cxx_std_20)
+    target_compile_definitions(${PROJECT_NAME}_glslang_wrapper PRIVATE _ITERATOR_DEBUG_LEVEL=0)
+    set_property(TARGET ${PROJECT_NAME}_glslang_wrapper PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreadedDLL")
     find_package(Threads REQUIRED)
-    target_link_libraries(daxa
-        PUBLIC
-        $<$<CONFIG:Debug>:$ENV{VULKAN_SDK}/Lib/shaderc_combinedd.lib>
-        $<$<CONFIG:Release>:$ENV{VULKAN_SDK}/Lib/shaderc_combined.lib>
-        $<$<CONFIG:RelWithDebInfo>:$ENV{VULKAN_SDK}/Lib/shaderc_combined.lib>
+    target_link_libraries(${PROJECT_NAME}_glslang_wrapper
+        PRIVATE
+        Vulkan::Vulkan # for glslang include directory
+        $ENV{VULKAN_SDK}/Lib/shaderc_combined.lib
         # Vulkan::glslang
         # Vulkan::glslang-spirv
         # glslang::glslang
         # glslang::SPIRV
     )
+    target_link_libraries(daxa PUBLIC ${PROJECT_NAME}_glslang_wrapper)
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
     target_compile_definitions(daxa

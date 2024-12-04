@@ -6,296 +6,14 @@
 
 #include <tuple>
 
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
-static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
-    .maxLights = 32,
-    .maxClipPlanes = 6,
-    .maxTextureUnits = 32,
-    .maxTextureCoords = 32,
-    .maxVertexAttribs = 64,
-    .maxVertexUniformComponents = 4096,
-    .maxVaryingFloats = 64,
-    .maxVertexTextureImageUnits = 1 << 16,
-    .maxCombinedTextureImageUnits = 1 << 16,
-    .maxTextureImageUnits = 1 << 16,
-    .maxFragmentUniformComponents = 4096,
-    .maxDrawBuffers = 32,
-    .maxVertexUniformVectors = 128,
-    .maxVaryingVectors = 8,
-    .maxFragmentUniformVectors = 16,
-    .maxVertexOutputVectors = 16,
-    .maxFragmentInputVectors = 15,
-    .minProgramTexelOffset = -8,
-    .maxProgramTexelOffset = 7,
-    .maxClipDistances = 8,
-    .maxComputeWorkGroupCountX = 65535,
-    .maxComputeWorkGroupCountY = 65535,
-    .maxComputeWorkGroupCountZ = 65535,
-    .maxComputeWorkGroupSizeX = 1024,
-    .maxComputeWorkGroupSizeY = 1024,
-    .maxComputeWorkGroupSizeZ = 64,
-    .maxComputeUniformComponents = 1024,
-    .maxComputeTextureImageUnits = 1 << 16,
-    .maxComputeImageUniforms = 1 << 16,
-    .maxComputeAtomicCounters = 8,
-    .maxComputeAtomicCounterBuffers = 1,
-    .maxVaryingComponents = 60,
-    .maxVertexOutputComponents = 64,
-    .maxGeometryInputComponents = 64,
-    .maxGeometryOutputComponents = 128,
-    .maxFragmentInputComponents = 128,
-    .maxImageUnits = 1 << 16,
-    .maxCombinedImageUnitsAndFragmentOutputs = 8,
-    .maxCombinedShaderOutputResources = 8,
-    .maxImageSamples = 0,
-    .maxVertexImageUniforms = 0,
-    .maxTessControlImageUniforms = 0,
-    .maxTessEvaluationImageUniforms = 0,
-    .maxGeometryImageUniforms = 0,
-    .maxFragmentImageUniforms = 8,
-    .maxCombinedImageUniforms = 8,
-    .maxGeometryTextureImageUnits = 16,
-    .maxGeometryOutputVertices = 256,
-    .maxGeometryTotalOutputComponents = 1024,
-    .maxGeometryUniformComponents = 1024,
-    .maxGeometryVaryingComponents = 64,
-    .maxTessControlInputComponents = 128,
-    .maxTessControlOutputComponents = 128,
-    .maxTessControlTextureImageUnits = 16,
-    .maxTessControlUniformComponents = 1024,
-    .maxTessControlTotalOutputComponents = 4096,
-    .maxTessEvaluationInputComponents = 128,
-    .maxTessEvaluationOutputComponents = 128,
-    .maxTessEvaluationTextureImageUnits = 16,
-    .maxTessEvaluationUniformComponents = 1024,
-    .maxTessPatchComponents = 120,
-    .maxPatchVertices = 32,
-    .maxTessGenLevel = 64,
-    .maxViewports = 16,
-    .maxVertexAtomicCounters = 0,
-    .maxTessControlAtomicCounters = 0,
-    .maxTessEvaluationAtomicCounters = 0,
-    .maxGeometryAtomicCounters = 0,
-    .maxFragmentAtomicCounters = 8,
-    .maxCombinedAtomicCounters = 8,
-    .maxAtomicCounterBindings = 1,
-    .maxVertexAtomicCounterBuffers = 0,
-    .maxTessControlAtomicCounterBuffers = 0,
-    .maxTessEvaluationAtomicCounterBuffers = 0,
-    .maxGeometryAtomicCounterBuffers = 0,
-    .maxFragmentAtomicCounterBuffers = 1,
-    .maxCombinedAtomicCounterBuffers = 1,
-    .maxAtomicCounterBufferSize = 16384,
-    .maxTransformFeedbackBuffers = 4,
-    .maxTransformFeedbackInterleavedComponents = 64,
-    .maxCullDistances = 8,
-    .maxCombinedClipAndCullDistances = 8,
-    .maxSamples = 4,
-    .maxMeshOutputVerticesNV = 256,
-    .maxMeshOutputPrimitivesNV = 512,
-    .maxMeshWorkGroupSizeX_NV = 32,
-    .maxMeshWorkGroupSizeY_NV = 1,
-    .maxMeshWorkGroupSizeZ_NV = 1,
-    .maxTaskWorkGroupSizeX_NV = 32,
-    .maxTaskWorkGroupSizeY_NV = 1,
-    .maxTaskWorkGroupSizeZ_NV = 1,
-    .maxMeshViewCountNV = 4,
-    // TODO: Verify these values are reasonable:
-    .maxMeshOutputVerticesEXT = 512,
-    .maxMeshOutputPrimitivesEXT = 512,
-    .maxMeshWorkGroupSizeX_EXT = 512,
-    .maxMeshWorkGroupSizeY_EXT = 512,
-    .maxMeshWorkGroupSizeZ_EXT = 512,
-    .maxTaskWorkGroupSizeX_EXT = 512,
-    .maxTaskWorkGroupSizeY_EXT = 512,
-    .maxTaskWorkGroupSizeZ_EXT = 512,
-    .maxMeshViewCountEXT = 2,
-    .maxDualSourceDrawBuffersEXT = {},
-    .limits{
-        .nonInductiveForLoops = true,
-        .whileLoops = true,
-        .doWhileLoops = true,
-        .generalUniformIndexing = true,
-        .generalAttributeMatrixVectorIndexing = true,
-        .generalVaryingIndexing = true,
-        .generalSamplerIndexing = true,
-        .generalVariableIndexing = true,
-        .generalConstantMatrixVectorIndexing = true,
-    },
-};
-#endif
-
-// #include <re2/re2.h>
 #include <thread>
 #include <utility>
-#include <sstream>
 #include <iostream>
 #include <string>
 // for std::hash<std::string>
 #include <unordered_map>
 
-// static auto const PRAGMA_ONCE_REGEX = RE2(R"regex(\s*#\s*pragma\s+once\s*)regex");
-static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
-{
-    std::string line = {};
-    std::stringstream file_ss{file_str};
-    std::stringstream result_ss = {};
-    bool has_pragma_once = false;
-    auto abs_path_str = path.string();
-    if (std::filesystem::exists(path))
-    {
-        abs_path_str = std::filesystem::absolute(path).string();
-    }
-    auto remove_iter = std::remove_if(
-        abs_path_str.begin(), abs_path_str.end(),
-        [](char c)
-        {
-            return !((c >= 'a' && c <= 'z') ||
-                     (c >= 'A' && c <= 'Z') ||
-                     (c >= '0' && c <= '9') ||
-                     c == '_');
-        });
-    abs_path_str.erase(remove_iter, abs_path_str.end());
-
-    auto check_for_pragma_once = [](std::string const & line)
-    {
-        auto pragma_pos = line.find("#pragma");
-        auto once_pos = line.find("once");
-        return pragma_pos != std::string::npos && once_pos != std::string::npos && once_pos > pragma_pos;
-        // return RE2::FullMatch(line, PRAGMA_ONCE_REGEX);
-    };
-
-    while (std::getline(file_ss, line))
-    {
-        if (!has_pragma_once && check_for_pragma_once(line))
-        {
-            result_ss << "#if !defined(" << abs_path_str << ")\n";
-            has_pragma_once = true;
-        }
-        else
-        {
-            result_ss << line << "\n";
-        }
-    }
-    if (has_pragma_once)
-    {
-        result_ss << "\n#define " << abs_path_str << "\n#endif\n";
-    }
-    file_str = result_ss.str();
-}
-
-namespace daxa
-{
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
-    class GlslangFileIncluder : public glslang::TShader::Includer
-    {
-      public:
-        constexpr static inline size_t DELETE_SOURCE_NAME = 0x1;
-        constexpr static inline size_t DELETE_CONTENT = 0x2;
-        constexpr static inline usize MAX_INCLUSION_DEPTH = 100;
-
-        ImplPipelineManager * impl_pipeline_manager = nullptr;
-
-        [[nodiscard]] auto process_include(daxa::Result<daxa::ShaderCode> const & shader_code_result, std::filesystem::path const & full_path) const -> IncludeResult *
-        {
-            auto search_pred = [&](std::filesystem::path const & p)
-            { return p == full_path; };
-            if (std::find_if(
-                    impl_pipeline_manager->current_seen_shader_files.begin(),
-                    impl_pipeline_manager->current_seen_shader_files.end(),
-                    search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
-            {
-                return nullptr;
-            }
-            if (shader_code_result.is_err())
-            {
-                return nullptr;
-            }
-            impl_pipeline_manager->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
-
-            std::string headerName = {};
-            char const * headerData = nullptr;
-            size_t headerLength = 0;
-
-            auto const & shader_code_str = shader_code_result.value().string;
-            headerLength = shader_code_str.size();
-            char * res_content = new char[headerLength + 1];
-            for (usize i = 0; i < headerLength; ++i)
-            {
-                res_content[i] = shader_code_str[i];
-            }
-            res_content[headerLength] = '\0';
-            headerData = res_content;
-
-            headerName = full_path.string();
-            for (auto & c : headerName)
-            {
-                if (c == '\\')
-                {
-                    c = '/';
-                }
-            }
-
-            return new IncludeResult{headerName, headerData, headerLength, nullptr};
-        }
-
-        auto includeLocal(
-            char const * header_name, char const * includer_name, size_t inclusion_depth) -> IncludeResult * override
-        {
-            if (inclusion_depth > MAX_INCLUSION_DEPTH)
-            {
-                return nullptr;
-            }
-            auto header_name_str = std::string{header_name};
-            if (impl_pipeline_manager->virtual_files.contains(header_name_str))
-            {
-                return process_include(Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str);
-            }
-            auto result = impl_pipeline_manager->full_path_to_file(includer_name);
-            if (result.is_err())
-            {
-                return nullptr;
-            }
-            auto full_path = result.value().parent_path() / header_name;
-            auto shader_code_result = impl_pipeline_manager->load_shader_source_from_file(full_path);
-            return process_include(shader_code_result, full_path);
-        }
-
-        auto includeSystem(
-            char const * header_name, char const * /*includer_name*/, size_t inclusion_depth) -> IncludeResult * override
-        {
-            if (inclusion_depth > MAX_INCLUSION_DEPTH)
-            {
-                return nullptr;
-            }
-            auto header_name_str = std::string{header_name};
-            if (impl_pipeline_manager->virtual_files.contains(header_name_str))
-            {
-                return process_include(Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str);
-            }
-            auto result = impl_pipeline_manager->full_path_to_file(header_name);
-            if (result.is_err())
-            {
-                return nullptr;
-            }
-            auto full_path = result.value();
-            auto shader_code_result = impl_pipeline_manager->load_shader_source_from_file(full_path);
-            return process_include(shader_code_result, full_path);
-        }
-
-        void releaseInclude(IncludeResult * result) override
-        {
-            if (result != nullptr)
-            {
-                {
-                    delete result->headerData;
-                }
-                delete result;
-            }
-        }
-    };
-#endif
-} // namespace daxa
+#include "glslang_wrapper/wrapper.hpp"
 
 namespace
 {
@@ -445,7 +163,7 @@ namespace daxa
             if (pipeline_manager_count == 0)
             {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
-                glslang::InitializeProcess();
+                glslang_wrapper_init();
 #endif
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
                 auto ret = slang::createGlobalSession(slang_backend.global_session.writeRef());
@@ -463,7 +181,7 @@ namespace daxa
             --pipeline_manager_count;
             if (pipeline_manager_count == 0)
             {
-                glslang::FinalizeProcess();
+                glslang_wrapper_deinit();
             }
         }
 #endif
@@ -925,11 +643,6 @@ namespace daxa
             .timestamp = std::chrono::file_clock::now(),
         };
         auto & virtual_file = virtual_files.at(virtual_info.name);
-        if (this->info.custom_preprocessor)
-        {
-            this->info.custom_preprocessor(virtual_file.contents, virtual_info.name);
-        }
-        shader_preprocess(virtual_file.contents, virtual_info.name);
     }
 
     auto ImplPipelineManager::reload_all() -> PipelineReloadResult
@@ -1427,11 +1140,6 @@ namespace daxa
                 std::this_thread::sleep_for(std::chrono::milliseconds(1));
                 continue;
             }
-            if (this->info.custom_preprocessor)
-            {
-                this->info.custom_preprocessor(str, result_path.value());
-            }
-            shader_preprocess(str, result_path.value());
             return Result(ShaderCode{.string = str});
         }
         std::string err = "timeout while trying to read file: \"";
@@ -1439,9 +1147,95 @@ namespace daxa
         return Result<ShaderCode>(err);
     }
 
+    void process_include(ImplPipelineManager * impl_pipeline_manager, daxa::Result<daxa::ShaderCode> const & shader_code_result, std::filesystem::path const & full_path, GlslangWrapperHeaderResult & result)
+    {
+        auto search_pred = [&](std::filesystem::path const & p)
+        { return p == full_path; };
+        if (std::find_if(
+                impl_pipeline_manager->current_seen_shader_files.begin(),
+                impl_pipeline_manager->current_seen_shader_files.end(),
+                search_pred) != impl_pipeline_manager->current_seen_shader_files.end())
+        {
+            return;
+        }
+        if (shader_code_result.is_err())
+        {
+            return;
+        }
+        impl_pipeline_manager->current_observed_hotload_files->insert({full_path, std::chrono::file_clock::now()});
+
+        std::string headerName = {};
+        char const * headerData = nullptr;
+
+        auto const & shader_code_str = shader_code_result.value().string;
+        char * res_content = new char[shader_code_str.size() + 1];
+        memcpy(res_content, shader_code_str.data(), shader_code_str.size() + 1);
+        headerData = res_content;
+
+        headerName = full_path.string();
+        for (auto & c : headerName)
+        {
+            if (c == '\\')
+            {
+                c = '/';
+            }
+        }
+        char * res_name = new char[headerName.size() + 1];
+        memcpy(res_name, headerName.data(), headerName.size() + 1);
+
+        result.header_name = res_name;
+        result.header_name_length = headerName.size();
+        result.header_code = res_content;
+        result.header_code_length = shader_code_str.size();
+    }
+
+    auto includeLocal(void * user_pointer, char const * header_name, char const * includer_name, GlslangWrapperHeaderResult & result)
+    {
+        auto * impl_pipeline_manager = reinterpret_cast<ImplPipelineManager *>(user_pointer);
+        auto header_name_str = std::string{header_name};
+        if (impl_pipeline_manager->virtual_files.contains(header_name_str))
+        {
+            process_include(impl_pipeline_manager, Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str, result);
+            return;
+        }
+        auto result_path = impl_pipeline_manager->full_path_to_file(includer_name);
+        if (result_path.is_err())
+        {
+            return;
+        }
+        auto full_path = result_path.value().parent_path() / header_name;
+        auto shader_code_result = impl_pipeline_manager->load_shader_source_from_file(full_path);
+        return process_include(impl_pipeline_manager, shader_code_result, full_path, result);
+    }
+
+    auto includeSystem(void * user_pointer, char const * header_name, char const * includer_name, GlslangWrapperHeaderResult & result)
+    {
+        auto * impl_pipeline_manager = reinterpret_cast<ImplPipelineManager *>(user_pointer);
+        auto header_name_str = std::string{header_name};
+        if (impl_pipeline_manager->virtual_files.contains(header_name_str))
+        {
+            process_include(impl_pipeline_manager, Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str, result);
+            return;
+        }
+        auto result_path = impl_pipeline_manager->full_path_to_file(header_name);
+        if (result_path.is_err())
+        {
+            return;
+        }
+        auto full_path = result_path.value();
+        auto shader_code_result = impl_pipeline_manager->load_shader_source_from_file(full_path);
+        process_include(impl_pipeline_manager, shader_code_result, full_path, result);
+    }
+
+    void release_string_cb(char const * str)
+    {
+        delete[] str;
+    }
+
     auto ImplPipelineManager::get_spirv_glslang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] std::string const & debug_name_opt, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
+
         auto translate_shader_stage = [](ShaderStage stage) -> EShLanguage
         {
             switch (stage)
@@ -1460,35 +1254,11 @@ namespace daxa
             case ShaderStage::RAY_INTERSECT: return EShLanguage::EShLangIntersect;
             case ShaderStage::RAY_CALLABLE: return EShLanguage::EShLangCallable;
             default:
-                DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
                 return EShLanguage::EShLangCount;
-            }
-        };
-        auto shader_stage_string = [](ShaderStage stage) -> std::string_view
-        {
-            switch (stage)
-            {
-            case ShaderStage::COMP: return "comp";
-            case ShaderStage::VERT: return "vert";
-            case ShaderStage::FRAG: return "frag";
-            case ShaderStage::TESS_CONTROL: return "tess_ctrl";
-            case ShaderStage::TESS_EVAL: return "tess_eval";
-            case ShaderStage::TASK: return "task";
-            case ShaderStage::MESH: return "mesh";
-            case ShaderStage::RAY_GEN: return "rgen";
-            case ShaderStage::RAY_ANY_HIT: return "rahit";
-            case ShaderStage::RAY_CLOSEST_HIT: return "rchit";
-            case ShaderStage::RAY_MISS: return "rmiss";
-            case ShaderStage::RAY_INTERSECT: return "rint";
-            case ShaderStage::RAY_CALLABLE: return "rcall";
-            default:
-                DAXA_DBG_ASSERT_TRUE_M(false, "Tried creating shader with unknown shader stage");
-                return "bruh";
             }
         };
 
         std::string preamble;
-
         auto spirv_stage = translate_shader_stage(shader_stage);
 
         // NOTE: You can't set #version in the preamble. However,
@@ -1537,84 +1307,47 @@ namespace daxa
             name = debug_name_opt;
         }
 
-        glslang::TShader shader{spirv_stage};
-
-        shader.setPreamble(preamble.c_str());
-
-        auto const & source_str = code.string;
-        auto const * source_cstr = source_str.c_str();
-        auto const * name_cstr = name.c_str();
-
-        bool const use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false);
-
-        shader.setStringsWithLengthsAndNames(&source_cstr, nullptr, &name_cstr, 1);
         auto entry_point = shader_info.compile_options.entry_point.value_or("main");
-        shader.setEntryPoint(entry_point.c_str());
-        shader.setSourceEntryPoint((shader_stage == ShaderStage::COMP || shader_stage == ShaderStage::RAY_GEN) ? "main" : entry_point.c_str());
-        shader.setEnvClient(glslang::EShClientVulkan, glslang::EShTargetVulkan_1_3);
-        shader.setEnvTarget(glslang::EShTargetSpv, glslang::EShTargetSpv_1_6);
+        auto source_entry = (shader_stage == ShaderStage::COMP || shader_stage == ShaderStage::RAY_GEN) ? "main" : entry_point.c_str();
 
-        glslang::SpvOptions spv_options{};
-        spv_options.generateDebugInfo = use_debug_info; // -g
-        // spv_options.emitNonSemanticShaderDebugInfo = use_debug_info; // -gV
-        // if (spv_options.emitNonSemanticShaderDebugInfo)
-        //     spv_options.emitNonSemanticShaderDebugSource = use_debug_info; // -gVS
-        spv_options.stripDebugInfo = !use_debug_info;
+        uint32_t * spv_ptr = nullptr;
+        uint32_t spv_size = 0;
 
-        if (spv_options.emitNonSemanticShaderDebugInfo)
-            shader.setDebugInfo(use_debug_info);
+        char const * error_str_ptr = nullptr;
+        uint32_t error_str_size = 0;
 
-        spv_options.disableOptimizer = use_debug_info;
+        glslang_wrapper_compile(GlslangWrapperCompileInfo{
+            .stage = spirv_stage,
+            .preamble = preamble.c_str(),
+            .shader_glsl = code.string.c_str(),
+            .shader_name = name.c_str(),
+            .entry_point = entry_point.c_str(),
+            .source_entry = source_entry,
+            .use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false),
 
-        GlslangFileIncluder includer;
-        includer.impl_pipeline_manager = this;
-        auto messages = static_cast<EShMessages>(EShMsgSpvRules | EShMsgVulkanRules);
-        TBuiltInResource const resource = DAXA_DEFAULT_BUILTIN_RESOURCE;
+            .include_local_cb = includeLocal,
+            .include_system_cb = includeSystem,
+            .release_string_cb = release_string_cb,
+            .user_pointer = this,
 
-        static constexpr int SHADER_VERSION = 460;
+            .out_spv_ptr = &spv_ptr,
+            .out_spv_size = &spv_size,
 
-        if (shader_info.compile_options.write_out_preprocessed_code.has_value())
+            .out_error_str = &error_str_ptr,
+            .out_error_str_size = &error_str_size,
+        });
+
+        if (spv_ptr == nullptr)
         {
-            std::replace(name.begin(), name.end(), '/', '_');
-            std::replace(name.begin(), name.end(), '\\', '_');
-            std::replace(name.begin(), name.end(), ':', '_');
-            std::string const file_name = std::string("preprocessed_") + name + "." + std::string(shader_stage_string(shader_stage));
-            auto out_folder = shader_info.compile_options.write_out_preprocessed_code.value();
-            std::filesystem::create_directories(out_folder);
-            auto filepath = out_folder / file_name;
-            std::string preprocessed_result = {};
-            shader.preprocess(&DAXA_DEFAULT_BUILTIN_RESOURCE, SHADER_VERSION, EProfile::ENoProfile, false, false, messages, &preprocessed_result, includer);
-            auto ofs = std::ofstream{filepath, std::ios_base::trunc};
-            ofs.write(preprocessed_result.data(), static_cast<std::streamsize>(preprocessed_result.size()));
-            ofs.close();
+            auto result = Result<std::vector<u32>>(std::string(error_str_ptr, error_str_size));
+            glslang_wrapper_release_results(spv_ptr, error_str_ptr);
+            return result;
         }
 
-        auto error_message_prefix = std::string("GLSLANG [") + name + "]";
-
-        if (!shader.parse(&resource, SHADER_VERSION, false, messages, includer))
-        {
-            return Result<std::vector<u32>>(error_message_prefix + shader.getInfoLog() + shader.getInfoDebugLog());
-        }
-
-        glslang::TProgram program;
-        program.addShader(&shader);
-
-        if (!program.link(messages))
-        {
-            return Result<std::vector<u32>>(error_message_prefix + shader.getInfoLog() + shader.getInfoDebugLog());
-        }
-
-        auto * intermediary = program.getIntermediate(spirv_stage);
-        if (intermediary == nullptr)
-        {
-            return Result<std::vector<u32>>(error_message_prefix + std::string("Failed to get shader stage intermediary"));
-        }
-
-        spv::SpvBuildLogger logger;
-
-        std::vector<u32> spv;
-        glslang::GlslangToSpv(*intermediary, spv, &logger, &spv_options);
-        return Result<std::vector<u32>>(spv);
+        auto spv = std::span(spv_ptr, spv_size);
+        auto result = Result<std::vector<u32>>(std::vector<uint32_t>(spv.begin(), spv.end()));
+        glslang_wrapper_release_results(spv_ptr, error_str_ptr);
+        return result;
 #else
         return Result<std::vector<u32>>("Asked for glslang compilation without enabling glslang");
 #endif

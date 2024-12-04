@@ -1,6 +1,7 @@
 #pragma once
 
 #include <daxa/utils/pipeline_manager.hpp>
+#include <map>
 
 #undef Bool
 
@@ -9,11 +10,6 @@
 #include <slang-com-ptr.h>
 #endif
 
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
-#include <glslang/Public/ShaderLang.h>
-#include <glslang/SPIRV/GlslangToSpv.h>
-#include <glslang/Include/ResourceLimits.h>
-#endif
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
 #include <spirv-tools/libspirv.hpp>
@@ -81,13 +77,6 @@ namespace daxa
         // PipelineManager is still externally thread-safe. You can create as many
         // PipelineManagers from as many threads as you'd like!
         ShaderCompileInfo const * current_shader_info = nullptr;
-
-#if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
-        struct GlslangBackend
-        {
-        };
-        GlslangBackend glslang_backend = {};
-#endif
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
         struct SlangBackend

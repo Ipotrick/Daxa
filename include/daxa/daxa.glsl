@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DAXA_DAXA_GLSL
+#define DAXA_DAXA_GLSL
 
 // Optional features:
 // #define DAXA_IMAGE_INT64
@@ -619,3 +620,5 @@ DAXA_DECL_BUFFER_PTR(daxa_u64vec3)
 DAXA_DECL_BUFFER_PTR(daxa_BufferId)
 DAXA_DECL_BUFFER_PTR(daxa_ImageViewId)
 DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
+
+#endif

@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DAXA_DAXA_INL
+#define DAXA_DAXA_INL
 
 #define DAXA_GPU_TABLE_SET_BINDING 0
 #define DAXA_STORAGE_BUFFER_BINDING 0
@@ -51,5 +52,6 @@
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa::types::DeviceAddress
 
+#endif
 #endif
 #endif

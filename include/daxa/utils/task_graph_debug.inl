@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DAXA_TASK_GRAPH_DEBUG_GLSL
+#define DAXA_TASK_GRAPH_DEBUG_GLSL
 
 #include <daxa/daxa.inl>
 
@@ -21,3 +22,5 @@ struct DebugTaskDrawDebugDisplayPush
     daxa_BufferPtr(daxa_f32vec4) readback_ptr;
     daxa_u32 readback_index;
 };
+
+#endif
