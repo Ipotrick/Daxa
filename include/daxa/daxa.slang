@@ -154,6 +154,12 @@ namespace daxa
     };
 
 #if defined(DAXA_RAY_TRACING)
+    [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
+    extension RaytracingAccelerationStructure
+    {
+        static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
+    }
+
     struct TlasId
     {
         daxa_u64 value;
@@ -169,13 +175,11 @@ namespace daxa
         {
             return value == 0;
         }
+        RaytracingAccelerationStructure get()
+        {
+            return RaytracingAccelerationStructure::get(self);
+        }
     };
-
-    [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
-    extension RaytracingAccelerationStructure
-    {
-        static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
-    }
 #endif // DAXA_RAY_TRACING
 
     extension ByteAddressBuffer
