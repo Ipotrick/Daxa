@@ -177,7 +177,7 @@ namespace daxa
         }
         RaytracingAccelerationStructure get()
         {
-            return RaytracingAccelerationStructure::get(self);
+            return RayTracingAccelerationStructureTable[index()];
         }
     };
 #endif // DAXA_RAY_TRACING

@@ -1311,29 +1311,29 @@ namespace daxa
                         for (auto parent : actual_images)
                         {
                             ImageViewInfo view_info = info.device.image_view_info(parent.default_view()).value();
-                            ImageViewType const use_view_type = (image_attach.view_type != ImageViewType::MAX_ENUM) ? image_attach.view_type : view_info.type;
-                            if (parent.default_view() == daxa::ImageViewId{})
+                            // Attachments that do not fill out the view type do not get a view generated!
+                            if (image_attach.view_type != ImageViewType::MAX_ENUM) 
                             {
-                                printf("bruh view\n");
-                            }
-                            if (parent == daxa::ImageId{})
-                            {
-                                printf("bruh image\n");
-                            }
+                                ImageViewType const use_view_type = image_attach.view_type;
 
-                            // When the use image view parameters match the default view,
-                            // then use the default view id and avoid creating a new id here.
-                            bool const is_use_default_slice = view_info.slice == slice;
-                            bool const is_use_default_view_type = use_view_type == view_info.type;
-                            if (is_use_default_slice && is_use_default_view_type)
-                            {
-                                view_cache.push_back(parent.default_view());
+                                // When the use image view parameters match the default view,
+                                // then use the default view id and avoid creating a new id here.
+                                bool const is_use_default_slice = view_info.slice == slice;
+                                bool const is_use_default_view_type = use_view_type == view_info.type;
+                                if (is_use_default_slice && is_use_default_view_type)
+                                {
+                                    view_cache.push_back(parent.default_view());
+                                }
+                                else
+                                {
+                                    view_info.type = use_view_type;
+                                    view_info.slice = slice;
+                                    view_cache.push_back(info.device.create_image_view(view_info));
+                                }
                             }
                             else
                             {
-                                view_info.type = use_view_type;
-                                view_info.slice = slice;
-                                view_cache.push_back(info.device.create_image_view(view_info));
+                                view_cache.push_back({});
                             }
                         }
                     }
