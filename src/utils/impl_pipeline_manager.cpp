@@ -1178,9 +1178,9 @@ namespace daxa
             }
         }
         std::string name = shader_info.source_path.string();
-        if (!debug_name_opt.empty())
+        if (name.empty() && !debug_name_opt.empty())
         {
-            name += debug_name_opt;
+            name = debug_name_opt;
         }
 
         auto entry_point = shader_info.entry_point.value_or("main");
