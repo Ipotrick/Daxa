@@ -11,19 +11,6 @@
 
 namespace daxa
 {
-    struct ShaderFile
-    {
-        std::filesystem::path path;
-    };
-
-    // This string will only work if it is valid GLSL/SLANG
-    struct ShaderCode
-    {
-        std::string string;
-    };
-
-    using ShaderSource = Variant<Monostate, ShaderFile, ShaderCode>;
-
     struct ShaderDefine
     {
         std::string name = {};
@@ -42,8 +29,9 @@ namespace daxa
         u32 major, minor;
     };
 
-    struct ShaderCompileOptions
+    struct ShaderCompileInfo
     {
+        std::filesystem::path source_path;
         std::optional<std::string> entry_point = {};
         std::vector<std::filesystem::path> root_paths = {};
         std::optional<std::filesystem::path> write_out_preprocessed_code = {};
@@ -54,14 +42,7 @@ namespace daxa
         std::optional<bool> enable_debug_info = {};
         std::optional<ShaderCreateFlags> create_flags = {};
         std::optional<u32> required_subgroup_size = {};
-
-        void inherit(ShaderCompileOptions const & other);
-    };
-
-    struct ShaderCompileInfo
-    {
-        ShaderSource source = Monostate{};
-        ShaderCompileOptions compile_options = {};
+        void inherit(ShaderCompileInfo const & other);
     };
 
     struct RayTracingPipelineCompileInfo
@@ -104,15 +85,9 @@ namespace daxa
     struct PipelineManagerInfo
     {
         Device device;
-        ShaderCompileOptions shader_compile_options = {};
+        ShaderCompileInfo shader_compile_options = {};
         bool register_null_pipelines_when_first_compile_fails = false;
         std::string name = {};
-    };
-
-    struct VirtualFileInfo
-    {
-        std::string name = {};
-        std::string contents = {};
     };
 
     struct PipelineReloadSuccess
@@ -139,7 +114,6 @@ namespace daxa
         void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
-        void add_virtual_file(VirtualFileInfo const & info);
         auto reload_all() -> PipelineReloadResult;
         auto all_pipelines_valid() const -> bool;
 

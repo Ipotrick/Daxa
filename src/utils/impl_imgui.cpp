@@ -452,7 +452,7 @@ namespace daxa
 
 DAXA_DECL_PUSH_CONSTANT(Push, push)
 
-#if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
+#if GL_VERTEX_SHADER
 
 layout(location = 0) out struct
 {
@@ -477,7 +477,7 @@ void main()
     gl_Position = vec4(aPos * push.scale + push.translate, 0, 1);
 }
 
-#elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_FRAGMENT
+#elif GL_FRAGMENT_SHADER
 
 layout(location = 0) out daxa_f32vec4 fColor;
 layout(location = 0) in struct
@@ -544,20 +544,16 @@ auto main() -> int
     // std::shared_ptr<daxa::RasterPipeline> imgui_pipeline =
     daxa::RasterPipelineCompileInfo compile_info{
         .vertex_shader_info = daxa::ShaderCompileInfo{
-            .source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"},
-            .compile_options = {
-                .write_out_shader_binary = "./",
-                .language = daxa::ShaderLanguage::GLSL,
-                .enable_debug_info = false,
-            },
+            .source_path = "src/utils/impl_imgui.cpp",
+            .write_out_shader_binary = "./",
+            .language = daxa::ShaderLanguage::GLSL,
+            .enable_debug_info = false,
         },
         .fragment_shader_info = daxa::ShaderCompileInfo{
-            .source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"},
-            .compile_options = daxa::ShaderCompileOptions{
-                .write_out_shader_binary = "./",
-                .language = daxa::ShaderLanguage::GLSL,
-                .enable_debug_info = false,
-            },
+            .source_path = "src/utils/impl_imgui.cpp",
+            .write_out_shader_binary = "./",
+            .language = daxa::ShaderLanguage::GLSL,
+            .enable_debug_info = false,
         },
         .color_attachments = {{.format = daxa::Format::R16G16B16A16_SFLOAT}},
         .raster = {},
@@ -583,7 +579,7 @@ auto main() -> int
     std::filesystem::remove("./imgui_pipeline.frag.spv");
 
     // WITH GAMMA CORRECTION
-    compile_info.fragment_shader_info.value().compile_options.defines = {{"GAMMA_CORRECTION", "TRUE"}};
+    compile_info.fragment_shader_info.value().defines = {{"GAMMA_CORRECTION", "TRUE"}};
     result = pipeline_manager.add_raster_pipeline(compile_info);
     std::cout << result.to_string();
 

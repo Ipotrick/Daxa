@@ -10,7 +10,6 @@
 #include <slang-com-ptr.h>
 #endif
 
-
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION
 #include <spirv-tools/libspirv.hpp>
 #endif
@@ -21,13 +20,10 @@ namespace daxa
 
     using ShaderFileTimeSet = std::map<std::filesystem::path, std::chrono::file_clock::time_point>;
 
-    struct VirtualFileState
+    struct ShaderCode
     {
-        std::string contents;
-        std::chrono::file_clock::time_point timestamp;
+        std::string string;
     };
-
-    using VirtualFileSet = std::map<std::string, VirtualFileState>;
 
     struct ImplPipelineManager final : ImplHandle
     {
@@ -52,8 +48,6 @@ namespace daxa
 
         std::vector<std::filesystem::path> current_seen_shader_files = {};
         ShaderFileTimeSet * current_observed_hotload_files = nullptr;
-
-        VirtualFileSet virtual_files = {};
 
         template <typename PipeT, typename InfoT>
         struct PipelineState
@@ -104,7 +98,6 @@ namespace daxa
         void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);
-        void add_virtual_file(VirtualFileInfo const & virtual_info);
         auto reload_all() -> PipelineReloadResult;
         auto all_pipelines_valid() const -> bool;
 

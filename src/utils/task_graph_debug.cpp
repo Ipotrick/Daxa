@@ -441,11 +441,9 @@ void TgDebugContext::init(daxa::Device & device, daxa::PipelineManager & pipelin
     this->device = device;
     auto result = pipeline_manager.add_compute_pipeline(daxa::ComputePipelineCompileInfo{
         .shader_info = {
-            .source = daxa::ShaderFile{"daxa/utils/task_graph_debug.glsl"},
-            .compile_options = {
-                .entry_point = "entry_draw_debug_display",
-                .language = daxa::ShaderLanguage::GLSL,
-            },
+            .source_path = "daxa/utils/task_graph_debug.glsl",
+            .entry_point = "entry_draw_debug_display",
+            .language = daxa::ShaderLanguage::GLSL,
         },
         .push_constant_size = sizeof(DebugTaskDrawDebugDisplayPush),
         .name = "debug_task_pipeline",
@@ -537,7 +535,7 @@ void TgDebugContext::debug_task(daxa::TaskInterface ti, bool pre_task)
             key += std::to_string(inl_attachment_index);
             ++inl_attachment_index;
         }
-        
+
         if (pre_task)
         {
             tg_debug.this_frame_task_attachments[this_frame_task_index].attachments.push_back(ti.attachment_infos[i]);

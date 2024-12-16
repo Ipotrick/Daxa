@@ -41,7 +41,7 @@ namespace
 
 namespace daxa
 {
-    void ShaderCompileOptions::inherit(ShaderCompileOptions const & other)
+    void ShaderCompileInfo::inherit(ShaderCompileInfo const & other)
     {
         if (!this->entry_point.has_value())
         {
@@ -119,12 +119,6 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
         return impl.remove_raster_pipeline(pipeline);
-    }
-
-    void PipelineManager::add_virtual_file(VirtualFileInfo const & virtual_info)
-    {
-        auto & impl = *r_cast<ImplPipelineManager *>(this->object);
-        impl.add_virtual_file(virtual_info);
     }
 
     auto PipelineManager::reload_all() -> PipelineReloadResult
@@ -260,13 +254,13 @@ namespace daxa
                 final_shader_info->push_back(daxa::ShaderInfo{
                     .byte_code = spv_results->back().value().data(),
                     .byte_code_size = static_cast<u32>(spv_results->back().value().size()),
-                    .create_flags = shader_compile_info.compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
+                    .create_flags = shader_compile_info.create_flags.value_or(ShaderCreateFlagBits::NONE),
                     .required_subgroup_size =
-                        shader_compile_info.compile_options.required_subgroup_size.has_value() ? Optional{shader_compile_info.compile_options.required_subgroup_size.value()} : daxa::None,
+                        shader_compile_info.required_subgroup_size.has_value() ? Optional{shader_compile_info.required_subgroup_size.value()} : daxa::None,
                 });
-                if (shader_compile_info.compile_options.entry_point.has_value() && (shader_compile_info.compile_options.language != ShaderLanguage::SLANG))
+                if (shader_compile_info.entry_point.has_value() && (shader_compile_info.language != ShaderLanguage::SLANG))
                 {
-                    final_shader_info->back().entry_point = {shader_compile_info.compile_options.entry_point.value()};
+                    final_shader_info->back().entry_point = {shader_compile_info.entry_point.value()};
                 }
             }
         }
@@ -314,17 +308,17 @@ namespace daxa
             }
         }
         char const * entry_point = "main";
-        if (a_info.shader_info.compile_options.entry_point.has_value() && a_info.shader_info.compile_options.language != ShaderLanguage::SLANG)
+        if (a_info.shader_info.entry_point.has_value() && a_info.shader_info.language != ShaderLanguage::SLANG)
         {
-            entry_point = a_info.shader_info.compile_options.entry_point.value().c_str();
+            entry_point = a_info.shader_info.entry_point.value().c_str();
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_compute_pipeline({
             .shader_info = {
                 .byte_code = spirv_result.value().data(),
                 .byte_code_size = static_cast<u32>(spirv_result.value().size()),
-                .create_flags = a_info.shader_info.compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
+                .create_flags = a_info.shader_info.create_flags.value_or(ShaderCreateFlagBits::NONE),
                 .required_subgroup_size =
-                    a_info.shader_info.compile_options.required_subgroup_size.has_value() ? Optional{a_info.shader_info.compile_options.required_subgroup_size.value()} : daxa::None,
+                    a_info.shader_info.required_subgroup_size.has_value() ? Optional{a_info.shader_info.required_subgroup_size.value()} : daxa::None,
                 .entry_point = entry_point,
             },
             .push_constant_size = a_info.push_constant_size,
@@ -394,13 +388,13 @@ namespace daxa
                 *final_shader_info = daxa::ShaderInfo{
                     .byte_code = spv_result->value().data(),
                     .byte_code_size = static_cast<u32>(spv_result->value().size()),
-                    .create_flags = pipe_result_shader_info->value().compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
+                    .create_flags = pipe_result_shader_info->value().create_flags.value_or(ShaderCreateFlagBits::NONE),
                     .required_subgroup_size =
-                        pipe_result_shader_info->value().compile_options.required_subgroup_size.has_value() ? Optional{pipe_result_shader_info->value().compile_options.required_subgroup_size.value()} : daxa::None,
+                        pipe_result_shader_info->value().required_subgroup_size.has_value() ? Optional{pipe_result_shader_info->value().required_subgroup_size.value()} : daxa::None,
                 };
-                if (pipe_result_shader_info->value().compile_options.language != ShaderLanguage::SLANG)
+                if (pipe_result_shader_info->value().language != ShaderLanguage::SLANG)
                 {
-                    final_shader_info->value().entry_point = {pipe_result_shader_info->value().compile_options.entry_point.value()};
+                    final_shader_info->value().entry_point = {pipe_result_shader_info->value().entry_point.value()};
                 }
             }
         }
@@ -414,27 +408,27 @@ namespace daxa
         auto modified_info = a_info;
         for (auto & shader_compile_info : modified_info.ray_gen_infos)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            shader_compile_info.inherit(this->info.shader_compile_options);
         }
         for (auto & shader_compile_info : modified_info.intersection_infos)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            shader_compile_info.inherit(this->info.shader_compile_options);
         }
         for (auto & shader_compile_info : modified_info.any_hit_infos)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            shader_compile_info.inherit(this->info.shader_compile_options);
         }
         for (auto & shader_compile_info : modified_info.callable_infos)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            shader_compile_info.inherit(this->info.shader_compile_options);
         }
         for (auto & shader_compile_info : modified_info.closest_hit_infos)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            shader_compile_info.inherit(this->info.shader_compile_options);
         }
         for (auto & shader_compile_info : modified_info.miss_hit_infos)
         {
-            shader_compile_info.compile_options.inherit(this->info.shader_compile_options);
+            shader_compile_info.inherit(this->info.shader_compile_options);
         }
 
         auto pipe_result = create_ray_tracing_pipeline(modified_info);
@@ -457,9 +451,9 @@ namespace daxa
 
     auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
-        DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
+        DAXA_DBG_ASSERT_TRUE_M(!a_info.shader_info.source_path.empty(), "must provide shader source");
         auto modified_info = a_info;
-        modified_info.shader_info.compile_options.inherit(this->info.shader_compile_options);
+        modified_info.shader_info.inherit(this->info.shader_compile_options);
         auto pipe_result = create_compute_pipeline(modified_info);
         if (pipe_result.is_err())
         {
@@ -493,7 +487,7 @@ namespace daxa
         {
             if (shader_compile_info->has_value())
             {
-                shader_compile_info->value().compile_options.inherit(this->info.shader_compile_options);
+                shader_compile_info->value().inherit(this->info.shader_compile_options);
             }
         }
         auto pipe_result = create_raster_pipeline(modified_info);
@@ -564,7 +558,7 @@ namespace daxa
 
     using FileWriteTimeLookupTable = std::unordered_map<std::string, std::filesystem::file_time_type>;
 
-    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files, VirtualFileSet & virtual_files, FileWriteTimeLookupTable & lookup_table) -> bool
+    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files, FileWriteTimeLookupTable & lookup_table) -> bool
     {
         using namespace std::chrono_literals;
         static constexpr auto HOTRELOAD_MIN_TIME = 250ms;
@@ -597,15 +591,7 @@ namespace daxa
         for (auto & [path, recorded_write_time] : observed_hotload_files)
         {
             auto path_str = path.string();
-            if (virtual_files.contains(path_str))
-            {
-                auto latest_write_time = virtual_files[path_str].timestamp;
-                if (latest_write_time > recorded_write_time)
-                {
-                    reload = true;
-                }
-            }
-            else // if (std::filesystem::exists(path))
+            // if (std::filesystem::exists(path))
             {
                 auto latest_write_time = get_last_file_write_time(path);
                 if (latest_write_time > recorded_write_time)
@@ -613,21 +599,13 @@ namespace daxa
                     reload = true;
                 }
             }
-            // else
-            // {
-            //     std::cout << "How?" << std::endl;
-            // }
         }
         if (reload)
         {
             for (auto & pair : observed_hotload_files)
             {
                 auto path_str = pair.first.string();
-                if (virtual_files.contains(path_str))
-                {
-                    pair.second = virtual_files[path_str].timestamp;
-                }
-                else if (std::filesystem::exists(pair.first))
+                if (std::filesystem::exists(pair.first))
                 {
                     pair.second = get_last_file_write_time(pair.first);
                 }
@@ -635,15 +613,6 @@ namespace daxa
         }
         return reload;
     };
-
-    void ImplPipelineManager::add_virtual_file(VirtualFileInfo const & virtual_info)
-    {
-        virtual_files[virtual_info.name] = VirtualFileState{
-            .contents = virtual_info.contents,
-            .timestamp = std::chrono::file_clock::now(),
-        };
-        auto & virtual_file = virtual_files.at(virtual_info.name);
-    }
 
     auto ImplPipelineManager::reload_all() -> PipelineReloadResult
     {
@@ -655,7 +624,7 @@ namespace daxa
 
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->compute_pipelines)
         {
-            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files, lookup_table))
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, lookup_table))
             {
                 reloaded = true;
                 auto new_pipeline = create_compute_pipeline(compile_info);
@@ -681,7 +650,7 @@ namespace daxa
 
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->raster_pipelines)
         {
-            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files, lookup_table))
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, lookup_table))
             {
                 reloaded = true;
                 auto new_pipeline = create_raster_pipeline(compile_info);
@@ -707,7 +676,7 @@ namespace daxa
 
         for (auto & [pipeline, compile_info, last_hotload_time, observed_hotload_files] : this->ray_tracing_pipelines)
         {
-            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, virtual_files, lookup_table))
+            if (check_if_sources_changed(last_hotload_time, observed_hotload_files, lookup_table))
             {
                 reloaded = true;
                 auto new_pipeline = create_ray_tracing_pipeline(compile_info);
@@ -769,7 +738,7 @@ namespace daxa
         return true;
     }
 
-    static auto hash_shader_info(std::string const & source_string, ShaderCompileOptions const & compile_options, ImplPipelineManager::ShaderStage shader_stage) -> uint64_t
+    static auto hash_shader_info(std::string const & source_string, ShaderCompileInfo const & compile_options, ImplPipelineManager::ShaderStage shader_stage) -> uint64_t
     {
         auto result = uint64_t{};
 
@@ -778,7 +747,7 @@ namespace daxa
             return h1 ^ (h2 << 1);
         };
 
-        auto hash_shader_compile_options = [&hash_combine](ShaderCompileOptions const & options) -> uint64_t
+        auto hash_shader_compile_options = [&hash_combine](ShaderCompileInfo const & options) -> uint64_t
         {
             auto result = uint64_t{};
             if (options.entry_point.has_value())
@@ -840,24 +809,11 @@ namespace daxa
             auto flags = uint64_t{};
             auto path_string = path.string();
             auto path_string_size = uint64_t{path_string.size()};
-            auto virtual_file_iter = virtual_files.find(path_string);
-            bool is_virtual_file = virtual_file_iter != virtual_files.end();
-            flags |= (is_virtual_file << 0);
             auto time_since_epoch = time_point.time_since_epoch().count();
             out_file.write(reinterpret_cast<char const *>(&flags), sizeof(flags));
             out_file.write(reinterpret_cast<char const *>(&path_string_size), sizeof(path_string_size));
             out_file.write(path_string.data(), path_string.size());
-            if (is_virtual_file)
-            {
-                auto const & virtual_file_contents = virtual_file_iter->second.contents;
-                auto virtual_file_size = uint64_t{virtual_file_contents.size()};
-                out_file.write(reinterpret_cast<char const *>(&virtual_file_size), sizeof(virtual_file_size));
-                out_file.write(virtual_file_contents.data(), virtual_file_contents.size());
-            }
-            else
-            {
-                out_file.write(reinterpret_cast<char const *>(&time_since_epoch), sizeof(time_since_epoch));
-            }
+            out_file.write(reinterpret_cast<char const *>(&time_since_epoch), sizeof(time_since_epoch));
         }
         out_file.write(reinterpret_cast<char const *>(spirv.data()), header.spirv_size);
     }
@@ -886,42 +842,19 @@ namespace daxa
                 auto path_string = std::string{};
                 auto path_string_size = uint64_t{};
                 in_file.read(reinterpret_cast<char *>(&flags), sizeof(flags));
-                auto is_virtual_file = ((flags >> 0) & 1) != 0;
                 in_file.read(reinterpret_cast<char *>(&path_string_size), sizeof(path_string_size));
                 path_string.resize(path_string_size);
                 in_file.read(path_string.data(), path_string_size);
                 path = path_string;
-                if (is_virtual_file)
+                in_file.read(reinterpret_cast<char *>(&time_since_epoch), sizeof(time_since_epoch));
+                if (!std::filesystem::exists(path))
                 {
-                    auto virtual_file_contents = std::string{};
-                    auto virtual_file_size = uint64_t{};
-
-                    in_file.read(reinterpret_cast<char *>(&virtual_file_size), sizeof(virtual_file_size));
-                    virtual_file_contents.resize(virtual_file_size);
-                    in_file.read(virtual_file_contents.data(), virtual_file_size);
-
-                    auto virtual_file_iter = virtual_files.find(path_string);
-                    if (virtual_file_iter == virtual_files.end())
-                    {
-                        return Result<std::vector<u32>>(std::string_view{"needs update"});
-                    }
-                    if (virtual_file_iter->second.contents != virtual_file_contents)
-                    {
-                        return Result<std::vector<u32>>(std::string_view{"needs update"});
-                    }
+                    return Result<std::vector<u32>>(std::string_view{"needs update"});
                 }
-                else
+                auto write_time = std::filesystem::last_write_time(path);
+                if (write_time.time_since_epoch().count() > time_since_epoch)
                 {
-                    in_file.read(reinterpret_cast<char *>(&time_since_epoch), sizeof(time_since_epoch));
-                    if (!std::filesystem::exists(path))
-                    {
-                        return Result<std::vector<u32>>(std::string_view{"needs update"});
-                    }
-                    auto write_time = std::filesystem::last_write_time(path);
-                    if (write_time.time_since_epoch().count() > time_since_epoch)
-                    {
-                        return Result<std::vector<u32>>(std::string_view{"needs update"});
-                    }
+                    return Result<std::vector<u32>>(std::string_view{"needs update"});
                 }
                 // NOTE(grundlett): Setting the time to now is fine, as we successfully handle
                 // any temporal changes above. This is a bus sus tho.
@@ -948,43 +881,25 @@ namespace daxa
         // }
         // else
         {
-            ShaderCode code;
-            if (auto const * shader_source = daxa::get_if<ShaderFile>(&shader_info.source))
+            auto file_ret = full_path_to_file(shader_info.source_path);
+            if (file_ret.is_err())
             {
-                auto ret = [this, &shader_source]() -> daxa::Result<std::filesystem::path>
-                {
-                    if (this->virtual_files.contains(shader_source->path.string()))
-                    {
-                        return daxa::Result<std::filesystem::path>(shader_source->path);
-                    }
-                    else
-                    {
-                        return full_path_to_file(shader_source->path);
-                    }
-                }();
-                if (ret.is_err())
-                {
-                    return Result<std::vector<u32>>(ret.message());
-                }
-                // This is a hack. Instead of providing the file as source code, we provide the full path.
-                code = {.string = std::string("#include \"") + ret.value().string() + "\"\n"};
-                // auto code_ret = load_shader_source_from_file(ret.value());
-                // if (code_ret.is_err())
-                // {
-                //     return Result<std::vector<u32>>(code_ret.message());
-                // }
-                // code = code_ret.value();
+                return Result<std::vector<u32>>(file_ret.message());
             }
-            else
+            // This is a hack. Instead of providing the file as source code, we provide the full path.
+            // code = {.string = std::string("#include \"") + ret.value().string() + "\"\n"};
+            auto code_ret = load_shader_source_from_file(file_ret.value());
+            if (code_ret.is_err())
             {
-                code = daxa::get<ShaderCode>(shader_info.source);
+                return Result<std::vector<u32>>(code_ret.message());
             }
+            ShaderCode code = code_ret.value();
 
             // TODO: Test if this is slow, as it's not needed if there's no shader cache.
-            auto shader_info_hash = hash_shader_info(code.string, shader_info.compile_options, shader_stage);
-            if (shader_info.compile_options.spirv_cache_folder.has_value())
+            auto shader_info_hash = hash_shader_info(code.string, shader_info, shader_stage);
+            if (shader_info.spirv_cache_folder.has_value())
             {
-                auto cache_ret = try_load_shader_cache(shader_info.compile_options.spirv_cache_folder.value(), shader_info_hash);
+                auto cache_ret = try_load_shader_cache(shader_info.spirv_cache_folder.value(), shader_info_hash);
                 if (cache_ret.is_ok())
                 {
                     return cache_ret;
@@ -993,10 +908,10 @@ namespace daxa
 
             Result<std::vector<u32>> ret = Result<std::vector<u32>>("No shader was compiled");
 
-            DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.language.has_value(), "How did this happen? You mustn't provide a nullopt for the language");
+            DAXA_DBG_ASSERT_TRUE_M(shader_info.language.has_value(), "How did this happen? You mustn't provide a nullopt for the language");
 
-            DAXA_DBG_ASSERT_TRUE_M(shader_info.compile_options.language.has_value(), "You must have a shader language set when compiling GLSL");
-            switch (shader_info.compile_options.language.value())
+            DAXA_DBG_ASSERT_TRUE_M(shader_info.language.has_value(), "You must have a shader language set when compiling GLSL");
+            switch (shader_info.language.value())
             {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
             case ShaderLanguage::GLSL:
@@ -1018,9 +933,9 @@ namespace daxa
             }
 
             spirv = ret.value();
-            if (shader_info.compile_options.spirv_cache_folder.has_value())
+            if (shader_info.spirv_cache_folder.has_value())
             {
-                save_shader_cache(shader_info.compile_options.spirv_cache_folder.value(), shader_info_hash, spirv);
+                save_shader_cache(shader_info.spirv_cache_folder.value(), shader_info_hash, spirv);
             }
         }
         current_shader_info = nullptr;
@@ -1030,19 +945,19 @@ namespace daxa
         {
             name = debug_name_opt;
         }
-        else if (auto const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
+        else
         {
-            name = shader_file->path.string();
+            name = shader_info.source_path.string();
         }
 
-        if (shader_info.compile_options.write_out_shader_binary.has_value())
+        if (shader_info.write_out_shader_binary.has_value())
         {
             std::replace(name.begin(), name.end(), '/', '_');
             std::replace(name.begin(), name.end(), '\\', '_');
             std::replace(name.begin(), name.end(), ':', '_');
             std::replace(name.begin(), name.end(), '.', '_');
-            name = name + "_" + std::string{stage_string(shader_stage)} + "_" + shader_info.compile_options.entry_point.value() + ".spirv";
-            auto out_folder = shader_info.compile_options.write_out_shader_binary.value();
+            name = name + "_" + std::string{stage_string(shader_stage)} + "_" + shader_info.entry_point.value() + ".spirv";
+            auto out_folder = shader_info.write_out_shader_binary.value();
             std::filesystem::create_directories(out_folder);
             std::ofstream ofs(out_folder / name, std::ios_base::trunc | std::ios_base::binary);
             ofs.write(r_cast<char const *>(spirv.data()), static_cast<std::streamsize>(spirv.size() * 4));
@@ -1084,7 +999,7 @@ namespace daxa
         std::filesystem::path potential_path;
         if (this->current_shader_info != nullptr)
         {
-            for (auto const & root : this->current_shader_info->compile_options.root_paths)
+            for (auto const & root : this->current_shader_info->root_paths)
             {
                 potential_path.clear();
                 potential_path = root / path;
@@ -1193,11 +1108,6 @@ namespace daxa
     {
         auto * impl_pipeline_manager = reinterpret_cast<ImplPipelineManager *>(user_pointer);
         auto header_name_str = std::string{header_name};
-        if (impl_pipeline_manager->virtual_files.contains(header_name_str))
-        {
-            process_include(impl_pipeline_manager, Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str, result);
-            return;
-        }
         auto result_path = impl_pipeline_manager->full_path_to_file(includer_name);
         if (result_path.is_err())
         {
@@ -1212,11 +1122,6 @@ namespace daxa
     {
         auto * impl_pipeline_manager = reinterpret_cast<ImplPipelineManager *>(user_pointer);
         auto header_name_str = std::string{header_name};
-        if (impl_pipeline_manager->virtual_files.contains(header_name_str))
-        {
-            process_include(impl_pipeline_manager, Result{ShaderCode{impl_pipeline_manager->virtual_files.at(header_name_str).contents}}, header_name_str, result);
-            return;
-        }
         auto result_path = impl_pipeline_manager->full_path_to_file(header_name);
         if (result_path.is_err())
         {
@@ -1261,32 +1166,7 @@ namespace daxa
         std::string preamble;
         auto spirv_stage = translate_shader_stage(shader_stage);
 
-        // NOTE: You can't set #version in the preamble. However,
-        // you can set the version as a `shader.` parameter. This
-        // is unnecessary, though, since it appears to default to
-        // the latest version.
-        // preamble += "#version 450\n";
-
-        switch (shader_stage)
-        {
-        case ShaderStage::COMP: preamble += "#define DAXA_SHADER_STAGE 0\n"; break;
-        case ShaderStage::VERT: preamble += "#define DAXA_SHADER_STAGE 1\n"; break;
-        case ShaderStage::TESS_CONTROL: preamble += "#define DAXA_SHADER_STAGE 2\n"; break;
-        case ShaderStage::TESS_EVAL: preamble += "#define DAXA_SHADER_STAGE 3\n"; break;
-        case ShaderStage::FRAG: preamble += "#define DAXA_SHADER_STAGE 4\n"; break;
-        case ShaderStage::TASK: preamble += "#define DAXA_SHADER_STAGE 5\n"; break;
-        case ShaderStage::MESH: preamble += "#define DAXA_SHADER_STAGE 6\n"; break;
-        case ShaderStage::RAY_GEN: preamble += "#define DAXA_SHADER_STAGE 7\n"; break;
-        case ShaderStage::RAY_ANY_HIT: preamble += "#define DAXA_SHADER_STAGE 8\n"; break;
-        case ShaderStage::RAY_CLOSEST_HIT: preamble += "#define DAXA_SHADER_STAGE 9\n"; break;
-        case ShaderStage::RAY_MISS: preamble += "#define DAXA_SHADER_STAGE 10\n"; break;
-        case ShaderStage::RAY_INTERSECT: preamble += "#define DAXA_SHADER_STAGE 11\n"; break;
-        case ShaderStage::RAY_CALLABLE: preamble += "#define DAXA_SHADER_STAGE 12\n"; break;
-        }
-
-        preamble += "#extension GL_GOOGLE_include_directive : enable\n";
-        preamble += "#extension GL_KHR_memory_scope_semantics : enable\n";
-        for (auto const & shader_define : shader_info.compile_options.defines)
+        for (auto const & shader_define : shader_info.defines)
         {
             if (!shader_define.value.empty())
             {
@@ -1297,17 +1177,13 @@ namespace daxa
                 preamble += std::string("#define ") + shader_define.name + "\n";
             }
         }
-        std::string name = "unnamed-shader";
-        if (auto const * shader_file = daxa::get_if<ShaderFile>(&shader_info.source))
+        std::string name = shader_info.source_path.string();
+        if (!debug_name_opt.empty())
         {
-            name = shader_file->path.string();
-        }
-        else if (!debug_name_opt.empty())
-        {
-            name = debug_name_opt;
+            name += debug_name_opt;
         }
 
-        auto entry_point = shader_info.compile_options.entry_point.value_or("main");
+        auto entry_point = shader_info.entry_point.value_or("main");
         auto source_entry = (shader_stage == ShaderStage::COMP || shader_stage == ShaderStage::RAY_GEN) ? "main" : entry_point.c_str();
 
         uint32_t * spv_ptr = nullptr;
@@ -1323,7 +1199,7 @@ namespace daxa
             .shader_name = name.c_str(),
             .entry_point = entry_point.c_str(),
             .source_entry = source_entry,
-            .use_debug_info = shader_info.compile_options.enable_debug_info.value_or(false),
+            .use_debug_info = shader_info.enable_debug_info.value_or(false),
 
             .include_local_cb = includeLocal,
             .include_system_cb = includeSystem,
@@ -1361,17 +1237,17 @@ namespace daxa
         {
             auto search_paths_strings = std::vector<std::string>{};
             auto search_paths = std::vector<char const *>{};
-            search_paths_strings.reserve(shader_info.compile_options.root_paths.size());
-            search_paths.reserve(shader_info.compile_options.root_paths.size());
-            for (auto const & path : shader_info.compile_options.root_paths)
+            search_paths_strings.reserve(shader_info.root_paths.size());
+            search_paths.reserve(shader_info.root_paths.size());
+            for (auto const & path : shader_info.root_paths)
             {
                 search_paths_strings.push_back(path.string());
                 search_paths.push_back(search_paths_strings.back().c_str());
             }
 
             auto macros = std::vector<slang::PreprocessorMacroDesc>{};
-            macros.reserve(shader_info.compile_options.defines.size());
-            for (auto const & [name, value] : shader_info.compile_options.defines)
+            macros.reserve(shader_info.defines.size());
+            for (auto const & [name, value] : shader_info.defines)
             {
                 macros.push_back({name.c_str(), value.c_str()});
             }
@@ -1416,13 +1292,6 @@ namespace daxa
         };
         slangRequest->processCommandLineArguments(cmd_args.data(), static_cast<int>(cmd_args.size()));
 
-        for (auto const & [virtual_path, virtual_file] : virtual_files)
-        {
-            int virtualFileIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, virtual_path.c_str());
-            slangRequest->addTranslationUnitSourceString(virtualFileIndex, virtual_path.c_str(), virtual_file.contents.c_str());
-            current_observed_hotload_files->insert({virtual_path, std::chrono::file_clock::now()});
-        }
-
         auto const filename = "_daxa_file";
 
         int translationUnitIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, filename);
@@ -1453,7 +1322,7 @@ namespace daxa
         {
             auto * entry_refl = spReflection_getEntryPointByIndex(refl, i);
             auto const * entry_name = spReflectionEntryPoint_getName(entry_refl);
-            if (strcmp(entry_name, shader_info.compile_options.entry_point.value().c_str()) == 0)
+            if (strcmp(entry_name, shader_info.entry_point.value().c_str()) == 0)
             {
                 entry_point_index = i;
                 break;
@@ -1461,7 +1330,7 @@ namespace daxa
         }
         if (entry_point_index == -1)
         {
-            return Result<std::vector<u32>>(error_message_prefix + "Failed to find entry point '" + shader_info.compile_options.entry_point.value() + "' in module");
+            return Result<std::vector<u32>>(error_message_prefix + "Failed to find entry point '" + shader_info.entry_point.value() + "' in module");
         }
 
         slangRequest->getModule(translationUnitIndex, shader_module.writeRef());

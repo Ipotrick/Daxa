@@ -1,3 +1,6 @@
+#extension GL_GOOGLE_include_directive : enable
+#extension GL_KHR_memory_scope_semantics : enable
+
 #include <daxa/utils/task_graph_debug.inl>
 
 DAXA_DECL_PUSH_CONSTANT(DebugTaskDrawDebugDisplayPush, p)
