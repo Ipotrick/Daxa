@@ -1,7 +1,7 @@
 #ifndef DAXA_TASK_GRAPH_DEBUG_GLSL
 #define DAXA_TASK_GRAPH_DEBUG_GLSL
 
-#include <daxa/daxa.inl>
+#include "daxa/daxa.inl"
 
 struct DebugTaskDrawDebugDisplayPush
 {

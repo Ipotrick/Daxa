@@ -1,7 +1,7 @@
 #ifndef DAXA_TASK_GRAPH_INL
 #define DAXA_TASK_GRAPH_INL
 
-#include <daxa/daxa.inl>
+#include "daxa/daxa.inl"
 
 /**
  * DAXA_TH_IMAGE:

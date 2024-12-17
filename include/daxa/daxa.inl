@@ -25,7 +25,7 @@
 #define DAXA_SHADERLANG_GLSL 1
 #define DAXA_SHADERLANG_SLANG 2
 #if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-#include <daxa/daxa.glsl>
+#include "daxa/daxa.glsl"
 #elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
 #include "daxa/daxa.slang"
 #endif
