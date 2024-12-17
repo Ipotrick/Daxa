@@ -107,7 +107,7 @@ namespace daxa
         auto load_shader_source_from_file(std::filesystem::path const & path) -> Result<ShaderCode>;
 
         auto get_spirv(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage) -> Result<std::vector<u32>>;
-        auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
+        auto get_spirv_glslang(ShaderCompileInfo const & shader_info, std::string const & debug_name_opt, ShaderStage shader_stage, ShaderCode const & code, uint64_t shader_info_hash) -> Result<std::vector<u32>>;
         auto get_spirv_slang(ShaderCompileInfo const & shader_info, ShaderStage shader_stage, ShaderCode const & code) -> Result<std::vector<u32>>;
 
         static auto zero_ref_callback(ImplHandle const * handle);

@@ -258,10 +258,6 @@ namespace daxa
                     .required_subgroup_size =
                         shader_compile_info.required_subgroup_size.has_value() ? Optional{shader_compile_info.required_subgroup_size.value()} : daxa::None,
                 });
-                if (shader_compile_info.entry_point.has_value() && (shader_compile_info.language != ShaderLanguage::SLANG))
-                {
-                    final_shader_info->back().entry_point = {shader_compile_info.entry_point.value()};
-                }
             }
         }
 
@@ -308,10 +304,6 @@ namespace daxa
             }
         }
         char const * entry_point = "main";
-        if (a_info.shader_info.entry_point.has_value() && a_info.shader_info.language != ShaderLanguage::SLANG)
-        {
-            entry_point = a_info.shader_info.entry_point.value().c_str();
-        }
         (*pipe_result.pipeline_ptr) = this->info.device.create_compute_pipeline({
             .shader_info = {
                 .byte_code = spirv_result.value().data(),
@@ -392,10 +384,6 @@ namespace daxa
                     .required_subgroup_size =
                         pipe_result_shader_info->value().required_subgroup_size.has_value() ? Optional{pipe_result_shader_info->value().required_subgroup_size.value()} : daxa::None,
                 };
-                if (pipe_result_shader_info->value().language != ShaderLanguage::SLANG)
-                {
-                    final_shader_info->value().entry_point = {pipe_result_shader_info->value().entry_point.value()};
-                }
             }
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
@@ -782,7 +770,7 @@ namespace daxa
     }
 
     static constexpr auto CACHE_FILE_MAGIC_NUMBER = std::bit_cast<uint64_t>(std::to_array("daxpipe"));
-    static constexpr auto CACHE_FILE_VERSION = uint64_t{2};
+    static constexpr auto CACHE_FILE_VERSION = uint64_t{3};
 
     struct ShaderCacheFileHeader
     {
@@ -915,7 +903,7 @@ namespace daxa
             {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
             case ShaderLanguage::GLSL:
-                ret = get_spirv_glslang(shader_info, debug_name_opt, shader_stage, code);
+                ret = get_spirv_glslang(shader_info, debug_name_opt, shader_stage, code, shader_info_hash);
                 break;
 #endif
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
@@ -1137,7 +1125,7 @@ namespace daxa
         delete[] str;
     }
 
-    auto ImplPipelineManager::get_spirv_glslang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] std::string const & debug_name_opt, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
+    auto ImplPipelineManager::get_spirv_glslang([[maybe_unused]] ShaderCompileInfo const & shader_info, [[maybe_unused]] std::string const & debug_name_opt, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code, uint64_t shader_info_hash) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
 
@@ -1158,8 +1146,7 @@ namespace daxa
             case ShaderStage::RAY_MISS: return EShLanguage::EShLangMiss;
             case ShaderStage::RAY_INTERSECT: return EShLanguage::EShLangIntersect;
             case ShaderStage::RAY_CALLABLE: return EShLanguage::EShLangCallable;
-            default:
-                return EShLanguage::EShLangCount;
+            default: return EShLanguage::EShLangCount;
             }
         };
 
@@ -1183,8 +1170,8 @@ namespace daxa
             name = debug_name_opt;
         }
 
-        auto entry_point = shader_info.entry_point.value_or("main");
-        auto source_entry = (shader_stage == ShaderStage::COMP || shader_stage == ShaderStage::RAY_GEN) ? "main" : entry_point.c_str();
+        auto entry_point = "main";
+        auto source_entry = shader_info.entry_point.value_or("main");
 
         uint32_t * spv_ptr = nullptr;
         uint32_t spv_size = 0;
@@ -1192,13 +1179,54 @@ namespace daxa
         char const * error_str_ptr = nullptr;
         uint32_t error_str_size = 0;
 
+        bool print_cmd_command = false;
+        if (print_cmd_command)
+        {
+            std::cout << "glslang --glsl-version 460 --target-env vulkan1.3 -V -g0 ^\n    ";
+            for (auto const & root : shader_info.root_paths)
+            {
+                std::cout << "-I" << root.string() << " ^\n    ";
+            }
+            for (auto const & shader_define : shader_info.defines)
+            {
+                std::cout << "--D " << shader_define.name;
+                if (!shader_define.value.empty())
+                {
+                    std::cout << "=" << shader_define.value;
+                }
+                std::cout << " ^\n    ";
+            }
+            switch (spirv_stage)
+            {
+            case EShLanguage::EShLangVertex: std::cout << "-S vert "; break;
+            case EShLanguage::EShLangTessControl: std::cout << "-S tesc "; break;
+            case EShLanguage::EShLangTessEvaluation: std::cout << "-S tese "; break;
+            case EShLanguage::EShLangGeometry: std::cout << "-S geom "; break;
+            case EShLanguage::EShLangFragment: std::cout << "-S frag "; break;
+            case EShLanguage::EShLangCompute: std::cout << "-S comp "; break;
+            case EShLanguage::EShLangRayGen: std::cout << "-S rgen "; break;
+            case EShLanguage::EShLangIntersect: std::cout << "-S rint "; break;
+            case EShLanguage::EShLangAnyHit: std::cout << "-S rahit "; break;
+            case EShLanguage::EShLangClosestHit: std::cout << "-S rchit "; break;
+            case EShLanguage::EShLangMiss: std::cout << "-S rmiss "; break;
+            case EShLanguage::EShLangCallable: std::cout << "-S rcall "; break;
+            case EShLanguage::EShLangMesh: std::cout << "-S mesh "; break;
+            case EShLanguage::EShLangTask: std::cout << "-S task "; break;
+            default: break;
+            }
+            auto full_path = full_path_to_file(shader_info.source_path).value();
+
+            std::cout << "--entry-point " << entry_point << " --source-entrypoint " << source_entry << " \"shaders/" << name << "\" -o \"build/spv/" << shader_info_hash << ".spv\"\n\n"
+                      << std::flush;
+        }
+
         glslang_wrapper_compile(GlslangWrapperCompileInfo{
             .stage = spirv_stage,
             .preamble = preamble.c_str(),
             .shader_glsl = code.string.c_str(),
             .shader_name = name.c_str(),
-            .entry_point = entry_point.c_str(),
-            .source_entry = source_entry,
+            .entry_point = entry_point,
+            .source_entry = source_entry.c_str(),
             .use_debug_info = shader_info.enable_debug_info.value_or(false),
 
             .include_local_cb = includeLocal,

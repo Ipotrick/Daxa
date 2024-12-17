@@ -32,6 +32,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         auto result = vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
         if (result != VK_SUCCESS)
         {
+            _DAXA_DEBUG_BREAK
             return result;
         }
         vk_shader_modules.push_back(vk_shader_module);
@@ -64,6 +65,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             {                                                                                                                   \
                 vkDestroyShaderModule(ret.device->vk_device, module, nullptr);                                                  \
             }                                                                                                                   \
+            _DAXA_DEBUG_BREAK                                                                                                   \
             return std::bit_cast<daxa_Result>(result);                                                                          \
         }                                                                                                                       \
     }
@@ -84,6 +86,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             {
                 vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
             }
+            _DAXA_DEBUG_BREAK
             return DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED;
         }
     }
@@ -291,6 +294,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     }
     if (result != VK_SUCCESS)
     {
+        _DAXA_DEBUG_BREAK
         return std::bit_cast<daxa_Result>(result);
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
@@ -346,6 +350,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     auto module_result = vkCreateShaderModule(ret.device->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
     if (module_result != VK_SUCCESS)
     {
+        _DAXA_DEBUG_BREAK
         return std::bit_cast<daxa_Result>(module_result);
     }
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
@@ -381,6 +386,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     vkDestroyShaderModule(ret.device->vk_device, vk_shader_module, nullptr);
     if (pipeline_result != VK_SUCCESS)
     {
+        _DAXA_DEBUG_BREAK
         return std::bit_cast<daxa_Result>(pipeline_result);
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
@@ -435,6 +441,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     // Check if ray tracing is supported
     if ((device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
+        _DAXA_DEBUG_BREAK
         return DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
     }
 
@@ -483,6 +490,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         auto result = vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
         if (result != VK_SUCCESS)
         {
+            _DAXA_DEBUG_BREAK
             return result;
         }
         vk_shader_modules.push_back(vk_shader_module);
@@ -595,6 +603,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
 
     if (pipeline_result != VK_SUCCESS)
     {
+        _DAXA_DEBUG_BREAK
         return std::bit_cast<daxa_Result>(pipeline_result);
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
@@ -651,14 +660,14 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     {
         auto shader_group = pipeline->shader_groups.at(i);
 
-        // Hit groups are the only ones that need the type explicitly specified, thus we can immediately 
+        // Hit groups are the only ones that need the type explicitly specified, thus we can immediately
         // deduce the group type from this.
         if (shader_group.type == ShaderGroup::TRIANGLES_HIT_GROUP || shader_group.type == ShaderGroup::PROCEDURAL_HIT_GROUP)
         {
             hit_group_count++;
         }
         else
-        { 
+        {
             // Group indexes raygen shader -> it is a raygen group
             if (shader_group.general_shader_index != VK_SHADER_UNUSED_KHR &&
                 shader_group.general_shader_index < raygen_count)
