@@ -220,8 +220,9 @@ void GLSLANG_WRAPPER_DLL_EXPORT glslang_wrapper_compile(GlslangWrapperCompileInf
     if (!shader.parse(&resource, SHADER_VERSION, false, messages, includer))
     {
         auto error_str = error_message_prefix + shader.getInfoLog() + shader.getInfoDebugLog();
-        auto cstr = new char[error_str.size()];
+        auto cstr = new char[error_str.size() + 1];
         memcpy(cstr, error_str.data(), error_str.size());
+        cstr[error_str.size()] = '\0';
         *info.out_error_str = cstr;
         *info.out_error_str_size = error_str.size();
         return;
@@ -233,8 +234,9 @@ void GLSLANG_WRAPPER_DLL_EXPORT glslang_wrapper_compile(GlslangWrapperCompileInf
     if (!program.link(messages))
     {
         auto error_str = error_message_prefix + program.getInfoLog() + program.getInfoDebugLog();
-        auto cstr = new char[error_str.size()];
+        auto cstr = new char[error_str.size() + 1];
         memcpy(cstr, error_str.data(), error_str.size());
+        cstr[error_str.size()] = '\0';
         *info.out_error_str = cstr;
         *info.out_error_str_size = error_str.size();
         return;
@@ -244,8 +246,9 @@ void GLSLANG_WRAPPER_DLL_EXPORT glslang_wrapper_compile(GlslangWrapperCompileInf
     if (intermediary == nullptr)
     {
         auto error_str = error_message_prefix + std::string("Failed to get shader stage intermediary");
-        auto cstr = new char[error_str.size()];
+        auto cstr = new char[error_str.size() + 1];
         memcpy(cstr, error_str.data(), error_str.size());
+        cstr[error_str.size()] = '\0';
         *info.out_error_str = cstr;
         *info.out_error_str_size = error_str.size();
         return;
