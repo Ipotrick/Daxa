@@ -54,8 +54,6 @@ add_library(daxa
     "src/utils/impl_imgui.cpp"
     "src/utils/impl_fsr2.cpp"
     "src/utils/impl_mem.cpp"
-    "src/utils/impl_pipeline_manager.cpp"
-    "src/utils/task_graph_debug.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
