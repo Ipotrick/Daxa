@@ -418,7 +418,7 @@ namespace daxa
             .image_view_id = font_sheet.default_view(),
             .sampler_id = this->font_sampler,
         });
-        io.Fonts->SetTexID(nullptr);
+        io.Fonts->SetTexID({});
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()
