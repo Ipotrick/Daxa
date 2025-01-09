@@ -1397,8 +1397,9 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    if (physical_device.features.physical_device_acceleration_structure_features_khr.accelerationStructure)
+    if ((properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) != 0)
     {
+        if (self->info.max_per_stage_descriptor_acceleration_structures)
         if (self->info.max_allowed_acceleration_structures > self->properties.acceleration_structure_properties.value.max_descriptor_set_update_after_bind_acceleration_structures ||
             self->info.max_allowed_acceleration_structures == 0)
         {
