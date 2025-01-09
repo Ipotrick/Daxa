@@ -126,7 +126,7 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * leg
     daxa_DeviceInfo2 info = {};
     if (legacy_info->flags & DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT)
     {
-        info.explicit_features = DAXA_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY;
+        info.explicit_features = DAXA_EXPLICIT_FEATURE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY;
     }
     if (legacy_info->flags & DAXA_DEVICE_FLAG_VK_MEMORY_MODEL)
     {
