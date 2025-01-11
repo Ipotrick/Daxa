@@ -68,7 +68,6 @@ function(DAXA_CREATE_TEST_C)
 endfunction()
 
 find_package(glfw3 CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 
 DAXA_CREATE_TEST(
     FOLDER 1_setup 1_window
@@ -85,7 +84,7 @@ DAXA_CREATE_TEST(
 )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 3_command_recorder
-    LIBS fmt::fmt
+    LIBS
 )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 4_synchronization

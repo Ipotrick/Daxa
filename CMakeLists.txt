@@ -104,7 +104,6 @@ target_compile_features(daxa PUBLIC cxx_std_20)
 
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 
 include(GNUInstallDirs)
 
@@ -202,7 +201,6 @@ target_link_libraries(daxa
     PRIVATE
     GPUOpen::VulkanMemoryAllocator
     Vulkan::Vulkan
-    fmt::fmt
 )
 
 target_include_directories(daxa
@@ -246,7 +244,7 @@ endif()
 if(DAXA_ENABLE_TOOLS)
     add_executable(daxa_tools_compile_imgui_shaders "src/utils/impl_imgui.cpp")
     target_compile_definitions(daxa_tools_compile_imgui_shaders PRIVATE DAXA_COMPILE_IMGUI_SHADERS=true)
-    target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa fmt::fmt)
+    target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa)
 endif()
 
 if(DAXA_INSTALL)
