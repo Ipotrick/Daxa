@@ -269,7 +269,7 @@ namespace daxa
         }
         [[nodiscard]] auto at(usize i) const -> T const &
         {
-            return this->m_data.at(i);
+            return this->m_data[i];
         }
         [[nodiscard]] auto operator[](usize i) -> T &
         {
@@ -285,11 +285,11 @@ namespace daxa
         }
         [[nodiscard]] auto data() const -> T const *
         {
-            return this->m_data.data();
+            return this->m_data;
         }
         [[nodiscard]] auto data() -> T *
         {
-            return this->m_data.data();
+            return this->m_data;
         }
         [[nodiscard]] auto empty() const -> bool
         {
@@ -302,7 +302,7 @@ namespace daxa
         }
         [[nodiscard]] auto span() const -> std::span<T const>
         {
-            return {this->m_data.data(), static_cast<usize>(this->m_size)};
+            return {this->m_data, static_cast<usize>(this->m_size)};
         }
     };
 
