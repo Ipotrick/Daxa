@@ -5,7 +5,6 @@
 
 #include "impl_core.hpp"
 
-#include "cpp_wrapper.hpp"
 #include <daxa/c/device.h>
 
 // Adding a new vulkan feature bool to daxa:
