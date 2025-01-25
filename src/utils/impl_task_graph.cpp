@@ -313,7 +313,7 @@ namespace daxa
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
