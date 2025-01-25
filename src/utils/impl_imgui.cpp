@@ -418,7 +418,7 @@ namespace daxa
             .image_view_id = font_sheet.default_view(),
             .sampler_id = this->font_sampler,
         });
-        io.Fonts->SetTexID(nullptr);
+        io.Fonts->SetTexID({});
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()
@@ -522,7 +522,7 @@ void main()
 #include <daxa/daxa.hpp>
 #include <daxa/utils/pipeline_manager.hpp>
 #include <fstream>
-#include <fmt/format.h>
+#include <format>
 
 auto main() -> int
 {
@@ -553,7 +553,7 @@ auto main() -> int
     };
     // NO GAMMA CORRECTION
     auto result = pipeline_manager.add_raster_pipeline(compile_info);
-    fmt::println("{}", result.to_string());
+    std::cout << result.to_string();
 
     auto vert_file = std::ifstream{"./imgui_pipeline.vert.main.spv", std::ios::binary};
     auto vert_size = std::filesystem::file_size("./imgui_pipeline.vert.main.spv");
@@ -572,7 +572,7 @@ auto main() -> int
     // WITH GAMMA CORRECTION
     compile_info.fragment_shader_info.value().compile_options.defines = {{"GAMMA_CORRECTION", "TRUE"}};
     result = pipeline_manager.add_raster_pipeline(compile_info);
-    fmt::println("{}", result.to_string());
+    std::cout << result.to_string();
 
     // vert is unchanged
     std::filesystem::remove("./imgui_pipeline.vert.main.spv");
@@ -585,12 +585,12 @@ auto main() -> int
 
     auto out_file = std::ofstream{"./src/utils/impl_imgui_spv.hpp", std::ofstream::trunc};
     out_file << "#pragma once\n#include <array>\n\n";
-    out_file << fmt::format("static constexpr auto imgui_vert_spv = std::array<uint32_t, {}>{{\n    // clang-format off\n   ", vert_size / sizeof(uint32_t));
+    out_file << std::format("static constexpr auto imgui_vert_spv = std::array<uint32_t, {}>{{\n    // clang-format off\n   ", vert_size / sizeof(uint32_t));
 
     size_t iter = 0;
     for (auto const & u : vert_bytes)
     {
-        out_file << fmt::format(" {:#010x},", u);
+        out_file << std::format(" {:#010x},", u);
         if ((iter % 8) == 7)
         {
             out_file << "\n   ";
@@ -600,11 +600,11 @@ auto main() -> int
 
     out_file << "\n    // clang-format on\n};\n";
 
-    out_file << fmt::format("static constexpr auto imgui_frag_spv = std::array<uint32_t, {}>{{\n    // clang-format off\n   ", frag_size / sizeof(uint32_t));
+    out_file << std::format("static constexpr auto imgui_frag_spv = std::array<uint32_t, {}>{{\n    // clang-format off\n   ", frag_size / sizeof(uint32_t));
     iter = 0;
     for (auto const & u : frag_bytes)
     {
-        out_file << fmt::format(" {:#010x},", u);
+        out_file << std::format(" {:#010x},", u);
         if ((iter % 8) == 7)
         {
             out_file << "\n   ";
@@ -614,11 +614,11 @@ auto main() -> int
 
     out_file << "\n    // clang-format on\n};\n";
 
-    out_file << fmt::format("static constexpr auto imgui_gamma_frag_spv = std::array<uint32_t, {}>{{\n    // clang-format off\n   ", gamma_frag_size / sizeof(uint32_t));
+    out_file << std::format("static constexpr auto imgui_gamma_frag_spv = std::array<uint32_t, {}>{{\n    // clang-format off\n   ", gamma_frag_size / sizeof(uint32_t));
     iter = 0;
     for (auto const & u : gamma_frag_bytes)
     {
-        out_file << fmt::format(" {:#010x},", u);
+        out_file << std::format(" {:#010x},", u);
         if ((iter % 8) == 7)
         {
             out_file << "\n   ";

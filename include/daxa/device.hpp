@@ -296,6 +296,7 @@ namespace daxa
         static inline constexpr ImplicitFeatureFlags DYNAMIC_STATE_3 = {0x1 << 10};
         static inline constexpr ImplicitFeatureFlags SHADER_ATOMIC_FLOAT = {0x1 << 11};
         static inline constexpr ImplicitFeatureFlags SWAPCHAIN = {0x1 << 12};
+        static inline constexpr ImplicitFeatureFlags SHADER_INT16 = {0x1 << 13};
     };
 
     struct DeviceProperties
@@ -371,16 +372,16 @@ namespace daxa
     {
         Queue queue = daxa::QUEUE_MAIN;
         PipelineStageFlags wait_stages = {};
-        std::span<ExecutableCommandList const> command_lists = {};
-        std::span<BinarySemaphore const> wait_binary_semaphores = {};
-        std::span<BinarySemaphore const> signal_binary_semaphores = {};
-        std::span<std::pair<TimelineSemaphore, u64> const> wait_timeline_semaphores = {};
-        std::span<std::pair<TimelineSemaphore, u64> const> signal_timeline_semaphores = {};
+        daxa::Span<ExecutableCommandList const> command_lists = {};
+        daxa::Span<BinarySemaphore const> wait_binary_semaphores = {};
+        daxa::Span<BinarySemaphore const> signal_binary_semaphores = {};
+        daxa::Span<std::pair<TimelineSemaphore, u64> const> wait_timeline_semaphores = {};
+        daxa::Span<std::pair<TimelineSemaphore, u64> const> signal_timeline_semaphores = {};
     };
 
     struct PresentInfo
     {
-        std::span<BinarySemaphore const> wait_binary_semaphores = {};
+        daxa::Span<BinarySemaphore const> wait_binary_semaphores = {};
         Swapchain swapchain;
         Queue queue = QUEUE_MAIN;
     };

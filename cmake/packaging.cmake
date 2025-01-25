@@ -15,7 +15,6 @@ set_target_properties(daxa::daxa PROPERTIES
 file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 ]=])
 
 if(DAXA_ENABLE_UTILS_FSR2)
@@ -35,11 +34,6 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
     file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
 find_package(glslang CONFIG REQUIRED)
 find_package(Threads REQUIRED)
-]=])
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
-    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
-find_package(shader-slang CONFIG REQUIRED)
 ]=])
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)

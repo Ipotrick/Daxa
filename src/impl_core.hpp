@@ -11,7 +11,8 @@
 #include <map>
 #include <deque>
 #include <cstring>
-#include <fmt/format.h>
+#include <memory>
+#include <format>
 
 #if DAXA_VALIDATION
 #include <iostream>

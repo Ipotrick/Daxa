@@ -25,11 +25,16 @@ function(DAXA_CREATE_TEST)
     endif()
     
     if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
-        # NOTE(grundlett): Really hacky. It appears there's no way to create plugin dll dependencies...
-        # see https://gitlab.kitware.com/cmake/cmake/-/issues/22993
-        add_custom_command(TARGET daxa_test_${FOLDER_NAME} POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:slang::glslang> $<TARGET_FILE_DIR:daxa_test_${FOLDER_NAME}>
-        )
+        if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+            # NOTE(grundlett): Really hacky. It appears there's no way to create plugin dll dependencies...
+            # see https://gitlab.kitware.com/cmake/cmake/-/issues/22993
+            find_program(SLANG_DLL slang.dll)
+            find_program(SLANG_GLSLANG_DLL slang-glslang.dll)
+            add_custom_command(TARGET daxa_test_${FOLDER_NAME} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy ${SLANG_DLL} $<TARGET_FILE_DIR:daxa_test_${FOLDER_NAME}>
+                COMMAND ${CMAKE_COMMAND} -E copy ${SLANG_GLSLANG_DLL} $<TARGET_FILE_DIR:daxa_test_${FOLDER_NAME}>
+            )
+        endif()
     endif()
 endfunction()
 
@@ -65,7 +70,6 @@ function(DAXA_CREATE_TEST_C)
 endfunction()
 
 find_package(glfw3 CONFIG REQUIRED)
-find_package(fmt CONFIG REQUIRED)
 
 DAXA_CREATE_TEST(
     FOLDER 1_setup 1_window
@@ -82,7 +86,7 @@ DAXA_CREATE_TEST(
 )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 3_command_recorder
-    LIBS fmt::fmt
+    LIBS
 )
 DAXA_CREATE_TEST(
     FOLDER 2_daxa_api 4_synchronization
@@ -129,10 +133,10 @@ DAXA_CREATE_TEST(
     FOLDER 3_samples 1_mandelbrot
     LIBS glfw
 )
-DAXA_CREATE_TEST(
-    FOLDER 3_samples 2_mpm_mls
-    LIBS glfw
-)
+# DAXA_CREATE_TEST(
+#     FOLDER 3_samples 2_mpm_mls
+#     LIBS glfw
+# )
 DAXA_CREATE_TEST(
     FOLDER 3_samples 3_hello_triangle_compute
     LIBS glfw

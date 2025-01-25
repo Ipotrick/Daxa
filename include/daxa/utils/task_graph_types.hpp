@@ -73,8 +73,10 @@ namespace daxa
         DRAW_INDIRECT_INFO_READ,
         TRANSFER_READ,
         TRANSFER_WRITE,
+        TRANSFER_READ_WRITE,
         HOST_TRANSFER_READ,
         HOST_TRANSFER_WRITE,
+        HOST_TRANSFER_READ_WRITE,
         ACCELERATION_STRUCTURE_BUILD_READ,
         ACCELERATION_STRUCTURE_BUILD_WRITE,
         ACCELERATION_STRUCTURE_BUILD_READ_WRITE,
@@ -329,7 +331,7 @@ namespace daxa
 
     struct TaskBufferAttachment
     {
-        using INDEX_TYPE = typename TaskBufferAttachmentIndex;
+        using INDEX_TYPE = TaskBufferAttachmentIndex;
         char const * name = {};
         TaskBufferAccess task_access = {};
         Access access = {};
@@ -339,7 +341,7 @@ namespace daxa
 
     struct TaskBlasAttachment
     {
-        using INDEX_TYPE = typename TaskBlasAttachmentIndex;
+        using INDEX_TYPE = TaskBlasAttachmentIndex;
         char const * name = {};
         TaskBlasAccess task_access = {};
         Access access = {};
@@ -347,7 +349,7 @@ namespace daxa
 
     struct TaskTlasAttachment
     {
-        using INDEX_TYPE = typename TaskTlasAttachmentIndex;
+        using INDEX_TYPE = TaskTlasAttachmentIndex;
         char const * name = {};
         TaskTlasAccess task_access = {};
         Access access = {};
@@ -356,7 +358,7 @@ namespace daxa
 
     struct TaskImageAttachment
     {
-        using INDEX_TYPE = typename TaskImageAttachmentIndex;
+        using INDEX_TYPE = TaskImageAttachmentIndex;
         char const * name = {};
         TaskImageAccess task_access = {};
         Access access = {};
@@ -400,7 +402,7 @@ namespace daxa
     };
 
     template <typename T>
-    concept IsTaskAttachment =
+    concept IsTaskResourceAttachment =
         std::is_same_v<T, TaskBufferAttachment> ||
         std::is_same_v<T, TaskBlasAttachment> ||
         std::is_same_v<T, TaskTlasAttachment> ||
@@ -617,19 +619,19 @@ namespace daxa
         auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
-        auto info(TaskIndexOrView auto tresource, u32 array_index = 0)
+        auto info(TaskIndexOrView auto tresource, u32 array_index = 0) const
         {
             return this->device.info(this->get(tresource).ids[array_index]);
         }
-        auto image_view_info(TaskImageIndexOrView auto timage, u32 array_index = 0) -> Optional<ImageViewInfo>
+        auto image_view_info(TaskImageIndexOrView auto timage, u32 array_index = 0) const -> Optional<ImageViewInfo>
         {
             return this->device.image_view_info(this->get(timage).view_ids[array_index]);
         }
-        auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) -> Optional<DeviceAddress>
+        auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) const -> Optional<DeviceAddress>
         {
             return this->device.device_address(this->get(tresource).ids[array_index]);
         }
-        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) -> Optional<std::byte *>
+        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) const -> Optional<std::byte *>
         {
             return this->device.buffer_host_address(this->get(tbuffer).ids[array_index]);
         }
@@ -739,9 +741,9 @@ namespace daxa
     template <usize ATTACHMENT_COUNT, StringLiteral NAME>
     struct PartialTask : IPartialTask
     {
-        /// NOTE: Used to add attachments and declate named constant indices to the added attachment.
-        template <IsTaskAttachment AttachT>
-        static auto add_attachment(AttachT const & attach) -> AttachT::INDEX_TYPE
+        /// NOTE: Used to add attachments and declare named constant indices to the added attachment.
+        template <IsTaskResourceAttachment IndexT>
+        static auto add_attachment(IndexT const & attach) -> IndexT::INDEX_TYPE
         {
             declared_attachments.at(cur_attach_index) = attach;
             return {cur_attach_index++};

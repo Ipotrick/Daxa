@@ -1,13 +1,12 @@
 {
   "name": "daxa",
-  "version": "2.0.0",
+  "version": "3.0.2",
   "description": "Daxa C++ Vulkan Abstraction",
   "homepage": "https://github.com/Ipotrick/Daxa",
   "dependencies": [
     "vulkan-memory-allocator",
     "vulkan-headers",
     "vulkan",
-    "fmt",
     {
       "name": "wayland",
       "default-features": false,
@@ -80,10 +79,9 @@
       ]
     }
   },
-  "builtin-baseline": "78ba9711d30c64a6b40462c72f356c681e2255f3",
+  "builtin-baseline": "cf035d9916a0a23042b41fcae7ee0386d245af08",
   "vcpkg-configuration": {
     "overlay-ports": [
-      "./cmake/vcpkg-overlay-ports/shader-slang",
       "./cmake/vcpkg-overlay-ports/fsr2",
       "./cmake/vcpkg-overlay-ports/glfw3"
     ]

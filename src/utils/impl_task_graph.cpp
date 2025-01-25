@@ -93,7 +93,7 @@ namespace daxa
 
     auto to_string(TaskGPUResourceView const & id) -> std::string
     {
-        return fmt::format("tg idx: {}, index: {}", id.task_graph_index, id.index);
+        return std::format("tg idx: {}, index: {}", id.task_graph_index, id.index);
     }
 
     auto static constexpr access_to_usage(TaskImageAccess const & access) -> ImageUsageFlags
@@ -310,25 +310,27 @@ namespace daxa
         case TaskBufferAccess::MESH_SHADER_READ_WRITE: return {{PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::MESH_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::MESH_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::EXCLUSIVE};
-        case TaskBufferAccess::GEOMETRY_SHADER_READ: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
-        case TaskBufferAccess::FRAGMENT_SHADER_READ: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_WRITE: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
-        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
-        case TaskBufferAccess::GEOMETRY_SHADER_WRITE: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
-        case TaskBufferAccess::FRAGMENT_SHADER_WRITE: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT
+        case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_WRITE: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::GEOMETRY_SHADER_READ: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::GEOMETRY_SHADER_WRITE: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::GEOMETRY_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::GEOMETRY_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::FRAGMENT_SHADER_READ: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
+        case TaskBufferAccess::FRAGMENT_SHADER_WRITE: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::FRAGMENT_SHADER_READ_WRITE_CONCURRENT: return {{PipelineStageFlagBits::FRAGMENT_SHADER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::TRANSFER_READ: return {{PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::TRANSFER_WRITE: return {{PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::TRANSFER_READ_WRITE: return {{PipelineStageFlagBits::TRANSFER, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::HOST_TRANSFER_READ: return {{PipelineStageFlagBits::HOST, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::HOST_TRANSFER_WRITE: return {{PipelineStageFlagBits::HOST, AccessTypeFlagBits::WRITE}, TaskAccessConcurrency::EXCLUSIVE};
+        case TaskBufferAccess::HOST_TRANSFER_READ_WRITE: return {{PipelineStageFlagBits::HOST, AccessTypeFlagBits::READ_WRITE}, TaskAccessConcurrency::EXCLUSIVE};
         case TaskBufferAccess::INDEX_READ: return {{PipelineStageFlagBits::INDEX_INPUT, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::DRAW_INDIRECT_INFO_READ: return {{PipelineStageFlagBits::DRAW_INDIRECT, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
         case TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ: return {{PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD, AccessTypeFlagBits::READ}, TaskAccessConcurrency::CONCURRENT};
@@ -408,8 +410,10 @@ namespace daxa
         case daxa::TaskBufferAccess::DRAW_INDIRECT_INFO_READ: return std::string_view{"DRAW_INDIRECT_INFO_READ"};
         case daxa::TaskBufferAccess::TRANSFER_READ: return std::string_view{"TRANSFER_READ"};
         case daxa::TaskBufferAccess::TRANSFER_WRITE: return std::string_view{"TRANSFER_WRITE"};
+        case daxa::TaskBufferAccess::TRANSFER_READ_WRITE: return std::string_view{"TRANSFER_READ_WRITE"};
         case daxa::TaskBufferAccess::HOST_TRANSFER_READ: return std::string_view{"HOST_TRANSFER_READ"};
         case daxa::TaskBufferAccess::HOST_TRANSFER_WRITE: return std::string_view{"HOST_TRANSFER_WRITE"};
+        case daxa::TaskBufferAccess::HOST_TRANSFER_READ_WRITE: return std::string_view{"HOST_TRANSFER_READ_WRITE"};
         case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_READ"};
         case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_WRITE"};
         case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_READ_WRITE"};
@@ -1214,6 +1218,7 @@ namespace daxa
 
     void validate_runtime_image_slice(ImplTaskGraph & impl, TaskGraphPermutation const & perm, u32 use_index, u32 task_image_index, ImageMipArraySlice const & access_slice)
     {
+#if DAXA_VALIDATION
         auto const actual_images = impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, perm);
         std::string_view task_name = impl.global_image_infos[task_image_index].get_name();
         for (u32 index = 0; index < actual_images.size(); ++index)
@@ -1225,24 +1230,27 @@ namespace daxa
                 (access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count) &&
                 (access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count);
             [[maybe_unused]] std::string const error_message =
-                fmt::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
+                std::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
                             use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
             DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
         }
+#endif
     }
 
     void validate_image_attachs(ImplTaskGraph & impl, TaskGraphPermutation const & perm, [[maybe_unused]] u32 use_index, u32 task_image_index, TaskImageAccess task_access, [[maybe_unused]] std::string_view task_name)
     {
+#if DAXA_VALIDATION
         ImageUsageFlags const use_flags = access_to_usage(task_access);
         auto const actual_images = impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, perm);
         std::string_view task_image_name = impl.global_image_infos[task_image_index].get_name();
         for (auto image : actual_images)
         {
             [[maybe_unused]] bool const access_valid = (impl.info.device.image_info(image).value().usage & use_flags) != ImageUsageFlagBits::NONE;
-            DAXA_DBG_ASSERT_TRUE_M(access_valid, fmt::format("Detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
+            DAXA_DBG_ASSERT_TRUE_M(access_valid, std::format("Detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
                                                              "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
                                                              impl.info.device.image_info(image).value().name.view(), task_image_name, use_index, task_name, daxa::to_string(use_flags)));
         }
+#endif
     }
 
     void ImplTaskGraph::update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation)
@@ -1384,7 +1392,7 @@ namespace daxa
                        {
                 DAXA_DBG_ASSERT_TRUE_M(
                     !runtime_ids.empty(),
-                    fmt::format(
+                    std::format(
                         "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
                         impl.global_buffer_infos[local_buffer_i].get_name(),
                         impl.info.name,
@@ -1393,14 +1401,13 @@ namespace daxa
                 {
                     DAXA_DBG_ASSERT_TRUE_M(
                         impl.info.device.is_id_valid(runtime_ids[buffer_index]),
-                        fmt::format(
+                        std::format(
                             "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
                             impl.global_buffer_infos[local_buffer_i].get_name(),
                             impl.info.name,
                             buffer_index,
                             PERSISTENT_RESOURCE_MESSAGE));
-                } },
-                       runtime_ids);
+                } }, runtime_ids);
         }
         for (u32 local_image_i = 0; local_image_i < impl.global_image_infos.size(); ++local_image_i)
         {
@@ -1415,7 +1422,7 @@ namespace daxa
             auto const & runtime_images = impl.global_image_infos.at(local_image_i).get_persistent().actual_images;
             DAXA_DBG_ASSERT_TRUE_M(
                 !runtime_images.empty(),
-                fmt::format(
+                std::format(
                     "Detected persistent task image \"{}\" used in task graph \"{}\" with 0 runtime images; {}",
                     impl.global_image_infos[local_image_i].get_name(),
                     impl.info.name,
@@ -1424,7 +1431,7 @@ namespace daxa
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     impl.info.device.is_id_valid(runtime_images[image_index]),
-                    fmt::format(
+                    std::format(
                         "Detected persistent task image \"{}\" used in task graph \"{}\" with invalid image id (runtime image index: {}); {}",
                         impl.global_image_infos[local_image_i].get_name(),
                         impl.info.name,
@@ -1559,10 +1566,13 @@ namespace daxa
             task.base_task->attachment_shader_blob_size(),
             task.base_task->attachments());
         impl_runtime.current_task = &task;
-        impl_runtime.recorder.begin_label({
-            .label_color = info.task_label_color,
-            .name = std::string("batch ") + std::to_string(batch_index) + std::string(" task ") + std::to_string(in_batch_task_index) + std::string(" \"") + std::string(task.base_task->name()) + std::string("\""),
-        });
+        if (this->info.enable_command_labels)
+        {
+            impl_runtime.recorder.begin_label({
+                .label_color = info.task_label_color,
+                .name = std::string("batch ") + std::to_string(batch_index) + std::string(" task ") + std::to_string(in_batch_task_index) + std::string(" \"") + std::string(task.base_task->name()) + std::string("\""),
+            });
+        }
         auto interface = TaskInterface{
             .device = this->info.device,
             .recorder = impl_runtime.recorder,
@@ -1581,7 +1591,10 @@ namespace daxa
         {
             info.post_task_callback(interface);
         }
-        impl_runtime.recorder.end_label();
+        if (this->info.enable_command_labels)
+        {
+            impl_runtime.recorder.end_label();
+        }
     }
 
     void TaskGraph::conditional(TaskGraphConditionalInfo const & conditional_info)
@@ -1591,7 +1604,7 @@ namespace daxa
         [[maybe_unused]] bool const already_active = ((impl.record_active_conditional_scopes >> conditional_info.condition_index) & 1u) != 0;
         DAXA_DBG_ASSERT_TRUE_M(!already_active, "can not nest scopes of the same condition in itself.");
         DAXA_DBG_ASSERT_TRUE_M(conditional_info.condition_index < impl.info.permutation_condition_count,
-                               fmt::format("Detected invalid conditional index {}; conditional indices must all be smaller then the conditional count given in construction", conditional_info.condition_index));
+                               std::format("Detected invalid conditional index {}; conditional indices must all be smaller then the conditional count given in construction", conditional_info.condition_index));
         // Set conditional scope to active.
         impl.record_active_conditional_scopes |= 1u << conditional_info.condition_index;
         impl.update_active_permutations();
@@ -2908,7 +2921,7 @@ namespace daxa
         std::string indent;
         if (impl.info.record_debug_information)
         {
-            fmt::format_to(std::back_inserter(out), "{}runtime sync memory barriers:\n", indent);
+            std::format_to(std::back_inserter(out), "{}runtime sync memory barriers:\n", indent);
             begin_indent(out, indent, true);
         }
         for (usize task_buffer_index = 0; task_buffer_index < permutation.buffer_infos.size(); ++task_buffer_index)
@@ -2945,7 +2958,7 @@ namespace daxa
                 recorder.pipeline_barrier(mem_barrier_info);
                 if (impl.info.record_debug_information)
                 {
-                    fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(mem_barrier_info));
+                    std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(mem_barrier_info));
                     print_separator_to(out, indent);
                 }
                 persistent_data.latest_access = {};
@@ -2954,7 +2967,7 @@ namespace daxa
         if (impl.info.record_debug_information)
         {
             end_indent(out, indent);
-            fmt::format_to(std::back_inserter(out), "{}runtime sync image memory barriers:\n", indent);
+            std::format_to(std::back_inserter(out), "{}runtime sync image memory barriers:\n", indent);
             begin_indent(out, indent, true);
         }
         // If parts of the first use slices to not intersect with any previous use,
@@ -2972,7 +2985,7 @@ namespace daxa
             {
                 if (impl.info.record_debug_information)
                 {
-                    fmt::format_to(std::back_inserter(out), "{}sync from previous uses:\n", indent);
+                    std::format_to(std::back_inserter(out), "{}sync from previous uses:\n", indent);
                     begin_indent(out, indent, true);
                 }
                 auto & previous_access_slices = exec_image.get_persistent().latest_slice_states;
@@ -3012,7 +3025,7 @@ namespace daxa
                                 recorder.pipeline_barrier_image_transition(img_barrier_info);
                                 if (impl.info.record_debug_information)
                                 {
-                                    fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
+                                    std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
                                     print_separator_to(out, indent);
                                 }
                             }
@@ -3054,7 +3067,7 @@ namespace daxa
                 if (impl.info.record_debug_information)
                 {
                     end_indent(out, indent);
-                    fmt::format_to(std::back_inserter(out), "{}sync from undefined:\n", indent);
+                    std::format_to(std::back_inserter(out), "{}sync from undefined:\n", indent);
                     begin_indent(out, indent, true);
                 }
                 // For all first uses that did NOT intersect with and previous use,
@@ -3074,7 +3087,7 @@ namespace daxa
                         recorder.pipeline_barrier_image_transition(img_barrier_info);
                         if (impl.info.record_debug_information)
                         {
-                            fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
+                            std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
                             print_separator_to(out, indent);
                         }
                     }
@@ -3352,7 +3365,10 @@ namespace daxa
                 {
                     signal_timeline_semaphores.insert(signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                 }
-                signal_timeline_semaphores.emplace_back(impl.staging_memory->timeline_semaphore(), impl.staging_memory->inc_timeline_value());
+                if (impl.staging_memory.has_value())
+                {
+                    signal_timeline_semaphores.emplace_back(impl.staging_memory->timeline_semaphore(), impl.staging_memory->inc_timeline_value());
+                }
                 daxa::CommandSubmitInfo const submit_info = {
                     .wait_stages = wait_stages,
                     .command_lists = commands,
@@ -3489,7 +3505,7 @@ namespace daxa
     {
         if (local_id.is_null())
         {
-            fmt::format_to(std::back_inserter(out), "{}task image [NULL]\n", indent);
+            std::format_to(std::back_inserter(out), "{}task image [NULL]\n", indent);
             return;
         }
         auto const & glob_image = global_image_infos[local_id.index];
@@ -3497,17 +3513,17 @@ namespace daxa
         if (global_image_infos[local_id.index].is_persistent())
         {
             u32 const persistent_index = global_image_infos[local_id.index].get_persistent().unique_index;
-            persistent_info = fmt::format(", persistent index: {}", persistent_index);
+            persistent_info = std::format(", persistent index: {}", persistent_index);
         }
-        fmt::format_to(std::back_inserter(out), "{}task image name: \"{}\", id: ({}){}\n", indent, glob_image.get_name(), to_string(local_id), persistent_info);
-        fmt::format_to(std::back_inserter(out), "{}runtime images:\n", indent);
+        std::format_to(std::back_inserter(out), "{}task image name: \"{}\", id: ({}){}\n", indent, glob_image.get_name(), to_string(local_id), persistent_info);
+        std::format_to(std::back_inserter(out), "{}runtime images:\n", indent);
         {
             [[maybe_unused]] FormatIndent const d1{out, indent, true};
             for (u32 child_i = 0; child_i < get_actual_images(local_id, permutation).size(); ++child_i)
             {
                 auto const child_id = get_actual_images(local_id, permutation)[child_i];
                 auto const & child_info = info.device.image_info(child_id).value();
-                fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
             }
             print_separator_to(out, indent);
         }
@@ -3517,7 +3533,7 @@ namespace daxa
     {
         if (local_id.is_null())
         {
-            fmt::format_to(std::back_inserter(out), "{}[NULL]\n", indent);
+            std::format_to(std::back_inserter(out), "{}[NULL]\n", indent);
             return;
         }
         auto const & glob_buffer = global_buffer_infos[local_id.index];
@@ -3527,10 +3543,10 @@ namespace daxa
         if (global_buffer_infos[local_id.index].is_persistent())
         {
             u32 const persistent_index = global_buffer_infos[local_id.index].get_persistent().unique_index;
-            persistent_info = fmt::format(", persistent index: {}", persistent_index);
+            persistent_info = std::format(", persistent index: {}", persistent_index);
         }
-        fmt::format_to(std::back_inserter(out), "{}task {} name: \"{}\", id: ({}){}\n", indent, type_str, glob_buffer.get_name(), to_string(local_id), persistent_info);
-        fmt::format_to(std::back_inserter(out), "{}runtime {}:\n", indent, type_str);
+        std::format_to(std::back_inserter(out), "{}task {} name: \"{}\", id: ({}){}\n", indent, type_str, glob_buffer.get_name(), to_string(local_id), persistent_info);
+        std::format_to(std::back_inserter(out), "{}runtime {}:\n", indent, type_str);
         std::visit([&](auto const & ids)
                    {
             [[maybe_unused]] FormatIndent const d2{out, indent, true};
@@ -3541,21 +3557,20 @@ namespace daxa
                 if constexpr (std::is_same_v<ChildIdT, BufferId>)
                 {
                     auto const & child_info = info.device.buffer_info(child_id).value();
-                    fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                    std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
                 if constexpr (std::is_same_v<ChildIdT, BlasId>)
                 {
-                    auto const & child_info = info.device.blas_info(child_id).value();
-                    fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                    auto const & child_info = info.device.info_blas(child_id).value();
+                    std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
                 if constexpr (std::is_same_v<ChildIdT, TlasId>)
                 {
-                    auto const & child_info = info.device.tlas_info(child_id).value();
-                    fmt::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
+                    auto const & child_info = info.device.info_tlas(child_id).value();
+                    std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
             }
-            print_separator_to(out, indent); },
-                   actual_ids);
+            print_separator_to(out, indent); }, actual_ids);
     }
 
     void ImplTaskGraph::print_task_barrier_to(std::string & out, std::string & indent, TaskGraphPermutation const & permutation, usize index, bool const split_barrier)
@@ -3571,9 +3586,9 @@ namespace daxa
         }
         else
         {
-            fmt::format_to(std::back_inserter(out), "{}slice: ({})\n", indent, to_string(barrier.slice));
-            fmt::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(MemoryBarrierInfo{.src_access = barrier.src_access, .dst_access = barrier.dst_access}));
-            fmt::format_to(std::back_inserter(out), "{}layout: ({}) -> ({})\n", indent, to_string(barrier.layout_before), to_string(barrier.layout_after));
+            std::format_to(std::back_inserter(out), "{}slice: ({})\n", indent, to_string(barrier.slice));
+            std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(MemoryBarrierInfo{.src_access = barrier.src_access, .dst_access = barrier.dst_access}));
+            std::format_to(std::back_inserter(out), "{}layout: ({}) -> ({})\n", indent, to_string(barrier.layout_before), to_string(barrier.layout_after));
             print_task_image_to(out, indent, permutation, barrier.image_id);
         }
     }
@@ -3581,8 +3596,8 @@ namespace daxa
     void ImplTaskGraph::print_task_to(std::string & out, std::string & indent, TaskGraphPermutation const & permutation, usize task_id)
     {
         ImplTask const & task = tasks[task_id];
-        fmt::format_to(std::back_inserter(out), "{}task name: \"{}\", id: {}\n", indent, task.base_task->name(), task_id);
-        fmt::format_to(std::back_inserter(out), "{}task arguments:\n", indent);
+        std::format_to(std::back_inserter(out), "{}task name: \"{}\", id: {}\n", indent, task.base_task->name(), task_id);
+        std::format_to(std::back_inserter(out), "{}task arguments:\n", indent);
         [[maybe_unused]] FormatIndent const d0{out, indent, true};
         for_each(
             task.base_task->attachments(),
@@ -3590,18 +3605,18 @@ namespace daxa
             {
                 auto [access, is_concurrent] = task_buffer_access_to_access(static_cast<TaskBufferAccess>(attach.task_access));
                 std::string_view type_str = buffer_blas_tlas_str(attach.translated_view, permutation);
-                fmt::format_to(std::back_inserter(out), "{}{} argument:\n", indent, type_str);
-                fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
+                std::format_to(std::back_inserter(out), "{}{} argument:\n", indent, type_str);
+                std::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
                 print_task_buffer_blas_tlas_to(out, indent, permutation, attach.translated_view);
                 print_separator_to(out, indent);
             },
             [&](u32, TaskImageAttachmentInfo const & img)
             {
                 auto [layout, access, is_concurrent] = task_image_access_to_layout_access(img.task_access);
-                fmt::format_to(std::back_inserter(out), "{}image argument:\n", indent);
-                fmt::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
-                fmt::format_to(std::back_inserter(out), "{}layout: {}\n", indent, to_string(layout));
-                fmt::format_to(std::back_inserter(out), "{}slice: {}\n", indent, to_string(img.translated_view.slice));
+                std::format_to(std::back_inserter(out), "{}image argument:\n", indent);
+                std::format_to(std::back_inserter(out), "{}access: ({})\n", indent, to_string(access));
+                std::format_to(std::back_inserter(out), "{}layout: {}\n", indent, to_string(layout));
+                std::format_to(std::back_inserter(out), "{}slice: {}\n", indent, to_string(img.translated_view.slice));
                 print_task_image_to(out, indent, permutation, img.translated_view);
                 print_separator_to(out, indent);
             });
@@ -3622,30 +3637,30 @@ namespace daxa
             {
                 if (i >= start_idx && i < end_idx)
                 {
-                    fmt::format_to(std::back_inserter(out), "{}===", i);
+                    std::format_to(std::back_inserter(out), "{}===", i);
                 }
                 else if (i == end_idx && end_idx != batches - 1)
                 {
-                    fmt::format_to(std::back_inserter(out), "{}---", i);
+                    std::format_to(std::back_inserter(out), "{}---", i);
                 }
                 else if (i != batches - 1)
                 {
-                    fmt::format_to(std::back_inserter(out), "----", i);
+                    std::format_to(std::back_inserter(out), "----", i);
                 }
                 else
                 {
                     if (end_idx == batches - 1)
                     {
-                        fmt::format_to(std::back_inserter(out), "{}", i);
+                        std::format_to(std::back_inserter(out), "{}", i);
                     }
                     else
                     {
-                        fmt::format_to(std::back_inserter(out), "-");
+                        std::format_to(std::back_inserter(out), "-");
                     }
                 }
             }
         };
-        fmt::format_to(std::back_inserter(out), "{}Resource lifetimes and aliasing:\n", indent);
+        std::format_to(std::back_inserter(out), "{}Resource lifetimes and aliasing:\n", indent);
         for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
         {
             if (global_image_infos.at(perm_image_idx).is_persistent() || !permutation.image_infos.at(perm_image_idx).valid)
@@ -3658,9 +3673,9 @@ namespace daxa
                                     perm_task_image.lifetime.first_use.task_batch_index;
             usize const end_idx = submit_batch_offsets.at(perm_task_image.lifetime.last_use.submit_scope_index) +
                                   perm_task_image.lifetime.last_use.task_batch_index;
-            fmt::format_to(std::back_inserter(out), "{}", indent);
+            std::format_to(std::back_inserter(out), "{}", indent);
             print_lifetime(start_idx, end_idx);
-            fmt::format_to(std::back_inserter(out), "  allocation offset: {} allocation size: {} task resource name: {}\n",
+            std::format_to(std::back_inserter(out), "  allocation offset: {} allocation size: {} task resource name: {}\n",
                            perm_task_image.allocation_offset,
                            0, // TODO(msakmary)
                            global_image_infos.at(perm_image_idx).get_name());
@@ -3677,9 +3692,9 @@ namespace daxa
                                     perm_task_buffer.lifetime.first_use.task_batch_index;
             usize const end_idx = submit_batch_offsets.at(perm_task_buffer.lifetime.last_use.submit_scope_index) +
                                   perm_task_buffer.lifetime.last_use.task_batch_index;
-            fmt::format_to(std::back_inserter(out), "{}", indent);
+            std::format_to(std::back_inserter(out), "{}", indent);
             print_lifetime(start_idx, end_idx);
-            fmt::format_to(std::back_inserter(out), "  allocation offset: {} allocation size: {} task resource name: {}\n",
+            std::format_to(std::back_inserter(out), "  allocation offset: {} allocation size: {} task resource name: {}\n",
                            perm_task_buffer.allocation_offset,
                            0, // TODO(msakmary)
                            global_buffer_infos.at(perm_buffer_idx).get_name());
@@ -3690,49 +3705,49 @@ namespace daxa
     {
         std::string out = {};
         std::string indent = {};
-        fmt::format_to(std::back_inserter(out), "task graph name: {}, id: {}:\n", info.name, unique_index);
-        fmt::format_to(std::back_inserter(out), "device: {}\n", info.device.info().name.view());
-        fmt::format_to(std::back_inserter(out), "swapchain: {}\n", (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name.view() : "-"));
-        fmt::format_to(std::back_inserter(out), "reorder tasks: {}\n", info.reorder_tasks);
-        fmt::format_to(std::back_inserter(out), "use split barriers: {}\n", info.use_split_barriers);
-        fmt::format_to(std::back_inserter(out), "permutation_condition_count: {}\n", info.permutation_condition_count);
-        fmt::format_to(std::back_inserter(out), "enable_command_labels: {}\n", info.enable_command_labels);
-        fmt::format_to(std::back_inserter(out), "task_graph_label_color: ({},{},{},{})\n",
+        std::format_to(std::back_inserter(out), "task graph name: {}, id: {}:\n", info.name, unique_index);
+        std::format_to(std::back_inserter(out), "device: {}\n", info.device.info().name.view());
+        std::format_to(std::back_inserter(out), "swapchain: {}\n", (this->info.swapchain.has_value() ? this->info.swapchain.value().info().name.view() : "-"));
+        std::format_to(std::back_inserter(out), "reorder tasks: {}\n", info.reorder_tasks);
+        std::format_to(std::back_inserter(out), "use split barriers: {}\n", info.use_split_barriers);
+        std::format_to(std::back_inserter(out), "permutation_condition_count: {}\n", info.permutation_condition_count);
+        std::format_to(std::back_inserter(out), "enable_command_labels: {}\n", info.enable_command_labels);
+        std::format_to(std::back_inserter(out), "task_graph_label_color: ({},{},{},{})\n",
                        info.task_graph_label_color[0],
                        info.task_graph_label_color[1],
                        info.task_graph_label_color[2],
                        info.task_graph_label_color[3]);
-        fmt::format_to(std::back_inserter(out), "task_batch_label_color: ({},{},{},{})\n",
+        std::format_to(std::back_inserter(out), "task_batch_label_color: ({},{},{},{})\n",
                        info.task_batch_label_color[0],
                        info.task_batch_label_color[1],
                        info.task_batch_label_color[2],
                        info.task_batch_label_color[3]);
-        fmt::format_to(std::back_inserter(out), "task_label_color: ({},{},{},{})\n",
+        std::format_to(std::back_inserter(out), "task_label_color: ({},{},{},{})\n",
                        info.task_label_color[0],
                        info.task_label_color[1],
                        info.task_label_color[2],
                        info.task_label_color[3]);
-        fmt::format_to(std::back_inserter(out), "record_debug_information: {}\n", info.record_debug_information);
-        fmt::format_to(std::back_inserter(out), "staging_memory_pool_size: {}\n", info.staging_memory_pool_size);
-        fmt::format_to(std::back_inserter(out), "executed permutation: {}\n", chosen_permutation_last_execution);
+        std::format_to(std::back_inserter(out), "record_debug_information: {}\n", info.record_debug_information);
+        std::format_to(std::back_inserter(out), "staging_memory_pool_size: {}\n", info.staging_memory_pool_size);
+        std::format_to(std::back_inserter(out), "executed permutation: {}\n", chosen_permutation_last_execution);
         usize permutation_index = this->chosen_permutation_last_execution;
         auto & permutation = this->permutations[permutation_index];
         {
             this->print_permutation_aliasing_to(out, indent, permutation);
             permutation_index += 1;
-            fmt::format_to(std::back_inserter(out), "permutations split barriers: {}\n", info.use_split_barriers);
+            std::format_to(std::back_inserter(out), "permutations split barriers: {}\n", info.use_split_barriers);
             [[maybe_unused]] FormatIndent const d0{out, indent, true};
             usize submit_scope_index = 0;
             for (auto & submit_scope : permutation.batch_submit_scopes)
             {
-                fmt::format_to(std::back_inserter(out), "{}submit scope: {}\n", indent, submit_scope_index);
+                std::format_to(std::back_inserter(out), "{}submit scope: {}\n", indent, submit_scope_index);
                 [[maybe_unused]] FormatIndent const d1{out, indent, true};
                 usize batch_index = 0;
                 for (auto & task_batch : submit_scope.task_batches)
                 {
-                    fmt::format_to(std::back_inserter(out), "{}batch: {}\n", indent, batch_index);
+                    std::format_to(std::back_inserter(out), "{}batch: {}\n", indent, batch_index);
                     batch_index += 1;
-                    fmt::format_to(std::back_inserter(out), "{}inserted pipeline barriers:\n", indent);
+                    std::format_to(std::back_inserter(out), "{}inserted pipeline barriers:\n", indent);
                     {
                         [[maybe_unused]] FormatIndent const d2{out, indent, true};
                         for (auto barrier_index : task_batch.pipeline_barrier_indices)
@@ -3743,7 +3758,7 @@ namespace daxa
                     }
                     if (!this->info.use_split_barriers)
                     {
-                        fmt::format_to(std::back_inserter(out), "{}inserted pipeline barriers (converted from split barrier):\n", indent);
+                        std::format_to(std::back_inserter(out), "{}inserted pipeline barriers (converted from split barrier):\n", indent);
                         [[maybe_unused]] FormatIndent const d2{out, indent, true};
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
                         {
@@ -3753,7 +3768,7 @@ namespace daxa
                     }
                     else
                     {
-                        fmt::format_to(std::back_inserter(out), "{}inserted split pipeline barrier waits:\n", indent);
+                        std::format_to(std::back_inserter(out), "{}inserted split pipeline barrier waits:\n", indent);
                         [[maybe_unused]] FormatIndent const d2{out, indent, true};
                         print_separator_to(out, indent);
                         for (auto barrier_index : task_batch.wait_split_barrier_indices)
@@ -3762,7 +3777,7 @@ namespace daxa
                             print_separator_to(out, indent);
                         }
                     }
-                    fmt::format_to(std::back_inserter(out), "{}tasks:\n", indent);
+                    std::format_to(std::back_inserter(out), "{}tasks:\n", indent);
                     {
                         [[maybe_unused]] FormatIndent const d2{out, indent, true};
                         for (TaskId const task_id : task_batch.tasks)
@@ -3773,7 +3788,7 @@ namespace daxa
                     }
                     if (this->info.use_split_barriers)
                     {
-                        fmt::format_to(std::back_inserter(out), "{}inserted split barrier signals:\n", indent);
+                        std::format_to(std::back_inserter(out), "{}inserted split barrier signals:\n", indent);
                         [[maybe_unused]] FormatIndent const d2{out, indent, true};
                         for (usize const barrier_index : task_batch.signal_split_barrier_indices)
                         {
@@ -3785,7 +3800,7 @@ namespace daxa
                 }
                 if (!submit_scope.last_minute_barrier_indices.empty())
                 {
-                    fmt::format_to(std::back_inserter(out), "{}inserted last minute pipeline barriers:\n", indent);
+                    std::format_to(std::back_inserter(out), "{}inserted last minute pipeline barriers:\n", indent);
                     [[maybe_unused]] FormatIndent const d2{out, indent, true};
                     for (usize const barrier_index : submit_scope.last_minute_barrier_indices)
                     {
@@ -3795,10 +3810,10 @@ namespace daxa
                 }
                 if (&submit_scope != &permutation.batch_submit_scopes.back())
                 {
-                    fmt::format_to(std::back_inserter(out), "{} -- inserted submit -- \n", indent);
+                    std::format_to(std::back_inserter(out), "{} -- inserted submit -- \n", indent);
                     if (submit_scope.present_info.has_value())
                     {
-                        fmt::format_to(std::back_inserter(out), "{} -- inserted present -- \n", indent);
+                        std::format_to(std::back_inserter(out), "{} -- inserted present -- \n", indent);
                     }
                 }
                 print_separator_to(out, indent);
