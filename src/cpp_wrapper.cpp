@@ -4,7 +4,6 @@
 #include <daxa/daxa.hpp>
 
 #include <chrono>
-#include <iostream>
 #include <utility>
 #include <format>
 #include <bit>
@@ -151,15 +150,12 @@ void check_result(daxa_Result result, char const * message, std::array<daxa_Resu
     }
     if (!result_allowed)
     {
-#if DAXA_VALIDATION
-        std::cout << std::format(
-                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n\n",
-                         daxa_result_to_string(result),
-                         std::bit_cast<i32>(result),
-                         message)
-                  << std::flush;
-#endif
-        throw std::runtime_error({});
+        DAXA_THROW_M("", std::format(
+                             "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n\n",
+                             daxa_result_to_string(result),
+                             std::bit_cast<i32>(result),
+                             message)
+                             .c_str());
     }
 }
 
@@ -463,9 +459,7 @@ namespace daxa
     {
         if (info.queue_family != daxa::QueueFamily::MAIN)
         {
-            std::cout << "[[DAXA ASSERT FAILURE]]: queue family must be main for a generic command recorder.\n\n"
-                      << std::flush;
-            throw std::runtime_error({});
+            DAXA_THROW_M("", "queue family must be main for a generic command recorder.\n\n");
         }
         CommandRecorder ret = {};
         check_result(daxa_dvc_create_command_recorder(
@@ -480,9 +474,7 @@ namespace daxa
     {
         if (info.queue_family != daxa::QueueFamily::MAIN && info.queue_family != daxa::QueueFamily::COMPUTE)
         {
-            std::cout << "[[DAXA ASSERT FAILURE]]: queue family must be either main or compute for a compute command recorder.\n\n"
-                      << std::flush;
-            throw std::runtime_error({});
+            DAXA_THROW_M("", "queue family must be either main or compute for a compute command recorder.\n\n");
         }
         ComputeCommandRecorder ret = {};
         check_result(daxa_dvc_create_command_recorder(
