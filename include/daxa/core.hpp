@@ -8,6 +8,14 @@
 #include DAXA_CORE_USER_DEFINED_H
 #endif
 
+#if !defined(DAXA_VALIDATION)
+#if defined(NDEBUG)
+#define DAXA_VALIDATION 0
+#else
+#define DAXA_VALIDATION 1
+#endif
+#endif
+
 #if !defined(DAXA_GPU_ID_VALIDATION)
 #if DAXA_VALIDATION
 #define DAXA_GPU_ID_VALIDATION 1
