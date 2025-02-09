@@ -18,7 +18,12 @@ namespace tests
                 .name = ("swapchain (simple_creation)"),
             });
 
-            App() : AppWindow<App>(" (simple_creation)") {}
+            App() : AppWindow<App>(" (simple_creation)")
+            {
+                [[maybe_unused]] daxa::Extent2D surface_extent = swapchain.get_surface_extent();
+                [[maybe_unused]] daxa::Format format = swapchain.get_format();
+                [[maybe_unused]] daxa::ColorSpace color_space = swapchain.get_color_space();
+            }
 
             void on_mouse_move(f32 /*unused*/, f32 /*unused*/) {}
             void on_mouse_button(i32 /*unused*/, i32 /*unused*/) {}

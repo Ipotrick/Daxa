@@ -96,6 +96,7 @@ namespace daxa
         [[nodiscard]] auto info() const -> SwapchainInfo const &;
         [[nodiscard]] auto get_surface_extent() const -> Extent2D;
         [[nodiscard]] auto get_format() const -> Format;
+        [[nodiscard]] auto get_color_space() const -> ColorSpace;
 
       protected:
         template <typename T, typename H_T>
