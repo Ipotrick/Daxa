@@ -3376,12 +3376,12 @@ namespace daxa
                 }
                 if constexpr (std::is_same_v<ChildIdT, BlasId>)
                 {
-                    auto const & child_info = info.device.info_blas(child_id).value();
+                    auto const & child_info = info.device.blas_info(child_id).value();
                     std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
                 if constexpr (std::is_same_v<ChildIdT, TlasId>)
                 {
-                    auto const & child_info = info.device.info_tlas(child_id).value();
+                    auto const & child_info = info.device.tlas_info(child_id).value();
                     std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
             }

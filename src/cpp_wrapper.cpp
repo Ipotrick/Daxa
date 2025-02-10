@@ -179,6 +179,7 @@ namespace daxa
         return ret;
     }
 
+#if !DAXA_REMOVE_DEPRECATED
     auto Instance::create_device(DeviceInfo const & info) -> Device
     {
         Device ret = {};
@@ -189,6 +190,7 @@ namespace daxa
                      "failed to create device");
         return ret;
     }
+#endif
 
     auto Instance::create_device_2(DeviceInfo2 const & info) -> Device
     {
@@ -241,10 +243,12 @@ namespace daxa
 
     /// --- Begin Device ---
 
+#if !DAXA_REMOVE_DEPRECATED
     auto default_device_score(DeviceProperties const & device_props) -> i32
     {
         return daxa_default_device_score(r_cast<daxa_DeviceProperties const *>(&device_props));
     }
+#endif
 
     auto Device::create_memory(MemoryBlockInfo const & info) -> MemoryBlock
     {
