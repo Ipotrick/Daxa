@@ -404,7 +404,68 @@ namespace daxa
     auto PipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
-        return impl.add_ray_tracing_pipeline(info);
+
+        auto update_info_vector = [&](auto const & infos)
+        {
+            std::vector<ShaderCompileInfo2> converted_infos = {};
+            converted_infos.reserve(infos.size());
+            for (auto const & info : infos)
+            {
+                converted_infos.push_back(upgrade_shader_compile_info(info));
+            }
+            return converted_infos;
+        };
+        RayTracingPipelineCompileInfo2 converted_info = {};
+        converted_info.ray_gen_infos = update_info_vector(info.ray_gen_infos);
+        converted_info.intersection_infos = update_info_vector(info.intersection_infos);
+        converted_info.any_hit_infos = update_info_vector(info.any_hit_infos);
+        converted_info.callable_infos = update_info_vector(info.callable_infos);
+        converted_info.closest_hit_infos = update_info_vector(info.closest_hit_infos);
+        converted_info.miss_hit_infos = update_info_vector(info.miss_hit_infos);
+        converted_info.shader_groups_infos = info.shader_groups_infos;
+        converted_info.max_ray_recursion_depth = info.max_ray_recursion_depth;
+        converted_info.push_constant_size = info.push_constant_size;
+        converted_info.name = info.name;
+
+        return this->add_ray_tracing_pipeline2(converted_info);
+    }
+
+    auto PipelineManager::add_ray_tracing_pipeline2(RayTracingPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
+    {
+        auto & impl = *r_cast<ImplPipelineManager *>(this->object);
+        
+        // DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
+        auto modified_info = info;
+        std::array shader_infos = {&modified_info.ray_gen_infos,
+                                   &modified_info.intersection_infos,
+                                   &modified_info.any_hit_infos,
+                                   &modified_info.callable_infos,
+                                   &modified_info.closest_hit_infos,
+                                   &modified_info.miss_hit_infos};
+        for (auto & infos : shader_infos)
+        {
+            for (auto & shader_compile_info : *infos)
+            {
+                inherit_shader_compile_options(shader_compile_info, impl.info.default_shader_compile_info);
+            }
+        }
+
+        auto pipe_result = impl.create_ray_tracing_pipeline(modified_info);
+        if (pipe_result.is_err())
+        {
+            return Result<std::shared_ptr<RayTracingPipeline>>(pipe_result.m);
+        }
+        impl.ray_tracing_pipelines.push_back(pipe_result.value());
+        if (impl.info.register_null_pipelines_when_first_compile_fails)
+        {
+            auto result = Result<std::shared_ptr<RayTracingPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+            result.m = std::move(pipe_result.m);
+            return result;
+        }
+        else
+        {
+            return Result<std::shared_ptr<RayTracingPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        }
     }
     
     auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo a_info) -> Result<std::shared_ptr<ComputePipeline>>
@@ -572,7 +633,7 @@ namespace daxa
 #endif
     }
 
-    auto ImplPipelineManager::create_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<RayTracingPipelineState>
+    auto ImplPipelineManager::create_ray_tracing_pipeline(RayTracingPipelineCompileInfo2 const & a_info) -> Result<RayTracingPipelineState>
     {
         if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -613,7 +674,7 @@ namespace daxa
         auto callable_shader_infos = std::vector<ShaderInfo>{};
         auto closest_hit_shader_infos = std::vector<ShaderInfo>{};
         auto miss_hit_shader_infos = std::vector<ShaderInfo>{};
-        using ElemT = std::tuple<std::vector<ShaderCompileInfo> *, std::vector<ShaderInfo> *, std::vector<daxa::Result<std::vector<unsigned int>>> *, ShaderStage>;
+        using ElemT = std::tuple<std::vector<ShaderCompileInfo2> *, std::vector<ShaderInfo> *, std::vector<daxa::Result<std::vector<unsigned int>>> *, ShaderStage>;
         auto const result_shader_compile_infos = std::array<ElemT, 6>{
             ElemT{&pipe_result.info.ray_gen_infos, &ray_gen_shader_infos, &ray_gen_spirv_result, ShaderStage::RAY_GEN},
             ElemT{&pipe_result.info.intersection_infos, &intersection_shader_infos, &intersection_spirv_result, ShaderStage::RAY_INTERSECT},
@@ -627,7 +688,7 @@ namespace daxa
         {
             for (auto & shader_compile_info : *pipe_result_shader_info)
             {
-                auto spv_result = get_spirv(upgrade_shader_compile_info(shader_compile_info), pipe_result.info.name, stage);
+                auto spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
                 if (spv_result.is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
@@ -645,13 +706,13 @@ namespace daxa
                 final_shader_info->push_back(daxa::ShaderInfo{
                     .byte_code = spv_results->back().value().data(),
                     .byte_code_size = static_cast<u32>(spv_results->back().value().size()),
-                    .create_flags = shader_compile_info.compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
+                    .create_flags = shader_compile_info.create_flags.value_or(ShaderCreateFlagBits::NONE),
                     .required_subgroup_size =
-                        shader_compile_info.compile_options.required_subgroup_size.has_value() ? Optional{shader_compile_info.compile_options.required_subgroup_size.value()} : daxa::None,
+                        shader_compile_info.required_subgroup_size.has_value() ? Optional{shader_compile_info.required_subgroup_size.value()} : daxa::None,
                 });
-                if (shader_compile_info.compile_options.entry_point.has_value() && (shader_compile_info.compile_options.language != ShaderLanguage::SLANG))
+                if (shader_compile_info.entry_point.has_value() && (shader_compile_info.language != ShaderLanguage::SLANG))
                 {
-                    final_shader_info->back().entry_point = {shader_compile_info.compile_options.entry_point.value()};
+                    final_shader_info->back().entry_point = {shader_compile_info.entry_point.value()};
                 }
             }
         }
@@ -792,65 +853,6 @@ namespace daxa
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
         return Result<RasterPipelineState>(std::move(pipe_result));
     }
-
-    auto ImplPipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RayTracingPipeline>>
-    {
-        // DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
-        auto modified_info = a_info;
-        std::array shader_infos = {&modified_info.ray_gen_infos,
-                                   &modified_info.intersection_infos,
-                                   &modified_info.any_hit_infos,
-                                   &modified_info.callable_infos,
-                                   &modified_info.closest_hit_infos,
-                                   &modified_info.miss_hit_infos};
-        for (auto & infos : shader_infos)
-        {
-            for (auto & shader_compile_info : *infos)
-            {
-                inherit_shader_compile_options(shader_compile_info.compile_options, this->info.default_shader_compile_info);
-            }
-        }
-
-        auto pipe_result = create_ray_tracing_pipeline(modified_info);
-        if (pipe_result.is_err())
-        {
-            return Result<std::shared_ptr<RayTracingPipeline>>(pipe_result.m);
-        }
-        this->ray_tracing_pipelines.push_back(pipe_result.value());
-        if (this->info.register_null_pipelines_when_first_compile_fails)
-        {
-            auto result = Result<std::shared_ptr<RayTracingPipeline>>(std::move(pipe_result.value().pipeline_ptr));
-            result.m = std::move(pipe_result.m);
-            return result;
-        }
-        else
-        {
-            return Result<std::shared_ptr<RayTracingPipeline>>(std::move(pipe_result.value().pipeline_ptr));
-        }
-    }
-
-    // auto ImplPipelineManager::add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>
-    // {
-    //     DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
-    //     auto modified_info = a_info;
-    //     inherit_shader_compile_options(modified_info.shader_info.compile_options, this->info.default_shader_compile_info)
-    //     auto pipe_result = create_compute_pipeline(modified_info);
-    //     if (pipe_result.is_err())
-    //     {
-    //         return Result<std::shared_ptr<ComputePipeline>>(pipe_result.m);
-    //     }
-    //     this->compute_pipelines.push_back(pipe_result.value());
-    //     if (this->info.register_null_pipelines_when_first_compile_fails)
-    //     {
-    //         auto result = Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
-    //         result.m = std::move(pipe_result.m);
-    //         return result;
-    //     }
-    //     else
-    //     {
-    //         return Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
-    //     }
-    // }
 
     auto ImplPipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>
     {

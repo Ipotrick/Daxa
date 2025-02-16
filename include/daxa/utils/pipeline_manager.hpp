@@ -75,7 +75,7 @@ namespace daxa
         std::optional<u32> required_subgroup_size = {};
     };
 
-    struct RayTracingPipelineCompileInfo
+    struct [[deprecated("Use RayTracingPipelineCompileInfo2 instead")]] RayTracingPipelineCompileInfo
     {
         std::vector<ShaderCompileInfo> ray_gen_infos = {};
         std::vector<ShaderCompileInfo> intersection_infos = {};
@@ -83,6 +83,20 @@ namespace daxa
         std::vector<ShaderCompileInfo> callable_infos = {};
         std::vector<ShaderCompileInfo> closest_hit_infos = {};
         std::vector<ShaderCompileInfo> miss_hit_infos = {};
+        std::vector<RayTracingShaderGroupInfo> shader_groups_infos = {};
+        u32 max_ray_recursion_depth = {};
+        u32 push_constant_size = {};
+        std::string name = {};
+    };
+
+    struct RayTracingPipelineCompileInfo2
+    {        
+        std::vector<ShaderCompileInfo2> ray_gen_infos = {};
+        std::vector<ShaderCompileInfo2> intersection_infos = {};
+        std::vector<ShaderCompileInfo2> any_hit_infos = {};
+        std::vector<ShaderCompileInfo2> callable_infos = {};
+        std::vector<ShaderCompileInfo2> closest_hit_infos = {};
+        std::vector<ShaderCompileInfo2> miss_hit_infos = {};
         std::vector<RayTracingShaderGroupInfo> shader_groups_infos = {};
         u32 max_ray_recursion_depth = {};
         u32 push_constant_size = {};
@@ -174,6 +188,7 @@ namespace daxa
         PipelineManager(PipelineManagerInfo2 info);
 
         auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
+        auto add_ray_tracing_pipeline2(RayTracingPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
         auto add_compute_pipeline(ComputePipelineCompileInfo info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_compute_pipeline2(ComputePipelineCompileInfo2 info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
