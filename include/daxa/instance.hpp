@@ -37,9 +37,9 @@ namespace daxa
 
         /// Convenience function to pick a physical device.
         /// Picks first supported device that satisfies the given device info and desired implicit features.
-        auto choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 const & base_info) -> DeviceInfo2;
+        [[nodiscard]] auto choose_device(ImplicitFeatureFlags desired_features, DeviceInfo2 const & base_info) -> DeviceInfo2;
 
-        auto list_devices_properties() -> std::span<DeviceProperties const>;
+        [[nodiscard]] auto list_devices_properties() -> std::span<DeviceProperties const>;
 
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
