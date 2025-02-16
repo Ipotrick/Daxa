@@ -69,7 +69,7 @@ namespace daxa
         };
 
         using ComputePipelineState = PipelineState<ComputePipeline, ComputePipelineCompileInfo2>;
-        using RasterPipelineState = PipelineState<RasterPipeline, RasterPipelineCompileInfo>;
+        using RasterPipelineState = PipelineState<RasterPipeline, RasterPipelineCompileInfo2>;
         using RayTracingPipelineState = PipelineState<RayTracingPipeline, RayTracingPipelineCompileInfo2>;
 
         std::vector<ComputePipelineState> compute_pipelines;
@@ -109,9 +109,7 @@ namespace daxa
 
         auto create_ray_tracing_pipeline(RayTracingPipelineCompileInfo2 const & a_info) -> Result<RayTracingPipelineState>;
         auto create_compute_pipeline(ComputePipelineCompileInfo2 const & a_info) -> Result<ComputePipelineState>;
-        auto create_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<RasterPipelineState>;
-        auto add_compute_pipeline(ComputePipelineCompileInfo const & a_info) -> Result<std::shared_ptr<ComputePipeline>>;
-        auto add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>;
+        auto create_raster_pipeline(RasterPipelineCompileInfo2 const & a_info) -> Result<RasterPipelineState>;
         void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);

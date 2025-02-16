@@ -545,8 +545,58 @@ namespace daxa
 
     auto PipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>
     {
+        RasterPipelineCompileInfo2 converted_info = {};
+        converted_info.mesh_shader_info = info.mesh_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.mesh_shader_info.value())) : daxa::None;
+        converted_info.vertex_shader_info = info.vertex_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.vertex_shader_info.value())) : daxa::None;
+        converted_info.tesselation_control_shader_info = info.tesselation_control_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.tesselation_control_shader_info.value())) : daxa::None;
+        converted_info.tesselation_evaluation_shader_info = info.tesselation_evaluation_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.tesselation_evaluation_shader_info.value())) : daxa::None;
+        converted_info.fragment_shader_info = info.fragment_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.fragment_shader_info.value())) : daxa::None;
+        converted_info.task_shader_info = info.task_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.task_shader_info.value())) : daxa::None;
+        converted_info.color_attachments = info.color_attachments;
+        converted_info.depth_test = info.depth_test;
+        converted_info.raster = info.raster;
+        converted_info.tesselation = info.tesselation;
+        converted_info.push_constant_size = info.push_constant_size;
+        converted_info.name = info.name;
+        return add_raster_pipeline2(converted_info);
+    }
+
+    auto PipelineManager::add_raster_pipeline2(RasterPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RasterPipeline>>
+    {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
-        return impl.add_raster_pipeline(info);
+
+        auto modified_info = info;
+        auto const modified_shader_compile_infos = std::array<Optional<ShaderCompileInfo2> *, 6>{
+            &modified_info.vertex_shader_info,
+            &modified_info.tesselation_control_shader_info,
+            &modified_info.tesselation_evaluation_shader_info,
+            &modified_info.fragment_shader_info,
+            &modified_info.mesh_shader_info,
+            &modified_info.task_shader_info,
+        };
+        for (auto * shader_compile_info : modified_shader_compile_infos)
+        {
+            if (shader_compile_info->has_value())
+            {
+                inherit_shader_compile_options(shader_compile_info->value(), impl.info.default_shader_compile_info);
+            }
+        }
+        auto pipe_result = impl.create_raster_pipeline(modified_info);
+        if (pipe_result.is_err())
+        {
+            return Result<std::shared_ptr<RasterPipeline>>(pipe_result.m);
+        }
+        impl.raster_pipelines.push_back(pipe_result.value());
+        if (impl.info.register_null_pipelines_when_first_compile_fails)
+        {
+            auto result = Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+            result.m = std::move(pipe_result.m);
+            return result;
+        }
+        else
+        {
+            return Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
+        }
     }
 
     void PipelineManager::remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline)
@@ -779,7 +829,7 @@ namespace daxa
         return Result<ComputePipelineState>(std::move(pipe_result));
     }
 
-    auto ImplPipelineManager::create_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<RasterPipelineState>
+    auto ImplPipelineManager::create_raster_pipeline(RasterPipelineCompileInfo2 const & a_info) -> Result<RasterPipelineState>
     {
         if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
@@ -810,7 +860,7 @@ namespace daxa
         auto tesselation_evaluation_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         auto task_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
         auto mesh_spirv_result = daxa::Result<std::vector<unsigned int>>("useless string");
-        using ElemT = std::tuple<Optional<ShaderCompileInfo> *, Optional<ShaderInfo> *, daxa::Result<std::vector<unsigned int>> *, ShaderStage>;
+        using ElemT = std::tuple<Optional<ShaderCompileInfo2> *, Optional<ShaderInfo> *, daxa::Result<std::vector<unsigned int>> *, ShaderStage>;
         auto const result_shader_compile_infos = std::array<ElemT, 6>{
             ElemT{&pipe_result.info.vertex_shader_info, &raster_pipeline_info.vertex_shader_info, &vertex_spirv_result, ShaderStage::VERT},
             ElemT{&pipe_result.info.fragment_shader_info, &raster_pipeline_info.fragment_shader_info, &fragment_spirv_result, ShaderStage::FRAG},
@@ -823,7 +873,7 @@ namespace daxa
         {
             if (pipe_result_shader_info->has_value())
             {
-                *spv_result = get_spirv(upgrade_shader_compile_info(pipe_result_shader_info->value()), pipe_result.info.name, stage);
+                *spv_result = get_spirv(pipe_result_shader_info->value(), pipe_result.info.name, stage);
                 if (spv_result->is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
@@ -840,54 +890,18 @@ namespace daxa
                 *final_shader_info = daxa::ShaderInfo{
                     .byte_code = spv_result->value().data(),
                     .byte_code_size = static_cast<u32>(spv_result->value().size()),
-                    .create_flags = pipe_result_shader_info->value().compile_options.create_flags.value_or(ShaderCreateFlagBits::NONE),
+                    .create_flags = pipe_result_shader_info->value().create_flags.value_or(ShaderCreateFlagBits::NONE),
                     .required_subgroup_size =
-                        pipe_result_shader_info->value().compile_options.required_subgroup_size.has_value() ? Optional{pipe_result_shader_info->value().compile_options.required_subgroup_size.value()} : daxa::None,
+                        pipe_result_shader_info->value().required_subgroup_size.has_value() ? Optional{pipe_result_shader_info->value().required_subgroup_size.value()} : daxa::None,
                 };
-                if (pipe_result_shader_info->value().compile_options.language != ShaderLanguage::SLANG)
+                if (pipe_result_shader_info->value().language != ShaderLanguage::SLANG)
                 {
-                    final_shader_info->value().entry_point = {pipe_result_shader_info->value().compile_options.entry_point.value()};
+                    final_shader_info->value().entry_point = {pipe_result_shader_info->value().entry_point.value()};
                 }
             }
         }
         (*pipe_result.pipeline_ptr) = this->info.device.create_raster_pipeline(raster_pipeline_info);
         return Result<RasterPipelineState>(std::move(pipe_result));
-    }
-
-    auto ImplPipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & a_info) -> Result<std::shared_ptr<RasterPipeline>>
-    {
-        auto modified_info = a_info;
-        auto const modified_shader_compile_infos = std::array<Optional<ShaderCompileInfo> *, 6>{
-            &modified_info.vertex_shader_info,
-            &modified_info.tesselation_control_shader_info,
-            &modified_info.tesselation_evaluation_shader_info,
-            &modified_info.fragment_shader_info,
-            &modified_info.mesh_shader_info,
-            &modified_info.task_shader_info,
-        };
-        for (auto * shader_compile_info : modified_shader_compile_infos)
-        {
-            if (shader_compile_info->has_value())
-            {
-                inherit_shader_compile_options(shader_compile_info->value().compile_options, this->info.default_shader_compile_info);
-            }
-        }
-        auto pipe_result = create_raster_pipeline(modified_info);
-        if (pipe_result.is_err())
-        {
-            return Result<std::shared_ptr<RasterPipeline>>(pipe_result.m);
-        }
-        this->raster_pipelines.push_back(pipe_result.value());
-        if (this->info.register_null_pipelines_when_first_compile_fails)
-        {
-            auto result = Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
-            result.m = std::move(pipe_result.m);
-            return result;
-        }
-        else
-        {
-            return Result<std::shared_ptr<RasterPipeline>>(std::move(pipe_result.value().pipeline_ptr));
-        }
     }
 
     void ImplPipelineManager::remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline)
