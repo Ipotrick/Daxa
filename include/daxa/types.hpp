@@ -1337,11 +1337,11 @@ namespace daxa
         ADOBERGB_NONLINEAR = 1000104012,
         PASS_THROUGH = 1000104013,
         EXTENDED_SRGB_NONLINEAR = 1000104014,
-        DISPLAY_NATIVE = 1000213000,
-        RGB_NONLINEAR = EXTENDED_SRGB_NONLINEAR,
-        DCI_P3_LINEAR = DISPLAY_P3_LINEAR,
+        DISPLAY_NATIVE_AMD = 1000213000,
         MAX_ENUM = 0x7fffffff,
     };
+
+    [[nodiscard]] auto to_string(ColorSpace color_space) -> std::string_view;
 
     enum struct ImageLayout
     {

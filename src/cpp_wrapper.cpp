@@ -843,6 +843,11 @@ namespace daxa
         return std::bit_cast<Format>(daxa_swp_get_format(rc_cast<daxa_Swapchain>(this->object)));
     }
 
+    auto Swapchain::get_color_space() const -> ColorSpace
+    {
+        return std::bit_cast<ColorSpace>(daxa_swp_get_color_space(rc_cast<daxa_Swapchain>(this->object)));
+    }
+
     auto Swapchain::inc_refcnt(ImplHandle const * object) -> u64
     {
         return daxa_swp_inc_refcnt(rc_cast<daxa_Swapchain>(object));
@@ -1597,6 +1602,30 @@ namespace daxa
         case Format::PVRTC1_4BPP_SRGB_BLOCK_IMG: return "PVRTC1_4BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_2BPP_SRGB_BLOCK_IMG: return "PVRTC2_2BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_4BPP_SRGB_BLOCK_IMG: return "PVRTC2_4BPP_SRGB_BLOCK_IMG";
+        default: return "unknown";
+        }
+    }
+
+    auto to_string(ColorSpace color_space) -> std::string_view
+    {
+        switch (color_space)
+        {
+        case ColorSpace::SRGB_NONLINEAR: return "SRGB_NONLINEAR";
+        case ColorSpace::DISPLAY_P3_NONLINEAR: return "DISPLAY_P3_NONLINEAR";
+        case ColorSpace::EXTENDED_SRGB_LINEAR: return "EXTENDED_SRGB_LINEAR";
+        case ColorSpace::DISPLAY_P3_LINEAR: return "DISPLAY_P3_LINEAR";
+        case ColorSpace::DCI_P3_NONLINEAR: return "DCI_P3_NONLINEAR";
+        case ColorSpace::BT709_LINEAR: return "BT709_LINEAR";
+        case ColorSpace::BT709_NONLINEAR: return "BT709_NONLINEAR";
+        case ColorSpace::BT2020_LINEAR: return "BT2020_LINEAR";
+        case ColorSpace::HDR10_ST2084: return "HDR10_ST2084";
+        case ColorSpace::DOLBYVISION: return "DOLBYVISION";
+        case ColorSpace::HDR10_HLG: return "HDR10_HLG";
+        case ColorSpace::ADOBERGB_LINEAR: return "ADOBERGB_LINEAR";
+        case ColorSpace::ADOBERGB_NONLINEAR: return "ADOBERGB_NONLINEAR";
+        case ColorSpace::PASS_THROUGH: return "PASS_THROUGH";
+        case ColorSpace::EXTENDED_SRGB_NONLINEAR: return "EXTENDED_SRGB_NONLINEAR";
+        case ColorSpace::DISPLAY_NATIVE_AMD: return "DISPLAY_NATIVE_AMD";
         default: return "unknown";
         }
     }

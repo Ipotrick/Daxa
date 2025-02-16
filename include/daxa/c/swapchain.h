@@ -39,6 +39,8 @@ DAXA_EXPORT VkExtent2D
 daxa_swp_get_surface_extent(daxa_Swapchain swapchain);
 DAXA_EXPORT VkFormat
 daxa_swp_get_format(daxa_Swapchain swapchain);
+DAXA_EXPORT VkColorSpaceKHR
+daxa_swp_get_color_space(daxa_Swapchain swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_swp_resize(daxa_Swapchain swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
