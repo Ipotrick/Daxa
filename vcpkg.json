@@ -79,7 +79,7 @@
       ]
     }
   },
-  "builtin-baseline": "cf035d9916a0a23042b41fcae7ee0386d245af08",
+  "builtin-baseline": "d5ec528843d29e3a52d745a64b469f810b2cedbf",
   "vcpkg-configuration": {
     "overlay-ports": [
       "./cmake/vcpkg-overlay-ports/fsr2",
