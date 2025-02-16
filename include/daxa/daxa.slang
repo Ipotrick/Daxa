@@ -72,11 +72,11 @@ namespace daxa
     _DAXA_DECL_MAT_TYPES(bool, b32)
 
     DAXA_DECL_STORAGE_BUFFERS __DynamicResource buffers[];
-    DAXA_DECL_STORAGE_BUFFERS coherent __DynamicResource coherent_buffers[];
+    DAXA_DECL_STORAGE_BUFFERS coherent __DynamicResource buffers_coherent[];
     DAXA_DECL_STORAGE_IMAGES __DynamicResource storage_images[];
-    DAXA_DECL_STORAGE_IMAGES coherent __DynamicResource coherent_storage_images[];
+    DAXA_DECL_STORAGE_IMAGES coherent __DynamicResource storage_images_coherent[];
     DAXA_DECL_SAMPLED_IMAGES __DynamicResource sampled_images[];
-    DAXA_DECL_SAMPLED_IMAGES coherent __DynamicResource coherent_sampled_images[];
+    DAXA_DECL_SAMPLED_IMAGES coherent __DynamicResource sampled_images_coherent[];
     DAXA_DECL_SAMPLERS SamplerState samplers[];
     DAXA_DECL_ACCELERATION_STRUCTURES RaytracingAccelerationStructure acceleration_structures[];
     
@@ -202,24 +202,24 @@ namespace daxa
 } // namespace daxa
 
 #define _DAXA_DECL_TEX_EXTENSION(TYPE, TABLE)\
-__generic<T> extension TYPE<T>\
+__generic<T : ITexelElement> extension TYPE<T>\
 {\
     static TYPE<T> get(daxa::ImageViewId i) { return TABLE[i.index()]; }\
-    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE[i.index()]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE ## _coherent[i.index()]; }\
     static TYPE<T> get(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
-    static TYPE<T> get_coherent(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewIndex i) { return TABLE ## _coherent[i.index()]; }\
 }\
 namespace daxa\
 {\
-    __generic<T>\
+    __generic<T : ITexelElement>\
     struct TYPE ## Id\
     {\
         ImageViewId id;\
         TYPE<T> get() { return TYPE<T>::get(id); }\
         TYPE<T> get_coherent() { return TYPE<T>::get_coherent(id); }\
     };    \
-    __generic<T>\
-    struct TYPE ## Index\
+    __generic<T : ITexelElement>\
+    struct TYPE ## Idx\
     {\
         ImageViewIndex index;\
         TYPE<T> get() { return TYPE<T>::get(index); }\

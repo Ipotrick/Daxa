@@ -157,6 +157,11 @@ auto daxa_swp_get_format(daxa_Swapchain self) -> VkFormat
     return self->vk_surface_format.format;
 }
 
+auto daxa_swp_get_color_space(daxa_Swapchain self) -> VkColorSpaceKHR
+{
+    return self->vk_surface_format.colorSpace;
+}
+
 auto daxa_swp_resize(daxa_Swapchain self) -> daxa_Result
 {
     auto result = self->recreate();
