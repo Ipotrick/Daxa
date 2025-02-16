@@ -73,7 +73,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     DAXA_DECL_TRY_CREATE_MODULE(tesselation_control, TESSELLATION_CONTROL_BIT)
     DAXA_DECL_TRY_CREATE_MODULE(tesselation_evaluation, TESSELLATION_EVALUATION_BIT)
     DAXA_DECL_TRY_CREATE_MODULE(fragment, FRAGMENT_BIT)
-    if ((ret.device->properties.implicit_features & ImplicitFeatureFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
+    if ((ret.device->properties.implicit_features & ImplicitFeatureFlagBits::MESH_SHADER) != ImplicitFeatureFlagBits::NONE)
     {
         DAXA_DECL_TRY_CREATE_MODULE(task, TASK_BIT_EXT)
         DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
