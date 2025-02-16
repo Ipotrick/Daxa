@@ -58,7 +58,7 @@
 #endif
 
 #if !defined(DAXA_REMOVE_DEPRECATED)
-#define DAXA_REMOVE_DEPRECATED 0
+#define DAXA_REMOVE_DEPRECATED 1
 #endif
 
 namespace daxa

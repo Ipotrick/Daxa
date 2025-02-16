@@ -602,7 +602,7 @@ namespace daxa
         usize task_index = {};
 
 #if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
+        [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead, API:3.0")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
         {
             std::memcpy(
                 arr.data(),

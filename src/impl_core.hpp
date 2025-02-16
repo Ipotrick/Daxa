@@ -44,6 +44,8 @@
 #endif
 
 // INCLUDE ORDER MUST STAY LIKE THIS:
+// ensure we always compile in the deprecated functions to avoid link issues
+#define DAXA_REMOVE_DEPRECATED 0
 #include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
