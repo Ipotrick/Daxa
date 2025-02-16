@@ -14,14 +14,6 @@
 #include <memory>
 #include <format>
 
-#if DAXA_VALIDATION
-#include <iostream>
-#include <cstdlib>
-#include <stdexcept>
-
-#define DAXA_GPU_ID_VALIDATION 1
-#endif
-
 #if defined(_WIN32)
 #define VK_USE_PLATFORM_WIN32_KHR
 #define WIN32_LEAN_AND_MEAN
