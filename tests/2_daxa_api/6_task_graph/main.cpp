@@ -24,7 +24,7 @@ struct TestTask : TestTaskHead::Task
         {
             [[maybe_unused]] daxa::BufferId id = ti.get(AT.buffer0).ids[0];
             [[maybe_unused]] char const * name = ti.get(AT.buffer0).name;
-            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(AT.buffer0).access;
+            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(AT.buffer0).task_access;
             [[maybe_unused]] u8 shader_array_size = ti.get(AT.buffer0).shader_array_size;
             [[maybe_unused]] bool shader_as_address = ti.get(AT.buffer0).shader_as_address;
             [[maybe_unused]] daxa::TaskBufferView view = ti.get(AT.buffer0).view;
@@ -33,7 +33,7 @@ struct TestTask : TestTaskHead::Task
         // The Image Attachment info contents:
         {
             [[maybe_unused]] char const * name = ti.get(AT.image0).name;
-            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(AT.image0).access;
+            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(AT.image0).task_access;
             [[maybe_unused]] daxa::ImageViewType view_type = ti.get(AT.image0).view_type;
             [[maybe_unused]] u8 shader_array_size = ti.get(AT.image0).shader_array_size;
             [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(AT.image0).shader_array_type;

@@ -2,9 +2,9 @@
 
 #include <queue>
 
+#include "impl_core.hpp"
 #include <daxa/sync.hpp>
 
-#include "impl_core.hpp"
 
 namespace daxa
 {

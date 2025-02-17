@@ -113,8 +113,8 @@ namespace tests
         daxa::Instance instance = daxa::create_instance({});
         daxa::Device device = instance.create_device_2(instance.choose_device({}, {}));
 
-        daxa::ExecutableCommandList commands = {};
         {
+            daxa::ExecutableCommandList commands = {};
             auto rec = device.create_command_recorder({});
             commands = rec.complete_current_commands();
         }

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "impl_core.hpp"
 #include <daxa/daxa.hpp>
 #include <daxa/device.hpp>
 
-#include "impl_core.hpp"
 
 #include <daxa/c/device.h>
 

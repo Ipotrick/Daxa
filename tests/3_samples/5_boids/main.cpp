@@ -162,10 +162,10 @@ struct App : AppWindow<App>
     struct DrawBoidsTask : daxa::PartialTask<2, "DrawBoids">
     {
         static inline daxa::TaskBufferAttachmentIndex const boids = add_attachment(daxa::TaskBufferAttachment{
-            .access = daxa::TaskBufferAccess::VERTEX_SHADER_READ,
+            .task_access = daxa::TaskBufferAccess::VERTEX_SHADER_READ,
         });
         static inline daxa::TaskImageAttachmentIndex const render_image = add_attachment(daxa::TaskImageAttachment{
-            .access = daxa::TaskImageAccess::COLOR_ATTACHMENT,
+            .task_access = daxa::TaskImageAccess::COLOR_ATTACHMENT,
         });
         AttachmentViews views = {};
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};

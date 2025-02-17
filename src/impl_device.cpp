@@ -70,7 +70,7 @@ namespace
     }
 } // namespace
 
-auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device, u32 queue_family_index, u32 queue_index) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
 {
     VkSemaphoreTypeCreateInfo timeline_ci{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -85,8 +85,7 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device, u32 queue_family
         .flags = {},
     };
 
-    this->vk_queue_family_index = queue_family_index;
-    vkGetDeviceQueue(vk_device, queue_family_index, queue_index, &this->vk_queue);
+    vkGetDeviceQueue(vk_device, vk_queue_family_index, queue_index, &this->vk_queue);
     daxa_Result result = DAXA_RESULT_SUCCESS;
     if (this->vk_queue == VK_NULL_HANDLE)
     {
@@ -1398,7 +1397,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    if (physical_device.features.physical_device_acceleration_structure_features_khr.accelerationStructure)
+    if ((properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) != 0)
     {
         if (self->info.max_allowed_acceleration_structures > self->properties.acceleration_structure_properties.value.max_descriptor_set_update_after_bind_acceleration_structures ||
             self->info.max_allowed_acceleration_structures == 0)
@@ -1523,7 +1522,8 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             continue;
         }
         auto const vk_queue_family = self->queue_families[self->queues[i].family].vk_index;
-        result = self->queues[i].initialize(self->vk_device, vk_queue_family, self->queues[i].queue_index);
+        self->queues[i].vk_queue_family_index = vk_queue_family;
+        result = self->queues[i].initialize(self->vk_device);
         _DAXA_RETURN_IF_ERROR(result, result)
     }
 

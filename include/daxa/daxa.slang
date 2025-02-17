@@ -147,9 +147,19 @@ namespace daxa
         {
             return value == 0;
         }
+        SamplerState get()
+        {
+            return samplers[index()];
+        }
     };
 
 #if defined(DAXA_RAY_TRACING)
+    [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
+    extension RaytracingAccelerationStructure
+    {
+        static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
+    }
+
     struct TlasId
     {
         daxa_u64 value;
@@ -165,13 +175,11 @@ namespace daxa
         {
             return value == 0;
         }
+        RaytracingAccelerationStructure get()
+        {
+            return RayTracingAccelerationStructureTable[index()];
+        }
     };
-
-    [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
-    extension RaytracingAccelerationStructure
-    {
-        static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
-    }
 #endif // DAXA_RAY_TRACING
 
     extension ByteAddressBuffer
@@ -211,7 +219,7 @@ namespace daxa\
         TYPE<T> get_coherent() { return TYPE<T>::get_coherent(id); }\
     };    \
     __generic<T : ITexelElement>\
-    struct TYPE ## Idx\
+    struct TYPE ## Index\
     {\
         ImageViewIndex index;\
         TYPE<T> get() { return TYPE<T>::get(index); }\
