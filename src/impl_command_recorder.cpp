@@ -5,7 +5,6 @@
 
 #include "impl_sync.hpp"
 #include "impl_device.hpp"
-#include "impl_core.hpp"
 
 /// --- Begin Helpers ---
 

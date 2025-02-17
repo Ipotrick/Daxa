@@ -1,7 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG || DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
-#include "daxa/utils/pipeline_manager.hpp"
 
 #include "../impl_core.hpp"
+#include "daxa/utils/pipeline_manager.hpp"
 #include "impl_pipeline_manager.hpp"
 
 #include <tuple>
@@ -430,6 +430,48 @@ namespace daxa
         return this->add_ray_tracing_pipeline2(converted_info);
     }
 
+    template<typename T>
+    void auto_complete_shader_compile_info(T & info)
+    {
+        if (!info.entry_point.has_value())
+        {
+            info.entry_point = "main";
+        }
+
+        if (daxa::holds_alternative<daxa::ShaderFile>(info.source) && !info.language.has_value())
+        {
+            auto const & shader_file = daxa::get<daxa::ShaderFile>(info.source);
+            auto const shader_file_string = shader_file.path.filename().string();
+            bool is_slang_file = false;
+            is_slang_file |= shader_file_string.ends_with(".hlslh");
+            is_slang_file |= shader_file_string.ends_with(".hlsl");
+            is_slang_file |= shader_file_string.ends_with(".slang");
+            is_slang_file |= shader_file_string.ends_with(".slangh");
+            bool is_glsl_file = false;
+            is_glsl_file |= shader_file_string.ends_with(".glsl");
+            is_glsl_file |= shader_file_string.ends_with(".glslh");
+            if (is_slang_file)
+            {
+                info.language = ShaderLanguage::SLANG;
+            }            
+            if (is_glsl_file)
+            {
+                info.language = ShaderLanguage::GLSL;
+            }
+        }
+    }
+
+    template<typename T>
+    void auto_complete_pipeline_name(T & info)
+    {
+        // For compute pipelines, insert a default name based on filename and entry.
+        if (daxa::holds_alternative<daxa::ShaderFile>(info.source) && info.name.empty())
+        {
+            auto const & shader_file = daxa::get<daxa::ShaderFile>(info.source);
+            info.name = (shader_file.path.string() + "::") + info.entry_point.value();
+        }
+    }
+
     auto PipelineManager::add_ray_tracing_pipeline2(RayTracingPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
@@ -446,6 +488,7 @@ namespace daxa
         {
             for (auto & shader_compile_info : *infos)
             {
+                auto_complete_shader_compile_info(shader_compile_info);
                 inherit_shader_compile_options(shader_compile_info, impl.info.default_shader_compile_info);
             }
         }
@@ -489,40 +532,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.source), "must provide shader source");
 
         auto m_info = std::move(a_info);
+        auto_complete_pipeline_name(m_info);
 
-        if (!m_info.entry_point.has_value())
-        {
-            m_info.entry_point = "main";
-        }
-
-        if (daxa::holds_alternative<daxa::ShaderFile>(m_info.source) && !m_info.language.has_value())
-        {
-            auto const & shader_file = daxa::get<daxa::ShaderFile>(m_info.source);
-            auto const shader_file_string = shader_file.path.filename().string();
-            bool is_slang_file = false;
-            is_slang_file |= shader_file_string.ends_with(".hlslh");
-            is_slang_file |= shader_file_string.ends_with(".hlsl");
-            is_slang_file |= shader_file_string.ends_with(".slang");
-            is_slang_file |= shader_file_string.ends_with(".slangh");
-            bool is_glsl_file = false;
-            is_glsl_file |= shader_file_string.ends_with(".glsl");
-            is_glsl_file |= shader_file_string.ends_with(".glslh");
-            if (is_slang_file)
-            {
-                m_info.language = ShaderLanguage::SLANG;
-            }            
-            if (is_glsl_file)
-            {
-                m_info.language = ShaderLanguage::GLSL;
-            }
-        }
-
-        // For compute pipelines, insert a default name based on filename and entry.
-        if (daxa::holds_alternative<daxa::ShaderFile>(m_info.source) && m_info.name.empty())
-        {
-            auto const & shader_file = daxa::get<daxa::ShaderFile>(m_info.source);
-            m_info.name = (shader_file.path.string() + "::") + m_info.entry_point.value();
-        }
+        auto_complete_shader_compile_info(m_info);
 
         inherit_shader_compile_options(m_info, impl.info.default_shader_compile_info);
         auto pipe_result = impl.create_compute_pipeline(m_info);
@@ -578,6 +590,7 @@ namespace daxa
         {
             if (shader_compile_info->has_value())
             {
+                auto_complete_shader_compile_info(shader_compile_info->value());
                 inherit_shader_compile_options(shader_compile_info->value(), impl.info.default_shader_compile_info);
             }
         }
