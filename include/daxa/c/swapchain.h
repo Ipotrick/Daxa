@@ -3,6 +3,7 @@
 
 #include <daxa/c/gpu_resources.h>
 #include <daxa/c/sync.h>
+#include <vulkan/vulkan_core.h>
 
 DAXA_EXPORT int32_t
 daxa_default_format_selector(VkFormat format);
@@ -39,6 +40,8 @@ DAXA_EXPORT VkExtent2D
 daxa_swp_get_surface_extent(daxa_Swapchain swapchain);
 DAXA_EXPORT VkFormat
 daxa_swp_get_format(daxa_Swapchain swapchain);
+DAXA_EXPORT VkColorSpaceKHR
+daxa_swp_get_color_space(daxa_Swapchain swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_swp_resize(daxa_Swapchain swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

@@ -85,8 +85,8 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     }
     auto format_comparator = [&](auto const & a, auto const & b) -> bool
     {
-        return ret.info.surface_format_selector(std::bit_cast<Format>(a.format)) <
-               ret.info.surface_format_selector(std::bit_cast<Format>(b.format));
+        return ret.info.surface_format_selector(std::bit_cast<Format>(a.format), std::bit_cast<ColorSpace>(a.colorSpace)) <
+               ret.info.surface_format_selector(std::bit_cast<Format>(b.format), std::bit_cast<ColorSpace>(b.colorSpace));
     };
     auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
     if (best_format == surface_formats.end())
@@ -155,6 +155,11 @@ auto daxa_swp_get_surface_extent(daxa_Swapchain self) -> VkExtent2D
 auto daxa_swp_get_format(daxa_Swapchain self) -> VkFormat
 {
     return self->vk_surface_format.format;
+}
+
+auto daxa_swp_get_color_space(daxa_Swapchain self) -> VkColorSpaceKHR
+{
+    return self->vk_surface_format.colorSpace;
 }
 
 auto daxa_swp_resize(daxa_Swapchain self) -> daxa_Result
