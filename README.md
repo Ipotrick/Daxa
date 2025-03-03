@@ -24,14 +24,14 @@ Why would you want to use Daxa? These are some of the aspects of Daxa that set i
 
 ## Getting started
 
-If you want to get started with Daxa, check out [learndaxa.com](https://www.learndaxa.com/), a website hosting an up-to-date Daxa tutorial as well as a Wiki that provides more information on the Daxa API.
+To begin using Daxa, visit [daxa.dev](https://daxa.dev/), where you'll find a comprehensive tutorial and a Wiki containing detailed information about the Daxa API.
 
-- [Daxa Tutorial](https://tutorial.learndaxa.com/)
-- [Daxa Wiki](https://wiki.learndaxa.com/)
+- [Daxa Tutorial](https://tutorial.daxa.dev/)
+- [Daxa Wiki](https://wiki.daxa.dev/)
 
-Additionally, the Daxa repository has a set of example projects in the tests folder.
+Additionally, the Daxa repository includes a collection of example projects located in the **tests** folder
 
-If you prefer to interact in Discord over GitHub issues, Daxa has a [Discord server](https://discord.gg/MJPJvZ4FK5).
+For discussions or support, you can also join the Daxa [Discord server](https://discord.gg/MJPJvZ4FK5) if you prefer interacting there instead of using GitHub issues.
 
 ## List of biggest features
 
