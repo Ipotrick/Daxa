@@ -303,9 +303,19 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         }
     };
 
+    VkImageViewType vk_image_view_type = {};
+    if (info->array_layer_count > 1)
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
+    }
+    else
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
+    }
+
     ret.info = *info;
     ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
-        .type = static_cast<ImageViewType>(info->dimensions - 1),
+        .type = static_cast<ImageViewType>(vk_image_view_type),
         .format = std::bit_cast<Format>(ret.info.format),
         .image = {id},
         .slice = ImageMipArraySlice{
@@ -316,16 +326,6 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         },
         .name = info->name.data,
     });
-
-    VkImageViewType vk_image_view_type = {};
-    if (info->array_layer_count > 1)
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
-    }
-    else
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
-    }
 
     ret.aspect_flags = infer_aspect_from_format(info->format);
     VkImageViewCreateInfo vk_image_view_create_info{

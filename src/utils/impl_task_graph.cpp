@@ -1224,15 +1224,18 @@ namespace daxa
         for (u32 index = 0; index < actual_images.size(); ++index)
         {
             ImageMipArraySlice const full_slice = impl.info.device.image_view_info(actual_images[index].default_view()).value().slice;
-            auto name_sw = impl.info.device.image_info(actual_images[index]).value().name;
-            std::string const & name = {name_sw.data(), name_sw.size()};
             [[maybe_unused]] bool const use_within_runtime_image_counts =
                 (access_slice.base_mip_level + access_slice.level_count <= full_slice.base_mip_level + full_slice.level_count) &&
                 (access_slice.base_array_layer + access_slice.layer_count <= full_slice.base_array_layer + full_slice.layer_count);
-            [[maybe_unused]] std::string const error_message =
-                std::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
-                            use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
-            DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
+            if (!use_within_runtime_image_counts)
+            {
+                auto name_sw = impl.info.device.image_info(actual_images[index]).value().name;
+                std::string const & name = {name_sw.data(), name_sw.size()};
+                [[maybe_unused]] std::string const error_message =
+                    std::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
+                                use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
+                DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
+            }
         }
 #endif
     }
@@ -1442,10 +1445,11 @@ namespace daxa
 #endif // #if DAXA_VALIDATION
     }
 
-    auto write_attachment_shader_blob(Device device, u32 data_size, std::span<TaskAttachmentInfo const> attachments) -> std::vector<std::byte>
+    constexpr usize ATTACHMENT_BLOB_MAX_SIZE = 8192;
+
+    auto write_attachment_shader_blob(Device const & device, u32 data_size, std::span<TaskAttachmentInfo const> attachments) -> std::array<std::byte, ATTACHMENT_BLOB_MAX_SIZE>
     {
-        std::vector<std::byte> attachment_shader_blob = {};
-        attachment_shader_blob.resize(data_size);
+        std::array<std::byte, ATTACHMENT_BLOB_MAX_SIZE> attachment_shader_blob = {};
         usize shader_byte_blob_offset = 0;
         auto upalign = [&](size_t align_size)
         {
@@ -1561,16 +1565,22 @@ namespace daxa
                 attach.view_ids = std::span{task.image_view_cache[index].data(), task.image_view_cache[index].size()};
                 validate_task_image_runtime_data(task, attach);
             });
-        std::vector<std::byte> attachment_shader_blob = write_attachment_shader_blob(
-            info.device,
-            task.base_task->attachment_shader_blob_size(),
-            task.base_task->attachments());
+        std::array<std::byte, ATTACHMENT_BLOB_MAX_SIZE> attachment_shader_blob = 
+            write_attachment_shader_blob(
+                info.device,
+                task.base_task->attachment_shader_blob_size(),
+                task.base_task->attachments()
+            );
         impl_runtime.current_task = &task;
         if (this->info.enable_command_labels)
         {
+            static std::string tag = {};
+            tag.clear();
+            std::format_to(std::back_inserter(tag), "batch {} task {} \"{}\"", batch_index, in_batch_task_index, task.base_task->name());
+            SmallString stag = SmallString{tag};
             impl_runtime.recorder.begin_label({
                 .label_color = info.task_label_color,
-                .name = std::string("batch ") + std::to_string(batch_index) + std::string(" task ") + std::to_string(in_batch_task_index) + std::string(" \"") + std::string(task.base_task->name()) + std::string("\""),
+                .name = stag,
             });
         }
         auto interface = TaskInterface{
@@ -1578,7 +1588,7 @@ namespace daxa
             .recorder = impl_runtime.recorder,
             .attachment_infos = task.base_task->attachments(),
             .allocator = this->staging_memory.has_value() ? &this->staging_memory.value() : nullptr,
-            .attachment_shader_blob = attachment_shader_blob,
+            .attachment_shader_blob = { attachment_shader_blob.data(), task.base_task->attachment_shader_blob_size() },
             .task_name = task.base_task->name(),
             .task_index = task_id,
         };
