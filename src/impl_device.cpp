@@ -765,9 +765,6 @@ auto daxa_dvc_create_blas_from_buffer(daxa_Device self, daxa_BufferBlasInfo cons
 auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    /// --- Begin Validation ---
-
-    /// --- End Validation ---
 
     auto slot_opt = self->gpu_sro_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
@@ -788,6 +785,25 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     };
 
     ImplImageSlot const & parent_image_slot = self->slot(info->image);
+
+    /// --- Begin Validation ---
+
+    if (info->slice.layer_count > 1)
+    {
+        bool const array_type = info->type == 
+            VK_IMAGE_VIEW_TYPE_1D_ARRAY || 
+            info->type == VK_IMAGE_VIEW_TYPE_2D_ARRAY || 
+            info->type == VK_IMAGE_VIEW_TYPE_CUBE || 
+            info->type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+        if (!array_type)
+        {
+            result = DAXA_RESULT_INVALID_IMAGE_VIEW_INFO;
+        }
+    }
+    _DAXA_RETURN_IF_ERROR(result,result);
+
+    /// --- End Validation ---
+
     image_slot = {};
     auto & ret = image_slot.view_slot;
     ret.info = *info;
