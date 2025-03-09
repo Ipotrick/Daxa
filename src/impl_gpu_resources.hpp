@@ -243,8 +243,8 @@ namespace daxa
         VkDescriptorPool vk_descriptor_pool = {};
 
         // Contains pipeline layouts with varying push constant range size.
-        // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
-        std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
+        // The first size is 0 word, second is 1 word, all others are a power of two (maximum is DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE).
+        std::array<VkPipelineLayout, DAXA_PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
         auto initialize(
             u32 max_buffers,

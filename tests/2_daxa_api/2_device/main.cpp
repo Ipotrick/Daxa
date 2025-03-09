@@ -37,15 +37,16 @@ namespace tests
                 daxa::ExplicitFeatureFlags required_explicit_features = {};
                 // Implicit features are ones that always get enabled when present.
                 daxa::ImplicitFeatureFlags required_implicit_features = {};
-                if (!(properties.explicit_features & required_explicit_features) || !(properties.implicit_features & required_implicit_features))
+                if (((properties.explicit_features & required_explicit_features) != required_explicit_features) ||
+                    ((properties.implicit_features & required_implicit_features) != required_implicit_features))
                 {
                     continue;
                 }
-                
+
                 device_info.physical_device_index = i;
                 break;
             }
-            
+
             // Note there are a number of other qualities one should check for to choose a device other then missing features!
             // For this purpose daxa has an automatic device choose function: instance.choose_device() which takes required features and a device info to pick the first fit.
             // auto device = instance.create_device_2(instance.choose_device({}/* required implicit features */, device_info));

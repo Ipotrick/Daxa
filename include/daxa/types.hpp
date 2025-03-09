@@ -111,14 +111,14 @@ namespace daxa
         Optional(Optional<T> const &) = default;
         Optional(T const & v) : m_value{v}, m_has_value{true} {}
         Optional(NoneT const &) : m_value{}, m_has_value{} {}
-        Optional<T> & operator=(Optional<T> const &) = default;
-        Optional<T> & operator=(T const & v)
+        auto operator=(Optional<T> const &) -> Optional<T>& = default;
+        auto operator=(T const & v) -> Optional<T>&
         {
             this->m_value = v;
             this->m_has_value = true;
             return *this;
         }
-        Optional<T> & operator=(NoneT const &)
+       auto operator=(NoneT const &) -> Optional<T> & 
         {
             this->m_value = {};
             this->m_has_value = {};
@@ -360,7 +360,7 @@ namespace daxa
             }
         }
         SmallString(SmallString const & other) = default;
-        SmallString & operator=(SmallString const & other) = default;
+        auto operator=(SmallString const & other) -> SmallString & = default;
         [[nodiscard]] auto view() const -> std::string_view
         {
             return {this->m_data.data(), static_cast<usize>(this->m_size)};
@@ -1198,7 +1198,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(Format format) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Format format) -> std::string_view;
 
     template <typename Properties>
     struct Flags final
@@ -1237,7 +1237,7 @@ namespace daxa
         }
         [[nodiscard]] inline constexpr auto operator<=>(Flags const & other) const = default;
 
-        operator bool() const
+        constexpr operator bool() const
         {
             return data != 0;
         }
@@ -1302,7 +1302,7 @@ namespace daxa
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
     };
 
-    [[nodiscard]] auto to_string(ImageUsageFlags const &) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageUsageFlags const &) -> std::string;
 
     struct MemoryFlagsProperties
     {
@@ -1355,7 +1355,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    [[nodiscard]] auto to_string(ImageLayout layout) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageLayout layout) -> std::string_view;
 
     struct DAXA_EXPORT_CXX ImageMipArraySlice
     {
@@ -1372,7 +1372,7 @@ namespace daxa
         [[nodiscard]] auto subtract(ImageMipArraySlice const & slice) const -> std::tuple<std::array<ImageMipArraySlice, 4>, usize>;
     };
 
-    [[nodiscard]] auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageMipArraySlice image_mip_array_slice) -> std::string;
 
     struct DAXA_EXPORT_CXX ImageArraySlice
     {
@@ -1387,7 +1387,7 @@ namespace daxa
         [[nodiscard]] auto contained_in(ImageMipArraySlice const & slice) const -> bool;
     };
 
-    [[nodiscard]] auto to_string(ImageArraySlice image_array_slice) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageArraySlice image_array_slice) -> std::string;
 
     struct DAXA_EXPORT_CXX ImageSlice
     {
@@ -1402,7 +1402,7 @@ namespace daxa
         [[nodiscard]] auto contained_in(ImageArraySlice const & slice) const -> bool;
     };
 
-    auto to_string(ImageSlice image_slice) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageSlice image_slice) -> std::string;
 
     enum struct Filter
     {
@@ -1469,7 +1469,7 @@ namespace daxa
         static inline constexpr AccessTypeFlags READ_WRITE = READ | WRITE;
     };
 
-    [[nodiscard]] auto to_string(AccessTypeFlags flags) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(AccessTypeFlags flags) -> std::string;
 
     struct PipelineStageFlagsProperties
     {
@@ -1508,7 +1508,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags RAY_TRACING_SHADER = {0x00200000ull};
     };
 
-    [[nodiscard]] auto to_string(PipelineStageFlags flags) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(PipelineStageFlags flags) -> std::string;
 
     struct Access
     {
@@ -1879,5 +1879,5 @@ namespace daxa
         TRANSFER
     };
 
-    auto to_string(QueueFamily family) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily family) -> std::string_view;
 } // namespace daxa

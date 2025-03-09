@@ -113,8 +113,8 @@ namespace tests
         daxa::Instance instance = daxa::create_instance({});
         daxa::Device device = instance.create_device_2(instance.choose_device({}, {}));
 
-        daxa::ExecutableCommandList commands = {};
         {
+            daxa::ExecutableCommandList commands = {};
             auto rec = device.create_command_recorder({});
             commands = rec.complete_current_commands();
         }
@@ -330,7 +330,6 @@ namespace tests
                     },
                     .color_attachments = {{.format = swapchain.get_format()}},
                     .raster = {.static_state_sample_count = daxa::None},
-                    // .push_constant_size = sizeof(DrawTri::attachment_shader_blob_size()),
                     .name = "my pipeline",
                 });
                 if (result.is_err())

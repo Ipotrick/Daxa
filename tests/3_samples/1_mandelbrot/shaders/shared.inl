@@ -11,7 +11,7 @@ DAXA_DECL_BUFFER_PTR(GpuInput)
 
 struct ComputePush
 {
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if DAXA_LANGUAGE == DAXA_LANGUAGE_GLSL
     daxa_ImageViewId image_id;
     daxa_BufferId input_buffer_id;
     daxa_BufferPtr(GpuInput) ptr;
