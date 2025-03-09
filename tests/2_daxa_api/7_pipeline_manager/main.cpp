@@ -92,7 +92,7 @@ namespace tests
 
     auto perf(daxa::Device & device) -> i32
     {
-        daxa::PipelineManager pipeline_manager_ = daxa::PipelineManager({.device = device});
+        daxa::PipelineManager pipeline_manager_ = daxa::PipelineManager(daxa::PipelineManagerInfo2{.device = device});
 
         using Clock = std::chrono::high_resolution_clock;
         auto t0 = Clock::now();

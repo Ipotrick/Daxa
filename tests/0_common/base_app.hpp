@@ -1,4 +1,5 @@
 #pragma once
+#define SAMPLE_SHADER_LANGUAGE DAXA_LANGUAGE_GLSL
 
 #include <0_common/window.hpp>
 
@@ -19,10 +20,6 @@ using Clock = std::chrono::high_resolution_clock;
 #define APPNAME "Daxa App"
 #endif
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
-#if !defined(DAXA_SHADERLANG)
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
-#endif
 
 template <typename T>
 struct BaseApp : AppWindow<T>
@@ -58,9 +55,9 @@ struct BaseApp : AppWindow<T>
                 DAXA_SAMPLE_PATH "/shaders",
                 "tests/0_common/shaders",
             },
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .language = daxa::ShaderLanguage::GLSL,
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .language = daxa::ShaderLanguage::SLANG,
 #endif
             .enable_debug_info = true,

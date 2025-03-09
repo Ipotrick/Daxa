@@ -14,6 +14,7 @@
 #include <cstring>
 #include <type_traits>
 #include <span>
+#include <algorithm>
 
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
@@ -82,7 +83,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskBufferAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBufferAccess const & usage) -> std::string_view;
 
     enum struct TaskBlasAccess
     {
@@ -100,7 +101,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskBlasAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBlasAccess const & usage) -> std::string_view;
 
     enum struct TaskTlasAccess
     {
@@ -128,11 +129,16 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskTlasAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskTlasAccess const & usage) -> std::string_view;
 
     enum struct TaskImageAccess
     {
         NONE,
+        SHADER_SAMPLED,
+        SHADER_STORAGE_WRITE_ONLY,
+        SHADER_STORAGE_READ_ONLY,
+        SHADER_STORAGE_READ_WRITE,
+        SHADER_STORAGE_READ_WRITE_CONCURRENT,
         GRAPHICS_SHADER_SAMPLED,
         GRAPHICS_SHADER_STORAGE_WRITE_ONLY,
         GRAPHICS_SHADER_STORAGE_READ_ONLY,
@@ -197,7 +203,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    auto to_string(TaskImageAccess const & usage) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskImageAccess const & usage) -> std::string_view;
 
     using TaskResourceIndex = u32;
 
@@ -213,7 +219,7 @@ namespace daxa
         auto operator<=>(TaskGPUResourceView const & other) const = default;
     };
 
-    auto to_string(TaskGPUResourceView const & id) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskGPUResourceView const & id) -> std::string;
 
     struct TaskBufferView : public TaskGPUResourceView
     {
@@ -327,7 +333,8 @@ namespace daxa
     {
         using INDEX_TYPE = TaskBufferAttachmentIndex;
         char const * name = {};
-        TaskBufferAccess access = {};
+        TaskBufferAccess task_access = {};
+        Access access = {};
         u8 shader_array_size = {};
         bool shader_as_address = {};
     };
@@ -336,14 +343,16 @@ namespace daxa
     {
         using INDEX_TYPE = TaskBlasAttachmentIndex;
         char const * name = {};
-        TaskBlasAccess access = {};
+        TaskBlasAccess task_access = {};
+        Access access = {};
     };
 
     struct TaskTlasAttachment
     {
         using INDEX_TYPE = TaskTlasAttachmentIndex;
         char const * name = {};
-        TaskTlasAccess access = {};
+        TaskTlasAccess task_access = {};
+        Access access = {};
         bool shader_as_address = {};
     };
 
@@ -351,7 +360,8 @@ namespace daxa
     {
         using INDEX_TYPE = TaskImageAttachmentIndex;
         char const * name = {};
-        TaskImageAccess access = {};
+        TaskImageAccess task_access = {};
+        Access access = {};
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
         bool shader_as_index = {};
@@ -589,9 +599,10 @@ namespace daxa
         TransferMemoryPool * allocator = {};
         std::span<std::byte const> attachment_shader_blob = {};
         std::string_view task_name = {};
+        usize task_index = {};
 
 #if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
+        [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead, API:3.0")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
         {
             std::memcpy(
                 arr.data(),
@@ -811,32 +822,32 @@ namespace daxa
                 return declared_attachments_count++;                                      \
             }
 
-#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)     \
-    daxa::TaskBufferAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskBufferAttachment{        \
-            .name = #NAME,                                 \
-            .access = daxa::TaskBufferAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)          \
+    daxa::TaskBufferAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskBufferAttachment{             \
+            .name = #NAME,                                      \
+            .task_access = daxa::TaskBufferAccess::TASK_ACCESS, \
             __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)          \
-    daxa::TaskBlasAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskBlasAttachment{        \
-            .name = #NAME,                               \
-            .access = daxa::TaskBlasAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)               \
+    daxa::TaskBlasAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskBlasAttachment{             \
+            .name = #NAME,                                    \
+            .task_access = daxa::TaskBlasAccess::TASK_ACCESS, \
         })};
 
-#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)     \
-    daxa::TaskTlasAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskTlasAttachment{        \
-            .name = #NAME,                               \
-            .access = daxa::TaskTlasAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)          \
+    daxa::TaskTlasAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskTlasAttachment{             \
+            .name = #NAME,                                    \
+            .task_access = daxa::TaskTlasAccess::TASK_ACCESS, \
             __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)     \
-    daxa::TaskImageAttachmentIndex const NAME =           \
-        {add_attachment(daxa::TaskImageAttachment{        \
-            .name = #NAME,                                \
-            .access = daxa::TaskImageAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)          \
+    daxa::TaskImageAttachmentIndex const NAME =                \
+        {add_attachment(daxa::TaskImageAttachment{             \
+            .name = #NAME,                                     \
+            .task_access = daxa::TaskImageAccess::TASK_ACCESS, \
             __VA_ARGS__})};
 
 #define DAXA_DECL_TASK_HEAD_END                                                                                      \
@@ -886,7 +897,7 @@ namespace daxa
 
 #define DAXA_TH_IMAGE_TYPED(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = 1, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
 #define DAXA_TH_IMAGE_TYPED_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
-#define DAXA_TH_IMAGE_TYPED_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
+#define DAXA_TH_IMAGE_TYPED_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
 
 #define DAXA_TH_BUFFER(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 0)
 #define DAXA_TH_BUFFER_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)
@@ -1131,7 +1142,7 @@ namespace daxa
     {
         TaskBufferAttachmentInfo buf = {};
         buf.name = "inline attachment";
-        buf.access = access;
+        buf.task_access = access;
         buf.shader_array_size = 0;
         buf.shader_as_address = false;
         buf.view = view;
@@ -1145,7 +1156,7 @@ namespace daxa
     {
         TaskBlasAttachmentInfo blas = {};
         blas.name = "inline attachment";
-        blas.access = access;
+        blas.task_access = access;
         blas.view = view;
         TaskAttachmentInfo info = {};
         info.type = daxa::TaskAttachmentType::BLAS;
@@ -1157,7 +1168,7 @@ namespace daxa
     {
         TaskTlasAttachmentInfo tlas = {};
         tlas.name = "inline attachment";
-        tlas.access = access;
+        tlas.task_access = access;
         tlas.view = view;
         tlas.shader_as_address = false;
         TaskAttachmentInfo info = {};
@@ -1170,7 +1181,7 @@ namespace daxa
     {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
-        img.access = access;
+        img.task_access = access;
         img.view_type = daxa::ImageViewType::MAX_ENUM;
         img.shader_array_size = 0;
         img.view = view;
@@ -1184,7 +1195,7 @@ namespace daxa
     {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
-        img.access = access;
+        img.task_access = access;
         img.view_type = view_type;
         img.shader_array_size = 0;
         img.view = view;

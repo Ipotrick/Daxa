@@ -70,7 +70,7 @@ namespace
     }
 } // namespace
 
-auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device, u32 queue_family_index, u32 queue_index) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
 {
     VkSemaphoreTypeCreateInfo timeline_ci{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -85,8 +85,7 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device, u32 queue_family
         .flags = {},
     };
 
-    this->vk_queue_family_index = queue_family_index;
-    vkGetDeviceQueue(vk_device, queue_family_index, queue_index, &this->vk_queue);
+    vkGetDeviceQueue(vk_device, vk_queue_family_index, queue_index, &this->vk_queue);
     daxa_Result result = DAXA_RESULT_SUCCESS;
     if (this->vk_queue == VK_NULL_HANDLE)
     {
@@ -304,9 +303,19 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         }
     };
 
+    VkImageViewType vk_image_view_type = {};
+    if (info->array_layer_count > 1)
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
+    }
+    else
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
+    }
+
     ret.info = *info;
     ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
-        .type = static_cast<ImageViewType>(info->dimensions - 1),
+        .type = static_cast<ImageViewType>(vk_image_view_type),
         .format = std::bit_cast<Format>(ret.info.format),
         .image = {id},
         .slice = ImageMipArraySlice{
@@ -317,16 +326,6 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         },
         .name = info->name.data,
     });
-
-    VkImageViewType vk_image_view_type = {};
-    if (info->array_layer_count > 1)
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
-    }
-    else
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
-    }
 
     ret.aspect_flags = infer_aspect_from_format(info->format);
     VkImageViewCreateInfo vk_image_view_create_info{
@@ -1398,7 +1397,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    if (physical_device.features.physical_device_acceleration_structure_features_khr.accelerationStructure)
+    if ((properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) != 0)
     {
         if (self->info.max_allowed_acceleration_structures > self->properties.acceleration_structure_properties.value.max_descriptor_set_update_after_bind_acceleration_structures ||
             self->info.max_allowed_acceleration_structures == 0)
@@ -1523,7 +1522,8 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             continue;
         }
         auto const vk_queue_family = self->queue_families[self->queues[i].family].vk_index;
-        result = self->queues[i].initialize(self->vk_device, vk_queue_family, self->queues[i].queue_index);
+        self->queues[i].vk_queue_family_index = vk_queue_family;
+        result = self->queues[i].initialize(self->vk_device);
         _DAXA_RETURN_IF_ERROR(result, result)
     }
 

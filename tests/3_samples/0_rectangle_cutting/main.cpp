@@ -72,7 +72,6 @@ struct App : AppWindow<App>
             },
         }},
         .raster = {},
-        .push_constant_size = sizeof(DrawPush),
         .name = ("raster_pipeline"),
     }).value();
     // clang-format on
