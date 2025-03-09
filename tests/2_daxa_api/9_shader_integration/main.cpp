@@ -106,7 +106,6 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = sizeof(TestShaderTaskHead::AttachmentShaderBlob),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -195,7 +194,6 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = sizeof(BindlessTestPush),
             .name = "bindless_access",
         });
         auto bindless_access = compile_result0.value();
@@ -206,7 +204,6 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = sizeof(BindlessTestFollowPush),
             .name = "bindless_access_followup",
         });
         auto bindless_access_followup = compile_result1.value();

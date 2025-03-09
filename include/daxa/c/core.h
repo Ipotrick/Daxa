@@ -229,6 +229,10 @@ daxa_u32mat4x4;
 #pragma warning(pop)
 #endif
 
+static uint32_t const DAXA_MAX_PUSH_CONSTANT_WORD_SIZE = (32);
+static uint32_t const DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE = (DAXA_MAX_PUSH_CONSTANT_WORD_SIZE * 4);
+static uint32_t const DAXA_PIPELINE_LAYOUT_COUNT = (DAXA_MAX_PUSH_CONSTANT_WORD_SIZE + 1);
+
 // TODO(Raytracing): Should this say like this?
 static uint32_t const DAXA_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE = 0x00000001;
 static uint32_t const DAXA_GEOMETRY_INSTANCE_TRIANGLE_FLIP_FACING = 0x00000002;

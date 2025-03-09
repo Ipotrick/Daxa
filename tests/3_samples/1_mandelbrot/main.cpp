@@ -52,7 +52,6 @@ struct App : BaseApp<App>
             .source = daxa::ShaderFile{"compute.slang"}, 
             .entry_point = "entry_mandelbrot",
 #endif
-            .push_constant_size = sizeof(ComputePush),
         }).value();
     }();
     // clang-format on

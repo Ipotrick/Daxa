@@ -424,7 +424,6 @@ namespace tests
                     .enable_debug_info = true,
                 },
             },
-            .push_constant_size = sizeof(ShaderIntegrationTaskHead::AttachmentShaderBlob),
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();

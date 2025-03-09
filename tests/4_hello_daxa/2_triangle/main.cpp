@@ -259,7 +259,6 @@ auto main() -> int
             .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {},
-            .push_constant_size = sizeof(MyPushConstant),
             .name = "my pipeline",
         });
         if (result.is_err())

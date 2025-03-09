@@ -419,7 +419,6 @@ namespace daxa
         case daxa::TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE: return std::string_view{"ACCELERATION_STRUCTURE_BUILD_READ_WRITE"};
         default: return std::string_view{"UNIMPLEMENTED CASE"};
         }
-        return "invalid";
     }
 
     auto to_string(TaskBlasAccess const & usage) -> std::string_view
@@ -506,7 +505,6 @@ namespace daxa
         case daxa::TaskImageAccess::MAX_ENUM: return std::string_view{"MAX_ENUM"};
         default: return std::string_view{"UNIMPLEMENTED CASE"};
         }
-        return std::string_view{"UNIMPLEMENTED CASE"};
     }
 
     ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(TaskBufferInfo a_info)
@@ -1447,7 +1445,7 @@ namespace daxa
 
     constexpr usize ATTACHMENT_BLOB_MAX_SIZE = 8192;
 
-    auto write_attachment_shader_blob(Device const & device, u32 data_size, std::span<TaskAttachmentInfo const> attachments) -> std::array<std::byte, ATTACHMENT_BLOB_MAX_SIZE>
+    auto write_attachment_shader_blob(Device const & device, [[maybe_unused]] u32 data_size, std::span<TaskAttachmentInfo const> attachments) -> std::array<std::byte, ATTACHMENT_BLOB_MAX_SIZE>
     {
         std::array<std::byte, ATTACHMENT_BLOB_MAX_SIZE> attachment_shader_blob = {};
         usize shader_byte_blob_offset = 0;

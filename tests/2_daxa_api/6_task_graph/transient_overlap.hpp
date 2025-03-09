@@ -129,7 +129,6 @@ namespace tests
                 .compile_options = {
                     .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
             },
-            .push_constant_size = sizeof(TestImagePush),
             .name = "test image pipeline",
         };
 
@@ -266,7 +265,6 @@ namespace tests
                 .compile_options = {
                     .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
             },
-            .push_constant_size = sizeof(TestImagePush),
             .name = "test image pipeline",
         };
 
@@ -419,7 +417,6 @@ namespace tests
                 .compile_options = {
                     .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
             },
-            .push_constant_size = sizeof(TestImagePush),
             .name = "test image",
         };
         auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
@@ -428,7 +425,6 @@ namespace tests
             .shader_info = {
                 .source = daxa::ShaderFile{"transient.glsl"},
             },
-            .push_constant_size = sizeof(TestImagePush),
             .name = "test buffer",
         };
         auto test_buffer_pipeline = pipeline_manager.add_compute_pipeline(test_buffer_pipeline_info).value();

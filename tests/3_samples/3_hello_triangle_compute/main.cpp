@@ -15,7 +15,6 @@ struct App : BaseApp<App>
 #elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
         .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
 #endif
-        .push_constant_size = sizeof(ComputePush),
         .name = "compute_pipeline",
     }).value();
     // clang-format on

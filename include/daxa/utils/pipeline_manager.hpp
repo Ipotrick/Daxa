@@ -133,7 +133,7 @@ namespace daxa
         std::vector<ShaderCompileInfo2> miss_hit_infos = {};
         std::vector<RayTracingShaderGroupInfo> shader_groups_infos = {};
         u32 max_ray_recursion_depth = {};
-        u32 push_constant_size = {};
+        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;
         std::string name = {};
     };
 
@@ -147,8 +147,7 @@ namespace daxa
         std::optional<bool> enable_debug_info = {};
         std::optional<ShaderCreateFlags> create_flags = {};
         std::optional<u32> required_subgroup_size = {};
-        u32 push_constant_size = {};
-        std::string name = {};
+        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;        std::string name = {};
     };
 
     struct RasterPipelineCompileInfo2
@@ -163,7 +162,7 @@ namespace daxa
         Optional<DepthTestInfo> depth_test = {};
         RasterizerInfo raster = {};
         TesselationInfo tesselation = {};
-        u32 push_constant_size = {};
+        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;
         std::string name = {};
     };
 

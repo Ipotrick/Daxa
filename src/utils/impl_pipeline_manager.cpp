@@ -698,9 +698,9 @@ namespace daxa
 
     auto ImplPipelineManager::create_ray_tracing_pipeline(RayTracingPipelineCompileInfo2 const & a_info) -> Result<RayTracingPipelineState>
     {
-        if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        if (a_info.push_constant_size > DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
+            return Result<RayTracingPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE));
         }
         if (a_info.push_constant_size % 4 != 0)
         {
@@ -793,9 +793,9 @@ namespace daxa
 
     auto ImplPipelineManager::create_compute_pipeline(ComputePipelineCompileInfo2 const & a_info) -> Result<ComputePipelineState>
     {
-        if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        if (a_info.push_constant_size > DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            return Result<ComputePipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
+            return Result<ComputePipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE));
         }
         if (a_info.push_constant_size % 4 != 0)
         {
@@ -844,9 +844,9 @@ namespace daxa
 
     auto ImplPipelineManager::create_raster_pipeline(RasterPipelineCompileInfo2 const & a_info) -> Result<RasterPipelineState>
     {
-        if (a_info.push_constant_size > MAX_PUSH_CONSTANT_BYTE_SIZE)
+        if (a_info.push_constant_size > DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE)
         {
-            return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(MAX_PUSH_CONSTANT_BYTE_SIZE));
+            return Result<RasterPipelineState>(std::string("push constant size of ") + std::to_string(a_info.push_constant_size) + std::string(" exceeds the maximum size of ") + std::to_string(DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE));
         }
         if (a_info.push_constant_size % 4 != 0)
         {

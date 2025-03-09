@@ -52,7 +52,6 @@ namespace tests
             std::shared_ptr<daxa::ComputePipeline> compute_pipeline = [&]() { 
                 auto result = pipeline_manager.add_compute_pipeline({
                     .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}},
-                    .push_constant_size = sizeof(MipmappingComputePushConstant),
                     .name = "compute_pipeline",
                 });
                 std::cout << result.to_string() << std::endl;

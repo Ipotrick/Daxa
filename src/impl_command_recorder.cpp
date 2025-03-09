@@ -659,11 +659,15 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
         current_pipeline_push_constant_size = (**pipeline).info.push_constant_size;
         vk_pipeline_layout = (**pipeline).vk_pipeline_layout;
     }
-    if (current_pipeline_push_constant_size < (info->offset + info->size))
+    if (current_pipeline_push_constant_size < info->size)
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED);
     }
-    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, info->offset, static_cast<u32>(info->size), info->data);
+    // Always write the whole range, fill with 0xFF to the size of the push constant.
+    // This makes validation and renderdoc happy as well as help debug uninitialized push constant data 
+    std::array<std::byte, DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE> const_data = { std::byte{ 0xFF } };
+    std::memcpy(const_data.data(), info->data, info->size);
+    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0, current_pipeline_push_constant_size, const_data.data());
     return DAXA_RESULT_SUCCESS;
 }
 

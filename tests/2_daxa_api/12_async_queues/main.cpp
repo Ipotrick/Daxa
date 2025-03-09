@@ -330,7 +330,6 @@ namespace tests
                     },
                     .color_attachments = {{.format = swapchain.get_format()}},
                     .raster = {.static_state_sample_count = daxa::None},
-                    // .push_constant_size = sizeof(DrawTri::attachment_shader_blob_size()),
                     .name = "my pipeline",
                 });
                 if (result.is_err())

@@ -125,7 +125,6 @@ struct App : BaseApp<App>
 #elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_P2G"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "p2g_compute_pipeline",
         }).value();
     }();
@@ -146,7 +145,6 @@ struct App : BaseApp<App>
 #elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_P2G"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "p2g_second_compute_pipeline",
         }).value();
     }();
@@ -167,7 +165,6 @@ struct App : BaseApp<App>
 #elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_grid"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "grid_compute_pipeline",
         }).value();
     }();
@@ -191,7 +188,6 @@ struct App : BaseApp<App>
 #elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_G2P"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "g2p_compute_pipeline",
         }).value();
     }();
@@ -213,7 +209,6 @@ struct App : BaseApp<App>
                 .entry_point = "entry_sphere_tracing",
             },},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "sphere_tracing_compute_pipeline",
         }).value();
     }();
@@ -317,7 +312,6 @@ struct App : BaseApp<App>
             },
         },
         .max_ray_recursion_depth = 2,
-        .push_constant_size = sizeof(ComputePush),
         .name = "ray tracing pipeline",
     }).value();
     }();

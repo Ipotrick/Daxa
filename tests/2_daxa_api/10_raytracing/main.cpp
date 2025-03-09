@@ -422,7 +422,6 @@ namespace tests
                 //     .shader_info = daxa::ShaderCompileInfo{
                 //         .source = daxa::ShaderFile{"shaders.glsl"},
                 //     },
-                //     .push_constant_size = sizeof(PushConstant),
                 //     .name = "ray query comp shader",
                 // };
                 // comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
@@ -543,7 +542,6 @@ namespace tests
                         },
                     },
                     .max_ray_recursion_depth = 2,
-                    .push_constant_size = sizeof(PushConstant),
                     .name = "basic ray tracing pipeline",
                 };
                 rt_pipeline = pipeline_manager.add_ray_tracing_pipeline(ray_tracing_pipe_info).value();

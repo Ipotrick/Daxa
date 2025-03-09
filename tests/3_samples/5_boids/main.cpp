@@ -69,12 +69,10 @@ struct App : AppWindow<App>
         .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"frag.glsl"}},
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
-        .push_constant_size = sizeof(DrawPushConstant),
         .name = ("draw_pipeline"),
     }).value();
     std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = pipeline_manager.add_compute_pipeline({
         .shader_info = {.source = daxa::ShaderFile{"update_boids.glsl"}},
-        .push_constant_size = sizeof(UpdateBoidsPushConstant),
         .name = ("draw_pipeline"),
     }).value();
     // clang-format on

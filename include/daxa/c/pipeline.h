@@ -50,6 +50,19 @@ typedef struct
     daxa_SmallString name;
 } daxa_RayTracingPipelineInfo;
 
+static daxa_RayTracingPipelineInfo const DAXA_DEFAULT_RAY_TRACING_PIPELINE_INFO = {
+    .ray_gen_stages = DAXA_ZERO_INIT,
+    .miss_stages = DAXA_ZERO_INIT,
+    .callable_stages = DAXA_ZERO_INIT,
+    .intersection_stages = DAXA_ZERO_INIT,
+    .closest_hit_stages = DAXA_ZERO_INIT,
+    .any_hit_stages = DAXA_ZERO_INIT,
+    .shader_groups = DAXA_ZERO_INIT,
+    .max_ray_recursion_depth = DAXA_ZERO_INIT,
+    .push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE,
+    .name = DAXA_ZERO_INIT,
+};
+
 DAXA_EXPORT daxa_RayTracingPipelineInfo const *
 daxa_ray_tracing_pipeline_info(daxa_RayTracingPipeline ray_tracing_pipeline);
 
@@ -73,6 +86,12 @@ typedef struct
     uint32_t push_constant_size;
     daxa_SmallString name;
 } daxa_ComputePipelineInfo;
+
+static daxa_ComputePipelineInfo const DAXA_DEFAULT_COMPUTE_PIPELINE_INFO = {
+    .shader_info = DAXA_ZERO_INIT,
+    .push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE,
+    .name = DAXA_ZERO_INIT,
+};
 
 DAXA_EXPORT daxa_ComputePipelineInfo const *
 daxa_compute_pipeline_info(daxa_ComputePipeline compute_pipeline);
@@ -191,6 +210,21 @@ typedef struct
     uint32_t push_constant_size;
     daxa_SmallString name;
 } daxa_RasterPipelineInfo;
+
+static daxa_RasterPipelineInfo const DAXA_DEFAULT_RASTERIZER_PIPELINE_INFO = {
+    .mesh_shader_info = DAXA_ZERO_INIT,
+    .vertex_shader_info = DAXA_ZERO_INIT,
+    .tesselation_control_shader_info = DAXA_ZERO_INIT,
+    .tesselation_evaluation_shader_info = DAXA_ZERO_INIT,
+    .fragment_shader_info = DAXA_ZERO_INIT,
+    .task_shader_info = DAXA_ZERO_INIT,
+    .color_attachments = DAXA_ZERO_INIT,
+    .depth_test = DAXA_ZERO_INIT,
+    .tesselation = DAXA_ZERO_INIT,
+    .raster = DAXA_ZERO_INIT,
+    .push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE,
+    .name = DAXA_ZERO_INIT,
+};
 
 DAXA_EXPORT daxa_RasterPipelineInfo const *
 daxa_raster_pipeline_info(daxa_RasterPipeline raster_pipeline);
