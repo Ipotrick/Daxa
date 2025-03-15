@@ -73,7 +73,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     DAXA_DECL_TRY_CREATE_MODULE(tesselation_control, TESSELLATION_CONTROL_BIT)
     DAXA_DECL_TRY_CREATE_MODULE(tesselation_evaluation, TESSELLATION_EVALUATION_BIT)
     DAXA_DECL_TRY_CREATE_MODULE(fragment, FRAGMENT_BIT)
-    if ((ret.device->properties.implicit_features & ImplicitFeatureFlagBits::MESH_SHADER) != DeviceFlagBits::NONE)
+    if ((ret.device->properties.implicit_features & ImplicitFeatureFlagBits::MESH_SHADER) != ImplicitFeatureFlagBits::NONE)
     {
         DAXA_DECL_TRY_CREATE_MODULE(task, TASK_BIT_EXT)
         DAXA_DECL_TRY_CREATE_MODULE(mesh, MESH_BIT_EXT)
@@ -737,12 +737,11 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
 
     _DAXA_RETURN_IF_ERROR(get_group_handles_result, get_group_handles_result);
 
-    auto name_cstr = info.name.c_str();
     // Allocate a buffer for storing the SBT.
     auto sbt_info = daxa_BufferInfo{
         .size = sbt_size,
         .allocate_info = DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE,
-        .name = std::bit_cast<daxa_SmallString>(name_cstr),
+        .name = std::bit_cast<daxa_SmallString>(info.name),
     };
     // TODO: We need to store the buffer id somewhere, so we can destroy after the pipeline is destroyed
     auto & sbt_buffer_id = *out_buffer;

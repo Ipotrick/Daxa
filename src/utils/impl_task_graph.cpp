@@ -1203,38 +1203,40 @@ namespace daxa
         constexpr std::string_view PERSISTENT_RESOURCE_MESSAGE = {
             "when executing a task graph, all used persistent resources must be backed by at least one and exclusively "
             "valid runtime resources"};
-        // for (u32 local_buffer_i = 0; local_buffer_i < impl.global_buffer_infos.size(); ++local_buffer_i)
-        // {
-        //     if (!permutation.buffer_infos[local_buffer_i].valid)
-        //     {
-        //         continue;
-        //     }
-        //     if (!impl.global_buffer_infos.at(local_buffer_i).is_persistent())
-        //     {
-        //         continue;
-        //     }
-        //     auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_ids;
-        //     std::visit([&](auto const & runtime_ids){
-        //         DAXA_DBG_ASSERT_TRUE_M(
-        //             !runtime_ids.empty(),
-        //             std::format(
-        //                 "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
-        //                 impl.global_buffer_infos[local_buffer_i].get_name(),
-        //                 impl.info.name,
-        //                 PERSISTENT_RESOURCE_MESSAGE));
-        //         for (usize buffer_index = 0; buffer_index < runtime_ids.size(); ++buffer_index)
-        //         {
-        //             DAXA_DBG_ASSERT_TRUE_M(
-        //                 impl.info.device.is_id_valid(runtime_ids[buffer_index]),
-        //                 std::format(
-        //                     "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
-        //                     impl.global_buffer_infos[local_buffer_i].get_name(),
-        //                     impl.info.name,
-        //                     buffer_index,
-        //                     PERSISTENT_RESOURCE_MESSAGE));
-        //         }
-        //     }, runtime_ids);
-        // }
+#if 0
+        for (u32 local_buffer_i = 0; local_buffer_i < impl.global_buffer_infos.size(); ++local_buffer_i)
+        {
+            if (!permutation.buffer_infos[local_buffer_i].valid)
+            {
+                continue;
+            }
+            if (!impl.global_buffer_infos.at(local_buffer_i).is_persistent())
+            {
+                continue;
+            }
+            auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_ids;
+            std::visit([&](auto const & runtime_ids)
+                       {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    !runtime_ids.empty(),
+                    std::format(
+                        "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
+                        impl.global_buffer_infos[local_buffer_i].get_name(),
+                        impl.info.name,
+                        PERSISTENT_RESOURCE_MESSAGE));
+                for (usize buffer_index = 0; buffer_index < runtime_ids.size(); ++buffer_index)
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        impl.info.device.is_id_valid(runtime_ids[buffer_index]),
+                        std::format(
+                            "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
+                            impl.global_buffer_infos[local_buffer_i].get_name(),
+                            impl.info.name,
+                            buffer_index,
+                            PERSISTENT_RESOURCE_MESSAGE));
+                } }, runtime_ids);
+        }
+#endif
         for (u32 local_image_i = 0; local_image_i < impl.global_image_infos.size(); ++local_image_i)
         {
             if (!permutation.image_infos[local_image_i].valid)
@@ -3391,12 +3393,12 @@ namespace daxa
                 }
                 if constexpr (std::is_same_v<ChildIdT, BlasId>)
                 {
-                    auto const & child_info = info.device.info_blas(child_id).value();
+                    auto const & child_info = info.device.blas_info(child_id).value();
                     std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
                 if constexpr (std::is_same_v<ChildIdT, TlasId>)
                 {
-                    auto const & child_info = info.device.info_tlas(child_id).value();
+                    auto const & child_info = info.device.tlas_info(child_id).value();
                     std::format_to(std::back_inserter(out), "{}name: \"{}\", id: ({})\n", indent, child_info.name.view(), to_string(child_id));
                 }
             }

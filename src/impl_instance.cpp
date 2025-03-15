@@ -16,20 +16,19 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     ret.info.engine_name = ret.engine_name;
     ret.app_name = {ret.info.app_name.data(), ret.info.app_name.size()};
     ret.info.app_name = ret.app_name;
-    std::vector<char const *> required_extensions{};
-    required_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    std::vector<char const *> explicit_extensions{};
     if ((ret.info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
     {
-        required_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        explicit_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-#if defined(WIN32)
-    required_extensions.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-#elif defined(__linux__)
-    required_extensions.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
-#else
-// no surface extension
-#endif
+    std::vector<char const *> implicit_extensions{};
+    implicit_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    implicit_extensions.push_back("VK_KHR_win32_surface");
+    implicit_extensions.push_back("VK_KHR_xlib_surface");
+    implicit_extensions.push_back("VK_KHR_wayland_surface");
+    implicit_extensions.push_back("VK_EXT_swapchain_colorspace");
+
     // Check existence of extensions:
     std::vector<VkExtensionProperties> instance_extensions = {};
     uint32_t instance_extension_count = {};
@@ -40,7 +39,10 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     result = static_cast<daxa_Result>(vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.data()));
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    for (auto const * req_ext : required_extensions)
+    std::vector<char const *> enabled_extensions{};
+    enabled_extensions.reserve(implicit_extensions.size() + explicit_extensions.size());
+
+    for (auto const * req_ext : explicit_extensions)
     {
         bool found = false;
         for (auto & instance_extension : instance_extensions)
@@ -54,6 +56,24 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
         if (!found)
         {
             return DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT;
+        }
+        enabled_extensions.push_back(req_ext);
+    }
+
+    for (auto const * ext : implicit_extensions)
+    {
+        bool found = false;
+        for (auto & instance_extension : instance_extensions)
+        {
+            if (std::strcmp(ext, instance_extension.extensionName) == 0)
+            {
+                found = true;
+                break;
+            }
+        }
+        if (found)
+        {
+            enabled_extensions.push_back(ext);
         }
     }
     VkApplicationInfo const app_info = {
@@ -72,8 +92,8 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
         .pApplicationInfo = &app_info,
         .enabledLayerCount = 0u,
         .ppEnabledLayerNames = nullptr,
-        .enabledExtensionCount = static_cast<uint32_t>(required_extensions.size()),
-        .ppEnabledExtensionNames = required_extensions.data(),
+        .enabledExtensionCount = static_cast<uint32_t>(enabled_extensions.size()),
+        .ppEnabledExtensionNames = enabled_extensions.data(),
     };
     result = static_cast<daxa_Result>(vkCreateInstance(&instance_ci, nullptr, &ret.vk_instance));
     _DAXA_RETURN_IF_ERROR(result, result);
@@ -186,13 +206,14 @@ auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * leg
             .rating = rating,
         });
     }
-    
+
     if (rated_devices.empty())
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND, DAXA_RESULT_NO_SUITABLE_DEVICE_FOUND)
     }
 
-    std::sort(rated_devices.begin(), rated_devices.end(), [](auto a, auto b){ return a.rating > b.rating; });
+    std::sort(rated_devices.begin(), rated_devices.end(), [](auto a, auto b)
+              { return a.rating > b.rating; });
 
     u32 chosen_device = rated_devices[0].physical_device_index;
     info.physical_device_index = chosen_device;

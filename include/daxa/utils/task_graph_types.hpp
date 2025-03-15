@@ -319,13 +319,6 @@ namespace daxa
     template <typename T>
     concept TaskBufferBlasOrTlasIndexOrView = TaskBufferIndexOrView<T> || TaskBlasIndexOrView<T> || TaskTlasIndexOrView<T>;
 
-    template <typename T>
-    concept TaskAttachmentIndex =
-        std::is_same_v<T, TaskBufferAttachmentIndex> ||
-        std::is_same_v<T, TaskBlasAttachmentIndex> ||
-        std::is_same_v<T, TaskTlasAttachmentIndex> ||
-        std::is_same_v<T, TaskImageAttachmentIndex>;
-
     struct UndefinedAttachment
     {
     };
@@ -401,6 +394,13 @@ namespace daxa
         TaskHeadImageArrayType shader_array_type = {};
         TaskImageView view = {};
     };
+
+    template <typename T>
+    concept IsTaskResourceAttachment =
+        std::is_same_v<T, TaskBufferAttachment> ||
+        std::is_same_v<T, TaskBlasAttachment> ||
+        std::is_same_v<T, TaskTlasAttachment> ||
+        std::is_same_v<T, TaskImageAttachment>;
 
     struct TaskAttachment
     {
@@ -594,6 +594,7 @@ namespace daxa
         std::span<std::byte const> attachment_shader_blob = {};
         std::string_view task_name = {};
 
+#if !DAXA_REMOVE_DEPRECATED
         [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
         {
             std::memcpy(
@@ -601,6 +602,7 @@ namespace daxa
                 attachment_shader_blob.data(),
                 attachment_shader_blob.size());
         }
+#endif
 
         auto get(TaskBufferAttachmentIndex index) const -> TaskBufferAttachmentInfo const &;
         auto get(TaskBufferView view) const -> TaskBufferAttachmentInfo const &;
@@ -734,8 +736,8 @@ namespace daxa
     template <usize ATTACHMENT_COUNT, StringLiteral NAME>
     struct PartialTask : IPartialTask
     {
-        /// NOTE: Used to add attachments and declate named constant indices to the added attachment.
-        template <TaskAttachmentIndex IndexT>
+        /// NOTE: Used to add attachments and declare named constant indices to the added attachment.
+        template <IsTaskResourceAttachment IndexT>
         static auto add_attachment(IndexT const & attach) -> IndexT::INDEX_TYPE
         {
             declared_attachments.at(cur_attach_index) = attach;
