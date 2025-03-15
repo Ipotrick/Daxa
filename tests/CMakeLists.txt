@@ -133,10 +133,10 @@ DAXA_CREATE_TEST(
     FOLDER 3_samples 1_mandelbrot
     LIBS glfw
 )
-# DAXA_CREATE_TEST(
-#     FOLDER 3_samples 2_mpm_mls
-#     LIBS glfw
-# )
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 2_mls_mpm_cpic
+    LIBS glfw
+)
 DAXA_CREATE_TEST(
     FOLDER 3_samples 3_hello_triangle_compute
     LIBS glfw
