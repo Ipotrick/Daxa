@@ -1719,7 +1719,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .flags = {},
             .size = sizeof(u8) * 4,
             .usage = create_buffer_use_flags(self),
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .sharingMode = VK_SHARING_MODE_CONCURRENT,
             .queueFamilyIndexCount = self->valid_vk_queue_family_count,
             .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
         };

@@ -1284,6 +1284,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
     self->device->command_list_zombies.emplace_front(
         submit_timeline,
         CommandRecorderZombie{
+            .queue_family = self->info.queue_family,
             .vk_cmd_pool = self->vk_cmd_pool,
             .allocated_command_buffers = std::move(self->allocated_command_buffers),
         });
