@@ -529,30 +529,28 @@ auto main() -> int
     daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({}, daxa::DeviceInfo2{}));
 
-    daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+    daxa::PipelineManager pipeline_manager = daxa::PipelineManager(daxa::PipelineManagerInfo2{
         .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SHADER_INCLUDE_DIR,
-                "tests/0_common/shaders",
-            },
-            .write_out_shader_binary = "./",
-            .language = daxa::ShaderLanguage::GLSL,
-            .enable_debug_info = false,
+        .root_paths = {
+            DAXA_SHADER_INCLUDE_DIR,
+            "tests/0_common/shaders",
         },
+        .write_out_spirv = "./",
+        .default_language = daxa::ShaderLanguage::GLSL,
+        .default_enable_debug_info = false,
         .name = "pipeline_manager",
     });
 
-    daxa::RasterPipelineCompileInfo compile_info{
-        .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
-        .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
+    daxa::RasterPipelineCompileInfo2 compile_info{
+        .vertex_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
+        .fragment_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
         .color_attachments = {{.format = daxa::Format::R16G16B16A16_SFLOAT}},
         .raster = {},
         .push_constant_size = sizeof(Push),
         .name = "imgui_pipeline",
     };
     // NO GAMMA CORRECTION
-    auto result = pipeline_manager.add_raster_pipeline(compile_info);
+    auto result = pipeline_manager.add_raster_pipeline2(compile_info);
     std::cout << result.to_string();
 
     auto vert_file = std::ifstream{"./imgui_pipeline.vert.main.spv", std::ios::binary};
@@ -570,8 +568,8 @@ auto main() -> int
     std::filesystem::remove("./imgui_pipeline.frag.main.spv");
 
     // WITH GAMMA CORRECTION
-    compile_info.fragment_shader_info.value().compile_options.defines = {{"GAMMA_CORRECTION", "TRUE"}};
-    result = pipeline_manager.add_raster_pipeline(compile_info);
+    compile_info.fragment_shader_info.value().defines = {{"GAMMA_CORRECTION", "TRUE"}};
+    result = pipeline_manager.add_raster_pipeline2(compile_info);
     std::cout << result.to_string();
 
     // vert is unchanged

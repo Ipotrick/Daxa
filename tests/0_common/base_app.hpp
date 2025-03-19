@@ -49,19 +49,17 @@ struct BaseApp : AppWindow<T>
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
         .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SHADER_INCLUDE_DIR,
-                DAXA_SAMPLE_PATH "/shaders",
-                "tests/0_common/shaders",
-            },
-#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
-            .language = daxa::ShaderLanguage::GLSL,
-#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
-            .language = daxa::ShaderLanguage::SLANG,
-#endif
-            .enable_debug_info = true,
+        .root_paths = {
+            DAXA_SHADER_INCLUDE_DIR,
+            DAXA_SAMPLE_PATH "/shaders",
+            "tests/0_common/shaders",
         },
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
+        .default_language = daxa::ShaderLanguage::GLSL,
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
+        .default_language = daxa::ShaderLanguage::SLANG,
+#endif
+        .default_enable_debug_info = true,
         .name = "pipeline_manager",
     });
 

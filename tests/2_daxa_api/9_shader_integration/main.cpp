@@ -90,22 +90,16 @@ namespace tests
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/9_shader_integration/shaders",
-                },
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                "tests/2_daxa_api/9_shader_integration/shaders",
             },
             .name = "pipeline manager",
         });
 
-        auto compile_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {
-                .source = daxa::ShaderFile{"alignment_test.glsl"},
-                .compile_options{
-                    .enable_debug_info = true,
-                },
-            },
+        auto compile_result = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"alignment_test.glsl"},
+            .enable_debug_info = true,
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();
@@ -178,32 +172,22 @@ namespace tests
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/9_shader_integration/shaders",
-                },
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                "tests/2_daxa_api/9_shader_integration/shaders",
             },
             .name = "pipeline manager",
         });
 
-        auto compile_result0 = pipeline_manager.add_compute_pipeline({
-            .shader_info = {
-                .source = daxa::ShaderFile{"bindless_access.glsl"},
-                .compile_options{
-                    .enable_debug_info = true,
-                },
-            },
+        auto compile_result0 = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"bindless_access.glsl"},
+            .enable_debug_info = true,
             .name = "bindless_access",
         });
         auto bindless_access = compile_result0.value();
-        auto compile_result1 = pipeline_manager.add_compute_pipeline({
-            .shader_info = {
-                .source = daxa::ShaderFile{"bindless_access_followup.glsl"},
-                .compile_options{
-                    .enable_debug_info = true,
-                },
-            },
+        auto compile_result1 = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"bindless_access_followup.glsl"},
+            .enable_debug_info = true,
             .name = "bindless_access_followup",
         });
         auto bindless_access_followup = compile_result1.value();
@@ -237,7 +221,7 @@ namespace tests
         using IA = daxa::TaskImageAccess;
 
         task_graph.add_task({
-            .attachments = {
+            .attachments = std::vector<daxa::TaskAttachmentInfo>{
                 daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, handles_buffer),
                 daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, f32_buffer),
                 daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_WRITE_ONLY, f32_image),
@@ -257,7 +241,7 @@ namespace tests
                 });
                 ti.recorder.dispatch({1, 1, 1});
             },
-            .name = std::string_view{"bindless access"},
+            .name = "bindless access",
         });
         task_graph.add_task({
             .attachments = {

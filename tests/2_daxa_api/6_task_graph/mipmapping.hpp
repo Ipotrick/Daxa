@@ -28,13 +28,11 @@ namespace tests
 
             daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
                 .device = device,
-                .shader_compile_options = {
-                    .root_paths = {
-                        DAXA_SHADER_INCLUDE_DIR,
-                        "tests/2_daxa_api/6_task_graph/shaders",
-                    },
-                    .language = daxa::ShaderLanguage::GLSL,
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    "tests/2_daxa_api/6_task_graph/shaders",
                 },
+                .default_language = daxa::ShaderLanguage::GLSL,
                 .name = "pipeline_manager",
             });
             daxa::ImGuiRenderer imgui_renderer = create_imgui_renderer();
@@ -50,8 +48,8 @@ namespace tests
 
             // clang-format off
             std::shared_ptr<daxa::ComputePipeline> compute_pipeline = [&]() { 
-                auto result = pipeline_manager.add_compute_pipeline({
-                    .shader_info = {.source = daxa::ShaderFile{"mipmapping.glsl"}},
+                auto result = pipeline_manager.add_compute_pipeline2({
+                    .source = daxa::ShaderFile{"mipmapping.glsl"},
                     .name = "compute_pipeline",
                 });
                 std::cout << result.to_string() << std::endl;

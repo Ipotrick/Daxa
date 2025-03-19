@@ -354,26 +354,26 @@ namespace daxa
     {
         if (!dst.entry_point.has_value())
         {
-            dst.entry_point = src.entry_point;
+            dst.entry_point = src.default_entry_point;
         }
         if (!dst.language.has_value())
         {
-            dst.language = src.language;
+            dst.language = src.default_language;
         }
         if (!dst.enable_debug_info.has_value())
         {
-            dst.enable_debug_info = src.enable_debug_info;
+            dst.enable_debug_info = src.default_enable_debug_info;
         }
         if (!dst.create_flags.has_value())
         {
-            dst.create_flags = src.create_flags;
+            dst.create_flags = src.default_create_flags;
         }
         if (!dst.required_subgroup_size.has_value())
         {
-            dst.required_subgroup_size = src.required_subgroup_size;
+            dst.required_subgroup_size = src.default_required_subgroup_size;
         }
 
-        dst.defines.insert(dst.defines.end(), src.defines.begin(), src.defines.end());
+        dst.defines.insert(dst.defines.end(), src.default_defines.begin(), src.default_defines.end());
     }
 
     PipelineManager::PipelineManager(PipelineManagerInfo old_info)
@@ -384,12 +384,12 @@ namespace daxa
         info.write_out_preprocessed_code = old_info.shader_compile_options.write_out_preprocessed_code;
         info.write_out_spirv = old_info.shader_compile_options.write_out_shader_binary;
         info.spirv_cache_folder = old_info.shader_compile_options.spirv_cache_folder;
-        info.default_shader_compile_info.entry_point = old_info.shader_compile_options.entry_point;
-        info.default_shader_compile_info.language = old_info.shader_compile_options.language;
-        info.default_shader_compile_info.defines = old_info.shader_compile_options.defines;
-        info.default_shader_compile_info.enable_debug_info = old_info.shader_compile_options.enable_debug_info;
-        info.default_shader_compile_info.create_flags = old_info.shader_compile_options.create_flags;
-        info.default_shader_compile_info.required_subgroup_size = old_info.shader_compile_options.required_subgroup_size;
+        info.default_entry_point = old_info.shader_compile_options.entry_point;
+        info.default_language = old_info.shader_compile_options.language;
+        info.default_defines = old_info.shader_compile_options.defines;
+        info.default_enable_debug_info = old_info.shader_compile_options.enable_debug_info;
+        info.default_create_flags = old_info.shader_compile_options.create_flags;
+        info.default_required_subgroup_size = old_info.shader_compile_options.required_subgroup_size;
         info.register_null_pipelines_when_first_compile_fails = old_info.register_null_pipelines_when_first_compile_fails;
         info.custom_preprocessor = old_info.custom_preprocessor;
         info.name = old_info.name;
@@ -489,7 +489,7 @@ namespace daxa
             for (auto & shader_compile_info : *infos)
             {
                 auto_complete_shader_compile_info(shader_compile_info);
-                inherit_shader_compile_options(shader_compile_info, impl.info.default_shader_compile_info);
+                inherit_shader_compile_options(shader_compile_info, impl.info);
             }
         }
 
@@ -536,7 +536,7 @@ namespace daxa
 
         auto_complete_shader_compile_info(m_info);
 
-        inherit_shader_compile_options(m_info, impl.info.default_shader_compile_info);
+        inherit_shader_compile_options(m_info, impl.info);
         auto pipe_result = impl.create_compute_pipeline(m_info);
         if (pipe_result.is_err())
         {
@@ -591,7 +591,7 @@ namespace daxa
             if (shader_compile_info->has_value())
             {
                 auto_complete_shader_compile_info(shader_compile_info->value());
-                inherit_shader_compile_options(shader_compile_info->value(), impl.info.default_shader_compile_info);
+                inherit_shader_compile_options(shader_compile_info->value(), impl.info);
             }
         }
         auto pipe_result = impl.create_raster_pipeline(modified_info);
@@ -654,17 +654,17 @@ namespace daxa
     ImplPipelineManager::ImplPipelineManager(PipelineManagerInfo2 && a_info)
         : info{std::move(a_info)}
     {
-        if (!this->info.default_shader_compile_info.entry_point.has_value())
+        if (!this->info.default_entry_point.has_value())
         {
-            this->info.default_shader_compile_info.entry_point = std::optional<std::string>{"main"};
+            this->info.default_entry_point = std::optional<std::string>{"main"};
         }
-        if (!this->info.default_shader_compile_info.language.has_value())
+        if (!this->info.default_language.has_value())
         {
-            this->info.default_shader_compile_info.language = std::optional<ShaderLanguage>{ShaderLanguage::GLSL};
+            this->info.default_language = std::optional<ShaderLanguage>{ShaderLanguage::GLSL};
         }
-        if (!this->info.default_shader_compile_info.enable_debug_info.has_value())
+        if (!this->info.default_enable_debug_info.has_value())
         {
-            this->info.default_shader_compile_info.enable_debug_info = {false};
+            this->info.default_enable_debug_info = {false};
         }
 
         {

@@ -147,7 +147,8 @@ namespace daxa
         std::optional<bool> enable_debug_info = {};
         std::optional<ShaderCreateFlags> create_flags = {};
         std::optional<u32> required_subgroup_size = {};
-        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;        std::string name = {};
+        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;        
+        std::string name = {};
     };
 
     struct RasterPipelineCompileInfo2
@@ -173,9 +174,14 @@ namespace daxa
         std::optional<std::filesystem::path> write_out_preprocessed_code = {};
         std::optional<std::filesystem::path> write_out_spirv = {};
         std::optional<std::filesystem::path> spirv_cache_folder = {};
-        ShaderCompileInfo2 default_shader_compile_info = {};
         bool register_null_pipelines_when_first_compile_fails = false;
         std::function<void(std::string &, std::filesystem::path const & path)> custom_preprocessor = {};
+        std::optional<std::string> default_entry_point = {};
+        std::optional<ShaderLanguage> default_language = {};
+        std::vector<ShaderDefine> default_defines = {};
+        std::optional<bool> default_enable_debug_info = {};
+        std::optional<ShaderCreateFlags> default_create_flags = {};
+        std::optional<u32> default_required_subgroup_size = {};
         std::string name = {};
     };
 

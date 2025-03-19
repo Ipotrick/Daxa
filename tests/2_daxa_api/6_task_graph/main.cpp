@@ -408,22 +408,16 @@ namespace tests
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = app.device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_graph/shaders",
-                },
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                "tests/2_daxa_api/6_task_graph/shaders",
             },
             .name = "pipeline manager",
         });
 
-        auto compile_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {
-                .source = daxa::ShaderFile{"shader_integration.glsl"},
-                .compile_options{
-                    .enable_debug_info = true,
-                },
-            },
+        auto compile_result = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"shader_integration.glsl"},
+            .enable_debug_info = true,
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();

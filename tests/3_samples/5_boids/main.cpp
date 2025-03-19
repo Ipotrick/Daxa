@@ -52,27 +52,25 @@ struct App : AppWindow<App>
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
         .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SHADER_INCLUDE_DIR,
-                "tests/3_samples/5_boids/shaders",
-                "tests/3_samples/5_boids",
-            },
-            .language = daxa::ShaderLanguage::GLSL,
-            .enable_debug_info = true,
+        .root_paths = {
+            DAXA_SHADER_INCLUDE_DIR,
+            "tests/3_samples/5_boids/shaders",
+            "tests/3_samples/5_boids",
         },
+        .default_language = daxa::ShaderLanguage::GLSL,
+        .default_enable_debug_info = true,
         .name = ("pipeline_manager"),
     });
     // clang-format off
-    std::shared_ptr<daxa::RasterPipeline> draw_pipeline = pipeline_manager.add_raster_pipeline({
-        .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"vert.glsl"}},
-        .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"frag.glsl"}},
+    std::shared_ptr<daxa::RasterPipeline> draw_pipeline = pipeline_manager.add_raster_pipeline2({
+        .vertex_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"vert.glsl"}},
+        .fragment_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"frag.glsl"}},
         .color_attachments = {{.format = swapchain.get_format()}},
         .raster = {},
         .name = ("draw_pipeline"),
     }).value();
-    std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = pipeline_manager.add_compute_pipeline({
-        .shader_info = {.source = daxa::ShaderFile{"update_boids.glsl"}},
+    std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = pipeline_manager.add_compute_pipeline2({
+        .source = daxa::ShaderFile{"update_boids.glsl"},
         .name = ("draw_pipeline"),
     }).value();
     // clang-format on

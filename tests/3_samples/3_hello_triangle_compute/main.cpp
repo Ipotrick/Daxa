@@ -9,11 +9,11 @@ using namespace daxa::types;
 struct App : BaseApp<App>
 {
     // clang-format off
-    std::shared_ptr<daxa::ComputePipeline> compute_pipeline = pipeline_manager.add_compute_pipeline({
+    std::shared_ptr<daxa::ComputePipeline> compute_pipeline = pipeline_manager.add_compute_pipeline2({
 #if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
-        .shader_info = {.source = daxa::ShaderFile{"compute.glsl"}},
+        .source = daxa::ShaderFile{"compute.glsl"},
 #elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
-        .shader_info = {.source = daxa::ShaderFile{"compute.hlsl"}},
+        .source = daxa::ShaderFile{"compute.hlsl"},
 #endif
         .name = "compute_pipeline",
     }).value();

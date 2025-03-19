@@ -389,7 +389,7 @@ namespace tests
                 {
                     auto recorder = device.create_command_recorder({});
                     recorder.build_acceleration_structures({
-                        .blas_build_infos = std::array{blas_build_info, proc_blas_build_info},
+                        .blas_build_infos = std::array<daxa::BlasBuildInfo, 2>{blas_build_info, proc_blas_build_info},
                     });
                     recorder.pipeline_barrier({
                         .src_access = daxa::AccessConsts::ACCELERATION_STRUCTURE_BUILD_WRITE,
@@ -409,13 +409,11 @@ namespace tests
                 /// No need to wait idle here.
                 /// Daxa will defer all the destructions of the buffers until the submitted as build commands are complete.
 
-                pipeline_manager = daxa::PipelineManager{daxa::PipelineManagerInfo{
+                pipeline_manager = daxa::PipelineManager{daxa::PipelineManagerInfo2{
                     .device = device,
-                    .shader_compile_options = {
-                        .root_paths = {
-                            DAXA_SHADER_INCLUDE_DIR,
-                            "tests/2_daxa_api/10_raytracing/shaders",
-                        },
+                    .root_paths = {
+                        DAXA_SHADER_INCLUDE_DIR,
+                        "tests/2_daxa_api/10_raytracing/shaders",
                     },
                 }};
                 // auto const compute_pipe_info = daxa::ComputePipelineCompileInfo{
@@ -427,124 +425,109 @@ namespace tests
                 // comp_pipeline = pipeline_manager.add_compute_pipeline(compute_pipe_info).value();
 
 
-                daxa::ShaderCompileInfo prim_ray_gen_compile_info;
-                daxa::ShaderCompileInfo ray_gen_compile_info;
+                daxa::ShaderCompileInfo2 prim_ray_gen_compile_info;
+                daxa::ShaderCompileInfo2 ray_gen_compile_info;
                 if(invocation_reorder_mode == static_cast<daxa_u32>(daxa::InvocationReorderMode::ALLOW_REORDER)) {
-                    prim_ray_gen_compile_info = daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"raytracing.glsl"},
-                        .compile_options = {
-                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, daxa::ShaderDefine{"SER_ON", "1"}, atomic_float ?
-                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
-                            }},
-                        },
+                    prim_ray_gen_compile_info.source = daxa::ShaderFile{"raytracing.glsl"},
+                    prim_ray_gen_compile_info.defines = std::vector{
+                        daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, daxa::ShaderDefine{"SER_ON", "1"}, 
+                        atomic_float ? daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"},
                     };
-                    ray_gen_compile_info = daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"raytracing.glsl"},
-                        .compile_options = {
-                            .defines = std::vector{daxa::ShaderDefine{"SER_ON", "1"}, atomic_float ? daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"}}},
-                    };
+                    ray_gen_compile_info.source = daxa::ShaderFile{"raytracing.glsl"};
+                    ray_gen_compile_info.defines = std::vector{daxa::ShaderDefine{"SER_ON", "1"}, atomic_float ? daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"}};
                 } else {
-                    prim_ray_gen_compile_info = daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"raytracing.glsl"},
-                        .compile_options = {
-                            .defines = std::vector{daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, atomic_float ?
-                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
-                            }},
-                        }
+                    prim_ray_gen_compile_info.source = daxa::ShaderFile{"raytracing.glsl"};
+                    prim_ray_gen_compile_info.defines = std::vector{
+                        daxa::ShaderDefine{"PRIMARY_RAYS", "1"}, 
+                        atomic_float ? daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"},
                     };
-                    ray_gen_compile_info = daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"raytracing.glsl"},
-                        .compile_options = {.defines = std::vector{daxa::ShaderDefine{"HIT_TRIANGLE", "1"}, atomic_float ?
-                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
-                            }}
-                        },
+                    ray_gen_compile_info.source = daxa::ShaderFile{"raytracing.glsl"},
+                    ray_gen_compile_info.defines = std::vector{
+                        daxa::ShaderDefine{"HIT_TRIANGLE", "1"}, 
+                        atomic_float ? daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"},
                     };
                 }
 
                 
-                auto const ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo{
-                    .ray_gen_infos = {
-                        prim_ray_gen_compile_info,
-                        ray_gen_compile_info
-                    },
-                    .intersection_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"raytracing.glsl"},
-                    }},
-                    .any_hit_infos = {daxa::ShaderCompileInfo{
-                        .source = daxa::ShaderFile{"raytracing.glsl"},
-                    }},
-                    .callable_infos = {
-                        daxa::ShaderCompileInfo{
-                            .source = daxa::ShaderFile{"raytracing.glsl"},
-                            .compile_options = {
-                                .defines = std::vector{daxa::ShaderDefine{"SPOT_LIGHT", "1"}}},
-                        },
-                        daxa::ShaderCompileInfo{
-                            .source = daxa::ShaderFile{"raytracing.glsl"},
-                        },
-                    },
-                    .closest_hit_infos = {
-                        daxa::ShaderCompileInfo{
-                            .source = daxa::ShaderFile{"raytracing.glsl"},
-                        },
-                        daxa::ShaderCompileInfo{
-                            .source = daxa::ShaderFile{"raytracing.glsl"},
-                            .compile_options = {.defines = std::vector{daxa::ShaderDefine{"HIT_TRIANGLE", "1"}, atomic_float ?
-                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
-                            }}
-                        }},
-                    },
-                    .miss_hit_infos = {
-                        daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"raytracing.glsl"}},
-                        daxa::ShaderCompileInfo{
-                            .source = daxa::ShaderFile{"raytracing.glsl"},
-                            .compile_options = {.defines = std::vector{daxa::ShaderDefine{"MISS_SHADOW", "1"}, atomic_float ?
-                                daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0"
-                            }}
-                        }},
-                    },
-                    // Groups are in order of their shader indices.
-                    // NOTE: The order of the groups is important! raygen, miss, hit, callable
-                    .shader_groups_infos = {
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 0,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 1,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 8,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 9,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::PROCEDURAL_HIT_GROUP,
-                            .closest_hit_shader_index = 6,
-                            .any_hit_shader_index = 3,
-                            .intersection_shader_index = 2,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::TRIANGLES_HIT_GROUP,
-                            .closest_hit_shader_index = 7,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 4,
-                        },
-                        daxa::RayTracingShaderGroupInfo{
-                            .type = daxa::ShaderGroup::GENERAL,
-                            .general_shader_index = 5,
-                        },
-                    },
-                    .max_ray_recursion_depth = 2,
-                    .name = "basic ray tracing pipeline",
+                auto ray_tracing_pipe_info = daxa::RayTracingPipelineCompileInfo2{};
+                ray_tracing_pipe_info.ray_gen_infos = {
+                    prim_ray_gen_compile_info,
+                    ray_gen_compile_info
                 };
-                rt_pipeline = pipeline_manager.add_ray_tracing_pipeline(ray_tracing_pipe_info).value();
+                ray_tracing_pipe_info.intersection_infos = {daxa::ShaderCompileInfo2{
+                    .source = daxa::ShaderFile{"raytracing.glsl"},
+                }};
+                ray_tracing_pipe_info.any_hit_infos = {daxa::ShaderCompileInfo2{
+                    .source = daxa::ShaderFile{"raytracing.glsl"},
+                }};
+                ray_tracing_pipe_info.callable_infos = {
+                    daxa::ShaderCompileInfo2{
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .defines = std::vector{daxa::ShaderDefine{"SPOT_LIGHT", "1"}},
+                    },
+                    daxa::ShaderCompileInfo2{
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                    },
+                };
+                ray_tracing_pipe_info.closest_hit_infos = {
+                    daxa::ShaderCompileInfo2{
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                    },
+                    daxa::ShaderCompileInfo2{
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .defines = std::vector{daxa::ShaderDefine{"HIT_TRIANGLE", "1"}, atomic_float ?
+                            daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0" }
+                    }},
+                };
+                ray_tracing_pipe_info.miss_hit_infos = {
+                    daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"raytracing.glsl"}},
+                    daxa::ShaderCompileInfo2{
+                        .source = daxa::ShaderFile{"raytracing.glsl"},
+                        .defines = std::vector{daxa::ShaderDefine{"MISS_SHADOW", "1"}, atomic_float ?
+                            daxa::ShaderDefine{"ATOMIC_FLOAT", "1"} : daxa::ShaderDefine{"ATOMIC_FLOAT", "0" }
+                    }},
+                };
+                // Groups are in order of their shader indices.
+                // NOTE: The order of the groups is important! raygen, miss, hit, callable
+                ray_tracing_pipe_info.shader_groups_infos = {
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 0,
+                    },
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 1,
+                    },
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 8,
+                    },
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 9,
+                    },
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::PROCEDURAL_HIT_GROUP,
+                        .closest_hit_shader_index = 6,
+                        .any_hit_shader_index = 3,
+                        .intersection_shader_index = 2,
+                    },
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::TRIANGLES_HIT_GROUP,
+                        .closest_hit_shader_index = 7,
+                    },
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 4,
+                    },
+                    daxa::RayTracingShaderGroupInfo{
+                        .type = daxa::ShaderGroup::GENERAL,
+                        .general_shader_index = 5,
+                    },
+                };
+                ray_tracing_pipe_info.max_ray_recursion_depth = 2;
+                ray_tracing_pipe_info.name = "basic ray tracing pipeline";
+                rt_pipeline = pipeline_manager.add_ray_tracing_pipeline2(ray_tracing_pipe_info).value();
             }
 
             auto update() -> bool

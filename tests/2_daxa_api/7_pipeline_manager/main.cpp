@@ -16,19 +16,17 @@ namespace tests
     {
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    DAXA_SAMPLE_PATH "/shaders",
-                    "tests/0_common/shaders",
-                },
-                .language = daxa::ShaderLanguage::GLSL,
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                DAXA_SAMPLE_PATH "/shaders",
+                "tests/0_common/shaders",
             },
+            .default_language = daxa::ShaderLanguage::GLSL,
             .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
-        auto compilation_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+        auto compilation_result = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"main.glsl"},
             .name = APPNAME_PREFIX("compute_pipeline"),
         });
 
@@ -48,20 +46,18 @@ namespace tests
     {
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    DAXA_SAMPLE_PATH "/shaders",
-                    "tests/0_common/shaders",
-                },
-                .language = daxa::ShaderLanguage::GLSL,
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                DAXA_SAMPLE_PATH "/shaders",
+                "tests/0_common/shaders",
             },
             .register_null_pipelines_when_first_compile_fails = true,
+            .default_language = daxa::ShaderLanguage::GLSL,
             .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
-        auto compilation_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+        auto compilation_result = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"main.glsl"},
             .name = APPNAME_PREFIX("compute_pipeline"),
         });
 
@@ -101,20 +97,18 @@ namespace tests
         {
             daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
                 .device = device,
-                .shader_compile_options = {
-                    .root_paths = {
-                        DAXA_SHADER_INCLUDE_DIR,
-                        DAXA_SAMPLE_PATH "/shaders",
-                        "tests/0_common/shaders",
-                    },
-                    .spirv_cache_folder = "my/shader/cache/folder",
-                    .language = daxa::ShaderLanguage::GLSL,
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    DAXA_SAMPLE_PATH "/shaders",
+                    "tests/0_common/shaders",
                 },
+                .spirv_cache_folder = "my/shader/cache/folder",
+                .default_language = daxa::ShaderLanguage::GLSL,
                 .name = APPNAME_PREFIX("pipeline_manager"),
             });
 
-            auto compilation_result = pipeline_manager.add_compute_pipeline({
-                .shader_info = {.source = daxa::ShaderFile{"main.glsl"}},
+            auto compilation_result = pipeline_manager.add_compute_pipeline2({
+                .source = daxa::ShaderFile{"main.glsl"},
                 .name = APPNAME_PREFIX("compute_pipeline"),
             });
 
@@ -138,9 +132,7 @@ namespace tests
     {
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
-            .shader_compile_options = {
-                .language = daxa::ShaderLanguage::GLSL,
-            },
+            .default_language = daxa::ShaderLanguage::GLSL,
             .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
@@ -167,8 +159,8 @@ namespace tests
             )glsl",
         });
 
-        auto compilation_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {.source = daxa::ShaderFile{"my_file"}},
+        auto compilation_result = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"my_file"},
             .name = APPNAME_PREFIX("compute_pipeline"),
         });
 
@@ -188,21 +180,19 @@ namespace tests
     {
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    DAXA_SAMPLE_PATH "/shaders/test",
-                },
-                .language = daxa::ShaderLanguage::GLSL,
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                DAXA_SAMPLE_PATH "/shaders/test",
             },
+            .default_language = daxa::ShaderLanguage::GLSL,
             .name = APPNAME_PREFIX("pipeline_manager"),
         });
 
-        auto compilation_result = pipeline_manager.add_raster_pipeline({
-            .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
-            .tesselation_control_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
-            .tesselation_evaluation_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
-            .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+        auto compilation_result = pipeline_manager.add_raster_pipeline2({
+            .vertex_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+            .tesselation_control_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+            .tesselation_evaluation_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
+            .fragment_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"tesselation_test.glsl"}},
             .raster = {.primitive_topology = daxa::PrimitiveTopology::PATCH_LIST},
             .tesselation = {.control_points = 3},
         });

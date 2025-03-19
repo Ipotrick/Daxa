@@ -113,26 +113,21 @@ namespace tests
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_graph/shaders",
-                },
-                .language = daxa::ShaderLanguage::GLSL,
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                "tests/2_daxa_api/6_task_graph/shaders",
             },
+            .default_language = daxa::ShaderLanguage::GLSL,
             .name = "pipeline manager",
         }};
 
-        daxa::ComputePipelineCompileInfo const test_image_pipeline_info = {
-            .shader_info = {
-                .source = daxa::ShaderFile{"transient.glsl"},
-                .compile_options = {
-                    .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
-            },
+        daxa::ComputePipelineCompileInfo2 const test_image_pipeline_info = {
+            .source = daxa::ShaderFile{"transient.glsl"},
+            .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}},
             .name = "test image pipeline",
         };
 
-        auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value();
 
         {
             f32 const IMAGE_A_VALUE = 1.0f;
@@ -249,26 +244,21 @@ namespace tests
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_graph/shaders",
-                },
-                .language = daxa::ShaderLanguage::GLSL,
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                "tests/2_daxa_api/6_task_graph/shaders",
             },
+            .default_language = daxa::ShaderLanguage::GLSL,
             .name = "pipeline manager",
         }};
 
-        daxa::ComputePipelineCompileInfo const test_image_pipeline_info = {
-            .shader_info = {
-                .source = daxa::ShaderFile{"transient.glsl"},
-                .compile_options = {
-                    .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
-            },
+        daxa::ComputePipelineCompileInfo2 const test_image_pipeline_info = {
+            .source = daxa::ShaderFile{"transient.glsl"},
+            .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}},
             .name = "test image pipeline",
         };
 
-        auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value();
 
         {
             f32 const IMAGE_A_VALUE = 1.0f;
@@ -401,33 +391,26 @@ namespace tests
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager{{
             .device = device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_graph/shaders",
-                },
-                .language = daxa::ShaderLanguage::GLSL,
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                "tests/2_daxa_api/6_task_graph/shaders",
             },
+            .default_language = daxa::ShaderLanguage::GLSL,
             .name = "pipeline manager",
         }};
 
-        daxa::ComputePipelineCompileInfo const test_image_pipeline_info = {
-            .shader_info = {
-                .source = daxa::ShaderFile{"transient.glsl"},
-                .compile_options = {
-                    .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}}},
-            },
+        daxa::ComputePipelineCompileInfo2 const test_image_pipeline_info = {
+            .source = daxa::ShaderFile{"transient.glsl"},
+            .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}},
             .name = "test image",
         };
-        auto test_image_pipeline = pipeline_manager.add_compute_pipeline(test_image_pipeline_info).value();
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value();
 
-        daxa::ComputePipelineCompileInfo const test_buffer_pipeline_info = {
-            .shader_info = {
-                .source = daxa::ShaderFile{"transient.glsl"},
-            },
+        daxa::ComputePipelineCompileInfo2 const test_buffer_pipeline_info = {
+            .source = daxa::ShaderFile{"transient.glsl"},
             .name = "test buffer",
         };
-        auto test_buffer_pipeline = pipeline_manager.add_compute_pipeline(test_buffer_pipeline_info).value();
+        auto test_buffer_pipeline = pipeline_manager.add_compute_pipeline2(test_buffer_pipeline_info).value();
 
         {
             auto task_graph = daxa::TaskGraph({
