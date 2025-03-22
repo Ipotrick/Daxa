@@ -24,9 +24,6 @@
 
 #define _DAXA_TEST_PRINT(...)
 
-#define DAXA_SHADERLANG_GLSL 1
-#define DAXA_SHADERLANG_SLANG 2
-
 static uint32_t const DAXA_ID_INDEX_BITS = 20;
 static uint32_t const DAXA_ID_INDEX_MASK = (1ull << 20) - 1ull;
 static uint32_t const DAXA_ID_INDEX_OFFSET = 0;
@@ -231,6 +228,10 @@ daxa_u32mat4x4;
 #elif defined(_MSC_VER)
 #pragma warning(pop)
 #endif
+
+static uint32_t const DAXA_MAX_PUSH_CONSTANT_WORD_SIZE = (32);
+static uint32_t const DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE = (DAXA_MAX_PUSH_CONSTANT_WORD_SIZE * 4);
+static uint32_t const DAXA_PIPELINE_LAYOUT_COUNT = (DAXA_MAX_PUSH_CONSTANT_WORD_SIZE + 1);
 
 // TODO(Raytracing): Should this say like this?
 static uint32_t const DAXA_GEOMETRY_INSTANCE_TRIANGLE_FACING_CULL_DISABLE = 0x00000001;

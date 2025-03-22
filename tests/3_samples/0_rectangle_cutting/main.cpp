@@ -37,13 +37,11 @@ struct App : AppWindow<App>
 
     daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
         .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SHADER_INCLUDE_DIR,
-                "tests/3_samples/0_rectangle_cutting/shaders",
-            },
-            .language = daxa::ShaderLanguage::GLSL,
+        .root_paths = {
+            DAXA_SHADER_INCLUDE_DIR,
+            "tests/3_samples/0_rectangle_cutting/shaders",
         },
+        .default_language = daxa::ShaderLanguage::GLSL,
         .name = ("pipeline_manager"),
     });
 
@@ -59,9 +57,9 @@ struct App : AppWindow<App>
     }
 
     // clang-format off
-    std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline({
-        .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
-        .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"draw.glsl"}},
+    std::shared_ptr<daxa::RasterPipeline> raster_pipeline = pipeline_manager.add_raster_pipeline2({
+        .vertex_shader_info = daxa::ShaderCompileInfo2{daxa::ShaderFile{"draw.glsl"}},
+        .fragment_shader_info = daxa::ShaderCompileInfo2{daxa::ShaderFile{"draw.glsl"}},
         .color_attachments = std::vector{daxa::RenderAttachment{
             .format = swapchain.get_format(),
             .blend = daxa::BlendInfo{
@@ -72,7 +70,6 @@ struct App : AppWindow<App>
             },
         }},
         .raster = {},
-        .push_constant_size = sizeof(DrawPush),
         .name = ("raster_pipeline"),
     }).value();
     // clang-format on

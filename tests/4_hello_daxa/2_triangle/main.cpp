@@ -241,25 +241,22 @@ auto main() -> int
     // first by creating the pipeline manager
     auto pipeline_manager = daxa::PipelineManager({
         .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SHADER_INCLUDE_DIR,
-                "./tests/4_hello_daxa/2_triangle",
-            },
-            .language = daxa::ShaderLanguage::GLSL,
-            .enable_debug_info = true,
+        .root_paths = {
+            DAXA_SHADER_INCLUDE_DIR,
+            "./tests/4_hello_daxa/2_triangle",
         },
+        .default_language = daxa::ShaderLanguage::GLSL,
+        .default_enable_debug_info = true,
         .name = "my pipeline manager",
     });
     // Then just adding it to the pipeline manager
     std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
-        auto result = pipeline_manager.add_raster_pipeline({
-            .vertex_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
-            .fragment_shader_info = daxa::ShaderCompileInfo{.source = daxa::ShaderFile{"main.glsl"}},
+        auto result = pipeline_manager.add_raster_pipeline2({
+            .vertex_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"main.glsl"}},
+            .fragment_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"main.glsl"}},
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {},
-            .push_constant_size = sizeof(MyPushConstant),
             .name = "my pipeline",
         });
         if (result.is_err())

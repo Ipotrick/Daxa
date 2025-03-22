@@ -60,6 +60,11 @@ namespace daxa
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         Variant<Monostate, LastConcurrentAccessSplitBarrierIndex, LastConcurrentAccessBarrierIndex> latest_concurrent_access_barrer_index = Monostate{};
+        // Used to reorder tasks to the earliest possible batch within the current concurrent scope.
+        // This is the first batch where the resource is completely usable in the access state given.
+        // This means all barriers are done even split barriers are done at this point.
+        /// WARNING: THIS DOES NOT MEAN THAT THIS IS THE FIRST BATCH AFTER THE PREVIOUS ACCESS. THE FIRST TASK TO USE THIS ACCESS DETERMINES THE START BATCH. THIS SHOULD BE IMPROVED. WE COULD FOR EXAMPLE STORE THE PRIOR DEPENDENCY TASKS/BATCHES FOR THE CURRENT CONCURRENT SEQUENCE!
+        usize latest_concurrent_sequence_start_batch = ~0u;
         std::variant<BufferId, BlasId, TlasId> actual_id = BufferId{};
 
         ResourceLifetime lifetime = {};
@@ -76,6 +81,11 @@ namespace daxa
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         Variant<Monostate, LastConcurrentAccessSplitBarrierIndex, LastConcurrentAccessBarrierIndex> latest_concurrent_access_barrer_index = Monostate{};
+        // Used to reorder tasks to the earliest possible batch within the current concurrent scope.
+        // This is the first batch where the resource is completely usable in the access state given.
+        // This means all barriers are done even split barriers are done at this point.
+        /// WARNING: THIS DOES NOT MEAN THAT THIS IS THE FIRST BATCH AFTER THE PREVIOUS ACCESS. THE FIRST TASK TO USE THIS ACCESS DETERMINES THE START BATCH. THIS SHOULD BE IMPROVED. WE COULD FOR EXAMPLE STORE THE PRIOR DEPENDENCY TASKS/BATCHES FOR THE CURRENT CONCURRENT SEQUENCE!
+        usize latest_concurrent_sequence_start_batch = ~0u;
     };
 
     struct PerPermTaskImage
@@ -488,7 +498,7 @@ namespace daxa
         auto id_to_local_id(TaskImageView id) const -> TaskImageView;
         void update_active_permutations();
         void update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation);
-        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, u32 batch_index, TaskBatchId in_batch_task_index, TaskId task_id);
+        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id);
         void insert_pre_batch_barriers(TaskGraphPermutation & permutation);
         void create_transient_runtime_buffers(TaskGraphPermutation & permutation);
         void create_transient_runtime_images(TaskGraphPermutation & permutation);

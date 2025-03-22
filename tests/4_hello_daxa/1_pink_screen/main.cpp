@@ -99,8 +99,8 @@ auto main() -> int
         // These features pose no downsides, so they are always enabled when present.
         // We must check if the gpu supports the implicit features we want for the device.
         daxa::ImplicitFeatureFlags required_implicit_features = {};
-        if ((required_explicit_features & properties.explicit_features) != required_explicit_features ||
-            (required_implicit_features & properties.implicit_features) != required_implicit_features)
+        if (((properties.explicit_features & required_explicit_features) != required_explicit_features) ||
+            ((properties.implicit_features & required_implicit_features) != required_implicit_features))
         {
             continue;
         }

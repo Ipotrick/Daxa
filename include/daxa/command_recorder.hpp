@@ -15,7 +15,7 @@ namespace daxa
     {
         void const * data = {};
         u64 size = {};
-        u32 offset = {};
+        [[deprecated("parameter ignored. API: 3.1")]] u32 offset = {};
     };
 
     struct CommandRecorderInfo
@@ -312,12 +312,11 @@ namespace daxa
 
         void push_constant_vptr(PushConstantInfo const & info);
         template <typename T>
-        void push_constant(T const & constant, u32 offset = 0)
+        void push_constant(T const & constant, [[maybe_unused]] [[deprecated("parameter ignored. API: 3.1")]] u32 offset = 0)
         {
             push_constant_vptr({
                 .data = static_cast<void const *>(&constant),
                 .size = static_cast<u32>(sizeof(T)),
-                .offset = offset,
             });
         }
         void set_pipeline(RasterPipeline const & pipeline);
