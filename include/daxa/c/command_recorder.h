@@ -18,7 +18,7 @@ typedef struct
 {
     void const * data;
     uint64_t size;
-    uint32_t offset;
+    uint32_t offset; // deprecated API 3.1
 } daxa_PushConstantInfo;
 
 typedef struct

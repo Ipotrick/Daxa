@@ -36,6 +36,8 @@
 #endif
 
 // INCLUDE ORDER MUST STAY LIKE THIS:
+// ensure we always compile in the deprecated functions to avoid link issues
+#define DAXA_REMOVE_DEPRECATED 0
 #include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>
@@ -57,9 +59,6 @@ auto r_cast(FROM_T * ptr)
     return reinterpret_cast<TO_T>(ptr);
 }
 
-static inline constexpr u32 MAX_PUSH_CONSTANT_WORD_SIZE = {32};
-static inline constexpr u32 MAX_PUSH_CONSTANT_BYTE_SIZE = {MAX_PUSH_CONSTANT_WORD_SIZE * 4};
-static inline constexpr u32 PIPELINE_LAYOUT_COUNT = {MAX_PUSH_CONSTANT_WORD_SIZE + 1};
 // TODO: WTF IS THIS?!
 static inline constexpr char const * MAX_PUSH_CONSTANT_SIZE_ERROR = {"push constant size is limited to 128 bytes/ 32 device words"};
 static inline constexpr u32 GPU_TABLE_SET_BINDING = 0;

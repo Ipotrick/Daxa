@@ -24,7 +24,7 @@ struct TestTask : TestTaskHead::Task
         {
             [[maybe_unused]] daxa::BufferId id = ti.get(AT.buffer0).ids[0];
             [[maybe_unused]] char const * name = ti.get(AT.buffer0).name;
-            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(AT.buffer0).access;
+            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(AT.buffer0).task_access;
             [[maybe_unused]] u8 shader_array_size = ti.get(AT.buffer0).shader_array_size;
             [[maybe_unused]] bool shader_as_address = ti.get(AT.buffer0).shader_as_address;
             [[maybe_unused]] daxa::TaskBufferView view = ti.get(AT.buffer0).view;
@@ -33,7 +33,7 @@ struct TestTask : TestTaskHead::Task
         // The Image Attachment info contents:
         {
             [[maybe_unused]] char const * name = ti.get(AT.image0).name;
-            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(AT.image0).access;
+            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(AT.image0).task_access;
             [[maybe_unused]] daxa::ImageViewType view_type = ti.get(AT.image0).view_type;
             [[maybe_unused]] u8 shader_array_size = ti.get(AT.image0).shader_array_size;
             [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(AT.image0).shader_array_type;
@@ -408,23 +408,16 @@ namespace tests
 
         daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
             .device = app.device,
-            .shader_compile_options = {
-                .root_paths = {
-                    DAXA_SHADER_INCLUDE_DIR,
-                    "tests/2_daxa_api/6_task_graph/shaders",
-                },
+            .root_paths = {
+                DAXA_SHADER_INCLUDE_DIR,
+                "tests/2_daxa_api/6_task_graph/shaders",
             },
             .name = "pipeline manager",
         });
 
-        auto compile_result = pipeline_manager.add_compute_pipeline({
-            .shader_info = {
-                .source = daxa::ShaderFile{"shader_integration.glsl"},
-                .compile_options{
-                    .enable_debug_info = true,
-                },
-            },
-            .push_constant_size = sizeof(ShaderIntegrationTaskHead::AttachmentShaderBlob),
+        auto compile_result = pipeline_manager.add_compute_pipeline2({
+            .source = daxa::ShaderFile{"shader_integration.glsl"},
+            .enable_debug_info = true,
             .name = "compute_pipeline",
         });
         auto compute_pipeline = compile_result.value();

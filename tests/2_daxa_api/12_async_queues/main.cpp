@@ -113,8 +113,8 @@ namespace tests
         daxa::Instance instance = daxa::create_instance({});
         daxa::Device device = instance.create_device_2(instance.choose_device({}, {}));
 
-        daxa::ExecutableCommandList commands = {};
         {
+            daxa::ExecutableCommandList commands = {};
             auto rec = device.create_command_recorder({});
             commands = rec.complete_current_commands();
         }
@@ -306,31 +306,28 @@ namespace tests
 
             auto pipeline_manager = daxa::PipelineManager({
                 .device = device,
-                .shader_compile_options = {
-                    .root_paths = {
-                        DAXA_SHADER_INCLUDE_DIR,
-                        "./tests/2_daxa_api/12_async_queues",
-                    },
-                    .language = daxa::ShaderLanguage::SLANG,
-                    .enable_debug_info = true,
+                .root_paths = {
+                    DAXA_SHADER_INCLUDE_DIR,
+                    "./tests/2_daxa_api/12_async_queues",
                 },
+                .default_language = daxa::ShaderLanguage::SLANG,
+                .default_enable_debug_info = true,
                 .name = "my pipeline manager",
             });
             // Then just adding it to the pipeline manager
             std::shared_ptr<daxa::RasterPipeline> pipeline;
             {
-                auto result = pipeline_manager.add_raster_pipeline({
-                    .mesh_shader_info = daxa::ShaderCompileInfo{
+                auto result = pipeline_manager.add_raster_pipeline2({
+                    .mesh_shader_info = daxa::ShaderCompileInfo2{
                         .source = daxa::ShaderFile{"draw.slang"},
-                        .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_mesh"},
+                        .entry_point = "entry_mesh",
                     },
-                    .fragment_shader_info = daxa::ShaderCompileInfo{
+                    .fragment_shader_info = daxa::ShaderCompileInfo2{
                         .source = daxa::ShaderFile{"draw.slang"},
-                        .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_fragment"},
+                        .entry_point = "entry_fragment",
                     },
                     .color_attachments = {{.format = swapchain.get_format()}},
                     .raster = {.static_state_sample_count = daxa::None},
-                    // .push_constant_size = sizeof(DrawTri::attachment_shader_blob_size()),
                     .name = "my pipeline",
                 });
                 if (result.is_err())

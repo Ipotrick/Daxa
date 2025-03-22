@@ -82,6 +82,11 @@ namespace daxa
         ///         This memory is used internally as well as by tasks via the TaskInterface::get_allocator().
         ///         Setting the size to 0, disables a few task list features but also eliminates the memory allocation.
         u32 staging_memory_pool_size = 262'144; // 2^16 bytes.
+        // Useful for debugging tools that are invisible to the graph.
+        daxa::ImageUsageFlags additional_transient_image_usage_flags = {};
+        // Useful for reflection/ debugging.
+        std::function<void(daxa::TaskInterface)> pre_task_callback = {};
+        std::function<void(daxa::TaskInterface)> post_task_callback = {};
         std::string name = {};
     };
 
@@ -138,7 +143,7 @@ namespace daxa
     {
         std::vector<TaskAttachmentInfo> attachments = {};
         std::function<void(TaskInterface)> task = {};
-        std::string_view name = "unnamed";
+        std::string name = "unnamed";
     };
 
     struct InlineTask : ITask
@@ -166,7 +171,48 @@ namespace daxa
       private:
         std::vector<TaskAttachmentInfo> _attachments = {};
         std::function<void(TaskInterface)> _callback = {};
-        std::string_view _name = {};
+        std::string _name = {};
+    };
+
+    template<typename TaskHeadTaskT>
+    struct InlineTaskWithHead : TaskHeadTaskT
+    {
+        TaskHeadTaskT::AttachmentViews views = {};
+        std::function<void(daxa::TaskInterface)> task = {};
+        void callback(daxa::TaskInterface ti)
+        {
+            task(ti);
+        }
+    };
+
+    struct TaskBufferClearInfo
+    {
+        TaskBufferView buffer = {};
+        u64 offset = {};
+        u64 size = ~0ull; // default clears all
+        u32 clear_value = {};
+        std::string_view name = {};
+    };
+
+    struct TaskImageClearInfo
+    {
+        TaskImageView view = {};
+        ClearValue clear_value = std::array{0u, 0u, 0u, 0u};
+        std::string_view name = {};
+    };
+
+    struct TaskBufferCopyInfo
+    {
+        TaskBufferView src = {};
+        TaskBufferView dst = {};
+        std::string_view name = {};
+    };
+
+    struct TaskImageCopyInfo
+    {
+        TaskImageView src = {};
+        TaskImageView dst = {};
+        std::string_view name = {};
     };
 
     struct ImplTaskGraph;
@@ -185,6 +231,15 @@ namespace daxa
 
         DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
         DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
+
+        DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo const &;
+        DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo const &;
+
+        DAXA_EXPORT_CXX void clear_buffer(TaskBufferClearInfo const & info);
+        DAXA_EXPORT_CXX void clear_image(TaskImageClearInfo const & info);
+
+        DAXA_EXPORT_CXX void copy_buffer_to_buffer(TaskBufferCopyInfo const & info);
+        DAXA_EXPORT_CXX void copy_image_to_image(TaskImageCopyInfo const & info);
 
         template <typename TTask>
             requires std::is_base_of_v<IPartialTask, TTask>
@@ -206,7 +261,7 @@ namespace daxa
                         {
                             TaskBufferAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.buffer.name;
-                            info.access = NoRefTTask::attachments()[i].value.buffer.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.buffer.task_access;
                             info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size;
                             info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address;
                             info.view = daxa::get<TaskBufferView>(task.views.views[i]);
@@ -217,7 +272,7 @@ namespace daxa
                         {
                             TaskTlasAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.tlas.name;
-                            info.access = NoRefTTask::attachments()[i].value.tlas.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.tlas.task_access;
                             info.shader_as_address = NoRefTTask::attachments()[i].value.tlas.shader_as_address;
                             info.view = daxa::get<TaskTlasView>(task.views.views[i]);
                             _attachments[i] = info;
@@ -227,7 +282,7 @@ namespace daxa
                         {
                             TaskBlasAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.blas.name;
-                            info.access = NoRefTTask::attachments()[i].value.blas.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.blas.task_access;
                             info.view = daxa::get<TaskBlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -236,7 +291,7 @@ namespace daxa
                         {
                             TaskImageAttachmentInfo info;
                             info.name = NoRefTTask::attachments()[i].value.image.name;
-                            info.access = NoRefTTask::attachments()[i].value.image.access;
+                            info.task_access = NoRefTTask::attachments()[i].value.image.task_access;
                             info.view_type = NoRefTTask::attachments()[i].value.image.view_type;
                             info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size;
                             info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type;

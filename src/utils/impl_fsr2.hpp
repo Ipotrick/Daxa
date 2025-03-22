@@ -1,8 +1,8 @@
 #pragma once
 
+#include "../impl_core.hpp"
 #include <daxa/utils/fsr2.hpp>
 
-#include "../impl_core.hpp"
 #include "../impl_device.hpp"
 
 #include <ffx-fsr2-api/ffx_fsr2.h>

@@ -1,3 +1,4 @@
+#define DAXA_REMOVE_DEPRECATED 0
 #include <daxa/daxa.hpp>
 #include <daxa/utils/pipeline_manager.hpp>
 #include <daxa/utils/task_graph.hpp>
@@ -148,7 +149,6 @@ auto main() -> int
             },
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {.static_state_sample_count = daxa::None},
-            // .push_constant_size = sizeof(DrawTri::attachment_shader_blob_size()),
             .name = "my pipeline",
         });
         if (result.is_err())

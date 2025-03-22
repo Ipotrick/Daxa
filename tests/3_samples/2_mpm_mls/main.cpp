@@ -1,4 +1,4 @@
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
+#define SAMPLE_SHADER_LANGUAGE DAXA_LANGUAGE_GLSL
 // #define DAXA_SIMULATION_WATER_MPM_MLS
 // #define DAXA_SIMULATION_MANY_MATERIALS
 #define DAXA_ATOMIC_FLOAT_FLAG
@@ -81,12 +81,12 @@ struct App : BaseApp<App>
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 1
                 )",
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
                 .contents = R"(static const bool MY_TOGGLE = true;)",
 #endif
             });
@@ -95,12 +95,12 @@ struct App : BaseApp<App>
         {
             pipeline_manager.add_virtual_file({
                 .name = "custom file!!",
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
                 .contents = R"(
                     #pragma once
                     #define MY_TOGGLE 0
                 )",
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
                 .contents = R"(static const bool MY_TOGGLE = false;)",
 #endif
             });
@@ -111,7 +111,7 @@ struct App : BaseApp<App>
     std::shared_ptr<daxa::ComputePipeline> p2g_compute_pipeline = [this]() {
         update_virtual_shader();
         return pipeline_manager.add_compute_pipeline({
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .shader_info = {
                 .source = daxa::ShaderFile{"compute.glsl"}, 
                 .compile_options = {
@@ -122,10 +122,9 @@ struct App : BaseApp<App>
 #endif // DAXA_SIMULATION_WATER_MPM_MLS
                 }
             },
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_P2G"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "p2g_compute_pipeline",
         }).value();
     }();
@@ -136,17 +135,16 @@ struct App : BaseApp<App>
     std::shared_ptr<daxa::ComputePipeline> p2g_second_compute_pipeline = [this]() {
         update_virtual_shader();
         return pipeline_manager.add_compute_pipeline({
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .shader_info = {
                 .source = daxa::ShaderFile{"compute.glsl"}, 
                 .compile_options = {
                     .defines =  std::vector{daxa::ShaderDefine{"P2G_WATER_SECOND_COMPUTE_FLAG", "1"}},
                 }
             },
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_P2G"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "p2g_second_compute_pipeline",
         }).value();
     }();
@@ -157,17 +155,16 @@ struct App : BaseApp<App>
     std::shared_ptr<daxa::ComputePipeline> grid_compute_pipeline = [this]() {
         update_virtual_shader();
         return pipeline_manager.add_compute_pipeline({
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .shader_info = {
                 .source = daxa::ShaderFile{"compute.glsl"}, 
                 .compile_options = {
                     .defines =  std::vector{daxa::ShaderDefine{"GRID_COMPUTE_FLAG", "1"}},
                 }
             },
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_grid"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "grid_compute_pipeline",
         }).value();
     }();
@@ -177,7 +174,7 @@ struct App : BaseApp<App>
     std::shared_ptr<daxa::ComputePipeline> g2p_compute_pipeline = [this]() {
         update_virtual_shader();
         return pipeline_manager.add_compute_pipeline({
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .shader_info = {
                 .source = daxa::ShaderFile{"compute.glsl"}, 
                 .compile_options = {
@@ -188,10 +185,9 @@ struct App : BaseApp<App>
 #endif // DAXA_SIMULATION_WATER_MPM_MLS
                 }
             },
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {.entry_point = "entry_MPM_G2P"}},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "g2p_compute_pipeline",
         }).value();
     }();
@@ -201,19 +197,18 @@ struct App : BaseApp<App>
     std::shared_ptr<daxa::ComputePipeline> sphere_tracing_compute_pipeline = [this]() {
         update_virtual_shader();
         return pipeline_manager.add_compute_pipeline({
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .shader_info = {
                 .source = daxa::ShaderFile{"compute.glsl"}, 
                 .compile_options = {
                     .defines =  std::vector{daxa::ShaderDefine{"SPHERE_TRACING_FLAG", "1"}},
                 }
             },
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .shader_info = {.source = daxa::ShaderFile{"compute.slang"}, .compile_options = {
                 .entry_point = "entry_sphere_tracing",
             },},
 #endif
-            .push_constant_size = sizeof(ComputePush),
             .name = "sphere_tracing_compute_pipeline",
         }).value();
     }();
@@ -224,9 +219,9 @@ struct App : BaseApp<App>
         update_virtual_shader();
 
         auto rt_gen_shader = daxa::ShaderCompileInfo{
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .source = daxa::ShaderFile{"raytracing.glsl"},
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .source = daxa::ShaderFile{"raytracing.slang"},
             .compile_options = {
                 .entry_point = "rayGenShader",
@@ -235,9 +230,9 @@ struct App : BaseApp<App>
         };
 
         auto rt_miss_shader = daxa::ShaderCompileInfo{
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .source = daxa::ShaderFile{"raytracing.glsl"},
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .source = daxa::ShaderFile{"raytracing.slang"},
             .compile_options = {
                 .entry_point = "missShader",
@@ -246,12 +241,12 @@ struct App : BaseApp<App>
         };
 
         auto rt_miss_shadow_shader = daxa::ShaderCompileInfo{
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .source = daxa::ShaderFile{"raytracing.glsl"},
             .compile_options = {
                 .defines = std::vector{daxa::ShaderDefine{"DAXA_SHADOW_RAY_FLAG", "1"}},
             },
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .source = daxa::ShaderFile{"raytracing.slang"},
             .compile_options = {
                 .entry_point = "missShadowShader",
@@ -260,9 +255,9 @@ struct App : BaseApp<App>
         };
 
         auto rt_closest_hit_shader = daxa::ShaderCompileInfo{
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .source = daxa::ShaderFile{"raytracing.glsl"},
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .source = daxa::ShaderFile{"raytracing.slang"},
             .compile_options = {
                 .entry_point = "closestHitShader",
@@ -271,9 +266,9 @@ struct App : BaseApp<App>
         };
 
         auto rt_intersection_shader = daxa::ShaderCompileInfo{
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
+#if SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_GLSL
             .source = daxa::ShaderFile{"raytracing.glsl"},  
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
+#elif SAMPLE_SHADER_LANGUAGE == DAXA_LANGUAGE_SLANG
             .source = daxa::ShaderFile{"raytracing.slang"},
             .compile_options = {
                 .entry_point = "intersectionShader",
@@ -317,7 +312,6 @@ struct App : BaseApp<App>
             },
         },
         .max_ray_recursion_depth = 2,
-        .push_constant_size = sizeof(ComputePush),
         .name = "ray tracing pipeline",
     }).value();
     }();
