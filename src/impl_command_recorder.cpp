@@ -674,24 +674,39 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
 void daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline)
 {
     daxa_cmd_flush_barriers(self);
+    const bool prev_pipeline_rt = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RayTracingPipeline>;
+    const bool same_type_same_layout_as_prev_pipe = prev_pipeline_rt && daxa::get<daxa_RayTracingPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    if (!same_type_same_layout_as_prev_pipe)
+    {
+        vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    }
     self->current_pipeline = pipeline;
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline);
 }
 
 void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline pipeline)
 {
     daxa_cmd_flush_barriers(self);
+    const bool prev_pipeline_compute = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_ComputePipeline>;
+    const bool same_type_same_layout_as_prev_pipe = prev_pipeline_compute && daxa::get<daxa_ComputePipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    if (!same_type_same_layout_as_prev_pipe)
+    {
+        vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    }
     self->current_pipeline = pipeline;
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
 }
 
 void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline pipeline)
 {
     daxa_cmd_flush_barriers(self);
+    const bool prev_pipeline_raster = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RasterPipeline>;
+    const bool same_type_same_layout_as_prev_pipe = prev_pipeline_raster && daxa::get<daxa_RasterPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    if (!same_type_same_layout_as_prev_pipe)
+    {
+        vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    }
     self->current_pipeline = pipeline;
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
 }
 
