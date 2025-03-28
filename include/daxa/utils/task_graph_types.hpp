@@ -33,42 +33,82 @@ namespace daxa
         GRAPHICS_SHADER_WRITE,
         GRAPHICS_SHADER_READ_WRITE,
         GRAPHICS_SHADER_READ_WRITE_CONCURRENT,
+        GPS_READ = GRAPHICS_SHADER_READ,
+        GPS_WRITE = GRAPHICS_SHADER_WRITE,
+        GPS_READ_WRITE = GRAPHICS_SHADER_READ_WRITE,
+        GPS_READ_WRITE_CONCURRENT = GRAPHICS_SHADER_READ_WRITE_CONCURRENT,
         COMPUTE_SHADER_READ,
         COMPUTE_SHADER_WRITE,
         COMPUTE_SHADER_READ_WRITE,
         COMPUTE_SHADER_READ_WRITE_CONCURRENT,
+        CS_READ = COMPUTE_SHADER_READ,
+        CS_WRITE = COMPUTE_SHADER_WRITE,
+        CS_READ_WRITE = COMPUTE_SHADER_READ_WRITE,
+        CS_READ_WRITE_CONCURRENT = COMPUTE_SHADER_READ_WRITE_CONCURRENT,
         RAY_TRACING_SHADER_READ,
         RAY_TRACING_SHADER_WRITE,
         RAY_TRACING_SHADER_READ_WRITE,
         RAY_TRACING_SHADER_READ_WRITE_CONCURRENT,
+        RS_READ = RAY_TRACING_SHADER_READ,
+        RS_WRITE = RAY_TRACING_SHADER_WRITE,
+        RS_READ_WRITE = RAY_TRACING_SHADER_READ_WRITE,
+        RS_READ_WRITE_CONCURRENT = RAY_TRACING_SHADER_READ_WRITE_CONCURRENT,
         TASK_SHADER_READ,
         TASK_SHADER_WRITE,
         TASK_SHADER_READ_WRITE,
         TASK_SHADER_READ_WRITE_CONCURRENT,
+        TS_READ = TASK_SHADER_READ,
+        TS_WRITE = TASK_SHADER_WRITE,
+        TS_READ_WRITE = TASK_SHADER_READ_WRITE,
+        TS_READ_WRITE_CONCURRENT = TASK_SHADER_READ_WRITE_CONCURRENT,
         MESH_SHADER_READ,
         MESH_SHADER_WRITE,
         MESH_SHADER_READ_WRITE,
         MESH_SHADER_READ_WRITE_CONCURRENT,
+        MS_READ = MESH_SHADER_READ,
+        MS_WRITE = MESH_SHADER_WRITE,
+        MS_READ_WRITE = MESH_SHADER_READ_WRITE,
+        MS_READ_WRITE_CONCURRENT = MESH_SHADER_READ_WRITE_CONCURRENT,
         VERTEX_SHADER_READ,
         VERTEX_SHADER_WRITE,
         VERTEX_SHADER_READ_WRITE,
         VERTEX_SHADER_READ_WRITE_CONCURRENT,
+        VS_READ = VERTEX_SHADER_READ,
+        VS_WRITE = VERTEX_SHADER_WRITE,
+        VS_READ_WRITE = VERTEX_SHADER_READ_WRITE,
+        VS_READ_WRITE_CONCURRENT = VERTEX_SHADER_READ_WRITE_CONCURRENT,
         TESSELLATION_CONTROL_SHADER_READ,
         TESSELLATION_CONTROL_SHADER_WRITE,
         TESSELLATION_CONTROL_SHADER_READ_WRITE,
         TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT,
+        TCS_READ = TESSELLATION_CONTROL_SHADER_READ,
+        TCS_WRITE = TESSELLATION_CONTROL_SHADER_WRITE,
+        TCS_READ_WRITE = TESSELLATION_CONTROL_SHADER_READ_WRITE,
+        TCS_READ_WRITE_CONCURRENT = TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT,
         TESSELLATION_EVALUATION_SHADER_READ,
         TESSELLATION_EVALUATION_SHADER_WRITE,
         TESSELLATION_EVALUATION_SHADER_READ_WRITE,
         TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT,
+        TES_READ = TESSELLATION_EVALUATION_SHADER_READ,
+        TES_WRITE = TESSELLATION_EVALUATION_SHADER_WRITE,
+        TES_READ_WRITE = TESSELLATION_EVALUATION_SHADER_READ_WRITE,
+        TES_READ_WRITE_CONCURRENT = TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT,
         GEOMETRY_SHADER_READ,
         GEOMETRY_SHADER_WRITE,
         GEOMETRY_SHADER_READ_WRITE,
         GEOMETRY_SHADER_READ_WRITE_CONCURRENT,
+        GS_READ = GEOMETRY_SHADER_READ,
+        GS_WRITE = GEOMETRY_SHADER_WRITE,
+        GS_READ_WRITE = GEOMETRY_SHADER_READ_WRITE,
+        GS_READ_WRITE_CONCURRENT = GEOMETRY_SHADER_READ_WRITE_CONCURRENT,
         FRAGMENT_SHADER_READ,
         FRAGMENT_SHADER_WRITE,
         FRAGMENT_SHADER_READ_WRITE,
         FRAGMENT_SHADER_READ_WRITE_CONCURRENT,
+        FS_READ = FRAGMENT_SHADER_READ,
+        FS_WRITE = FRAGMENT_SHADER_WRITE,
+        FS_READ_WRITE = FRAGMENT_SHADER_READ_WRITE,
+        FS_READ_WRITE_CONCURRENT = FRAGMENT_SHADER_READ_WRITE_CONCURRENT,
         INDEX_READ,
         DRAW_INDIRECT_INFO_READ,
         TRANSFER_READ,
@@ -80,6 +120,17 @@ namespace daxa
         ACCELERATION_STRUCTURE_BUILD_READ,
         ACCELERATION_STRUCTURE_BUILD_WRITE,
         ACCELERATION_STRUCTURE_BUILD_READ_WRITE,
+        IDX_READ = INDEX_READ,
+        DII_READ = DRAW_INDIRECT_INFO_READ,
+        T_READ = TRANSFER_READ,
+        T_WRITE = TRANSFER_WRITE,
+        T_READ_WRITE = TRANSFER_READ_WRITE,
+        HT_READ = HOST_TRANSFER_READ,
+        HT_WRITE = HOST_TRANSFER_WRITE,
+        HT_READ_WRITE = HOST_TRANSFER_READ_WRITE,
+        ASB_READ,
+        ASB_WRITE,
+        ASB_READ_WRITE,
         MAX_ENUM = 0x7fffffff,
     };
 
@@ -139,58 +190,115 @@ namespace daxa
         SHADER_STORAGE_READ_ONLY,
         SHADER_STORAGE_READ_WRITE,
         SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        SAMPLED = SHADER_SAMPLED,
+        WRITE = SHADER_STORAGE_WRITE_ONLY,
+        READ = SHADER_STORAGE_READ_ONLY,
+        READ_WRITE = SHADER_STORAGE_READ_WRITE,
+        READ_WRITE_CONCURRENT = SHADER_STORAGE_READ_WRITE_CONCURRENT,
         GRAPHICS_SHADER_SAMPLED,
         GRAPHICS_SHADER_STORAGE_WRITE_ONLY,
         GRAPHICS_SHADER_STORAGE_READ_ONLY,
         GRAPHICS_SHADER_STORAGE_READ_WRITE,
         GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        GPS_SAMPLED = GRAPHICS_SHADER_SAMPLED,
+        GPS_WRITE = GRAPHICS_SHADER_STORAGE_WRITE_ONLY,
+        GPS_READ = GRAPHICS_SHADER_STORAGE_READ_ONLY,
+        GPS_READ_WRITE = GRAPHICS_SHADER_STORAGE_READ_WRITE,
+        GPS_READ_WRITE_CONCURRENT = GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         COMPUTE_SHADER_SAMPLED,
         COMPUTE_SHADER_STORAGE_WRITE_ONLY,
         COMPUTE_SHADER_STORAGE_READ_ONLY,
         COMPUTE_SHADER_STORAGE_READ_WRITE,
         COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        CS_SAMPLED = COMPUTE_SHADER_SAMPLED,
+        CS_WRITE = COMPUTE_SHADER_STORAGE_WRITE_ONLY,
+        CS_READ = COMPUTE_SHADER_STORAGE_READ_ONLY,
+        CS_READ_WRITE = COMPUTE_SHADER_STORAGE_READ_WRITE,
+        CS_READ_WRITE_CONCURRENT = COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         RAY_TRACING_SHADER_SAMPLED,
         RAY_TRACING_SHADER_STORAGE_WRITE_ONLY,
         RAY_TRACING_SHADER_STORAGE_READ_ONLY,
         RAY_TRACING_SHADER_STORAGE_READ_WRITE,
         RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        RS_SAMPLED = RAY_TRACING_SHADER_SAMPLED,
+        RS_WRITE = RAY_TRACING_SHADER_STORAGE_WRITE_ONLY,
+        RS_READ = RAY_TRACING_SHADER_STORAGE_READ_ONLY,
+        RS_READ_WRITE = RAY_TRACING_SHADER_STORAGE_READ_WRITE,
+        RS_READ_WRITE_CONCURRENT = RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         TASK_SHADER_SAMPLED,
         TASK_SHADER_STORAGE_WRITE_ONLY,
         TASK_SHADER_STORAGE_READ_ONLY,
         TASK_SHADER_STORAGE_READ_WRITE,
         TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        TS_SAMPLED = TASK_SHADER_SAMPLED,
+        TS_WRITE = TASK_SHADER_STORAGE_WRITE_ONLY,
+        TS_READ = TASK_SHADER_STORAGE_READ_ONLY,
+        TS_READ_WRITE = TASK_SHADER_STORAGE_READ_WRITE,
+        TS_READ_WRITE_CONCURRENT = TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         MESH_SHADER_SAMPLED,
         MESH_SHADER_STORAGE_WRITE_ONLY,
         MESH_SHADER_STORAGE_READ_ONLY,
         MESH_SHADER_STORAGE_READ_WRITE,
         MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        MS_SAMPLED = MESH_SHADER_SAMPLED,
+        MS_WRITE = MESH_SHADER_STORAGE_WRITE_ONLY,
+        MS_READ = MESH_SHADER_STORAGE_READ_ONLY,
+        MS_READ_WRITE = MESH_SHADER_STORAGE_READ_WRITE,
+        MS_READ_WRITE_CONCURRENT = MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         VERTEX_SHADER_SAMPLED,
         VERTEX_SHADER_STORAGE_WRITE_ONLY,
         VERTEX_SHADER_STORAGE_READ_ONLY,
         VERTEX_SHADER_STORAGE_READ_WRITE,
         VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        VS_SAMPLED = VERTEX_SHADER_SAMPLED,
+        VS_WRITE = VERTEX_SHADER_STORAGE_WRITE_ONLY,
+        VS_READ = VERTEX_SHADER_STORAGE_READ_ONLY,
+        VS_READ_WRITE = VERTEX_SHADER_STORAGE_READ_WRITE,
+        VS_READ_WRITE_CONCURRENT = VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         TESSELLATION_CONTROL_SHADER_SAMPLED,
         TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY,
         TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY,
         TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE,
         TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        TCS_SAMPLED = TESSELLATION_CONTROL_SHADER_SAMPLED,
+        TCS_WRITE = TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY,
+        TCS_READ = TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY,
+        TCS_READ_WRITE = TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE,
+        TCS_READ_WRITE_CONCURRENT = TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         TESSELLATION_EVALUATION_SHADER_SAMPLED,
         TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY,
         TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY,
         TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE,
         TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        TES_SAMPLED = TESSELLATION_EVALUATION_SHADER_SAMPLED,
+        TES_WRITE = TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY,
+        TES_READ = TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY,
+        TES_READ_WRITE = TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE,
+        TES_READ_WRITE_CONCURRENT = TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         GEOMETRY_SHADER_SAMPLED,
         GEOMETRY_SHADER_STORAGE_WRITE_ONLY,
         GEOMETRY_SHADER_STORAGE_READ_ONLY,
         GEOMETRY_SHADER_STORAGE_READ_WRITE,
         GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        GS_SAMPLED = GEOMETRY_SHADER_SAMPLED,
+        GS_WRITE = GEOMETRY_SHADER_STORAGE_WRITE_ONLY,
+        GS_READ = GEOMETRY_SHADER_STORAGE_READ_ONLY,
+        GS_READ_WRITE = GEOMETRY_SHADER_STORAGE_READ_WRITE,
+        GS_READ_WRITE_CONCURRENT = GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         FRAGMENT_SHADER_SAMPLED,
         FRAGMENT_SHADER_STORAGE_WRITE_ONLY,
         FRAGMENT_SHADER_STORAGE_READ_ONLY,
         FRAGMENT_SHADER_STORAGE_READ_WRITE,
         FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT,
+        FS_SAMPLED = FRAGMENT_SHADER_SAMPLED,
+        FS_WRITE = FRAGMENT_SHADER_STORAGE_WRITE_ONLY,
+        FS_READ = FRAGMENT_SHADER_STORAGE_READ_ONLY,
+        FS_READ_WRITE = FRAGMENT_SHADER_STORAGE_READ_WRITE,
+        FS_READ_WRITE_CONCURRENT = FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT,
         TRANSFER_READ,
         TRANSFER_WRITE,
+        T_READ = TRANSFER_READ,
+        T_WRITE = TRANSFER_WRITE,
         COLOR_ATTACHMENT,
         DEPTH_ATTACHMENT,
         STENCIL_ATTACHMENT,
@@ -198,6 +306,13 @@ namespace daxa
         DEPTH_ATTACHMENT_READ,
         STENCIL_ATTACHMENT_READ,
         DEPTH_STENCIL_ATTACHMENT_READ,
+        CA = COLOR_ATTACHMENT,
+        DA = DEPTH_ATTACHMENT,
+        SA = STENCIL_ATTACHMENT,
+        DSA = DEPTH_STENCIL_ATTACHMENT,
+        DA_READ = DEPTH_ATTACHMENT_READ,
+        SA_READ = STENCIL_ATTACHMENT_READ,
+        DSA_READ = DEPTH_STENCIL_ATTACHMENT_READ,
         RESOLVE_WRITE,
         PRESENT,
         MAX_ENUM = 0x7fffffff,
@@ -236,6 +351,8 @@ namespace daxa
         using ID_T = TlasId;
     };
 
+    struct TaskAttachmentInfo;
+
     struct TaskImageView : public TaskGPUResourceView
     {
         daxa::ImageMipArraySlice slice = {};
@@ -244,6 +361,14 @@ namespace daxa
             auto ret = *this;
             ret.slice = new_slice;
             return ret;
+        }
+        auto mips(u32 base_mip_level, u32 mip_count = 1) const -> TaskImageView
+        {
+            return view({.base_mip_level = base_mip_level, .level_count = mip_count});
+        }
+        auto layers(u32 base_array_layer, u32 layer_count = 1) const -> TaskImageView
+        {
+            return view({.base_array_layer = base_array_layer, .layer_count = layer_count});
         }
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskImageView const & other) const = default;
@@ -637,6 +762,14 @@ namespace daxa
         {
             return this->device.buffer_host_address(this->get(tbuffer).ids[array_index]);
         }
+        auto id(TaskIndexOrView auto tresource, u32 index = 0)
+        {
+            return this->get(tresource).ids[index];
+        }
+        auto view(TaskImageIndexOrView auto timg, u32 index = 0)
+        {
+            return this->get(timg).view_ids[index];
+        }
     };
 
     using TaskViewVariant = Variant<
@@ -806,81 +939,211 @@ namespace daxa
     ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⡙⠓⠻⠶⠽⢮⣶⣥⣷⣭⣾⣥⣯⡵⠯⠼⠗⠛⠋⣉⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     */
 
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                                              \
-    namespace HEAD_NAME                                                                   \
-    {                                                                                     \
-        static inline constexpr char NAME[] = #HEAD_NAME;                                 \
-        template <daxa::usize ATTACHMENT_COUNT>                                           \
-        struct AttachmentsStruct                                                          \
-        {                                                                                 \
-            daxa::u32 declared_attachments_count = {};                                    \
-            std::array<daxa::TaskAttachment, ATTACHMENT_COUNT> declared_attachments = {}; \
-                                                                                          \
-            auto constexpr add_attachment(auto attachment) -> daxa::u32                   \
-            {                                                                             \
-                declared_attachments.at(declared_attachments_count) = attachment;         \
-                return declared_attachments_count++;                                      \
+    /// ======================================= BRACE FOR IMPACT =======================================
+    /// ============================== HEAVY TEMPLATE METAPROGRAMMING AHEAD ============================
+    /// =========================================DO NOT PANIC ==========================================
+
+    struct TaskAttachmentViewWrapperRaw
+    {
+        TaskAttachmentType type = TaskAttachmentType::UNDEFINED;
+        union Value
+        {
+            u32 undefined;
+            TaskBufferView buffer;
+            TaskBlasView blas;
+            TaskTlasView tlas;
+            TaskImageView image;
+        } value = {.undefined = {}};
+    };
+
+    template <typename T>
+    struct TaskAttachmentViewWrapper
+    {
+        TaskAttachmentViewWrapperRaw _value = {};
+
+        TaskAttachmentViewWrapper() = default;
+        TaskAttachmentViewWrapper(TaskBufferView const & view)
+            requires(std::is_same_v<T, TaskBufferView>)
+            : _value{TaskAttachmentType::BUFFER, {.buffer = view}}
+        {
+        }
+        TaskAttachmentViewWrapper(TaskBlasView const & view)
+            requires(std::is_same_v<T, TaskBlasView>)
+            : _value{TaskAttachmentType::BLAS, {.blas = view}}
+        {
+        }
+        TaskAttachmentViewWrapper(TaskTlasView const & view)
+            requires(std::is_same_v<T, TaskTlasView>)
+            : _value{TaskAttachmentType::TLAS, {.tlas = view}}
+        {
+        }
+        TaskAttachmentViewWrapper(TaskImageView const & view)
+            requires(std::is_same_v<T, TaskImageView>)
+            : _value{TaskAttachmentType::IMAGE, {.image = view}}
+        {
+        }
+    };
+
+    // Used to specialize the TaskHeadStruct.
+    // Specialized struct will contain an array of all declared attachments,
+    // As well as a named field for each declared attachment with the index of that declaration as a value.
+    template <daxa::usize ATTACHMENT_COUNT>
+    struct TaskHeadStructSpecializeAttachmentDecls
+    {
+        struct DeclaredAttachments
+        {
+            std::array<daxa::TaskAttachment, ATTACHMENT_COUNT> value = {};
+            u32 count = {};
+        };
+        using InternalT = DeclaredAttachments;
+        using TaskBufferT = daxa::TaskBufferAttachmentIndex const;
+        using TaskBlasT = daxa::TaskBlasAttachmentIndex const;
+        using TaskTlasT = daxa::TaskTlasAttachmentIndex const;
+        using TaskImageT = daxa::TaskImageAttachmentIndex const;
+        constexpr static usize DECL_ATTACHMENTS = true;
+        template <typename TaskResourceT>
+        static constexpr auto process_attachment_decl(DeclaredAttachments & _internal, auto const & initalizer)
+        {
+            _internal.value.at(_internal.count) = initalizer;
+            return _internal.count++;
+        }
+    };
+
+    // Used to specialize the TaskHeadStruct.
+    // Specialized struct will contain a named field for each declared attachment typed as a view for that attachment.
+    template <daxa::usize ATTACHMENT_COUNT>
+    struct TaskHeadStructSpecializeAttachmentViews
+    {
+        using InternalT = u32;
+        using TaskBufferT = daxa::TaskAttachmentViewWrapper<TaskBufferView>;
+        using TaskBlasT = daxa::TaskAttachmentViewWrapper<TaskBlasView>;
+        using TaskTlasT = daxa::TaskAttachmentViewWrapper<TaskTlasView>;
+        using TaskImageT = daxa::TaskAttachmentViewWrapper<TaskImageView>;
+        constexpr static usize DECL_ATTACHMENTS = false;
+        template <typename TaskResourceT>
+        static constexpr auto process_attachment_decl(InternalT &, auto const & initalizer)
+        {
+            return TaskResourceT{};
+        }
+
+        static auto convert(auto const & type) -> daxa::AttachmentViews<ATTACHMENT_COUNT>
+        {
+            // Binary compatible with TaskHeadStruct for Views type.
+            struct Extractor
+            {
+                u32 dummy = {};
+                std::array<TaskAttachmentViewWrapperRaw, ATTACHMENT_COUNT> initializers = {};
+            };
+            auto views = std::bit_cast<Extractor>(type);
+            auto ret = daxa::AttachmentViews<ATTACHMENT_COUNT>{};
+            for (daxa::u32 i = 0; i < ATTACHMENT_COUNT; ++i)
+            {
+                switch (views.initializers[i].type)
+                {
+                case TaskAttachmentType::BUFFER:
+                    ret.views[i] = views.initializers[i].value.buffer;
+                    break;
+                case TaskAttachmentType::BLAS:
+                    ret.views[i] = views.initializers[i].value.blas;
+                    break;
+                case TaskAttachmentType::TLAS:
+                    ret.views[i] = views.initializers[i].value.tlas;
+                    break;
+                case TaskAttachmentType::IMAGE:
+                    ret.views[i] = views.initializers[i].value.image;
+                    break;
+                default:
+                    DAXA_DBG_ASSERT_TRUE_M(false, "Invalid attachment type!");
+                }
+            }
+            return ret;
+        }
+    };
+
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                    \
+    namespace HEAD_NAME                                         \
+    {                                                           \
+        static inline constexpr char NAME[] = #HEAD_NAME;       \
+        template <typename TDecl, daxa::usize ATTACHMENT_COUNT> \
+        struct TaskHeadStruct                                   \
+        {                                                       \
+            TDecl::InternalT _internal = {};                    \
+            operator daxa::AttachmentViews<ATTACHMENT_COUNT>()  \
+                requires(!TDecl::DECL_ATTACHMENTS)              \
+            {                                                   \
+                return TDecl::convert(*this);                   \
             }
 
-#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)          \
-    daxa::TaskBufferAttachmentIndex const NAME =                \
-        {add_attachment(daxa::TaskBufferAttachment{             \
-            .name = #NAME,                                      \
-            .task_access = daxa::TaskBufferAccess::TASK_ACCESS, \
-            __VA_ARGS__})};
+#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)              \
+    TDecl::TaskBufferT NAME =                                       \
+        {TDecl::process_attachment_decl<TDecl::TaskBufferT>(        \
+            _internal,                                              \
+            daxa::TaskBufferAttachment{                             \
+                .name = #NAME,                                      \
+                .task_access = daxa::TaskBufferAccess::TASK_ACCESS, \
+                __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)               \
-    daxa::TaskBlasAttachmentIndex const NAME =                \
-        {add_attachment(daxa::TaskBlasAttachment{             \
-            .name = #NAME,                                    \
-            .task_access = daxa::TaskBlasAccess::TASK_ACCESS, \
-        })};
+#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)                   \
+    TDecl::TaskBlasT const NAME =                                 \
+        {TDecl::process_attachment_decl<TDecl::TaskBlasT>(        \
+            _internal,                                            \
+            daxa::TaskBlasAttachment{                             \
+                .name = #NAME,                                    \
+                .task_access = daxa::TaskBlasAccess::TASK_ACCESS, \
+            })};
 
-#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)          \
-    daxa::TaskTlasAttachmentIndex const NAME =                \
-        {add_attachment(daxa::TaskTlasAttachment{             \
-            .name = #NAME,                                    \
-            .task_access = daxa::TaskTlasAccess::TASK_ACCESS, \
-            __VA_ARGS__})};
+#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)              \
+    TDecl::TaskTlasT const NAME =                                 \
+        {TDecl::process_attachment_decl<TDecl::TaskTlasT>(        \
+            _internal,                                            \
+            daxa::TaskTlasAttachment{                             \
+                .name = #NAME,                                    \
+                .task_access = daxa::TaskTlasAccess::TASK_ACCESS, \
+                __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)          \
-    daxa::TaskImageAttachmentIndex const NAME =                \
-        {add_attachment(daxa::TaskImageAttachment{             \
-            .name = #NAME,                                     \
-            .task_access = daxa::TaskImageAccess::TASK_ACCESS, \
-            __VA_ARGS__})};
+#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)              \
+    TDecl::TaskImageT const NAME =                                 \
+        {TDecl::process_attachment_decl<TDecl::TaskImageT>(        \
+            _internal,                                             \
+            daxa::TaskImageAttachment{                             \
+                .name = #NAME,                                     \
+                .task_access = daxa::TaskImageAccess::TASK_ACCESS, \
+                __VA_ARGS__})};
 
-#define DAXA_DECL_TASK_HEAD_END                                                                                      \
-    }                                                                                                                \
-    ;                                                                                                                \
-    static inline constexpr auto ATTACHMENT_COUNT = AttachmentsStruct<256>{}.declared_attachments_count;             \
-    static inline constexpr auto ATTACHMENTS = AttachmentsStruct<ATTACHMENT_COUNT>{};                                \
-    static inline constexpr auto const & AT = ATTACHMENTS;                                                           \
-    struct alignas(daxa::detail::get_asb_size_and_alignment(AT.declared_attachments).alignment) AttachmentShaderBlob \
-    {                                                                                                                \
-        std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT.declared_attachments).size> value = {};    \
-        AttachmentShaderBlob() = default;                                                                            \
-        AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                      \
-        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                    \
-        {                                                                                                            \
-            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                       \
-            for (daxa::u32 i = 0; i < data.size(); ++i)                                                              \
-                this->value[i] = data[i];                                                                            \
-            return *this;                                                                                            \
-        }                                                                                                            \
-    };                                                                                                               \
-    struct Task : public daxa::IPartialTask                                                                          \
-    {                                                                                                                \
-        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                             \
-        static constexpr AttachmentsStruct<ATTACHMENT_COUNT> const & AT = ATTACHMENTS;                               \
-        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                \
-        static auto name() -> std::string_view { return std::string_view{NAME}; }                                    \
-        static auto attachments() -> std::span<daxa::TaskAttachment const>                                           \
-        {                                                                                                            \
-            return AT.declared_attachments;                                                                          \
-        }                                                                                                            \
-    };                                                                                                               \
-    }                                                                                                                \
+#define DAXA_DECL_TASK_HEAD_END                                                                                                                \
+    }                                                                                                                                          \
+    ;                                                                                                                                          \
+    static inline constexpr auto ATTACHMENT_COUNT = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256>, 256>{}._internal.count; \
+    using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                   \
+    using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                         \
+    static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                \
+    static inline constexpr auto const & AT = ATTACHMENTS;                                                                                     \
+    struct alignas(daxa::detail::get_asb_size_and_alignment(AT._internal.value).alignment) AttachmentShaderBlob                                \
+    {                                                                                                                                          \
+        std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT._internal.value).size> value = {};                                   \
+        AttachmentShaderBlob() = default;                                                                                                      \
+        AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                                                \
+        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                              \
+        {                                                                                                                                      \
+            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                 \
+            for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                        \
+                this->value[i] = data[i];                                                                                                      \
+            return *this;                                                                                                                      \
+        }                                                                                                                                      \
+    };                                                                                                                                         \
+    struct Task : public daxa::IPartialTask                                                                                                    \
+    {                                                                                                                                          \
+        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
+        using Views = VIEWS_T;                                                                                                                 \
+        static constexpr ATTACHMENTS_T const & AT = ATTACHMENTS;                                                                               \
+        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                                          \
+        static auto name() -> std::string_view { return std::string_view{NAME}; }                                                              \
+        static auto attachments() -> std::span<daxa::TaskAttachment const>                                                                     \
+        {                                                                                                                                      \
+            return AT._internal.value;                                                                                                         \
+        }                                                                                                                                      \
+    };                                                                                                                                         \
+    }                                                                                                                                          \
     ;
 
 #define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
@@ -1091,12 +1354,6 @@ namespace daxa
         static auto inc_refcnt(ImplHandle const * object) -> u64;
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
-
-    using AttachmentViewPairVariant = Variant<
-        std::pair<TaskBufferAttachment, TaskBufferView>,
-        std::pair<TaskBlasAttachment, TaskBlasView>,
-        std::pair<TaskTlasAttachment, TaskTlasView>,
-        std::pair<TaskImageAttachment, TaskImageView>>;
 
     inline auto attachment_view(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewVariant
     {
