@@ -1060,6 +1060,13 @@ namespace daxa
         }
     };
 
+#define _DAXA_INTELLISENSE_FIX_COMMA ,
+#ifdef __INTELLISENSE__
+#define _DAXA_INTELLISENSE_FIX(X) 256
+#else
+#define _DAXA_INTELLISENSE_FIX(X) X
+#endif
+
 #define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                    \
     namespace HEAD_NAME                                         \
     {                                                           \
@@ -1110,40 +1117,40 @@ namespace daxa
                 .task_access = daxa::TaskImageAccess::TASK_ACCESS, \
                 __VA_ARGS__})};
 
-#define DAXA_DECL_TASK_HEAD_END                                                                                                                \
-    }                                                                                                                                          \
-    ;                                                                                                                                          \
-    static inline constexpr auto ATTACHMENT_COUNT = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256>, 256>{}._internal.count; \
-    using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                   \
-    using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                         \
-    static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                \
-    static inline constexpr auto const & AT = ATTACHMENTS;                                                                                     \
-    struct alignas(daxa::detail::get_asb_size_and_alignment(AT._internal.value).alignment) AttachmentShaderBlob                                \
-    {                                                                                                                                          \
-        std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT._internal.value).size> value = {};                                   \
-        AttachmentShaderBlob() = default;                                                                                                      \
-        AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                                                \
-        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                              \
-        {                                                                                                                                      \
-            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                 \
-            for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                        \
-                this->value[i] = data[i];                                                                                                      \
-            return *this;                                                                                                                      \
-        }                                                                                                                                      \
-    };                                                                                                                                         \
-    struct Task : public daxa::IPartialTask                                                                                                    \
-    {                                                                                                                                          \
-        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
-        using Views = VIEWS_T;                                                                                                                 \
-        static constexpr ATTACHMENTS_T const & AT = ATTACHMENTS;                                                                               \
-        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                                          \
-        static auto name() -> std::string_view { return std::string_view{NAME}; }                                                              \
-        static auto attachments() -> std::span<daxa::TaskAttachment const>                                                                     \
-        {                                                                                                                                      \
-            return AT._internal.value;                                                                                                         \
-        }                                                                                                                                      \
-    };                                                                                                                                         \
-    }                                                                                                                                          \
+#define DAXA_DECL_TASK_HEAD_END                                                                                                                                                                    \
+    }                                                                                                                                                                                              \
+    ;                                                                                                                                                                                              \
+    static inline constexpr auto ATTACHMENT_COUNT = _DAXA_INTELLISENSE_FIX(TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256> _DAXA_INTELLISENSE_FIX_COMMA 256>{}._internal.count); \
+    using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                                                                       \
+    using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                                                                             \
+    static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                                                                    \
+    static inline constexpr auto const & AT = ATTACHMENTS;                                                                                                                                         \
+    struct alignas(daxa::detail::get_asb_size_and_alignment(AT._internal.value).alignment) AttachmentShaderBlob                                                                                    \
+    {                                                                                                                                                                                              \
+        std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT._internal.value).size> value = {};                                                                                       \
+        AttachmentShaderBlob() = default;                                                                                                                                                          \
+        AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                                                                                                    \
+        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                                                                                  \
+        {                                                                                                                                                                                          \
+            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                                                                     \
+            for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                                                                            \
+                this->value[i] = data[i];                                                                                                                                                          \
+            return *this;                                                                                                                                                                          \
+        }                                                                                                                                                                                          \
+    };                                                                                                                                                                                             \
+    struct Task : public daxa::IPartialTask                                                                                                                                                        \
+    {                                                                                                                                                                                              \
+        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                                                                           \
+        using Views = VIEWS_T;                                                                                                                                                                     \
+        static constexpr ATTACHMENTS_T const & AT = ATTACHMENTS;                                                                                                                                   \
+        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                                                                                              \
+        static auto name() -> std::string_view { return std::string_view{NAME}; }                                                                                                                  \
+        static auto attachments() -> std::span<daxa::TaskAttachment const>                                                                                                                         \
+        {                                                                                                                                                                                          \
+            return AT._internal.value;                                                                                                                                                             \
+        }                                                                                                                                                                                          \
+    };                                                                                                                                                                                             \
+    }                                                                                                                                                                                              \
     ;
 
 #define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
