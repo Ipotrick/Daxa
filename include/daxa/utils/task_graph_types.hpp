@@ -772,6 +772,159 @@ namespace daxa
         }
     };
 
+    
+
+    struct TrackedBuffers
+    {
+        std::span<BufferId const> buffers = {};
+        Access latest_access = {};
+    };
+
+    struct TaskBufferInfo
+    {
+        TrackedBuffers initial_buffers = {};
+        std::string name = {};
+    };
+
+    struct ImplPersistentTaskBufferBlasTlas;
+    struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBufferBlasTlas *>
+    {
+        TaskBuffer() = default;
+        TaskBuffer(TaskBufferInfo const & info);
+        TaskBuffer(daxa::Device & device, BufferInfo const & info);
+
+        operator TaskBufferView() const;
+
+        auto view() const -> TaskBufferView;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        auto info() const -> TaskBufferInfo const &;
+        auto get_state() const -> TrackedBuffers;
+        auto is_owning() const -> bool;
+
+        void set_buffers(TrackedBuffers const & buffers);
+        void swap_buffers(TaskBuffer & other);
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
+    struct TrackedBlas
+    {
+        std::span<BlasId const> blas = {};
+        Access latest_access = {};
+    };
+
+    struct TaskBlasInfo
+    {
+        TrackedBlas initial_blas = {};
+        std::string name = {};
+    };
+
+    struct DAXA_EXPORT_CXX TaskBlas : ManagedPtr<TaskBlas, ImplPersistentTaskBufferBlasTlas *>
+    {
+        TaskBlas() = default;
+        TaskBlas(TaskBlasInfo const & info);
+
+        operator TaskBlasView() const;
+
+        auto view() const -> TaskBlasView;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        auto info() const -> TaskBlasInfo const &;
+        auto get_state() const -> TrackedBlas;
+
+        void set_blas(TrackedBlas const & blas);
+        void swap_blas(TaskBlas & other);
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
+    struct TrackedTlas
+    {
+        std::span<TlasId const> tlas = {};
+        Access latest_access = {};
+    };
+
+    struct TaskTlasInfo
+    {
+        TrackedTlas initial_tlas = {};
+        std::string name = {};
+    };
+
+    struct DAXA_EXPORT_CXX TaskTlas : ManagedPtr<TaskTlas, ImplPersistentTaskBufferBlasTlas *>
+    {
+        TaskTlas() = default;
+        TaskTlas(TaskTlasInfo const & info);
+
+        operator TaskTlasView() const;
+
+        auto view() const -> TaskTlasView;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        auto info() const -> TaskTlasInfo const &;
+        auto get_state() const -> TrackedTlas;
+
+        void set_tlas(TrackedTlas const & tlas);
+        void swap_tlas(TaskTlas & other);
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
+    struct TrackedImages
+    {
+        std::span<ImageId const> images = {};
+        // optional:
+        std::span<ImageSliceState const> latest_slice_states = {};
+    };
+
+    struct TaskImageInfo
+    {
+        TrackedImages initial_images = {};
+        bool swapchain_image = {};
+        std::string name = {};
+    };
+
+    struct ImplPersistentTaskImage;
+    struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
+    {
+        TaskImage() = default;
+        // TaskImage(TaskImage const & ti) = default;
+        TaskImage(TaskImageInfo const & info);
+
+        operator TaskImageView() const;
+
+        auto view() const -> TaskImageView;
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        auto info() const -> TaskImageInfo const &;
+        auto get_state() const -> TrackedImages;
+
+        void set_images(TrackedImages const & images);
+        void swap_images(TaskImage & other);
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
     using TaskViewVariant = Variant<
         std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>,
         std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>,
@@ -967,9 +1120,19 @@ namespace daxa
             : _value{TaskAttachmentType::BUFFER, {.buffer = view}}
         {
         }
+        TaskAttachmentViewWrapper(TaskBuffer const & tbuffer)
+            requires(std::is_same_v<T, TaskBufferView>)
+            : _value{TaskAttachmentType::BUFFER, {.buffer = tbuffer.view()}}
+        {
+        }
         TaskAttachmentViewWrapper(TaskBlasView const & view)
             requires(std::is_same_v<T, TaskBlasView>)
             : _value{TaskAttachmentType::BLAS, {.blas = view}}
+        {
+        }
+        TaskAttachmentViewWrapper(TaskBlas const & tblas)
+            requires(std::is_same_v<T, TaskBlasView>)
+            : _value{TaskAttachmentType::BLAS, {.blas = tblas.view()}}
         {
         }
         TaskAttachmentViewWrapper(TaskTlasView const & view)
@@ -977,9 +1140,19 @@ namespace daxa
             : _value{TaskAttachmentType::TLAS, {.tlas = view}}
         {
         }
+        TaskAttachmentViewWrapper(TaskTlas const & ttlas)
+            requires(std::is_same_v<T, TaskTlasView>)
+            : _value{TaskAttachmentType::TLAS, {.tlas = ttlas.view()}}
+        {
+        }
         TaskAttachmentViewWrapper(TaskImageView const & view)
             requires(std::is_same_v<T, TaskImageView>)
             : _value{TaskAttachmentType::IMAGE, {.image = view}}
+        {
+        }
+        TaskAttachmentViewWrapper(TaskImage const & timage)
+            requires(std::is_same_v<T, TaskImageView>)
+            : _value{TaskAttachmentType::IMAGE, {.image = timage.view()}}
         {
         }
     };
@@ -1210,157 +1383,6 @@ namespace daxa
             }
         }
     }
-
-    struct TrackedBuffers
-    {
-        std::span<BufferId const> buffers = {};
-        Access latest_access = {};
-    };
-
-    struct TaskBufferInfo
-    {
-        TrackedBuffers initial_buffers = {};
-        std::string name = {};
-    };
-
-    struct ImplPersistentTaskBufferBlasTlas;
-    struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBufferBlasTlas *>
-    {
-        TaskBuffer() = default;
-        TaskBuffer(TaskBufferInfo const & info);
-        TaskBuffer(daxa::Device & device, BufferInfo const & info);
-
-        operator TaskBufferView() const;
-
-        auto view() const -> TaskBufferView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
-        auto info() const -> TaskBufferInfo const &;
-        auto get_state() const -> TrackedBuffers;
-        auto is_owning() const -> bool;
-
-        void set_buffers(TrackedBuffers const & buffers);
-        void swap_buffers(TaskBuffer & other);
-
-      protected:
-        template <typename T, typename H_T>
-        friend struct ManagedPtr;
-        static auto inc_refcnt(ImplHandle const * object) -> u64;
-        static auto dec_refcnt(ImplHandle const * object) -> u64;
-    };
-
-    struct TrackedBlas
-    {
-        std::span<BlasId const> blas = {};
-        Access latest_access = {};
-    };
-
-    struct TaskBlasInfo
-    {
-        TrackedBlas initial_blas = {};
-        std::string name = {};
-    };
-
-    struct DAXA_EXPORT_CXX TaskBlas : ManagedPtr<TaskBlas, ImplPersistentTaskBufferBlasTlas *>
-    {
-        TaskBlas() = default;
-        TaskBlas(TaskBlasInfo const & info);
-
-        operator TaskBlasView() const;
-
-        auto view() const -> TaskBlasView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
-        auto info() const -> TaskBlasInfo const &;
-        auto get_state() const -> TrackedBlas;
-
-        void set_blas(TrackedBlas const & blas);
-        void swap_blas(TaskBlas & other);
-
-      protected:
-        template <typename T, typename H_T>
-        friend struct ManagedPtr;
-        static auto inc_refcnt(ImplHandle const * object) -> u64;
-        static auto dec_refcnt(ImplHandle const * object) -> u64;
-    };
-
-    struct TrackedTlas
-    {
-        std::span<TlasId const> tlas = {};
-        Access latest_access = {};
-    };
-
-    struct TaskTlasInfo
-    {
-        TrackedTlas initial_tlas = {};
-        std::string name = {};
-    };
-
-    struct DAXA_EXPORT_CXX TaskTlas : ManagedPtr<TaskTlas, ImplPersistentTaskBufferBlasTlas *>
-    {
-        TaskTlas() = default;
-        TaskTlas(TaskTlasInfo const & info);
-
-        operator TaskTlasView() const;
-
-        auto view() const -> TaskTlasView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
-        auto info() const -> TaskTlasInfo const &;
-        auto get_state() const -> TrackedTlas;
-
-        void set_tlas(TrackedTlas const & tlas);
-        void swap_tlas(TaskTlas & other);
-
-      protected:
-        template <typename T, typename H_T>
-        friend struct ManagedPtr;
-        static auto inc_refcnt(ImplHandle const * object) -> u64;
-        static auto dec_refcnt(ImplHandle const * object) -> u64;
-    };
-
-    struct TrackedImages
-    {
-        std::span<ImageId const> images = {};
-        // optional:
-        std::span<ImageSliceState const> latest_slice_states = {};
-    };
-
-    struct TaskImageInfo
-    {
-        TrackedImages initial_images = {};
-        bool swapchain_image = {};
-        std::string name = {};
-    };
-
-    struct ImplPersistentTaskImage;
-    struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
-    {
-        TaskImage() = default;
-        // TaskImage(TaskImage const & ti) = default;
-        TaskImage(TaskImageInfo const & info);
-
-        operator TaskImageView() const;
-
-        auto view() const -> TaskImageView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
-        auto info() const -> TaskImageInfo const &;
-        auto get_state() const -> TrackedImages;
-
-        void set_images(TrackedImages const & images);
-        void swap_images(TaskImage & other);
-
-      protected:
-        template <typename T, typename H_T>
-        friend struct ManagedPtr;
-        static auto inc_refcnt(ImplHandle const * object) -> u64;
-        static auto dec_refcnt(ImplHandle const * object) -> u64;
-    };
 
     inline auto attachment_view(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewVariant
     {
