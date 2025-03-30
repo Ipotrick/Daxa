@@ -1255,7 +1255,6 @@ namespace daxa
                 return TDecl::convert(*this);                   \
             }
 
-
 // Intellisense has trouble processing the real attachment declarations.
 #if defined(__INTELLISENSE__)
 #define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...) typename TDecl::TaskBufferT NAME = {};
@@ -1434,13 +1433,32 @@ namespace daxa
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
 
-    template<typename T>
-    concept TaskResourceViewOrResource = 
-        std::is_same_v<T, TaskBufferView> || std::is_same_v<T, TaskBlasView> || std::is_same_v<T, TaskTlasView> || std::is_same_v<T, TaskImageView> ||
-        std::is_same_v<T, TaskBuffer> || std::is_same_v<T, TaskBlas> || std::is_same_v<T, TaskTlas> || std::is_same_v<T, TaskImage>;
+    template <typename T>
+    concept TaskBufferViewOrTaskBuffer = std::is_same_v<T, TaskBufferView> || std::is_same_v<T, TaskBuffer>;
 
-    template<typename T>
-    concept TaskImageViewOrImage = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage>;
+    template <typename T>
+    concept TaskBlasViewOrTaskBlas = std::is_same_v<T, TaskBlasView> || std::is_same_v<T, TaskBlas>;
+
+    template <typename T>
+    concept TaskTlasViewOrTaskTlas = std::is_same_v<T, TaskTlasView> || std::is_same_v<T, TaskTlas>;
+
+    template <typename T>
+    concept TaskImageViewOrTaskImage = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage>;
+
+    template <typename T>
+    concept TaskResourceViewOrResource =
+        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T>;
+
+    template <typename T>
+    concept TaskBufferBlasTlasViewOrBufferBlasTlas =
+        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T>;
+
+    template <typename T>
+    concept TaskResourceViewOrResourceOrImageViewType =
+        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T> || std::is_same_v<ImageViewType, T>;
+
+    template <typename T>
+        concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
 
     inline auto inl_attachment(TaskAccess access, TaskBufferView view) -> TaskAttachmentInfo
     {
@@ -1481,12 +1499,12 @@ namespace daxa
         return info;
     }
 
-    inline auto inl_attachment(TaskAccess access, TaskImageView view) -> TaskAttachmentInfo
+    inline auto inl_attachment(TaskAccess access, TaskImageView view, ImageViewType view_type = daxa::ImageViewType::MAX_ENUM) -> TaskAttachmentInfo
     {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
         img.task_access = access;
-        img.view_type = daxa::ImageViewType::MAX_ENUM;
+        img.view_type = view_type;
         img.shader_array_size = 0;
         img.view = view;
         TaskAttachmentInfo info = {};
