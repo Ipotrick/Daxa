@@ -159,17 +159,20 @@ namespace daxa
         }
         InlineTask(std::string name)
         {
-            value._internal._name =std::move(name);
+            value._internal._name = std::move(name);
         }
         virtual ~InlineTask() override
         {
 
         }
-        InlineTask(InlineTask const & other)
+        InlineTask(InlineTask && other)
         {
-            this->value._internal._attachments = other.value._internal._attachments;
-            this->value._internal._callback = other.value._internal._callback;
-            this->value._internal._name = other.value._internal._name;
+            this->value._internal._attachments = std::move(other.value._internal._attachments);
+            this->value._internal._callback = std::move(other.value._internal._callback);
+            this->value._internal._name = std::move(other.value._internal._name);
+            other.value._internal._attachments = {};
+            other.value._internal._callback = {};
+            other.value._internal._name = {};
         }
         constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> override
         {
