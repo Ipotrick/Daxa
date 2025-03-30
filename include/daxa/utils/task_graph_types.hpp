@@ -1434,6 +1434,14 @@ namespace daxa
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
 
+    template<typename T>
+    concept TaskResourceViewOrResource = 
+        std::is_same_v<T, TaskBufferView> || std::is_same_v<T, TaskBlasView> || std::is_same_v<T, TaskTlasView> || std::is_same_v<T, TaskImageView> ||
+        std::is_same_v<T, TaskBuffer> || std::is_same_v<T, TaskBlas> || std::is_same_v<T, TaskTlas> || std::is_same_v<T, TaskImage>;
+
+    template<typename T>
+    concept TaskImageViewOrImage = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage>;
+
     inline auto inl_attachment(TaskAccess access, TaskBufferView view) -> TaskAttachmentInfo
     {
         TaskBufferAttachmentInfo buf = {};
