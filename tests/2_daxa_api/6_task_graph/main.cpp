@@ -24,7 +24,7 @@ struct TestTask : TestTaskHead::Task
         {
             [[maybe_unused]] daxa::BufferId id = ti.get(AT.buffer0).ids[0];
             [[maybe_unused]] char const * name = ti.get(AT.buffer0).name;
-            [[maybe_unused]] daxa::TaskBufferAccess access = ti.get(AT.buffer0).task_access;
+            [[maybe_unused]] daxa::TaskAccess access = ti.get(AT.buffer0).task_access;
             [[maybe_unused]] u8 shader_array_size = ti.get(AT.buffer0).shader_array_size;
             [[maybe_unused]] bool shader_as_address = ti.get(AT.buffer0).shader_as_address;
             [[maybe_unused]] daxa::TaskBufferView view = ti.get(AT.buffer0).view;
@@ -33,7 +33,7 @@ struct TestTask : TestTaskHead::Task
         // The Image Attachment info contents:
         {
             [[maybe_unused]] char const * name = ti.get(AT.image0).name;
-            [[maybe_unused]] daxa::TaskImageAccess access = ti.get(AT.image0).task_access;
+            [[maybe_unused]] daxa::TaskAccess access = ti.get(AT.image0).task_access;
             [[maybe_unused]] daxa::ImageViewType view_type = ti.get(AT.image0).view_type;
             [[maybe_unused]] u8 shader_array_size = ti.get(AT.image0).shader_array_size;
             [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(AT.image0).shader_array_type;
@@ -49,7 +49,7 @@ struct TestTask : TestTaskHead::Task
             // Overloaded for buffer, blas, tlas
             [[maybe_unused]] daxa::DeviceAddress address = ti.device_address(AT.buffer0).value();
 
-            [[maybe_unused]] std::byte* host_address = ti.buffer_host_address(AT.buffer0).value();
+            [[maybe_unused]] std::byte * host_address = ti.buffer_host_address(AT.buffer0).value();
             [[maybe_unused]] daxa::ImageViewInfo img_view_info = ti.image_view_info(AT.image0).value();
 
             // In case the task resource has an array of real resources, one can use the optional second parameter to access those:
@@ -565,11 +565,11 @@ namespace tests
         //  Batch 0:
         //      Task 1)
         //  Batch 1:
-        //      [Barrier Write -> Read Write] + Task 2) and 3) 
+        //      [Barrier Write -> Read Write] + Task 2) and 3)
         //  Batch 2:
-        //      [Barrier Write -> Read] + Task 4) 
+        //      [Barrier Write -> Read] + Task 4)
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
+        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({}, {}));
 
         auto buffer = device.create_buffer({
             .size = 1,
@@ -636,11 +636,11 @@ namespace tests
         //  Batch 0:
         //      Task 1)
         //  Batch 1:
-        //      [Barrier Read -> Read Write] + Task 2) and 3) 
+        //      [Barrier Read -> Read Write] + Task 2) and 3)
         //  Batch 2:
-        //      [Barrier Read Write -> Write] + Task 4) 
+        //      [Barrier Read Write -> Write] + Task 4)
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
+        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({}, {}));
         auto image = device.create_image({
             .size = {1, 1, 1},
             .array_layer_count = 1,
@@ -709,7 +709,7 @@ namespace tests
         //  Expected result:
         //      Oversync between task graph A and B aka one jit [ReadWrite -> ReadWrite] Barrier between
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
+        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({}, {}));
 
         auto buffer = device.create_buffer({
             .size = 1,
@@ -775,7 +775,7 @@ namespace tests
         // batch 0 : read write concurrent (1) (2)
         // batch 2 : read buffer (3)
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
+        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({}, {}));
 
         auto buffer = device.create_buffer({
             .size = 1,
@@ -829,7 +829,6 @@ namespace tests
         task_graph.submit({});
         task_graph.complete({});
 
-
         task_graph.execute({});
         std::cout << task_graph.get_debug_string() << std::endl;
 
@@ -837,7 +836,7 @@ namespace tests
         device.destroy_buffer(buffer);
         device.collect_garbage();
     }
-    
+
     void concurrent_read_on_read()
     {
         // TEST:
@@ -850,7 +849,7 @@ namespace tests
         // batch 1 : read buffer (2 and 3)
         // batch 2 : wriite buffer (4)
         daxa::Instance daxa_ctx = daxa::create_instance({});
-        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
+        daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({}, {}));
 
         auto buffer = device.create_buffer({
             .size = 1,
@@ -923,7 +922,6 @@ namespace tests
         task_graph.submit({});
         task_graph.complete({});
 
-
         task_graph.execute({});
         std::cout << task_graph.get_debug_string() << std::endl;
 
@@ -969,7 +967,7 @@ namespace tests
         task_graph.execute({});
         std::cout << task_graph.get_debug_string() << std::endl;
     }
-} //namespace tests
+} // namespace tests
 
 auto main() -> i32
 {

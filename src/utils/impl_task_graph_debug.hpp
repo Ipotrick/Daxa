@@ -62,16 +62,28 @@ namespace daxa
     template <typename BufferBlasTlasAttachmentT>
     void validate_buffer_blas_tlas_task_view(ITask const & task, u32 attach_index, BufferBlasTlasAttachmentT const & attach)
     {
+        bool const type_restriction_upheld = attach.task_access.restriction == BufferBlasTlasAttachmentT::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
+        bool const view_filled_or_null = !attach.view.is_empty();
         DAXA_DBG_ASSERT_TRUE_M(
-            !attach.view.is_empty(),
+            type_restriction_upheld,
+            std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+                        attach.name, attach_index, to_string(attach.access), task.name()));
+        DAXA_DBG_ASSERT_TRUE_M(
+            view_filled_or_null,
             std::format("Detected unassigned task buffer view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
                         attach.name, attach_index, to_string(attach.access), task.name()));
     }
 
     void validate_image_task_view(ITask const & task, u32 attach_index, TaskImageAttachmentInfo const & attach)
     {
+        bool const type_restriction_upheld = attach.task_access.restriction == TaskImageAttachment::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
+        bool const view_filled_or_null = !attach.view.is_empty();
         DAXA_DBG_ASSERT_TRUE_M(
-            !attach.view.is_empty(),
+            type_restriction_upheld,
+            std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+                        attach.name, attach_index, to_string(attach.access), task.name()));
+        DAXA_DBG_ASSERT_TRUE_M(
+            view_filled_or_null,
             std::format("Detected unassigned task image view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
                         attach.name, attach_index, to_string(attach.access), task.name()));
     }

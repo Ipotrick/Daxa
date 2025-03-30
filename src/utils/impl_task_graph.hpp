@@ -155,8 +155,8 @@ namespace daxa
         std::optional<ImplPresentInfo> present_info = {};
     };
 
-    auto task_image_access_to_layout_access(TaskImageAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>;
-    auto task_buffer_access_to_access(TaskBufferAccess const & access) -> std::pair<Access, TaskAccessConcurrency>;
+    auto task_image_access_to_layout_access(TaskAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>;
+    auto task_access_to_access(TaskAccess const & access) -> std::pair<Access, TaskAccessConcurrency>;
 
     struct ImplTaskGraph;
 

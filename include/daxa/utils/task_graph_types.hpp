@@ -22,303 +22,339 @@
 
 namespace daxa
 {
-    enum struct TaskBufferAccess
+    enum struct TaskAttachmentType : u8
+    {
+        UNDEFINED,
+        BUFFER,
+        BLAS,
+        TLAS,
+        IMAGE,
+    };
+
+    struct TaskBufferAttachmentIndex
+    {
+        u32 value;
+    };
+
+    struct TaskBlasAttachmentIndex
+    {
+        u32 value;
+    };
+
+    struct TaskTlasAttachmentIndex
+    {
+        u32 value;
+    };
+
+    struct TaskImageAttachmentIndex
+    {
+        u32 value;
+    };
+
+    enum struct TaskAccessType : u8
+    {
+        // Concurrent bit: 0
+        // Read bit: 1
+        // Sampled bit: 2
+        // Write bit: 3
+        NONE = 0,
+        CONCURRENT_BIT = 1,
+        READ = (1 << 1) | CONCURRENT_BIT,
+        SAMPLED = 1 << 2 | CONCURRENT_BIT,
+        WRITE = 1 << 3,
+        READ_WRITE = (1 << 1) | (1 << 3),
+        WRITE_CONCURRENT = WRITE | CONCURRENT_BIT,
+        READ_WRITE_CONCURRENT = READ_WRITE | CONCURRENT_BIT,
+    };
+
+    auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
+
+    enum struct TaskStage : u16
     {
         NONE,
-        READ,
-        WRITE,
-        READ_WRITE,
-        READ_WRITE_CONCURRENT,
-        GRAPHICS_SHADER_READ,
-        GRAPHICS_SHADER_WRITE,
-        GRAPHICS_SHADER_READ_WRITE,
-        GRAPHICS_SHADER_READ_WRITE_CONCURRENT,
-        GPS_READ = GRAPHICS_SHADER_READ,
-        GPS_WRITE = GRAPHICS_SHADER_WRITE,
-        GPS_READ_WRITE = GRAPHICS_SHADER_READ_WRITE,
-        GPS_READ_WRITE_CONCURRENT = GRAPHICS_SHADER_READ_WRITE_CONCURRENT,
-        COMPUTE_SHADER_READ,
-        COMPUTE_SHADER_WRITE,
-        COMPUTE_SHADER_READ_WRITE,
-        COMPUTE_SHADER_READ_WRITE_CONCURRENT,
-        CS_READ = COMPUTE_SHADER_READ,
-        CS_WRITE = COMPUTE_SHADER_WRITE,
-        CS_READ_WRITE = COMPUTE_SHADER_READ_WRITE,
-        CS_READ_WRITE_CONCURRENT = COMPUTE_SHADER_READ_WRITE_CONCURRENT,
-        RAY_TRACING_SHADER_READ,
-        RAY_TRACING_SHADER_WRITE,
-        RAY_TRACING_SHADER_READ_WRITE,
-        RAY_TRACING_SHADER_READ_WRITE_CONCURRENT,
-        RS_READ = RAY_TRACING_SHADER_READ,
-        RS_WRITE = RAY_TRACING_SHADER_WRITE,
-        RS_READ_WRITE = RAY_TRACING_SHADER_READ_WRITE,
-        RS_READ_WRITE_CONCURRENT = RAY_TRACING_SHADER_READ_WRITE_CONCURRENT,
-        TASK_SHADER_READ,
-        TASK_SHADER_WRITE,
-        TASK_SHADER_READ_WRITE,
-        TASK_SHADER_READ_WRITE_CONCURRENT,
-        TS_READ = TASK_SHADER_READ,
-        TS_WRITE = TASK_SHADER_WRITE,
-        TS_READ_WRITE = TASK_SHADER_READ_WRITE,
-        TS_READ_WRITE_CONCURRENT = TASK_SHADER_READ_WRITE_CONCURRENT,
-        MESH_SHADER_READ,
-        MESH_SHADER_WRITE,
-        MESH_SHADER_READ_WRITE,
-        MESH_SHADER_READ_WRITE_CONCURRENT,
-        MS_READ = MESH_SHADER_READ,
-        MS_WRITE = MESH_SHADER_WRITE,
-        MS_READ_WRITE = MESH_SHADER_READ_WRITE,
-        MS_READ_WRITE_CONCURRENT = MESH_SHADER_READ_WRITE_CONCURRENT,
-        VERTEX_SHADER_READ,
-        VERTEX_SHADER_WRITE,
-        VERTEX_SHADER_READ_WRITE,
-        VERTEX_SHADER_READ_WRITE_CONCURRENT,
-        VS_READ = VERTEX_SHADER_READ,
-        VS_WRITE = VERTEX_SHADER_WRITE,
-        VS_READ_WRITE = VERTEX_SHADER_READ_WRITE,
-        VS_READ_WRITE_CONCURRENT = VERTEX_SHADER_READ_WRITE_CONCURRENT,
-        TESSELLATION_CONTROL_SHADER_READ,
-        TESSELLATION_CONTROL_SHADER_WRITE,
-        TESSELLATION_CONTROL_SHADER_READ_WRITE,
-        TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT,
-        TCS_READ = TESSELLATION_CONTROL_SHADER_READ,
-        TCS_WRITE = TESSELLATION_CONTROL_SHADER_WRITE,
-        TCS_READ_WRITE = TESSELLATION_CONTROL_SHADER_READ_WRITE,
-        TCS_READ_WRITE_CONCURRENT = TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT,
-        TESSELLATION_EVALUATION_SHADER_READ,
-        TESSELLATION_EVALUATION_SHADER_WRITE,
-        TESSELLATION_EVALUATION_SHADER_READ_WRITE,
-        TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT,
-        TES_READ = TESSELLATION_EVALUATION_SHADER_READ,
-        TES_WRITE = TESSELLATION_EVALUATION_SHADER_WRITE,
-        TES_READ_WRITE = TESSELLATION_EVALUATION_SHADER_READ_WRITE,
-        TES_READ_WRITE_CONCURRENT = TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT,
-        GEOMETRY_SHADER_READ,
-        GEOMETRY_SHADER_WRITE,
-        GEOMETRY_SHADER_READ_WRITE,
-        GEOMETRY_SHADER_READ_WRITE_CONCURRENT,
-        GS_READ = GEOMETRY_SHADER_READ,
-        GS_WRITE = GEOMETRY_SHADER_WRITE,
-        GS_READ_WRITE = GEOMETRY_SHADER_READ_WRITE,
-        GS_READ_WRITE_CONCURRENT = GEOMETRY_SHADER_READ_WRITE_CONCURRENT,
-        FRAGMENT_SHADER_READ,
-        FRAGMENT_SHADER_WRITE,
-        FRAGMENT_SHADER_READ_WRITE,
-        FRAGMENT_SHADER_READ_WRITE_CONCURRENT,
-        FS_READ = FRAGMENT_SHADER_READ,
-        FS_WRITE = FRAGMENT_SHADER_WRITE,
-        FS_READ_WRITE = FRAGMENT_SHADER_READ_WRITE,
-        FS_READ_WRITE_CONCURRENT = FRAGMENT_SHADER_READ_WRITE_CONCURRENT,
-        INDEX_READ,
-        DRAW_INDIRECT_INFO_READ,
-        TRANSFER_READ,
-        TRANSFER_WRITE,
-        TRANSFER_READ_WRITE,
-        HOST_TRANSFER_READ,
-        HOST_TRANSFER_WRITE,
-        HOST_TRANSFER_READ_WRITE,
-        ACCELERATION_STRUCTURE_BUILD_READ,
-        ACCELERATION_STRUCTURE_BUILD_WRITE,
-        ACCELERATION_STRUCTURE_BUILD_READ_WRITE,
-        IDX_READ = INDEX_READ,
-        DII_READ = DRAW_INDIRECT_INFO_READ,
-        T_READ = TRANSFER_READ,
-        T_WRITE = TRANSFER_WRITE,
-        T_READ_WRITE = TRANSFER_READ_WRITE,
-        HT_READ = HOST_TRANSFER_READ,
-        HT_WRITE = HOST_TRANSFER_WRITE,
-        HT_READ_WRITE = HOST_TRANSFER_READ_WRITE,
-        ASB_READ,
-        ASB_WRITE,
-        ASB_READ_WRITE,
-        MAX_ENUM = 0x7fffffff,
+        VERTEX_SHADER,
+        TESSELLATION_CONTROL_SHADER,
+        TESSELLATION_EVALUATION_SHADER,
+        GEOMETRY_SHADER,
+        FRAGMENT_SHADER,
+        COMPUTE_SHADER,
+        RAY_TRACING_SHADER,
+        TASK_SHADER,
+        MESH_SHADER,
+        PRE_RASTERIZATION_SHADERS,
+        RASTER_SHADER,
+        SHADER,
+        COLOR_ATTACHMENT,
+        DEPTH_STENCIL_ATTACHMENT,
+        RESOLVE,
+        PRESENT,
+        INDIRECT_COMMAND,
+        INDEX_INPUT,
+        TRANSFER,
+        HOST,
+        AS_BUILD,
+        ANY_COMMAND,
+    };
+
+    auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags;
+
+    struct TaskAccess
+    {
+        TaskStage stage = {};
+        TaskAccessType type = {};
+        TaskAttachmentType restriction = {};
+    };
+    static_assert(sizeof(TaskAccess) == sizeof(u32));
+
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskAccess const & access) -> std::string_view;
+
+    template <TaskStage STAGE, TaskAttachmentType ATTACHMENT_TYPE_RESTRICTION = TaskAttachmentType::UNDEFINED>
+    struct TaskAccessConstsPartial
+    {
+        static constexpr TaskAccess NONE = TaskAccess{};
+        static constexpr TaskAccess READ = TaskAccess{STAGE, TaskAccessType::READ, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess WRITE = TaskAccess{STAGE, TaskAccessType::WRITE, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess READ_WRITE = TaskAccess{STAGE, TaskAccessType::READ_WRITE, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::READ_WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess SAMPLED = TaskAccess{STAGE, TaskAccessType::SAMPLED, TaskAttachmentType::IMAGE};
+        static constexpr TaskAccess R = READ;
+        static constexpr TaskAccess W = WRITE;
+        static constexpr TaskAccess WC = WRITE_CONCURRENT;
+        static constexpr TaskAccess RW = READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess RWC = READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess S = SAMPLED;
+    };
+
+    struct TaskAccessConsts
+    {
+        using VERTEX_SHADER = TaskAccessConstsPartial<TaskStage::VERTEX_SHADER>;
+        using VS = VERTEX_SHADER;
+        using TESSELLATION_CONTROL_SHADER = TaskAccessConstsPartial<TaskStage::TESSELLATION_CONTROL_SHADER>;
+        using TCS = TESSELLATION_CONTROL_SHADER;
+        using TESSELLATION_EVALUATION_SHADER = TaskAccessConstsPartial<TaskStage::TESSELLATION_EVALUATION_SHADER>;
+        using TES = TESSELLATION_EVALUATION_SHADER;
+        using GEOMETRY_SHADER = TaskAccessConstsPartial<TaskStage::GEOMETRY_SHADER>;
+        using GS = GEOMETRY_SHADER;
+        using FRAGMENT_SHADER = TaskAccessConstsPartial<TaskStage::FRAGMENT_SHADER>;
+        using FS = FRAGMENT_SHADER;
+        using COMPUTE_SHADER = TaskAccessConstsPartial<TaskStage::COMPUTE_SHADER>;
+        using CS = COMPUTE_SHADER;
+        using RAY_TRACING_SHADER = TaskAccessConstsPartial<TaskStage::RAY_TRACING_SHADER>;
+        using RT = RAY_TRACING_SHADER;
+        using TASK_SHADER = TaskAccessConstsPartial<TaskStage::TASK_SHADER>;
+        using TS = TASK_SHADER;
+        using MESH_SHADER = TaskAccessConstsPartial<TaskStage::MESH_SHADER>;
+        using MS = MESH_SHADER;
+        using PRE_RASTERIZATION_SHADERS = TaskAccessConstsPartial<TaskStage::PRE_RASTERIZATION_SHADERS>;
+        using PRS = PRE_RASTERIZATION_SHADERS;
+        using RASTER_SHADER = TaskAccessConstsPartial<TaskStage::RASTER_SHADER>;
+        using RS = RASTER_SHADER;
+        using SHADER = TaskAccessConstsPartial<TaskStage::SHADER>;
+        using S = SHADER;
+        using DEPTH_STENCIL_ATTACHMENT = TaskAccessConstsPartial<TaskStage::DEPTH_STENCIL_ATTACHMENT, TaskAttachmentType::IMAGE>;
+        using DSA = DEPTH_STENCIL_ATTACHMENT;
+        using RESOLVE = TaskAccessConstsPartial<TaskStage::RESOLVE, TaskAttachmentType::IMAGE>;
+        using TRANSFER = TaskAccessConstsPartial<TaskStage::TRANSFER>;
+        using T = TRANSFER;
+        using HOST = TaskAccessConstsPartial<TaskStage::HOST>;
+        using H = HOST;
+        using ACCELERATION_STRUCTURE_BUILD = TaskAccessConstsPartial<TaskStage::AS_BUILD>;
+        using ASB = ACCELERATION_STRUCTURE_BUILD;
+        using ANY_COMMAND = TaskAccessConstsPartial<TaskStage::ANY_COMMAND>;
+        using ANY = ANY_COMMAND;
+        static constexpr TaskAccess NONE = TaskAccess{TaskStage::NONE, TaskAccessType::NONE};
+        static constexpr TaskAccess READ = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::READ};
+        static constexpr TaskAccess WRITE = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::WRITE};
+        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::WRITE_CONCURRENT};
+        static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::READ_WRITE};
+        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::READ_WRITE_CONCURRENT};
+        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::SAMPLED, TaskAttachmentType::IMAGE};
+        static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
+        static constexpr TaskAccess CA = COLOR_ATTACHMENT;
+        static constexpr TaskAccess PRESENT = TaskAccess{TaskStage::PRESENT, TaskAccessType::READ, TaskAttachmentType::IMAGE};
+        static constexpr TaskAccess INDIRECT_COMMAND = TaskAccess{TaskStage::INDIRECT_COMMAND, TaskAccessType::READ, TaskAttachmentType::BUFFER};
+        static constexpr TaskAccess IC = INDIRECT_COMMAND;
+        static constexpr TaskAccess INDEX_INPUT = TaskAccess{TaskStage::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
+        static constexpr TaskAccess IDX = INDEX_INPUT;
+    };
+
+    struct TaskBufferAccess
+    {
+        static constexpr TaskAccess NONE = TaskAccessConsts::NONE;
+        static constexpr TaskAccess READ = TaskAccessConsts::READ;
+        static constexpr TaskAccess WRITE = TaskAccessConsts::WRITE;
+        static constexpr TaskAccess READ_WRITE = TaskAccessConsts::READ_WRITE;
+        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccessConsts::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess GRAPHICS_SHADER_READ = TaskAccessConsts::RS::READ;
+        static constexpr TaskAccess GRAPHICS_SHADER_WRITE = TaskAccessConsts::RS::READ;
+        static constexpr TaskAccess GRAPHICS_SHADER_READ_WRITE = TaskAccessConsts::RS::READ_WRITE;
+        static constexpr TaskAccess GRAPHICS_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::RS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess COMPUTE_SHADER_READ = TaskAccessConsts::COMPUTE_SHADER::READ;
+        static constexpr TaskAccess COMPUTE_SHADER_WRITE = TaskAccessConsts::COMPUTE_SHADER::WRITE;
+        static constexpr TaskAccess COMPUTE_SHADER_READ_WRITE = TaskAccessConsts::COMPUTE_SHADER::READ_WRITE;
+        static constexpr TaskAccess COMPUTE_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::COMPUTE_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess RAY_TRACING_SHADER_READ = TaskAccessConsts::RAY_TRACING_SHADER::READ;
+        static constexpr TaskAccess RAY_TRACING_SHADER_WRITE = TaskAccessConsts::RAY_TRACING_SHADER::WRITE;
+        static constexpr TaskAccess RAY_TRACING_SHADER_READ_WRITE = TaskAccessConsts::RAY_TRACING_SHADER::READ_WRITE;
+        static constexpr TaskAccess RAY_TRACING_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::RAY_TRACING_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess TASK_SHADER_READ = TaskAccessConsts::TASK_SHADER::READ;
+        static constexpr TaskAccess TASK_SHADER_WRITE = TaskAccessConsts::TASK_SHADER::WRITE;
+        static constexpr TaskAccess TASK_SHADER_READ_WRITE = TaskAccessConsts::TASK_SHADER::READ_WRITE;
+        static constexpr TaskAccess TASK_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::TASK_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess MESH_SHADER_READ = TaskAccessConsts::MESH_SHADER::READ;
+        static constexpr TaskAccess MESH_SHADER_WRITE = TaskAccessConsts::MESH_SHADER::WRITE;
+        static constexpr TaskAccess MESH_SHADER_READ_WRITE = TaskAccessConsts::MESH_SHADER::READ_WRITE;
+        static constexpr TaskAccess MESH_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::MESH_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess VERTEX_SHADER_READ = TaskAccessConsts::VERTEX_SHADER::READ;
+        static constexpr TaskAccess VERTEX_SHADER_WRITE = TaskAccessConsts::VERTEX_SHADER::WRITE;
+        static constexpr TaskAccess VERTEX_SHADER_READ_WRITE = TaskAccessConsts::VERTEX_SHADER::READ_WRITE;
+        static constexpr TaskAccess VERTEX_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::VERTEX_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::READ;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_WRITE = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::WRITE;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ_WRITE = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::READ_WRITE;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::READ;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_WRITE = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::WRITE;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ_WRITE = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::READ_WRITE;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess GEOMETRY_SHADER_READ = TaskAccessConsts::GEOMETRY_SHADER::READ;
+        static constexpr TaskAccess GEOMETRY_SHADER_WRITE = TaskAccessConsts::GEOMETRY_SHADER::WRITE;
+        static constexpr TaskAccess GEOMETRY_SHADER_READ_WRITE = TaskAccessConsts::GEOMETRY_SHADER::READ_WRITE;
+        static constexpr TaskAccess GEOMETRY_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::GEOMETRY_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess FRAGMENT_SHADER_READ = TaskAccessConsts::FRAGMENT_SHADER::READ;
+        static constexpr TaskAccess FRAGMENT_SHADER_WRITE = TaskAccessConsts::FRAGMENT_SHADER::WRITE;
+        static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE;
+        static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess INDEX_READ = TaskAccessConsts::INDEX_INPUT;
+        static constexpr TaskAccess DRAW_INDIRECT_INFO_READ = TaskAccessConsts::INDIRECT_COMMAND;
+        static constexpr TaskAccess TRANSFER_READ = TaskAccessConsts::TRANSFER::READ;
+        static constexpr TaskAccess TRANSFER_WRITE = TaskAccessConsts::TRANSFER::WRITE;
+        static constexpr TaskAccess TRANSFER_READ_WRITE = TaskAccessConsts::TRANSFER::READ_WRITE;
+        static constexpr TaskAccess HOST_TRANSFER_READ = TaskAccessConsts::HOST::READ;
+        static constexpr TaskAccess HOST_TRANSFER_WRITE = TaskAccessConsts::HOST::WRITE;
+        static constexpr TaskAccess HOST_TRANSFER_READ_WRITE = TaskAccessConsts::HOST::READ_WRITE;
+        static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_READ = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::READ;
+        static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_WRITE = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::WRITE;
+        static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_READ_WRITE = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::READ_WRITE;
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBufferAccess const & usage) -> std::string_view;
 
-    enum struct TaskBlasAccess
+    struct TaskBlasAccess
     {
-        NONE = static_cast<u32>(TaskBufferAccess::NONE),
-        READ = static_cast<u32>(TaskBufferAccess::READ),
-        WRITE = static_cast<u32>(TaskBufferAccess::WRITE),
-        READ_WRITE = static_cast<u32>(TaskBufferAccess::READ_WRITE),
-        TRANSFER_READ = static_cast<u32>(TaskBufferAccess::TRANSFER_READ),
-        TRANSFER_WRITE = static_cast<u32>(TaskBufferAccess::TRANSFER_WRITE),
-        HOST_TRANSFER_READ = static_cast<u32>(TaskBufferAccess::HOST_TRANSFER_READ),
-        HOST_TRANSFER_WRITE = static_cast<u32>(TaskBufferAccess::HOST_TRANSFER_WRITE),
-        BUILD_READ = static_cast<u32>(TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ),
-        BUILD_WRITE = static_cast<u32>(TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE),
-        BUILD_READ_WRITE = static_cast<u32>(TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE),
-        MAX_ENUM = 0x7fffffff,
+        static constexpr TaskAccess NONE = TaskBufferAccess::NONE;
+        static constexpr TaskAccess READ = TaskBufferAccess::READ;
+        static constexpr TaskAccess WRITE = TaskBufferAccess::WRITE;
+        static constexpr TaskAccess READ_WRITE = TaskBufferAccess::READ_WRITE;
+        static constexpr TaskAccess TRANSFER_READ = TaskBufferAccess::TRANSFER_READ;
+        static constexpr TaskAccess TRANSFER_WRITE = TaskBufferAccess::TRANSFER_WRITE;
+        static constexpr TaskAccess HOST_TRANSFER_READ = TaskBufferAccess::HOST_TRANSFER_READ;
+        static constexpr TaskAccess HOST_TRANSFER_WRITE = TaskBufferAccess::HOST_TRANSFER_WRITE;
+        static constexpr TaskAccess BUILD_READ = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ;
+        static constexpr TaskAccess BUILD_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE;
+        static constexpr TaskAccess BUILD_READ_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE;
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBlasAccess const & usage) -> std::string_view;
 
-    enum struct TaskTlasAccess
+    struct TaskTlasAccess
     {
-        NONE = static_cast<u32>(TaskBufferAccess::NONE),
-        READ = static_cast<u32>(TaskBufferAccess::READ),
-        WRITE = static_cast<u32>(TaskBufferAccess::WRITE),
-        READ_WRITE = static_cast<u32>(TaskBufferAccess::READ_WRITE),
-        TRANSFER_READ = static_cast<u32>(TaskBufferAccess::TRANSFER_READ),
-        TRANSFER_WRITE = static_cast<u32>(TaskBufferAccess::TRANSFER_WRITE),
-        HOST_TRANSFER_READ = static_cast<u32>(TaskBufferAccess::HOST_TRANSFER_READ),
-        HOST_TRANSFER_WRITE = static_cast<u32>(TaskBufferAccess::HOST_TRANSFER_WRITE),
-        BUILD_READ = static_cast<u32>(TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ),
-        BUILD_WRITE = static_cast<u32>(TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE),
-        BUILD_READ_WRITE = static_cast<u32>(TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE),
-        GRAPHICS_SHADER_READ = static_cast<u32>(TaskBufferAccess::GRAPHICS_SHADER_READ),
-        COMPUTE_SHADER_READ = static_cast<u32>(TaskBufferAccess::COMPUTE_SHADER_READ),
-        RAY_TRACING_SHADER_READ = static_cast<u32>(TaskBufferAccess::RAY_TRACING_SHADER_READ),
-        TASK_SHADER_READ = static_cast<u32>(TaskBufferAccess::TASK_SHADER_READ),
-        MESH_SHADER_READ = static_cast<u32>(TaskBufferAccess::MESH_SHADER_READ),
-        VERTEX_SHADER_READ = static_cast<u32>(TaskBufferAccess::VERTEX_SHADER_READ),
-        TESSELLATION_CONTROL_SHADER_READ = static_cast<u32>(TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ),
-        TESSELLATION_EVALUATION_SHADER_READ = static_cast<u32>(TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ),
-        GEOMETRY_SHADER_READ = static_cast<u32>(TaskBufferAccess::GEOMETRY_SHADER_READ),
-        FRAGMENT_SHADER_READ = static_cast<u32>(TaskBufferAccess::FRAGMENT_SHADER_READ),
-        MAX_ENUM = 0x7fffffff,
+        static constexpr TaskAccess NONE = TaskBufferAccess::NONE;
+        static constexpr TaskAccess READ = TaskBufferAccess::READ;
+        static constexpr TaskAccess WRITE = TaskBufferAccess::WRITE;
+        static constexpr TaskAccess READ_WRITE = TaskBufferAccess::READ_WRITE;
+        static constexpr TaskAccess TRANSFER_READ = TaskBufferAccess::TRANSFER_READ;
+        static constexpr TaskAccess TRANSFER_WRITE = TaskBufferAccess::TRANSFER_WRITE;
+        static constexpr TaskAccess HOST_TRANSFER_READ = TaskBufferAccess::HOST_TRANSFER_READ;
+        static constexpr TaskAccess HOST_TRANSFER_WRITE = TaskBufferAccess::HOST_TRANSFER_WRITE;
+        static constexpr TaskAccess BUILD_READ = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ;
+        static constexpr TaskAccess BUILD_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE;
+        static constexpr TaskAccess BUILD_READ_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE;
+        static constexpr TaskAccess GRAPHICS_SHADER_READ = TaskBufferAccess::GRAPHICS_SHADER_READ;
+        static constexpr TaskAccess COMPUTE_SHADER_READ = TaskBufferAccess::COMPUTE_SHADER_READ;
+        static constexpr TaskAccess RAY_TRACING_SHADER_READ = TaskBufferAccess::RAY_TRACING_SHADER_READ;
+        static constexpr TaskAccess TASK_SHADER_READ = TaskBufferAccess::TASK_SHADER_READ;
+        static constexpr TaskAccess MESH_SHADER_READ = TaskBufferAccess::MESH_SHADER_READ;
+        static constexpr TaskAccess VERTEX_SHADER_READ = TaskBufferAccess::VERTEX_SHADER_READ;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ = TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ = TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ;
+        static constexpr TaskAccess GEOMETRY_SHADER_READ = TaskBufferAccess::GEOMETRY_SHADER_READ;
+        static constexpr TaskAccess FRAGMENT_SHADER_READ = TaskBufferAccess::FRAGMENT_SHADER_READ;
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskTlasAccess const & usage) -> std::string_view;
 
-    enum struct TaskImageAccess
+    struct TaskImageAccess
     {
-        NONE,
-        SHADER_SAMPLED,
-        SHADER_STORAGE_WRITE_ONLY,
-        SHADER_STORAGE_READ_ONLY,
-        SHADER_STORAGE_READ_WRITE,
-        SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        SAMPLED = SHADER_SAMPLED,
-        WRITE = SHADER_STORAGE_WRITE_ONLY,
-        READ = SHADER_STORAGE_READ_ONLY,
-        READ_WRITE = SHADER_STORAGE_READ_WRITE,
-        READ_WRITE_CONCURRENT = SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        GRAPHICS_SHADER_SAMPLED,
-        GRAPHICS_SHADER_STORAGE_WRITE_ONLY,
-        GRAPHICS_SHADER_STORAGE_READ_ONLY,
-        GRAPHICS_SHADER_STORAGE_READ_WRITE,
-        GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        GPS_SAMPLED = GRAPHICS_SHADER_SAMPLED,
-        GPS_WRITE = GRAPHICS_SHADER_STORAGE_WRITE_ONLY,
-        GPS_READ = GRAPHICS_SHADER_STORAGE_READ_ONLY,
-        GPS_READ_WRITE = GRAPHICS_SHADER_STORAGE_READ_WRITE,
-        GPS_READ_WRITE_CONCURRENT = GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        COMPUTE_SHADER_SAMPLED,
-        COMPUTE_SHADER_STORAGE_WRITE_ONLY,
-        COMPUTE_SHADER_STORAGE_READ_ONLY,
-        COMPUTE_SHADER_STORAGE_READ_WRITE,
-        COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        CS_SAMPLED = COMPUTE_SHADER_SAMPLED,
-        CS_WRITE = COMPUTE_SHADER_STORAGE_WRITE_ONLY,
-        CS_READ = COMPUTE_SHADER_STORAGE_READ_ONLY,
-        CS_READ_WRITE = COMPUTE_SHADER_STORAGE_READ_WRITE,
-        CS_READ_WRITE_CONCURRENT = COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        RAY_TRACING_SHADER_SAMPLED,
-        RAY_TRACING_SHADER_STORAGE_WRITE_ONLY,
-        RAY_TRACING_SHADER_STORAGE_READ_ONLY,
-        RAY_TRACING_SHADER_STORAGE_READ_WRITE,
-        RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        RS_SAMPLED = RAY_TRACING_SHADER_SAMPLED,
-        RS_WRITE = RAY_TRACING_SHADER_STORAGE_WRITE_ONLY,
-        RS_READ = RAY_TRACING_SHADER_STORAGE_READ_ONLY,
-        RS_READ_WRITE = RAY_TRACING_SHADER_STORAGE_READ_WRITE,
-        RS_READ_WRITE_CONCURRENT = RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        TASK_SHADER_SAMPLED,
-        TASK_SHADER_STORAGE_WRITE_ONLY,
-        TASK_SHADER_STORAGE_READ_ONLY,
-        TASK_SHADER_STORAGE_READ_WRITE,
-        TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        TS_SAMPLED = TASK_SHADER_SAMPLED,
-        TS_WRITE = TASK_SHADER_STORAGE_WRITE_ONLY,
-        TS_READ = TASK_SHADER_STORAGE_READ_ONLY,
-        TS_READ_WRITE = TASK_SHADER_STORAGE_READ_WRITE,
-        TS_READ_WRITE_CONCURRENT = TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        MESH_SHADER_SAMPLED,
-        MESH_SHADER_STORAGE_WRITE_ONLY,
-        MESH_SHADER_STORAGE_READ_ONLY,
-        MESH_SHADER_STORAGE_READ_WRITE,
-        MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        MS_SAMPLED = MESH_SHADER_SAMPLED,
-        MS_WRITE = MESH_SHADER_STORAGE_WRITE_ONLY,
-        MS_READ = MESH_SHADER_STORAGE_READ_ONLY,
-        MS_READ_WRITE = MESH_SHADER_STORAGE_READ_WRITE,
-        MS_READ_WRITE_CONCURRENT = MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        VERTEX_SHADER_SAMPLED,
-        VERTEX_SHADER_STORAGE_WRITE_ONLY,
-        VERTEX_SHADER_STORAGE_READ_ONLY,
-        VERTEX_SHADER_STORAGE_READ_WRITE,
-        VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        VS_SAMPLED = VERTEX_SHADER_SAMPLED,
-        VS_WRITE = VERTEX_SHADER_STORAGE_WRITE_ONLY,
-        VS_READ = VERTEX_SHADER_STORAGE_READ_ONLY,
-        VS_READ_WRITE = VERTEX_SHADER_STORAGE_READ_WRITE,
-        VS_READ_WRITE_CONCURRENT = VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        TESSELLATION_CONTROL_SHADER_SAMPLED,
-        TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY,
-        TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY,
-        TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE,
-        TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        TCS_SAMPLED = TESSELLATION_CONTROL_SHADER_SAMPLED,
-        TCS_WRITE = TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY,
-        TCS_READ = TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY,
-        TCS_READ_WRITE = TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE,
-        TCS_READ_WRITE_CONCURRENT = TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        TESSELLATION_EVALUATION_SHADER_SAMPLED,
-        TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY,
-        TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY,
-        TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE,
-        TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        TES_SAMPLED = TESSELLATION_EVALUATION_SHADER_SAMPLED,
-        TES_WRITE = TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY,
-        TES_READ = TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY,
-        TES_READ_WRITE = TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE,
-        TES_READ_WRITE_CONCURRENT = TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        GEOMETRY_SHADER_SAMPLED,
-        GEOMETRY_SHADER_STORAGE_WRITE_ONLY,
-        GEOMETRY_SHADER_STORAGE_READ_ONLY,
-        GEOMETRY_SHADER_STORAGE_READ_WRITE,
-        GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        GS_SAMPLED = GEOMETRY_SHADER_SAMPLED,
-        GS_WRITE = GEOMETRY_SHADER_STORAGE_WRITE_ONLY,
-        GS_READ = GEOMETRY_SHADER_STORAGE_READ_ONLY,
-        GS_READ_WRITE = GEOMETRY_SHADER_STORAGE_READ_WRITE,
-        GS_READ_WRITE_CONCURRENT = GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        FRAGMENT_SHADER_SAMPLED,
-        FRAGMENT_SHADER_STORAGE_WRITE_ONLY,
-        FRAGMENT_SHADER_STORAGE_READ_ONLY,
-        FRAGMENT_SHADER_STORAGE_READ_WRITE,
-        FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        FS_SAMPLED = FRAGMENT_SHADER_SAMPLED,
-        FS_WRITE = FRAGMENT_SHADER_STORAGE_WRITE_ONLY,
-        FS_READ = FRAGMENT_SHADER_STORAGE_READ_ONLY,
-        FS_READ_WRITE = FRAGMENT_SHADER_STORAGE_READ_WRITE,
-        FS_READ_WRITE_CONCURRENT = FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT,
-        TRANSFER_READ,
-        TRANSFER_WRITE,
-        T_READ = TRANSFER_READ,
-        T_WRITE = TRANSFER_WRITE,
-        COLOR_ATTACHMENT,
-        DEPTH_ATTACHMENT,
-        STENCIL_ATTACHMENT,
-        DEPTH_STENCIL_ATTACHMENT,
-        DEPTH_ATTACHMENT_READ,
-        STENCIL_ATTACHMENT_READ,
-        DEPTH_STENCIL_ATTACHMENT_READ,
-        CA = COLOR_ATTACHMENT,
-        DA = DEPTH_ATTACHMENT,
-        SA = STENCIL_ATTACHMENT,
-        DSA = DEPTH_STENCIL_ATTACHMENT,
-        DA_READ = DEPTH_ATTACHMENT_READ,
-        SA_READ = STENCIL_ATTACHMENT_READ,
-        DSA_READ = DEPTH_STENCIL_ATTACHMENT_READ,
-        RESOLVE_WRITE,
-        PRESENT,
-        MAX_ENUM = 0x7fffffff,
+        static constexpr TaskAccess NONE = TaskAccessConsts::NONE;
+        static constexpr TaskAccess SHADER_SAMPLED = TaskAccessConsts::SHADER::SAMPLED;
+        static constexpr TaskAccess SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::SHADER::WRITE;
+        static constexpr TaskAccess SHADER_STORAGE_READ_ONLY = TaskAccessConsts::SHADER::READ;
+        static constexpr TaskAccess SHADER_STORAGE_READ_WRITE = TaskAccessConsts::SHADER::READ_WRITE;
+        static constexpr TaskAccess SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::SHADER::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess GRAPHICS_SHADER_SAMPLED = TaskAccessConsts::RS::SAMPLED;
+        static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::RS::WRITE;
+        static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::RS::READ;
+        static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::RS::READ_WRITE;
+        static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::RS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess COMPUTE_SHADER_SAMPLED = TaskAccessConsts::CS::SAMPLED;
+        static constexpr TaskAccess COMPUTE_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::CS::WRITE;
+        static constexpr TaskAccess COMPUTE_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::CS::READ;
+        static constexpr TaskAccess COMPUTE_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::CS::READ_WRITE;
+        static constexpr TaskAccess COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::CS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess RAY_TRACING_SHADER_SAMPLED = TaskAccessConsts::RT::SAMPLED;
+        static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::RT::WRITE;
+        static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::RT::READ;
+        static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::RT::READ_WRITE;
+        static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::RT::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess TASK_SHADER_SAMPLED = TaskAccessConsts::TS::SAMPLED;
+        static constexpr TaskAccess TASK_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::TS::WRITE;
+        static constexpr TaskAccess TASK_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::TS::READ;
+        static constexpr TaskAccess TASK_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::TS::READ_WRITE;
+        static constexpr TaskAccess TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::TS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess MESH_SHADER_SAMPLED = TaskAccessConsts::MS::SAMPLED;
+        static constexpr TaskAccess MESH_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::MS::WRITE;
+        static constexpr TaskAccess MESH_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::MS::READ;
+        static constexpr TaskAccess MESH_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::MS::READ_WRITE;
+        static constexpr TaskAccess MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::MS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess VERTEX_SHADER_SAMPLED = TaskAccessConsts::VS::SAMPLED;
+        static constexpr TaskAccess VERTEX_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::VS::WRITE;
+        static constexpr TaskAccess VERTEX_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::VS::READ;
+        static constexpr TaskAccess VERTEX_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::VS::READ_WRITE;
+        static constexpr TaskAccess VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::VS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_SAMPLED = TaskAccessConsts::TCS::SAMPLED;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::TCS::WRITE;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::TCS::READ;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::TCS::READ_WRITE;
+        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::TCS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_SAMPLED = TaskAccessConsts::TES::SAMPLED;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::TES::WRITE;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::TES::READ;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::TES::READ_WRITE;
+        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::TES::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess GEOMETRY_SHADER_SAMPLED = TaskAccessConsts::GS::SAMPLED;
+        static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::GS::WRITE;
+        static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::GS::READ;
+        static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::GS::READ_WRITE;
+        static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::GS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess FRAGMENT_SHADER_SAMPLED = TaskAccessConsts::FS::SAMPLED;
+        static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::FS::WRITE;
+        static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::FS::READ;
+        static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::FS::READ_WRITE;
+        static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::FS::READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess TRANSFER_READ = TaskAccessConsts::TRANSFER::READ;
+        static constexpr TaskAccess TRANSFER_WRITE = TaskAccessConsts::TRANSFER::WRITE;
+        static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccessConsts::CA;
+        static constexpr TaskAccess DEPTH_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
+        static constexpr TaskAccess STENCIL_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
+        static constexpr TaskAccess DEPTH_STENCIL_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
+        static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
+        static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
+        static constexpr TaskAccess DEPTH_STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
+        static constexpr TaskAccess RESOLVE_WRITE = TaskAccessConsts::RESOLVE::READ_WRITE;
+        static constexpr TaskAccess PRESENT = TaskAccessConsts::PRESENT;
     };
-
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskImageAccess const & usage) -> std::string_view;
 
     using TaskResourceIndex = u32;
 
@@ -407,36 +443,6 @@ namespace daxa
         MIP_LEVELS,
     };
 
-    enum struct TaskAttachmentType
-    {
-        UNDEFINED,
-        BUFFER,
-        BLAS,
-        TLAS,
-        IMAGE,
-        MAX_ENUM = 0x7fffffff,
-    };
-
-    struct TaskBufferAttachmentIndex
-    {
-        u32 value;
-    };
-
-    struct TaskBlasAttachmentIndex
-    {
-        u32 value;
-    };
-
-    struct TaskTlasAttachmentIndex
-    {
-        u32 value;
-    };
-
-    struct TaskImageAttachmentIndex
-    {
-        u32 value;
-    };
-
     template <typename T>
     concept TaskBufferIndexOrView = std::is_same_v<T, TaskBufferAttachmentIndex> || std::is_same_v<T, TaskBufferView>;
     template <typename T>
@@ -457,8 +463,9 @@ namespace daxa
     struct TaskBufferAttachment
     {
         using INDEX_TYPE = TaskBufferAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::BUFFER;
         char const * name = {};
-        TaskBufferAccess task_access = {};
+        TaskAccess task_access = {};
         Access access = {};
         u8 shader_array_size = {};
         bool shader_as_address = {};
@@ -467,16 +474,18 @@ namespace daxa
     struct TaskBlasAttachment
     {
         using INDEX_TYPE = TaskBlasAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::BLAS;
         char const * name = {};
-        TaskBlasAccess task_access = {};
+        TaskAccess task_access = {};
         Access access = {};
     };
 
     struct TaskTlasAttachment
     {
         using INDEX_TYPE = TaskTlasAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::TLAS;
         char const * name = {};
-        TaskTlasAccess task_access = {};
+        TaskAccess task_access = {};
         Access access = {};
         bool shader_as_address = {};
     };
@@ -484,8 +493,9 @@ namespace daxa
     struct TaskImageAttachment
     {
         using INDEX_TYPE = TaskImageAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::IMAGE;
         char const * name = {};
-        TaskImageAccess task_access = {};
+        TaskAccess task_access = {};
         Access access = {};
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
@@ -496,7 +506,7 @@ namespace daxa
     struct TaskBufferInlineAttachment
     {
         char const * name = {};
-        TaskBufferAccess access = {};
+        TaskAccess access = {};
         u8 shader_array_size = {};
         bool shader_as_address = {};
         TaskBufferView view = {};
@@ -505,21 +515,21 @@ namespace daxa
     struct TaskBlasInlineAttachment
     {
         char const * name = {};
-        TaskBlasAccess access = {};
+        TaskAccess access = {};
         TaskBlasView view = {};
     };
 
     struct TaskTlasInlineAttachment
     {
         char const * name = {};
-        TaskTlasAccess access = {};
+        TaskAccess access = {};
         TaskTlasView view = {};
     };
 
     struct TaskImageInlineAttachment
     {
         char const * name = {};
-        TaskImageAccess access = {};
+        TaskAccess access = {};
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
         TaskHeadImageArrayType shader_array_type = {};
@@ -771,8 +781,6 @@ namespace daxa
             return this->get(timg).view_ids[index];
         }
     };
-
-    
 
     struct TrackedBuffers
     {
@@ -1194,7 +1202,7 @@ namespace daxa
         using TaskImageT = daxa::TaskAttachmentViewWrapper<TaskImageView>;
         constexpr static usize DECL_ATTACHMENTS = false;
         template <typename TaskResourceT>
-        static constexpr auto process_attachment_decl(InternalT &, auto const & initalizer)
+        static constexpr auto process_attachment_decl(InternalT &, auto const &)
         {
             return TaskResourceT{};
         }
@@ -1233,13 +1241,6 @@ namespace daxa
         }
     };
 
-#define _DAXA_INTELLISENSE_FIX_COMMA ,
-#ifdef __INTELLISENSE__
-#define _DAXA_INTELLISENSE_FIX(X) 256
-#else
-#define _DAXA_INTELLISENSE_FIX(X) X
-#endif
-
 #define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                    \
     namespace HEAD_NAME                                         \
     {                                                           \
@@ -1247,83 +1248,92 @@ namespace daxa
         template <typename TDecl, daxa::usize ATTACHMENT_COUNT> \
         struct TaskHeadStruct                                   \
         {                                                       \
-            TDecl::InternalT _internal = {};                    \
+            typename TDecl::InternalT _internal = {};           \
             operator daxa::AttachmentViews<ATTACHMENT_COUNT>()  \
                 requires(!TDecl::DECL_ATTACHMENTS)              \
             {                                                   \
                 return TDecl::convert(*this);                   \
             }
 
-#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)              \
-    TDecl::TaskBufferT NAME =                                       \
-        {TDecl::process_attachment_decl<TDecl::TaskBufferT>(        \
-            _internal,                                              \
-            daxa::TaskBufferAttachment{                             \
-                .name = #NAME,                                      \
-                .task_access = daxa::TaskBufferAccess::TASK_ACCESS, \
+
+// Intellisense has trouble processing the real attachment declarations.
+#if defined(__INTELLISENSE__)
+#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...) typename TDecl::TaskBufferT NAME = {};
+#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS) typename TDecl::TaskBlasT const NAME = {};
+#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...) typename TDecl::TaskTlasT const NAME = {};
+#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...) typename TDecl::TaskImageT const NAME = {};
+#else
+#define _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, ...)                         \
+    typename TDecl::TaskBufferT NAME =                                         \
+        {TDecl::template process_attachment_decl<typename TDecl::TaskBufferT>( \
+            _internal,                                                         \
+            daxa::TaskBufferAttachment{                                        \
+                .name = #NAME,                                                 \
+                .task_access = daxa::TaskBufferAccess::TASK_ACCESS,            \
                 __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)                   \
-    TDecl::TaskBlasT const NAME =                                 \
-        {TDecl::process_attachment_decl<TDecl::TaskBlasT>(        \
-            _internal,                                            \
-            daxa::TaskBlasAttachment{                             \
-                .name = #NAME,                                    \
-                .task_access = daxa::TaskBlasAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)                              \
+    typename TDecl::TaskBlasT const NAME =                                   \
+        {TDecl::template process_attachment_decl<typename TDecl::TaskBlasT>( \
+            _internal,                                                       \
+            daxa::TaskBlasAttachment{                                        \
+                .name = #NAME,                                               \
+                .task_access = daxa::TaskBlasAccess::TASK_ACCESS,            \
             })};
 
-#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)              \
-    TDecl::TaskTlasT const NAME =                                 \
-        {TDecl::process_attachment_decl<TDecl::TaskTlasT>(        \
-            _internal,                                            \
-            daxa::TaskTlasAttachment{                             \
-                .name = #NAME,                                    \
-                .task_access = daxa::TaskTlasAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)                         \
+    typename TDecl::TaskTlasT const NAME =                                   \
+        {TDecl::template process_attachment_decl<typename TDecl::TaskTlasT>( \
+            _internal,                                                       \
+            daxa::TaskTlasAttachment{                                        \
+                .name = #NAME,                                               \
+                .task_access = daxa::TaskTlasAccess::TASK_ACCESS,            \
                 __VA_ARGS__})};
 
-#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)              \
-    TDecl::TaskImageT const NAME =                                 \
-        {TDecl::process_attachment_decl<TDecl::TaskImageT>(        \
-            _internal,                                             \
-            daxa::TaskImageAttachment{                             \
-                .name = #NAME,                                     \
-                .task_access = daxa::TaskImageAccess::TASK_ACCESS, \
+#define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)                         \
+    typename TDecl::TaskImageT const NAME =                                   \
+        {TDecl::template process_attachment_decl<typename TDecl::TaskImageT>( \
+            _internal,                                                        \
+            daxa::TaskImageAttachment{                                        \
+                .name = #NAME,                                                \
+                .task_access = daxa::TaskImageAccess::TASK_ACCESS,            \
                 __VA_ARGS__})};
+#endif
 
-#define DAXA_DECL_TASK_HEAD_END                                                                                                                                                                    \
-    }                                                                                                                                                                                              \
-    ;                                                                                                                                                                                              \
-    static inline constexpr auto ATTACHMENT_COUNT = _DAXA_INTELLISENSE_FIX(TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256> _DAXA_INTELLISENSE_FIX_COMMA 256>{}._internal.count); \
-    using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                                                                       \
-    using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                                                                             \
-    static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                                                                    \
-    static inline constexpr auto const & AT = ATTACHMENTS;                                                                                                                                         \
-    struct alignas(daxa::detail::get_asb_size_and_alignment(AT._internal.value).alignment) AttachmentShaderBlob                                                                                    \
-    {                                                                                                                                                                                              \
-        std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT._internal.value).size> value = {};                                                                                       \
-        AttachmentShaderBlob() = default;                                                                                                                                                          \
-        AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                                                                                                    \
-        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                                                                                  \
-        {                                                                                                                                                                                          \
-            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                                                                     \
-            for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                                                                            \
-                this->value[i] = data[i];                                                                                                                                                          \
-            return *this;                                                                                                                                                                          \
-        }                                                                                                                                                                                          \
-    };                                                                                                                                                                                             \
-    struct Task : public daxa::IPartialTask                                                                                                                                                        \
-    {                                                                                                                                                                                              \
-        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                                                                           \
-        using Views = VIEWS_T;                                                                                                                                                                     \
-        static constexpr ATTACHMENTS_T const & AT = ATTACHMENTS;                                                                                                                                   \
-        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                                                                                              \
-        static auto name() -> std::string_view { return std::string_view{NAME}; }                                                                                                                  \
-        static auto attachments() -> std::span<daxa::TaskAttachment const>                                                                                                                         \
-        {                                                                                                                                                                                          \
-            return AT._internal.value;                                                                                                                                                             \
-        }                                                                                                                                                                                          \
-    };                                                                                                                                                                                             \
-    }                                                                                                                                                                                              \
+#define DAXA_DECL_TASK_HEAD_END                                                                                                                \
+    }                                                                                                                                          \
+    ;                                                                                                                                          \
+    static inline constexpr auto ATTACHMENT_COUNT = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256>, 256>{}._internal.count; \
+    using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                   \
+    using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                         \
+    static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                \
+    static inline constexpr auto const & AT = ATTACHMENTS;                                                                                     \
+    struct alignas(daxa::detail::get_asb_size_and_alignment(AT._internal.value).alignment) AttachmentShaderBlob                                \
+    {                                                                                                                                          \
+        std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT._internal.value).size> value = {};                                   \
+        AttachmentShaderBlob() = default;                                                                                                      \
+        AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                                                \
+        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                              \
+        {                                                                                                                                      \
+            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                 \
+            for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                        \
+                this->value[i] = data[i];                                                                                                      \
+            return *this;                                                                                                                      \
+        }                                                                                                                                      \
+    };                                                                                                                                         \
+    struct Task : public daxa::IPartialTask                                                                                                    \
+    {                                                                                                                                          \
+        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
+        using Views = VIEWS_T;                                                                                                                 \
+        static constexpr ATTACHMENTS_T const & AT = ATTACHMENTS;                                                                               \
+        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                                          \
+        static auto name() -> std::string_view { return std::string_view{NAME}; }                                                              \
+        static auto attachments() -> std::span<daxa::TaskAttachment const>                                                                     \
+        {                                                                                                                                      \
+            return AT._internal.value;                                                                                                         \
+        }                                                                                                                                      \
+    };                                                                                                                                         \
+    }                                                                                                                                          \
     ;
 
 #define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
@@ -1424,7 +1434,7 @@ namespace daxa
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
 
-    inline auto inl_attachment(TaskBufferAccess access, TaskBufferView view) -> TaskAttachmentInfo
+    inline auto inl_attachment(TaskAccess access, TaskBufferView view) -> TaskAttachmentInfo
     {
         TaskBufferAttachmentInfo buf = {};
         buf.name = "inline attachment";
@@ -1438,7 +1448,7 @@ namespace daxa
         return info;
     }
 
-    inline auto inl_attachment(TaskBlasAccess access, TaskBlasView view) -> TaskAttachmentInfo
+    inline auto inl_attachment(TaskAccess access, TaskBlasView view) -> TaskAttachmentInfo
     {
         TaskBlasAttachmentInfo blas = {};
         blas.name = "inline attachment";
@@ -1450,7 +1460,7 @@ namespace daxa
         return info;
     }
 
-    inline auto inl_attachment(TaskTlasAccess access, TaskTlasView view) -> TaskAttachmentInfo
+    inline auto inl_attachment(TaskAccess access, TaskTlasView view) -> TaskAttachmentInfo
     {
         TaskTlasAttachmentInfo tlas = {};
         tlas.name = "inline attachment";
@@ -1463,7 +1473,7 @@ namespace daxa
         return info;
     }
 
-    inline auto inl_attachment(TaskImageAccess access, TaskImageView view) -> TaskAttachmentInfo
+    inline auto inl_attachment(TaskAccess access, TaskImageView view) -> TaskAttachmentInfo
     {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
@@ -1477,7 +1487,7 @@ namespace daxa
         return info;
     }
 
-    inline auto inl_attachment(TaskImageAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo
+    inline auto inl_attachment(TaskAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo
     {
         TaskImageAttachmentInfo img = {};
         img.name = "inline attachment";
