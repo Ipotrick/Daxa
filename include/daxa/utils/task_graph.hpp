@@ -144,34 +144,132 @@ namespace daxa
         std::vector<TaskAttachmentInfo> attachments = {};
         std::function<void(TaskInterface)> task = {};
         std::string name = "unnamed";
+
+
     };
 
     struct InlineTask : ITask
     {
+        InlineTask() = default;
         InlineTask(InlineTaskInfo const & info)
         {
-            _attachments = info.attachments;
-            _callback = info.task;
-            _name = info.name;
+            value._internal._attachments = info.attachments;
+            value._internal._callback = info.task;
+            value._internal._name = info.name;
+        }
+        InlineTask(std::string name)
+        {
+            value._internal._name =std::move(name);
+        }
+        virtual ~InlineTask() override
+        {
+
+        }
+        InlineTask(InlineTask const & other)
+        {
+            this->value._internal._attachments = other.value._internal._attachments;
+            this->value._internal._callback = other.value._internal._callback;
+            this->value._internal._name = other.value._internal._name;
         }
         constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> override
         {
-            return _attachments;
+            return value._internal._attachments;
         }
         constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> override
         {
-            return _attachments;
+            return value._internal._attachments;
         }
-        constexpr virtual std::string_view name() const override { return _name; };
+        constexpr virtual std::string_view name() const override { return value._internal._name; };
         virtual void callback(TaskInterface ti) override
         {
-            _callback(ti);
+            value._internal._callback(ti);
         };
 
+        struct Internal
+        {
+            std::vector<TaskAttachmentInfo> _attachments = {};
+            std::function<void(TaskInterface)> _callback = {};
+            std::string _name = {};
+        };
+        template<TaskStage STAGE = TaskStage::NONE>
+        struct InternalValue
+        {
+            Internal _internal = {};
+
+            template<TaskResourceViewOrResource ... TResources>
+            auto reads(TResources ... v) -> InlineTask
+            {
+                (_internal._attachments.push_back(inl_attachment(TaskAccess{STAGE, TaskAccessType::READ}, v)), ...);
+                return std::move(InlineTask{std::move(_internal)});
+            }
+            template<TaskResourceViewOrResource ... TResources>
+            auto writes(TResources ... v) -> InlineTask
+            {
+                (_internal._attachments.push_back(inl_attachment(TaskAccess{STAGE, TaskAccessType::WRITE}, v)), ...);
+                return std::move(InlineTask{std::move(_internal)});
+            }
+            template<TaskResourceViewOrResource ... TResources>
+            auto writes_concurrent(TResources ... v) -> InlineTask
+            {
+                (_internal._attachments.push_back(inl_attachment(TaskAccess{STAGE, TaskAccessType::WRITE_CONCURRENT}, v)), ...);
+                return std::move(InlineTask{std::move(_internal)});
+            }
+            template<TaskResourceViewOrResource ... TResources>
+            auto reads_writes(TResources ... v) -> InlineTask
+            {
+                (_internal._attachments.push_back(inl_attachment(TaskAccess{STAGE, TaskAccessType::READ_WRITE}, v)), ...);
+                return std::move(InlineTask{std::move(_internal)});
+            }
+            template<TaskResourceViewOrResource ... TResources>
+            auto readwrites_concurrent(TResources ... v) -> InlineTask
+            {
+                (_internal._attachments.push_back(inl_attachment(TaskAccess{STAGE, TaskAccessType::READ_WRITE_CONCURRENT}, v)), ...);
+                return std::move(InlineTask{std::move(_internal)});
+            }
+            template<TaskImageViewOrImage ... TResources>
+            auto samples(TResources ... v) -> InlineTask
+            {
+                (_internal._attachments.push_back(inl_attachment(TaskAccess{STAGE, TaskAccessType::SAMPLED}, v)), ...);
+                return std::move(InlineTask{std::move(_internal)});
+            }
+        };
+        union {
+            InternalValue<TaskStage::NONE> value = {};
+            InternalValue<TaskStage::VERTEX_SHADER> vs;
+            InternalValue<TaskStage::TESSELLATION_CONTROL_SHADER> tcs;
+            InternalValue<TaskStage::TESSELLATION_EVALUATION_SHADER> tes;
+            InternalValue<TaskStage::GEOMETRY_SHADER> gs;
+            InternalValue<TaskStage::FRAGMENT_SHADER> fs;
+            InternalValue<TaskStage::COMPUTE_SHADER> cs;
+            InternalValue<TaskStage::RAY_TRACING_SHADER> rt;
+            InternalValue<TaskStage::TASK_SHADER> ts;
+            InternalValue<TaskStage::MESH_SHADER> ms;
+            InternalValue<TaskStage::PRE_RASTERIZATION_SHADERS> prs;
+            InternalValue<TaskStage::RASTER_SHADER> rs;
+            InternalValue<TaskStage::SHADER> s;
+            InternalValue<TaskStage::COLOR_ATTACHMENT> ca;
+            InternalValue<TaskStage::DEPTH_STENCIL_ATTACHMENT> dsa;
+            InternalValue<TaskStage::RESOLVE> resolve;
+            InternalValue<TaskStage::PRESENT> present;
+            InternalValue<TaskStage::INDIRECT_COMMAND> indirect_cmd;
+            InternalValue<TaskStage::INDEX_INPUT> index_input;
+            InternalValue<TaskStage::TRANSFER> tf;
+            InternalValue<TaskStage::HOST> host;
+            InternalValue<TaskStage::AS_BUILD> asb;
+            InternalValue<TaskStage::ANY_COMMAND> any;
+        };
+
+        auto executes(std::function<void(TaskInterface)> const& c) && -> InlineTask
+        {
+            value._internal._callback = std::move(c);
+            return std::move(*this);
+        }
+
       private:
-        std::vector<TaskAttachmentInfo> _attachments = {};
-        std::function<void(TaskInterface)> _callback = {};
-        std::string _name = {};
+        InlineTask(Internal && internal)
+        {
+            this->value._internal = std::move(internal);
+        }
     };
 
     template<typename TaskHeadTaskT>
@@ -319,6 +417,10 @@ namespace daxa
         void add_task(InlineTaskInfo const & inline_task_info)
         {
             add_task(std::make_unique<InlineTask>(inline_task_info));
+        }
+        void add_task(InlineTask && inline_task)
+        {
+            add_task(std::make_unique<InlineTask>(std::move(inline_task)));
         }
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
