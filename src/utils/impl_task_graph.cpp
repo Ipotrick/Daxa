@@ -1834,6 +1834,36 @@ namespace daxa
     void apply_view_overrides(ImplTaskGraph const & impl, ITask * task)
     {
         TaskStage default_stage = task->default_stage();
+        auto apply_validate_stage_override = [&](u32 i, auto & attach)
+        {
+            if (attach.task_access.stage == TaskStage::NONE)
+            {
+                // Apply default stage:
+                if (default_stage != TaskStage::NONE)
+                {
+                    attach.task_access.stage = default_stage;
+                }
+                // Apply view stage:
+                if (attach.view.stage_override != TaskStage::NONE)
+                {
+                    attach.task_access.stage = attach.view.stage_override;
+                }
+                DAXA_DBG_ASSERT_TRUE_M(
+                    attach.task_access.stage != TaskStage::NONE, 
+                    std::format("Detected TaskAttachment (\"{}\", idx {}) in Task \"{}\" with no stage set." 
+                        "The stage of a TaskAttachment must be set in either 1. the task head, 2. the access type or 3. in a view stage override!",
+                        attach.name, i, task->name()
+                    ));
+            }
+            else
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    attach.view.stage_override == TaskStage::NONE, 
+                    std::format("Detected TaskAttachment (\"{}\", idx {}) in Task \"{}\" has view stage override but attachment has fixed stage.",
+                        attach.name, i, task->name()
+                    ));
+            }
+        };
         for_each(
             task->attachments(),
             [&](u32 i, auto & attach)
@@ -1844,37 +1874,18 @@ namespace daxa
                 {
                     attach.task_access.type = attach.view.access_type_override;
                 }
-                if (attach.view.stage_override != TaskStage::NONE)
-                {
-                    attach.task_access.stage = attach.view.stage_override;
-                }
-                // Apply default stage:
-                if (default_stage != TaskStage::NONE && attach.task_access.stage == TaskStage::ANY_COMMAND)
-                {
-                    attach.task_access.stage = default_stage;
-                }
+                apply_validate_stage_override(i, attach);
             },
             [&](u32 i, TaskImageAttachmentInfo & attach)
             {
+                
                 validate_image_task_view(*task, i, attach);
                 attach.translated_view = impl.id_to_local_id(attach.view);
                 if (attach.view.access_type_override != TaskAccessType::NONE)
                 {
                     attach.task_access.type = attach.view.access_type_override;
                 }
-                if (attach.view.stage_override != TaskStage::NONE)
-                {
-                    attach.task_access.stage = attach.view.stage_override;
-                }
-                if (attach.view.view_type_override != ImageViewType::MAX_ENUM)
-                {
-                    attach.view_type = attach.view.view_type_override;
-                }
-                // Apply default stage:
-                if (default_stage != TaskStage::NONE && attach.task_access.stage == TaskStage::ANY_COMMAND)
-                {
-                    attach.task_access.stage = default_stage;
-                }
+                apply_validate_stage_override(i, attach);
             });
     }
 
