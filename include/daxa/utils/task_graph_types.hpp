@@ -77,12 +77,12 @@ namespace daxa
         TESSELLATION_EVALUATION_SHADER,
         GEOMETRY_SHADER,
         FRAGMENT_SHADER,
-        COMPUTE_SHADER,
-        RAY_TRACING_SHADER,
         TASK_SHADER,
         MESH_SHADER,
         PRE_RASTERIZATION_SHADERS,
         RASTER_SHADER,
+        COMPUTE_SHADER,
+        RAY_TRACING_SHADER,
         SHADER,
         COLOR_ATTACHMENT,
         DEPTH_STENCIL_ATTACHMENT,
@@ -156,7 +156,7 @@ namespace daxa
         using DSA = DEPTH_STENCIL_ATTACHMENT;
         using RESOLVE = TaskAccessConstsPartial<TaskStage::RESOLVE, TaskAttachmentType::IMAGE>;
         using TRANSFER = TaskAccessConstsPartial<TaskStage::TRANSFER>;
-        using T = TRANSFER;
+        using TF = TRANSFER;
         using HOST = TaskAccessConstsPartial<TaskStage::HOST>;
         using H = HOST;
         using ACCELERATION_STRUCTURE_BUILD = TaskAccessConstsPartial<TaskStage::AS_BUILD>;
@@ -164,12 +164,13 @@ namespace daxa
         using ANY_COMMAND = TaskAccessConstsPartial<TaskStage::ANY_COMMAND>;
         using ANY = ANY_COMMAND;
         static constexpr TaskAccess NONE = TaskAccess{TaskStage::NONE, TaskAccessType::NONE};
-        static constexpr TaskAccess READ = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::READ};
-        static constexpr TaskAccess WRITE = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::WRITE};
-        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::WRITE_CONCURRENT};
-        static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::READ_WRITE};
-        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::READ_WRITE_CONCURRENT};
-        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStage::ANY_COMMAND, TaskAccessType::SAMPLED, TaskAttachmentType::IMAGE};
+        static constexpr TaskAccess READ = TaskAccess{TaskStage::NONE, TaskAccessType::READ};
+        static constexpr TaskAccess WRITE = TaskAccess{TaskStage::NONE, TaskAccessType::WRITE};
+        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::WRITE_CONCURRENT};
+        static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE};
+        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE_CONCURRENT};
+        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStage::NONE, TaskAccessType::SAMPLED, TaskAttachmentType::IMAGE};
+
         static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;
         static constexpr TaskAccess PRESENT = TaskAccess{TaskStage::PRESENT, TaskAccessType::READ, TaskAttachmentType::IMAGE};
@@ -1119,9 +1120,11 @@ namespace daxa
     ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⡙⠓⠻⠶⠽⢮⣶⣥⣷⣭⣾⣥⣯⡵⠯⠼⠗⠛⠋⣉⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     */
 
+
+
     /// ======================================= BRACE FOR IMPACT =======================================
     /// ============================== HEAVY TEMPLATE METAPROGRAMMING AHEAD ============================
-    /// =========================================DO NOT PANIC ==========================================
+    /// ========================================= DO NOT PANIC =========================================
 
     struct TaskAttachmentViewWrapperRaw
     {
