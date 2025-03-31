@@ -1845,7 +1845,7 @@ namespace daxa
                     attach.task_access.stage = attach.view.stage_override;
                 }
                 // Apply default stage:
-                if (attach.task_access.stage == TaskStage::ANY_COMMAND)
+                if (default_stage != TaskStage::NONE && attach.task_access.stage == TaskStage::ANY_COMMAND)
                 {
                     attach.task_access.stage = default_stage;
                 }
@@ -1867,7 +1867,7 @@ namespace daxa
                     attach.view_type = attach.view.view_type_override;
                 }
                 // Apply default stage:
-                if (attach.task_access.stage == TaskStage::ANY_COMMAND)
+                if (default_stage != TaskStage::NONE && attach.task_access.stage == TaskStage::ANY_COMMAND)
                 {
                     attach.task_access.stage = default_stage;
                 }
