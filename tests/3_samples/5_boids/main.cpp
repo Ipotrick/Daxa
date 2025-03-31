@@ -37,6 +37,11 @@ struct Test
     DAXA_TH_BLOB(UpdateBoids, test)
 };
 
+DAXA_DECL_TASK_HEAD_BEGIN(DrawBoidsH)
+DAXA_TH_BUFFER_PTR(VS::READ, daxa_BufferPtr(u32), boids)
+DAXA_TH_IMAGE_ID(COLOR_ATTACHMENT, REGULAR_2D, render_image)
+DAXA_DECL_TASK_HEAD_END
+
 struct App : AppWindow<App>
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
@@ -155,14 +160,8 @@ struct App : AppWindow<App>
 
     // Draw task:
 
-    struct DrawBoidsTask : daxa::PartialTask<2, "DrawBoids">
+    struct DrawBoidsTask : DrawBoidsH::Task
     {
-        static inline daxa::TaskBufferAttachmentIndex const boids = add_attachment(daxa::TaskBufferAttachment{
-            .task_access = daxa::TaskBufferAccess::VERTEX_SHADER_READ,
-        });
-        static inline daxa::TaskImageAttachmentIndex const render_image = add_attachment(daxa::TaskImageAttachment{
-            .task_access = daxa::TaskImageAccess::COLOR_ATTACHMENT,
-        });
         AttachmentViews views = {};
         std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
         u32 * size_x = {};

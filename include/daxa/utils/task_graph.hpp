@@ -179,11 +179,12 @@ namespace daxa
         {
             return value._internal._attachments;
         }
-        constexpr virtual std::string_view name() const override { return value._internal._name; };
+        constexpr virtual auto name() const -> std::string_view override { return value._internal._name; };
         virtual void callback(TaskInterface ti) override
         {
             value._internal._callback(ti);
-        };
+        }
+        virtual auto default_stage() const -> TaskStage override { return TaskStage::NONE; }
 
       private:
         enum Allow
@@ -410,15 +411,15 @@ namespace daxa
                 {
                     for (u32 i = 0; i < NoRefTTask::ATTACH_COUNT; ++i)
                     {
-                        switch (NoRefTTask::attachments()[i].type)
+                        switch (_task.attachments()[i].type)
                         {
                         case daxa::TaskAttachmentType::BUFFER:
                         {
                             TaskBufferAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.buffer.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.buffer.task_access;
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size;
-                            info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address;
+                            info.name = _task.attachments()[i].value.buffer.name;
+                            info.task_access = _task.attachments()[i].value.buffer.task_access;
+                            info.shader_array_size = _task.attachments()[i].value.buffer.shader_array_size;
+                            info.shader_as_address = _task.attachments()[i].value.buffer.shader_as_address;
                             info.view = daxa::get<TaskBufferView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -426,9 +427,9 @@ namespace daxa
                         case daxa::TaskAttachmentType::TLAS:
                         {
                             TaskTlasAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.tlas.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.tlas.task_access;
-                            info.shader_as_address = NoRefTTask::attachments()[i].value.tlas.shader_as_address;
+                            info.name = _task.attachments()[i].value.tlas.name;
+                            info.task_access = _task.attachments()[i].value.tlas.task_access;
+                            info.shader_as_address = _task.attachments()[i].value.tlas.shader_as_address;
                             info.view = daxa::get<TaskTlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -436,8 +437,8 @@ namespace daxa
                         case daxa::TaskAttachmentType::BLAS:
                         {
                             TaskBlasAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.blas.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.blas.task_access;
+                            info.name = _task.attachments()[i].value.blas.name;
+                            info.task_access = _task.attachments()[i].value.blas.task_access;
                             info.view = daxa::get<TaskBlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -445,12 +446,12 @@ namespace daxa
                         case daxa::TaskAttachmentType::IMAGE:
                         {
                             TaskImageAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.image.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.image.task_access;
-                            info.view_type = NoRefTTask::attachments()[i].value.image.view_type;
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size;
-                            info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type;
-                            info.shader_as_index = NoRefTTask::attachments()[i].value.image.shader_as_index;
+                            info.name = _task.attachments()[i].value.image.name;
+                            info.task_access = _task.attachments()[i].value.image.task_access;
+                            info.view_type = _task.attachments()[i].value.image.view_type;
+                            info.shader_array_size = _task.attachments()[i].value.image.shader_array_size;
+                            info.shader_array_type = _task.attachments()[i].value.image.shader_array_type;
+                            info.shader_as_index = _task.attachments()[i].value.image.shader_as_index;
                             info.view = daxa::get<TaskImageView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -466,9 +467,10 @@ namespace daxa
                 constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> { return _attachments; }
                 constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> { return _attachments; }
                 constexpr virtual auto name() const -> std::string_view { return NoRefTTask::name(); }
+                virtual auto default_stage() const -> TaskStage { return _task.default_stage(); };
                 virtual void callback(TaskInterface ti) { _task.callback(ti); };
             };
-            auto wrapped_task = std::make_unique<WrapperTask>(task);
+            auto wrapped_task = std::make_unique<WrapperTask>(std::move(task));
             add_task(std::move(wrapped_task));
         }
         void add_task(InlineTaskInfo const & inline_task_info)
