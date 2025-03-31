@@ -1799,19 +1799,78 @@ namespace daxa
         return first_possible_batch_index;
     }
 
-    void translate_persistent_ids(ImplTaskGraph const & impl, ITask * task)
+    void validate_attachment_views(ImplTaskGraph const & impl, ITask * task)
     {
         for_each(
             task->attachments(),
             [&](u32 i, auto & attach)
             {
                 validate_buffer_blas_tlas_task_view(*task, i, attach);
+            },
+            [&](u32 i, TaskImageAttachmentInfo & attach)
+            {
+                validate_image_task_view(*task, i, attach);
+            });
+    }
+
+    void translate_persistent_ids(ImplTaskGraph const & impl, ITask * task)
+    {
+        for_each(
+            task->attachments(),
+            [&](u32 i, auto & attach)
+            {
                 attach.translated_view = impl.buffer_blas_tlas_id_to_local_id(attach.view);
+            },
+            [&](u32 i, TaskImageAttachmentInfo & attach)
+            {
+                attach.translated_view = impl.id_to_local_id(attach.view);
+            });
+    }
+
+    void apply_view_overrides(ImplTaskGraph const & impl, ITask * task)
+    {
+        TaskStage default_stage = task->default_stage();
+        for_each(
+            task->attachments(),
+            [&](u32 i, auto & attach)
+            {
+                validate_buffer_blas_tlas_task_view(*task, i, attach);
+                attach.translated_view = impl.buffer_blas_tlas_id_to_local_id(attach.view);
+                if (attach.view.access_type_override != TaskAccessType::NONE)
+                {
+                    attach.task_access.type = attach.view.access_type_override;
+                }
+                if (attach.view.stage_override != TaskStage::NONE)
+                {
+                    attach.task_access.stage = attach.view.stage_override;
+                }
+                // Apply default stage:
+                if (attach.task_access.stage == TaskStage::ANY_COMMAND)
+                {
+                    attach.task_access.stage = default_stage;
+                }
             },
             [&](u32 i, TaskImageAttachmentInfo & attach)
             {
                 validate_image_task_view(*task, i, attach);
                 attach.translated_view = impl.id_to_local_id(attach.view);
+                if (attach.view.access_type_override != TaskAccessType::NONE)
+                {
+                    attach.task_access.type = attach.view.access_type_override;
+                }
+                if (attach.view.stage_override != TaskStage::NONE)
+                {
+                    attach.task_access.stage = attach.view.stage_override;
+                }
+                if (attach.view.view_type_override != ImageViewType::MAX_ENUM)
+                {
+                    attach.view_type = attach.view.view_type_override;
+                }
+                // Apply default stage:
+                if (attach.task_access.stage == TaskStage::ANY_COMMAND)
+                {
+                    attach.task_access.stage = default_stage;
+                }
             });
     }
 
@@ -1832,7 +1891,10 @@ namespace daxa
             .image_view_cache = std::move(view_cache),
             .runtime_images_last_execution = std::move(id_cache),
         };
+        validate_attachment_views(impl, impl_task.base_task.get());
         translate_persistent_ids(impl, impl_task.base_task.get());
+        apply_view_overrides(impl, impl_task.base_task.get());
+        // TODO: Add stage validation as soon as we have pure compute tasks!
 
         for (auto * permutation : impl.record_active_permutations)
         {

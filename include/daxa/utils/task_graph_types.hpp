@@ -98,7 +98,7 @@ namespace daxa
 
     auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags;
 
-    struct TaskAccess
+    struct alignas(u32) TaskAccess
     {
         TaskStage stage = {};
         TaskAccessType type = {};
@@ -173,19 +173,13 @@ namespace daxa
         static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;
         static constexpr TaskAccess PRESENT = TaskAccess{TaskStage::PRESENT, TaskAccessType::READ, TaskAttachmentType::IMAGE};
-        static constexpr TaskAccess INDIRECT_COMMAND = TaskAccess{TaskStage::INDIRECT_COMMAND, TaskAccessType::READ, TaskAttachmentType::BUFFER};
-        static constexpr TaskAccess IC = INDIRECT_COMMAND;
-        static constexpr TaskAccess INDEX_INPUT = TaskAccess{TaskStage::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
-        static constexpr TaskAccess IDX = INDEX_INPUT;
-    };
+        static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStage::INDIRECT_COMMAND, TaskAccessType::READ, TaskAttachmentType::BUFFER};
+        static constexpr TaskAccess ICR = INDIRECT_COMMAND_READ;
+        static constexpr TaskAccess INDEX_INPUT_READ = TaskAccess{TaskStage::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
+        static constexpr TaskAccess IDXR = INDEX_INPUT_READ;
 
-    struct TaskBufferAccess
-    {
-        static constexpr TaskAccess NONE = TaskAccessConsts::NONE;
-        static constexpr TaskAccess READ = TaskAccessConsts::READ;
-        static constexpr TaskAccess WRITE = TaskAccessConsts::WRITE;
-        static constexpr TaskAccess READ_WRITE = TaskAccessConsts::READ_WRITE;
-        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccessConsts::READ_WRITE_CONCURRENT;
+        // Backwards Compatibiliy Constants:
+
         static constexpr TaskAccess GRAPHICS_SHADER_READ = TaskAccessConsts::RS::READ;
         static constexpr TaskAccess GRAPHICS_SHADER_WRITE = TaskAccessConsts::RS::READ;
         static constexpr TaskAccess GRAPHICS_SHADER_READ_WRITE = TaskAccessConsts::RS::READ_WRITE;
@@ -226,8 +220,8 @@ namespace daxa
         static constexpr TaskAccess FRAGMENT_SHADER_WRITE = TaskAccessConsts::FRAGMENT_SHADER::WRITE;
         static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE;
         static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE_CONCURRENT;
-        static constexpr TaskAccess INDEX_READ = TaskAccessConsts::INDEX_INPUT;
-        static constexpr TaskAccess DRAW_INDIRECT_INFO_READ = TaskAccessConsts::INDIRECT_COMMAND;
+        static constexpr TaskAccess INDEX_READ = TaskAccessConsts::INDEX_INPUT_READ;
+        static constexpr TaskAccess DRAW_INDIRECT_INFO_READ = TaskAccessConsts::INDIRECT_COMMAND_READ;
         static constexpr TaskAccess TRANSFER_READ = TaskAccessConsts::TRANSFER::READ;
         static constexpr TaskAccess TRANSFER_WRITE = TaskAccessConsts::TRANSFER::WRITE;
         static constexpr TaskAccess TRANSFER_READ_WRITE = TaskAccessConsts::TRANSFER::READ_WRITE;
@@ -237,57 +231,7 @@ namespace daxa
         static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_READ = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::READ;
         static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_WRITE = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::WRITE;
         static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_READ_WRITE = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::READ_WRITE;
-    };
 
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBufferAccess const & usage) -> std::string_view;
-
-    struct TaskBlasAccess
-    {
-        static constexpr TaskAccess NONE = TaskBufferAccess::NONE;
-        static constexpr TaskAccess READ = TaskBufferAccess::READ;
-        static constexpr TaskAccess WRITE = TaskBufferAccess::WRITE;
-        static constexpr TaskAccess READ_WRITE = TaskBufferAccess::READ_WRITE;
-        static constexpr TaskAccess TRANSFER_READ = TaskBufferAccess::TRANSFER_READ;
-        static constexpr TaskAccess TRANSFER_WRITE = TaskBufferAccess::TRANSFER_WRITE;
-        static constexpr TaskAccess HOST_TRANSFER_READ = TaskBufferAccess::HOST_TRANSFER_READ;
-        static constexpr TaskAccess HOST_TRANSFER_WRITE = TaskBufferAccess::HOST_TRANSFER_WRITE;
-        static constexpr TaskAccess BUILD_READ = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ;
-        static constexpr TaskAccess BUILD_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE;
-        static constexpr TaskAccess BUILD_READ_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE;
-    };
-
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskBlasAccess const & usage) -> std::string_view;
-
-    struct TaskTlasAccess
-    {
-        static constexpr TaskAccess NONE = TaskBufferAccess::NONE;
-        static constexpr TaskAccess READ = TaskBufferAccess::READ;
-        static constexpr TaskAccess WRITE = TaskBufferAccess::WRITE;
-        static constexpr TaskAccess READ_WRITE = TaskBufferAccess::READ_WRITE;
-        static constexpr TaskAccess TRANSFER_READ = TaskBufferAccess::TRANSFER_READ;
-        static constexpr TaskAccess TRANSFER_WRITE = TaskBufferAccess::TRANSFER_WRITE;
-        static constexpr TaskAccess HOST_TRANSFER_READ = TaskBufferAccess::HOST_TRANSFER_READ;
-        static constexpr TaskAccess HOST_TRANSFER_WRITE = TaskBufferAccess::HOST_TRANSFER_WRITE;
-        static constexpr TaskAccess BUILD_READ = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ;
-        static constexpr TaskAccess BUILD_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_WRITE;
-        static constexpr TaskAccess BUILD_READ_WRITE = TaskBufferAccess::ACCELERATION_STRUCTURE_BUILD_READ_WRITE;
-        static constexpr TaskAccess GRAPHICS_SHADER_READ = TaskBufferAccess::GRAPHICS_SHADER_READ;
-        static constexpr TaskAccess COMPUTE_SHADER_READ = TaskBufferAccess::COMPUTE_SHADER_READ;
-        static constexpr TaskAccess RAY_TRACING_SHADER_READ = TaskBufferAccess::RAY_TRACING_SHADER_READ;
-        static constexpr TaskAccess TASK_SHADER_READ = TaskBufferAccess::TASK_SHADER_READ;
-        static constexpr TaskAccess MESH_SHADER_READ = TaskBufferAccess::MESH_SHADER_READ;
-        static constexpr TaskAccess VERTEX_SHADER_READ = TaskBufferAccess::VERTEX_SHADER_READ;
-        static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ = TaskBufferAccess::TESSELLATION_CONTROL_SHADER_READ;
-        static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ = TaskBufferAccess::TESSELLATION_EVALUATION_SHADER_READ;
-        static constexpr TaskAccess GEOMETRY_SHADER_READ = TaskBufferAccess::GEOMETRY_SHADER_READ;
-        static constexpr TaskAccess FRAGMENT_SHADER_READ = TaskBufferAccess::FRAGMENT_SHADER_READ;
-    };
-
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskTlasAccess const & usage) -> std::string_view;
-
-    struct TaskImageAccess
-    {
-        static constexpr TaskAccess NONE = TaskAccessConsts::NONE;
         static constexpr TaskAccess SHADER_SAMPLED = TaskAccessConsts::SHADER::SAMPLED;
         static constexpr TaskAccess SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::SHADER::WRITE;
         static constexpr TaskAccess SHADER_STORAGE_READ_ONLY = TaskAccessConsts::SHADER::READ;
@@ -343,18 +287,19 @@ namespace daxa
         static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::FS::READ;
         static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::FS::READ_WRITE;
         static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::FS::READ_WRITE_CONCURRENT;
-        static constexpr TaskAccess TRANSFER_READ = TaskAccessConsts::TRANSFER::READ;
-        static constexpr TaskAccess TRANSFER_WRITE = TaskAccessConsts::TRANSFER::WRITE;
-        static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccessConsts::CA;
         static constexpr TaskAccess DEPTH_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
         static constexpr TaskAccess STENCIL_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
-        static constexpr TaskAccess DEPTH_STENCIL_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
         static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
         static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
         static constexpr TaskAccess DEPTH_STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
         static constexpr TaskAccess RESOLVE_WRITE = TaskAccessConsts::RESOLVE::READ_WRITE;
-        static constexpr TaskAccess PRESENT = TaskAccessConsts::PRESENT;
     };
+
+    // Backwards Compatibiliy Usings:
+    using TaskBufferAccess = TaskAccessConsts;
+    using TaskBlasAccess = TaskAccessConsts;
+    using TaskTlasAccess = TaskAccessConsts;
+    using TaskImageAccess = TaskAccessConsts;
 
     using TaskResourceIndex = u32;
 
@@ -374,16 +319,58 @@ namespace daxa
 
     struct TaskBufferView : public TaskGPUResourceView
     {
+        TaskStage stage_override = {};
+        TaskAccessType access_type_override = {};
+        auto override_stage(TaskStage stage) const -> TaskBufferView
+        {
+            auto ret = *this;
+            ret.stage_override = stage;
+            return ret;
+        }
+        auto override_access_type(TaskAccessType access_type) const -> TaskBufferView
+        {
+            auto ret = *this;
+            ret.access_type_override = access_type;
+            return ret;
+        }
         using ID_T = BufferId;
     };
 
     struct TaskBlasView : public TaskGPUResourceView
     {
+        TaskStage stage_override = {};
+        TaskAccessType access_type_override = {};
+        auto override_stage(TaskStage stage) const -> TaskBlasView
+        {
+            auto ret = *this;
+            ret.stage_override = stage;
+            return ret;
+        }
+        auto override_access_type(TaskAccessType access_type) const -> TaskBlasView
+        {
+            auto ret = *this;
+            ret.access_type_override = access_type;
+            return ret;
+        }
         using ID_T = BlasId;
     };
 
     struct TaskTlasView : public TaskGPUResourceView
     {
+        TaskStage stage_override = {};
+        TaskAccessType access_type_override = {};
+        auto override_stage(TaskStage stage) const -> TaskTlasView
+        {
+            auto ret = *this;
+            ret.stage_override = stage;
+            return ret;
+        }
+        auto override_access_type(TaskAccessType access_type) const -> TaskTlasView
+        {
+            auto ret = *this;
+            ret.access_type_override = access_type;
+            return ret;
+        }
         using ID_T = TlasId;
     };
 
@@ -392,19 +379,46 @@ namespace daxa
     struct TaskImageView : public TaskGPUResourceView
     {
         daxa::ImageMipArraySlice slice = {};
+        ImageViewType view_type_override = ImageViewType::MAX_ENUM;
+        TaskStage stage_override = {};
+        TaskAccessType access_type_override = {};
+        auto override_stage(TaskStage stage) const -> TaskImageView
+        {
+            auto ret = *this;
+            ret.stage_override = stage;
+            return ret;
+        }
+        auto override_access_type(TaskAccessType access_type) const -> TaskImageView
+        {
+            auto ret = *this;
+            ret.access_type_override = access_type;
+            return ret;
+        }
         auto view(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageView
         {
             auto ret = *this;
             ret.slice = new_slice;
             return ret;
         }
-        auto mips(u32 base_mip_level, u32 mip_count = 1) const -> TaskImageView
+        auto mips(u32 base_mip_level, u32 level_count = 1) const -> TaskImageView
         {
-            return view({.base_mip_level = base_mip_level, .level_count = mip_count});
+            auto ret = *this;
+            ret.slice.base_mip_level = base_mip_level;
+            ret.slice.level_count = level_count;
+            return ret;
         }
         auto layers(u32 base_array_layer, u32 layer_count = 1) const -> TaskImageView
         {
-            return view({.base_array_layer = base_array_layer, .layer_count = layer_count});
+            auto ret = *this;
+            ret.slice.base_array_layer = base_array_layer;
+            ret.slice.layer_count = layer_count;
+            return ret;
+        }
+        auto override_view_type(ImageViewType view_type) const -> TaskImageView
+        {
+            auto ret = *this;
+            ret.view_type_override = view_type;
+            return ret;
         }
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskImageView const & other) const = default;
@@ -939,6 +953,33 @@ namespace daxa
         std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>,
         std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>>;
 
+    template <typename T>
+    concept TaskBufferViewOrTaskBuffer = std::is_same_v<T, TaskBufferView> || std::is_same_v<T, TaskBuffer>;
+
+    template <typename T>
+    concept TaskBlasViewOrTaskBlas = std::is_same_v<T, TaskBlasView> || std::is_same_v<T, TaskBlas>;
+
+    template <typename T>
+    concept TaskTlasViewOrTaskTlas = std::is_same_v<T, TaskTlasView> || std::is_same_v<T, TaskTlas>;
+
+    template <typename T>
+    concept TaskImageViewOrTaskImage = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage>;
+
+    template <typename T>
+    concept TaskResourceViewOrResource =
+        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T>;
+
+    template <typename T>
+    concept TaskBufferBlasTlasViewOrBufferBlasTlas =
+        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T>;
+
+    template <typename T>
+    concept TaskResourceViewOrResourceOrImageViewType =
+        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T> || std::is_same_v<ImageViewType, T>;
+
+    template <typename T>
+    concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
+
     inline namespace detail
     {
         struct AsbSizeAlignment
@@ -978,6 +1019,7 @@ namespace daxa
         };
         constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> = 0;
         constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> = 0;
+        constexpr virtual auto default_stage() const -> TaskStage = 0;
         constexpr virtual std::string_view name() const = 0;
         virtual void callback(TaskInterface){};
     };
@@ -1032,29 +1074,6 @@ namespace daxa
                        daxa::TaskImageView>,
                    ATTACHMENT_COUNT>
             views = {};
-    };
-
-    template <usize ATTACHMENT_COUNT, StringLiteral NAME>
-    struct PartialTask : IPartialTask
-    {
-        /// NOTE: Used to add attachments and declare named constant indices to the added attachment.
-        template <IsTaskResourceAttachment IndexT>
-        static auto add_attachment(IndexT const & attach) -> IndexT::INDEX_TYPE
-        {
-            declared_attachments.at(cur_attach_index) = attach;
-            return {cur_attach_index++};
-        }
-        static auto name() -> std::string_view { return std::string_view{NAME.value, NAME.SIZE}; }
-        static auto attachments() -> std::span<TaskAttachment const>
-        {
-            return declared_attachments;
-        }
-        static constexpr inline usize ATTACH_COUNT = ATTACHMENT_COUNT;
-        static inline std::array<TaskAttachment, ATTACHMENT_COUNT> declared_attachments = {};
-        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;
-
-      private:
-        static inline u32 cur_attach_index = 0;
     };
 
     /*
@@ -1123,44 +1142,24 @@ namespace daxa
         TaskAttachmentViewWrapperRaw _value = {};
 
         TaskAttachmentViewWrapper() = default;
-        TaskAttachmentViewWrapper(TaskBufferView const & view)
+        TaskAttachmentViewWrapper(TaskBufferViewOrTaskBuffer auto const & v)
             requires(std::is_same_v<T, TaskBufferView>)
-            : _value{TaskAttachmentType::BUFFER, {.buffer = view}}
+            : _value{TaskAttachmentType::BUFFER, {.buffer = v}}
         {
         }
-        TaskAttachmentViewWrapper(TaskBuffer const & tbuffer)
-            requires(std::is_same_v<T, TaskBufferView>)
-            : _value{TaskAttachmentType::BUFFER, {.buffer = tbuffer.view()}}
-        {
-        }
-        TaskAttachmentViewWrapper(TaskBlasView const & view)
+        TaskAttachmentViewWrapper(TaskBlasViewOrTaskBlas auto const & v)
             requires(std::is_same_v<T, TaskBlasView>)
-            : _value{TaskAttachmentType::BLAS, {.blas = view}}
+            : _value{TaskAttachmentType::BLAS, {.blas = v}}
         {
         }
-        TaskAttachmentViewWrapper(TaskBlas const & tblas)
-            requires(std::is_same_v<T, TaskBlasView>)
-            : _value{TaskAttachmentType::BLAS, {.blas = tblas.view()}}
-        {
-        }
-        TaskAttachmentViewWrapper(TaskTlasView const & view)
+        TaskAttachmentViewWrapper(TaskTlasViewOrTaskTlas auto const & v)
             requires(std::is_same_v<T, TaskTlasView>)
-            : _value{TaskAttachmentType::TLAS, {.tlas = view}}
+            : _value{TaskAttachmentType::TLAS, {.tlas = v}}
         {
         }
-        TaskAttachmentViewWrapper(TaskTlas const & ttlas)
-            requires(std::is_same_v<T, TaskTlasView>)
-            : _value{TaskAttachmentType::TLAS, {.tlas = ttlas.view()}}
-        {
-        }
-        TaskAttachmentViewWrapper(TaskImageView const & view)
+        TaskAttachmentViewWrapper(TaskImageViewOrTaskImage auto const & v)
             requires(std::is_same_v<T, TaskImageView>)
-            : _value{TaskAttachmentType::IMAGE, {.image = view}}
-        {
-        }
-        TaskAttachmentViewWrapper(TaskImage const & timage)
-            requires(std::is_same_v<T, TaskImageView>)
-            : _value{TaskAttachmentType::IMAGE, {.image = timage.view()}}
+            : _value{TaskAttachmentType::IMAGE, {.image = v}}
         {
         }
     };
@@ -1241,19 +1240,26 @@ namespace daxa
         }
     };
 
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME)                    \
-    namespace HEAD_NAME                                         \
-    {                                                           \
-        static inline constexpr char NAME[] = #HEAD_NAME;       \
-        template <typename TDecl, daxa::usize ATTACHMENT_COUNT> \
-        struct TaskHeadStruct                                   \
-        {                                                       \
-            typename TDecl::InternalT _internal = {};           \
-            operator daxa::AttachmentViews<ATTACHMENT_COUNT>()  \
-                requires(!TDecl::DECL_ATTACHMENTS)              \
-            {                                                   \
-                return TDecl::convert(*this);                   \
+#define DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, STAGE)                               \
+    namespace HEAD_NAME                                                                 \
+    {                                                                                   \
+        static inline constexpr char NAME[] = #HEAD_NAME;                               \
+        static inline constexpr daxa::TaskStage DEFAULT_STAGE = daxa::TaskStage::STAGE; \
+        template <typename TDecl, daxa::usize ATTACHMENT_COUNT>                         \
+        struct TaskHeadStruct                                                           \
+        {                                                                               \
+            typename TDecl::InternalT _internal = {};                                   \
+            operator daxa::AttachmentViews<ATTACHMENT_COUNT>()                          \
+                requires(!TDecl::DECL_ATTACHMENTS)                                      \
+            {                                                                           \
+                return TDecl::convert(*this);                                           \
             }
+
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, NONE)
+#define DAXA_DECL_COMPUTE_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, COMPUTE_SHADER)
+#define DAXA_DECL_RASTER_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, RASTER_SHADER)
+#define DAXA_DECL_TRANSFER_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, TRANSFER)
+#define DAXA_DECL_RAY_TRACING_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, RAY_TRACING)
 
 // Intellisense has trouble processing the real attachment declarations.
 #if defined(__INTELLISENSE__)
@@ -1322,14 +1328,19 @@ namespace daxa
     };                                                                                                                                         \
     struct Task : public daxa::IPartialTask                                                                                                    \
     {                                                                                                                                          \
+        static inline constexpr daxa::TaskStage DEFAULT_STAGE = DEFAULT_STAGE;                                                                 \
         using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
         using Views = VIEWS_T;                                                                                                                 \
-        static constexpr ATTACHMENTS_T const & AT = ATTACHMENTS;                                                                               \
+        ATTACHMENTS_T AT = ATTACHMENTS_T{};                                                                                                    \
         static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                                          \
         static auto name() -> std::string_view { return std::string_view{NAME}; }                                                              \
-        static auto attachments() -> std::span<daxa::TaskAttachment const>                                                                     \
+        auto attachments() const -> std::span<daxa::TaskAttachment const>                                                                      \
         {                                                                                                                                      \
             return AT._internal.value;                                                                                                         \
+        }                                                                                                                                      \
+        auto default_stage() const -> daxa::TaskStage                                                                                          \
+        {                                                                                                                                      \
+            return DEFAULT_STAGE;                                                                                                              \
         }                                                                                                                                      \
     };                                                                                                                                         \
     }                                                                                                                                          \
@@ -1350,6 +1361,8 @@ namespace daxa
 #define DAXA_TH_IMAGE_TYPED(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = 1, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
 #define DAXA_TH_IMAGE_TYPED_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
 #define DAXA_TH_IMAGE_TYPED_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
+
+#define DAXA_TH_STAGE_VAR(STAGE_VAR) daxa::TaskStage stage = {};
 
 #define DAXA_TH_BUFFER(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 0)
 #define DAXA_TH_BUFFER_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)
@@ -1432,33 +1445,6 @@ namespace daxa
     {
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
-
-    template <typename T>
-    concept TaskBufferViewOrTaskBuffer = std::is_same_v<T, TaskBufferView> || std::is_same_v<T, TaskBuffer>;
-
-    template <typename T>
-    concept TaskBlasViewOrTaskBlas = std::is_same_v<T, TaskBlasView> || std::is_same_v<T, TaskBlas>;
-
-    template <typename T>
-    concept TaskTlasViewOrTaskTlas = std::is_same_v<T, TaskTlasView> || std::is_same_v<T, TaskTlas>;
-
-    template <typename T>
-    concept TaskImageViewOrTaskImage = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage>;
-
-    template <typename T>
-    concept TaskResourceViewOrResource =
-        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T>;
-
-    template <typename T>
-    concept TaskBufferBlasTlasViewOrBufferBlasTlas =
-        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T>;
-
-    template <typename T>
-    concept TaskResourceViewOrResourceOrImageViewType =
-        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T> || std::is_same_v<ImageViewType, T>;
-
-    template <typename T>
-        concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
 
     inline auto inl_attachment(TaskAccess access, TaskBufferView view) -> TaskAttachmentInfo
     {
