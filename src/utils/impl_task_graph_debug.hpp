@@ -185,5 +185,37 @@ namespace daxa
         }
 #endif
     }
-    // void validate_
+    
+    void validate_attachment_stages(ImplTaskGraph const & impl, ITask * task)
+    {
+        auto const task_type = task->task_type();
+#if DAXA_VALIDATION
+        for_each(
+            task->attachments(),
+            [&](u32 i, auto & attach)
+            {
+                auto const stage = attach.task_access.stage;
+                if (!task_type_allowed_stages(task_type, stage))
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        false,
+                        std::format("Detected invalid task stage \"{}\" for attachment \"{}\" in task \"{}\".\n"
+                                    "Task type \"{}\" does not allow this stage!",
+                                    to_string(stage), attach.name, task->name(), to_string(task_type)));
+                }
+            },
+            [&](u32 i, TaskImageAttachmentInfo & attach)
+            {
+                auto const stage = attach.task_access.stage;
+                if (!task_type_allowed_stages(task_type, stage))
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        false,
+                        std::format("Detected invalid task stage \"{}\" for attachment \"{}\" in task \"{}\".\n"
+                                    "Task type \"{}\" does not allow this stage!",
+                                    to_string(stage), attach.name, task->name(), to_string(task_type)));
+                }
+            });
+#endif
+    }
 } // namespace daxa

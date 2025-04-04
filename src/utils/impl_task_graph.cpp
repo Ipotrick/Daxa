@@ -11,6 +11,104 @@
 
 namespace daxa
 {
+    auto to_string(TaskStage stage) -> std::string_view
+    {
+        switch (stage)
+        {
+            case TaskStage::NONE: return "NONE";
+            case TaskStage::VERTEX_SHADER: return "VERTEX_SHADER";
+            case TaskStage::TESSELLATION_CONTROL_SHADER: return "TESSELLATION_CONTROL_SHADER";
+            case TaskStage::TESSELLATION_EVALUATION_SHADER: return "TESSELLATION_EVALUATION_SHADER";
+            case TaskStage::GEOMETRY_SHADER: return "GEOMETRY_SHADER";
+            case TaskStage::FRAGMENT_SHADER: return "FRAGMENT_SHADER";
+            case TaskStage::TASK_SHADER: return "TASK_SHADER";
+            case TaskStage::MESH_SHADER: return "MESH_SHADER";
+            case TaskStage::PRE_RASTERIZATION_SHADERS: return "PRE_RASTERIZATION_SHADERS";
+            case TaskStage::RASTER_SHADER: return "RASTER_SHADER";
+            case TaskStage::COMPUTE_SHADER: return "COMPUTE_SHADER";
+            case TaskStage::RAY_TRACING_SHADER: return "RAY_TRACING_SHADER";
+            case TaskStage::SHADER: return "SHADER";
+            case TaskStage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
+            case TaskStage::DEPTH_STENCIL_ATTACHMENT: return "DEPTH_STENCIL_ATTACHMENT";
+            case TaskStage::RESOLVE: return "RESOLVE";
+            case TaskStage::PRESENT: return "PRESENT";
+            case TaskStage::INDIRECT_COMMAND: return "INDIRECT_COMMAND";
+            case TaskStage::INDEX_INPUT: return "INDEX_INPUT";
+            case TaskStage::TRANSFER: return "TRANSFER";
+            case TaskStage::HOST: return "HOST";
+            case TaskStage::AS_BUILD: return "AS_BUILD";
+            case TaskStage::ANY_COMMAND: return "ANY_COMMAND";
+        }
+        return "UNKNOWN";
+    }
+
+    auto to_string(TaskType task_type) -> std::string_view
+    {
+        switch (task_type)
+        {
+            case TaskType::GENERAL: return "GENERAL";
+            case TaskType::RASTER: return "RASTER";
+            case TaskType::COMPUTE: return "COMPUTE";
+            case TaskType::RAY_TRACING: return "RAY_TRACING";
+            case TaskType::TRANSFER: return "TRANSFER";
+            default: return "UNKNOWN";
+        }
+        return "UNKNOWN";
+    }
+
+    auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool
+    {
+        switch(task_type)
+        {
+            case TaskType::GENERAL:
+                return true;
+            case TaskType::RASTER:
+                return stage == TaskStage::VERTEX_SHADER ||
+                stage == TaskStage::TESSELLATION_CONTROL_SHADER ||
+                stage == TaskStage::TESSELLATION_EVALUATION_SHADER ||
+                stage == TaskStage::GEOMETRY_SHADER ||
+                stage == TaskStage::FRAGMENT_SHADER ||
+                stage == TaskStage::TASK_SHADER ||
+                stage == TaskStage::MESH_SHADER ||
+                stage == TaskStage::PRE_RASTERIZATION_SHADERS ||
+                stage == TaskStage::RASTER_SHADER ||
+                stage == TaskStage::COLOR_ATTACHMENT ||
+                stage == TaskStage::DEPTH_STENCIL_ATTACHMENT ||
+                stage == TaskStage::RESOLVE ||
+                stage == TaskStage::PRESENT ||
+                stage == TaskStage::INDIRECT_COMMAND ||
+                stage == TaskStage::INDEX_INPUT;
+            case TaskType::COMPUTE:
+                return stage == TaskStage::COMPUTE_SHADER ||
+                    stage == TaskStage::INDIRECT_COMMAND;
+            case TaskType::RAY_TRACING:
+                return stage == TaskStage::RAY_TRACING_SHADER ||
+                    stage == TaskStage::INDIRECT_COMMAND ||
+                    stage == TaskStage::AS_BUILD; 
+            case TaskType::TRANSFER:
+                return stage == TaskStage::TRANSFER || 
+                    stage == TaskStage::HOST ||
+                    stage == TaskStage::AS_BUILD; 
+            default:
+                return false;
+        }
+        return false;
+    }
+
+    auto task_type_default_stage(TaskType task_type) -> TaskStage
+    {
+        switch (task_type)
+        {
+            case TaskType::GENERAL: return TaskStage::ANY_COMMAND;
+            case TaskType::RASTER: return TaskStage::RASTER_SHADER;
+            case TaskType::COMPUTE: return TaskStage::COMPUTE_SHADER;
+            case TaskType::RAY_TRACING: return TaskStage::RAY_TRACING_SHADER;
+            case TaskType::TRANSFER: return TaskStage::TRANSFER;
+            default: return TaskStage::NONE;
+        }
+        return TaskStage::NONE;
+    }
+
     auto TaskInterface::get(TaskBufferAttachmentIndex index) const -> TaskBufferAttachmentInfo const &
     {
         return attachment_infos[index.value].value.buffer;
@@ -1827,9 +1925,9 @@ namespace daxa
             });
     }
 
-    void apply_view_overrides(ImplTaskGraph const & impl, ITask * task)
+    void apply_attachment_stage_overrides(ImplTaskGraph const & impl, ITask * task)
     {
-        TaskStage default_stage = task->default_stage();
+        TaskStage default_stage = task_type_default_stage(task->task_type());
         auto apply_validate_stage_override = [&](u32 i, auto & attach)
         {
             if (attach.task_access.stage == TaskStage::NONE)
@@ -1902,10 +2000,10 @@ namespace daxa
             .image_view_cache = std::move(view_cache),
             .runtime_images_last_execution = std::move(id_cache),
         };
+        apply_attachment_stage_overrides(impl, impl_task.base_task.get());
         validate_attachment_views(impl, impl_task.base_task.get());
         translate_persistent_ids(impl, impl_task.base_task.get());
-        apply_view_overrides(impl, impl_task.base_task.get());
-        // TODO: Add stage validation as soon as we have pure compute tasks!
+        validate_attachment_stages(impl, impl_task.base_task.get());
 
         for (auto * permutation : impl.record_active_permutations)
         {

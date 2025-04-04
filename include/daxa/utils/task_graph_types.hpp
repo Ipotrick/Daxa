@@ -96,6 +96,8 @@ namespace daxa
         ANY_COMMAND,
     };
 
+    auto to_string(TaskStage stage) -> std::string_view;
+
     auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags;
 
     struct alignas(u32) TaskAccess
@@ -301,6 +303,22 @@ namespace daxa
     using TaskBlasAccess = TaskAccessConsts;
     using TaskTlasAccess = TaskAccessConsts;
     using TaskImageAccess = TaskAccessConsts;
+    
+    enum struct TaskType
+    {
+        UNDEFINED,
+        GENERAL,
+        RASTER,
+        COMPUTE,
+        RAY_TRACING,
+        TRANSFER
+    };
+
+    auto to_string(TaskType task_type) -> std::string_view;
+
+    auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool;
+
+    auto task_type_default_stage(TaskType task_type) -> TaskStage;
 
     using TaskResourceIndex = u32;
 
@@ -1020,7 +1038,7 @@ namespace daxa
         };
         constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> = 0;
         constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> = 0;
-        constexpr virtual auto default_stage() const -> TaskStage = 0;
+        constexpr virtual auto task_type() const -> TaskType = 0;
         constexpr virtual std::string_view name() const = 0;
         virtual void callback(TaskInterface){};
     };
@@ -1119,8 +1137,6 @@ namespace daxa
     ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠓⠯⣧⣎⠳⣬⢓⡬⡱⢎⡵⣋⡬⣛⠴⣋⠶⡱⢎⡞⡬⢳⡍⣞⣦⠷⠛⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     ⠄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢈⡙⠓⠻⠶⠽⢮⣶⣥⣷⣭⣾⣥⣯⡵⠯⠼⠗⠛⠋⣉⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
     */
-
-
 
     /// ======================================= BRACE FOR IMPACT =======================================
     /// ============================== HEAVY TEMPLATE METAPROGRAMMING AHEAD ============================
@@ -1243,26 +1259,26 @@ namespace daxa
         }
     };
 
-#define DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, STAGE)                               \
-    namespace HEAD_NAME                                                                 \
-    {                                                                                   \
-        static inline constexpr char NAME[] = #HEAD_NAME;                               \
-        static inline constexpr daxa::TaskStage DEFAULT_STAGE = daxa::TaskStage::STAGE; \
-        template <typename TDecl, daxa::usize ATTACHMENT_COUNT>                         \
-        struct TaskHeadStruct                                                           \
-        {                                                                               \
-            typename TDecl::InternalT _internal = {};                                   \
-            operator daxa::AttachmentViews<ATTACHMENT_COUNT>()                          \
-                requires(!TDecl::DECL_ATTACHMENTS)                                      \
-            {                                                                           \
-                return TDecl::convert(*this);                                           \
+#define DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, HEAD_TYPE)                    \
+    namespace HEAD_NAME                                                          \
+    {                                                                            \
+        static inline constexpr char NAME[] = #HEAD_NAME;                        \
+        static inline constexpr daxa::TaskType TYPE = daxa::TaskType::HEAD_TYPE; \
+        template <typename TDecl, daxa::usize ATTACHMENT_COUNT>                  \
+        struct TaskHeadStruct                                                    \
+        {                                                                        \
+            typename TDecl::InternalT _internal = {};                            \
+            operator daxa::AttachmentViews<ATTACHMENT_COUNT>()                   \
+                requires(!TDecl::DECL_ATTACHMENTS)                               \
+            {                                                                    \
+                return TDecl::convert(*this);                                    \
             }
 
-#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, NONE)
-#define DAXA_DECL_COMPUTE_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, COMPUTE_SHADER)
-#define DAXA_DECL_RASTER_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, RASTER_SHADER)
-#define DAXA_DECL_TRANSFER_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, TRANSFER)
+#define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, GENERAL)
+#define DAXA_DECL_RASTER_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, RASTER)
+#define DAXA_DECL_COMPUTE_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, COMPUTE)
 #define DAXA_DECL_RAY_TRACING_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, RAY_TRACING)
+#define DAXA_DECL_TRANSFER_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, TRANSFER)
 
 // Intellisense has trouble processing the real attachment declarations.
 #if defined(__INTELLISENSE__)
@@ -1331,19 +1347,19 @@ namespace daxa
     };                                                                                                                                         \
     struct Task : public daxa::IPartialTask                                                                                                    \
     {                                                                                                                                          \
-        static inline constexpr daxa::TaskStage DEFAULT_STAGE = DEFAULT_STAGE;                                                                 \
+        static inline constexpr daxa::TaskType TASK_TYPE = TYPE;                                                                               \
         using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
         using Views = VIEWS_T;                                                                                                                 \
-        ATTACHMENTS_T AT = ATTACHMENTS_T{};                                                                                                    \
-        static constexpr daxa::usize ATTACH_COUNT = ATTACHMENT_COUNT;                                                                          \
+        static constexpr auto const & AT = ATTACHMENTS_T{};                                                                                    \
+        static constexpr auto ATTACH_COUNT = ATTACHMENT_COUNT;                                                                                 \
         static auto name() -> std::string_view { return std::string_view{NAME}; }                                                              \
         auto attachments() const -> std::span<daxa::TaskAttachment const>                                                                      \
         {                                                                                                                                      \
             return AT._internal.value;                                                                                                         \
         }                                                                                                                                      \
-        auto default_stage() const -> daxa::TaskStage                                                                                          \
+        auto task_type() const -> daxa::TaskType                                                                                               \
         {                                                                                                                                      \
-            return DEFAULT_STAGE;                                                                                                              \
+            return TYPE;                                                                                                                       \
         }                                                                                                                                      \
     };                                                                                                                                         \
     }                                                                                                                                          \

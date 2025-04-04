@@ -184,7 +184,7 @@ namespace daxa
         {
             value._internal._callback(ti);
         }
-        virtual auto default_stage() const -> TaskStage override { return TaskStage::NONE; }
+        virtual auto task_type() const -> TaskType override { return TaskType::GENERAL; }
 
       private:
         enum Allow
@@ -467,7 +467,7 @@ namespace daxa
                 constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> { return _attachments; }
                 constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> { return _attachments; }
                 constexpr virtual auto name() const -> std::string_view { return NoRefTTask::name(); }
-                virtual auto default_stage() const -> TaskStage { return _task.default_stage(); };
+                virtual auto task_type() const -> TaskType { return _task.task_type(); };
                 virtual void callback(TaskInterface ti) { _task.callback(ti); };
             };
             auto wrapped_task = std::make_unique<WrapperTask>(std::move(task));
