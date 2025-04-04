@@ -8,6 +8,20 @@
 
 /// --- Begin Helpers ---
 
+// DO NOT VALIDATE RENDER PASS COMMANDS
+// VALIDATING THE START OF A RENDERPASS SHOULD ALWAYS BE ENOUGH!
+auto validate_queue_family(daxa_QueueFamily recorder_qf, daxa_QueueFamily command_qf) -> daxa_Result
+{
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    bool const main_on_transfer = command_qf == DAXA_QUEUE_FAMILY_MAIN && recorder_qf == DAXA_QUEUE_FAMILY_TRANSFER;
+    bool const comp_on_transfer = command_qf == DAXA_QUEUE_FAMILY_COMPUTE && recorder_qf == DAXA_QUEUE_FAMILY_TRANSFER;
+    bool const main_on_comp = command_qf == DAXA_QUEUE_FAMILY_MAIN && recorder_qf == DAXA_QUEUE_FAMILY_COMPUTE;
+    result = main_on_transfer ? DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
+    result = comp_on_transfer ? DAXA_RESULT_ERROR_COMPUTE_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
+    result = main_on_comp ? DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER : result;
+    return result;
+}
+
 auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
 {
     return VkImageMemoryBarrier2{
@@ -377,6 +391,8 @@ auto daxa_cmd_blit_image_to_image(daxa_CommandRecorder self, daxa_ImageBlitInfo 
 auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_BuildAccelerationStucturesInfo const * info) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     if ((self->device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
         result = DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
@@ -637,6 +653,9 @@ void daxa_cmd_reset_event(daxa_CommandRecorder self, daxa_ResetEventInfo const *
 
 auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo const * info) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
     if (daxa::holds_alternative<daxa_ImplCommandRecorder::NoPipeline>(self->current_pipeline))
     {
@@ -664,54 +683,69 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED);
     }
     // Always write the whole range, fill with 0xFF to the size of the push constant.
-    // This makes validation and renderdoc happy as well as help debug uninitialized push constant data 
-    std::array<std::byte, DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE> const_data = { std::byte{ 0xFF } };
+    // This makes validation and renderdoc happy as well as help debug uninitialized push constant data
+    std::array<std::byte, DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE> const_data = {std::byte{0xFF}};
     std::memcpy(const_data.data(), info->data, info->size);
     vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0, current_pipeline_push_constant_size, const_data.data());
     return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline)
+auto daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
-    const bool prev_pipeline_rt = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RayTracingPipeline>;
-    const bool same_type_same_layout_as_prev_pipe = prev_pipeline_rt && daxa::get<daxa_RayTracingPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    bool const prev_pipeline_rt = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RayTracingPipeline>;
+    bool const same_type_same_layout_as_prev_pipe = prev_pipeline_rt && daxa::get<daxa_RayTracingPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
     if (!same_type_same_layout_as_prev_pipe)
     {
         vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     }
     self->current_pipeline = pipeline;
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline);
+    return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline pipeline)
+auto daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline pipeline) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
-    const bool prev_pipeline_compute = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_ComputePipeline>;
-    const bool same_type_same_layout_as_prev_pipe = prev_pipeline_compute && daxa::get<daxa_ComputePipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    bool const prev_pipeline_compute = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_ComputePipeline>;
+    bool const same_type_same_layout_as_prev_pipe = prev_pipeline_compute && daxa::get<daxa_ComputePipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
     if (!same_type_same_layout_as_prev_pipe)
     {
         vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     }
     self->current_pipeline = pipeline;
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
+    return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline pipeline)
+auto daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline pipeline) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_MAIN);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
-    const bool prev_pipeline_raster = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RasterPipeline>;
-    const bool same_type_same_layout_as_prev_pipe = prev_pipeline_raster && daxa::get<daxa_RasterPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    bool const prev_pipeline_raster = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RasterPipeline>;
+    bool const same_type_same_layout_as_prev_pipe = prev_pipeline_raster && daxa::get<daxa_RasterPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
     if (!same_type_same_layout_as_prev_pipe)
     {
         vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     }
     self->current_pipeline = pipeline;
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
+    return DAXA_RESULT_SUCCESS;
 }
 
 auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * info) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
@@ -738,6 +772,9 @@ auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
 
 auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndirectInfo const * info) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
@@ -764,6 +801,9 @@ auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndir
 
 auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
@@ -775,6 +815,9 @@ auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info
 
 auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirectInfo const * info) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer)
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
@@ -814,6 +857,9 @@ auto daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder self, daxa_SamplerId
 
 auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginInfo const * info) -> daxa_Result
 {
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_MAIN);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
 
     auto fill_rendering_attachment_info = [&](daxa_RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out)

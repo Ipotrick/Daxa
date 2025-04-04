@@ -18,7 +18,6 @@ typedef struct
 {
     void const * data;
     uint64_t size;
-    uint32_t offset; // deprecated API 3.1
 } daxa_PushConstantInfo;
 
 typedef struct
@@ -458,11 +457,11 @@ daxa_cmd_reset_event(daxa_CommandRecorder cmd_enc, daxa_ResetEventInfo const * i
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_push_constant(daxa_CommandRecorder cmd_enc, daxa_PushConstantInfo const * info);
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder cmd_enc, daxa_RayTracingPipeline pipeline);
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_set_compute_pipeline(daxa_CommandRecorder cmd_enc, daxa_ComputePipeline pipeline);
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_set_raster_pipeline(daxa_CommandRecorder cmd_enc, daxa_RasterPipeline pipeline);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

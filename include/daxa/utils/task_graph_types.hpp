@@ -1233,7 +1233,12 @@ namespace daxa
                 u32 dummy = {};
                 std::array<TaskAttachmentViewWrapperRaw, ATTACHMENT_COUNT> initializers = {};
             };
-            auto views = std::bit_cast<Extractor>(type);
+            // Compilers collapse here. Usually type traits start to fail so we will just memcpy here until we get c++26 reflection.
+            static constexpr u32 SIZEOF_EXTRACTOR = sizeof(Extractor);
+            static constexpr u32 SIZEOF_TYPE = sizeof(decltype(type));
+            static_assert(SIZEOF_TYPE == SIZEOF_EXTRACTOR, "DAXA_STATIC_ERROR: TaskAttachmentViews Extractor type abi does not match actual views type!");
+            Extractor views = {};
+            std::memcpy(&views, &type, SIZEOF_EXTRACTOR);
             auto ret = daxa::AttachmentViews<ATTACHMENT_COUNT>{};
             for (daxa::u32 i = 0; i < ATTACHMENT_COUNT; ++i)
             {

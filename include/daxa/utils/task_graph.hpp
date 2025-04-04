@@ -151,6 +151,7 @@ namespace daxa
         InlineTask() = default;
         InlineTask(InlineTaskInfo const & info)
         {
+            value = {}; // Prevents ICE
             value._internal._attachments = info.attachments;
             value._internal._callback = info.task;
             value._internal._name = info.name;
@@ -164,6 +165,7 @@ namespace daxa
         }
         InlineTask(InlineTask && other)
         {
+            this->value = {}; // Prevents ICE
             this->value._internal._attachments = std::move(other.value._internal._attachments);
             this->value._internal._callback = std::move(other.value._internal._callback);
             this->value._internal._name = std::move(other.value._internal._name);
@@ -278,32 +280,32 @@ namespace daxa
         union
         {
             InternalValue<Allow::NONE, TaskStage::NONE> value = {};
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::VERTEX_SHADER> vs;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::VERTEX_SHADER> vertex_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_CONTROL_SHADER> tcs;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_CONTROL_SHADER> tesselation_control_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_EVALUATION_SHADER> tes;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_EVALUATION_SHADER> tesselation_evaluation_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::GEOMETRY_SHADER> gs;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::GEOMETRY_SHADER> geometry_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::FRAGMENT_SHADER> fs;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::FRAGMENT_SHADER> fragment_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::COMPUTE_SHADER> cs;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::COMPUTE_SHADER> compute_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RAY_TRACING_SHADER> rts;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RAY_TRACING_SHADER> ray_tracing_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TASK_SHADER> ts;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TASK_SHADER> task_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::MESH_SHADER> ms;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::MESH_SHADER> mesh_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::PRE_RASTERIZATION_SHADERS> prs;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::PRE_RASTERIZATION_SHADERS> pre_rasterization_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RASTER_SHADER> rs;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RASTER_SHADER> raster_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::SHADER> s;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::SHADER> shader;
-            InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> ca;
-            InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> color_attachment;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::VERTEX_SHADER> vs;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::VERTEX_SHADER> vertex_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_CONTROL_SHADER> tcs;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_CONTROL_SHADER> tesselation_control_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_EVALUATION_SHADER> tes;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_EVALUATION_SHADER> tesselation_evaluation_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::GEOMETRY_SHADER> gs;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::GEOMETRY_SHADER> geometry_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::FRAGMENT_SHADER> fs;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::FRAGMENT_SHADER> fragment_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::COMPUTE_SHADER> cs;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::COMPUTE_SHADER> compute_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RAY_TRACING_SHADER> rts;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RAY_TRACING_SHADER> ray_tracing_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TASK_SHADER> ts;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TASK_SHADER> task_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::MESH_SHADER> ms;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::MESH_SHADER> mesh_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::PRE_RASTERIZATION_SHADERS> prs;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::PRE_RASTERIZATION_SHADERS> pre_rasterization_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RASTER_SHADER> rs;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RASTER_SHADER> raster_shader;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::SHADER> s;
+            // InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::SHADER> shader;
+            // InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> ca;
+            // InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> color_attachment;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::DEPTH_STENCIL_ATTACHMENT> dsa;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::RESOLVE> resolve;
