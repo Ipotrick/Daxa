@@ -35,21 +35,14 @@
 ///   the main queue is the default exlusively owning queue.
 ///
 /// CommandRecorder Types
-///   * daxa has four command recorders
+///   * daxa has two command recorders
 ///   * CommandRecorder
-///     * can be used only for the main queue family
-///     * can record any command and can be morphed into a render command recorder
+///     * can record any non raster command
+///     * mind that the commands that can be recorded are restricted to the recorders queue family type
 ///   * RenderCommandRecorder
 ///     * can record commands that are only valid within a renderpass
 ///     * created by generic command recorder
 ///     * must be morphed back into a command recorder to finish a render pass
-///   * ComputeCommandRecorder
-///     * can only be used to record commands to the main and compute queues, NOT transfer queues.
-///     * can record any command allowed on transfer and compute queues and the main queue, does not allow recording of graphics commands.
-///   * TransferCommandRecorder
-///     * can be used to record commands to ANY queue
-///     * can only record commands that are valid on the transfer queue and all others.
-///   * allows for cheap compile time checks. Without these types, daxa would have to check the queue family for every command.
 ///
 
 auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
@@ -133,7 +126,7 @@ namespace tests
             // Commands for a transfer queue MUST ONLY be recorded by a transfer command recorder!
             // A generic or compute command recorder can not record commands for a transfer queue!
             // Tho transfer command recorders CAN record commands for any queue.
-            auto rec = device.create_transfer_command_recorder({daxa::QueueFamily::TRANSFER});
+            auto rec = device.create_command_recorder({daxa::QueueFamily::TRANSFER});
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             rec.copy_buffer_to_buffer({
                 .src_buffer = buffer,
@@ -156,7 +149,7 @@ namespace tests
             // Command recorders queue family MUST match the queue it is submitted to.
             // Commands for a compute queue can only be recorded by a compute or a transfer command recorder!
             // A generic command recorder is not allowed to record commands for a compute queue!
-            auto rec = device.create_compute_command_recorder({daxa::QueueFamily::COMPUTE});
+            auto rec = device.create_command_recorder({daxa::QueueFamily::COMPUTE});
             rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_READ_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
             rec.copy_buffer_to_buffer({
                 .src_buffer = buffer,
@@ -386,7 +379,7 @@ namespace tests
                 loop_task_graph.execute({});
                 device.collect_garbage();
                 {
-                    auto rec = device.create_compute_command_recorder({daxa::QueueFamily::COMPUTE});
+                    auto rec = device.create_command_recorder({daxa::QueueFamily::COMPUTE});
                     auto cmds = rec.complete_current_commands();
                     device.submit_commands({
                         .queue = daxa::QUEUE_COMPUTE_0, 

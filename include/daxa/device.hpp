@@ -546,8 +546,6 @@ namespace daxa
 
         [[nodiscard]] auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         [[nodiscard]] auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;
-        [[nodiscard]] auto create_compute_command_recorder(CommandRecorderInfo const & info) -> ComputeCommandRecorder;
-        [[nodiscard]] auto create_transfer_command_recorder(CommandRecorderInfo const & info) -> TransferCommandRecorder;
         [[nodiscard]] auto create_binary_semaphore(BinarySemaphoreInfo const & info) -> BinarySemaphore;
         [[nodiscard]] auto create_timeline_semaphore(TimelineSemaphoreInfo const & info) -> TimelineSemaphore;
         [[nodiscard]] auto create_event(EventInfo const & info) -> Event;

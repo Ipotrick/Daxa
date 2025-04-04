@@ -15,7 +15,6 @@ namespace daxa
     {
         void const * data = {};
         u64 size = {};
-        [[deprecated("parameter ignored. API: 3.1")]] u32 offset = {};
     };
 
     struct CommandRecorderInfo
@@ -336,14 +335,14 @@ namespace daxa
     };
 
     /**
-     * @brief   TransferCommandRecorder is used to encode commands into a VkCommandBuffer.
+     * @brief   CommandRecorder is used to encode commands into a VkCommandBuffer.
      *          In order to submit a command list one must complete it.
      *          Completing a command list does SIGNIFICANT driver cpu work,
      *          so do not always complete just before submitting.
-     * 
-     * TRANSFER:
-     * * can only be used to record "transfer commands"
-     * * can be created for any queue family
+     *
+     * GENERAL:
+     * * can only be created for the main queue.
+     * * can be used to record any commands.
      *
      * THREADSAFETY:
      * * must be externally synchronized
@@ -357,19 +356,23 @@ namespace daxa
      * * using deferred destructions will make the completed command list not reusable,
      *   as resources can only be destroyed once
      */
-    struct DAXA_EXPORT_CXX TransferCommandRecorder
+    struct DAXA_EXPORT_CXX CommandRecorder
     {
       protected:
         daxa_CommandRecorder internal = {};
         friend struct RenderCommandRecorder;
 
+
+        /// ============= Transfer Queue Legal Commands ============= ///
+
+
       public:
-        TransferCommandRecorder() = default;
-        ~TransferCommandRecorder();
-        TransferCommandRecorder(TransferCommandRecorder const &) = delete;
-        TransferCommandRecorder & operator=(TransferCommandRecorder const &) = delete;
-        TransferCommandRecorder(TransferCommandRecorder &&);
-        TransferCommandRecorder & operator=(TransferCommandRecorder &&);
+        CommandRecorder() = default;
+        ~CommandRecorder();
+        CommandRecorder(CommandRecorder const &) = delete;
+        CommandRecorder & operator=(CommandRecorder const &) = delete;
+        CommandRecorder(CommandRecorder &&);
+        CommandRecorder & operator=(CommandRecorder &&);
 
         void copy_buffer_to_buffer(BufferCopyInfo const & info);
         void copy_buffer_to_image(BufferImageCopyInfo const & info);
@@ -425,41 +428,19 @@ namespace daxa
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.
         [[nodiscard]] auto info() const -> CommandRecorderInfo const &;
-    };
 
-    /**
-     * @brief   ComputeCommandRecorder is used to encode commands into a VkCommandBuffer.
-     *          In order to submit a command list one must complete it.
-     *          Completing a command list does SIGNIFICANT driver cpu work,
-     *          so do not always complete just before submitting.
-     * 
-     * COMPUTE:
-     * * can only be used to record "transfer commands" and "compute commands"
-     * * can only be created for compute and main queue family
-     *
-     * THREADSAFETY:
-     * * must be externally synchronized
-     * * can be passed between different threads
-     * * may only be accessed by one thread at a time
-     * WARNING:
-     * * creating a command list, it will LOCK resource lifetimes
-     * * calling collect_garbage will BLOCK until all resource lifetime locks have been unlocked
-     * * completing a command list will remove its lock on the resource lifetimes
-     * * most record commands can throw exceptions on invalid inputs such as invalid ids
-     * * using deferred destructions will make the completed command list not reusable,
-     *   as resources can only be destroyed once
-     */
-    struct DAXA_EXPORT_CXX ComputeCommandRecorder : TransferCommandRecorder
-    {
+
+        /// ============= Compute Queue Legal Commands ============= ///
+
+
         void push_constant_vptr(PushConstantInfo const & info);
 
         template <typename T>
-        void push_constant(T const & constant, u32 offset = 0)
+        void push_constant(T const & constant)
         {
             push_constant_vptr({
                 .data = &constant,
-                .size = static_cast<u32>(sizeof(T)),
-                .offset = offset,
+                .size = static_cast<u32>(sizeof(T))
             });
         }
 
@@ -476,32 +457,11 @@ namespace daxa
         void trace_rays(TraceRaysInfo const & info);
 
         void trace_rays_indirect(TraceRaysIndirectInfo const & info);
-    };
 
-    /**
-     * @brief   CommandRecorder is used to encode commands into a VkCommandBuffer.
-     *          In order to submit a command list one must complete it.
-     *          Completing a command list does SIGNIFICANT driver cpu work,
-     *          so do not always complete just before submitting.
-     * 
-     * GENERAL:
-     * * can only be created for the main queue.
-     * * can be used to record any commands.
-     *
-     * THREADSAFETY:
-     * * must be externally synchronized
-     * * can be passed between different threads
-     * * may only be accessed by one thread at a time
-     * WARNING:
-     * * creating a command list, it will LOCK resource lifetimes
-     * * calling collect_garbage will BLOCK until all resource lifetime locks have been unlocked
-     * * completing a command list will remove its lock on the resource lifetimes
-     * * most record commands can throw exceptions on invalid inputs such as invalid ids
-     * * using deferred destructions will make the completed command list not reusable,
-     *   as resources can only be destroyed once
-     */
-    struct DAXA_EXPORT_CXX CommandRecorder : ComputeCommandRecorder
-    {
+
+        /// ============= Main Queue Legal Commands ============= ///
+
+
         /// @brief  Starts a renderpass scope akin to the dynamic rendering feature in vulkan.
         ///         Between the begin and end renderpass commands, the renderpass persists and drawcalls can be recorded.
         /// @param info parameters.
