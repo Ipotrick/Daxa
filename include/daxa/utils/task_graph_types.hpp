@@ -999,6 +999,12 @@ namespace daxa
     template <typename T>
     concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
 
+    template<typename T>
+    concept TaskResourceOrViewOrAccess = TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStage>;
+
+    template<typename T>
+    concept TaskImageOrViewOrAccess = TaskImageViewOrTaskImageOrImageViewType<T> || std::is_same_v<T, TaskStage>;
+
     inline namespace detail
     {
         struct AsbSizeAlignment
