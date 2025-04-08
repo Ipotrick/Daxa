@@ -453,7 +453,7 @@ namespace daxa
             if (is_slang_file)
             {
                 info.language = ShaderLanguage::SLANG;
-            }            
+            }
             if (is_glsl_file)
             {
                 info.language = ShaderLanguage::GLSL;
@@ -475,7 +475,7 @@ namespace daxa
     auto PipelineManager::add_ray_tracing_pipeline2(RayTracingPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
-        
+
         // DAXA_DBG_ASSERT_TRUE_M(!daxa::holds_alternative<daxa::Monostate>(a_info.shader_info.source), "must provide shader source");
         auto modified_info = info;
         std::array shader_infos = {&modified_info.ray_gen_infos,
@@ -510,7 +510,7 @@ namespace daxa
             return Result<std::shared_ptr<RayTracingPipeline>>(std::move(pipe_result.value().pipeline_ptr));
         }
     }
-    
+
     auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
         ComputePipelineCompileInfo2 info = {};
@@ -676,6 +676,7 @@ namespace daxa
 #endif
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
                 auto ret = slang::createGlobalSession(slang_backend.global_session.writeRef());
+                DAXA_DBG_ASSERT_TRUE_M(SLANG_SUCCEEDED(ret), "slang::createGlobalSession failed");
 #endif
             }
             ++pipeline_manager_count;

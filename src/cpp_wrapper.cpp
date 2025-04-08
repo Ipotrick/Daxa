@@ -182,6 +182,7 @@ namespace daxa
         return ret;
     }
 
+#if !DAXA_REMOVE_DEPRECATED
     auto Instance::create_device(DeviceInfo const & info) -> Device
     {
         Device ret = {};
@@ -192,6 +193,7 @@ namespace daxa
                      "failed to create device");
         return ret;
     }
+#endif
 
     auto Instance::create_device_2(DeviceInfo2 const & info) -> Device
     {
@@ -1221,10 +1223,9 @@ namespace daxa
         case ImageLayout::TRANSFER_DST_OPTIMAL: return "TRANSFER_DST_OPTIMAL";
         case ImageLayout::READ_ONLY_OPTIMAL: return "READ_ONLY_OPTIMAL";
         case ImageLayout::ATTACHMENT_OPTIMAL: return "ATTACHMENT_OPTIMAL";
-        case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";    
+        case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";
         default: return "UNIMPLEMENTED CASE";
         }
-        return "invalid ImageLayout";
     }
 
     auto to_string(ImageUsageFlags const & flags) -> std::string
@@ -1944,13 +1945,13 @@ namespace daxa
         // arrays       0              1          2            3
         //  ⬇️
         //
-        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓  
+        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓
         //  0      A ▓▓██████▓▓   B ▓▓██░░░░   C ░░░░██▓▓   D ░░██░░
         //           ▓▓██████▓▓     ▓▓██░░░░     ░░░░██▓▓     ░░██░░
         //           ▓▓██████▓▓     ▓▓██░░░░     ░░░░██▓▓     ░░██░░
-        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓  
+        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓
         //
-        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓  
+        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓
         //  1      E ▓▓██████▓▓   F ▓▓██░░░░   G ░░░░██▓▓   H ░░██░░
         //             ░░░░░░         ░░░░░░     ░░░░░░       ░░░░░░
         //             ░░░░░░         ░░░░░░     ░░░░░░       ░░░░░░
@@ -1958,7 +1959,7 @@ namespace daxa
         //  3      I   ░░░░░░     J   ░░░░░░   K ░░░░░░     L ░░░░░░
         //             ░░░░░░         ░░░░░░     ░░░░░░       ░░░░░░
         //           ▓▓██████▓▓     ▓▓██░░░░     ░░░░██▓▓     ░░██░░
-        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓  
+        //           ▓▓▓▓▓▓▓▓▓▓     ▓▓▓▓             ▓▓▓▓       ▓▓
         //
         //  2      M   ░░░░░░     N   ░░░░░░   O ░░░░░░     P ░░░░░░
         //           ▓▓██████▓▓     ▓▓██░░░░     ░░░░██▓▓     ░░██░░
