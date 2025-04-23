@@ -201,12 +201,47 @@ namespace daxa
 
 } // namespace daxa
 
+#define _DAXA_DECL_TEX_EXTENSION_FORMAT(TYPE)\
+namespace daxa\
+{ \
+    DAXA_DECL_STORAGE_IMAGES [[vk::image_format("r32ui")]] coherent TYPE<u32> TYPE ## u32_table[];\
+    DAXA_DECL_STORAGE_IMAGES [[vk::image_format("r64ui")]] coherent TYPE<u64> TYPE ## u64_table[];\
+} \
+extension TYPE<daxa::u32>\
+{\
+    static TYPE<daxa::u32> get_formatted(daxa::ImageViewId i) { return daxa::TYPE ## u32_table[i.index()]; }\
+    static TYPE<daxa::u32> get_formatted(daxa::ImageViewIndex i) { return daxa::TYPE ## u32_table[i.index()]; }\
+}\
+extension TYPE<daxa::u64>\
+{\
+    static TYPE<daxa::u64> get_formatted(daxa::ImageViewId i) { return daxa::TYPE ## u64_table[i.index()]; }\
+    static TYPE<daxa::u64> get_formatted(daxa::ImageViewIndex i) { return daxa::TYPE ## u64_table[i.index()]; }\
+}\
+namespace daxa {\
+    extension TYPE ## Id<daxa::u32>\
+    {\
+        TYPE<u32> get_formatted() { return TYPE<u32>::get_formatted(id); }\
+    }\
+    extension TYPE ## Id<daxa::u64>\
+    {\
+        TYPE<u64> get_formatted() { return TYPE<u64>::get_formatted(id); }\
+    }\
+    extension TYPE ## Index<daxa::u32>\
+    {\
+        TYPE<u32> get_formatted() { return TYPE<u32>::get_formatted(index); }\
+    }\
+    extension TYPE ## Index<daxa::u64>\
+    {\
+        TYPE<u64> get_formatted() { return TYPE<u64>::get_formatted(index); }\
+    }\
+}
+
 #define _DAXA_DECL_TEX_EXTENSION(TYPE, TABLE)\
 __generic<T : ITexelElement> extension TYPE<T>\
 {\
     static TYPE<T> get(daxa::ImageViewId i) { return TABLE[i.index()]; }\
-    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE ## _coherent[i.index()]; }\
     static TYPE<T> get(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE ## _coherent[i.index()]; }\
     static TYPE<T> get_coherent(daxa::ImageViewIndex i) { return TABLE ## _coherent[i.index()]; }\
 }\
 namespace daxa\
@@ -232,6 +267,11 @@ _DAXA_DECL_TEX_EXTENSION(RWTexture2D, daxa::storage_images)
 _DAXA_DECL_TEX_EXTENSION(RWTexture3D, daxa::storage_images)
 _DAXA_DECL_TEX_EXTENSION(RWTexture1DArray, daxa::storage_images)
 _DAXA_DECL_TEX_EXTENSION(RWTexture2DArray, daxa::storage_images)
+_DAXA_DECL_TEX_EXTENSION_FORMAT(RWTexture1D)
+_DAXA_DECL_TEX_EXTENSION_FORMAT(RWTexture2D)
+_DAXA_DECL_TEX_EXTENSION_FORMAT(RWTexture3D)
+_DAXA_DECL_TEX_EXTENSION_FORMAT(RWTexture1DArray)
+_DAXA_DECL_TEX_EXTENSION_FORMAT(RWTexture2DArray)
     
 _DAXA_DECL_TEX_EXTENSION(Texture1D, daxa::sampled_images)
 _DAXA_DECL_TEX_EXTENSION(Texture2D, daxa::sampled_images)
@@ -241,7 +281,6 @@ _DAXA_DECL_TEX_EXTENSION(Texture2DArray, daxa::sampled_images)
 _DAXA_DECL_TEX_EXTENSION(TextureCube, daxa::sampled_images)
 _DAXA_DECL_TEX_EXTENSION(TextureCubeArray, daxa::sampled_images)
 _DAXA_DECL_TEX_EXTENSION(Texture2DMS, daxa::sampled_images)
-
 
 // These are hopefully only temporary global namespace declarations:
 _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(uint, daxa_u)
