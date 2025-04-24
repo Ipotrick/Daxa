@@ -1962,24 +1962,23 @@ namespace daxa
             task->attachments(),
             [&](u32 i, auto & attach)
             {
-                validate_buffer_blas_tlas_task_view(*task, i, attach);
-                attach.translated_view = impl.buffer_blas_tlas_id_to_local_id(attach.view);
                 if (attach.view.access_type_override != TaskAccessType::NONE)
                 {
                     attach.task_access.type = attach.view.access_type_override;
                 }
                 apply_validate_stage_override(i, attach);
+                validate_buffer_blas_tlas_task_view(*task, i, attach);
+                attach.translated_view = impl.buffer_blas_tlas_id_to_local_id(attach.view);
             },
             [&](u32 i, TaskImageAttachmentInfo & attach)
             {
-                
-                validate_image_task_view(*task, i, attach);
-                attach.translated_view = impl.id_to_local_id(attach.view);
                 if (attach.view.access_type_override != TaskAccessType::NONE)
                 {
                     attach.task_access.type = attach.view.access_type_override;
                 }
                 apply_validate_stage_override(i, attach);
+                validate_image_task_view(*task, i, attach);
+                attach.translated_view = impl.id_to_local_id(attach.view);
             });
     }
 

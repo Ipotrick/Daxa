@@ -1166,7 +1166,25 @@ namespace daxa
     {
         TaskAttachmentViewWrapperRaw _value = {};
 
-        TaskAttachmentViewWrapper() = default;
+        TaskAttachmentViewWrapper() 
+        {
+            if constexpr(std::is_same_v<T, TaskBufferView>)
+            {
+                _value = {TaskAttachmentType::BUFFER, {.buffer = TaskBufferView{}}};
+            }
+            if constexpr(std::is_same_v<T, TaskBlasView>)
+            {
+                _value = {TaskAttachmentType::BLAS, {.blas = TaskBlasView{}}};
+            }
+            if constexpr(std::is_same_v<T, TaskTlasView>)
+            {
+                _value = {TaskAttachmentType::TLAS, {.tlas = TaskTlasView{}}};
+            }
+            if constexpr(std::is_same_v<T, TaskImageView>)
+            {
+                _value = {TaskAttachmentType::IMAGE, {.image = TaskImageView{}}};
+            }
+        }
         TaskAttachmentViewWrapper(TaskBufferViewOrTaskBuffer auto const & v)
             requires(std::is_same_v<T, TaskBufferView>)
             : _value{TaskAttachmentType::BUFFER, {.buffer = v}}

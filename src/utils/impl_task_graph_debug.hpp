@@ -67,11 +67,11 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             type_restriction_upheld,
             std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
-                        attach.name, attach_index, to_string(attach.access), task.name()));
+                        attach.name, attach_index, to_string(attach.task_access), task.name()));
         DAXA_DBG_ASSERT_TRUE_M(
             view_filled_or_null,
             std::format("Detected unassigned task buffer view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
-                        attach.name, attach_index, to_string(attach.access), task.name()));
+                        attach.name, attach_index, to_string(attach.task_access), task.name()));
     }
 
     void validate_image_task_view(ITask const & task, u32 attach_index, TaskImageAttachmentInfo const & attach)
@@ -81,11 +81,11 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             type_restriction_upheld,
             std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
-                        attach.name, attach_index, to_string(attach.access), task.name()));
+                        attach.name, attach_index, to_string(attach.task_access), task.name()));
         DAXA_DBG_ASSERT_TRUE_M(
             view_filled_or_null,
             std::format("Detected unassigned task image view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
-                        attach.name, attach_index, to_string(attach.access), task.name()));
+                        attach.name, attach_index, to_string(attach.task_access), task.name()));
     }
 
     void validate_overlapping_attachment_views(ImplTaskGraph const & impl, ITask const * task)
