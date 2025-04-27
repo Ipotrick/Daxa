@@ -139,7 +139,7 @@ namespace daxa
                                 "Attachments \"{}\" and \"{}\" refer overlapping slices ({} and {}) to the same task image \"{}\" in task \"{}\";"
                                 "All task image attachment views and their slices must refer to disjoint parts of images within each task!",
                                 a.name, b.name, to_string(a.view.slice), to_string(b.view.slice),
-                                impl.global_image_infos.at(b.view.index).get_name(),
+                                impl.global_image_infos.at(b.translated_view.index).get_name(),
                                 task->name()));
                     });
             });
