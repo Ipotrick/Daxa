@@ -1986,7 +1986,6 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_not_compiled(impl);
-        validate_overlapping_attachment_views(impl, task.get());
 
         TaskId const task_id = impl.tasks.size();
 
@@ -2003,6 +2002,7 @@ namespace daxa
         validate_attachment_views(impl, impl_task.base_task.get());
         translate_persistent_ids(impl, impl_task.base_task.get());
         validate_attachment_stages(impl, impl_task.base_task.get());
+        validate_overlapping_attachment_views(impl, impl_task.base_task.get());
 
         for (auto * permutation : impl.record_active_permutations)
         {
