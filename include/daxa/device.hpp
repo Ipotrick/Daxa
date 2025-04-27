@@ -299,6 +299,7 @@ namespace daxa
         static inline constexpr ImplicitFeatureFlags SHADER_ATOMIC_FLOAT = {0x1 << 11};
         static inline constexpr ImplicitFeatureFlags SWAPCHAIN = {0x1 << 12};
         static inline constexpr ImplicitFeatureFlags SHADER_INT16 = {0x1 << 13};
+        static inline constexpr ImplicitFeatureFlags SHADER_CLOCK = {0x1 << 14};
     };
 
     struct DeviceProperties

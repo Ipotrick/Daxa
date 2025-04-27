@@ -57,6 +57,7 @@ namespace daxa
             physical_device_mesh_shader_ext,
             physical_device_ray_tracing_invocation_reorder_nv,
             physical_device_shader_atomic_float_ext,
+            physical_device_shader_clock_khr,
             COUNT
         };
         constexpr static std::array<char const *, COUNT> extension_names = {
@@ -75,6 +76,7 @@ namespace daxa
             VK_EXT_MESH_SHADER_EXTENSION_NAME,
             VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME,
             VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
+            VK_KHR_SHADER_CLOCK_EXTENSION_NAME,
         };
         char const * extension_name_list[COUNT] = {};
         u32 extension_name_list_size = {};
@@ -110,6 +112,7 @@ namespace daxa
         VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR physical_device_ray_tracing_position_fetch_features_khr = {};
         VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV physical_device_ray_tracing_invocation_reorder_features_nv = {};
         VkPhysicalDeviceShaderAtomicFloatFeaturesEXT physical_device_shader_atomic_float_features_ext = {};
+        VkPhysicalDeviceShaderClockFeaturesKHR physical_device_shader_clock_features_khr = {};
         VkPhysicalDeviceFeatures2 physical_device_features_2 = {};
         bool conservative_rasterization = {};
         bool swapchain = {};
