@@ -48,6 +48,12 @@ namespace daxa
     {
         Swapchain() = default;
 
+        /// @brief Limits Frames In Flight. Blocks until GPU catches up to the max nr of frames in flight.
+        /// WARNING:
+        /// * DOES NOT WAIT for the swapchain image to be available, one must STILL use the acquire semaphore!
+        /// * This function DOES WAIT until there is a FRAME IN FLIGHT available to prepare on the CPU!
+        /// * Function is entirely optional to call, the function acquire_next_image ALSO calls wait_for_next_frame internally.
+        void wait_for_next_frame();
         /// @brief The ImageId may change between calls. This must be called to obtain a new swapchain image to be used for rendering.
         /// WARNING:
         /// * ImageIds returned from the swapchain are INVALID after the swapchain is destroyed.

@@ -185,26 +185,39 @@ auto daxa_swp_set_present_mode(daxa_Swapchain self, VkPresentModeKHR present_mod
     return result;
 }
 
+auto daxa_swp_wait_for_next_frame(daxa_Swapchain self) -> daxa_Result
+{
+    auto waited_wo_timeout = self->gpu_frame_timeline.wait_for_value(
+        static_cast<u64>(
+            std::max<i64>(
+                0,
+                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight))));
+    return waited_wo_timeout ? DAXA_RESULT_SUCCESS : DAXA_RESULT_TIMEOUT;
+}
+
 auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_id) -> daxa_Result
 {
+    daxa_Result result = {};
+    result = daxa_swp_wait_for_next_frame(self);
     [[maybe_unused]] auto _ignored = self->gpu_frame_timeline.wait_for_value(
         static_cast<u64>(
             std::max<i64>(
                 0,
                 static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight))));
+    _DAXA_RETURN_IF_ERROR(result, result);
     self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % (self->info.max_allowed_frames_in_flight + 1);
     BinarySemaphore & acquire_semaphore = self->acquire_semaphores[self->acquire_semaphore_index];
-    auto result = vkAcquireNextImageKHR(
+    result = static_cast<daxa_Result>(vkAcquireNextImageKHR(
         self->device->vk_device,
         self->vk_swapchain, UINT64_MAX,
         (**r_cast<daxa_BinarySemaphore *>(&acquire_semaphore)).vk_semaphore,
         nullptr,
-        &self->current_image_index);
+        &self->current_image_index));
 
     // We only bump the cpu timeline, when the acquire succeeds.
     self->cpu_frame_timeline += 1;
     *out_image_id = static_cast<daxa_ImageId>(self->images[self->current_image_index]);
-    return std::bit_cast<daxa_Result>(result);
+    return result;
 }
 
 auto daxa_swp_current_acquire_semaphore(daxa_Swapchain self) -> daxa_BinarySemaphore *
