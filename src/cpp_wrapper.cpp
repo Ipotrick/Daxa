@@ -745,6 +745,12 @@ namespace daxa
             "failed to set swapchain present mode");
     }
 
+    void Swapchain::wait_for_next_frame()
+    {
+        auto result = daxa_swp_wait_for_next_frame(r_cast<daxa_Swapchain>(this->object));
+        check_result(result, "failed to wait for next frame");
+    }
+
     auto Swapchain::acquire_next_image() -> ImageId
     {
         ImageId ret = {};
