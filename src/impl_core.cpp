@@ -468,13 +468,13 @@ auto daxa_version_of_sampler(daxa_SamplerId id) -> u64
 
 auto ImplHandle::inc_refcnt() const -> u64
 {
-    auto & mut_strong_ref = *rc_cast<u64 *>(&this->strong_count);
+    auto & mut_strong_ref = *r_cast<u64 *>(&this->strong_count);
     return std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64
 {
-    auto & mut_strong_ref = *rc_cast<u64 *>(&this->strong_count);
+    auto & mut_strong_ref = *r_cast<u64 *>(&this->strong_count);
     auto prev = std::atomic_ref{mut_strong_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {
@@ -499,14 +499,14 @@ auto ImplHandle::get_refcnt() const -> u64
 auto ImplHandle::impl_inc_weak_refcnt([[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"inc_weak_refcnt\" in \"%s\"\n", callsite);
-    auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
+    auto & mut_weak_ref = *r_cast<u64 *>(&this->weak_count);
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance /*unused*/, [[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
-    auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
+    auto & mut_weak_ref = *r_cast<u64 *>(&this->weak_count);
     auto prev = std::atomic_ref{mut_weak_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {
@@ -584,7 +584,7 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
 
 void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
 {
-    auto * self = rc_cast<daxa_ImplMemoryBlock *>(handle);
+    auto const * self = r_cast<daxa_ImplMemoryBlock const*>(handle);
     std::unique_lock const lock{self->device->zombies_mtx};
     u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);
     self->device->memory_block_zombies.emplace_front(

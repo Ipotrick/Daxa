@@ -124,9 +124,9 @@ namespace daxa
     struct ImplHandle
     {
         // Used for user side reference count.
-        u64 strong_count = 1;
+        mutable u64 strong_count = 1;
         // Used for internal reference count.
-        u64 weak_count = {};
+        mutable u64 weak_count = {};
 
 #define inc_weak_refcnt() impl_inc_weak_refcnt(__FUNCTION__)
 #define dec_weak_refcnt(CB, IS) impl_dec_weak_refcnt(CB, IS, __FUNCTION__)
