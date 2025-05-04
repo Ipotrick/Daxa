@@ -259,6 +259,40 @@ namespace daxa
                      "failed to create memory block");
         return ret;
     }
+    
+    void Device::device_memory_report(DeviceMemoryReport & out_report) const
+    {
+        daxa_Result result = daxa_dvc_device_memory_report(r_cast<daxa_Device>(this->object), r_cast<daxa_DeviceMemoryReport*>(&out_report));
+        check_result(result, "failed to create device memory report");
+    }
+
+    auto Device::device_memory_report_convenient() const -> DeviceMemoryReportConvenient
+    {
+        DeviceMemoryReportConvenient ret = {};
+        DeviceMemoryReport query = {};
+        device_memory_report(query);
+        ret.total_device_memory_use = query.total_device_memory_use;
+        ret.total_buffer_device_memory_use = query.total_buffer_device_memory_use;
+        ret.total_image_device_memory_use = query.total_image_device_memory_use;
+        ret.total_aliased_tlas_device_memory_use = query.total_aliased_tlas_device_memory_use;
+        ret.total_aliased_blas_device_memory_use = query.total_aliased_blas_device_memory_use;
+        ret.total_memory_block_device_memory_use = query.total_memory_block_device_memory_use;
+
+        ret.buffer_list.resize(query.buffer_count);
+        ret.image_list.resize(query.image_count);
+        ret.tlas_list.resize(query.tlas_count);
+        ret.blas_list.resize(query.blas_count);
+        ret.memory_block_list.resize(query.memory_block_count);
+
+        query.buffer_list = ret.buffer_list.data();
+        query.image_list = ret.image_list.data();
+        query.tlas_list = ret.tlas_list.data();
+        query.blas_list = ret.blas_list.data();
+        query.memory_block_list = ret.memory_block_list.data();
+        device_memory_report(query);
+
+        return ret;
+    }
 
     auto Device::buffer_memory_requirements(BufferInfo const & info) const -> MemoryRequirements
     {
