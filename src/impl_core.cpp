@@ -582,6 +582,9 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
         self->device->instance);
 }
 
+// This is weird.
+// When a mem block is zonbiefied, its cpu memory allocation is already gone.
+// This can cause issues when we want to later use it in destruction of memory block suballocated resources.
 void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
 {
     auto const * self = r_cast<daxa_ImplMemoryBlock const*>(handle);

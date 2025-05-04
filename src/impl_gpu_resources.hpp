@@ -85,6 +85,8 @@ namespace daxa
         static constexpr inline usize PAGE_MASK = PAGE_SIZE - 1u;
         static constexpr inline usize PAGE_COUNT = MAX_RESOURCE_COUNT / PAGE_SIZE;
         using VersionAndRefcntT = std::atomic_uint64_t;
+        static constexpr inline u64 VERSION_ZOMBIE_BIT = 1ull << 63ull;
+        static constexpr inline u64 VERSION_COUNT_MASK = ~(VERSION_ZOMBIE_BIT);
         // TODO: split up slots into hot and cold data.
         using PageT = std::array<std::pair<ResourceT, VersionAndRefcntT>, PAGE_SIZE>;
 
@@ -111,7 +113,8 @@ namespace daxa
         {
             auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-            auto const version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
+            // Remove Zombie Mark Bit.
+            auto const version = VERSION_COUNT_MASK & this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
             // Slots that reached max version CAN NOT be recycled.
             // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
             // Clear slot MUST HAPPEN before pushing into free list.
@@ -169,7 +172,11 @@ namespace daxa
                     this->valid_page_count.fetch_add(1, std::memory_order_seq_cst);
                 }
             }
+            
             u64 version = this->pages[page]->at(offset).second.load(std::memory_order_relaxed);
+            // Remove Zombie Mark Bit.
+            version = version & VERSION_COUNT_MASK;
+            this->pages[page]->at(offset).second.store(version, std::memory_order_relaxed);
 
             auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = version};
             return std::optional{std::pair<GPUResourceId, ResourceT &>(id, this->pages[page]->at(offset).first)};
@@ -184,7 +191,8 @@ namespace daxa
             }
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
             u64 version = id.version;
-            u64 const new_version = version + 1;
+            // Explicitly mark as zombie
+            u64 const new_version = (version + 1) | VERSION_ZOMBIE_BIT;
             return (*this->pages[page])[offset].second.compare_exchange_strong(
                 version, new_version,
                 std::memory_order_relaxed,
