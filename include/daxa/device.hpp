@@ -426,6 +426,75 @@ namespace daxa
         u64 offset = {};
     };
 
+    struct BufferIdDeviceMemorySizePair
+    {
+        BufferId id = {};
+        u64 size = {};
+        bool block_allocated = {};
+    };
+
+    struct ImageIdDeviceMemorySizePair
+    {
+        ImageId id = {};
+        u64 size = {};
+        bool block_allocated = {};
+    };
+
+    struct TlasIdDeviceMemorySizePair
+    {
+        TlasId id = {};
+        u64 size = {};
+        // NOTE: All tlas are aliased allocations into buffers
+    };
+
+    struct BlasIdDeviceMemorySizePair
+    {
+        BlasId id = {};
+        u64 size = {};
+        // NOTE: All tlas are aliased allocations into buffers
+    };
+
+    struct MemoryBLockDeviceMemorySizePair
+    {
+        MemoryBlock handle = {};
+        u64 memory_size = {};
+    };
+    
+    struct DeviceMemoryReport
+    {
+        u64 total_device_memory_use = {};
+        u64 total_buffer_device_memory_use = {};
+        u64 total_image_device_memory_use = {};
+        u64 total_aliased_tlas_device_memory_use = {};
+        u64 total_aliased_blas_device_memory_use = {};
+        u64 total_memory_block_device_memory_use = {};
+        u32 buffer_count = {};
+        u32 image_count = {};
+        u32 tlas_count = {};
+        u32 blas_count = {};
+        u32 memory_block_count = {};
+        BufferIdDeviceMemorySizePair * buffer_list = {};
+        ImageIdDeviceMemorySizePair * image_list = {};
+        TlasIdDeviceMemorySizePair * tlas_list = {};
+        BlasIdDeviceMemorySizePair * blas_list = {};
+        MemoryBLockDeviceMemorySizePair * memory_block_list = {};
+    };
+    
+    struct DeviceMemoryReportConvenient
+    {
+        u64 total_device_memory_use = {};
+        u64 total_buffer_device_memory_use = {};
+        u64 total_image_device_memory_use = {};
+        u64 total_aliased_tlas_device_memory_use = {};
+        u64 total_aliased_blas_device_memory_use = {};
+        u64 total_memory_block_device_memory_use = {};
+        std::vector<BufferIdDeviceMemorySizePair> buffer_list = {};
+        std::vector<ImageIdDeviceMemorySizePair> image_list = {};
+        std::vector<TlasIdDeviceMemorySizePair> tlas_list = {};
+        std::vector<BlasIdDeviceMemorySizePair> blas_list = {};
+        std::vector<MemoryBLockDeviceMemorySizePair> memory_block_list = {};
+    };
+
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
      *          Device manages all general gpu operations that are not handled by other objects.
@@ -447,6 +516,8 @@ namespace daxa
         [[nodiscard]] auto as_build_sizes(TlasBuildInfo const & info) { return tlas_build_sizes(info); }
         [[nodiscard]] auto as_build_sizes(BlasBuildInfo const & info) { return blas_build_sizes(info); }
 
+        void device_memory_report(DeviceMemoryReport & out_report) const;
+        [[nodiscard]] auto device_memory_report_convenient() const -> DeviceMemoryReportConvenient;
         [[nodiscard]] auto buffer_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
         [[nodiscard]] auto image_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
         [[nodiscard]] auto memory_requirements(BufferInfo const & info) const { return buffer_memory_requirements(info); }

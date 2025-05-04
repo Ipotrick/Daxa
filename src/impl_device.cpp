@@ -552,6 +552,194 @@ auto create_acceleration_structure_helper(
 
 // --- Begin API Functions ---
 
+auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * report) -> daxa_Result
+{
+    if (report == nullptr)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_MEMORY_MAP_FAILED, DAXA_RESULT_ERROR_MEMORY_MAP_FAILED);
+    }
+
+    auto const buffer_list_allocation_size = report->buffer_count;
+    auto const image_list_allocation_size = report->image_count;
+    auto const tlas_list_allocation_size = report->tlas_count;
+    auto const blas_list_allocation_size = report->blas_count;
+    auto const memory_block_list_allocation_size = report->memory_block_count;
+
+    report->buffer_count = {};
+    report->image_count = {};
+    report->tlas_count = {};
+    report->blas_count = {};
+    report->memory_block_count = {};
+    report->total_buffer_device_memory_use = {};
+    report->total_image_device_memory_use = {};
+    report->total_aliased_tlas_device_memory_use = {};
+    report->total_aliased_blas_device_memory_use = {};
+    report->total_memory_block_device_memory_use = {};
+
+    // TODO: Refactor all objects to live in arrays so we can always iterate all objects.
+    std::unordered_map<daxa_MemoryBlock, u32> mem_blocks = {};
+
+    for (u32 bi = 0; bi < self->gpu_sro_table.buffer_slots.next_index; ++bi)
+    {
+        {
+            u64 version = self->gpu_sro_table.buffer_slots.version_of_slot(bi);
+            daxa::BufferId id = { bi, version };
+            auto& slot = self->gpu_sro_table.buffer_slots.unsafe_get(id);
+            if (slot.vk_buffer == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->buffer_count++;
+
+            bool const aliased = slot.vma_allocation == nullptr;
+            u64 memory_size = {};
+            if (!aliased)
+            {
+                VmaAllocationInfo vma_alloc_info = {};
+                vmaGetAllocationInfo(self->vma_allocator, slot.vma_allocation, &vma_alloc_info);
+                memory_size = vma_alloc_info.size;
+                report->total_buffer_device_memory_use += memory_size;
+            }
+            else
+            {
+                auto requirements = daxa_dvc_buffer_memory_requirements(self, &slot.info);
+                memory_size = requirements.size;
+            }
+
+            if (slot.opt_memory_block != nullptr)
+            {
+                mem_blocks[slot.opt_memory_block] += 1;
+            }
+    
+            if (report->buffer_list != nullptr && out_idx < buffer_list_allocation_size)
+            {
+                report->buffer_list[out_idx] = {
+                    std::bit_cast<daxa_BufferId>(id),
+                    memory_size,
+                    aliased,
+                };
+            }
+        }
+    }
+
+    for (u32 ii = 0; ii < self->gpu_sro_table.image_slots.next_index; ++ii)
+    {
+        {
+            u64 version = self->gpu_sro_table.image_slots.version_of_slot(ii);
+            daxa::ImageId id = { ii, version };
+            auto& slot = self->gpu_sro_table.image_slots.unsafe_get(id);
+            if (slot.vk_image == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->image_count++;
+
+            bool const aliased = slot.vma_allocation == nullptr;
+            u64 memory_size = {};
+            if (!aliased)
+            {
+                VmaAllocationInfo vma_alloc_info = {};
+                vmaGetAllocationInfo(self->vma_allocator, slot.vma_allocation, &vma_alloc_info);
+                memory_size = vma_alloc_info.size;
+                report->total_image_device_memory_use += memory_size;
+            }
+            else
+            {
+                auto requirements = daxa_dvc_image_memory_requirements(self, &slot.info);
+                memory_size = requirements.size;
+            }
+
+            if (slot.opt_memory_block != nullptr)
+            {
+                mem_blocks[slot.opt_memory_block] += 1;
+            }
+
+            if (report->image_list != nullptr && out_idx < image_list_allocation_size)
+            {
+                report->image_list[out_idx] = {
+                    std::bit_cast<daxa_ImageId>(id),
+                    memory_size,
+                    aliased,
+                };
+            }
+        }
+    }
+    
+    for (u32 ti = 0; ti < self->gpu_sro_table.tlas_slots.next_index; ++ti)
+    {
+        {
+            u64 version = self->gpu_sro_table.tlas_slots.version_of_slot(ti);
+            daxa::TlasId id = { ti, version };
+            auto& slot = self->gpu_sro_table.tlas_slots.unsafe_get(id);
+            if (slot.vk_acceleration_structure == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->tlas_count++;
+            report->total_aliased_tlas_device_memory_use += slot.info.size;
+    
+            if (report->tlas_list != nullptr && out_idx < tlas_list_allocation_size)
+            {
+                report->tlas_list[out_idx] = {
+                    std::bit_cast<daxa_TlasId>(id),
+                    slot.info.size
+                };
+            }
+        }
+    }
+    
+    for (u32 bli = 0; bli < self->gpu_sro_table.blas_slots.next_index; ++bli)
+    {
+        {
+            u64 version = self->gpu_sro_table.blas_slots.version_of_slot(bli);
+            daxa::BlasId id = { bli, version };
+            auto& slot = self->gpu_sro_table.blas_slots.unsafe_get(id);
+            if (slot.vk_acceleration_structure == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->blas_count++;
+            report->total_aliased_blas_device_memory_use += slot.info.size;
+    
+            if (report->blas_list != nullptr && out_idx < blas_list_allocation_size)
+            {
+                report->blas_list[out_idx] = {
+                    std::bit_cast<daxa_BlasId>(id),
+                    slot.info.size
+                };
+            }
+        }
+    }
+
+    for (auto v : mem_blocks)
+    {
+        daxa_MemoryBlock const& block = v.first;
+        u32 out_idx = report->memory_block_count++;
+
+        report->total_memory_block_device_memory_use += block->alloc_info.size;
+
+        if (report->memory_block_list != nullptr && out_idx < memory_block_list_allocation_size)
+        {
+            block->inc_refcnt();
+            report->memory_block_list[out_idx] = {
+                block,
+                block->alloc_info.size,
+            };
+        }
+    }
+    
+    report->total_device_memory_use = 
+        report->total_buffer_device_memory_use +
+        report->total_image_device_memory_use +
+        report->total_memory_block_device_memory_use;
+
+    return DAXA_RESULT_SUCCESS;
+} 
+
 auto daxa_default_device_score(daxa_DeviceProperties const * c_properties) -> i32
 {
     DeviceProperties const * properties = r_cast<DeviceProperties const *>(c_properties);
