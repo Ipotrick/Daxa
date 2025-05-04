@@ -53,7 +53,6 @@ namespace daxa
             case TaskType::TRANSFER: return "TRANSFER";
             default: return "UNKNOWN";
         }
-        return "UNKNOWN";
     }
 
     auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool
@@ -92,7 +91,6 @@ namespace daxa
             default:
                 return false;
         }
-        return false;
     }
 
     auto task_type_default_stage(TaskType task_type) -> TaskStage
@@ -106,7 +104,6 @@ namespace daxa
             case TaskType::TRANSFER: return TaskStage::TRANSFER;
             default: return TaskStage::NONE;
         }
-        return TaskStage::NONE;
     }
 
     auto TaskInterface::get(TaskBufferAttachmentIndex index) const -> TaskBufferAttachmentInfo const &

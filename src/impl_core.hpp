@@ -16,8 +16,12 @@
 
 #if defined(_WIN32)
 #define VK_USE_PLATFORM_WIN32_KHR
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #elif defined(__linux__)
 #if DAXA_BUILT_WITH_X11
 #include <X11/Xlib.h>
@@ -168,8 +172,13 @@ deferrer<F> operator*(defer_dummy, F f) { return {f}; }
 #define _DAXA_DEBUG_BREAK
 #endif
 
+constexpr bool is_daxa_result_success(daxa_Result v)
+{
+    return v == DAXA_RESULT_SUCCESS;
+}
+
 #define _DAXA_RETURN_IF_ERROR(V, RET) \
-    if (V != DAXA_RESULT_SUCCESS)     \
+    if (!is_daxa_result_success(V))   \
     {                                 \
         _DAXA_DEBUG_BREAK             \
         return RET;                   \
