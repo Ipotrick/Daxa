@@ -581,8 +581,9 @@ auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * r
 
     for (u32 bi = 0; bi < self->gpu_sro_table.buffer_slots.next_index; ++bi)
     {
+        u64 version = self->gpu_sro_table.buffer_slots.version_of_slot(bi);
+        if ((version & GpuResourcePool<u32>::VERSION_ZOMBIE_BIT) == 0) 
         {
-            u64 version = self->gpu_sro_table.buffer_slots.version_of_slot(bi);
             daxa::BufferId id = { bi, version };
             auto& slot = self->gpu_sro_table.buffer_slots.unsafe_get(id);
             if (slot.vk_buffer == nullptr)
@@ -625,8 +626,9 @@ auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * r
 
     for (u32 ii = 0; ii < self->gpu_sro_table.image_slots.next_index; ++ii)
     {
+        u64 version = self->gpu_sro_table.image_slots.version_of_slot(ii);
+        if ((version & GpuResourcePool<u32>::VERSION_ZOMBIE_BIT) == 0) 
         {
-            u64 version = self->gpu_sro_table.image_slots.version_of_slot(ii);
             daxa::ImageId id = { ii, version };
             auto& slot = self->gpu_sro_table.image_slots.unsafe_get(id);
             if (slot.vk_image == nullptr)
@@ -669,8 +671,9 @@ auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * r
     
     for (u32 ti = 0; ti < self->gpu_sro_table.tlas_slots.next_index; ++ti)
     {
+        u64 version = self->gpu_sro_table.tlas_slots.version_of_slot(ti);
+        if ((version & GpuResourcePool<u32>::VERSION_ZOMBIE_BIT) == 0) 
         {
-            u64 version = self->gpu_sro_table.tlas_slots.version_of_slot(ti);
             daxa::TlasId id = { ti, version };
             auto& slot = self->gpu_sro_table.tlas_slots.unsafe_get(id);
             if (slot.vk_acceleration_structure == nullptr)
@@ -693,8 +696,9 @@ auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * r
     
     for (u32 bli = 0; bli < self->gpu_sro_table.blas_slots.next_index; ++bli)
     {
+        u64 version = self->gpu_sro_table.blas_slots.version_of_slot(bli);
+        if ((version & GpuResourcePool<u32>::VERSION_ZOMBIE_BIT) == 0) 
         {
-            u64 version = self->gpu_sro_table.blas_slots.version_of_slot(bli);
             daxa::BlasId id = { bli, version };
             auto& slot = self->gpu_sro_table.blas_slots.unsafe_get(id);
             if (slot.vk_acceleration_structure == nullptr)
