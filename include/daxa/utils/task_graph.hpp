@@ -425,7 +425,7 @@ namespace daxa
         auto executes(std::function<void(TaskInterface)> const & c) && -> InlineTask
         {
             value._internal._callback = std::move(c);
-            return *this;
+            return std::move(*this);
         }
 
       private:
