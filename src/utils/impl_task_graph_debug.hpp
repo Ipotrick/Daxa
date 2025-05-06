@@ -62,16 +62,28 @@ namespace daxa
     template <typename BufferBlasTlasAttachmentT>
     void validate_buffer_blas_tlas_task_view(ITask const & task, u32 attach_index, BufferBlasTlasAttachmentT const & attach)
     {
+        bool const type_restriction_upheld = attach.task_access.restriction == BufferBlasTlasAttachmentT::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
+        bool const view_filled_or_null = !attach.view.is_empty();
         DAXA_DBG_ASSERT_TRUE_M(
-            !attach.view.is_empty(),
+            type_restriction_upheld,
+            std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+                        attach.name, attach_index, to_string(attach.task_access), task.name()));
+        DAXA_DBG_ASSERT_TRUE_M(
+            view_filled_or_null,
             std::format("Detected unassigned task buffer view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
                         attach.name, attach_index, to_string(attach.task_access), task.name()));
     }
 
     void validate_image_task_view(ITask const & task, u32 attach_index, TaskImageAttachmentInfo const & attach)
     {
+        bool const type_restriction_upheld = attach.task_access.restriction == TaskImageAttachment::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
+        bool const view_filled_or_null = !attach.view.is_empty();
         DAXA_DBG_ASSERT_TRUE_M(
-            !attach.view.is_empty(),
+            type_restriction_upheld,
+            std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
+                        attach.name, attach_index, to_string(attach.task_access), task.name()));
+        DAXA_DBG_ASSERT_TRUE_M(
+            view_filled_or_null,
             std::format("Detected unassigned task image view for attachment \"{}\" (index: {}, access: {}) in task \"{}\"\n",
                         attach.name, attach_index, to_string(attach.task_access), task.name()));
     }
@@ -127,7 +139,7 @@ namespace daxa
                                 "Attachments \"{}\" and \"{}\" refer overlapping slices ({} and {}) to the same task image \"{}\" in task \"{}\";"
                                 "All task image attachment views and their slices must refer to disjoint parts of images within each task!",
                                 a.name, b.name, to_string(a.view.slice), to_string(b.view.slice),
-                                impl.global_image_infos.at(b.view.index).get_name(),
+                                impl.global_image_infos.at(b.translated_view.index).get_name(),
                                 task->name()));
                     });
             });
@@ -173,5 +185,37 @@ namespace daxa
         }
 #endif
     }
-    // void validate_
+    
+    void validate_attachment_stages(ImplTaskGraph const & impl, ITask * task)
+    {
+        auto const task_type = task->task_type();
+#if DAXA_VALIDATION
+        for_each(
+            task->attachments(),
+            [&](u32 i, auto & attach)
+            {
+                auto const stage = attach.task_access.stage;
+                if (!task_type_allowed_stages(task_type, stage))
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        false,
+                        std::format("Detected invalid task stage \"{}\" for attachment \"{}\" in task \"{}\".\n"
+                                    "Task type \"{}\" does not allow this stage!",
+                                    to_string(stage), attach.name, task->name(), to_string(task_type)));
+                }
+            },
+            [&](u32 i, TaskImageAttachmentInfo & attach)
+            {
+                auto const stage = attach.task_access.stage;
+                if (!task_type_allowed_stages(task_type, stage))
+                {
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        false,
+                        std::format("Detected invalid task stage \"{}\" for attachment \"{}\" in task \"{}\".\n"
+                                    "Task type \"{}\" does not allow this stage!",
+                                    to_string(stage), attach.name, task->name(), to_string(task_type)));
+                }
+            });
+#endif
+    }
 } // namespace daxa

@@ -195,7 +195,7 @@ namespace daxa
          * @brief   Checks if an id refers to a valid resource.
          *
          * Always threadsafe.
-         * @returns if the given id is valid.
+         * @returns is the given id is valid.
          */
         auto is_id_valid(GPUResourceId id) const -> bool
         {
@@ -207,6 +207,22 @@ namespace daxa
             }
             u64 const slot_version = (*this->pages[page])[offset].second.load(std::memory_order_relaxed);
             return slot_version == id.version;
+        }
+
+        /**
+         * @brief   Meant for debugging/ metrics.
+         * Always threadsafe.
+         * @returns returns the current version of a slot.
+         */
+        auto version_of_slot(u32 idx) const -> u64
+        {
+            auto const page = static_cast<usize>(idx) >> PAGE_BITS;
+            auto const offset = static_cast<usize>(idx) & PAGE_MASK;
+            if (page >= this->valid_page_count.load(std::memory_order_relaxed))
+            {
+                return 0;
+            }
+            return (*this->pages[page])[offset].second.load(std::memory_order_relaxed);
         }
 
         /**
@@ -243,8 +259,8 @@ namespace daxa
         VkDescriptorPool vk_descriptor_pool = {};
 
         // Contains pipeline layouts with varying push constant range size.
-        // The first size is 0 word, second is 1 word, all others are a power of two (maximum is MAX_PUSH_CONSTANT_BYTE_SIZE).
-        std::array<VkPipelineLayout, PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
+        // The first size is 0 word, second is 1 word, all others are a power of two (maximum is DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE).
+        std::array<VkPipelineLayout, DAXA_PIPELINE_LAYOUT_COUNT> pipeline_layouts = {};
 
         auto initialize(
             u32 max_buffers,

@@ -469,9 +469,9 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     u32 const closest_hit_count = static_cast<u32>(ret.info.closest_hit_shaders.size());
     u32 const miss_hit_count = static_cast<u32>(ret.info.miss_hit_shaders.size());
     u32 const all_stages_count = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count + miss_hit_count;
-    u32 const first_callable_index = raygen_count + intersection_count + any_hit_count;
-    u32 const last_callable_index = raygen_count + intersection_count + any_hit_count + callable_count;
-    u32 const first_miss_index = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count;
+    [[maybe_unused]] u32 const first_callable_index = raygen_count + intersection_count + any_hit_count;
+    [[maybe_unused]] u32 const last_callable_index = raygen_count + intersection_count + any_hit_count + callable_count;
+    [[maybe_unused]] u32 const first_miss_index = raygen_count + intersection_count + any_hit_count + callable_count + closest_hit_count;
 
     std::vector<VkPipelineShaderStageRequiredSubgroupSizeCreateInfo> require_subgroup_size_vkstructs = {};
     // Necessary to prevent re-allocation
@@ -819,9 +819,8 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
 auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void * out_blob) -> daxa_Result
 {
     auto * device = pipeline->device;
-    auto & info = pipeline->info;
 
-    u32 const handle_count = pipeline->shader_groups.size();
+    u32 const handle_count = static_cast<u32>(pipeline->shader_groups.size());
     u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
 
     u32 const data_size = handle_count * handle_size;

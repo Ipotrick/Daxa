@@ -269,6 +269,7 @@ typedef enum
     DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT = 0x1 << 11,
     DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN = 0x1 << 12,
     DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16 = 0x1 << 13,
+    DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK = 0x1 << 14,
 } daxa_DeviceImplicitFeatureFlagBits;
 
 typedef daxa_DeviceImplicitFeatureFlagBits daxa_ImplicitFeatureFlags;
@@ -452,9 +453,67 @@ typedef struct
     uint64_t build_scratch_size;
 } daxa_AccelerationStructureBuildSizesInfo;
 
-DAXA_EXPORT VkMemoryRequirements
+typedef struct
+{
+    daxa_BufferId id;
+    daxa_u64 size;
+    daxa_Bool8 block_allocated;
+} daxa_BufferIdDeviceMemorySizePair;
+
+typedef struct
+{
+    daxa_ImageId id;
+    daxa_u64 size;
+    daxa_Bool8 block_allocated;
+} daxa_ImageIdDeviceMemorySizePair;
+
+typedef struct
+{
+    daxa_TlasId id;
+    daxa_u64 size;
+    // NOTE: All tlas are aliased allocations into buffers
+} daxa_TlasIdDeviceMemorySizePair;
+
+typedef struct
+{
+    daxa_BlasId id;
+    daxa_u64 size;
+    // NOTE: All tlas are aliased allocations into buffers
+} daxa_BlasIdDeviceMemorySizePair;
+
+typedef struct
+{
+    daxa_MemoryBlock handle;
+    daxa_u64 size;
+} daxa_MemoryBlockDeviceMemorySizePair;
+
+typedef struct
+{
+    daxa_u64 total_device_memory_use;
+    daxa_u64 total_buffer_device_memory_use;
+    daxa_u64 total_image_device_memory_use;
+    daxa_u64 total_aliased_tlas_device_memory_use;
+    daxa_u64 total_aliased_blas_device_memory_use;
+    daxa_u64 total_memory_block_device_memory_use;
+    daxa_u32 buffer_count;
+    daxa_u32 image_count;
+    daxa_u32 tlas_count;
+    daxa_u32 blas_count;
+    daxa_u32 memory_block_count;
+    daxa_BufferIdDeviceMemorySizePair * buffer_list;
+    daxa_ImageIdDeviceMemorySizePair * image_list;
+    daxa_TlasIdDeviceMemorySizePair * tlas_list;
+    daxa_BlasIdDeviceMemorySizePair * blas_list;
+    daxa_MemoryBlockDeviceMemorySizePair * memory_block_list;
+} daxa_DeviceMemoryReport;
+
+static daxa_DeviceMemoryReport const DAXA_DEFAULT_DEVICE_MEMORY_REPORT_INFO = DAXA_ZERO_INIT;
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_device_memory_report(daxa_Device device, daxa_DeviceMemoryReport * report);
+DAXA_EXPORT DAXA_NO_DISCARD VkMemoryRequirements
 daxa_dvc_buffer_memory_requirements(daxa_Device device, daxa_BufferInfo const * info);
-DAXA_EXPORT VkMemoryRequirements
+DAXA_EXPORT DAXA_NO_DISCARD VkMemoryRequirements
 daxa_dvc_image_memory_requirements(daxa_Device device, daxa_ImageInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_memory(daxa_Device device, daxa_MemoryBlockInfo const * info, daxa_MemoryBlock * out_memory_block);

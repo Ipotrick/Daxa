@@ -5,7 +5,6 @@
 
 #include "impl_sync.hpp"
 #include "impl_device.hpp"
-#include "impl_core.hpp"
 
 // NOTE: Removed profiling for all commands for now
 #undef PROFILE_FUNC
@@ -14,6 +13,20 @@
 #define PROFILE_SCOPE(x)
 
 /// --- Begin Helpers ---
+
+// DO NOT VALIDATE RENDER PASS COMMANDS
+// VALIDATING THE START OF A RENDERPASS SHOULD ALWAYS BE ENOUGH!
+auto validate_queue_family(daxa_QueueFamily recorder_qf, daxa_QueueFamily command_qf) -> daxa_Result
+{
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    bool const main_on_transfer = command_qf == DAXA_QUEUE_FAMILY_MAIN && recorder_qf == DAXA_QUEUE_FAMILY_TRANSFER;
+    bool const comp_on_transfer = command_qf == DAXA_QUEUE_FAMILY_COMPUTE && recorder_qf == DAXA_QUEUE_FAMILY_TRANSFER;
+    bool const main_on_comp = command_qf == DAXA_QUEUE_FAMILY_MAIN && recorder_qf == DAXA_QUEUE_FAMILY_COMPUTE;
+    result = main_on_transfer ? DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
+    result = comp_on_transfer ? DAXA_RESULT_ERROR_COMPUTE_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
+    result = main_on_comp ? DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER : result;
+    return result;
+}
 
 auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
 {
@@ -258,7 +271,7 @@ auto daxa_cmd_set_rasterization_samples(daxa_CommandRecorder self, VkSampleCount
     PROFILE_FUNC();
     if (self->device->vkCmdSetRasterizationSamplesEXT == nullptr)
     {
-        return DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT, DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT);
     }
     daxa_cmd_flush_barriers(self);
     self->device->vkCmdSetRasterizationSamplesEXT(self->current_command_data.vk_cmd_buffer, samples);
@@ -278,7 +291,7 @@ auto daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder self, daxa_BufferCopyIn
     in_bounds = in_bounds && ((static_cast<u64>(vk_buffer_copy->dstOffset) + static_cast<u64>(vk_buffer_copy->size)) <= static_cast<u64>(dst_slot.info.size));
     if (!in_bounds)
     {
-        return DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS, DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS);
     }
     vkCmdCopyBuffer(
         self->current_command_data.vk_cmd_buffer,
@@ -393,6 +406,8 @@ auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_Buil
 {
     PROFILE_FUNC();
     daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     if ((self->device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
         result = DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
@@ -462,6 +477,12 @@ auto daxa_cmd_clear_buffer(daxa_CommandRecorder self, daxa_BufferClearInfo const
     PROFILE_FUNC();
     daxa_cmd_flush_barriers(self);
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->buffer)
+    ImplBufferSlot const & dst_slot = self->device->slot(info->buffer);
+    bool const in_bounds = ((static_cast<u64>(info->offset) + static_cast<u64>(info->size)) <= static_cast<u64>(dst_slot.info.size));
+    if (!in_bounds)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS, DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS);
+    }
     vkCmdFillBuffer(
         self->current_command_data.vk_cmd_buffer,
         self->device->slot(info->buffer).vk_buffer,
@@ -485,7 +506,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
     {
         if (!is_image_depth_stencil)
         {
-            return DAXA_RESULT_INVALID_CLEAR_VALUE;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_CLEAR_VALUE, DAXA_RESULT_INVALID_CLEAR_VALUE);
         }
         VkImageSubresourceRange const sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
         vkCmdClearDepthStencilImage(
@@ -500,7 +521,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
     {
         if (is_image_depth_stencil)
         {
-            return DAXA_RESULT_INVALID_CLEAR_VALUE;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_CLEAR_VALUE, DAXA_RESULT_INVALID_CLEAR_VALUE);
         }
         VkImageSubresourceRange const sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
         vkCmdClearColorImage(
@@ -656,10 +677,13 @@ void daxa_cmd_reset_event(daxa_CommandRecorder self, daxa_ResetEventInfo const *
 auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo const * info) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
     if (daxa::holds_alternative<daxa_ImplCommandRecorder::NoPipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_PIPELINE_BOUND, DAXA_RESULT_NO_PIPELINE_BOUND);
     }
     VkPipelineLayout vk_pipeline_layout = {};
     u32 current_pipeline_push_constant_size = {};
@@ -678,48 +702,82 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
         current_pipeline_push_constant_size = (**pipeline).info.push_constant_size;
         vk_pipeline_layout = (**pipeline).vk_pipeline_layout;
     }
-    if (current_pipeline_push_constant_size < (info->offset + info->size))
+    if (current_pipeline_push_constant_size < info->size)
     {
-        return DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED);
     }
-    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, info->offset, static_cast<u32>(info->size), info->data);
+    // Always write the whole range, fill with 0xFF to the size of the push constant.
+    // This makes validation and renderdoc happy as well as help debug uninitialized push constant data
+    std::array<std::byte, DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE> const_data = {std::byte{0xFF}};
+    std::memcpy(const_data.data(), info->data, info->size);
+    vkCmdPushConstants(self->current_command_data.vk_cmd_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0, current_pipeline_push_constant_size, const_data.data());
     return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline)
+auto daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracingPipeline pipeline) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
+    bool const prev_pipeline_rt = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RayTracingPipeline>;
+    bool const same_type_same_layout_as_prev_pipe = prev_pipeline_rt && daxa::get<daxa_RayTracingPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    if (!same_type_same_layout_as_prev_pipe)
+    {
+        vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    }
     self->current_pipeline = pipeline;
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_RAY_TRACING_KHR, pipeline->vk_pipeline);
+    return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline pipeline)
+auto daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeline pipeline) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
+    bool const prev_pipeline_compute = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_ComputePipeline>;
+    bool const same_type_same_layout_as_prev_pipe = prev_pipeline_compute && daxa::get<daxa_ComputePipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    if (!same_type_same_layout_as_prev_pipe)
+    {
+        vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    }
     self->current_pipeline = pipeline;
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_COMPUTE, pipeline->vk_pipeline);
+    return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline pipeline)
+auto daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline pipeline) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_MAIN);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
+    bool const prev_pipeline_raster = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RasterPipeline>;
+    bool const same_type_same_layout_as_prev_pipe = prev_pipeline_raster && daxa::get<daxa_RasterPipeline>(self->current_pipeline)->vk_pipeline_layout == pipeline->vk_pipeline_layout;
+    if (!same_type_same_layout_as_prev_pipe)
+    {
+        vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
+    }
     self->current_pipeline = pipeline;
-    vkCmdBindDescriptorSets(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline_layout, 0, 1, &self->device->gpu_sro_table.vk_descriptor_set, 0, nullptr);
     vkCmdBindPipeline(self->current_command_data.vk_cmd_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->vk_pipeline);
+    return DAXA_RESULT_SUCCESS;
 }
 
 auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * info) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND, DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND);
     }
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
@@ -743,10 +801,13 @@ auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
 auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndirectInfo const * info) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND, DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND);
     }
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
@@ -770,10 +831,13 @@ auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndir
 auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND, DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND);
     }
     vkCmdDispatch(self->current_command_data.vk_cmd_buffer, info->x, info->y, info->z);
     return DAXA_RESULT_SUCCESS;
@@ -782,10 +846,13 @@ auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info
 auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirectInfo const * info) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    _DAXA_RETURN_IF_ERROR(result, result);
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer)
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
-        return DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND, DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND);
     }
     vkCmdDispatchIndirect(self->current_command_data.vk_cmd_buffer, self->device->slot(info->indirect_buffer).vk_buffer, info->offset);
     return DAXA_RESULT_SUCCESS;
@@ -826,6 +893,9 @@ auto daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder self, daxa_SamplerId
 auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginInfo const * info) -> daxa_Result
 {
     PROFILE_FUNC();
+    daxa_Result result = DAXA_RESULT_SUCCESS;
+    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_MAIN);
+    _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
 
     auto fill_rendering_attachment_info = [&](daxa_RenderAttachmentInfo const & in, VkRenderingAttachmentInfo & out)
@@ -855,11 +925,11 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     {
         if (daxa_dvc_is_image_view_valid(self->device, info->color_attachments.data[i].image_view) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_VIEW_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_INVALID_IMAGE_VIEW_ID);
         }
         if (daxa_dvc_is_image_valid(self->device, self->device->slot(info->color_attachments.data[i].image_view).info.image) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
         }
         fill_rendering_attachment_info(info->color_attachments.data[i], vk_color_attachments.at(i));
     }
@@ -868,11 +938,11 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     {
         if (daxa_dvc_is_image_view_valid(self->device, info->depth_attachment.value.image_view) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_VIEW_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_INVALID_IMAGE_VIEW_ID);
         }
         if (daxa_dvc_is_image_valid(self->device, self->device->slot(info->depth_attachment.value.image_view).info.image) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
         }
         fill_rendering_attachment_info(info->depth_attachment.value, depth_attachment_info);
     };
@@ -881,11 +951,11 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
     {
         if (daxa_dvc_is_image_view_valid(self->device, info->stencil_attachment.value.image_view) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_VIEW_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_INVALID_IMAGE_VIEW_ID);
         }
         if (daxa_dvc_is_image_valid(self->device, self->device->slot(info->stencil_attachment.value.image_view).info.image) == 0)
         {
-            return DAXA_RESULT_INVALID_IMAGE_ID;
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
         }
         fill_rendering_attachment_info(info->stencil_attachment.value, stencil_attachment_info);
     };
@@ -1336,6 +1406,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
     self->device->command_list_zombies.emplace_front(
         submit_timeline,
         CommandRecorderZombie{
+            .queue_family = self->info.queue_family,
             .vk_cmd_pool = self->vk_cmd_pool,
             .allocated_command_buffers = std::move(self->allocated_command_buffers),
         });

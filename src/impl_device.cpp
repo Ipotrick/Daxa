@@ -2,6 +2,7 @@
 
 #include <utility>
 #include <functional>
+#include "daxa/core.hpp"
 #include "impl_features.hpp"
 
 #include "impl_device.hpp"
@@ -70,7 +71,7 @@ namespace
     }
 } // namespace
 
-auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device, u32 queue_family_index, u32 queue_index) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
 {
     VkSemaphoreTypeCreateInfo timeline_ci{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -85,8 +86,7 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device, u32 queue_family
         .flags = {},
     };
 
-    this->vk_queue_family_index = queue_family_index;
-    vkGetDeviceQueue(vk_device, queue_family_index, queue_index, &this->vk_queue);
+    vkGetDeviceQueue(vk_device, vk_queue_family_index, queue_index, &this->vk_queue);
     daxa_Result result = DAXA_RESULT_SUCCESS;
     if (this->vk_queue == VK_NULL_HANDLE)
     {
@@ -305,9 +305,19 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         }
     };
 
+    VkImageViewType vk_image_view_type = {};
+    if (info->array_layer_count > 1)
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
+    }
+    else
+    {
+        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
+    }
+
     ret.info = *info;
     ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
-        .type = static_cast<ImageViewType>(info->dimensions - 1),
+        .type = static_cast<ImageViewType>(vk_image_view_type),
         .format = std::bit_cast<Format>(ret.info.format),
         .image = {id},
         .slice = ImageMipArraySlice{
@@ -318,16 +328,6 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         },
         .name = info->name.data,
     });
-
-    VkImageViewType vk_image_view_type = {};
-    if (info->array_layer_count > 1)
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions + 3);
-    }
-    else
-    {
-        vk_image_view_type = static_cast<VkImageViewType>(info->dimensions - 1);
-    }
 
     ret.aspect_flags = infer_aspect_from_format(info->format);
     VkImageViewCreateInfo vk_image_view_create_info{
@@ -554,6 +554,198 @@ auto create_acceleration_structure_helper(
 
 // --- Begin API Functions ---
 
+auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * report) -> daxa_Result
+{
+    if (report == nullptr)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_MEMORY_MAP_FAILED, DAXA_RESULT_ERROR_MEMORY_MAP_FAILED);
+    }
+
+    auto const buffer_list_allocation_size = report->buffer_count;
+    auto const image_list_allocation_size = report->image_count;
+    auto const tlas_list_allocation_size = report->tlas_count;
+    auto const blas_list_allocation_size = report->blas_count;
+    auto const memory_block_list_allocation_size = report->memory_block_count;
+
+    report->buffer_count = {};
+    report->image_count = {};
+    report->tlas_count = {};
+    report->blas_count = {};
+    report->memory_block_count = {};
+    report->total_buffer_device_memory_use = {};
+    report->total_image_device_memory_use = {};
+    report->total_aliased_tlas_device_memory_use = {};
+    report->total_aliased_blas_device_memory_use = {};
+    report->total_memory_block_device_memory_use = {};
+
+    // TODO: Refactor all objects to live in arrays so we can always iterate all objects.
+    std::unordered_map<daxa_MemoryBlock, u32> mem_blocks = {};
+
+    for (u32 bi = 0; bi < self->gpu_sro_table.buffer_slots.next_index; ++bi)
+    {
+        {
+            u64 version = self->gpu_sro_table.buffer_slots.version_of_slot(bi);
+            daxa::BufferId id = { bi, version };
+            auto& slot = self->gpu_sro_table.buffer_slots.unsafe_get(id);
+            if (slot.vk_buffer == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->buffer_count++;
+
+            bool const aliased = slot.vma_allocation == nullptr;
+            u64 memory_size = {};
+            if (!aliased)
+            {
+                VmaAllocationInfo vma_alloc_info = {};
+                vmaGetAllocationInfo(self->vma_allocator, slot.vma_allocation, &vma_alloc_info);
+                memory_size = vma_alloc_info.size;
+                report->total_buffer_device_memory_use += memory_size;
+            }
+            else
+            {
+                auto requirements = daxa_dvc_buffer_memory_requirements(self, &slot.info);
+                memory_size = requirements.size;
+            }
+
+            if (slot.opt_memory_block != nullptr)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull, "bruh");
+                // if (reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull)
+                mem_blocks[slot.opt_memory_block] += 1;
+            }
+    
+            if (report->buffer_list != nullptr && out_idx < buffer_list_allocation_size)
+            {
+                report->buffer_list[out_idx] = {
+                    std::bit_cast<daxa_BufferId>(id),
+                    memory_size,
+                    aliased,
+                };
+            }
+        }
+    }
+
+    for (u32 ii = 0; ii < self->gpu_sro_table.image_slots.next_index; ++ii)
+    {
+        {
+            u64 version = self->gpu_sro_table.image_slots.version_of_slot(ii);
+            daxa::ImageId id = { ii, version };
+            auto& slot = self->gpu_sro_table.image_slots.unsafe_get(id);
+            if (slot.vk_image == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->image_count++;
+
+            bool const aliased = slot.vma_allocation == nullptr;
+            u64 memory_size = {};
+            if (!aliased)
+            {
+                VmaAllocationInfo vma_alloc_info = {};
+                vmaGetAllocationInfo(self->vma_allocator, slot.vma_allocation, &vma_alloc_info);
+                memory_size = vma_alloc_info.size;
+                report->total_image_device_memory_use += memory_size;
+            }
+            else
+            {
+                auto requirements = daxa_dvc_image_memory_requirements(self, &slot.info);
+                memory_size = requirements.size;
+            }
+
+            if (slot.opt_memory_block != nullptr)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull, "bruh");
+                // if (reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull)
+                mem_blocks[slot.opt_memory_block] += 1;
+            }
+
+            if (report->image_list != nullptr && out_idx < image_list_allocation_size)
+            {
+                report->image_list[out_idx] = {
+                    std::bit_cast<daxa_ImageId>(id),
+                    memory_size,
+                    aliased,
+                };
+            }
+        }
+    }
+    
+    for (u32 ti = 0; ti < self->gpu_sro_table.tlas_slots.next_index; ++ti)
+    {
+        {
+            u64 version = self->gpu_sro_table.tlas_slots.version_of_slot(ti);
+            daxa::TlasId id = { ti, version };
+            auto& slot = self->gpu_sro_table.tlas_slots.unsafe_get(id);
+            if (slot.vk_acceleration_structure == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->tlas_count++;
+            report->total_aliased_tlas_device_memory_use += slot.info.size;
+    
+            if (report->tlas_list != nullptr && out_idx < tlas_list_allocation_size)
+            {
+                report->tlas_list[out_idx] = {
+                    std::bit_cast<daxa_TlasId>(id),
+                    slot.info.size
+                };
+            }
+        }
+    }
+    
+    for (u32 bli = 0; bli < self->gpu_sro_table.blas_slots.next_index; ++bli)
+    {
+        {
+            u64 version = self->gpu_sro_table.blas_slots.version_of_slot(bli);
+            daxa::BlasId id = { bli, version };
+            auto& slot = self->gpu_sro_table.blas_slots.unsafe_get(id);
+            if (slot.vk_acceleration_structure == nullptr)
+            {
+                continue;
+            }
+
+            u32 out_idx = report->blas_count++;
+            report->total_aliased_blas_device_memory_use += slot.info.size;
+    
+            if (report->blas_list != nullptr && out_idx < blas_list_allocation_size)
+            {
+                report->blas_list[out_idx] = {
+                    std::bit_cast<daxa_BlasId>(id),
+                    slot.info.size
+                };
+            }
+        }
+    }
+
+    for (auto v : mem_blocks)
+    {
+        daxa_MemoryBlock const& block = v.first;
+        u32 out_idx = report->memory_block_count++;
+
+        report->total_memory_block_device_memory_use += block->alloc_info.size;
+
+        if (report->memory_block_list != nullptr && out_idx < memory_block_list_allocation_size)
+        {
+            block->inc_refcnt();
+            report->memory_block_list[out_idx] = {
+                block,
+                block->alloc_info.size,
+            };
+        }
+    }
+    
+    report->total_device_memory_use = 
+        report->total_buffer_device_memory_use +
+        report->total_image_device_memory_use +
+        report->total_memory_block_device_memory_use;
+
+    return DAXA_RESULT_SUCCESS;
+} 
+
 auto daxa_default_device_score(daxa_DeviceProperties const * c_properties) -> i32
 {
     DeviceProperties const * properties = r_cast<DeviceProperties const *>(c_properties);
@@ -767,9 +959,6 @@ auto daxa_dvc_create_blas_from_buffer(daxa_Device self, daxa_BufferBlasInfo cons
 auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    /// --- Begin Validation ---
-
-    /// --- End Validation ---
 
     auto slot_opt = self->gpu_sro_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
@@ -790,6 +979,25 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     };
 
     ImplImageSlot const & parent_image_slot = self->slot(info->image);
+
+    /// --- Begin Validation ---
+
+    if (info->slice.layer_count > 1)
+    {
+        bool const array_type = info->type == 
+            VK_IMAGE_VIEW_TYPE_1D_ARRAY || 
+            info->type == VK_IMAGE_VIEW_TYPE_2D_ARRAY || 
+            info->type == VK_IMAGE_VIEW_TYPE_CUBE || 
+            info->type == VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+        if (!array_type)
+        {
+            result = DAXA_RESULT_INVALID_IMAGE_VIEW_INFO;
+        }
+    }
+    _DAXA_RETURN_IF_ERROR(result,result);
+
+    /// --- End Validation ---
+
     image_slot = {};
     auto & ret = image_slot.view_slot;
     ret.info = *info;
@@ -1404,7 +1612,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    if (physical_device.features.physical_device_acceleration_structure_features_khr.accelerationStructure)
+    if ((properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) != 0)
     {
         if (self->info.max_allowed_acceleration_structures > self->properties.acceleration_structure_properties.value.max_descriptor_set_update_after_bind_acceleration_structures ||
             self->info.max_allowed_acceleration_structures == 0)
@@ -1529,7 +1737,8 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             continue;
         }
         auto const vk_queue_family = self->queue_families[self->queues[i].family].vk_index;
-        result = self->queues[i].initialize(self->vk_device, vk_queue_family, self->queues[i].queue_index);
+        self->queues[i].vk_queue_family_index = vk_queue_family;
+        result = self->queues[i].initialize(self->vk_device);
         _DAXA_RETURN_IF_ERROR(result, result)
     }
 
@@ -1709,7 +1918,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .flags = {},
             .size = sizeof(u8) * 4,
             .usage = create_buffer_use_flags(self),
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            .sharingMode = VK_SHARING_MODE_CONCURRENT,
             .queueFamilyIndexCount = self->valid_vk_queue_family_count,
             .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
         };

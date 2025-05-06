@@ -6,6 +6,8 @@
 
 #include <daxa/c/types.h>
 
+VK_DEFINE_HANDLE(VmaAllocation)
+
 DAXA_EXPORT daxa_ImageViewId
 daxa_default_view(daxa_ImageId image);
 

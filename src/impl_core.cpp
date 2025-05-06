@@ -468,13 +468,13 @@ auto daxa_version_of_sampler(daxa_SamplerId id) -> u64
 
 auto ImplHandle::inc_refcnt() const -> u64
 {
-    auto & mut_strong_ref = *rc_cast<u64 *>(&this->strong_count);
+    auto & mut_strong_ref = this->strong_count;
     return std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64
 {
-    auto & mut_strong_ref = *rc_cast<u64 *>(&this->strong_count);
+    auto & mut_strong_ref = this->strong_count;
     auto prev = std::atomic_ref{mut_strong_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {
@@ -499,14 +499,14 @@ auto ImplHandle::get_refcnt() const -> u64
 auto ImplHandle::impl_inc_weak_refcnt([[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"inc_weak_refcnt\" in \"%s\"\n", callsite);
-    auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
+    auto & mut_weak_ref = this->weak_count;
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance /*unused*/, [[maybe_unused]] char const * callsite) const -> u64
 {
     _DAXA_TEST_PRINT("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
-    auto & mut_weak_ref = *rc_cast<u64 *>(&this->weak_count);
+    auto & mut_weak_ref = this->weak_count;
     auto prev = std::atomic_ref{mut_weak_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
     {

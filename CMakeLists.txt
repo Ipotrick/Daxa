@@ -240,6 +240,7 @@ endif()
 if(DAXA_ENABLE_TOOLS)
     add_executable(daxa_tools_compile_imgui_shaders "src/utils/impl_imgui.cpp")
     target_compile_definitions(daxa_tools_compile_imgui_shaders PRIVATE DAXA_COMPILE_IMGUI_SHADERS=true)
+    target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa)
 endif()
 
 if(DAXA_INSTALL)

@@ -1,9 +1,9 @@
 #pragma once
 
+#include "impl_core.hpp"
 #include <daxa/daxa.hpp>
 #include <daxa/device.hpp>
 
-#include "impl_core.hpp"
 
 #include <daxa/c/device.h>
 
@@ -57,6 +57,7 @@ namespace daxa
             physical_device_mesh_shader_ext,
             physical_device_ray_tracing_invocation_reorder_nv,
             physical_device_shader_atomic_float_ext,
+            physical_device_shader_clock_khr,
             // Used by DLSS
             physical_device_push_descriptor_khr,
             physical_device_binary_import_nvx,
@@ -79,6 +80,7 @@ namespace daxa
             VK_EXT_MESH_SHADER_EXTENSION_NAME,
             VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME,
             VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
+            VK_KHR_SHADER_CLOCK_EXTENSION_NAME,
             // Used by DLSS
             VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
             VK_NVX_BINARY_IMPORT_EXTENSION_NAME,
@@ -118,6 +120,7 @@ namespace daxa
         VkPhysicalDeviceRayTracingPositionFetchFeaturesKHR physical_device_ray_tracing_position_fetch_features_khr = {};
         VkPhysicalDeviceRayTracingInvocationReorderFeaturesNV physical_device_ray_tracing_invocation_reorder_features_nv = {};
         VkPhysicalDeviceShaderAtomicFloatFeaturesEXT physical_device_shader_atomic_float_features_ext = {};
+        VkPhysicalDeviceShaderClockFeaturesKHR physical_device_shader_clock_features_khr = {};
         VkPhysicalDeviceFeatures2 physical_device_features_2 = {};
         bool conservative_rasterization = {};
         bool swapchain = {};

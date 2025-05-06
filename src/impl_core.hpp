@@ -30,6 +30,8 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #ifndef NOMINMAX
+#endif
+#ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #elif defined(__linux__)
@@ -50,6 +52,12 @@
 #endif
 
 // INCLUDE ORDER MUST STAY LIKE THIS:
+// ensure we always compile in the deprecated functions to avoid link issues
+#ifdef DAXA_REMOVE_DEPRECATED
+#undef DAXA_REMOVE_DEPRECATED
+#endif
+
+#define DAXA_REMOVE_DEPRECATED 0
 #include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
 #include <vma/vk_mem_alloc.h>
@@ -80,9 +88,6 @@ auto r_cast(FROM_T * ptr)
     return reinterpret_cast<TO_T>(ptr);
 }
 
-static inline constexpr u32 MAX_PUSH_CONSTANT_WORD_SIZE = {32};
-static inline constexpr u32 MAX_PUSH_CONSTANT_BYTE_SIZE = {MAX_PUSH_CONSTANT_WORD_SIZE * 4};
-static inline constexpr u32 PIPELINE_LAYOUT_COUNT = {MAX_PUSH_CONSTANT_WORD_SIZE + 1};
 // TODO: WTF IS THIS?!
 static inline constexpr char const * MAX_PUSH_CONSTANT_SIZE_ERROR = {"push constant size is limited to 128 bytes/ 32 device words"};
 static inline constexpr u32 GPU_TABLE_SET_BINDING = 0;
@@ -136,9 +141,9 @@ namespace daxa
     struct ImplHandle
     {
         // Used for user side reference count.
-        u64 strong_count = 1;
+        mutable u64 strong_count = 1;
         // Used for internal reference count.
-        u64 weak_count = {};
+        mutable u64 weak_count = {};
 
 #define inc_weak_refcnt() impl_inc_weak_refcnt(__FUNCTION__)
 #define dec_weak_refcnt(CB, IS) impl_dec_weak_refcnt(CB, IS, __FUNCTION__)
@@ -192,8 +197,13 @@ deferrer<F> operator*(defer_dummy, F f) { return {f}; }
 #define _DAXA_DEBUG_BREAK
 #endif
 
+constexpr bool is_daxa_result_success(daxa_Result v)
+{
+    return v == DAXA_RESULT_SUCCESS;
+}
+
 #define _DAXA_RETURN_IF_ERROR(V, RET) \
-    if (V != DAXA_RESULT_SUCCESS)     \
+    if (!is_daxa_result_success(V))   \
     {                                 \
         _DAXA_DEBUG_BREAK             \
         return RET;                   \

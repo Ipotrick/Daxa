@@ -141,6 +141,7 @@ namespace daxa
 
     struct InlineTaskInfo
     {
+        TaskType task_type = TaskType::GENERAL;
         std::vector<TaskAttachmentInfo> attachments = {};
         std::function<void(TaskInterface)> task = {};
         char const * name = "unnamed";
@@ -148,30 +149,331 @@ namespace daxa
 
     struct InlineTask : ITask
     {
+        InlineTask() = default;
         InlineTask(InlineTaskInfo const & info)
         {
-            _attachments = info.attachments;
-            _callback = info.task;
-            _name = info.name;
+            value = {}; // Prevents ICE
+            value._internal._task_type = info.task_type;
+            value._internal._attachments = info.attachments;
+            value._internal._callback = info.task;
+            value._internal._name = info.name;
+        }
+        InlineTask(std::string name, TaskType task_type = TaskType::GENERAL)
+        {
+            value._internal._name = std::move(name);
+            value._internal._task_type = task_type;
+        }
+        static auto Raster(std::string name) -> InlineTask
+        {
+            return InlineTask(name, TaskType::RASTER);
+        }
+        static auto Compute(std::string name) -> InlineTask
+        {
+            return InlineTask(name, TaskType::COMPUTE);
+        }
+        static auto RayTracing(std::string name) -> InlineTask
+        {
+            return InlineTask(name, TaskType::RAY_TRACING);
+        }
+        static auto Transfer(std::string name) -> InlineTask
+        {
+            return InlineTask(name, TaskType::TRANSFER);
+        }
+        virtual ~InlineTask() override
+        {
+        }
+        InlineTask(InlineTask && other)
+        {
+            this->value = {}; // Prevents ICE
+            this->value._internal._attachments = std::move(other.value._internal._attachments);
+            this->value._internal._callback = std::move(other.value._internal._callback);
+            this->value._internal._name = std::move(other.value._internal._name);
+            this->value._internal._task_type = std::move(other.value._internal._task_type);
+            other.value._internal._attachments = {};
+            other.value._internal._callback = {};
+            other.value._internal._name = {};
+            other.value._internal._task_type = {};
         }
         constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> override
         {
-            return _attachments;
+            return value._internal._attachments;
         }
         constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> override
         {
-            return _attachments;
+            return value._internal._attachments;
         }
-        constexpr virtual std::string_view name() const override { return _name; };
+        constexpr virtual auto name() const -> std::string_view override { return value._internal._name; };
         virtual void callback(TaskInterface ti) override
         {
-            _callback(ti);
-        };
+            value._internal._callback(ti);
+        }
+        virtual auto task_type() const -> TaskType override { return value._internal._task_type; }
 
       private:
-        std::vector<TaskAttachmentInfo> _attachments = {};
-        std::function<void(TaskInterface)> _callback = {};
-        char const * _name = {};
+        enum Allow
+        {
+            NONE = 0,
+            READ = (1 << 0),
+            WRITE = (1 << 1),
+            READ_WRITE = (1 << 2),
+            SAMPLED = (1 << 5),
+        };
+
+      public:
+        struct Internal
+        {
+            std::vector<TaskAttachmentInfo> _attachments = {};
+            std::function<void(TaskInterface)> _callback = {};
+            std::string _name = {};
+            TaskType _task_type = TaskType::GENERAL;
+
+            void _process_params(TaskStage stage, TaskAccessType type, ImageViewType & view_override, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
+            {
+                _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param));
+            }
+            void _process_params(TaskStage stage, TaskAccessType type, ImageViewType & view_override, TaskImageViewOrTaskImage auto param)
+            {
+                _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param, view_override));
+            }
+            void _process_params(TaskStage stage, TaskAccessType type, ImageViewType & view_override, ImageViewType param)
+            {
+                view_override = param;
+            }
+        };
+        template <Allow ALLOWED_ACCESS, TaskStage STAGE = TaskStage::NONE>
+        struct InternalValue
+        {
+            Internal _internal = {};
+
+            template <TaskResourceViewOrResource... TResources>
+            auto reads(TResources... v) -> InlineTask
+                requires((ALLOWED_ACCESS & Allow::READ) != 0)
+            {
+                ImageViewType view_override = ImageViewType::MAX_ENUM;
+                (_internal._process_params(STAGE, TaskAccessType::READ,view_override, v), ...);
+                return InlineTask{std::move(_internal)};
+            }
+            template <TaskResourceViewOrResourceOrImageViewType... TResources>
+            auto writes(TResources... v) -> InlineTask
+                requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
+            {
+                ImageViewType view_override = ImageViewType::MAX_ENUM;
+                (_internal._process_params(STAGE, TaskAccessType::WRITE, view_override, v), ...);
+                return InlineTask{std::move(_internal)};
+            }
+            template <TaskResourceViewOrResourceOrImageViewType... TResources>
+            auto writes_concurrent(TResources... v) -> InlineTask
+                requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
+            {
+                ImageViewType view_override = ImageViewType::MAX_ENUM;
+                (_internal._process_params(STAGE, TaskAccessType::WRITE_CONCURRENT, view_override, v), ...);
+                return InlineTask{std::move(_internal)};
+            }
+            template <TaskResourceViewOrResourceOrImageViewType... TResources>
+            auto reads_writes(TResources... v) -> InlineTask
+                requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
+            {
+                ImageViewType view_override = ImageViewType::MAX_ENUM;
+                (_internal._process_params(STAGE, TaskAccessType::READ_WRITE, view_override, v), ...);
+                return InlineTask{std::move(_internal)};
+            }
+            template <TaskResourceViewOrResourceOrImageViewType... TResources>
+            auto readwrites_concurrent(TResources... v) -> InlineTask
+                requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
+            {
+                ImageViewType view_override = ImageViewType::MAX_ENUM;
+                (_internal._process_params(STAGE, TaskAccessType::READ_WRITE_CONCURRENT, view_override, v), ...);
+                return InlineTask{std::move(_internal)};
+            }
+            template <TaskImageViewOrTaskImageOrImageViewType... TResources>
+                requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0)
+            auto samples(TResources... v) -> InlineTask
+            {
+                ImageViewType view_override = ImageViewType::MAX_ENUM;
+                (_internal._process_params(STAGE, TaskAccessType::SAMPLED, view_override, v), ...);
+                return InlineTask{std::move(_internal)};
+            }
+        };
+        union
+        {
+            InternalValue<Allow::NONE, TaskStage::NONE> value = {};
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::VERTEX_SHADER> vs;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::VERTEX_SHADER> vertex_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_CONTROL_SHADER> tcs;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_CONTROL_SHADER> tesselation_control_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_EVALUATION_SHADER> tes;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_EVALUATION_SHADER> tesselation_evaluation_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::GEOMETRY_SHADER> gs;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::GEOMETRY_SHADER> geometry_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::FRAGMENT_SHADER> fs;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::FRAGMENT_SHADER> fragment_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::COMPUTE_SHADER> cs;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::COMPUTE_SHADER> compute_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RAY_TRACING_SHADER> rts;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RAY_TRACING_SHADER> ray_tracing_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TASK_SHADER> ts;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TASK_SHADER> task_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::MESH_SHADER> ms;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::MESH_SHADER> mesh_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::PRE_RASTERIZATION_SHADERS> prs;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::PRE_RASTERIZATION_SHADERS> pre_rasterization_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RASTER_SHADER> rs;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RASTER_SHADER> raster_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::SHADER> s;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::SHADER> shader;
+            InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> ca;
+            InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> color_attachment;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::DEPTH_STENCIL_ATTACHMENT> dsa;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::RESOLVE> resolve;
+            InternalValue<Allow::READ, TaskStage::PRESENT> present;
+            InternalValue<Allow::READ, TaskStage::INDIRECT_COMMAND> indirect_cmd;
+            InternalValue<Allow::READ, TaskStage::INDEX_INPUT> index_input;
+            InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::TRANSFER> tf;
+            InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::TRANSFER> transfer;
+            InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::HOST> host;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::AS_BUILD> asb;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::AS_BUILD> acceleration_structure_build;
+        };
+
+        
+        template <TaskResourceViewOrResource... TResources>
+        auto reads(TaskStage stage, TResources... v) -> InlineTask
+        {
+            ImageViewType view_override = ImageViewType::MAX_ENUM;
+            (value._internal._process_params(stage, TaskAccessType::READ, view_override, v), ...);
+            return InlineTask{std::move(value._internal)};
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto writes(TaskStage stage, TResources... v) -> InlineTask
+        {
+            ImageViewType view_override = ImageViewType::MAX_ENUM;
+            (value._internal._process_params(stage, TaskAccessType::WRITE, view_override, v), ...);
+            return InlineTask{std::move(value._internal)};
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto writes_concurrent(TaskStage stage, TResources... v) -> InlineTask
+        {
+            ImageViewType view_override = ImageViewType::MAX_ENUM;
+            (value._internal._process_params(stage, TaskAccessType::WRITE_CONCURRENT, view_override, v), ...);
+            return InlineTask{std::move(value._internal)};
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto reads_writes(TaskStage stage, TResources... v) -> InlineTask
+        {
+            ImageViewType view_override = ImageViewType::MAX_ENUM;
+            (value._internal._process_params(stage, TaskAccessType::READ_WRITE, view_override, v), ...);
+            return InlineTask{std::move(value._internal)};
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto readwrites_concurrent(TaskStage stage, TResources... v) -> InlineTask
+        {
+            ImageViewType view_override = ImageViewType::MAX_ENUM;
+            (value._internal._process_params(stage, TaskAccessType::READ_WRITE_CONCURRENT, view_override, v), ...);
+            return InlineTask{std::move(value._internal)};
+        }
+        template <TaskImageViewOrTaskImageOrImageViewType... TResources>
+        auto samples(TaskStage stage, TResources... v) -> InlineTask
+        {
+            ImageViewType view_override = ImageViewType::MAX_ENUM;
+            (value._internal._process_params(stage, TaskAccessType::SAMPLED, view_override, v), ...);
+            return InlineTask{std::move(value._internal)};
+        }
+
+
+        template <TaskResourceViewOrResource... TResources>
+        auto reads(TResources... v) -> InlineTask
+        {
+            return reads(TaskStage::NONE, v...);
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto writes(TResources... v) -> InlineTask
+        {
+            return writes(TaskStage::NONE, v...);
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto writes_concurrent(TResources... v) -> InlineTask
+        {
+            return writes_concurrent(TaskStage::NONE, v...);
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto reads_writes(TResources... v) -> InlineTask
+        {
+            return reads_writes(TaskStage::NONE, v...);
+        }
+        template <TaskResourceViewOrResourceOrImageViewType... TResources>
+        auto readwrites_concurrent(TResources... v) -> InlineTask
+        {
+            return readwrites_concurrent(TaskStage::NONE, v...);
+        }
+        template <TaskImageViewOrTaskImageOrImageViewType... TResources>
+        auto samples(TResources... v) -> InlineTask
+        {
+            return samples(TaskStage::NONE, v...);
+        }
+
+
+        template <TaskResourceViewOrResource... TResources>
+        auto uses(TaskAccess access, TResources... v) -> InlineTask
+        {
+            ImageViewType view_override = ImageViewType::MAX_ENUM;
+            (value._internal._process_params(access.stage, access.type, view_override, v), ...);
+            return InlineTask{std::move(value._internal)};
+        }
+
+
+        auto executes(std::function<void(TaskInterface)> const & c) && -> InlineTask
+        {
+            value._internal._callback = std::move(c);
+            return std::move(*this);
+        }
+
+      private:
+        InlineTask(Internal && internal)
+        {
+            this->value._internal = std::move(internal);
+        }
+    };
+
+    template <typename TaskHeadTaskT>
+    struct InlineTaskWithHead : TaskHeadTaskT
+    {
+        TaskHeadTaskT::AttachmentViews views = {};
+        std::function<void(daxa::TaskInterface)> task = {};
+        void callback(daxa::TaskInterface ti)
+        {
+            task(ti);
+        }
+    };
+
+    struct TaskBufferClearInfo
+    {
+        TaskBufferView buffer = {};
+        u64 offset = {};
+        u64 size = ~0ull; // default clears all
+        u32 clear_value = {};
+        std::string_view name = {};
+    };
+
+    struct TaskImageClearInfo
+    {
+        TaskImageView view = {};
+        ClearValue clear_value = std::array{0u, 0u, 0u, 0u};
+        std::string_view name = {};
+    };
+
+    struct TaskBufferCopyInfo
+    {
+        TaskBufferView src = {};
+        TaskBufferView dst = {};
+        std::string_view name = {};
+    };
+
+    struct TaskImageCopyInfo
+    {
+        TaskImageView src = {};
+        TaskImageView dst = {};
+        std::string_view name = {};
     };
 
     struct ImplTaskGraph;
@@ -191,6 +493,15 @@ namespace daxa
         DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
         DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
 
+        DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo const &;
+        DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo const &;
+
+        DAXA_EXPORT_CXX void clear_buffer(TaskBufferClearInfo const & info);
+        DAXA_EXPORT_CXX void clear_image(TaskImageClearInfo const & info);
+
+        DAXA_EXPORT_CXX void copy_buffer_to_buffer(TaskBufferCopyInfo const & info);
+        DAXA_EXPORT_CXX void copy_image_to_image(TaskImageCopyInfo const & info);
+
         template <typename TTask>
             requires std::is_base_of_v<IPartialTask, TTask>
         void add_task(TTask const & task)
@@ -205,15 +516,15 @@ namespace daxa
                 {
                     for (u32 i = 0; i < NoRefTTask::ATTACH_COUNT; ++i)
                     {
-                        switch (NoRefTTask::attachments()[i].type)
+                        switch (_task.attachments()[i].type)
                         {
                         case daxa::TaskAttachmentType::BUFFER:
                         {
                             TaskBufferAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.buffer.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.buffer.task_access;
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.buffer.shader_array_size;
-                            info.shader_as_address = NoRefTTask::attachments()[i].value.buffer.shader_as_address;
+                            info.name = _task.attachments()[i].value.buffer.name;
+                            info.task_access = _task.attachments()[i].value.buffer.task_access;
+                            info.shader_array_size = _task.attachments()[i].value.buffer.shader_array_size;
+                            info.shader_as_address = _task.attachments()[i].value.buffer.shader_as_address;
                             info.view = daxa::get<TaskBufferView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -221,9 +532,9 @@ namespace daxa
                         case daxa::TaskAttachmentType::TLAS:
                         {
                             TaskTlasAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.tlas.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.tlas.task_access;
-                            info.shader_as_address = NoRefTTask::attachments()[i].value.tlas.shader_as_address;
+                            info.name = _task.attachments()[i].value.tlas.name;
+                            info.task_access = _task.attachments()[i].value.tlas.task_access;
+                            info.shader_as_address = _task.attachments()[i].value.tlas.shader_as_address;
                             info.view = daxa::get<TaskTlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -231,8 +542,8 @@ namespace daxa
                         case daxa::TaskAttachmentType::BLAS:
                         {
                             TaskBlasAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.blas.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.blas.task_access;
+                            info.name = _task.attachments()[i].value.blas.name;
+                            info.task_access = _task.attachments()[i].value.blas.task_access;
                             info.view = daxa::get<TaskBlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -240,12 +551,12 @@ namespace daxa
                         case daxa::TaskAttachmentType::IMAGE:
                         {
                             TaskImageAttachmentInfo info;
-                            info.name = NoRefTTask::attachments()[i].value.image.name;
-                            info.task_access = NoRefTTask::attachments()[i].value.image.task_access;
-                            info.view_type = NoRefTTask::attachments()[i].value.image.view_type;
-                            info.shader_array_size = NoRefTTask::attachments()[i].value.image.shader_array_size;
-                            info.shader_array_type = NoRefTTask::attachments()[i].value.image.shader_array_type;
-                            info.shader_as_index = NoRefTTask::attachments()[i].value.image.shader_as_index;
+                            info.name = _task.attachments()[i].value.image.name;
+                            info.task_access = _task.attachments()[i].value.image.task_access;
+                            info.view_type = _task.attachments()[i].value.image.view_type;
+                            info.shader_array_size = _task.attachments()[i].value.image.shader_array_size;
+                            info.shader_array_type = _task.attachments()[i].value.image.shader_array_type;
+                            info.shader_as_index = _task.attachments()[i].value.image.shader_as_index;
                             info.view = daxa::get<TaskImageView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -261,14 +572,21 @@ namespace daxa
                 constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> { return _attachments; }
                 constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> { return _attachments; }
                 constexpr virtual auto name() const -> std::string_view { return NoRefTTask::name(); }
+                virtual auto task_type() const -> TaskType { return _task.task_type(); };
                 virtual void callback(TaskInterface ti) { _task.callback(ti); };
             };
-            auto wrapped_task = std::make_unique<WrapperTask>(task);
+            auto wrapped_task = std::make_unique<WrapperTask>(std::move(task));
             add_task(std::move(wrapped_task));
         }
         void add_task(InlineTaskInfo const & inline_task_info)
         {
             add_task(std::make_unique<InlineTask>(inline_task_info));
+        }
+        template<typename T>
+        void add_task(T && inline_task)
+            requires std::is_base_of_v<InlineTask, T> || std::is_same_v<InlineTask, T>
+        {
+            add_task(std::make_unique<T>(std::move(inline_task)));
         }
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);

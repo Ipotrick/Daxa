@@ -529,68 +529,57 @@ auto main() -> int
     daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({}, daxa::DeviceInfo2{}));
 
-    daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
+    daxa::PipelineManager pipeline_manager = daxa::PipelineManager(daxa::PipelineManagerInfo2{
         .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SHADER_INCLUDE_DIR,
-                "tests/0_common/shaders",
-            },
-            .language = daxa::ShaderLanguage::GLSL,
+        .root_paths = {
+            DAXA_SHADER_INCLUDE_DIR,
+            "tests/0_common/shaders",
         },
+        .write_out_spirv = "./",
+        .default_language = daxa::ShaderLanguage::GLSL,
+        .default_enable_debug_info = false,
         .name = "pipeline_manager",
     });
 
-    // std::shared_ptr<daxa::RasterPipeline> imgui_pipeline =
-    daxa::RasterPipelineCompileInfo compile_info{
-        .vertex_shader_info = daxa::ShaderCompileInfo{
-            .source_path = "src/utils/impl_imgui.cpp",
-            .write_out_shader_binary = "./",
-            .language = daxa::ShaderLanguage::GLSL,
-            .enable_debug_info = false,
-        },
-        .fragment_shader_info = daxa::ShaderCompileInfo{
-            .source_path = "src/utils/impl_imgui.cpp",
-            .write_out_shader_binary = "./",
-            .language = daxa::ShaderLanguage::GLSL,
-            .enable_debug_info = false,
-        },
+    daxa::RasterPipelineCompileInfo2 compile_info{
+        .vertex_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
+        .fragment_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
         .color_attachments = {{.format = daxa::Format::R16G16B16A16_SFLOAT}},
         .raster = {},
         .push_constant_size = sizeof(Push),
         .name = "imgui_pipeline",
     };
     // NO GAMMA CORRECTION
-    auto result = pipeline_manager.add_raster_pipeline(compile_info);
+    auto result = pipeline_manager.add_raster_pipeline2(compile_info);
     std::cout << result.to_string();
 
-    auto vert_file = std::ifstream{"./imgui_pipeline.vert.spv", std::ios::binary};
-    auto vert_size = std::filesystem::file_size("./imgui_pipeline.vert.spv");
+    auto vert_file = std::ifstream{"./imgui_pipeline.vert.main.spv", std::ios::binary};
+    auto vert_size = std::filesystem::file_size("./imgui_pipeline.vert.main.spv");
     auto vert_bytes = std::vector<uint32_t>(vert_size / sizeof(uint32_t));
     vert_file.read(reinterpret_cast<char *>(vert_bytes.data()), static_cast<std::streamsize>(vert_size));
     vert_file.close();
     std::filesystem::remove("./imgui_pipeline.vert.spv");
 
-    auto frag_file = std::ifstream{"./imgui_pipeline.frag.spv", std::ios::binary};
-    auto frag_size = std::filesystem::file_size("./imgui_pipeline.frag.spv");
+    auto frag_file = std::ifstream{"./imgui_pipeline.frag.main.spv", std::ios::binary};
+    auto frag_size = std::filesystem::file_size("./imgui_pipeline.frag.main.spv");
     auto frag_bytes = std::vector<uint32_t>(frag_size / sizeof(uint32_t));
     frag_file.read(reinterpret_cast<char *>(frag_bytes.data()), static_cast<std::streamsize>(frag_size));
     frag_file.close();
-    std::filesystem::remove("./imgui_pipeline.frag.spv");
+    std::filesystem::remove("./imgui_pipeline.frag.main.spv");
 
     // WITH GAMMA CORRECTION
     compile_info.fragment_shader_info.value().defines = {{"GAMMA_CORRECTION", "TRUE"}};
-    result = pipeline_manager.add_raster_pipeline(compile_info);
+    result = pipeline_manager.add_raster_pipeline2(compile_info);
     std::cout << result.to_string();
 
     // vert is unchanged
-    std::filesystem::remove("./imgui_pipeline.vert.spv");
-    auto gamma_frag_file = std::ifstream{"./imgui_pipeline.frag.spv", std::ios::binary};
-    auto gamma_frag_size = std::filesystem::file_size("./imgui_pipeline.frag.spv");
+    std::filesystem::remove("./imgui_pipeline.vert.main.spv");
+    auto gamma_frag_file = std::ifstream{"./imgui_pipeline.frag.main.spv", std::ios::binary};
+    auto gamma_frag_size = std::filesystem::file_size("./imgui_pipeline.frag.main.spv");
     auto gamma_frag_bytes = std::vector<uint32_t>(gamma_frag_size / sizeof(uint32_t));
     gamma_frag_file.read(reinterpret_cast<char *>(gamma_frag_bytes.data()), static_cast<std::streamsize>(gamma_frag_size));
     gamma_frag_file.close();
-    std::filesystem::remove("./imgui_pipeline.frag.spv");
+    std::filesystem::remove("./imgui_pipeline.frag.main.spv");
 
     auto out_file = std::ofstream{"./src/utils/impl_imgui_spv.hpp", std::ofstream::trunc};
     out_file << "#pragma once\n#include <array>\n\n";

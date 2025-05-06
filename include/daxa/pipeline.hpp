@@ -61,8 +61,8 @@ namespace daxa
         Span<ShaderInfo const> closest_hit_shaders = {};
         Span<ShaderInfo const> miss_hit_shaders = {};
         Span<RayTracingShaderGroupInfo const> shader_groups = {};
-        u32 max_ray_recursion_depth;
-        u32 push_constant_size = {};
+        u32 max_ray_recursion_depth = {};
+        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;
         SmallString name = {};
     };
 
@@ -97,7 +97,7 @@ namespace daxa
     struct ComputePipelineInfo
     {
         ShaderInfo shader_info = {};
-        u32 push_constant_size = {};
+        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;
         SmallString name = {};
     };
 
@@ -191,7 +191,7 @@ namespace daxa
         Optional<DepthTestInfo> depth_test = {};
         Optional<TesselationInfo> tesselation = {};
         RasterizerInfo raster = {};
-        u32 push_constant_size = {};
+        u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;
         SmallString name = {};
     };
 

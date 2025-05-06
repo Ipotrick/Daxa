@@ -158,6 +158,13 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_shader_atomic_float_features_ext);
         }
 
+        if (extensions.extensions_present[extensions.physical_device_shader_clock_khr])
+        {
+            physical_device_shader_clock_features_khr.pNext = chain;
+            physical_device_shader_clock_features_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_CLOCK_FEATURES_KHR;
+            chain = static_cast<void *>(&physical_device_shader_clock_features_khr);
+        }
+
         conservative_rasterization = extensions.extensions_present[extensions.physical_device_conservative_rasterization_ext];
         swapchain = extensions.extensions_present[extensions.physical_device_swapchain_khr];
 
@@ -279,19 +286,8 @@ namespace daxa
         // offsetof(PhysicalDeviceFeaturesStruct, physical_device_8bit_storage_features.storagePushConstant8),
     };
 
-    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16_VK_FEATURES = std::array{
-        offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderInt16),
-        offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.storageBuffer16BitAccess),
-        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.uniformAndStorageBuffer16BitAccess),
-        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.storagePushConstant16),
-    };
-
     constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3_VK_FEATURES = std::array{
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_extended_dynamic_state3_features_ext.extendedDynamicState3RasterizationSamples),
-    };
-
-    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES = std::array{
-        offsetof(PhysicalDeviceFeaturesStruct, swapchain),
     };
 
     constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT_VK_FEATURES = std::array{
@@ -301,6 +297,22 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_float_features_ext.shaderSharedFloat32AtomicAdd),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_float_features_ext.shaderImageFloat32Atomics),
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_atomic_float_features_ext.shaderImageFloat32AtomicAdd),
+    };
+
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, swapchain),
+    };
+
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderInt16),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.storageBuffer16BitAccess),
+        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.uniformAndStorageBuffer16BitAccess),
+        // offsetof(PhysicalDeviceFeaturesStruct, physical_device_16bit_storage_features.storagePushConstant16),
+    };
+
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_clock_features_khr.shaderSubgroupClock),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_clock_features_khr.shaderDeviceClock),
     };
 
     constexpr static std::array IMPLICIT_FEATURES = std::array{
@@ -318,6 +330,8 @@ namespace daxa
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_ATOMIC_FLOAT},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK},
     };
 
     // === Explicit Features ===

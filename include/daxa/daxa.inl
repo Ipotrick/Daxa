@@ -9,30 +9,17 @@
 #define DAXA_BUFFER_DEVICE_ADDRESS_BUFFER_BINDING 4
 #define DAXA_ACCELERATION_STRUCTURE_BINDING 5
 
+#define DAXA_LANGUAGE_C 0
+#define DAXA_LANGUAGE_CPP 0
+#define DAXA_LANGUAGE_GLSL 2
+#define DAXA_LANGUAGE_SLANG 3
+#define DAXA_LANGUAGE_HLSL DAXA_LANGUAGE_SLANG
+
 #if defined(_STDC_) // C
-#define DAXA_SHADER 0
-#elif defined(__cplusplus) // C++
-#define DAXA_SHADER 0
-#elif defined(GL_core_profile) // GLSL
-#define DAXA_SHADER 1
-#define DAXA_SHADERLANG DAXA_SHADERLANG_GLSL
-#else // SLANG
-#define DAXA_SHADER 1
-#define DAXA_SHADERLANG DAXA_SHADERLANG_SLANG
-#endif
 
-#if DAXA_SHADER
-#define DAXA_SHADERLANG_GLSL 1
-#define DAXA_SHADERLANG_SLANG 2
-#if DAXA_SHADERLANG == DAXA_SHADERLANG_GLSL
-#include "daxa/daxa.glsl"
-#elif DAXA_SHADERLANG == DAXA_SHADERLANG_SLANG
-#include "daxa/daxa.slang"
-#endif
-#else
-#if defined(_STDC_)
+#define DAXA_SHADER 0
+#define DAXA_LANGUAGE DAXA_LANGUAGE_C
 #include <daxa/c/daxa.h>
-
 /// @brief Buffer ptr enable is ignored in c++.
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
@@ -41,9 +28,11 @@
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa_DeviceAddress
 
-#else
-#include <daxa/daxa.hpp>
+#elif defined(__cplusplus) // C++
 
+#define DAXA_SHADER 0
+#define DAXA_LANGUAGE DAXA_LANGUAGE_CPP
+#include <daxa/daxa.hpp>
 /// @brief Buffer ptr enable is ignored in c++.
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
@@ -52,6 +41,17 @@
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
 #define daxa_BufferPtr(x) daxa::types::DeviceAddress
 
-#endif
+#elif defined(GL_core_profile) // GLSL
+
+#define DAXA_SHADER 1
+#define DAXA_LANGUAGE DAXA_LANGUAGE_GLSL
+#include "daxa/daxa.glsl"
+
+#else // SLANG
+
+#define DAXA_SHADER 1
+#define DAXA_LANGUAGE DAXA_LANGUAGE_SLANG
+#include "daxa/daxa.slang"
+
 #endif
 #endif
