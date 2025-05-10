@@ -611,8 +611,6 @@ auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * r
 
             if (slot.opt_memory_block != nullptr)
             {
-                DAXA_DBG_ASSERT_TRUE_M(reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull, "bruh");
-                // if (reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull)
                 mem_blocks[slot.opt_memory_block] += 1;
             }
     
@@ -657,8 +655,6 @@ auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * r
 
             if (slot.opt_memory_block != nullptr)
             {
-                DAXA_DBG_ASSERT_TRUE_M(reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull, "bruh");
-                // if (reinterpret_cast<size_t>(slot.opt_memory_block->device) != 0xddddddddddddddddull)
                 mem_blocks[slot.opt_memory_block] += 1;
             }
 
