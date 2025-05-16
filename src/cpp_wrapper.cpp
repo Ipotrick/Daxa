@@ -3,14 +3,13 @@
 #include <daxa/c/daxa.h>
 #include <daxa/daxa.hpp>
 
-#include <chrono>
 #include <iostream>
 #include <utility>
 #include <format>
 #include <bit>
 
-#include "impl_instance.hpp"
 #include "impl_device.hpp"
+#include "impl_instance.hpp"
 
 static_assert(sizeof(daxa::Queue) == sizeof(daxa_Queue));
 static_assert(alignof(daxa::Queue) == alignof(daxa_Queue));

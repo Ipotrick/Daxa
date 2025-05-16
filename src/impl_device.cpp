@@ -1,11 +1,11 @@
 #include "impl_device.hpp"
 
+#include <unordered_map>
 #include <utility>
-#include <functional>
 #include "daxa/core.hpp"
 #include "impl_features.hpp"
-
-#include "impl_device.hpp"
+#include "impl_swapchain.hpp"
+#include "impl_instance.hpp"
 
 /// --- Begin Helpers ---
 

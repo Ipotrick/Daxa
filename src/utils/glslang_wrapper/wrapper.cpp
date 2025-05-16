@@ -4,7 +4,6 @@
 
 #define GLSLANG_WRAPPER_INTERNAL
 #include "wrapper.hpp"
-#include <string_view>
 
 static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
     .maxLights = 32,

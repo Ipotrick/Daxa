@@ -5,6 +5,7 @@
 #include <variant>
 #include <sstream>
 #include <daxa/utils/task_graph.hpp>
+#include <format>
 
 #define DAXA_TASK_GRAPH_MAX_CONDITIONALS 31
 
@@ -475,7 +476,7 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task buffer id. Please make sure to only use initialized task buffer ids.");
             if (id.is_persistent())
             {
-                DAXA_DBG_ASSERT_TRUE_M(
+                DAXA_DBG_ASSERT_TRUE_MS(
                     persistent_buffer_index_to_local_index.contains(id.index),
                     std::format("Detected invalid access of persistent task buffer id ({}) in task graph \"{}\"; "
                                 "please make sure to declare persistent resource use to each task graph that uses this buffer with the function use_persistent_buffer!",
@@ -484,7 +485,7 @@ namespace daxa
             }
             else
             {
-                DAXA_DBG_ASSERT_TRUE_M(
+                DAXA_DBG_ASSERT_TRUE_MS(
                     id.task_graph_index == this->unique_index,
                     std::format("Detected invalid access of transient task buffer id ({}) in task graph \"{}\"; "
                                 "please make sure that you only use transient buffers within the list they are created in!",

@@ -2,10 +2,9 @@
 
 #include "impl_core.hpp"
 
-#include "impl_instance.hpp"
+#include "impl_sync.hpp"
 #include "impl_command_recorder.hpp"
 #include "impl_pipeline.hpp"
-#include "impl_swapchain.hpp"
 #include "impl_gpu_resources.hpp"
 #include "impl_timeline_query.hpp"
 #include "impl_features.hpp"
@@ -13,6 +12,7 @@
 #include <daxa/c/device.h>
 
 #include <atomic>
+#include <mutex>
 
 using namespace daxa;
 
@@ -175,7 +175,7 @@ struct daxa_ImplDevice final : public ImplHandle
     void zombify_tlas(TlasId id);
     void zombify_blas(BlasId id);
 
-    static auto create_2(daxa_Instance instance, daxa_DeviceInfo2 const & info, ImplPhysicalDevice const & physical_device, daxa_DeviceProperties const & properties, daxa_Device device) -> daxa_Result;
+    static auto create_2(daxa_Instance instance, daxa_DeviceInfo2 const & info, struct ImplPhysicalDevice const & physical_device, daxa_DeviceProperties const & properties, daxa_Device device) -> daxa_Result;
     static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
     static void zero_ref_callback(ImplHandle const * handle);
 };

@@ -13,42 +13,36 @@
 #endif
 
 #if DAXA_VALIDATION
-#include <iostream>
-#include <stdexcept>
+#include <stdio.h>
+#include <assert.h>
 
 #define DAXA_GPU_ID_VALIDATION 1
 
 #define DAXA_DBG_ASSERT_FAIL_STRING "[[DAXA ASSERT FAILURE]]"
 
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)                                              \
-    do                                                                            \
-    {                                                                             \
-        if (std::is_constant_evaluated())                                         \
-        {                                                                         \
-            /* how do we check this??? static_assert(x); */                       \
-        }                                                                         \
-        else if (!(x))                                                            \
-        {                                                                         \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
-        }                                                                         \
+#define DAXA_DBG_ASSERT_TRUE_M(x, ...) \
+    do                                 \
+    {                                  \
+        if (!(x))                      \
+        {                              \
+            printf(__VA_ARGS__);       \
+            assert(false);             \
+        }                              \
     } while (false)
-#define DAXA_DBG_ASSERT_TRUE_MS(x, STREAM)                                        \
-    do                                                                            \
-    {                                                                             \
-        if (std::is_constant_evaluated())                                         \
-        {                                                                         \
-            /* how do we check this??? static_assert(x); */                       \
-        }                                                                         \
-        else if (!(x))                                                            \
-        {                                                                         \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " STREAM << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
-        }                                                                         \
+
+#define DAXA_DBG_ASSERT_TRUE_MS(x, s)  \
+    do                                 \
+    {                                  \
+        if (!(x))                      \
+        {                              \
+            auto const msg = s;        \
+            printf("%s", msg.c_str()); \
+            assert(false);             \
+        }                              \
     } while (false)
 #else
 
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)
+#define DAXA_DBG_ASSERT_TRUE_M(x, ...)
 #define DAXA_DBG_ASSERT_TRUE_MS(x, m)
 
 #endif
@@ -129,7 +123,7 @@ namespace daxa
 
         auto value() -> T &
         {
-            DAXA_DBG_ASSERT_TRUE_M(v.has_value(), (m != "" ? m : "tried getting value of empty Result"));
+            DAXA_DBG_ASSERT_TRUE_MS(v.has_value(), (m != "" ? m : "tried getting value of empty Result"));
             return v.value();
         }
 

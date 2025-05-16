@@ -1268,24 +1268,16 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task image id. Please make sure to only use initialized task image ids.");
         if (id.is_persistent())
         {
-            DAXA_DBG_ASSERT_TRUE_MS(
-                persistent_image_index_to_local_index.contains(id.index),
-                << "Detected invalid access of persistent task image id "
-                << id.index
-                << " in task graph \""
-                << info.name
-                << "\". Please make sure to declare persistent resource use to each task graph that uses this image with the function use_persistent_image!");
+            DAXA_DBG_ASSERT_TRUE_MS(persistent_image_index_to_local_index.contains(id.index),
+                                    std::format(R"(Detected invalid access of persistent task image id {} in task graph "{}". Please make sure to declare persistent resource use to each task graph that uses this image with the function use_persistent_image!)",
+                                                (id.index), info.name));
             return TaskImageView{{.task_graph_index = this->unique_index, .index = persistent_image_index_to_local_index.at(id.index)}, id.slice};
         }
         else
         {
-            DAXA_DBG_ASSERT_TRUE_MS(
-                id.task_graph_index == this->unique_index,
-                << "Detected invalid access of transient task image id "
-                << (id.index)
-                << " in task graph \""
-                << info.name
-                << "\". Please make sure that you only use transient image within the list they are created in!");
+            DAXA_DBG_ASSERT_TRUE_MS(id.task_graph_index == this->unique_index,
+                                    std::format(R"(Detected invalid access of transient task image id {} in task graph "{}". Please make sure that you only use transient image within the list they are created in!)",
+                                                (id.index), info.name));
             return TaskImageView{{.task_graph_index = this->unique_index, .index = id.index}, id.slice};
         }
     }
@@ -1320,10 +1312,9 @@ namespace daxa
             {
                 auto name_sw = impl.info.device.image_info(actual_images[index]).value().name;
                 std::string const & name = {name_sw.data(), name_sw.size()};
-                [[maybe_unused]] std::string const error_message =
-                    std::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
-                                use_index, task_name, to_string(access_slice), index, name, to_string(full_slice));
-                DAXA_DBG_ASSERT_TRUE_M(use_within_runtime_image_counts, error_message);
+                DAXA_DBG_ASSERT_TRUE_MS(use_within_runtime_image_counts,
+                                        std::format(R"(task image argument (arg index: {}, task image: "{}", slice: {}) exceeds runtime image (index: {}, name: "{}") dimensions ({})!)",
+                                                    use_index, task_name, to_string(access_slice), index, name, to_string(full_slice)));
             }
         }
 #endif
@@ -1338,9 +1329,9 @@ namespace daxa
         for (auto image : actual_images)
         {
             [[maybe_unused]] bool const access_valid = (impl.info.device.image_info(image).value().usage & use_flags) != ImageUsageFlagBits::NONE;
-            DAXA_DBG_ASSERT_TRUE_M(access_valid, std::format("Detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
-                                                             "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
-                                                             impl.info.device.image_info(image).value().name.view(), task_image_name, use_index, task_name, daxa::to_string(use_flags)));
+            DAXA_DBG_ASSERT_TRUE_MS(access_valid, std::format("Detected invalid runtime image \"{}\" of task image \"{}\", in use {} of task \"{}\". "
+                                                              "The given runtime image does NOT have the image use flag {} set, but the task use requires this use for all runtime images!",
+                                                              impl.info.device.image_info(image).value().name.view(), task_image_name, use_index, task_name, daxa::to_string(use_flags)));
         }
 #endif
     }
@@ -1485,7 +1476,7 @@ namespace daxa
             auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_ids;
             std::visit([&](auto const & runtime_ids)
                        {
-                DAXA_DBG_ASSERT_TRUE_M(
+                DAXA_DBG_ASSERT_TRUE_MS(
                     !runtime_ids.empty(),
                     std::format(
                         "Detected persistent task buffer \"{}\" used in task graph \"{}\" with 0 runtime buffers; {}",
@@ -1494,7 +1485,7 @@ namespace daxa
                         PERSISTENT_RESOURCE_MESSAGE));
                 for (usize buffer_index = 0; buffer_index < runtime_ids.size(); ++buffer_index)
                 {
-                    DAXA_DBG_ASSERT_TRUE_M(
+                    DAXA_DBG_ASSERT_TRUE_MS(
                         impl.info.device.is_id_valid(runtime_ids[buffer_index]),
                         std::format(
                             "Detected persistent task buffer \"{}\" used in task graph \"{}\" with invalid buffer id (runtime buffer index: {}); {}",
@@ -1516,7 +1507,7 @@ namespace daxa
                 continue;
             }
             auto const & runtime_images = impl.global_image_infos.at(local_image_i).get_persistent().actual_images;
-            DAXA_DBG_ASSERT_TRUE_M(
+            DAXA_DBG_ASSERT_TRUE_MS(
                 !runtime_images.empty(),
                 std::format(
                     "Detected persistent task image \"{}\" used in task graph \"{}\" with 0 runtime images; {}",
@@ -1525,7 +1516,7 @@ namespace daxa
                     PERSISTENT_RESOURCE_MESSAGE));
             for (usize image_index = 0; image_index < runtime_images.size(); ++image_index)
             {
-                DAXA_DBG_ASSERT_TRUE_M(
+                DAXA_DBG_ASSERT_TRUE_MS(
                     impl.info.device.is_id_valid(runtime_images[image_index]),
                     std::format(
                         "Detected persistent task image \"{}\" used in task graph \"{}\" with invalid image id (runtime image index: {}); {}",
@@ -1706,8 +1697,8 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
         [[maybe_unused]] bool const already_active = ((impl.record_active_conditional_scopes >> conditional_info.condition_index) & 1u) != 0;
         DAXA_DBG_ASSERT_TRUE_M(!already_active, "can not nest scopes of the same condition in itself.");
-        DAXA_DBG_ASSERT_TRUE_M(conditional_info.condition_index < impl.info.permutation_condition_count,
-                               std::format("Detected invalid conditional index {}; conditional indices must all be smaller then the conditional count given in construction", conditional_info.condition_index));
+        DAXA_DBG_ASSERT_TRUE_MS(conditional_info.condition_index < impl.info.permutation_condition_count,
+                                std::format("Detected invalid conditional index {}; conditional indices must all be smaller then the conditional count given in construction", conditional_info.condition_index));
         // Set conditional scope to active.
         impl.record_active_conditional_scopes |= 1u << conditional_info.condition_index;
         impl.update_active_permutations();
@@ -1945,20 +1936,18 @@ namespace daxa
                 {
                     attach.task_access.stage = attach.view.stage_override;
                 }
-                DAXA_DBG_ASSERT_TRUE_M(
-                    attach.task_access.stage != TaskStage::NONE, 
-                    std::format("Detected TaskAttachment (\"{}\", idx {}) in Task \"{}\" with no stage set." 
-                        "The stage of a TaskAttachment must be set in either 1. the task head, 2. the access type or 3. in a view stage override!",
-                        attach.name, i, task->name()
-                    ));
+                DAXA_DBG_ASSERT_TRUE_MS(
+                    attach.task_access.stage != TaskStage::NONE,
+                    std::format("Detected TaskAttachment (\"{}\", idx {}) in Task \"{}\" with no stage set."
+                                "The stage of a TaskAttachment must be set in either 1. the task head, 2. the access type or 3. in a view stage override!",
+                                attach.name, i, task->name()));
             }
             else
             {
-                DAXA_DBG_ASSERT_TRUE_M(
-                    attach.view.stage_override == TaskStage::NONE, 
+                DAXA_DBG_ASSERT_TRUE_MS(
+                    attach.view.stage_override == TaskStage::NONE,
                     std::format("Detected TaskAttachment (\"{}\", idx {}) in Task \"{}\" has view stage override but attachment has fixed stage.",
-                        attach.name, i, task->name()
-                    ));
+                                attach.name, i, task->name()));
             }
         };
         for_each(
@@ -2663,10 +2652,10 @@ namespace daxa
 
             if (!glob_image.is_persistent() && perm_image.valid)
             {
-                DAXA_DBG_ASSERT_TRUE_M(perm_image.usage != ImageUsageFlagBits::NONE,
-                                       std::string("Transient image is not used in this permutation but marked as valid either: ") +
-                                           std::string("\t- it was used as PRESENT which is not allowed for transient images") +
-                                           std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
+                DAXA_DBG_ASSERT_TRUE_MS(perm_image.usage != ImageUsageFlagBits::NONE,
+                                        std::string("Transient image is not used in this permutation but marked as valid either: ") +
+                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
+                                            std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
                 auto const & transient_image_info = daxa::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
                 perm_image.actual_image = info.device.create_image_from_memory_block(
                     MemoryBlockImageInfo{
@@ -3066,7 +3055,7 @@ namespace daxa
             for (usize index = 0; index < actual_images.size(); ++index)
             {
                 auto const & image = actual_images[index];
-                DAXA_DBG_ASSERT_TRUE_M(
+                DAXA_DBG_ASSERT_TRUE_MS(
                     impl.info.device.is_id_valid(image),
                     std::string("Detected invalid runtime image id while inserting barriers: the runtime image id at index ") +
                         std::to_string(index) +

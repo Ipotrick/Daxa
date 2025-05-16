@@ -1,5 +1,6 @@
 #include "impl_device.hpp"
 #include "impl_pipeline.hpp"
+#include "impl_instance.hpp"
 
 // --- Begin API Functions ---
 

@@ -1,11 +1,10 @@
 #pragma once
 
 #include "impl_core.hpp"
-#include "impl_sync.hpp"
-#include "impl_pipeline.hpp"
 
 #include <daxa/c/command_recorder.h>
 #include <daxa/command_recorder.hpp>
+#include <mutex>
 
 using namespace daxa;
 

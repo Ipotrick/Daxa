@@ -3,6 +3,7 @@
 #include <utility>
 
 #include "impl_device.hpp"
+#include "impl_instance.hpp"
 
 // --- Begin API Functions ---
 

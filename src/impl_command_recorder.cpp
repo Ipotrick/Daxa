@@ -5,6 +5,7 @@
 
 #include "impl_sync.hpp"
 #include "impl_device.hpp"
+#include "impl_instance.hpp"
 
 // NOTE: Removed profiling for all commands for now
 #undef PROFILE_FUNC

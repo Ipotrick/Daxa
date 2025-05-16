@@ -1,6 +1,7 @@
 #include "impl_gpu_resources.hpp"
 
 #include <daxa/daxa.inl>
+#include <format>
 
 namespace daxa
 {
@@ -363,9 +364,9 @@ namespace daxa
             }
             return ret;
         };
-        DAXA_DBG_ASSERT_TRUE_M(buffer_slots.free_index_stack.size() == buffer_slots.next_index, print_remaining("Detected leaked buffers; not all buffers have been destroyed before destroying the device;", buffer_slots.pages));
-        DAXA_DBG_ASSERT_TRUE_M(image_slots.free_index_stack.size() == image_slots.next_index, print_remaining("Detected leaked images; not all images have been destroyed before destroying the device;", image_slots.pages));
-        DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("Detected leaked samplers; not all samplers have been destroyed before destroying the device;", sampler_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_MS(buffer_slots.free_index_stack.size() == buffer_slots.next_index, print_remaining("Detected leaked buffers; not all buffers have been destroyed before destroying the device;", buffer_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_MS(image_slots.free_index_stack.size() == image_slots.next_index, print_remaining("Detected leaked images; not all images have been destroyed before destroying the device;", image_slots.pages));
+        DAXA_DBG_ASSERT_TRUE_MS(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("Detected leaked samplers; not all samplers have been destroyed before destroying the device;", sampler_slots.pages));
         for (usize i = 0; i < DAXA_PIPELINE_LAYOUT_COUNT; ++i)
         {
             vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);

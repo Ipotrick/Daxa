@@ -4,20 +4,9 @@
 #error MOST NOT INCLUDE VULKAN H BEFORE THIS FILE!
 #endif
 
-#include <unordered_map>
-#include <mutex>
-#include <shared_mutex>
-#include <fstream>
-#include <map>
-#include <deque>
-#include <cstring>
-#include <memory>
-#include <format>
-
 #if DAXA_VALIDATION
 #include <iostream>
 #include <cstdlib>
-#include <stdexcept>
 
 #define DAXA_GPU_ID_VALIDATION 1
 #endif

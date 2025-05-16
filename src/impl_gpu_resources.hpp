@@ -5,6 +5,8 @@
 #include <daxa/gpu_resources.hpp>
 
 #include <atomic>
+#include <mutex>
+#include <shared_mutex>
 
 namespace daxa
 {
