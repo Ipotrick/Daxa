@@ -365,6 +365,7 @@ namespace daxa
         auto texture_staging_buffer = this->info.device.create_buffer({
             .size = static_cast<u32>(upload_size),
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .name = "dear ImGui texture staging buffer",
         });
 
         u8 * staging_buffer_data = this->info.device.buffer_host_address_as<u8>(texture_staging_buffer).value();
