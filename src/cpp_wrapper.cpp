@@ -789,7 +789,8 @@ namespace daxa
         auto result = daxa_swp_acquire_next_image(r_cast<daxa_Swapchain>(this->object), r_cast<daxa_ImageId *>(&ret));
         if (result == DAXA_RESULT_ERROR_OUT_OF_DATE_KHR ||
             result == DAXA_RESULT_ERROR_SURFACE_LOST_KHR ||
-            result == DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
+            result == DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT ||
+            result == DAXA_RESULT_SUBOPTIMAL_KHR)
         {
             return {};
         }
