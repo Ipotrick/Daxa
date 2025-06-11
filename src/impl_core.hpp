@@ -104,7 +104,7 @@ inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageA
 
 auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result;
 
-auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties;
+auto construct_daxa_physical_device_properties(daxa_Instance instance, VkPhysicalDevice physical_device) -> daxa_DeviceProperties;
 
 void daxa_as_build_info_to_vk(
     daxa_Device device,
@@ -193,3 +193,27 @@ constexpr bool is_daxa_result_success(daxa_Result v)
     }
 
 #define _DAXA_DEFER_ON_ERROR(V)
+
+#if DAXA_USE_DYNAMIC_VULKAN
+    // Instance function
+    #define VK_CALL_I(instance, func, ...) ((instance)->func(__VA_ARGS__))
+    // Device function
+    #define VK_CALL_D(device, func, ...) ((device)->func(__VA_ARGS__))
+    // Device ext function
+    #define VK_CALL_D_EXT(device, func, ...) ((device)->func(__VA_ARGS__))
+    // Functions with checking
+    #define VK_CALL_I_SAFE(instance, func, ...) ((instance)->func ? (instance)->func(__VA_ARGS__) : VK_SUCCESS)
+    #define VK_CALL_D_SAFE(device, func, ...) ((device)->func ? (device)->func(__VA_ARGS__) : VK_SUCCESS)
+    // Function for gathering instance functions
+    #define VK_GET_INSTANCE_PROC_ADDR(instance) (instance)->vkGetInstanceProcAddr
+    // Function for gathering device functions
+    #define VK_GET_DEVICE_PROC_ADDR(instance) (instance)->vkGetDeviceProcAddr
+#else
+    #define VK_CALL_I(instance, func, ...) func(__VA_ARGS__)
+    #define VK_CALL_D(device, func, ...) func(__VA_ARGS__)
+    #define VK_CALL_D_EXT(device, func, ...) ((device)->func(__VA_ARGS__))
+    #define VK_CALL_I_SAFE(instance, func, ...) func(__VA_ARGS__)
+    #define VK_CALL_D_SAFE(device, func, ...) func(__VA_ARGS__)
+    #define VK_GET_INSTANCE_PROC_ADDR(instance) vkGetInstanceProcAddr
+    #define VK_GET_DEVICE_PROC_ADDR(instance) vkGetDeviceProcAddr
+#endif

@@ -82,7 +82,7 @@ namespace daxa
         u32 extension_name_list_size = {};
         std::array<bool, COUNT> extensions_present = {};
 
-        auto initialize(VkPhysicalDevice physical_device) -> daxa_Result;
+        auto initialize(daxa_Instance instance, VkPhysicalDevice physical_device) -> daxa_Result;
     };
 
     /// WARNING: DO NOT MOVE THIS STRUCT IN MEMORY, MUST NOT CHANGE ADDRESS!
@@ -137,5 +137,5 @@ namespace daxa
         void initialize(daxa_DeviceImplicitFeatureFlagBits implicit_features);
     };
 
-    void fill_daxa_device_properties(PhysicalDeviceExtensionsStruct const & extensions, PhysicalDeviceFeaturesStruct const & features, VkPhysicalDevice physical_device, daxa_DeviceProperties * out);
+    void fill_daxa_device_properties(PhysicalDeviceExtensionsStruct const & extensions, PhysicalDeviceFeaturesStruct const & features, daxa_Instance instance, VkPhysicalDevice physical_device, daxa_DeviceProperties * out);
 } // namespace daxa

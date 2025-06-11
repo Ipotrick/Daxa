@@ -282,17 +282,17 @@ namespace daxa
             u32 max_images,
             u32 max_samplers,
             u32 max_acceleration_structures,
-            VkDevice device,
+            daxa_Device device,
             VkBuffer device_address_buffer,
             PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT) -> daxa_Result;
-        void cleanup(VkDevice device);
+        void cleanup(daxa_Device device);
     };
 
-    void write_descriptor_set_sampler(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkSampler vk_sampler, u32 index);
+    void write_descriptor_set_sampler(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkSampler vk_sampler, u32 index);
 
-    void write_descriptor_set_buffer(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index);
+    void write_descriptor_set_buffer(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index);
 
-    void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index);
+    void write_descriptor_set_image(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index);
 
-    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index);
+    void write_descriptor_set_acceleration_structure(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index);
 } // namespace daxa

@@ -463,3 +463,5 @@ vcpkg/
 
 wiki/daxa-book/book/*
 preproc
+
+lib
