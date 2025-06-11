@@ -600,29 +600,48 @@ namespace daxa
         check_result(result, "could not create surface");
 
         u32 present_mode_count = {};
-        auto vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+        auto vk_result = VK_CALL_I(
+            c_device->instance,
+            vkGetPhysicalDeviceSurfacePresentModesKHR, 
             c_device->vk_physical_device,
             surface,
             &present_mode_count,
             nullptr);
         if (vk_result != VK_SUCCESS)
         {
-            vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
+            VK_CALL_I(
+                c_device->instance,
+                vkDestroySurfaceKHR,
+                c_device->instance->vk_instance,
+                surface,
+                nullptr);
             check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
         }
         std::vector<PresentMode> ret = {};
         ret.resize(static_cast<usize>(present_mode_count));
-        vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+        vk_result = VK_CALL_I(
+            c_device->instance,
+            vkGetPhysicalDeviceSurfacePresentModesKHR,
             c_device->vk_physical_device,
             surface,
             &present_mode_count,
             r_cast<VkPresentModeKHR *>(ret.data()));
         if (vk_result != VK_SUCCESS)
         {
-            vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
+            VK_CALL_I(
+                c_device->instance,
+                vkDestroySurfaceKHR, 
+                c_device->instance->vk_instance, 
+                surface, 
+                nullptr);
             check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
         }
-        vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
+        VK_CALL_I(
+            c_device->instance,
+            vkDestroySurfaceKHR, 
+            c_device->instance->vk_instance, 
+            surface, 
+            nullptr);
         return ret;
     }
 
