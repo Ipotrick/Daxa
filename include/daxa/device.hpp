@@ -359,7 +359,20 @@ namespace daxa
     {
         QueueFamily family = {};
         u32 index = {};
+
+        [[nodiscard]] DAXA_EXPORT_CXX auto operator==(Queue const & other) const noexcept -> bool
+        {
+            return this->family == other.family && this->index == other.index;
+        }
+
+        [[nodiscard]] DAXA_EXPORT_CXX auto operator!=(Queue const & other) const noexcept -> bool
+        {
+            return !(*this == other);
+        }
     };
+
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily queue_family) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Queue queue) -> std::string_view;
 
     static constexpr inline Queue QUEUE_MAIN = Queue{QueueFamily::MAIN, 0};
     static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{QueueFamily::COMPUTE, 0};

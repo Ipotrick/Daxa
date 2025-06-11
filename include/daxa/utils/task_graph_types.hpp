@@ -303,7 +303,7 @@ namespace daxa
     using TaskBlasAccess = TaskAccessConsts;
     using TaskTlasAccess = TaskAccessConsts;
     using TaskImageAccess = TaskAccessConsts;
-    
+
     enum struct TaskType
     {
         UNDEFINED,
@@ -999,10 +999,10 @@ namespace daxa
     template <typename T>
     concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
 
-    template<typename T>
+    template <typename T>
     concept TaskResourceOrViewOrAccess = TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStage>;
 
-    template<typename T>
+    template <typename T>
     concept TaskImageOrViewOrAccess = TaskImageViewOrTaskImageOrImageViewType<T> || std::is_same_v<T, TaskStage>;
 
     inline namespace detail
@@ -1012,15 +1012,16 @@ namespace daxa
             u32 size = {};
             u32 alignment = {};
         };
+        template <typename T>
+        auto constexpr align_up(T value, T align) -> T
+        {
+            if (value == 0 || align == 0)
+                return 0;
+            return (value + align - static_cast<T>(1)) / align * align;
+        }
         constexpr auto get_asb_size_and_alignment(auto const & attachment_array) -> AsbSizeAlignment
         {
             AsbSizeAlignment size_align = {};
-            auto align_up = [](auto value, auto align) -> u32
-            {
-                if (value == 0 || align == 0)
-                    return 0;
-                return (value + align - 1u) / align * align;
-            };
             for (auto const & attachment_decl : attachment_array)
             {
                 if (attachment_decl.shader_array_size() == 0 || attachment_decl.shader_element_align() == 0)
@@ -1037,15 +1038,6 @@ namespace daxa
     struct ITask
     {
         constexpr virtual ~ITask() {}
-        /// TODO(pahrens): optimize:
-        constexpr virtual auto attachment_shader_blob_size() const -> u32
-        {
-            return detail::get_asb_size_and_alignment(attachments()).size;
-        };
-        constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> = 0;
-        constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> = 0;
-        constexpr virtual auto task_type() const -> TaskType = 0;
-        constexpr virtual std::string_view name() const = 0;
         virtual void callback(TaskInterface){};
     };
 
@@ -1166,21 +1158,21 @@ namespace daxa
     {
         TaskAttachmentViewWrapperRaw _value = {};
 
-        TaskAttachmentViewWrapper() 
+        TaskAttachmentViewWrapper()
         {
-            if constexpr(std::is_same_v<T, TaskBufferView>)
+            if constexpr (std::is_same_v<T, TaskBufferView>)
             {
                 _value = {TaskAttachmentType::BUFFER, {.buffer = TaskBufferView{}}};
             }
-            if constexpr(std::is_same_v<T, TaskBlasView>)
+            if constexpr (std::is_same_v<T, TaskBlasView>)
             {
                 _value = {TaskAttachmentType::BLAS, {.blas = TaskBlasView{}}};
             }
-            if constexpr(std::is_same_v<T, TaskTlasView>)
+            if constexpr (std::is_same_v<T, TaskTlasView>)
             {
                 _value = {TaskAttachmentType::TLAS, {.tlas = TaskTlasView{}}};
             }
-            if constexpr(std::is_same_v<T, TaskImageView>)
+            if constexpr (std::is_same_v<T, TaskImageView>)
             {
                 _value = {TaskAttachmentType::IMAGE, {.image = TaskImageView{}}};
             }
@@ -1377,19 +1369,11 @@ namespace daxa
     struct Task : public daxa::IPartialTask                                                                                                    \
     {                                                                                                                                          \
         static inline constexpr daxa::TaskType TASK_TYPE = TYPE;                                                                               \
+        static inline constexpr char const * TASK_NAME = NAME;                                                                                 \
         using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
         using Views = VIEWS_T;                                                                                                                 \
         static constexpr auto const & AT = ATTACHMENTS_T{};                                                                                    \
         static constexpr auto ATTACH_COUNT = ATTACHMENT_COUNT;                                                                                 \
-        static auto name() -> std::string_view { return std::string_view{NAME}; }                                                              \
-        auto attachments() const -> std::span<daxa::TaskAttachment const>                                                                      \
-        {                                                                                                                                      \
-            return AT._internal.value;                                                                                                         \
-        }                                                                                                                                      \
-        auto task_type() const -> daxa::TaskType                                                                                               \
-        {                                                                                                                                      \
-            return TYPE;                                                                                                                       \
-        }                                                                                                                                      \
     };                                                                                                                                         \
     }                                                                                                                                          \
     ;
