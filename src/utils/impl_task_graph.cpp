@@ -187,7 +187,7 @@ namespace daxa
                 return other.value.image.view == view || other.value.image.translated_view == view;
             }
             return false; });
-        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
+        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task image view as index for attachment!");
         return iter->value.image;
     }
 
