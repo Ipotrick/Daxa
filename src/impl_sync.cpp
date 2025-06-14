@@ -13,7 +13,7 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
         .pNext = nullptr,
         .flags = {},
     };
-    auto vk_result = vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore);
+    auto vk_result = VK_CALL_D(device, vkCreateSemaphore, device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore);
     if (vk_result != VK_SUCCESS)
     {
         return std::bit_cast<daxa_Result>(vk_result);
@@ -28,7 +28,7 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
             .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
             .pObjectName = c_str.data(),
         };
-        device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
@@ -75,7 +75,7 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
         .pNext = &timeline_vk_semaphore,
         .flags = {},
     };
-    auto vk_result = vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore);
+    auto vk_result = VK_CALL_D(device, vkCreateSemaphore, device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore);
     if (vk_result != VK_SUCCESS)
     {
         return std::bit_cast<daxa_Result>(vk_result);
@@ -90,7 +90,7 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
             .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
             .pObjectName = c_str.data(),
         };
-        device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
@@ -106,7 +106,7 @@ auto daxa_timeline_semaphore_info(daxa_TimelineSemaphore self) -> daxa_TimelineS
 
 auto daxa_timeline_semaphore_get_value(daxa_TimelineSemaphore self, uint64_t * out_value) -> daxa_Result
 {
-    return static_cast<daxa_Result>(vkGetSemaphoreCounterValue(self->device->vk_device, self->vk_semaphore, out_value));
+    return static_cast<daxa_Result>(VK_CALL_D(self->device, vkGetSemaphoreCounterValue, self->device->vk_device, self->vk_semaphore, out_value));
 }
 
 auto daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore self, uint64_t value) -> daxa_Result
@@ -118,7 +118,7 @@ auto daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore self, uint64_t val
         .value = value,
     };
 
-    return static_cast<daxa_Result>(vkSignalSemaphore(self->device->vk_device, &vk_semaphore_signal_info));
+    return static_cast<daxa_Result>(VK_CALL_D(self->device, vkSignalSemaphore, self->device->vk_device, &vk_semaphore_signal_info));
 }
 
 auto daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore self, uint64_t value, uint64_t timeout) -> daxa_Result
@@ -132,7 +132,7 @@ auto daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore self, uint64_
         .pValues = &value,
     };
 
-    return static_cast<daxa_Result>(vkWaitSemaphores(self->device->vk_device, &vk_semaphore_wait_info, timeout));
+    return static_cast<daxa_Result>(VK_CALL_D(self->device, vkWaitSemaphores, self->device->vk_device, &vk_semaphore_wait_info, timeout));
 }
 
 auto daxa_timeline_semaphore_get_vk_semaphore(daxa_TimelineSemaphore self) -> VkSemaphore
@@ -164,7 +164,7 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
         .flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT,
     };
     VkEvent event = {};
-    auto vk_result = vkCreateEvent(ret.device->vk_device, &vk_event_create_info, nullptr, &event);
+    auto vk_result = VK_CALL_D(device, vkCreateEvent, ret.device->vk_device, &vk_event_create_info, nullptr, &event);
     if (vk_result != VK_SUCCESS)
     {
         return std::bit_cast<daxa_Result>(vk_result);
@@ -180,7 +180,7 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_event),
             .pObjectName = c_str.data(),
         };
-        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, ret.device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();

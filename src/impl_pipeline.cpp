@@ -29,7 +29,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             .codeSize = static_cast<u32>(shader_info.byte_code_size * sizeof(u32)),
             .pCode = shader_info.byte_code,
         };
-        auto result = vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
+        auto result = VK_CALL_I(device->instance, vkCreateShaderModule, ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
         if (result != VK_SUCCESS)
         {
             _DAXA_DEBUG_BREAK
@@ -63,7 +63,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         {                                                                                                                       \
             for (auto module : vk_shader_modules)                                                                               \
             {                                                                                                                   \
-                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);                                                  \
+                VK_CALL_I(device->instance, vkDestroyShaderModule, ret.device->vk_device, module, nullptr);                                         \
             }                                                                                                                   \
             _DAXA_DEBUG_BREAK                                                                                                   \
             return std::bit_cast<daxa_Result>(result);                                                                          \
@@ -84,7 +84,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         {
             for (auto module : vk_shader_modules)
             {
-                vkDestroyShaderModule(ret.device->vk_device, module, nullptr);
+                VK_CALL_I(device->instance, vkDestroyShaderModule, ret.device->vk_device, module, nullptr);
             }
             _DAXA_DEBUG_BREAK
             return DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED;
@@ -281,7 +281,8 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = 0,
     };
-    auto result = vkCreateGraphicsPipelines(
+    auto result = VK_CALL_D(device,
+        vkCreateGraphicsPipelines,
         ret.device->vk_device,
         VK_NULL_HANDLE,
         1u,
@@ -290,7 +291,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         &ret.vk_pipeline);
     for (auto & vk_shader_module : vk_shader_modules)
     {
-        vkDestroyShaderModule(ret.device->vk_device, vk_shader_module, nullptr);
+        VK_CALL_I(device->instance, vkDestroyShaderModule, ret.device->vk_device, vk_shader_module, nullptr);
     }
     if (result != VK_SUCCESS)
     {
@@ -307,7 +308,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             .objectHandle = std::bit_cast<u64>(ret.vk_pipeline),
             .pObjectName = name_cstr.data(),
         };
-        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, ret.device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
@@ -347,7 +348,12 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         .codeSize = ret.info.shader_info.byte_code_size * static_cast<u32>(sizeof(u32)),
         .pCode = ret.info.shader_info.byte_code,
     };
-    auto module_result = vkCreateShaderModule(ret.device->vk_device, &shader_module_ci, nullptr, &vk_shader_module);
+    auto module_result = VK_CALL_I(device->instance, 
+        vkCreateShaderModule, 
+        ret.device->vk_device, 
+        &shader_module_ci, 
+        nullptr, 
+        &vk_shader_module);
     if (module_result != VK_SUCCESS)
     {
         _DAXA_DEBUG_BREAK
@@ -376,14 +382,15 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = 0,
     };
-    auto pipeline_result = vkCreateComputePipelines(
+    auto pipeline_result = VK_CALL_D(device,
+        vkCreateComputePipelines,
         ret.device->vk_device,
         VK_NULL_HANDLE,
         1u,
         &vk_compute_pipeline_create_info,
         nullptr,
         &ret.vk_pipeline);
-    vkDestroyShaderModule(ret.device->vk_device, vk_shader_module, nullptr);
+    VK_CALL_I(device->instance, vkDestroyShaderModule, ret.device->vk_device, vk_shader_module, nullptr);
     if (pipeline_result != VK_SUCCESS)
     {
         _DAXA_DEBUG_BREAK
@@ -399,7 +406,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_pipeline),
             .pObjectName = name_cstr.data(),
         };
-        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, ret.device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
@@ -458,7 +465,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     {
         for (auto & vk_shader_module : vk_shader_modules)
         {
-            vkDestroyShaderModule(ret.device->vk_device, vk_shader_module, nullptr);
+            VK_CALL_I(device->instance, vkDestroyShaderModule, ret.device->vk_device, vk_shader_module, nullptr);
         }
     };
 
@@ -487,7 +494,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             .codeSize = static_cast<u32>(shader_info.byte_code_size * sizeof(u32)),
             .pCode = shader_info.byte_code,
         };
-        auto result = vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
+        auto result = VK_CALL_I(device->instance, vkCreateShaderModule, ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
         if (result != VK_SUCCESS)
         {
             _DAXA_DEBUG_BREAK
@@ -592,7 +599,8 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = 0,
     };
-    auto pipeline_result = ret.device->vkCreateRayTracingPipelinesKHR(
+    auto pipeline_result = VK_CALL_D_EXT(device,
+        vkCreateRayTracingPipelinesKHR,
         ret.device->vk_device,
         VK_NULL_HANDLE,
         VK_NULL_HANDLE,
@@ -616,7 +624,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_pipeline),
             .pObjectName = name_cstr.data(),
         };
-        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, ret.device->vk_device, &name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
@@ -727,7 +735,8 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     // Allocate a buffer for storing the SBT.
     VkDeviceSize const sbt_size = raygen_region.size + miss_region.size + hit_region.size + callable_region.size;
     // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/vkGetRayTracingShaderGroupHandlesNV.html
-    auto const get_group_handles_result = static_cast<daxa_Result>(device->vkGetRayTracingShaderGroupHandlesKHR(
+    auto const get_group_handles_result = static_cast<daxa_Result>(VK_CALL_D_EXT(device,
+        vkGetRayTracingShaderGroupHandlesKHR,
         device->vk_device,
         pipeline->vk_pipeline,
         0,
@@ -826,7 +835,8 @@ auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline 
     u32 const data_size = handle_count * handle_size;
 
     // Get the shader group handles
-    auto vk_result = device->vkGetRayTracingShaderGroupHandlesKHR(
+    auto vk_result = VK_CALL_D_EXT(device,
+        vkGetRayTracingShaderGroupHandlesKHR,
         device->vk_device,
         pipeline->vk_pipeline,
         0,

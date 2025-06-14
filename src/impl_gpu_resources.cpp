@@ -1,4 +1,6 @@
 #include "impl_gpu_resources.hpp"
+#include <daxa/c/device.h>
+#include "impl_device.hpp"
 
 #include <daxa/daxa.inl>
 
@@ -35,21 +37,24 @@ namespace daxa
     }
 
     auto GPUShaderResourceTable::initialize(u32 max_buffers, u32 max_images, u32 max_samplers, u32 max_acceleration_structures,
-                                            VkDevice device, VkBuffer device_address_buffer,
+                                            daxa_Device daxa_device, VkBuffer device_address_buffer,
                                             PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT) -> daxa_Result
     {
         daxa_Result result = DAXA_RESULT_SUCCESS;
+
+        VkDevice device = daxa_dvc_get_vk_device(daxa_device);
+
         defer
         {
             if (result != DAXA_RESULT_SUCCESS)
             {
                 if (this->vk_descriptor_pool)
                 {
-                    vkDestroyDescriptorPool(device, this->vk_descriptor_pool, nullptr);
+                    VK_CALL_D(daxa_device, vkDestroyDescriptorPool, device, this->vk_descriptor_pool, nullptr);
                 }
                 if (this->vk_descriptor_set_layout)
                 {
-                    vkDestroyDescriptorSetLayout(device, this->vk_descriptor_set_layout, nullptr);
+                    VK_CALL_D(daxa_device, vkDestroyDescriptorSetLayout, device, this->vk_descriptor_set_layout, nullptr);
                 }
             }
         };
@@ -109,7 +114,7 @@ namespace daxa
             .pPoolSizes = pool_sizes.data(),
         };
 
-        result = static_cast<daxa_Result>(vkCreateDescriptorPool(device, &vk_descriptor_pool_create_info, nullptr, &this->vk_descriptor_pool));
+        result = static_cast<daxa_Result>(VK_CALL_D(daxa_device, vkCreateDescriptorPool, device, &vk_descriptor_pool_create_info, nullptr, &this->vk_descriptor_pool));
         _DAXA_RETURN_IF_ERROR(result, result)
 
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
@@ -212,7 +217,7 @@ namespace daxa
             .pBindings = descriptor_set_layout_bindings.data(),
         };
 
-        result = static_cast<daxa_Result>(vkCreateDescriptorSetLayout(device, &vk_descriptor_set_layout_create_info, nullptr, &this->vk_descriptor_set_layout));
+        result = static_cast<daxa_Result>(VK_CALL_D(daxa_device, vkCreateDescriptorSetLayout, device, &vk_descriptor_set_layout_create_info, nullptr, &this->vk_descriptor_set_layout));
         _DAXA_RETURN_IF_ERROR(result, result)
 
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
@@ -236,7 +241,7 @@ namespace daxa
             .pSetLayouts = &this->vk_descriptor_set_layout,
         };
 
-        result = static_cast<daxa_Result>(vkAllocateDescriptorSets(device, &vk_descriptor_set_allocate_info, &this->vk_descriptor_set));
+        result = static_cast<daxa_Result>(VK_CALL_D(daxa_device, vkAllocateDescriptorSets, device, &vk_descriptor_set_allocate_info, &this->vk_descriptor_set));
         _DAXA_RETURN_IF_ERROR(result, result)
 
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
@@ -263,7 +268,7 @@ namespace daxa
             .pPushConstantRanges = nullptr,
         };
 
-        result = static_cast<daxa_Result>(vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, pipeline_layouts.data()));
+        result = static_cast<daxa_Result>(VK_CALL_D(daxa_device, vkCreatePipelineLayout, device, &vk_pipeline_create_info, nullptr, pipeline_layouts.data()));
         _DAXA_RETURN_IF_ERROR(result, result)
 
         if (vkSetDebugUtilsObjectNameEXT != nullptr)
@@ -288,7 +293,7 @@ namespace daxa
             };
             vk_pipeline_create_info.pushConstantRangeCount = 1;
             vk_pipeline_create_info.pPushConstantRanges = &vk_push_constant_range;
-            result = static_cast<daxa_Result>(vkCreatePipelineLayout(device, &vk_pipeline_create_info, nullptr, &pipeline_layouts.at(i)));
+            result = static_cast<daxa_Result>(VK_CALL_D(daxa_device, vkCreatePipelineLayout, device, &vk_pipeline_create_info, nullptr, &pipeline_layouts.at(i)));
             _DAXA_RETURN_IF_ERROR(result, result)
 
             if (vkSetDebugUtilsObjectNameEXT != nullptr)
@@ -324,12 +329,12 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        vkUpdateDescriptorSets(device, 1, &write, 0, nullptr);
+        VK_CALL_D(daxa_device, vkUpdateDescriptorSets, device, 1, &write, 0, nullptr);
 
         return result;
     }
 
-    void GPUShaderResourceTable::cleanup(VkDevice device)
+    void GPUShaderResourceTable::cleanup(daxa_Device device)
     {
         [[maybe_unused]] auto print_remaining = [&](std::string prefix, auto & pages)
         {
@@ -368,14 +373,14 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(sampler_slots.free_index_stack.size() == sampler_slots.next_index, print_remaining("Detected leaked samplers; not all samplers have been destroyed before destroying the device;", sampler_slots.pages));
         for (usize i = 0; i < DAXA_PIPELINE_LAYOUT_COUNT; ++i)
         {
-            vkDestroyPipelineLayout(device, pipeline_layouts.at(i), nullptr);
+            VK_CALL_D(device, vkDestroyPipelineLayout, device->vk_device, pipeline_layouts.at(i), nullptr);
         }
-        vkDestroyDescriptorSetLayout(device, this->vk_descriptor_set_layout, nullptr);
-        vkResetDescriptorPool(device, this->vk_descriptor_pool, {});
-        vkDestroyDescriptorPool(device, this->vk_descriptor_pool, nullptr);
+        VK_CALL_D(device, vkDestroyDescriptorSetLayout, device->vk_device, this->vk_descriptor_set_layout, nullptr);
+        VK_CALL_D(device, vkResetDescriptorPool, device->vk_device, this->vk_descriptor_pool, {});
+        VK_CALL_D(device, vkDestroyDescriptorPool, device->vk_device, this->vk_descriptor_pool, nullptr);
     }
 
-    void write_descriptor_set_sampler(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkSampler vk_sampler, u32 index)
+    void write_descriptor_set_sampler(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkSampler vk_sampler, u32 index)
     {
         VkDescriptorImageInfo const vk_descriptor_image_info{
             .sampler = vk_sampler,
@@ -396,10 +401,10 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        vkUpdateDescriptorSets(vk_device, 1, &vk_write_descriptor_set_storage, 0, nullptr);
+        VK_CALL_D(device, vkUpdateDescriptorSets, device->vk_device, 1, &vk_write_descriptor_set_storage, 0, nullptr);
     }
 
-    void write_descriptor_set_buffer(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index)
+    void write_descriptor_set_buffer(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkBuffer vk_buffer, VkDeviceSize offset, VkDeviceSize range, u32 index)
     {
         VkDescriptorBufferInfo const vk_descriptor_image_info{
             .buffer = vk_buffer,
@@ -420,10 +425,10 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        vkUpdateDescriptorSets(vk_device, 1, &vk_write_descriptor_set, 0, nullptr);
+        VK_CALL_D(device, vkUpdateDescriptorSets, device->vk_device, 1, &vk_write_descriptor_set, 0, nullptr);
     }
 
-    void write_descriptor_set_image(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index)
+    void write_descriptor_set_image(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkImageView vk_image_view, ImageUsageFlags usage, u32 index)
     {
         u32 descriptor_set_write_count = 0;
         std::array<VkWriteDescriptorSet, 2> descriptor_set_writes = {};
@@ -476,10 +481,10 @@ namespace daxa
             descriptor_set_writes.at(descriptor_set_write_count++) = vk_write_descriptor_set_sampled;
         }
 
-        vkUpdateDescriptorSets(vk_device, descriptor_set_write_count, descriptor_set_writes.data(), 0, nullptr);
+        VK_CALL_D(device, vkUpdateDescriptorSets, device->vk_device, descriptor_set_write_count, descriptor_set_writes.data(), 0, nullptr);
     }
 
-    void write_descriptor_set_acceleration_structure(VkDevice vk_device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index)
+    void write_descriptor_set_acceleration_structure(daxa_Device device, VkDescriptorSet vk_descriptor_set, VkAccelerationStructureKHR vk_acceleration_structure, u32 index)
     {
         VkWriteDescriptorSetAccelerationStructureKHR vk_write_descriptor_set_as = {
             .sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET_ACCELERATION_STRUCTURE_KHR,
@@ -501,6 +506,6 @@ namespace daxa
             .pTexelBufferView = nullptr,
         };
 
-        vkUpdateDescriptorSets(vk_device, 1, &vk_write_descriptor_set, 0, nullptr);
+        VK_CALL_D(device, vkUpdateDescriptorSets, device->vk_device, 1, &vk_write_descriptor_set, 0, nullptr);
     }
 } // namespace daxa
