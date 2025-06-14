@@ -194,6 +194,7 @@ namespace daxa
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderStorageImageReadWithoutFormat), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_STORAGE_IMAGE_READ_WITHOUT_FORMAT},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderStorageImageWriteWithoutFormat), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_STORAGE_IMAGE_WRITE_WITHOUT_FORMAT},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderInt64), DAXA_MISSING_REQUIRED_VK_FEATURE_SHADER_INT64},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_features_2.features.shaderImageGatherExtended), DAXA_MISSING_REQUIRED_VK_FEATURE_IMAGE_GATHER_EXTENDED}, // Slang constantly adds this SPIRV feature.
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_variable_pointer_features.variablePointersStorageBuffer), DAXA_MISSING_REQUIRED_VK_FEATURE_VARIABLE_POINTERS_STORAGE_BUFFER},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_variable_pointer_features.variablePointers), DAXA_MISSING_REQUIRED_VK_FEATURE_VARIABLE_POINTERS},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_buffer_device_address_features.bufferDeviceAddress), DAXA_MISSING_REQUIRED_VK_FEATURE_BUFFER_DEVICE_ADDRESS},
