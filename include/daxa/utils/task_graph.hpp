@@ -89,6 +89,7 @@ namespace daxa
         // Useful for reflection/ debugging.
         std::function<void(daxa::TaskInterface)> pre_task_callback = {};
         std::function<void(daxa::TaskInterface)> post_task_callback = {};
+        daxa::Queue default_queue = QUEUE_MAIN;
         std::string name = {};
     };
 
@@ -473,6 +474,11 @@ namespace daxa
         std::string_view name = {};
     };
 
+    struct TaskAddInfo
+    {
+        Queue queue = daxa::QUEUE_NONE;
+    };;
+
     struct ImplTaskGraph;
 
     struct TaskGraph : ManagedPtr<TaskGraph, ImplTaskGraph *>
@@ -503,7 +509,7 @@ namespace daxa
 
         template <typename TTask>
             requires std::is_base_of_v<IPartialTask, TTask>
-        void add_task(TTask const & task, daxa::Queue queue = daxa::QUEUE_MAIN)
+        void add_task(TTask const & task, TaskAddInfo add_info = {})
         {
             using NoRefTTask = std::remove_reference_t<TTask>;
             static constexpr auto const & ATTACHMENTS = NoRefTTask::AT._internal.value;
@@ -578,10 +584,10 @@ namespace daxa
             u32 asb_align = detail::get_asb_size_and_alignment(attachments).alignment;
             TaskType task_type = TTask::TASK_TYPE;
             std::string_view name = TTask::TASK_NAME;
-            add_task( std::move(wrapped_task), attachments, asb_size, asb_align, task_type, name, queue );
+            add_task( std::move(wrapped_task), attachments, asb_size, asb_align, task_type, name, add_info );
         }
         template<typename T>
-        void add_task(T && inline_task, daxa::Queue queue = daxa::QUEUE_MAIN)
+        void add_task(T && inline_task, TaskAddInfo add_info = {})
             requires std::is_base_of_v<InlineTask, T> || std::is_same_v<InlineTask, T>
         {
             auto task = std::make_unique<InlineTask>(std::move(inline_task));
@@ -590,11 +596,11 @@ namespace daxa
             u32 asb_align = detail::get_asb_size_and_alignment(attachments).alignment;
             TaskType task_type = task->value._internal._task_type;
             std::string_view name = task->value._internal._name;
-            add_task( std::move(task), attachments, asb_size, asb_align, task_type, name, queue );
+            add_task( std::move(task), attachments, asb_size, asb_align, task_type, name, add_info );
         }
-        void add_task(InlineTaskInfo const & inline_task_info, daxa::Queue queue = daxa::QUEUE_MAIN)
+        void add_task(InlineTaskInfo const & inline_task_info, TaskAddInfo add_info = {})
         {
-            add_task( std::move(InlineTask{inline_task_info}), queue );
+            add_task( std::move(InlineTask{inline_task_info}), add_info );
         }
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
@@ -623,6 +629,6 @@ namespace daxa
             u32 attachment_shader_blob_alignment,
             TaskType task_type,
             std::string_view name,
-            daxa::Queue queue);
+            TaskAddInfo const & add_info);
     };
 } // namespace daxa

@@ -375,6 +375,7 @@ namespace daxa
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily queue_family) -> std::string_view;
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Queue queue) -> std::string_view;
 
+    static constexpr inline Queue QUEUE_NONE = Queue{QueueFamily::MAX_ENUM, 0};
     static constexpr inline Queue QUEUE_MAIN = Queue{QueueFamily::MAIN, 0};
     static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{QueueFamily::COMPUTE, 0};
     static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{QueueFamily::COMPUTE, 1};

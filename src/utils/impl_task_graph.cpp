@@ -1190,7 +1190,7 @@ namespace daxa
                 }
             },
             .name = info.name.size() > 0 ? std::string(info.name) : std::string("clear buffer: ") + std::string(impl.global_buffer_infos.at(view.index).get_name()),
-        }, info.queue);
+        }, {info.queue});
     }
 
     DAXA_EXPORT_CXX void TaskGraph::clear_image(TaskImageClearInfo const & info)
@@ -1214,7 +1214,7 @@ namespace daxa
                 }
             },
             .name = info.name.size() > 0 ? std::string(info.name) : std::string("clear image: ") + std::string(impl.global_image_infos.at(view.index).get_name()),
-        }, info.queue);
+        }, {info.queue});
     }
 
     DAXA_EXPORT_CXX void TaskGraph::copy_buffer_to_buffer(TaskBufferCopyInfo const & info)
@@ -1245,7 +1245,7 @@ namespace daxa
                 }
             },
             .name = info.name.size() > 0 ? std::string(info.name) : std::string("copy ") + std::string(impl.global_buffer_infos.at(src.index).get_name()) + " to " + std::string(impl.global_buffer_infos.at(dst.index).get_name()),
-        }, info.queue);
+        }, {info.queue});
     }
 
     DAXA_EXPORT_CXX void TaskGraph::copy_image_to_image(TaskImageCopyInfo const & info)
@@ -1287,7 +1287,7 @@ namespace daxa
                 }
             },
             .name = info.name.size() > 0 ? std::string(info.name) : std::string("copy ") + std::string(impl.global_image_infos.at(src.index).get_name()) + " to " + std::string(impl.global_image_infos.at(dst.index).get_name()),
-        }, info.queue);
+        }, {info.queue});
     }
 
     static inline constexpr std::array<ImageId, 64> NULL_IMG_ARRAY = {};
@@ -1685,7 +1685,7 @@ namespace daxa
         return attachment_shader_blob;
     }
 
-    void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id)
+    void ImplTaskGraph::execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id, Queue queue)
     {
         // We always allow to reuse the last command list ONCE within the task callback.
         // When the get command list function is called in a task this is set to false.
@@ -1731,6 +1731,7 @@ namespace daxa
             .attachment_shader_blob = {attachment_shader_blob.data(), task.attachment_shader_blob_size},
             .task_name = task.name,
             .task_index = task_id,
+            .queue = queue,
         };
         if (info.pre_task_callback)
         {
@@ -2085,12 +2086,14 @@ namespace daxa
         u32 attachment_shader_blob_alignment,
         TaskType task_type,
         std::string_view name,
-        daxa::Queue queue)
+        TaskAddInfo const & add_info)
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_not_compiled(impl);
 
         TaskId const task_id = impl.tasks.size();
+
+        auto queue = add_info.queue == QUEUE_NONE ? impl.info.default_queue : add_info.queue;
 
         std::vector<std::vector<ImageViewId>> view_cache = {};
         view_cache.resize(attachments.size(), {});
@@ -2240,6 +2243,24 @@ namespace daxa
         }
     }
 
+    void validate_task_queue_insertion(ImplTaskGraph & impl, TaskGraphPermutation & perm, ImplTask & task, Queue queue)
+    {
+        // Its invalid to use any other queue than the default queue in the first submit scope!
+        u32 const current_submit_scope = static_cast<u32>(std::max(perm.batch_submit_scopes.size(), 1ull) - 1ull);
+        if (current_submit_scope == 0)
+        {
+            bool const is_default_queue = queue == impl.info.default_queue;
+            DAXA_DBG_ASSERT_TRUE_M(
+                is_default_queue,
+                std::format("Detected invalid multi-queue use."
+                    " Task \"{}\" of type {} was added to submit scope 0."
+                    " All tasks added to the first submit scope MUST ALL BE added to run on the default queue ({})."
+                    " This is a tg software limitation and might be improved in the future.",
+                    task.name, to_string(task.task_type), to_string(queue), to_string(impl.info.default_queue))
+            );
+        }
+    }
+
     // I hate this function.
     thread_local std::vector<ExtendedImageSliceState> tl_tracked_slice_rests = {};
     thread_local std::vector<ImageMipArraySlice> tl_new_use_slices = {};
@@ -2270,6 +2291,8 @@ namespace daxa
                     image_infos[attach.translated_view.index].valid = true;
                 }
             });
+
+        validate_task_queue_insertion(task_graph_impl, *this, task, queue);
 
         usize const current_submit_scope_index = this->batch_submit_scopes.size() - 1;
         TaskBatchSubmitScope & current_submit_scope = this->batch_submit_scopes[current_submit_scope_index];
@@ -3693,27 +3716,6 @@ namespace daxa
 
         validate_runtime_resources(impl, permutation);
 
-        // Record and submit setup commands
-        {
-            CommandRecorder setup_recorder = impl.info.device.create_command_recorder({});
-            generate_persistent_resource_synch(impl, permutation, setup_recorder);
-            // Execute setup barriers for shared images.
-            {
-                for (auto barrier : impl.setup_task_barriers)
-                {
-                    insert_pipeline_barrier(impl, permutation, setup_recorder, barrier);
-                }
-            }
-            auto setup_commands = setup_recorder.complete_current_commands();
-            auto signal_timeline_semaphores = std::array{ 
-                std::pair{impl.gpu_submit_timeline_semaphores[0], ++impl.cpu_submit_timeline_values[0] },
-            };
-            impl.info.device.submit_commands({
-                .command_lists = std::array{setup_commands},
-                .signal_timeline_semaphores = signal_timeline_semaphores,
-            });
-        }
-
         usize submit_scope_index = 0;
         for (auto & submit_scope : permutation.batch_submit_scopes)
         {
@@ -3730,6 +3732,7 @@ namespace daxa
             std::span<std::pair<daxa::TimelineSemaphore, u64>> wait_sema_array = std::span{wait_sema_mem.data(), count};
             for (auto & queue_submit_scope : submit_scope.queue_submit_scopes)
             {
+
                 if (queue_submit_scope.task_batches.empty())
                 {
                     // Skip empty submit scopes.
@@ -3737,6 +3740,31 @@ namespace daxa
                 }
                 CommandRecorder recorder = impl.info.device.create_command_recorder({ queue_submit_scope.queue.family });
                 ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .permutation = permutation, .recorder = recorder};
+                
+                // Setup commands are always recorded in the first submit scope to the default queue
+                // Async compute queue use in the first submit scope is not permitted.
+                if (submit_scope_index == 0 && queue_submit_scope.queue == impl.info.default_queue)
+                {
+                    if (impl.info.enable_command_labels)
+                    {
+                        impl_runtime.recorder.begin_label({
+                            .label_color = impl.info.task_graph_label_color,
+                            .name = impl.info.name + std::string(", Setup Commands"),
+                        });
+                    }
+                    generate_persistent_resource_synch(impl, permutation, recorder);
+                    // Execute setup barriers for shared images.
+                    {
+                        for (auto barrier : impl.setup_task_barriers)
+                        {
+                            insert_pipeline_barrier(impl, permutation, recorder, barrier);
+                        }
+                    }
+                    if (impl.info.enable_command_labels)
+                    {
+                        impl_runtime.recorder.end_label();
+                    }
+                }
 
                 if (impl.info.enable_command_labels)
                 {
@@ -3828,7 +3856,7 @@ namespace daxa
                     usize task_index = 0;
                     for (TaskId const task_id : task_batch.tasks)
                     {
-                        impl.execute_task(impl_runtime, permutation, batch_index, task_index, task_id);
+                        impl.execute_task(impl_runtime, permutation, batch_index, task_index, task_id, queue_submit_scope.queue);
                         task_index += 1;
                     }
                     if (impl.info.use_split_barriers)
