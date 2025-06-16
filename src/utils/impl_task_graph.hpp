@@ -181,16 +181,12 @@ namespace daxa
     {
         CommandSubmitInfo submit_info = {};
         TaskSubmitInfo user_submit_info = {};
-        std::array<QueueSubmitScope, 11> queue_submit_scopes = {
+        std::array<QueueSubmitScope, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_submit_scopes = {
             QueueSubmitScope{.queue = daxa::QUEUE_MAIN},
             QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_0},
             QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_1},
             QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_2},
             QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_3},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_4},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_5},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_6},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_7},
             QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_0},
             QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_1},  
         };
@@ -437,9 +433,9 @@ namespace daxa
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
 
-        std::array<bool, 11> queue_used = {};
-        std::array<TimelineSemaphore, 11> gpu_submit_timeline_semaphores = {};
-        std::array<u64, 11> cpu_submit_timeline_values = {};
+        std::array<bool, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_used = {};
+        std::array<TimelineSemaphore, DAXA_MAX_TOTAL_QUEUE_COUNT> gpu_submit_timeline_semaphores = {};
+        std::array<u64, DAXA_MAX_TOTAL_QUEUE_COUNT> cpu_submit_timeline_values = {};
 
         template <typename TaskIdT>
         auto get_actual_buffer_blas_tlas(TaskIdT id, TaskGraphPermutation const & perm) const -> std::span<typename TaskIdT::ID_T const>

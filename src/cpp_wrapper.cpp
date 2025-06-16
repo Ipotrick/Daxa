@@ -1244,22 +1244,6 @@ namespace daxa
         {
             return "QUEUE_COMPUTE_3";
         }
-        else if (queue == QUEUE_COMPUTE_4)
-        {
-            return "QUEUE_COMPUTE_4";
-        }
-        else if (queue == QUEUE_COMPUTE_5)
-        {
-            return "QUEUE_COMPUTE_5";
-        }
-        else if (queue == QUEUE_COMPUTE_6)
-        {
-            return "QUEUE_COMPUTE_6";
-        }
-        else if (queue == QUEUE_COMPUTE_7)
-        {
-            return "QUEUE_COMPUTE_7";
-        }
         else if (queue == QUEUE_TRANSFER_0)
         {
             return "QUEUE_TRANSFER_0";
