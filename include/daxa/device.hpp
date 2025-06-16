@@ -381,10 +381,6 @@ namespace daxa
     static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{QueueFamily::COMPUTE, 1};
     static constexpr inline Queue QUEUE_COMPUTE_2 = Queue{QueueFamily::COMPUTE, 2};
     static constexpr inline Queue QUEUE_COMPUTE_3 = Queue{QueueFamily::COMPUTE, 3};
-    static constexpr inline Queue QUEUE_COMPUTE_4 = Queue{QueueFamily::COMPUTE, 4};
-    static constexpr inline Queue QUEUE_COMPUTE_5 = Queue{QueueFamily::COMPUTE, 5};
-    static constexpr inline Queue QUEUE_COMPUTE_6 = Queue{QueueFamily::COMPUTE, 6};
-    static constexpr inline Queue QUEUE_COMPUTE_7 = Queue{QueueFamily::COMPUTE, 7};
     static constexpr inline Queue QUEUE_TRANSFER_0 = Queue{QueueFamily::TRANSFER, 0};
     static constexpr inline Queue QUEUE_TRANSFER_1 = Queue{QueueFamily::TRANSFER, 1};
 

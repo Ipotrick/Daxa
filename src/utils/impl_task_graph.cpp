@@ -3716,7 +3716,7 @@ namespace daxa
         for (auto & submit_scope : permutation.batch_submit_scopes)
         {
             u32 count = 0;
-            std::array<std::pair<daxa::TimelineSemaphore, u64>, 11> wait_sema_mem = {};
+            std::array<std::pair<daxa::TimelineSemaphore, u64>, DAXA_MAX_TOTAL_QUEUE_COUNT> wait_sema_mem = {};
             for (u32 q = 0; q < impl.queue_used.size(); ++q)
             {
                 if (impl.queue_used[q])
@@ -4070,10 +4070,6 @@ namespace daxa
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_1"}),
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_2"}),
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_3"}),
-            info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_4"}),
-            info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_5"}),
-            info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_6"}),
-            info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_7"}),
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline TRANSFER_0"}),
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline TRANSFER_1"}),
         };

@@ -129,10 +129,6 @@ struct daxa_ImplDevice final : public ImplHandle
         ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 1},
         ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 2},
         ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 3},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 4},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 5},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 6},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 7},
         ImplQueue{.family = DAXA_QUEUE_FAMILY_TRANSFER, .queue_index = 0},
         ImplQueue{.family = DAXA_QUEUE_FAMILY_TRANSFER, .queue_index = 1},
     };
