@@ -194,10 +194,6 @@ namespace daxa
             QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_1},
             QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_2},
             QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_3},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_4},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_5},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_6},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_7},
             QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_0},
             QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_1},  
         };
