@@ -4,7 +4,6 @@
 #include <daxa/daxa.hpp>
 
 #include <chrono>
-#include <iostream>
 #include <utility>
 #include <format>
 #include <bit>
@@ -140,7 +139,7 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
         case DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER: return "DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER";
         case DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER: return "DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER";
         case DAXA_RESULT_MAX_ENUM: return "DAXA_RESULT_MAX_ENUM";
-    default: return "UNIMPLEMENTED CASE";
+        default: return "UNIMPLEMENTED CASE";
     }
 };
 
@@ -154,15 +153,12 @@ void check_result(daxa_Result result, char const * message, std::array<daxa_Resu
     }
     if (!result_allowed)
     {
-#if DAXA_VALIDATION
-        std::cout << std::format(
-                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n\n",
-                         daxa_result_to_string(result),
-                         std::bit_cast<i32>(result),
-                         message)
-                  << std::flush;
-#endif
-        throw std::runtime_error({});
+        DAXA_THROW_M("", std::format(
+                             "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n\n",
+                             daxa_result_to_string(result),
+                             std::bit_cast<i32>(result),
+                             message)
+                             .c_str());
     }
 }
 
@@ -1126,7 +1122,7 @@ namespace daxa
         auto result = daxa_cmd_set_compute_pipeline(
             this->internal,
             *r_cast<daxa_ComputePipeline const *>(&pipeline));
-            check_result(result, "failed to set ray compute pipeline");
+        check_result(result, "failed to set ray compute pipeline");
     }
 
     void CommandRecorder::dispatch(DispatchInfo const & info)
@@ -1143,7 +1139,7 @@ namespace daxa
 
     void CommandRecorder::set_pipeline(RayTracingPipeline const & pipeline)
     {
-       auto result = daxa_cmd_set_ray_tracing_pipeline(
+        auto result = daxa_cmd_set_ray_tracing_pipeline(
             this->internal,
             *r_cast<daxa_RayTracingPipeline const *>(&pipeline));
         check_result(result, "failed to set ray tracing pipeline");
