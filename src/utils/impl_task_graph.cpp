@@ -872,82 +872,6 @@ namespace daxa
 
     TaskGraph::TaskGraph(TaskGraphInfo const & info)
     {
-#define check_things(TACCESS)                                                        \
-    {                                                                                \
-        auto [layout, a, concurrency] = task_image_access_to_layout_access(TACCESS); \
-        PipeStage stage = static_cast<PipeStage>(a.stages.data);                     \
-        PipeType type = static_cast<PipeType>(a.type.data);                          \
-        printf("next\n");                                                            \
-        __debugbreak();                                                              \
-    };
-        // check_things(TaskImageAccess::NONE);
-        // check_things(TaskImageAccess::SHADER_SAMPLED);
-        // check_things(TaskImageAccess::SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::GRAPHICS_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::COMPUTE_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::RAY_TRACING_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::RAY_TRACING_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::TASK_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::TASK_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::TASK_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::MESH_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::MESH_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::MESH_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::VERTEX_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::TESSELLATION_CONTROL_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::TESSELLATION_EVALUATION_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::GEOMETRY_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::GEOMETRY_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::FRAGMENT_SHADER_SAMPLED);
-        // check_things(TaskImageAccess::FRAGMENT_SHADER_STORAGE_WRITE_ONLY);
-        // check_things(TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_ONLY);
-        // check_things(TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE);
-        // check_things(TaskImageAccess::FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT);
-        // check_things(TaskImageAccess::TRANSFER_READ);
-        // check_things(TaskImageAccess::TRANSFER_WRITE);
-        // check_things(TaskImageAccess::COLOR_ATTACHMENT);
-        // check_things(TaskImageAccess::DEPTH_ATTACHMENT);
-        // check_things(TaskImageAccess::STENCIL_ATTACHMENT);
-        // check_things(TaskImageAccess::DEPTH_STENCIL_ATTACHMENT);
-        // check_things(TaskImageAccess::DEPTH_ATTACHMENT_READ);
-        // check_things(TaskImageAccess::STENCIL_ATTACHMENT_READ);
-        // check_things(TaskImageAccess::DEPTH_STENCIL_ATTACHMENT_READ);
-        // check_things(TaskImageAccess::RESOLVE_WRITE);
-        // check_things(TaskImageAccess::PRESENT);
-
         this->object = new ImplTaskGraph(info);
         auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         impl.permutations.resize(usize{1} << info.permutation_condition_count);
@@ -979,7 +903,9 @@ namespace daxa
             },
         });
         impl.persistent_buffer_index_to_local_index[buffer.view().index] = task_buffer_id.index;
-        impl.buffer_name_to_id[buffer.info().name] = task_buffer_id;
+        
+        auto name = impl.mk2.task_memory.allocate_copy_string(buffer.info().name);
+        impl.buffer_name_to_id[name] = task_buffer_id;
     }
 
     void TaskGraph::use_persistent_blas(TaskBlas const & blas)
@@ -1054,11 +980,13 @@ namespace daxa
         impl.image_name_to_id[image.info().name] = task_image_id;
     }
 
-    auto TaskGraph::create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView
+    auto TaskGraph::create_transient_buffer(TaskTransientBufferInfo info) -> TaskBufferView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
         DAXA_DBG_ASSERT_TRUE_M(!impl.buffer_name_to_id.contains(info.name), "task buffer names must be unique");
+        info.name = impl.mk2.task_memory.allocate_copy_string(info.name);
+
         TaskBufferView task_buffer_id{{.task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.global_buffer_infos.size())}};
 
         for (auto & permutation : impl.permutations)
@@ -1067,22 +995,23 @@ namespace daxa
                 .valid = permutation.active,
             });
         }
-        auto const & info_copy = info; // NOTE: (HACK) we must do this because msvc designated init bugs causing it to not generate copy constructors.
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
             .task_buffer_data = PermIndepTaskBufferInfo::Transient{
                 .type = TaskAttachmentType::BUFFER,
-                .info = info_copy,
+                .info = info,
         }});
 
         impl.buffer_name_to_id[info.name] = task_buffer_id;
         return task_buffer_id;
     }
 
-    auto TaskGraph::create_transient_tlas(TaskTransientTlasInfo const & info) -> TaskTlasView
+    auto TaskGraph::create_transient_tlas(TaskTransientTlasInfo info) -> TaskTlasView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
         DAXA_DBG_ASSERT_TRUE_M(!impl.tlas_name_to_id.contains(info.name), "task buffer names must be unique");
+        info.name = impl.mk2.task_memory.allocate_copy_string(info.name);
+
         TaskTlasView task_tlas_id{{.task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.global_buffer_infos.size())}};
 
         for (auto & permutation : impl.permutations)
@@ -1091,11 +1020,10 @@ namespace daxa
                 .valid = permutation.active,
             });
         }
-        auto const & info_copy = info; // NOTE: (HACK) we must do this because msvc designated init bugs causing it to not generate copy constructors.
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
             .task_buffer_data = PermIndepTaskBufferInfo::Transient{
                 .type = TaskAttachmentType::TLAS,
-                .info = info_copy,
+                .info = info,
             },
         });
 
@@ -1103,11 +1031,14 @@ namespace daxa
         return task_tlas_id;
     }
 
-    auto TaskGraph::create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView
+    auto TaskGraph::create_transient_image(TaskTransientImageInfo info) -> TaskImageView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
         DAXA_DBG_ASSERT_TRUE_M(!impl.image_name_to_id.contains(info.name), "task image names must be unique");
+
+        info.name = impl.mk2.task_memory.allocate_copy_string(info.name);
+
         TaskImageView task_image_view = {{
             .task_graph_index = impl.unique_index,
             .index = static_cast<u32>(impl.global_image_infos.size()),
@@ -1126,10 +1057,9 @@ namespace daxa
             });
         }
 
-        auto info_copy = info; // NOTE: (HACK) we must do this because msvc designated init bugs causing it to not generate copy constructors.
         impl.global_image_infos.emplace_back(PermIndepTaskImageInfo{
             .task_image_data = PermIndepTaskImageInfo::Transient{
-                .info = info_copy,
+                .info = info,
             }});
         impl.image_name_to_id[info.name] = task_image_view;
         return task_image_view;
@@ -1411,7 +1341,7 @@ namespace daxa
                     {
                         for (u32 index = 0; index < image_attach.shader_array_size; ++index)
                         {
-                            view_cache.push_back(daxa::ImageViewId{});
+                            view_cache[index] = {};
                         }
                     }
                     return;
@@ -1452,42 +1382,44 @@ namespace daxa
                             }
                         }
                     }
-                    view_cache.clear();
+                    // clear cache
+                    for (u32 index = 0; index < image_attach.shader_array_size; ++index)
+                    {
+                        view_cache[index] = {};
+                    }
+                    
                     if (image_attach.shader_array_type == TaskHeadImageArrayType::RUNTIME_IMAGES)
                     {
-                        for (auto parent : actual_images)
+                        auto runtime_image = actual_images.back(); // We do not support generating image views for multiple runtime images!
+                        ImageViewInfo view_info = info.device.image_view_info(runtime_image.default_view()).value();
+                        // Attachments that do not fill out the view type do not get a view generated!
+                        if (image_attach.view_type != ImageViewType::MAX_ENUM)
                         {
-                            ImageViewInfo view_info = info.device.image_view_info(parent.default_view()).value();
-                            // Attachments that do not fill out the view type do not get a view generated!
-                            if (image_attach.view_type != ImageViewType::MAX_ENUM)
-                            {
-                                ImageViewType const use_view_type = image_attach.view_type;
+                            ImageViewType const use_view_type = image_attach.view_type;
 
-                                // When the use image view parameters match the default view,
-                                // then use the default view id and avoid creating a new id here.
-                                bool const is_use_default_slice = view_info.slice == slice;
-                                bool const is_use_default_view_type = use_view_type == view_info.type;
-                                if (is_use_default_slice && is_use_default_view_type)
-                                {
-                                    view_cache.push_back(parent.default_view());
-                                }
-                                else
-                                {
-                                    view_info.type = use_view_type;
-                                    view_info.slice = slice;
-                                    view_cache.push_back(info.device.create_image_view(view_info));
-                                }
+                            // When the use image view parameters match the default view,
+                            // then use the default view id and avoid creating a new id here.
+                            bool const is_use_default_slice = view_info.slice == slice;
+                            bool const is_use_default_view_type = use_view_type == view_info.type;
+                            if (is_use_default_slice && is_use_default_view_type)
+                            {
+                                view_cache[0] = runtime_image.default_view();
                             }
                             else
                             {
-                                view_cache.push_back({});
+                                view_info.type = use_view_type;
+                                view_info.slice = slice;
+                                view_cache[0] = info.device.create_image_view(view_info);
                             }
+                        }
+                        else
+                        {
+                            view_cache[0] = {};
                         }
                     }
                     else // image_attach.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS
                     {
                         u32 const base_mip_level = image_attach.translated_view.slice.base_mip_level;
-                        view_cache.reserve(image_attach.shader_array_size);
                         auto filled_views = std::min(image_attach.translated_view.slice.level_count, u32(image_attach.shader_array_size));
                         for (u32 index = 0; index < filled_views; ++index)
                         {
@@ -1497,13 +1429,13 @@ namespace daxa
                             view_info.slice = image_attach.translated_view.slice;
                             view_info.slice.base_mip_level = base_mip_level + index;
                             view_info.slice.level_count = 1;
-                            view_cache.push_back(info.device.create_image_view(view_info));
+                            view_cache[index] = info.device.create_image_view(view_info);
                         }
                         // When the slice is smaller then the array size,
                         // The indices larger then the size are filled with 0 ids.
                         for (u32 index = filled_views; index < image_attach.shader_array_size; ++index)
                         {
-                            view_cache.push_back(daxa::ImageViewId{});
+                            view_cache[index] = {};
                         }
                     }
                 }
@@ -1733,7 +1665,7 @@ namespace daxa
         {
             info.pre_task_callback(interface);
         }
-        task.base_task->callback(interface);
+        task.task_callback(task.task_memory.get(), interface);
         if (info.post_task_callback)
         {
             info.post_task_callback(interface);
@@ -2075,8 +2007,30 @@ namespace daxa
         }
     }
 
+    auto TaskGraph::allocate_task_memory(usize size, usize align) -> void*
+    {
+        auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        auto task_memory = impl.mk2.task_memory.allocate(size, align);
+        DAXA_DBG_ASSERT_TRUE_M(task_memory != nullptr, "TaskGraph ran out of task memory, please increase the task memory pool");
+        return task_memory;
+    }
+
+    auto allocate_view_cache(ImplTaskGraph& impl, std::span<TaskAttachmentInfo> attachments) -> std::span<std::span<ImageViewId>>
+    {
+        std::span<std::span<ImageViewId>> view_cache = impl.mk2.task_memory.allocate_trivial_span<std::span<ImageViewId>>( attachments.size() );
+
+        for (u32 ai = 0; ai < attachments.size(); ++ai)
+        {
+            u32 const view_count = attachments[ai].shader_array_size() > 1 ? attachments[ai].shader_array_size() : 1;
+            view_cache[ai] = impl.mk2.task_memory.allocate_trivial_span<ImageViewId>( view_count );
+        }
+
+        return view_cache;
+    }
+
     void TaskGraph::add_task(
-        std::unique_ptr<ITask> && task, 
+        OpaqueTaskPtr && task_memory, 
+        OpaqueTaskCallback task_callback,
         std::span<TaskAttachmentInfo> attachments,
         u32 attachment_shader_blob_size,
         u32 attachment_shader_blob_alignment,
@@ -2091,19 +2045,18 @@ namespace daxa
 
         auto queue = add_info.queue == QUEUE_NONE ? impl.info.default_queue : add_info.queue;
 
-        std::vector<std::vector<ImageViewId>> view_cache = {};
-        view_cache.resize(attachments.size(), {});
         std::vector<std::vector<ImageId>> id_cache = {};
         id_cache.resize(attachments.size(), {});
         auto impl_task = ImplTask{
-            .base_task = std::move(task),
+            .task_memory = std::move(task_memory),
+            .task_callback = task_callback,
             .attachments = attachments, 
             .attachment_shader_blob_size = attachment_shader_blob_size,
             .attachment_shader_blob_alignment = attachment_shader_blob_alignment,
             .task_type = task_type,
-            .name = name,
+            .name = impl.mk2.task_memory.allocate_copy_string(name),
             .queue = queue,
-            .image_view_cache = std::move(view_cache),
+            .image_view_cache = allocate_view_cache(impl, attachments),
             .runtime_images_last_execution = std::move(id_cache),
         };
         apply_attachment_stage_overrides(impl, impl_task);
@@ -2476,7 +2429,7 @@ namespace daxa
                                     .dst_access = current_buffer_access,
                                 },
                                 /* .split_barrier_state = */ task_graph_impl.info.device.create_event({
-                                    .name = std::string("tg \"") + task_graph_impl.info.name + "\" sb " + std::to_string(split_barrier_index),
+                                    .name = std::string("tg \"") + std::string(task_graph_impl.info.name) + "\" sb " + std::to_string(split_barrier_index),
                                 }),
                             });
                             // Now we give the src batch the index of this barrier to signal.
@@ -2775,7 +2728,7 @@ namespace daxa
                                         .dst_access = current_image_access,
                                     },
                                     /* .split_barrier_state = */ task_graph_impl.info.device.create_event({
-                                        .name = std::string("tg \"") + task_graph_impl.info.name + "\" sbi " + std::to_string(split_barrier_index),
+                                        .name = std::string("tg \"") + std::string(task_graph_impl.info.name) + "\" sbi " + std::to_string(split_barrier_index),
                                     }),
                                 });
                                 // Now we give the src batch the index of this barrier to signal.
@@ -3745,7 +3698,7 @@ namespace daxa
                     {
                         impl_runtime.recorder.begin_label({
                             .label_color = impl.info.task_graph_label_color,
-                            .name = impl.info.name + std::string(", Setup Commands"),
+                            .name = std::string(impl.info.name) + std::string(", Setup Commands"),
                         });
                     }
                     generate_persistent_resource_synch(impl, permutation, recorder);
@@ -3766,7 +3719,7 @@ namespace daxa
                 {
                     impl_runtime.recorder.begin_label({
                         .label_color = impl.info.task_graph_label_color,
-                        .name = impl.info.name + std::string(", submit ") + std::to_string(submit_scope_index),
+                        .name = std::string(impl.info.name) + std::string(", submit ") + std::to_string(submit_scope_index),
                     });
                 }
                 usize batch_index = 0;
@@ -4062,8 +4015,11 @@ namespace daxa
     }
 
     ImplTaskGraph::ImplTaskGraph(TaskGraphInfo a_info)
-        : unique_index{ImplTaskGraph::exec_unique_next_index++}, info{std::move(a_info)}
+        : unique_index{ImplTaskGraph::exec_unique_next_index++}, info{std::move(a_info)},
+        mk2{ info.task_memory_pool_size }
     {
+        info.name = mk2.task_memory.allocate_copy_string(info.name);
+
         gpu_submit_timeline_semaphores = std::array{
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline MAIN"}),
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_0"}),
