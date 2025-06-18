@@ -8,7 +8,7 @@
 
 #include "impl_task_graph_mk2.hpp"
 
-#define DAXA_TASK_GRAPH_MAX_CONDITIONALS 31
+#define DAXA_TASK_GRAPH_MAX_CONDITIONALS 5
 
 namespace daxa
 {
@@ -141,14 +141,15 @@ namespace daxa
 
     struct ImplTask
     {
-        std::unique_ptr<ITask> base_task = {};
+        OpaqueTaskPtr task_memory = {nullptr, [](void*){}};
+        OpaqueTaskCallback task_callback = [](void*, TaskInterface &){};
         std::span<TaskAttachmentInfo> attachments = {};
         u32 attachment_shader_blob_size = {};
         u32 attachment_shader_blob_alignment = {};
         TaskType task_type = {};
         std::string_view name = {};
         Queue queue = {};
-        std::vector<std::vector<ImageViewId>> image_view_cache = {};
+        std::span<std::span<ImageViewId>> image_view_cache = {};
         // Used to verify image view cache:
         std::vector<std::vector<ImageId>> runtime_images_last_execution = {};
     };
@@ -397,6 +398,9 @@ namespace daxa
         u32 unique_index = {};
 
         TaskGraphInfo info;
+
+        ImplTaskGraphMk2 mk2;
+
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
         std::vector<TaskGraphPermutation> permutations = {};
@@ -409,10 +413,10 @@ namespace daxa
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
         std::vector<TaskGraphPermutation *> record_active_permutations = {};
-        std::unordered_map<std::string, TaskBufferView> buffer_name_to_id = {};
-        std::unordered_map<std::string, TaskBlasView> blas_name_to_id = {};
-        std::unordered_map<std::string, TaskTlasView> tlas_name_to_id = {};
-        std::unordered_map<std::string, TaskImageView> image_name_to_id = {};
+        std::unordered_map<std::string_view, TaskBufferView> buffer_name_to_id = {};
+        std::unordered_map<std::string_view, TaskBlasView> blas_name_to_id = {};
+        std::unordered_map<std::string_view, TaskTlasView> tlas_name_to_id = {};
+        std::unordered_map<std::string_view, TaskImageView> image_name_to_id = {};
 
         // Are executed in a pre-submission, before any actual task recording/submission.
         std::vector<TaskBarrier> setup_task_barriers = {};
