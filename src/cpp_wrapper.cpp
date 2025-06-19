@@ -1236,6 +1236,53 @@ namespace daxa
     /// --- End CommandRecorder ---
 
     /// --- Begin to_string ---
+    
+    auto to_string(QueueFamily queue_family) -> std::string_view
+    {
+        switch( queue_family )
+        {
+            case QueueFamily::MAIN: return "MAIN";
+            case QueueFamily::COMPUTE: return "COMPUTE";
+            case QueueFamily::TRANSFER: return "TRANSFER";
+            default: return "UNIMPLEMENTED CASE";
+        }
+    }
+
+    auto to_string(Queue queue) -> std::string_view
+    {
+        if (queue == QUEUE_MAIN)
+        {
+            return "QUEUE_MAIN";
+        }
+        else if (queue == QUEUE_COMPUTE_0)
+        {
+            return "QUEUE_COMPUTE_0";
+        }
+        else if (queue == QUEUE_COMPUTE_1)
+        {
+            return "QUEUE_COMPUTE_1";
+        }
+        else if (queue == QUEUE_COMPUTE_2)
+        {
+            return "QUEUE_COMPUTE_2";
+        }
+        else if (queue == QUEUE_COMPUTE_3)
+        {
+            return "QUEUE_COMPUTE_3";
+        }
+        else if (queue == QUEUE_TRANSFER_0)
+        {
+            return "QUEUE_TRANSFER_0";
+        }
+        else if (queue == QUEUE_TRANSFER_1)
+        {
+            return "QUEUE_TRANSFER_1";
+        }
+        else
+        {
+            return "UNIMPLEMENTED CASE";
+        }
+    }
 
     auto to_string(MemoryBarrierInfo const & info) -> std::string
     {
@@ -1901,17 +1948,6 @@ namespace daxa
     auto to_string(Access access) -> std::string
     {
         return std::format("stages: {}, type: {}", to_string(access.stages), to_string(access.type));
-    }
-
-    auto to_string(QueueFamily family) -> std::string_view
-    {
-        switch (family)
-        {
-        case QueueFamily::MAIN: return "MAIN";
-        case QueueFamily::COMPUTE: return "COMPUTE";
-        case QueueFamily::TRANSFER: return "TRANSFER";
-        default: return "UNKNOWN";
-        };
     }
 
     /// --- End to_string ---

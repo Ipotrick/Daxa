@@ -20,8 +20,10 @@ namespace daxa
     struct TaskTransientBufferInfo
     {
         u32 size = {};
-        std::string name = {};
+        std::string_view name = {};
     };
+
+    using TaskTransientTlasInfo = TaskTransientBufferInfo;
 
     struct TaskTransientImageInfo
     {
@@ -31,21 +33,7 @@ namespace daxa
         u32 mip_level_count = 1;
         u32 array_layer_count = 1;
         u32 sample_count = 1;
-        std::string name = {};
-    };
-
-    struct TaskImageAliasInfo
-    {
-        std::string alias = {};
-        Variant<TaskImageView, std::string> aliased_image = {};
-        u32 base_mip_level_offset = {};
-        u32 base_array_layer_offset = {};
-    };
-
-    struct TaskBufferAliasInfo
-    {
-        std::string alias = {};
-        Variant<TaskBufferView, std::string> aliased_buffer = {};
+        std::string_view name = {};
     };
 
     struct TaskGraphInfo
@@ -81,13 +69,16 @@ namespace daxa
         /// @brief  Sets the size of the linear allocator of device local, host visible memory used by the linear staging allocator.
         ///         This memory is used internally as well as by tasks via the TaskInterface::get_allocator().
         ///         Setting the size to 0, disables a few task list features but also eliminates the memory allocation.
-        u32 staging_memory_pool_size = 262'144; // 2^16 bytes.
+        u32 staging_memory_pool_size = 1u << 17u;   // 128kib
+        /// @brief  CPU Memory allocated for task data
+        u32 task_memory_pool_size = 1u << 18u; // 256kib
         // Useful for debugging tools that are invisible to the graph.
         daxa::ImageUsageFlags additional_transient_image_usage_flags = {};
         // Useful for reflection/ debugging.
         std::function<void(daxa::TaskInterface)> pre_task_callback = {};
         std::function<void(daxa::TaskInterface)> post_task_callback = {};
-        std::string name = {};
+        daxa::Queue default_queue = QUEUE_MAIN;
+        std::string_view name = {};
     };
 
     struct TaskSubmitInfo
@@ -102,6 +93,7 @@ namespace daxa
 
     struct TaskPresentInfo
     {
+        Queue queue = daxa::QUEUE_MAIN;
         std::vector<BinarySemaphore> * additional_binary_semaphores = {};
     };
 
@@ -144,10 +136,10 @@ namespace daxa
         TaskType task_type = TaskType::GENERAL;
         std::vector<TaskAttachmentInfo> attachments = {};
         std::function<void(TaskInterface)> task = {};
-        std::string name = "unnamed";
+        std::string_view name = "unnamed";
     };
 
-    struct InlineTask : ITask
+    struct InlineTask
     {
         InlineTask() = default;
         InlineTask(InlineTaskInfo const & info)
@@ -158,28 +150,28 @@ namespace daxa
             value._internal._callback = info.task;
             value._internal._name = info.name;
         }
-        InlineTask(std::string name, TaskType task_type = TaskType::GENERAL)
+        InlineTask(std::string_view name, TaskType task_type = TaskType::GENERAL)
         {
             value._internal._name = std::move(name);
             value._internal._task_type = task_type;
         }
-        static auto Raster(std::string name) -> InlineTask
+        static auto Raster(std::string_view name) -> InlineTask
         {
             return InlineTask(name, TaskType::RASTER);
         }
-        static auto Compute(std::string name) -> InlineTask
+        static auto Compute(std::string_view name) -> InlineTask
         {
             return InlineTask(name, TaskType::COMPUTE);
         }
-        static auto RayTracing(std::string name) -> InlineTask
+        static auto RayTracing(std::string_view name) -> InlineTask
         {
             return InlineTask(name, TaskType::RAY_TRACING);
         }
-        static auto Transfer(std::string name) -> InlineTask
+        static auto Transfer(std::string_view name) -> InlineTask
         {
             return InlineTask(name, TaskType::TRANSFER);
         }
-        virtual ~InlineTask() override
+        ~InlineTask()
         {
         }
         InlineTask(InlineTask && other)
@@ -194,20 +186,10 @@ namespace daxa
             other.value._internal._name = {};
             other.value._internal._task_type = {};
         }
-        constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> override
-        {
-            return value._internal._attachments;
-        }
-        constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> override
-        {
-            return value._internal._attachments;
-        }
-        constexpr virtual auto name() const -> std::string_view override { return value._internal._name; };
-        virtual void callback(TaskInterface ti) override
+        void callback(TaskInterface ti)
         {
             value._internal._callback(ti);
         }
-        virtual auto task_type() const -> TaskType override { return value._internal._task_type; }
 
       private:
         enum Allow
@@ -224,7 +206,7 @@ namespace daxa
         {
             std::vector<TaskAttachmentInfo> _attachments = {};
             std::function<void(TaskInterface)> _callback = {};
-            std::string _name = {};
+            std::string_view _name = {};
             TaskType _task_type = TaskType::GENERAL;
 
             void _process_params(TaskStage stage, TaskAccessType type, ImageViewType & view_override, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
@@ -452,6 +434,7 @@ namespace daxa
         u64 offset = {};
         u64 size = ~0ull; // default clears all
         u32 clear_value = {};
+        Queue queue = daxa::QUEUE_MAIN;
         std::string_view name = {};
     };
 
@@ -459,6 +442,7 @@ namespace daxa
     {
         TaskImageView view = {};
         ClearValue clear_value = std::array{0u, 0u, 0u, 0u};
+        Queue queue = daxa::QUEUE_MAIN;
         std::string_view name = {};
     };
 
@@ -466,6 +450,7 @@ namespace daxa
     {
         TaskBufferView src = {};
         TaskBufferView dst = {};
+        Queue queue = daxa::QUEUE_MAIN;
         std::string_view name = {};
     };
 
@@ -473,10 +458,19 @@ namespace daxa
     {
         TaskImageView src = {};
         TaskImageView dst = {};
+        Queue queue = daxa::QUEUE_MAIN;
         std::string_view name = {};
     };
 
+    struct TaskAddInfo
+    {
+        Queue queue = daxa::QUEUE_NONE;
+    };;
+
     struct ImplTaskGraph;
+
+    using OpaqueTaskPtr = std::unique_ptr<void, void(*)(void*)>;
+    using OpaqueTaskCallback = void (*)(void*, TaskInterface &);
 
     struct TaskGraph : ManagedPtr<TaskGraph, ImplTaskGraph *>
     {
@@ -490,10 +484,12 @@ namespace daxa
         DAXA_EXPORT_CXX void use_persistent_tlas(TaskTlas const & tlas);
         DAXA_EXPORT_CXX void use_persistent_image(TaskImage const & image);
 
-        DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo const & info) -> TaskBufferView;
-        DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo const & info) -> TaskImageView;
+        DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo info) -> TaskBufferView;
+        DAXA_EXPORT_CXX auto create_transient_tlas(TaskTransientTlasInfo info) -> TaskTlasView;
+        DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo info) -> TaskImageView;
 
         DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo const &;
+        DAXA_EXPORT_CXX auto transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo const &;
         DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo const &;
 
         DAXA_EXPORT_CXX void clear_buffer(TaskBufferClearInfo const & info);
@@ -504,11 +500,12 @@ namespace daxa
 
         template <typename TTask>
             requires std::is_base_of_v<IPartialTask, TTask>
-        void add_task(TTask const & task)
+        void add_task(TTask const & task, TaskAddInfo add_info = {})
         {
             using NoRefTTask = std::remove_reference_t<TTask>;
+            static constexpr auto const & ATTACHMENTS = NoRefTTask::AT._internal.value;
             // DAXA_DBG_ASSERT_TRUE_M(task.attachments().size() == task.attachments()._offset, "Detected task attachment count differing from Task head declared attachment count!");
-            struct WrapperTask : ITask
+            struct WrapperTask
             {
                 NoRefTTask _task;
                 std::array<TaskAttachmentInfo, NoRefTTask::ATTACH_COUNT> _attachments = {};
@@ -516,15 +513,15 @@ namespace daxa
                 {
                     for (u32 i = 0; i < NoRefTTask::ATTACH_COUNT; ++i)
                     {
-                        switch (_task.attachments()[i].type)
+                        switch (ATTACHMENTS[i].type)
                         {
                         case daxa::TaskAttachmentType::BUFFER:
                         {
                             TaskBufferAttachmentInfo info;
-                            info.name = _task.attachments()[i].value.buffer.name;
-                            info.task_access = _task.attachments()[i].value.buffer.task_access;
-                            info.shader_array_size = _task.attachments()[i].value.buffer.shader_array_size;
-                            info.shader_as_address = _task.attachments()[i].value.buffer.shader_as_address;
+                            info.name = ATTACHMENTS[i].value.buffer.name;
+                            info.task_access = ATTACHMENTS[i].value.buffer.task_access;
+                            info.shader_array_size = ATTACHMENTS[i].value.buffer.shader_array_size;
+                            info.shader_as_address = ATTACHMENTS[i].value.buffer.shader_as_address;
                             info.view = daxa::get<TaskBufferView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -532,9 +529,9 @@ namespace daxa
                         case daxa::TaskAttachmentType::TLAS:
                         {
                             TaskTlasAttachmentInfo info;
-                            info.name = _task.attachments()[i].value.tlas.name;
-                            info.task_access = _task.attachments()[i].value.tlas.task_access;
-                            info.shader_as_address = _task.attachments()[i].value.tlas.shader_as_address;
+                            info.name = ATTACHMENTS[i].value.tlas.name;
+                            info.task_access = ATTACHMENTS[i].value.tlas.task_access;
+                            info.shader_as_address = ATTACHMENTS[i].value.tlas.shader_as_address;
                             info.view = daxa::get<TaskTlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -542,8 +539,8 @@ namespace daxa
                         case daxa::TaskAttachmentType::BLAS:
                         {
                             TaskBlasAttachmentInfo info;
-                            info.name = _task.attachments()[i].value.blas.name;
-                            info.task_access = _task.attachments()[i].value.blas.task_access;
+                            info.name = ATTACHMENTS[i].value.blas.name;
+                            info.task_access = ATTACHMENTS[i].value.blas.task_access;
                             info.view = daxa::get<TaskBlasView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -551,12 +548,12 @@ namespace daxa
                         case daxa::TaskAttachmentType::IMAGE:
                         {
                             TaskImageAttachmentInfo info;
-                            info.name = _task.attachments()[i].value.image.name;
-                            info.task_access = _task.attachments()[i].value.image.task_access;
-                            info.view_type = _task.attachments()[i].value.image.view_type;
-                            info.shader_array_size = _task.attachments()[i].value.image.shader_array_size;
-                            info.shader_array_type = _task.attachments()[i].value.image.shader_array_type;
-                            info.shader_as_index = _task.attachments()[i].value.image.shader_as_index;
+                            info.name = ATTACHMENTS[i].value.image.name;
+                            info.task_access = ATTACHMENTS[i].value.image.task_access;
+                            info.view_type = ATTACHMENTS[i].value.image.view_type;
+                            info.shader_array_size = ATTACHMENTS[i].value.image.shader_array_size;
+                            info.shader_array_type = ATTACHMENTS[i].value.image.shader_array_type;
+                            info.shader_as_index = ATTACHMENTS[i].value.image.shader_as_index;
                             info.view = daxa::get<TaskImageView>(task.views.views[i]);
                             _attachments[i] = info;
                         }
@@ -569,24 +566,49 @@ namespace daxa
                         }
                     }
                 }
-                constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> { return _attachments; }
-                constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> { return _attachments; }
-                constexpr virtual auto name() const -> std::string_view { return NoRefTTask::name(); }
-                virtual auto task_type() const -> TaskType { return _task.task_type(); };
                 virtual void callback(TaskInterface ti) { _task.callback(ti); };
             };
-            auto wrapped_task = std::make_unique<WrapperTask>(std::move(task));
-            add_task(std::move(wrapped_task));
-        }
-        void add_task(InlineTaskInfo const & inline_task_info)
-        {
-            add_task(std::make_unique<InlineTask>(inline_task_info));
+
+            auto destructor_callback = 
+                [](void* t){ reinterpret_cast<WrapperTask*>(t)->~WrapperTask(); };
+            auto task_callback = 
+                [](void* t, TaskInterface & ti){ reinterpret_cast<WrapperTask*>(t)->callback(ti); };
+
+            OpaqueTaskPtr wrapped_task_opaque = {allocate_task_memory(sizeof(WrapperTask), alignof(WrapperTask)), destructor_callback};
+            auto wrapped_task = new (wrapped_task_opaque.get()) WrapperTask(std::move(task));
+
+            std::span<TaskAttachmentInfo> attachments = wrapped_task->_attachments;
+            u32 asb_size = detail::get_asb_size_and_alignment(attachments).size;
+            u32 asb_align = detail::get_asb_size_and_alignment(attachments).alignment;
+            TaskType task_type = TTask::TASK_TYPE;
+            std::string_view name = TTask::TASK_NAME;
+            add_task( 
+                std::move(wrapped_task_opaque), task_callback,
+                attachments, asb_size, asb_align, task_type, name, add_info );
         }
         template<typename T>
-        void add_task(T && inline_task)
+        void add_task(T && inline_task, TaskAddInfo add_info = {})
             requires std::is_base_of_v<InlineTask, T> || std::is_same_v<InlineTask, T>
         {
-            add_task(std::make_unique<T>(std::move(inline_task)));
+            auto destructor_callback = 
+                [](void* t){ reinterpret_cast<T*>(t)->~T(); };
+            auto task_callback = 
+                [](void* t, TaskInterface & ti){ reinterpret_cast<T*>(t)->callback(ti); };
+
+            OpaqueTaskPtr task_opaque = {allocate_task_memory(sizeof(T), alignof(T)), destructor_callback};
+            auto task = new (task_opaque.get()) T(std::move(inline_task));
+            std::span<TaskAttachmentInfo> attachments = task->value._internal._attachments;
+            u32 asb_size = detail::get_asb_size_and_alignment(attachments).size;
+            u32 asb_align = detail::get_asb_size_and_alignment(attachments).alignment;
+            TaskType task_type = task->value._internal._task_type;
+            std::string_view name = task->value._internal._name;
+            add_task( 
+                std::move(task_opaque), task_callback,
+                attachments, asb_size, asb_align, task_type, name, add_info );
+        }
+        void add_task(InlineTaskInfo const & inline_task_info, TaskAddInfo add_info = {})
+        {
+            add_task( std::move(InlineTask{inline_task_info}), add_info );
         }
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
@@ -608,6 +630,16 @@ namespace daxa
         DAXA_EXPORT_CXX static auto dec_refcnt(ImplHandle const * object) -> u64;
 
       private:
-        DAXA_EXPORT_CXX void add_task(std::unique_ptr<ITask> && task);
+        DAXA_EXPORT_CXX void add_task(
+            OpaqueTaskPtr && task_memory, 
+            OpaqueTaskCallback task_callback,
+            std::span<TaskAttachmentInfo> attachments,
+            u32 attachment_shader_blob_size,
+            u32 attachment_shader_blob_alignment,
+            TaskType task_type,
+            std::string_view name,
+            TaskAddInfo const & add_info);
+
+        DAXA_EXPORT_CXX auto allocate_task_memory(usize size, usize align) -> void*;
     };
 } // namespace daxa

@@ -303,8 +303,8 @@ namespace daxa
     using TaskBlasAccess = TaskAccessConsts;
     using TaskTlasAccess = TaskAccessConsts;
     using TaskImageAccess = TaskAccessConsts;
-    
-    enum struct TaskType
+
+    enum struct TaskType : u16
     {
         UNDEFINED,
         GENERAL,
@@ -768,6 +768,7 @@ namespace daxa
         std::span<std::byte const> attachment_shader_blob = {};
         std::string_view task_name = {};
         usize task_index = {};
+        Queue queue = {};
 
 #if !DAXA_REMOVE_DEPRECATED
         [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead, API:3.0")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
@@ -999,10 +1000,10 @@ namespace daxa
     template <typename T>
     concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
 
-    template<typename T>
+    template <typename T>
     concept TaskResourceOrViewOrAccess = TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStage>;
 
-    template<typename T>
+    template <typename T>
     concept TaskImageOrViewOrAccess = TaskImageViewOrTaskImageOrImageViewType<T> || std::is_same_v<T, TaskStage>;
 
     inline namespace detail
@@ -1012,15 +1013,16 @@ namespace daxa
             u32 size = {};
             u32 alignment = {};
         };
+        template <typename T>
+        auto constexpr align_up(T value, T align) -> T
+        {
+            if (value == 0 || align == 0)
+                return 0;
+            return (value + align - static_cast<T>(1)) / align * align;
+        }
         constexpr auto get_asb_size_and_alignment(auto const & attachment_array) -> AsbSizeAlignment
         {
             AsbSizeAlignment size_align = {};
-            auto align_up = [](auto value, auto align) -> u32
-            {
-                if (value == 0 || align == 0)
-                    return 0;
-                return (value + align - 1u) / align * align;
-            };
             for (auto const & attachment_decl : attachment_array)
             {
                 if (attachment_decl.shader_array_size() == 0 || attachment_decl.shader_element_align() == 0)
@@ -1033,21 +1035,6 @@ namespace daxa
             return size_align;
         }
     } // namespace detail
-
-    struct ITask
-    {
-        constexpr virtual ~ITask() {}
-        /// TODO(pahrens): optimize:
-        constexpr virtual auto attachment_shader_blob_size() const -> u32
-        {
-            return detail::get_asb_size_and_alignment(attachments()).size;
-        };
-        constexpr virtual auto attachments() -> std::span<TaskAttachmentInfo> = 0;
-        constexpr virtual auto attachments() const -> std::span<TaskAttachmentInfo const> = 0;
-        constexpr virtual auto task_type() const -> TaskType = 0;
-        constexpr virtual std::string_view name() const = 0;
-        virtual void callback(TaskInterface){};
-    };
 
     template <usize N>
     struct StringLiteral
@@ -1166,21 +1153,21 @@ namespace daxa
     {
         TaskAttachmentViewWrapperRaw _value = {};
 
-        TaskAttachmentViewWrapper() 
+        TaskAttachmentViewWrapper()
         {
-            if constexpr(std::is_same_v<T, TaskBufferView>)
+            if constexpr (std::is_same_v<T, TaskBufferView>)
             {
                 _value = {TaskAttachmentType::BUFFER, {.buffer = TaskBufferView{}}};
             }
-            if constexpr(std::is_same_v<T, TaskBlasView>)
+            if constexpr (std::is_same_v<T, TaskBlasView>)
             {
                 _value = {TaskAttachmentType::BLAS, {.blas = TaskBlasView{}}};
             }
-            if constexpr(std::is_same_v<T, TaskTlasView>)
+            if constexpr (std::is_same_v<T, TaskTlasView>)
             {
                 _value = {TaskAttachmentType::TLAS, {.tlas = TaskTlasView{}}};
             }
-            if constexpr(std::is_same_v<T, TaskImageView>)
+            if constexpr (std::is_same_v<T, TaskImageView>)
             {
                 _value = {TaskAttachmentType::IMAGE, {.image = TaskImageView{}}};
             }
@@ -1377,19 +1364,11 @@ namespace daxa
     struct Task : public daxa::IPartialTask                                                                                                    \
     {                                                                                                                                          \
         static inline constexpr daxa::TaskType TASK_TYPE = TYPE;                                                                               \
+        static inline constexpr char const * TASK_NAME = NAME;                                                                                 \
         using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
         using Views = VIEWS_T;                                                                                                                 \
         static constexpr auto const & AT = ATTACHMENTS_T{};                                                                                    \
         static constexpr auto ATTACH_COUNT = ATTACHMENT_COUNT;                                                                                 \
-        static auto name() -> std::string_view { return std::string_view{NAME}; }                                                              \
-        auto attachments() const -> std::span<daxa::TaskAttachment const>                                                                      \
-        {                                                                                                                                      \
-            return AT._internal.value;                                                                                                         \
-        }                                                                                                                                      \
-        auto task_type() const -> daxa::TaskType                                                                                               \
-        {                                                                                                                                      \
-            return TYPE;                                                                                                                       \
-        }                                                                                                                                      \
     };                                                                                                                                         \
     }                                                                                                                                          \
     ;
@@ -1399,15 +1378,12 @@ namespace daxa
 #define DAXA_TH_IMAGE(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0)
 
 #define DAXA_TH_IMAGE_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1)
-#define DAXA_TH_IMAGE_ID_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE)
 #define DAXA_TH_IMAGE_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
 
 #define DAXA_TH_IMAGE_INDEX(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1, .shader_as_index = true)
-#define DAXA_TH_IMAGE_INDEX_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = true)
 #define DAXA_TH_IMAGE_INDEX_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS, .shader_as_index = true)
 
 #define DAXA_TH_IMAGE_TYPED(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = 1, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
-#define DAXA_TH_IMAGE_TYPED_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
 #define DAXA_TH_IMAGE_TYPED_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
 
 #define DAXA_TH_STAGE_VAR(STAGE_VAR) daxa::TaskStage stage = {};
@@ -1415,8 +1391,6 @@ namespace daxa
 #define DAXA_TH_BUFFER(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 0)
 #define DAXA_TH_BUFFER_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
-#define DAXA_TH_BUFFER_ID_ARRAY(TASK_ACCESS, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
-#define DAXA_TH_BUFFER_PTR_ARRAY(TASK_ACCESS, PTR_TYPE, NAME, SIZE) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = SIZE, .shader_as_address = false)
 #define DAXA_TH_BLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)
 #define DAXA_TH_TLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 0)
 #define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_as_address = true)

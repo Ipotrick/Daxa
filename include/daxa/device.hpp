@@ -240,6 +240,7 @@ namespace daxa
         SHADER_STORAGE_IMAGE_READ_WITHOUT_FORMAT,
         SHADER_STORAGE_IMAGE_WRITE_WITHOUT_FORMAT,
         SHADER_INT64,
+        IMAGE_GATHER_EXTENDED,
         VARIABLE_POINTERS_STORAGE_BUFFER,
         VARIABLE_POINTERS,
         BUFFER_DEVICE_ADDRESS,
@@ -365,17 +366,27 @@ namespace daxa
     {
         QueueFamily family = {};
         u32 index = {};
+
+        [[nodiscard]] DAXA_EXPORT_CXX auto operator==(Queue const & other) const noexcept -> bool
+        {
+            return this->family == other.family && this->index == other.index;
+        }
+
+        [[nodiscard]] DAXA_EXPORT_CXX auto operator!=(Queue const & other) const noexcept -> bool
+        {
+            return !(*this == other);
+        }
     };
 
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily queue_family) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Queue queue) -> std::string_view;
+
+    static constexpr inline Queue QUEUE_NONE = Queue{QueueFamily::MAX_ENUM, 0};
     static constexpr inline Queue QUEUE_MAIN = Queue{QueueFamily::MAIN, 0};
     static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{QueueFamily::COMPUTE, 0};
     static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{QueueFamily::COMPUTE, 1};
     static constexpr inline Queue QUEUE_COMPUTE_2 = Queue{QueueFamily::COMPUTE, 2};
     static constexpr inline Queue QUEUE_COMPUTE_3 = Queue{QueueFamily::COMPUTE, 3};
-    static constexpr inline Queue QUEUE_COMPUTE_4 = Queue{QueueFamily::COMPUTE, 4};
-    static constexpr inline Queue QUEUE_COMPUTE_5 = Queue{QueueFamily::COMPUTE, 5};
-    static constexpr inline Queue QUEUE_COMPUTE_6 = Queue{QueueFamily::COMPUTE, 6};
-    static constexpr inline Queue QUEUE_COMPUTE_7 = Queue{QueueFamily::COMPUTE, 7};
     static constexpr inline Queue QUEUE_TRANSFER_0 = Queue{QueueFamily::TRANSFER, 0};
     static constexpr inline Queue QUEUE_TRANSFER_1 = Queue{QueueFamily::TRANSFER, 1};
 

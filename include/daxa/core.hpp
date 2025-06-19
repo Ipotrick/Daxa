@@ -5,7 +5,7 @@
 #include <string>
 
 #if !defined(DAXA_VALIDATION)
-#if defined(NDEBUG)
+#if defined(NDEBUG) && !defined(RELWITHDEBINFO)
 #define DAXA_VALIDATION 0
 #else
 #define DAXA_VALIDATION 1

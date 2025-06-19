@@ -6,7 +6,9 @@
 #include <sstream>
 #include <daxa/utils/task_graph.hpp>
 
-#define DAXA_TASK_GRAPH_MAX_CONDITIONALS 31
+#include "impl_task_graph_mk2.hpp"
+
+#define DAXA_TASK_GRAPH_MAX_CONDITIONALS 5
 
 namespace daxa
 {
@@ -54,6 +56,12 @@ namespace daxa
         Access latest_access = AccessConsts::NONE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
+
+        // Multi-queue.
+        Queue latest_access_submit_scope_queue = {};
+        bool latest_access_submit_scope_exclusive_locked = {}; 
+        bool latest_access_submit_scope_concurrent_locked = {};
+
         usize first_access_batch_index = {};
         usize first_access_submit_scope_index = {};
         Access first_access = AccessConsts::NONE;
@@ -65,7 +73,9 @@ namespace daxa
         // This means all barriers are done even split barriers are done at this point.
         /// WARNING: THIS DOES NOT MEAN THAT THIS IS THE FIRST BATCH AFTER THE PREVIOUS ACCESS. THE FIRST TASK TO USE THIS ACCESS DETERMINES THE START BATCH. THIS SHOULD BE IMPROVED. WE COULD FOR EXAMPLE STORE THE PRIOR DEPENDENCY TASKS/BATCHES FOR THE CURRENT CONCURRENT SEQUENCE!
         usize latest_concurrent_sequence_start_batch = ~0u;
+        bool used_queue_concurrently = {};
         std::variant<BufferId, BlasId, TlasId> actual_id = BufferId{};
+        BufferId as_backing_buffer_id = {};
 
         ResourceLifetime lifetime = {};
         usize allocation_offset = {};
@@ -78,6 +88,12 @@ namespace daxa
         TaskAccessConcurrency latest_access_concurrent = TaskAccessConcurrency::EXCLUSIVE;
         usize latest_access_batch_index = {};
         usize latest_access_submit_scope_index = {};
+
+        // Multi-queue.
+        Queue latest_access_submit_scope_queue = {};
+        bool latest_access_submit_scope_exclusive_locked = {}; 
+        bool latest_access_submit_scope_concurrent_locked = {};
+
         // When the last index was a read and an additional read is followed after,
         // we will combine all barriers into one, which is the first barrier that the first read generates.
         Variant<Monostate, LastConcurrentAccessSplitBarrierIndex, LastConcurrentAccessBarrierIndex> latest_concurrent_access_barrer_index = Monostate{};
@@ -100,6 +116,7 @@ namespace daxa
         ResourceLifetime lifetime = {};
         ImageCreateFlags create_flags = ImageCreateFlagBits::NONE;
         ImageUsageFlags usage = ImageUsageFlagBits::NONE;
+        bool used_queue_concurrently = {};
         ImageId actual_image = {};
         usize allocation_offset = {};
         daxa::MemoryRequirements memory_requirements = {};
@@ -124,8 +141,15 @@ namespace daxa
 
     struct ImplTask
     {
-        std::unique_ptr<ITask> base_task = {};
-        std::vector<std::vector<ImageViewId>> image_view_cache = {};
+        OpaqueTaskPtr task_memory = {nullptr, [](void*){}};
+        OpaqueTaskCallback task_callback = [](void*, TaskInterface &){};
+        std::span<TaskAttachmentInfo> attachments = {};
+        u32 attachment_shader_blob_size = {};
+        u32 attachment_shader_blob_alignment = {};
+        TaskType task_type = {};
+        std::string_view name = {};
+        Queue queue = {};
+        std::span<std::span<ImageViewId>> image_view_cache = {};
         // Used to verify image view cache:
         std::vector<std::vector<ImageId>> runtime_images_last_execution = {};
     };
@@ -144,15 +168,29 @@ namespace daxa
         std::vector<usize> signal_split_barrier_indices = {};
     };
 
-    struct TaskBatchSubmitScope
+    struct QueueSubmitScope
     {
-        CommandSubmitInfo submit_info = {};
-        TaskSubmitInfo user_submit_info = {};
+        daxa::Queue queue = {};
         // These barriers are inserted after all batches and their sync.
         std::vector<usize> last_minute_barrier_indices = {};
         std::vector<TaskBatch> task_batches = {};
         std::vector<u64> used_swapchain_task_images = {};
         std::optional<ImplPresentInfo> present_info = {};
+    };
+
+    struct TaskBatchSubmitScope
+    {
+        CommandSubmitInfo submit_info = {};
+        TaskSubmitInfo user_submit_info = {};
+        std::array<QueueSubmitScope, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_submit_scopes = {
+            QueueSubmitScope{.queue = daxa::QUEUE_MAIN},
+            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_0},
+            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_1},
+            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_2},
+            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_3},
+            QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_0},
+            QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_1},  
+        };
     };
 
     auto task_image_access_to_layout_access(TaskAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>;
@@ -178,7 +216,7 @@ namespace daxa
         usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
-        void add_task(ImplTaskGraph & task_graph_impl, ImplTask & impl_task, TaskId task_id);
+        void add_task(ImplTaskGraph & task_graph_impl, ImplTask & impl_task, TaskId task_id, daxa::Queue queue);
         void submit(TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
@@ -261,7 +299,7 @@ namespace daxa
         };
         struct Transient
         {
-            // TODO: Add Transient Blas and Tlas
+            TaskAttachmentType type = {};
             TaskTransientBufferInfo info = {};
         };
         Variant<Persistent, Transient> task_buffer_data;
@@ -360,6 +398,9 @@ namespace daxa
         u32 unique_index = {};
 
         TaskGraphInfo info;
+
+        ImplTaskGraphMk2 mk2;
+
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
         std::vector<TaskGraphPermutation> permutations = {};
@@ -372,10 +413,13 @@ namespace daxa
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
         std::vector<TaskGraphPermutation *> record_active_permutations = {};
-        std::unordered_map<std::string, TaskBufferView> buffer_name_to_id = {};
-        std::unordered_map<std::string, TaskBlasView> blas_name_to_id = {};
-        std::unordered_map<std::string, TaskTlasView> tlas_name_to_id = {};
-        std::unordered_map<std::string, TaskImageView> image_name_to_id = {};
+        std::unordered_map<std::string_view, TaskBufferView> buffer_name_to_id = {};
+        std::unordered_map<std::string_view, TaskBlasView> blas_name_to_id = {};
+        std::unordered_map<std::string_view, TaskTlasView> tlas_name_to_id = {};
+        std::unordered_map<std::string_view, TaskImageView> image_name_to_id = {};
+
+        // Are executed in a pre-submission, before any actual task recording/submission.
+        std::vector<TaskBarrier> setup_task_barriers = {};
 
         usize memory_block_size = {};
         u32 memory_type_bits = 0xFFFFFFFFu;
@@ -392,6 +436,10 @@ namespace daxa
         bool executed_once = {};
         u32 prev_frame_permutation_index = {};
         std::stringstream debug_string_stream = {};
+
+        std::array<bool, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_used = {};
+        std::array<TimelineSemaphore, DAXA_MAX_TOTAL_QUEUE_COUNT> gpu_submit_timeline_semaphores = {};
+        std::array<u64, DAXA_MAX_TOTAL_QUEUE_COUNT> cpu_submit_timeline_values = {};
 
         template <typename TaskIdT>
         auto get_actual_buffer_blas_tlas(TaskIdT id, TaskGraphPermutation const & perm) const -> std::span<typename TaskIdT::ID_T const>
@@ -498,9 +546,9 @@ namespace daxa
         auto id_to_local_id(TaskImageView id) const -> TaskImageView;
         void update_active_permutations();
         void update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation);
-        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id);
+        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id, Queue queue);
         void insert_pre_batch_barriers(TaskGraphPermutation & permutation);
-        void create_transient_runtime_buffers(TaskGraphPermutation & permutation);
+        void create_transient_runtime_buffers_and_tlas(TaskGraphPermutation & permutation);
         void create_transient_runtime_images(TaskGraphPermutation & permutation);
         void allocate_transient_resources();
         void print_task_buffer_blas_tlas_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskGPUResourceView local_id);

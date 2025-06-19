@@ -1876,7 +1876,8 @@ namespace daxa
     {
         MAIN,
         COMPUTE,
-        TRANSFER
+        TRANSFER,
+        MAX_ENUM = 0x7fffffff,
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily family) -> std::string_view;

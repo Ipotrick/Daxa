@@ -28,6 +28,7 @@ struct Push
 #include <cstring>
 #include <utility>
 #include <algorithm>
+#include <iostream>
 
 void set_imgui_style()
 {
@@ -523,6 +524,7 @@ void main()
 #include <daxa/utils/pipeline_manager.hpp>
 #include <fstream>
 #include <format>
+#include <iostream>
 
 auto main() -> int
 {
