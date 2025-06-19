@@ -106,6 +106,21 @@ target_compile_features(daxa PUBLIC cxx_std_20)
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
 
+# Add option for dynamic loading
+option(DAXA_USE_DYNAMIC_VULKAN "Use dynamic loading for Vulkan functions" OFF)
+
+if(DAXA_USE_DYNAMIC_VULKAN)
+    message(STATUS "✓ Vulkan functions will be loaded dynamically")
+    add_definitions(-DVK_NO_PROTOTYPES)
+    add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
+    add_definitions(-DVMA_STATIC_VULKAN_FUNCTIONS=0)
+    add_definitions(-DDAXA_USE_DYNAMIC_VULKAN=1)
+else()
+    message(STATUS "✓ Vulkan functions will be loaded statically")
+    add_definitions(-DDAXA_USE_DYNAMIC_VULKAN=0)
+    target_link_libraries(daxa PRIVATE Vulkan::Vulkan)
+endif()
+
 include(GNUInstallDirs)
 
 target_compile_definitions(daxa
@@ -203,7 +218,6 @@ endif()
 target_link_libraries(daxa
     PRIVATE
     GPUOpen::VulkanMemoryAllocator
-    Vulkan::Vulkan
 )
 
 target_include_directories(daxa

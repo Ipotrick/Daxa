@@ -40,7 +40,8 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
 
     // Save supported present modes.
     u32 present_mode_count = {};
-    auto vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+    auto vk_result = VK_CALL_I(device->instance, 
+        vkGetPhysicalDeviceSurfacePresentModesKHR,
         ret.device->vk_physical_device,
         ret.vk_surface,
         &present_mode_count,
@@ -51,7 +52,8 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         return std::bit_cast<daxa_Result>(vk_result);
     }
     ret.supported_present_modes.resize(present_mode_count);
-    vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+    vk_result = VK_CALL_I(device->instance, 
+        vkGetPhysicalDeviceSurfacePresentModesKHR,
         device->vk_physical_device,
         ret.vk_surface,
         &present_mode_count,
@@ -64,7 +66,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
 
     // Format Selection:
     u32 format_count = 0;
-    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, nullptr);
+    vk_result = VK_CALL_I(device->instance, vkGetPhysicalDeviceSurfaceFormatsKHR, ret.device->vk_physical_device, ret.vk_surface, &format_count, nullptr);
     if (vk_result != VK_SUCCESS)
     {
         ret.full_cleanup();
@@ -72,7 +74,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     }
     std::vector<VkSurfaceFormatKHR> surface_formats;
     surface_formats.resize(format_count);
-    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, surface_formats.data());
+    vk_result = VK_CALL_I(device->instance, vkGetPhysicalDeviceSurfaceFormatsKHR, ret.device->vk_physical_device, ret.vk_surface, &format_count, surface_formats.data());
     if (vk_result != VK_SUCCESS)
     {
         ret.full_cleanup();
@@ -167,7 +169,7 @@ auto daxa_swp_resize(daxa_Swapchain self) -> daxa_Result
     auto result = self->recreate();
     if (result != DAXA_RESULT_SUCCESS)
     {
-        [[maybe_unused]] auto ignored = vkDeviceWaitIdle(self->device->vk_device);
+        [[maybe_unused]] auto ignored = VK_CALL_D(self->device, vkDeviceWaitIdle, self->device->vk_device);
         self->full_cleanup();
     }
     return result;
@@ -179,7 +181,7 @@ auto daxa_swp_set_present_mode(daxa_Swapchain self, VkPresentModeKHR present_mod
     auto result = self->recreate();
     if (result != DAXA_RESULT_SUCCESS)
     {
-        [[maybe_unused]] auto ignored = vkDeviceWaitIdle(self->device->vk_device);
+        [[maybe_unused]] auto ignored = VK_CALL_D(self->device, vkDeviceWaitIdle, self->device->vk_device);
         self->full_cleanup();
     }
     return result;
@@ -207,7 +209,8 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
     _DAXA_RETURN_IF_ERROR(result, result);
     self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % (self->info.max_allowed_frames_in_flight + 1);
     BinarySemaphore & acquire_semaphore = self->acquire_semaphores[self->acquire_semaphore_index];
-    result = static_cast<daxa_Result>(vkAcquireNextImageKHR(
+    result = static_cast<daxa_Result>(VK_CALL_D(self->device,
+        vkAcquireNextImageKHR,
         self->device->vk_device,
         self->vk_swapchain, UINT64_MAX,
         (**r_cast<daxa_BinarySemaphore *>(&acquire_semaphore)).vk_semaphore,
@@ -283,7 +286,8 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
     _DAXA_RETURN_IF_ERROR(result, result)
 
     VkSurfaceCapabilitiesKHR surface_capabilities;
-    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceCapabilitiesKHR(
+    result = static_cast<daxa_Result>(VK_CALL_I(this->device->instance,
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR,
         this->device->vk_physical_device,
         this->vk_surface,
         &surface_capabilities));
@@ -331,7 +335,8 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         .oldSwapchain = old_swapchain,
     };
 
-    result = static_cast<daxa_Result>(vkCreateSwapchainKHR(
+    result = static_cast<daxa_Result>(VK_CALL_D(this->device,
+        vkCreateSwapchainKHR,
         this->device->vk_device,
         &swapchain_create_info,
         nullptr,
@@ -344,7 +349,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         {
             if (this->vk_swapchain)
             {
-                vkDestroySwapchainKHR(this->device->vk_device, this->vk_swapchain, nullptr);
+                VK_CALL_D(this->device, vkDestroySwapchainKHR, this->device->vk_device, this->vk_swapchain, nullptr);
             }
             for (auto & image : this->images)
             {
@@ -358,11 +363,11 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
 
     u32 image_count = 0;
     std::vector<VkImage> swapchain_images = {};
-    result = static_cast<daxa_Result>(vkGetSwapchainImagesKHR(this->device->vk_device, vk_swapchain, &image_count, nullptr));
+    result = static_cast<daxa_Result>(VK_CALL_D(this->device, vkGetSwapchainImagesKHR, this->device->vk_device, vk_swapchain, &image_count, nullptr));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     swapchain_images.resize(image_count);
-    result = static_cast<daxa_Result>(vkGetSwapchainImagesKHR(this->device->vk_device, vk_swapchain, &image_count, swapchain_images.data()));
+    result = static_cast<daxa_Result>(VK_CALL_D(this->device, vkGetSwapchainImagesKHR, this->device->vk_device, vk_swapchain, &image_count, swapchain_images.data()));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     this->images.resize(image_count);
@@ -390,12 +395,12 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
             .objectHandle = std::bit_cast<u64>(this->vk_swapchain),
             .pObjectName = this->info_name.c_str(),
         };
-        this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &swapchain_name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, this->device->vk_device, &swapchain_name_info);
     }
 
     if (old_swapchain != VK_NULL_HANDLE)
     {
-        vkDestroySwapchainKHR(this->device->vk_device, old_swapchain, nullptr);
+        VK_CALL_D(this->device, vkDestroySwapchainKHR, this->device->vk_device, old_swapchain, nullptr);
     }
 
     return DAXA_RESULT_SUCCESS;
@@ -418,12 +423,12 @@ void daxa_ImplSwapchain::full_cleanup()
     if (this->vk_swapchain != VK_NULL_HANDLE)
     {
         // Due to wsi limitations we need to wait idle before destroying the swapchain.
-        vkDeviceWaitIdle(this->device->vk_device);
-        vkDestroySwapchainKHR(this->device->vk_device, this->vk_swapchain, nullptr);
+        VK_CALL_D(this->device, vkDeviceWaitIdle, this->device->vk_device);
+        VK_CALL_D(this->device, vkDestroySwapchainKHR, this->device->vk_device, this->vk_swapchain, nullptr);
     }
     if (this->vk_surface != VK_NULL_HANDLE)
     {
-        vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
+        VK_CALL_I(this->device->instance, vkDestroySurfaceKHR, this->device->instance->vk_instance, this->vk_surface, nullptr);
     }
     if (this->device != nullptr)
     {
@@ -440,7 +445,7 @@ auto daxa_ImplSwapchain::recreate_surface() -> daxa_Result
 {
     if (this->vk_surface != nullptr)
     {
-        vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
+        VK_CALL_I(this->device->instance, vkDestroySurfaceKHR, this->device->instance->vk_instance, this->vk_surface, nullptr);
     }
     return create_surface(
         this->device->instance,

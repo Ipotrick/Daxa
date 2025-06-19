@@ -1,5 +1,3 @@
-#include "impl_device.hpp"
-
 #include <utility>
 #include <functional>
 #include "impl_features.hpp"
@@ -70,7 +68,7 @@ namespace
     }
 } // namespace
 
-auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::initialize(daxa_Device device) -> daxa_Result
 {
     VkSemaphoreTypeCreateInfo timeline_ci{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -85,7 +83,9 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
         .flags = {},
     };
 
-    vkGetDeviceQueue(vk_device, vk_queue_family_index, queue_index, &this->vk_queue);
+    auto vk_device = device->vk_device;
+
+    VK_CALL_D(device, vkGetDeviceQueue, vk_device, vk_queue_family_index, queue_index, &this->vk_queue);
     daxa_Result result = DAXA_RESULT_SUCCESS;
     if (this->vk_queue == VK_NULL_HANDLE)
     {
@@ -93,26 +93,26 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    result = static_cast<daxa_Result>(vkCreateSemaphore(vk_device, &vk_semaphore_create_info, nullptr, &this->gpu_queue_local_timeline));
+    result = static_cast<daxa_Result>(VK_CALL_D(device, vkCreateSemaphore, vk_device, &vk_semaphore_create_info, nullptr, &this->gpu_queue_local_timeline));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     return result;
 }
 
-void daxa_ImplDevice::ImplQueue::cleanup(VkDevice device)
+void daxa_ImplDevice::ImplQueue::cleanup(daxa_Device device)
 {
     if (this->gpu_queue_local_timeline)
     {
-        vkDestroySemaphore(device, this->gpu_queue_local_timeline, nullptr);
+        VK_CALL_D(device, vkDestroySemaphore, device->vk_device, this->gpu_queue_local_timeline, nullptr);
     }
 }
 
-auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit(VkDevice vk_device, std::optional<u64> & out) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit(daxa_Device device, std::optional<u64> & out) -> daxa_Result
 {
     if (this->gpu_queue_local_timeline)
     {
         u64 latest_gpu = {};
-        auto result = static_cast<daxa_Result>(vkGetSemaphoreCounterValue(vk_device, this->gpu_queue_local_timeline, &latest_gpu));
+        auto result = static_cast<daxa_Result>(VK_CALL_D(device, vkGetSemaphoreCounterValue, device->vk_device, this->gpu_queue_local_timeline, &latest_gpu));
         _DAXA_RETURN_IF_ERROR(result, result);
 
         u64 latest_cpu = this->latest_pending_submit_timeline_value.load(std::memory_order::acquire);
@@ -158,7 +158,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             self->gpu_sro_table.buffer_slots.unsafe_destroy_zombie_slot(id);
             if (ret.vk_buffer)
             {
-                vkDestroyBuffer(self->vk_device, ret.vk_buffer, nullptr);
+                VK_CALL_D(self, vkDestroyBuffer, self->vk_device, ret.vk_buffer, nullptr);
             }
         }
     };
@@ -215,7 +215,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
         ret.opt_memory_block = opt_memory_block;
         opt_memory_block->inc_weak_refcnt();
 
-        result = static_cast<daxa_Result>(vkCreateBuffer(self->vk_device, &vk_buffer_create_info, nullptr, &ret.vk_buffer));
+        result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateBuffer, self->vk_device, &vk_buffer_create_info, nullptr, &ret.vk_buffer));
         _DAXA_RETURN_IF_ERROR(result, result)
 
         result = static_cast<daxa_Result>(vmaBindBufferMemory2(
@@ -233,7 +233,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
         .buffer = ret.vk_buffer,
     };
 
-    ret.device_address = vkGetBufferDeviceAddress(self->vk_device, &vk_buffer_device_address_info);
+    ret.device_address = VK_CALL_D(self, vkGetBufferDeviceAddress,self->vk_device, &vk_buffer_device_address_info);
 
     ret.host_address = host_accessible ? vma_allocation_info.pMappedData : nullptr;
 
@@ -250,14 +250,14 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_buffer),
             .pObjectName = c_str_arr.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &buffer_name_info);
     }
 
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_buffer(
-            self->vk_device,
+            self,
             self->gpu_sro_table.vk_descriptor_set, ret.vk_buffer,
             0,
             static_cast<VkDeviceSize>(ret.info.size),
@@ -298,7 +298,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             }
             if (ret.view_slot.vk_image_view)
             {
-                vkDestroyImageView(self->vk_device, ret.view_slot.vk_image_view, nullptr);
+                VK_CALL_D(self, vkDestroyImageView, self->vk_device, ret.view_slot.vk_image_view, nullptr);
             }
         }
     };
@@ -367,7 +367,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_IMAGE);
 
         vk_image_view_create_info.image = ret.vk_image;
-        result = static_cast<daxa_Result>(vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
+        result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateImageView, self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW);
     }
     else
@@ -376,7 +376,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         ret.opt_memory_block = opt_memory_block;
         opt_memory_block->inc_weak_refcnt();
         // TODO(pahrens): Add validation for memory requirements.
-        result = static_cast<daxa_Result>(vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image));
+        result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateImage, self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_IMAGE);
 
         result = static_cast<daxa_Result>(vmaBindImageMemory2(
@@ -388,7 +388,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         _DAXA_RETURN_IF_ERROR(result, result);
 
         vk_image_view_create_info.image = ret.vk_image;
-        result = static_cast<daxa_Result>(vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
+        result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateImageView, self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW);
     }
 
@@ -402,7 +402,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_image),
             .pObjectName = c_str_arr.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &swapchain_image_name_info);
 
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -411,14 +411,14 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             .objectHandle = std::bit_cast<uint64_t>(ret.view_slot.vk_image_view),
             .pObjectName = c_str_arr.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_view_name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &swapchain_image_view_name_info);
     }
 
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(
-            self->vk_device,
+            self,
             self->gpu_sro_table.vk_descriptor_set,
             ret.view_slot.vk_image_view,
             std::bit_cast<ImageUsageFlags>(ret.info.usage),
@@ -508,7 +508,12 @@ auto create_acceleration_structure_helper(
         .type = vk_as_type,
         .deviceAddress = {},
     };
-    result = static_cast<daxa_Result>(self->vkCreateAccelerationStructureKHR(self->vk_device, &vk_create_info, nullptr, &ret.vk_acceleration_structure));
+    result = static_cast<daxa_Result>(VK_CALL_D_EXT(self, 
+        vkCreateAccelerationStructureKHR, 
+        self->vk_device, 
+        &vk_create_info, 
+        nullptr, 
+        &ret.vk_acceleration_structure));
     _DAXA_RETURN_IF_ERROR(result, result);
 
     auto vk_acceleration_structure_device_address_info_khr = VkAccelerationStructureDeviceAddressInfoKHR{
@@ -516,7 +521,8 @@ auto create_acceleration_structure_helper(
         .pNext = nullptr,
         .accelerationStructure = ret.vk_acceleration_structure,
     };
-    ret.device_address = self->vkGetAccelerationStructureDeviceAddressKHR(
+    ret.device_address = VK_CALL_D_EXT(self,
+        vkGetAccelerationStructureDeviceAddressKHR,
         self->vk_device,
         &vk_acceleration_structure_device_address_info_khr);
 
@@ -530,7 +536,7 @@ auto create_acceleration_structure_helper(
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_acceleration_structure),
             .pObjectName = c_str_arr.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &swapchain_image_name_info);
     }
 
     if (vk_as_type == VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR)
@@ -538,7 +544,7 @@ auto create_acceleration_structure_helper(
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_acceleration_structure(
-            self->vk_device,
+            self,
             self->gpu_sro_table.vk_descriptor_set,
             ret.vk_acceleration_structure,
             id.index);
@@ -783,7 +789,7 @@ auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const
         .pNext = {},
         .memoryRequirements = {},
     };
-    vkGetDeviceBufferMemoryRequirements(self->vk_device, &buffer_requirement_info, &mem_requirements);
+    VK_CALL_D(self, vkGetDeviceBufferMemoryRequirements, self->vk_device, &buffer_requirement_info, &mem_requirements);
     // MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
     return mem_requirements.memoryRequirements;
 }
@@ -802,7 +808,7 @@ auto daxa_dvc_image_memory_requirements(daxa_Device self, daxa_ImageInfo const *
         .pNext = {},
         .memoryRequirements = {},
     };
-    vkGetDeviceImageMemoryRequirements(self->vk_device, &image_requirement_info, &mem_requirements);
+    VK_CALL_D(self, vkGetDeviceImageMemoryRequirements, self->vk_device, &image_requirement_info, &mem_requirements);
     return mem_requirements.memoryRequirements;
 }
 
@@ -834,7 +840,8 @@ auto daxa_dvc_get_tlas_build_sizes(
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
         .pNext = nullptr,
     };
-    self->vkGetAccelerationStructureBuildSizesKHR(
+    VK_CALL_D_EXT(self,
+        vkGetAccelerationStructureBuildSizesKHR,
         self->vk_device,
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
         vk_build_geometry_infos.data(),
@@ -874,7 +881,7 @@ auto daxa_dvc_get_blas_build_sizes(
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
         .pNext = nullptr,
     };
-    self->vkGetAccelerationStructureBuildSizesKHR(
+    VK_CALL_D_EXT(self, vkGetAccelerationStructureBuildSizesKHR,
         self->vk_device,
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
         vk_build_geometry_infos.data(),
@@ -971,7 +978,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
             self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
             if (image_slot.view_slot.vk_image_view)
             {
-                vkDestroyImageView(self->vk_device, image_slot.view_slot.vk_image_view, nullptr);
+                VK_CALL_D(self, vkDestroyImageView, self->vk_device, image_slot.view_slot.vk_image_view, nullptr);
             }
         }
     };
@@ -1016,7 +1023,7 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
         },
         .subresourceRange = make_subresource_range(slice, parent_image_slot.aspect_flags),
     };
-    result = static_cast<daxa_Result>(vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateImageView, self->vk_device, &vk_image_view_create_info, nullptr, &ret.vk_image_view));
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW);
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
@@ -1028,14 +1035,14 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_image_view),
             .pObjectName = c_str_arr.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &name_info);
     }
 
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(
-            self->vk_device,
+            self,
             self->gpu_sro_table.vk_descriptor_set,
             ret.vk_image_view,
             std::bit_cast<ImageUsageFlags>(parent_image_slot.info.usage),
@@ -1069,7 +1076,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
             self->gpu_sro_table.sampler_slots.unsafe_destroy_zombie_slot(id);
             if (ret.vk_sampler)
             {
-                vkDestroySampler(self->vk_device, ret.vk_sampler, nullptr);
+                VK_CALL_D(self, vkDestroySampler, self->vk_device, ret.vk_sampler, nullptr);
             }
         }
     };
@@ -1103,7 +1110,7 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
         .unnormalizedCoordinates = static_cast<VkBool32>(ret.info.enable_unnormalized_coordinates),
     };
 
-    result = static_cast<daxa_Result>(vkCreateSampler(self->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateSampler, self->vk_device, &vk_sampler_create_info, nullptr, &ret.vk_sampler));
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_SAMPLER)
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
@@ -1116,13 +1123,13 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_sampler),
             .pObjectName = c_str_arr.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &sampler_name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &sampler_name_info);
     }
 
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
-        write_descriptor_set_sampler(self->vk_device, self->gpu_sro_table.vk_descriptor_set, ret.vk_sampler, id.index);
+        write_descriptor_set_sampler(self, self->gpu_sro_table.vk_descriptor_set, ret.vk_sampler, id.index);
     }
     *out_id = std::bit_cast<daxa_SamplerId>(id);
     return result;
@@ -1234,7 +1241,7 @@ auto daxa_dvc_get_vk_physical_device(daxa_Device self) -> VkPhysicalDevice
 
 auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 {
-    return std::bit_cast<daxa_Result>(vkDeviceWaitIdle(self->vk_device));
+    return std::bit_cast<daxa_Result>(VK_CALL_D(self, vkDeviceWaitIdle, self->vk_device));
 }
 
 auto daxa_dvc_queue_wait_idle(daxa_Device self, daxa_Queue queue) -> daxa_Result
@@ -1247,7 +1254,7 @@ auto daxa_dvc_queue_wait_idle(daxa_Device self, daxa_Queue queue) -> daxa_Result
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
-    return std::bit_cast<daxa_Result>(vkQueueWaitIdle(self->get_queue(queue).vk_queue));
+    return std::bit_cast<daxa_Result>(VK_CALL_D(self, vkQueueWaitIdle, self->get_queue(queue).vk_queue));
 }
 
 auto daxa_dvc_queue_count(daxa_Device self, daxa_QueueFamily queue_family, u32 * out_value) -> daxa_Result
@@ -1383,7 +1390,7 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
         .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signals.size()),
         .pSignalSemaphores = submit_semaphore_signals.data(),
     };
-    auto result = static_cast<daxa_Result>(vkQueueSubmit(queue.vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE));
+    auto result = static_cast<daxa_Result>(VK_CALL_D(self, vkQueueSubmit, queue.vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     std::unique_lock const lock{self->zombies_mtx};
@@ -1420,7 +1427,7 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
         .pResults = {},
     };
 
-    auto result = static_cast<daxa_Result>(vkQueuePresentKHR(self->get_queue(info->queue).vk_queue, &present_info));
+    auto result = static_cast<daxa_Result>(VK_CALL_D(self, vkQueuePresentKHR, self->get_queue(info->queue).vk_queue, &present_info));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     return std::bit_cast<daxa_Result>(result);
@@ -1435,7 +1442,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
     for (auto & queue : self->queues)
     {
         std::optional<u64> latest_pending_submit = {};
-        auto result = queue.get_oldest_pending_submit(self->vk_device, latest_pending_submit);
+        auto result = queue.get_oldest_pending_submit(self, latest_pending_submit);
         _DAXA_RETURN_IF_ERROR(result, result)
 
         if (latest_pending_submit.has_value())
@@ -1499,25 +1506,25 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
         self->pipeline_zombies,
         [&](auto & pipeline_zombie)
         {
-            vkDestroyPipeline(self->vk_device, pipeline_zombie.vk_pipeline, nullptr);
+            VK_CALL_D(self, vkDestroyPipeline, self->vk_device, pipeline_zombie.vk_pipeline, nullptr);
         });
     check_and_cleanup_gpu_resources(
         self->semaphore_zombies,
         [&](auto & semaphore_zombie)
         {
-            vkDestroySemaphore(self->vk_device, semaphore_zombie.vk_semaphore, nullptr);
+            VK_CALL_D(self, vkDestroySemaphore, self->vk_device, semaphore_zombie.vk_semaphore, nullptr);
         });
     check_and_cleanup_gpu_resources(
         self->split_barrier_zombies,
         [&](auto & split_barrier_zombie)
         {
-            vkDestroyEvent(self->vk_device, split_barrier_zombie.vk_event, nullptr);
+            VK_CALL_D(self, vkDestroyEvent, self->vk_device, split_barrier_zombie.vk_event, nullptr);
         });
     check_and_cleanup_gpu_resources(
         self->timeline_query_pool_zombies,
         [&](auto & timeline_query_pool_zombie)
         {
-            vkDestroyQueryPool(self->vk_device, timeline_query_pool_zombie.vk_timeline_query_pool, nullptr);
+            VK_CALL_D(self, vkDestroyQueryPool, self->vk_device, timeline_query_pool_zombie.vk_timeline_query_pool, nullptr);
         });
     check_and_cleanup_gpu_resources(
         self->memory_block_zombies,
@@ -1539,8 +1546,8 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
                 break;
             }
 
-            vkFreeCommandBuffers(self->vk_device, zombie.vk_cmd_pool, static_cast<u32>(zombie.allocated_command_buffers.size()), zombie.allocated_command_buffers.data());
-            auto result = static_cast<daxa_Result>(vkResetCommandPool(self->vk_device, zombie.vk_cmd_pool, {}));
+            VK_CALL_D(self, vkFreeCommandBuffers, self->vk_device, zombie.vk_cmd_pool, static_cast<u32>(zombie.allocated_command_buffers.size()), zombie.allocated_command_buffers.data());
+            auto result = static_cast<daxa_Result>(VK_CALL_D(self, vkResetCommandPool, self->vk_device, zombie.vk_cmd_pool, {}));
             _DAXA_RETURN_IF_ERROR(result, result)
 
             self->command_pool_pools[zombie.queue_family].put_back(zombie.vk_cmd_pool);
@@ -1621,9 +1628,9 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     {
         u32 queue_family_props_count = 0;
         std::vector<VkQueueFamilyProperties> queue_props;
-        vkGetPhysicalDeviceQueueFamilyProperties(self->vk_physical_device, &queue_family_props_count, nullptr);
+        VK_CALL_I(instance, vkGetPhysicalDeviceQueueFamilyProperties, self->vk_physical_device, &queue_family_props_count, nullptr);
         queue_props.resize(queue_family_props_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(self->vk_physical_device, &queue_family_props_count, queue_props.data());
+        VK_CALL_I(instance, vkGetPhysicalDeviceQueueFamilyProperties, self->vk_physical_device, &queue_family_props_count, queue_props.data());
         std::vector<VkBool32> supports_present;
         supports_present.resize(queue_family_props_count);
 
@@ -1702,15 +1709,21 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         .ppEnabledExtensionNames = physical_device.extensions.extension_name_list,
         .pEnabledFeatures = nullptr,
     };
-    result = static_cast<daxa_Result>(vkCreateDevice(self->vk_physical_device, &device_ci, nullptr, &self->vk_device));
+    result = static_cast<daxa_Result>(VK_CALL_I(instance, vkCreateDevice, self->vk_physical_device, &device_ci, nullptr, &self->vk_device));
     _DAXA_RETURN_IF_ERROR(result, result)
     defer
     {
         if (result != DAXA_RESULT_SUCCESS && self->vk_device)
         {
-            vkDestroyDevice(self->vk_device, nullptr);
+            VK_CALL_I(instance, vkDestroyDevice, self->vk_device, nullptr);
         }
     };
+
+    // Load device functions
+    if (!self->load_device_functions())
+    {
+        return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+    }
 
     // Queue initialization:
     defer
@@ -1719,7 +1732,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         {
             for (auto & queue : self->queues)
             {
-                queue.cleanup(self->vk_device);
+                queue.cleanup(self);
             }
         }
     };
@@ -1731,48 +1744,8 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         }
         auto const vk_queue_family = self->queue_families[self->queues[i].family].vk_index;
         self->queues[i].vk_queue_family_index = vk_queue_family;
-        result = self->queues[i].initialize(self->vk_device);
+        result = self->queues[i].initialize(self);
         _DAXA_RETURN_IF_ERROR(result, result)
-    }
-
-    // Query ext function pointers
-    {
-        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3)
-        {
-            self->vkCmdSetRasterizationSamplesEXT = r_cast<PFN_vkCmdSetRasterizationSamplesEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdSetRasterizationSamplesEXT"));
-        }
-
-        if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
-        {
-            self->vkSetDebugUtilsObjectNameEXT = r_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(self->vk_device, "vkSetDebugUtilsObjectNameEXT"));
-            self->vkCmdBeginDebugUtilsLabelEXT = r_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
-            self->vkCmdEndDebugUtilsLabelEXT = r_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
-        }
-
-        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
-        {
-            self->vkCmdDrawMeshTasksEXT = r_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksEXT"));
-            self->vkCmdDrawMeshTasksIndirectEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
-            self->vkCmdDrawMeshTasksIndirectCountEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
-        }
-
-        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
-        {
-            self->vkGetAccelerationStructureBuildSizesKHR = r_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetAccelerationStructureBuildSizesKHR"));
-            self->vkCreateAccelerationStructureKHR = r_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCreateAccelerationStructureKHR"));
-            self->vkDestroyAccelerationStructureKHR = r_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(self->vk_device, "vkDestroyAccelerationStructureKHR"));
-            self->vkCmdWriteAccelerationStructuresPropertiesKHR = r_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdWriteAccelerationStructuresPropertiesKHR"));
-            self->vkCmdBuildAccelerationStructuresKHR = r_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBuildAccelerationStructuresKHR"));
-            self->vkGetAccelerationStructureDeviceAddressKHR = r_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetAccelerationStructureDeviceAddressKHR"));
-        }
-
-        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
-        {
-            self->vkCreateRayTracingPipelinesKHR = r_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCreateRayTracingPipelinesKHR"));
-            self->vkCmdTraceRaysKHR = r_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdTraceRaysKHR"));
-            self->vkCmdTraceRaysIndirectKHR = r_cast<PFN_vkCmdTraceRaysIndirectKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdTraceRaysIndirectKHR"));
-            self->vkGetRayTracingShaderGroupHandlesKHR = r_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetRayTracingShaderGroupHandlesKHR"));
-        }
     }
 
     VkCommandPool init_cmd_pool = {};
@@ -1784,14 +1757,14 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         .queueFamilyIndex = self->get_queue(DAXA_QUEUE_MAIN).vk_queue_family_index,
     };
 
-    result = static_cast<daxa_Result>(vkCreateCommandPool(self->vk_device, &vk_command_pool_create_info, nullptr, &init_cmd_pool));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateCommandPool, self->vk_device, &vk_command_pool_create_info, nullptr, &init_cmd_pool));
     _DAXA_RETURN_IF_ERROR(result, result)
     defer
     {
         // Should always be destroyed at end of function!
         if (init_cmd_pool)
         {
-            vkDestroyCommandPool(self->vk_device, init_cmd_pool, nullptr);
+            VK_CALL_D(self, vkDestroyCommandPool, self->vk_device, init_cmd_pool, nullptr);
         }
     };
 
@@ -1803,7 +1776,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         .commandBufferCount = 1,
     };
 
-    result = static_cast<daxa_Result>(vkAllocateCommandBuffers(self->vk_device, &vk_command_buffer_allocate_info, &init_cmd_buffer));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkAllocateCommandBuffers, self->vk_device, &vk_command_buffer_allocate_info, &init_cmd_buffer));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     VkCommandBufferBeginInfo const vk_command_buffer_begin_info{
@@ -1812,12 +1785,12 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         .pInheritanceInfo = {},
     };
-    result = static_cast<daxa_Result>(vkBeginCommandBuffer(init_cmd_buffer, &vk_command_buffer_begin_info));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkBeginCommandBuffer, init_cmd_buffer, &vk_command_buffer_begin_info));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     VmaVulkanFunctions const vma_vulkan_functions{
-        .vkGetInstanceProcAddr = vkGetInstanceProcAddr,
-        .vkGetDeviceProcAddr = vkGetDeviceProcAddr,
+        .vkGetInstanceProcAddr = VK_GET_INSTANCE_PROC_ADDR(instance),
+        .vkGetDeviceProcAddr = VK_GET_DEVICE_PROC_ADDR(instance),
         .vkGetPhysicalDeviceProperties = {},
         .vkGetPhysicalDeviceMemoryProperties = {},
         .vkAllocateMemory = {},
@@ -1888,11 +1861,11 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             }
             if (self->vk_null_image_view)
             {
-                vkDestroyImageView(self->vk_device, self->vk_null_image_view, nullptr);
+                VK_CALL_D(self, vkDestroyImageView, self->vk_device, self->vk_null_image_view, nullptr);
             }
             if (self->vk_null_sampler)
             {
-                vkDestroySampler(self->vk_device, self->vk_null_sampler, nullptr);
+                VK_CALL_D(self, vkDestroySampler, self->vk_device, self->vk_null_sampler, nullptr);
             }
             if (self->buffer_device_address_buffer)
             {
@@ -1946,7 +1919,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
                 .objectHandle = std::bit_cast<uint64_t>(self->vk_null_buffer),
                 .pObjectName = "daxa null_buffer",
             };
-            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
+            VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &buffer_name_info);
         }
 
         *static_cast<decltype(buffer_data) *>(vma_allocation_info.pMappedData) = buffer_data;
@@ -1988,7 +1961,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
                 .objectHandle = std::bit_cast<uint64_t>(self->vk_null_image),
                 .pObjectName = "daxa null_image",
             };
-            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &image_name_info);
+            VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &image_name_info);
         }
 
         VkImageViewCreateInfo const vk_image_view_create_info{
@@ -2013,7 +1986,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             },
         };
 
-        result = static_cast<daxa_Result>(vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &self->vk_null_image_view));
+        result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateImageView, self->vk_device, &vk_image_view_create_info, nullptr, &self->vk_null_image_view));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_NULL_IMAGE_VIEW)
 
         if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
@@ -2025,7 +1998,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
                 .objectHandle = std::bit_cast<uint64_t>(self->vk_null_image_view),
                 .pObjectName = "daxa null_image_view",
             };
-            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &image_name_info);
+            VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &image_name_info);
         }
 
         VkImageMemoryBarrier vk_image_mem_barrier = {
@@ -2046,7 +2019,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
                 .layerCount = 1,
             },
         };
-        vkCmdPipelineBarrier(init_cmd_buffer, VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, {}, {}, {}, {}, {}, 1, &vk_image_mem_barrier);
+        VK_CALL_D(self, vkCmdPipelineBarrier, init_cmd_buffer, VK_PIPELINE_STAGE_HOST_BIT | VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, {}, {}, {}, {}, {}, 1, &vk_image_mem_barrier);
         VkBufferImageCopy const vk_buffer_image_copy{
             .bufferOffset = 0u,
             .bufferRowLength = 0u,
@@ -2060,14 +2033,14 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .imageOffset = VkOffset3D{0, 0, 0},
             .imageExtent = VkExtent3D{1, 1, 1},
         };
-        vkCmdCopyBufferToImage(init_cmd_buffer, self->vk_null_buffer, self->vk_null_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &vk_buffer_image_copy);
+        VK_CALL_D(self, vkCmdCopyBufferToImage, init_cmd_buffer, self->vk_null_buffer, self->vk_null_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &vk_buffer_image_copy);
         vk_image_mem_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
         vk_image_mem_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
         vk_image_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
         vk_image_mem_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL,
         vk_image_mem_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         vk_image_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        vkCmdPipelineBarrier(init_cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, {}, {}, {}, {}, {}, 1, &vk_image_mem_barrier);
+        VK_CALL_D(self, vkCmdPipelineBarrier, init_cmd_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, {}, {}, {}, {}, {}, 1, &vk_image_mem_barrier);
 
         VkSamplerCreateInfo const vk_sampler_create_info{
             .sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -2089,7 +2062,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_BLACK,
             .unnormalizedCoordinates = VK_FALSE,
         };
-        result = static_cast<daxa_Result>(vkCreateSampler(self->vk_device, &vk_sampler_create_info, nullptr, &self->vk_null_sampler));
+        result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateSampler, self->vk_device, &vk_sampler_create_info, nullptr, &self->vk_null_sampler));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_NULL_SAMPLER)
 
         if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
@@ -2101,7 +2074,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
                 .objectHandle = std::bit_cast<uint64_t>(self->vk_null_sampler),
                 .pObjectName = "daxa null_sampler",
             };
-            self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &sampler_name_info);
+            VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &sampler_name_info);
         }
 
         VkBufferUsageFlags const usage_flags =
@@ -2148,7 +2121,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .objectHandle = std::bit_cast<uint64_t>(self->vk_device),
             .pObjectName = device_name.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &device_name_info);
 
         auto const buffer_name = self->info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const device_buffer_device_address_buffer_name_info{
@@ -2158,7 +2131,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .objectHandle = std::bit_cast<uint64_t>(self->buffer_device_address_buffer),
             .pObjectName = buffer_name.data(),
         };
-        self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_buffer_device_address_buffer_name_info);
+        VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &device_buffer_device_address_buffer_name_info);
 
         for (auto & queue : self->queues)
         {
@@ -2174,7 +2147,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
                     .objectHandle = std::bit_cast<uint64_t>(queue.vk_queue),
                     .pObjectName = name.data(),
                 };
-                self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &queue_name_info);
+                VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &queue_name_info);
 
                 std::string timeline_name = {"[DAXA DEVICE] Queue timeline semaphore "};
                 timeline_name += to_string(static_cast<QueueFamily>(queue.family));
@@ -2186,7 +2159,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
                     .objectHandle = std::bit_cast<uint64_t>(queue.gpu_queue_local_timeline),
                     .pObjectName = timeline_name.data(),
                 };
-                self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &timeline_semaphore_name_info);
+                VK_CALL_D_EXT(self, vkSetDebugUtilsObjectNameEXT, self->vk_device, &timeline_semaphore_name_info);
             }
         }
     }
@@ -2196,12 +2169,12 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         self->info.max_allowed_images,
         self->info.max_allowed_samplers,
         (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) ? self->info.max_allowed_acceleration_structures : (~0u),
-        self->vk_device,
+        self,
         self->buffer_device_address_buffer,
         self->vkSetDebugUtilsObjectNameEXT);
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
 
-    result = static_cast<daxa_Result>(vkEndCommandBuffer(init_cmd_buffer));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkEndCommandBuffer, init_cmd_buffer));
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
 
     // Submit initial commands to set up the daxa device.
@@ -2217,14 +2190,183 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         .signalSemaphoreCount = {},
         .pSignalSemaphores = {},
     };
-    result = static_cast<daxa_Result>(vkQueueSubmit(self->get_queue(DAXA_QUEUE_MAIN).vk_queue, 1, &init_submit, {}));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkQueueSubmit, self->get_queue(DAXA_QUEUE_MAIN).vk_queue, 1, &init_submit, {}));
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
 
     // Wait for commands in from the init cmd list to complete.
-    result = static_cast<daxa_Result>(vkDeviceWaitIdle(self->vk_device));
+    result = static_cast<daxa_Result>(VK_CALL_D(self, vkDeviceWaitIdle, self->vk_device));
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
 
     return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_ImplDevice::load_device_functions() -> bool 
+{
+#if DAXA_USE_DYNAMIC_VULKAN
+    if (!vk_device || !instance->vkGetDeviceProcAddr) {
+        return false;
+    }
+
+    auto vkGetDeviceProcAddr = instance->vkGetDeviceProcAddr;
+    // Load device functions
+    vkGetDeviceQueue = r_cast<PFN_vkGetDeviceQueue>(vkGetDeviceProcAddr(vk_device, "vkGetDeviceQueue"));
+    vkCreateCommandPool = r_cast<PFN_vkCreateCommandPool>(vkGetDeviceProcAddr(vk_device, "vkCreateCommandPool"));
+    vkDestroyCommandPool = r_cast<PFN_vkDestroyCommandPool>(vkGetDeviceProcAddr(vk_device, "vkDestroyCommandPool"));
+    vkAllocateCommandBuffers = r_cast<PFN_vkAllocateCommandBuffers>(vkGetDeviceProcAddr(vk_device, "vkAllocateCommandBuffers"));
+    vkFreeCommandBuffers = r_cast<PFN_vkFreeCommandBuffers>(vkGetDeviceProcAddr(vk_device, "vkFreeCommandBuffers"));
+    vkBeginCommandBuffer = r_cast<PFN_vkBeginCommandBuffer>(vkGetDeviceProcAddr(vk_device, "vkBeginCommandBuffer"));
+    vkEndCommandBuffer = r_cast<PFN_vkEndCommandBuffer>(vkGetDeviceProcAddr(vk_device, "vkEndCommandBuffer"));
+    vkResetCommandBuffer = r_cast<PFN_vkResetCommandBuffer>(vkGetDeviceProcAddr(vk_device, "vkResetCommandBuffer"));
+    vkCmdBeginRenderPass = r_cast<PFN_vkCmdBeginRenderPass>(vkGetDeviceProcAddr(vk_device, "vkCmdBeginRenderPass"));
+    vkCmdEndRenderPass = r_cast<PFN_vkCmdEndRenderPass>(vkGetDeviceProcAddr(vk_device, "vkCmdEndRenderPass"));
+    vkCmdBindPipeline = r_cast<PFN_vkCmdBindPipeline>(vkGetDeviceProcAddr(vk_device, "vkCmdBindPipeline"));
+    vkCmdSetViewport = r_cast<PFN_vkCmdSetViewport>(vkGetDeviceProcAddr(vk_device, "vkCmdSetViewport"));
+    vkCmdSetScissor = r_cast<PFN_vkCmdSetScissor>(vkGetDeviceProcAddr(vk_device, "vkCmdSetScissor"));
+    vkCmdDraw = r_cast<PFN_vkCmdDraw>(vkGetDeviceProcAddr(vk_device, "vkCmdDraw"));
+    vkCmdDrawIndexed = r_cast<PFN_vkCmdDrawIndexed>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawIndexed"));
+    vkCmdDrawIndirect = r_cast<PFN_vkCmdDrawIndirect>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawIndirect"));
+    vkCmdDrawIndexedIndirect = r_cast<PFN_vkCmdDrawIndexedIndirect>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawIndexedIndirect"));
+    vkCmdDrawIndirectCount = r_cast<PFN_vkCmdDrawIndirectCount>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawIndirectCount"));
+    vkCmdDrawIndexedIndirectCount = r_cast<PFN_vkCmdDrawIndexedIndirectCount>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawIndexedIndirectCount"));
+    vkCmdDispatch = r_cast<PFN_vkCmdDispatch>(vkGetDeviceProcAddr(vk_device, "vkCmdDispatch"));
+    vkCmdDispatchIndirect = r_cast<PFN_vkCmdDispatchIndirect>(vkGetDeviceProcAddr(vk_device, "vkCmdDispatchIndirect"));
+    vkCmdCopyBuffer = r_cast<PFN_vkCmdCopyBuffer>(vkGetDeviceProcAddr(vk_device, "vkCmdCopyBuffer"));
+    vkCmdCopyImage = r_cast<PFN_vkCmdCopyImage>(vkGetDeviceProcAddr(vk_device, "vkCmdCopyImage"));
+    vkCmdBlitImage = r_cast<PFN_vkCmdBlitImage>(vkGetDeviceProcAddr(vk_device, "vkCmdBlitImage"));
+    vkCmdCopyBufferToImage = r_cast<PFN_vkCmdCopyBufferToImage>(vkGetDeviceProcAddr(vk_device, "vkCmdCopyBufferToImage"));
+    vkCmdCopyImageToBuffer = r_cast<PFN_vkCmdCopyImageToBuffer>(vkGetDeviceProcAddr(vk_device, "vkCmdCopyImageToBuffer"));
+    vkCmdUpdateBuffer = r_cast<PFN_vkCmdUpdateBuffer>(vkGetDeviceProcAddr(vk_device, "vkCmdUpdateBuffer"));
+    vkCmdFillBuffer = r_cast<PFN_vkCmdFillBuffer>(vkGetDeviceProcAddr(vk_device, "vkCmdFillBuffer"));
+    vkCmdClearColorImage = r_cast<PFN_vkCmdClearColorImage>(vkGetDeviceProcAddr(vk_device, "vkCmdClearColorImage"));
+    vkCmdClearDepthStencilImage = r_cast<PFN_vkCmdClearDepthStencilImage>(vkGetDeviceProcAddr(vk_device, "vkCmdClearDepthStencilImage"));
+    vkCmdResolveImage = r_cast<PFN_vkCmdResolveImage>(vkGetDeviceProcAddr(vk_device, "vkCmdResolveImage"));
+    vkCmdSetEvent = r_cast<PFN_vkCmdSetEvent>(vkGetDeviceProcAddr(vk_device, "vkCmdSetEvent"));
+    vkCmdResetEvent = r_cast<PFN_vkCmdResetEvent>(vkGetDeviceProcAddr(vk_device, "vkCmdResetEvent"));
+    vkCmdWaitEvents2 = r_cast<PFN_vkCmdWaitEvents2>(vkGetDeviceProcAddr(vk_device, "vkCmdWaitEvents2"));
+    vkCmdPipelineBarrier = r_cast<PFN_vkCmdPipelineBarrier>(vkGetDeviceProcAddr(vk_device, "vkCmdPipelineBarrier"));
+    vkCmdPushConstants = r_cast<PFN_vkCmdPushConstants>(vkGetDeviceProcAddr(vk_device, "vkCmdPushConstants"));
+    vkCmdBindDescriptorSets = r_cast<PFN_vkCmdBindDescriptorSets>(vkGetDeviceProcAddr(vk_device, "vkCmdBindDescriptorSets"));
+    vkCmdBindVertexBuffers = r_cast<PFN_vkCmdBindVertexBuffers>(vkGetDeviceProcAddr(vk_device, "vkCmdBindVertexBuffers"));
+    vkCmdBindIndexBuffer = r_cast<PFN_vkCmdBindIndexBuffer>(vkGetDeviceProcAddr(vk_device, "vkCmdBindIndexBuffer"));
+    vkResetCommandPool = r_cast<PFN_vkResetCommandPool>(vkGetDeviceProcAddr(vk_device, "vkResetCommandPool"));
+    vkCmdBeginRendering = r_cast<PFN_vkCmdBeginRendering>(vkGetDeviceProcAddr(vk_device, "vkCmdBeginRendering"));
+    vkCmdEndRendering = r_cast<PFN_vkCmdEndRendering>(vkGetDeviceProcAddr(vk_device, "vkCmdEndRendering"));
+    vkCmdSetDepthBias = r_cast<PFN_vkCmdSetDepthBias>(vkGetDeviceProcAddr(vk_device, "vkCmdSetDepthBias"));
+    vkCmdSetEvent2 = r_cast<PFN_vkCmdSetEvent2>(vkGetDeviceProcAddr(vk_device, "vkCmdSetEvent2"));
+    vkCmdWriteTimestamp2 = r_cast<PFN_vkCmdWriteTimestamp2>(vkGetDeviceProcAddr(vk_device, "vkCmdWriteTimestamp2"));
+    vkCmdResetQueryPool = r_cast<PFN_vkCmdResetQueryPool>(vkGetDeviceProcAddr(vk_device, "vkCmdResetQueryPool"));
+
+    // Memory management functions
+    vkAllocateMemory = r_cast<PFN_vkAllocateMemory>(vkGetDeviceProcAddr(vk_device, "vkAllocateMemory"));
+    vkFreeMemory = r_cast<PFN_vkFreeMemory>(vkGetDeviceProcAddr(vk_device, "vkFreeMemory"));
+    vkMapMemory = r_cast<PFN_vkMapMemory>(vkGetDeviceProcAddr(vk_device, "vkMapMemory"));
+    vkUnmapMemory = r_cast<PFN_vkUnmapMemory>(vkGetDeviceProcAddr(vk_device, "vkUnmapMemory"));
+    vkFlushMappedMemoryRanges = r_cast<PFN_vkFlushMappedMemoryRanges>(vkGetDeviceProcAddr(vk_device, "vkFlushMappedMemoryRanges"));
+    vkInvalidateMappedMemoryRanges = r_cast<PFN_vkInvalidateMappedMemoryRanges>(vkGetDeviceProcAddr(vk_device, "vkInvalidateMappedMemoryRanges"));
+    vkBindBufferMemory = r_cast<PFN_vkBindBufferMemory>(vkGetDeviceProcAddr(vk_device, "vkBindBufferMemory"));
+    vkBindImageMemory = r_cast<PFN_vkBindImageMemory>(vkGetDeviceProcAddr(vk_device, "vkBindImageMemory"));
+    vkGetBufferMemoryRequirements = r_cast<PFN_vkGetBufferMemoryRequirements>(vkGetDeviceProcAddr(vk_device, "vkGetBufferMemoryRequirements"));
+    vkGetImageMemoryRequirements = r_cast<PFN_vkGetImageMemoryRequirements>(vkGetDeviceProcAddr(vk_device, "vkGetImageMemoryRequirements"));
+    vkGetDeviceBufferMemoryRequirements = r_cast<PFN_vkGetDeviceBufferMemoryRequirements>(vkGetDeviceProcAddr(vk_device, "vkGetDeviceBufferMemoryRequirements"));
+    vkGetDeviceImageMemoryRequirements = r_cast<PFN_vkGetDeviceImageMemoryRequirements>(vkGetDeviceProcAddr(vk_device, "vkGetDeviceImageMemoryRequirements"));
+
+    // Resource creation/destruction functions
+    vkCreateBuffer = r_cast<PFN_vkCreateBuffer>(vkGetDeviceProcAddr(vk_device, "vkCreateBuffer"));
+    vkDestroyBuffer = r_cast<PFN_vkDestroyBuffer>(vkGetDeviceProcAddr(vk_device, "vkDestroyBuffer"));
+    vkCreateImage = r_cast<PFN_vkCreateImage>(vkGetDeviceProcAddr(vk_device, "vkCreateImage"));
+    vkDestroyImage = r_cast<PFN_vkDestroyImage>(vkGetDeviceProcAddr(vk_device, "vkDestroyImage"));
+    vkCreateImageView = r_cast<PFN_vkCreateImageView>(vkGetDeviceProcAddr(vk_device, "vkCreateImageView"));
+    vkDestroyImageView = r_cast<PFN_vkDestroyImageView>(vkGetDeviceProcAddr(vk_device, "vkDestroyImageView"));
+    vkCreateSampler = r_cast<PFN_vkCreateSampler>(vkGetDeviceProcAddr(vk_device, "vkCreateSampler"));
+    vkDestroySampler = r_cast<PFN_vkDestroySampler>(vkGetDeviceProcAddr(vk_device, "vkDestroySampler"));
+    vkCreateDescriptorSetLayout = r_cast<PFN_vkCreateDescriptorSetLayout>(vkGetDeviceProcAddr(vk_device, "vkCreateDescriptorSetLayout"));
+    vkDestroyDescriptorSetLayout = r_cast<PFN_vkDestroyDescriptorSetLayout>(vkGetDeviceProcAddr(vk_device, "vkDestroyDescriptorSetLayout"));
+    vkCreatePipelineLayout = r_cast<PFN_vkCreatePipelineLayout>(vkGetDeviceProcAddr(vk_device, "vkCreatePipelineLayout"));
+    vkDestroyPipelineLayout = r_cast<PFN_vkDestroyPipelineLayout>(vkGetDeviceProcAddr(vk_device, "vkDestroyPipelineLayout"));
+    vkCreateGraphicsPipelines = r_cast<PFN_vkCreateGraphicsPipelines>(vkGetDeviceProcAddr(vk_device, "vkCreateGraphicsPipelines"));
+    vkCreateComputePipelines = r_cast<PFN_vkCreateComputePipelines>(vkGetDeviceProcAddr(vk_device, "vkCreateComputePipelines"));
+    vkDestroyPipeline = r_cast<PFN_vkDestroyPipeline>(vkGetDeviceProcAddr(vk_device, "vkDestroyPipeline"));
+    vkCreateDescriptorPool = r_cast<PFN_vkCreateDescriptorPool>(vkGetDeviceProcAddr(vk_device, "vkCreateDescriptorPool"));
+    vkDestroyDescriptorPool = r_cast<PFN_vkDestroyDescriptorPool>(vkGetDeviceProcAddr(vk_device, "vkDestroyDescriptorPool"));
+    vkAllocateDescriptorSets = r_cast<PFN_vkAllocateDescriptorSets>(vkGetDeviceProcAddr(vk_device, "vkAllocateDescriptorSets"));
+    vkFreeDescriptorSets = r_cast<PFN_vkFreeDescriptorSets>(vkGetDeviceProcAddr(vk_device, "vkFreeDescriptorSets"));
+    vkUpdateDescriptorSets = r_cast<PFN_vkUpdateDescriptorSets>(vkGetDeviceProcAddr(vk_device, "vkUpdateDescriptorSets"));
+    vkResetDescriptorPool = r_cast<PFN_vkResetDescriptorPool>(vkGetDeviceProcAddr(vk_device, "vkResetDescriptorPool"));
+
+    // Synchronization functions
+    vkCreateSemaphore = r_cast<PFN_vkCreateSemaphore>(vkGetDeviceProcAddr(vk_device, "vkCreateSemaphore"));
+    vkDestroySemaphore = r_cast<PFN_vkDestroySemaphore>(vkGetDeviceProcAddr(vk_device, "vkDestroySemaphore"));
+    vkCreateFence = r_cast<PFN_vkCreateFence>(vkGetDeviceProcAddr(vk_device, "vkCreateFence"));
+    vkDestroyFence = r_cast<PFN_vkDestroyFence>(vkGetDeviceProcAddr(vk_device, "vkDestroyFence"));
+    vkWaitForFences = r_cast<PFN_vkWaitForFences>(vkGetDeviceProcAddr(vk_device, "vkWaitForFences"));
+    vkResetFences = r_cast<PFN_vkResetFences>(vkGetDeviceProcAddr(vk_device, "vkResetFences"));
+    vkQueueSubmit = r_cast<PFN_vkQueueSubmit>(vkGetDeviceProcAddr(vk_device, "vkQueueSubmit"));
+    vkQueueWaitIdle = r_cast<PFN_vkQueueWaitIdle>(vkGetDeviceProcAddr(vk_device, "vkQueueWaitIdle"));
+    vkDeviceWaitIdle = r_cast<PFN_vkDeviceWaitIdle>(vkGetDeviceProcAddr(vk_device, "vkDeviceWaitIdle"));
+    vkSignalSemaphore = r_cast<PFN_vkSignalSemaphore>(vkGetDeviceProcAddr(vk_device, "vkSignalSemaphore"));
+    vkWaitSemaphores = r_cast<PFN_vkWaitSemaphores>(vkGetDeviceProcAddr(vk_device, "vkWaitSemaphores"));
+    vkCreateEvent = r_cast<PFN_vkCreateEvent>(vkGetDeviceProcAddr(vk_device, "vkCreateEvent"));
+    vkDestroyEvent = r_cast<PFN_vkDestroyEvent>(vkGetDeviceProcAddr(vk_device, "vkDestroyEvent"));
+    vkSetEvent = r_cast<PFN_vkSetEvent>(vkGetDeviceProcAddr(vk_device, "vkSetEvent"));
+    vkResetEvent = r_cast<PFN_vkResetEvent>(vkGetDeviceProcAddr(vk_device, "vkResetEvent"));
+    vkCmdPipelineBarrier2 = r_cast<PFN_vkCmdPipelineBarrier2>(vkGetDeviceProcAddr(vk_device, "vkCmdPipelineBarrier2"));
+
+    // Query pool functions
+    vkCreateQueryPool = r_cast<PFN_vkCreateQueryPool>(vkGetDeviceProcAddr(vk_device, "vkCreateQueryPool"));
+    vkDestroyQueryPool = r_cast<PFN_vkDestroyQueryPool>(vkGetDeviceProcAddr(vk_device, "vkDestroyQueryPool"));
+    vkResetQueryPool = r_cast<PFN_vkResetQueryPool>(vkGetDeviceProcAddr(vk_device, "vkResetQueryPool"));
+    vkGetQueryPoolResults = r_cast<PFN_vkGetQueryPoolResults>(vkGetDeviceProcAddr(vk_device, "vkGetQueryPoolResults"));
+
+    // Additional functions
+    vkGetSemaphoreCounterValue = r_cast<PFN_vkGetSemaphoreCounterValue>(vkGetDeviceProcAddr(vk_device, "vkGetSemaphoreCounterValue"));
+    vkGetBufferDeviceAddress = r_cast<PFN_vkGetBufferDeviceAddress>(vkGetDeviceProcAddr(vk_device, "vkGetBufferDeviceAddress"));
+    
+    // Swapchain functions
+    vkCreateSwapchainKHR = r_cast<PFN_vkCreateSwapchainKHR>(vkGetDeviceProcAddr(vk_device, "vkCreateSwapchainKHR"));
+    vkDestroySwapchainKHR = r_cast<PFN_vkDestroySwapchainKHR>(vkGetDeviceProcAddr(vk_device, "vkDestroySwapchainKHR"));
+    vkGetSwapchainImagesKHR = r_cast<PFN_vkGetSwapchainImagesKHR>(vkGetDeviceProcAddr(vk_device, "vkGetSwapchainImagesKHR"));
+    vkAcquireNextImageKHR = r_cast<PFN_vkAcquireNextImageKHR>(vkGetDeviceProcAddr(vk_device, "vkAcquireNextImageKHR"));
+    vkQueuePresentKHR = r_cast<PFN_vkQueuePresentKHR>(vkGetDeviceProcAddr(vk_device, "vkQueuePresentKHR"));
+
+#endif
+    // Query ext function pointers
+    if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_DYNAMIC_STATE_3)
+    {
+        vkCmdSetRasterizationSamplesEXT = r_cast<PFN_vkCmdSetRasterizationSamplesEXT>(vkGetDeviceProcAddr(vk_device, "vkCmdSetRasterizationSamplesEXT"));
+    }
+
+    if ((instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE)
+    {
+        vkSetDebugUtilsObjectNameEXT = r_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(vk_device, "vkSetDebugUtilsObjectNameEXT"));
+        vkCmdBeginDebugUtilsLabelEXT = r_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
+        vkCmdEndDebugUtilsLabelEXT = r_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(vk_device, "vkCmdEndDebugUtilsLabelEXT"));
+    }
+
+    if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
+    {
+        vkCmdDrawMeshTasksEXT = r_cast<PFN_vkCmdDrawMeshTasksEXT>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawMeshTasksEXT"));
+        vkCmdDrawMeshTasksIndirectEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectEXT>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawMeshTasksIndirectEXT"));
+        vkCmdDrawMeshTasksIndirectCountEXT = r_cast<PFN_vkCmdDrawMeshTasksIndirectCountEXT>(vkGetDeviceProcAddr(vk_device, "vkCmdDrawMeshTasksIndirectCountEXT"));
+    }
+
+    if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING)
+    {
+        vkGetAccelerationStructureBuildSizesKHR = r_cast<PFN_vkGetAccelerationStructureBuildSizesKHR>(vkGetDeviceProcAddr(vk_device, "vkGetAccelerationStructureBuildSizesKHR"));
+        vkCreateAccelerationStructureKHR = r_cast<PFN_vkCreateAccelerationStructureKHR>(vkGetDeviceProcAddr(vk_device, "vkCreateAccelerationStructureKHR"));
+        vkDestroyAccelerationStructureKHR = r_cast<PFN_vkDestroyAccelerationStructureKHR>(vkGetDeviceProcAddr(vk_device, "vkDestroyAccelerationStructureKHR"));
+        vkCmdWriteAccelerationStructuresPropertiesKHR = r_cast<PFN_vkCmdWriteAccelerationStructuresPropertiesKHR>(vkGetDeviceProcAddr(vk_device, "vkCmdWriteAccelerationStructuresPropertiesKHR"));
+        vkCmdBuildAccelerationStructuresKHR = r_cast<PFN_vkCmdBuildAccelerationStructuresKHR>(vkGetDeviceProcAddr(vk_device, "vkCmdBuildAccelerationStructuresKHR"));
+        vkGetAccelerationStructureDeviceAddressKHR = r_cast<PFN_vkGetAccelerationStructureDeviceAddressKHR>(vkGetDeviceProcAddr(vk_device, "vkGetAccelerationStructureDeviceAddressKHR"));
+    }
+
+    if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_RAY_TRACING_PIPELINE)
+    {
+        vkCreateRayTracingPipelinesKHR = r_cast<PFN_vkCreateRayTracingPipelinesKHR>(vkGetDeviceProcAddr(vk_device, "vkCreateRayTracingPipelinesKHR"));
+        vkCmdTraceRaysKHR = r_cast<PFN_vkCmdTraceRaysKHR>(vkGetDeviceProcAddr(vk_device, "vkCmdTraceRaysKHR"));
+        vkCmdTraceRaysIndirectKHR = r_cast<PFN_vkCmdTraceRaysIndirectKHR>(vkGetDeviceProcAddr(vk_device, "vkCmdTraceRaysIndirectKHR"));
+        vkGetRayTracingShaderGroupHandlesKHR = r_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(    vk_device, "vkGetRayTracingShaderGroupHandlesKHR"));
+    }
+    return true;
 }
 
 auto daxa_ImplDevice::get_queue(daxa_Queue queue) -> daxa_ImplDevice::ImplQueue &
@@ -2326,7 +2468,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
     ret.swapchain_image_index = static_cast<i32>(index);
 
     ret.info = *r_cast<daxa_ImageInfo const *>(&image_info);
-    result = static_cast<daxa_Result>(vkCreateImageView(vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view));
+    result = static_cast<daxa_Result>(VK_CALL_D(this, vkCreateImageView, vk_device, &view_ci, nullptr, &ret.view_slot.vk_image_view));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     if ((this->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !image_info.name.empty())
@@ -2339,7 +2481,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_image),
             .pObjectName = c_str_arr.data(),
         };
-        this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
+        VK_CALL_D_EXT(this, vkSetDebugUtilsObjectNameEXT, this->vk_device, &swapchain_image_name_info);
 
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_view_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
@@ -2348,13 +2490,13 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .objectHandle = std::bit_cast<uint64_t>(ret.view_slot.vk_image_view),
             .pObjectName = c_str_arr.data(),
         };
-        this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
+        VK_CALL_D_EXT(this, vkSetDebugUtilsObjectNameEXT, this->vk_device, &swapchain_image_view_name_info);
     }
 
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
-        write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
+        write_descriptor_set_image(this, this->gpu_sro_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
     }
 
     *out = ImageId{id};
@@ -2370,11 +2512,11 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
-        write_descriptor_set_buffer(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
+        write_descriptor_set_buffer(this, this->gpu_sro_table.vk_descriptor_set, this->vk_null_buffer, 0, VK_WHOLE_SIZE, gid.index);
     }
     if (buffer_slot.opt_memory_block != nullptr)
     {
-        vkDestroyBuffer(this->vk_device, buffer_slot.vk_buffer, {});
+        VK_CALL_D(this, vkDestroyBuffer, this->vk_device, buffer_slot.vk_buffer, {});
     }
     else
     {
@@ -2392,18 +2534,18 @@ void daxa_ImplDevice::cleanup_image(ImageId id)
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
         write_descriptor_set_image(
-            this->vk_device,
+            this,
             this->gpu_sro_table.vk_descriptor_set,
             this->vk_null_image_view,
             std::bit_cast<ImageUsageFlags>(image_slot.info.usage),
             gid.index);
     }
-    vkDestroyImageView(vk_device, image_slot.view_slot.vk_image_view, nullptr);
+    VK_CALL_D(this, vkDestroyImageView, vk_device, image_slot.view_slot.vk_image_view, nullptr);
     if (image_slot.swapchain_image_index == NOT_OWNED_BY_SWAPCHAIN)
     {
         if (image_slot.opt_memory_block != nullptr)
         {
-            vkDestroyImage(this->vk_device, image_slot.vk_image, {});
+            VK_CALL_D(this, vkDestroyImage, this->vk_device, image_slot.vk_image, {});
         }
         else
         {
@@ -2420,9 +2562,9 @@ void daxa_ImplDevice::cleanup_image_view(ImageViewId id)
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
-        write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
+        write_descriptor_set_image(this, this->gpu_sro_table.vk_descriptor_set, this->vk_null_image_view, ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::SHADER_SAMPLED, std::bit_cast<daxa::ImageViewId>(id).index);
     }
-    vkDestroyImageView(vk_device, image_slot.vk_image_view, nullptr);
+    VK_CALL_D(this, vkDestroyImageView, vk_device, image_slot.vk_image_view, nullptr);
     gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
@@ -2432,9 +2574,9 @@ void daxa_ImplDevice::cleanup_sampler(SamplerId id)
     {
         // Does not need external sync given we use update after bind.
         // https://registry.khronos.org/vulkan/specs/1.3-extensions/man/html/VkDescriptorBindingFlagBits.html
-        write_descriptor_set_sampler(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_sampler, std::bit_cast<GPUResourceId>(id).index);
+        write_descriptor_set_sampler(this, this->gpu_sro_table.vk_descriptor_set, this->vk_null_sampler, std::bit_cast<GPUResourceId>(id).index);
     }
-    vkDestroySampler(this->vk_device, sampler_slot.vk_sampler, nullptr);
+    VK_CALL_D(this, vkDestroySampler, this->vk_device, sampler_slot.vk_sampler, nullptr);
     gpu_sro_table.sampler_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
@@ -2443,14 +2585,14 @@ void daxa_ImplDevice::cleanup_tlas(TlasId id)
     ImplTlasSlot const & tlas_slot = this->gpu_sro_table.tlas_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
     // TODO(Raytracing): Add null acceleration structure:
     // write_descriptor_set_acceleration_structure(this->vk_device, this->gpu_sro_table.vk_descriptor_set, this->vk_null_acceleration_structure, std::bit_cast<GPUResourceId>(id).index);
-    this->vkDestroyAccelerationStructureKHR(this->vk_device, tlas_slot.vk_acceleration_structure, nullptr);
+    VK_CALL_D_EXT(this, vkDestroyAccelerationStructureKHR, this->vk_device, tlas_slot.vk_acceleration_structure, nullptr);
     gpu_sro_table.tlas_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
 void daxa_ImplDevice::cleanup_blas(BlasId id)
 {
     ImplBlasSlot const & blas_slot = this->gpu_sro_table.blas_slots.unsafe_get(std::bit_cast<GPUResourceId>(id));
-    this->vkDestroyAccelerationStructureKHR(this->vk_device, blas_slot.vk_acceleration_structure, nullptr);
+    VK_CALL_D_EXT(this, vkDestroyAccelerationStructureKHR, this->vk_device, blas_slot.vk_acceleration_structure, nullptr);
     gpu_sro_table.blas_slots.unsafe_destroy_zombie_slot(std::bit_cast<GPUResourceId>(id));
 }
 
@@ -2498,17 +2640,17 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     }
     vmaUnmapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation);
     vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);
-    self->gpu_sro_table.cleanup(self->vk_device);
+    self->gpu_sro_table.cleanup(self);
     vmaDestroyImage(self->vma_allocator, self->vk_null_image, self->vk_null_image_vma_allocation);
     vmaDestroyBuffer(self->vma_allocator, self->vk_null_buffer, self->vk_null_buffer_vma_allocation);
     vmaDestroyAllocator(self->vma_allocator);
-    vkDestroySampler(self->vk_device, self->vk_null_sampler, nullptr);
-    vkDestroyImageView(self->vk_device, self->vk_null_image_view, nullptr);
+    VK_CALL_D(self, vkDestroySampler, self->vk_device, self->vk_null_sampler, nullptr);
+    VK_CALL_D(self, vkDestroyImageView, self->vk_device, self->vk_null_image_view, nullptr);
     for (auto & queue : self->queues)
     {
-        queue.cleanup(self->vk_device);
+        queue.cleanup(self);
     }
-    vkDestroyDevice(self->vk_device, nullptr);
+    VK_CALL_I(self->instance, vkDestroyDevice, self->vk_device, nullptr);
     self->instance->dec_weak_refcnt(
         daxa_ImplInstance::zero_ref_callback,
         self->instance);
