@@ -9,7 +9,7 @@
 #include <daxa/c/swapchain.h>
 #include <daxa/c/sync.h>
 
-#define DAXA_MAX_COMPUTE_QUEUE_COUNT 8u
+#define DAXA_MAX_COMPUTE_QUEUE_COUNT 4u
 #define DAXA_MAX_TRANSFER_QUEUE_COUNT 2u
 
 typedef enum
@@ -164,6 +164,12 @@ typedef struct
     uint32_t invocation_reorder_mode;
 } daxa_RayTracingInvocationReorderProperties;
 
+// MUST BE ABI COMPATIBLE WITH VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV!
+typedef struct
+{
+    uint32_t max_push_descriptor;
+} daxa_PushDescriptorProperties;
+
 // Is NOT ABI Compatible with VkPhysicalDeviceMeshShaderPropertiesEXT!
 typedef struct
 {
@@ -288,11 +294,14 @@ typedef struct
     daxa_Optional(daxa_RayTracingPipelineProperties) ray_tracing_pipeline_properties;
     daxa_Optional(daxa_AccelerationStructureProperties) acceleration_structure_properties;
     daxa_Optional(daxa_RayTracingInvocationReorderProperties) ray_tracing_invocation_reorder_properties;
+    daxa_Optional(daxa_PushDescriptorProperties) push_descriptor_properties;
     daxa_u32 compute_queue_count;
     daxa_u32 transfer_queue_count;
     daxa_ImplicitFeatureFlags implicit_features;
     daxa_ExplicitFeatureFlags explicit_features;
     daxa_MissingRequiredVkFeature missing_required_feature;
+    bool nvx_binary_import;
+    bool nvx_image_view_handle;
 } daxa_DeviceProperties;
 
 /// DEPRECATED: use daxa_instance_create_device_2 and daxa_DeviceInfo2 instead!
@@ -587,6 +596,8 @@ daxa_dvc_get_vk_buffer(daxa_Device device, daxa_BufferId buffer, VkBuffer * out_
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_get_vk_image(daxa_Device device, daxa_ImageId image, VkImage * out_vk_handle);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_image_memory(daxa_Device device, daxa_ImageId image, VkDeviceMemory * out_vk_handle);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_get_vk_image_view(daxa_Device device, daxa_ImageViewId id, VkImageView * out_vk_handle);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_get_vk_sampler(daxa_Device device, daxa_SamplerId sampler, VkSampler * out_vk_handle);
@@ -618,6 +629,8 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreInfo const * info, daxa_BinarySemaphore * out_binary_semaphore);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_timeline_semaphore);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_wrap_timeline_semaphore(daxa_Device device, VkSemaphore native_semaphore, daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_timeline_semaphore);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa_Event * out_event);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

@@ -58,6 +58,10 @@ namespace daxa
             physical_device_ray_tracing_invocation_reorder_nv,
             physical_device_shader_atomic_float_ext,
             physical_device_shader_clock_khr,
+            physical_device_push_descriptor_khr,
+            physical_device_binary_import_nvx,
+            physical_device_image_view_handle_nvx,
+            physical_device_low_latency_nv,
             COUNT
         };
         constexpr static std::array<char const *, COUNT> extension_names = {
@@ -77,6 +81,10 @@ namespace daxa
             VK_NV_RAY_TRACING_INVOCATION_REORDER_EXTENSION_NAME,
             VK_EXT_SHADER_ATOMIC_FLOAT_EXTENSION_NAME,
             VK_KHR_SHADER_CLOCK_EXTENSION_NAME,
+            VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME,
+            VK_NVX_BINARY_IMPORT_EXTENSION_NAME,
+            VK_NVX_IMAGE_VIEW_HANDLE_EXTENSION_NAME,
+            VK_NV_LOW_LATENCY_EXTENSION_NAME,
         };
         char const * extension_name_list[COUNT] = {};
         u32 extension_name_list_size = {};
@@ -114,6 +122,9 @@ namespace daxa
         VkPhysicalDeviceShaderAtomicFloatFeaturesEXT physical_device_shader_atomic_float_features_ext = {};
         VkPhysicalDeviceShaderClockFeaturesKHR physical_device_shader_clock_features_khr = {};
         VkPhysicalDeviceFeatures2 physical_device_features_2 = {};
+        bool low_latency = {};
+        bool nvx_image_view_handle = {};
+        bool nvx_binary_import = {};
         bool conservative_rasterization = {};
         bool swapchain = {};
 
@@ -132,6 +143,7 @@ namespace daxa
         VkPhysicalDeviceAccelerationStructurePropertiesKHR physical_device_acceleration_structure_properties_khr = {};
         VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV physical_device_ray_tracing_invocation_reorder_properties_nv = {};
         VkPhysicalDeviceMeshShaderPropertiesEXT physical_device_mesh_shader_properties_ext = {};
+        VkPhysicalDevicePushDescriptorPropertiesKHR physical_device_push_descriptor_properties_khr = {};
         VkPhysicalDeviceProperties2 physical_device_properties_2 = {};
 
         void initialize(daxa_DeviceImplicitFeatureFlagBits implicit_features);

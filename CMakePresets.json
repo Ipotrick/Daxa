@@ -25,7 +25,8 @@
                 "DAXA_ENABLE_TESTS": true,
                 "DAXA_ENABLE_TOOLS": true,
                 "DAXA_ENABLE_STATIC_ANALYSIS": false,
-                "DAXA_USE_DYNAMIC_VULKAN": false
+                "DAXA_USE_DYNAMIC_VULKAN": false,
+                "DAXA_USE_STREAMLINE": false
             }
         },
         {

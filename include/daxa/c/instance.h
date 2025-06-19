@@ -12,12 +12,21 @@ typedef struct
     daxa_InstanceFlags flags;
     daxa_SmallString engine_name;
     daxa_SmallString app_name;
+#ifdef STREAMLINE_ENABLED
+    // Streamline configuration
+    bool enable_streamline;
+    daxa_SpanToConst(sl::Feature) sl_features;
+#endif // STREAMLINE_ENABLED
 } daxa_InstanceInfo;
 
 static const daxa_InstanceInfo DAXA_DEFAULT_INSTANCE_INFO = {
     .flags = DAXA_INSTANCE_FLAG_DEBUG_UTIL,
     .engine_name = {.data = "daxa", .size = 4},
     .app_name = {.data = "daxa app", .size = 8},
+#ifdef STREAMLINE_ENABLED
+    .enable_streamline = false,
+    .sl_features = DAXA_ZERO_INIT,
+#endif // STREAMLINE_ENABLED
 };
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
