@@ -464,4 +464,5 @@ vcpkg/
 wiki/daxa-book/book/*
 preproc
 
+# Streamline and other libs here
 lib

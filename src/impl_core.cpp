@@ -152,6 +152,13 @@ auto construct_daxa_physical_device_properties(daxa_Instance instance, VkPhysica
         .pNext = nullptr,
     };
 
+    bool push_constants_supported = false;
+    VkPhysicalDevicePushDescriptorPropertiesKHR physical_device_push_descriptor_properties_khr = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR,
+        .pNext = nullptr,
+        .maxPushDescriptors = 0
+    };
+
     void * pNextChain = nullptr;
 
     u32 count = 0;
@@ -183,6 +190,12 @@ auto construct_daxa_physical_device_properties(daxa_Instance instance, VkPhysica
             mesh_shader_supported = true;
             vk_physical_device_mesh_shader_properties_ext.pNext = pNextChain;
             pNextChain = &vk_physical_device_mesh_shader_properties_ext;
+        }
+        if (std::strcmp(extension.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0)
+        {
+            push_constants_supported = true;
+            physical_device_push_descriptor_properties_khr.pNext = pNextChain;
+            pNextChain = &physical_device_push_descriptor_properties_khr;
         }
     }
 
@@ -232,6 +245,13 @@ auto construct_daxa_physical_device_properties(daxa_Instance instance, VkPhysica
         ret.mesh_shader_properties.value.prefers_local_invocation_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersLocalInvocationPrimitiveOutput);
         ret.mesh_shader_properties.value.prefers_compact_vertex_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactVertexOutput);
         ret.mesh_shader_properties.value.prefers_compact_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactPrimitiveOutput);
+    }
+    if(push_constants_supported) {
+        ret.push_descriptor_properties.has_value = 1;
+        std::memcpy(
+            &ret.push_descriptor_properties.value,
+            r_cast<std::byte const *>(&physical_device_push_descriptor_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_PushDescriptorProperties));
     }
 
     u32 queue_family_props_count = 0;

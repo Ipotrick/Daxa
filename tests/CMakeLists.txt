@@ -141,6 +141,13 @@ DAXA_CREATE_TEST(
     FOLDER 3_samples 3_hello_triangle_compute
     LIBS glfw
 )
+
+if(DAXA_USE_STREAMLINE)
+DAXA_CREATE_TEST(
+    FOLDER 3_samples 4_streamline
+    LIBS glfw
+)
+endif()
 DAXA_CREATE_TEST(
     FOLDER 3_samples 5_boids
     LIBS glfw

@@ -230,6 +230,13 @@ namespace daxa
         return *r_cast<InstanceInfo const *>(daxa_instance_info(rc_cast<daxa_Instance>(this->object)));
     }
 
+#ifdef STREAMLINE_ENABLED
+    auto Instance::streamline() const -> StreamlineContext const &
+    {
+        return (rc_cast<daxa_Instance>(this->object)->streamline);
+    }
+#endif 
+
     auto Instance::inc_refcnt(ImplHandle const * object) -> u64
     {
         _DAXA_TEST_PRINT("instance inc refcnt\n");

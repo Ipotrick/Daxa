@@ -83,6 +83,7 @@ add_library(daxa
     "src/utils/impl_fsr2.cpp"
     "src/utils/impl_mem.cpp"
     "src/utils/impl_pipeline_manager.cpp"
+    "src/utils/impl_streamline.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
@@ -105,21 +106,6 @@ target_compile_features(daxa PUBLIC cxx_std_20)
 
 find_package(Vulkan REQUIRED)
 find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-
-# Add option for dynamic loading
-option(DAXA_USE_DYNAMIC_VULKAN "Use dynamic loading for Vulkan functions" OFF)
-
-if(DAXA_USE_DYNAMIC_VULKAN)
-    message(STATUS "✓ Vulkan functions will be loaded dynamically")
-    add_definitions(-DVK_NO_PROTOTYPES)
-    add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
-    add_definitions(-DVMA_STATIC_VULKAN_FUNCTIONS=0)
-    add_definitions(-DDAXA_USE_DYNAMIC_VULKAN=1)
-else()
-    message(STATUS "✓ Vulkan functions will be loaded statically")
-    add_definitions(-DDAXA_USE_DYNAMIC_VULKAN=0)
-    target_link_libraries(daxa PRIVATE Vulkan::Vulkan)
-endif()
 
 include(GNUInstallDirs)
 
@@ -254,6 +240,173 @@ endif()
 
 set_project_warnings(daxa)
 
+
+# === STREAMLINE SMART INTEGRATION ===
+
+# Add option for streamline linkage
+option(DAXA_USE_STREAMLINE "Use Streamline to access Nvidia DLSS+ tools" OFF)
+set(STREAMLINE_ENABLED FALSE)
+set(STREAMLINE_MODE "NONE")
+set(STREAMLINE_ENABLED_FOR_FRAME TRUE)
+
+# Add option for dynamic loading
+option(DAXA_USE_DYNAMIC_VULKAN "Use dynamic loading for Vulkan functions" OFF)
+
+# Search for official SDK (preferred)
+set(STREAMLINE_SDK_DIR "${CMAKE_CURRENT_SOURCE_DIR}/lib/Streamline-sdk")
+if(EXISTS "${STREAMLINE_SDK_DIR}/include/sl.h")
+    message(STATUS "✓ Found official Streamline SDK")
+    set(STREAMLINE_ENABLED TRUE)
+    set(DAXA_USE_DYNAMIC_VULKAN TRUE)
+    set(STREAMLINE_MODE "SDK")
+    
+    target_include_directories(${PROJECT_NAME} PUBLIC "${STREAMLINE_SDK_DIR}/include")
+    if(WIN32 AND EXISTS "${STREAMLINE_SDK_DIR}/lib/x64/sl.interposer.lib")
+        target_link_libraries(${PROJECT_NAME} PRIVATE "${STREAMLINE_SDK_DIR}/lib/x64/sl.interposer.lib")
+        message(STATUS "✓ Linked Streamline library")
+        # Copy DLLs
+        file(GLOB STREAMLINE_DLLS "${STREAMLINE_SDK_DIR}/bin/x64/*.dll")
+        if(STREAMLINE_DLLS)
+            message(STATUS "✓ Found ${CMAKE_MATCH_COUNT} Streamline DLLs")
+            foreach(DLL_PATH ${STREAMLINE_DLLS})
+                get_filename_component(DLL_NAME ${DLL_PATH} NAME)
+                add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL_PATH}"
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+                    COMMENT "Copying ${DLL_NAME}"
+                )
+            endforeach()
+            foreach(DLL_PATH ${STREAMLINE_DLLS})
+                get_filename_component(DLL_NAME ${DLL_PATH} NAME)
+                add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL_PATH}"
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../tests/$<CONFIG>/${DLL_NAME}"
+                    COMMENT "Copiando ${DLL_NAME} to tests/$<CONFIG>/"
+                )
+            endforeach()
+        endif()
+    else()
+        message(WARNING "SDK found but no library - DLL-only mode")
+    endif()
+
+# Search for locally compiled artifacts
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/Streamline/_artifacts")
+    message(STATUS "⚡ Found compiled Streamline artifacts")
+    
+    # Verify that the headers directory exists
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/lib/Streamline/include/sl.h")
+        target_include_directories(${PROJECT_NAME} PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/lib/Streamline/include")
+        message(STATUS "✓ Added Streamline headers")
+    else()
+        message(WARNING "Headers not found at lib/Streamline/include/sl.h")
+    endif()
+    
+    # Search for files directly in the sl.* folders
+    file(GLOB STREAMLINE_COMPONENT_DIRS 
+        LIST_DIRECTORIES true
+        "${CMAKE_CURRENT_SOURCE_DIR}/lib/Streamline/_artifacts/sl.*"
+    )
+
+    set(STREAMLINE_FOUND_FILES FALSE)
+    set(STREAMLINE_DLLS_FOUND "")
+    
+    foreach(COMPONENT_DIR ${STREAMLINE_COMPONENT_DIRS})
+        if(IS_DIRECTORY ${COMPONENT_DIR})
+            get_filename_component(COMPONENT_NAME ${COMPONENT_DIR} NAME)
+            
+            # Find .dll files directly in the folder
+            file(GLOB COMPONENT_DLLS "${COMPONENT_DIR}/*.dll")
+            
+            # Search for files directly in the sl.* folders
+            file(GLOB_RECURSE COMPONENT_DLLS_RECURSIVE "${COMPONENT_DIR}/*.dll")
+            
+            # Combine results
+            list(APPEND COMPONENT_DLLS ${COMPONENT_DLLS_RECURSIVE})
+            list(REMOVE_DUPLICATES COMPONENT_DLLS)
+            
+            if(COMPONENT_DLLS)
+                message(STATUS "  📦 ${COMPONENT_NAME}:")
+                set(STREAMLINE_FOUND_FILES TRUE)
+                
+                # Process DLLs
+                foreach(DLL_PATH ${COMPONENT_DLLS})
+                    get_filename_component(DLL_NAME ${DLL_PATH} NAME)
+                    message(STATUS "    ✓ DLL: ${DLL_NAME}")
+                    list(APPEND STREAMLINE_DLLS_FOUND ${DLL_PATH})
+                endforeach()
+            endif()
+        endif()
+    endforeach()
+
+    if(STREAMLINE_FOUND_FILES)
+        set(STREAMLINE_ENABLED TRUE)
+        set(DAXA_USE_DYNAMIC_VULKAN TRUE)
+        set(STREAMLINE_MODE "COMPILED_DIRECT")
+        message(STATUS "✓ Using Streamline compiled artifacts (direct structure)")
+        
+        # Setup DLL copying
+        if(STREAMLINE_DLLS_FOUND)
+            foreach(DLL_PATH ${STREAMLINE_DLLS_FOUND})
+                get_filename_component(DLL_NAME ${DLL_PATH} NAME)
+                add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL_PATH}"
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+                    COMMENT "Copying ${DLL_NAME}"
+                )
+                # También copiar a tests si existe
+                add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL_PATH}"
+                        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/../tests/$<CONFIG>/"
+                    COMMENT "Copying ${DLL_NAME} to tests"
+                )
+            endforeach()
+            list(LENGTH STREAMLINE_DLLS_FOUND DLL_COUNT)
+            message(STATUS "  ✓ Configured to copy ${DLL_COUNT} DLLs")
+        endif()
+    else()
+        message(WARNING "No valid Streamline files found in _artifacts subdirectories")
+    endif()
+# Streamline not found
+else()
+    message(WARNING "Streamline not found. Integration disabled.")
+    message(STATUS "To enable Streamline:")
+    message(STATUS "  1. Download SDK to lib/Streamline-sdk/")
+    message(STATUS "  2. Or clone repo to lib/Streamline/")
+endif()
+
+# Macro configuration based on mode
+if(STREAMLINE_ENABLED AND DAXA_USE_STREAMLINE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        SL_VULKAN=1
+    )
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+        STREAMLINE_ENABLED=1
+    )
+    if(STREAMLINE_ENABLED_FOR_FRAME) 
+        target_compile_definitions(${PROJECT_NAME} PUBLIC
+            STREAMLINE_ENABLED_FOR_FRAME=1
+        )
+    endif()
+
+    # Specific mode
+    if(STREAMLINE_MODE STREQUAL "SDK")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_SDK_MODE=1)
+    elseif(STREAMLINE_MODE STREQUAL "COMPILED")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_COMPILED_MODE=1)
+    elseif(STREAMLINE_MODE STREQUAL "HEADERS_ONLY")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_HEADERS_ONLY=1)
+    endif()
+    
+    message(STATUS "🚀 Streamline integration: ${STREAMLINE_MODE}")
+else()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_DISABLED=1)
+    message(STATUS "❌ Streamline integration: DISABLED")
+endif()
+
 if(DAXA_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
@@ -267,3 +420,49 @@ endif()
 if(DAXA_INSTALL)
     include("${CMAKE_CURRENT_LIST_DIR}/cmake/packaging.cmake")
 endif()
+
+if(DAXA_USE_DYNAMIC_VULKAN)
+    message(STATUS "✓ Vulkan functions will be loaded dynamically")
+    add_definitions(-DVK_NO_PROTOTYPES)
+    add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
+    add_definitions(-DVMA_STATIC_VULKAN_FUNCTIONS=0)
+    add_definitions(-DDAXA_USE_DYNAMIC_VULKAN=1)
+else()
+    message(STATUS "✓ Vulkan functions will be loaded statically")
+    add_definitions(-DDAXA_USE_DYNAMIC_VULKAN=0)
+    target_link_libraries(daxa PRIVATE Vulkan::Vulkan)
+endif()
+
+target_include_directories(daxa
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(X11)
+    if(X11_FOUND)
+        target_compile_definitions(daxa
+            PUBLIC
+            DAXA_BUILT_WITH_X11=true
+        )
+        target_link_libraries(daxa
+            PRIVATE
+            ${X11_LIBRARIES}
+        )
+    endif()
+
+    find_package(Wayland)
+    if(Wayland_FOUND)
+        target_compile_definitions(daxa
+            PUBLIC
+            DAXA_BUILT_WITH_WAYLAND=true
+        )
+        target_link_libraries(daxa
+            PRIVATE
+            ${Wayland_LIBRARIES}
+        )
+    endif()
+endif()
+
+set_project_warnings(daxa)

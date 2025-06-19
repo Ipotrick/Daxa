@@ -367,8 +367,10 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             .priority = 0.5f,
         };
 
-        result = static_cast<daxa_Result>(vmaCreateImage(self->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, nullptr));
+        VmaAllocationInfo allocation_info {};
+        result = static_cast<daxa_Result>(vmaCreateImage(self->vma_allocator, &vk_image_create_info, &vma_allocation_create_info, &ret.vk_image, &ret.vma_allocation, &allocation_info));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_IMAGE);
+        ret.vk_dev_mem = allocation_info.deviceMemory;
 
         vk_image_view_create_info.image = ret.vk_image;
         result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateImageView, self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
@@ -390,6 +392,12 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             ret.vk_image,
             {}));
         _DAXA_RETURN_IF_ERROR(result, result);
+
+        VmaAllocationInfo2 allocation_info {};
+        vmaGetAllocationInfo2(self->vma_allocator,
+                            mem_block.allocation,
+                            &allocation_info);
+        ret.vk_dev_mem = allocation_info.allocationInfo.deviceMemory;
 
         vk_image_view_create_info.image = ret.vk_image;
         result = static_cast<daxa_Result>(VK_CALL_D(self, vkCreateImageView, self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
@@ -1187,6 +1195,17 @@ _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(sampler, Sampler, SAMPLER, sampler_slots, sam
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(tlas, Tlas, TLAS, tlas_slots, acceleration_structure, VkAccelerationStructureKHR)
 _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(blas, Blas, BLAS, blas_slots, acceleration_structure, VkAccelerationStructureKHR)
 
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_vk_image_memory(daxa_Device device, daxa_ImageId id, VkDeviceMemory * out_vk_handle)
+{
+    if (daxa_dvc_is_image_valid(device, id))
+    {
+        *out_vk_handle = device->slot(id).vk_dev_mem;
+        return DAXA_RESULT_SUCCESS;
+    }
+    return DAXA_RESULT_INVALID_IMAGE_ID;
+}
+
 auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_DeviceAddress * out_addr) -> daxa_Result
 {
     if (!daxa_dvc_is_buffer_valid(self, id))
@@ -1612,7 +1631,6 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     self->vk_physical_device = physical_device.vk_handle;
     self->properties = properties;
     self->instance = instance;
-    self->info = std::bit_cast<DeviceInfo2>(info);
 
     // Verify DeviceOptions:
     if (self->info.max_allowed_buffers > self->properties.limits.max_descriptor_set_storage_buffers || self->info.max_allowed_buffers == 0)
@@ -1644,6 +1662,16 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         _DAXA_RETURN_IF_ERROR(result, result)
     }
 
+#ifdef STREAMLINE_ENABLED
+    // u32 extra_graphics_queue_count = 0;
+    u32 extra_compute_queue_count = 0;
+    if( self->instance->sl_enabled) {
+        // extra_graphics_queue_count = self->instance->streamline.get_requested_graphics_queue_count();
+        extra_compute_queue_count = self->instance->streamline.get_requested_compute_queue_count();
+        _DAXA_RETURN_IF_ERROR(result, result)
+    }
+#endif // STREAMLINE_ENABLED
+
     // Queue Selection and Verification
     u32 vk_queue_request_count = {};
     std::array<VkDeviceQueueCreateInfo, 3> queues_ci = {};
@@ -1671,6 +1699,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             if (self->queue_families[DAXA_QUEUE_FAMILY_MAIN].vk_index == ~0u && supports_graphics && supports_compute && supports_transfer)
             {
                 self->queue_families[DAXA_QUEUE_FAMILY_MAIN].vk_index = i;
+                // NOTE: if sometime in the future graphics queues need to be increased, then check streamline requirements too
                 self->queue_families[DAXA_QUEUE_FAMILY_MAIN].queue_count = 1;
                 self->command_pool_pools[DAXA_QUEUE_FAMILY_MAIN].queue_family_index = i;
                 self->valid_vk_queue_families[self->valid_vk_queue_family_count++] = i;
@@ -1715,9 +1744,15 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         };
     }
 
+    // FIXME: check and add streamline device extensions and queue requirements
+
     PhysicalDeviceFeaturesStruct enabled_features = {};
     enabled_features.initialize(physical_device.extensions);
     fill_create_features(enabled_features, properties.implicit_features, info.explicit_features);
+    
+    // FIXME: check this out
+    self->properties.nvx_binary_import = enabled_features.nvx_binary_import;
+    self->properties.nvx_image_view_handle = enabled_features.nvx_image_view_handle;
 
     VkDeviceCreateInfo const device_ci = {
         .sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
@@ -1769,6 +1804,20 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         result = self->queues[i].initialize(self);
         _DAXA_RETURN_IF_ERROR(result, result)
     }
+
+#ifdef STREAMLINE_ENABLED
+    if( self->instance->sl_enabled) {
+        self->instance->sl_enabled = self->instance->streamline.check_or_load_features();
+        if(!self->instance->sl_enabled) {
+            result = result = DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+        }
+    }
+    _DAXA_RETURN_IF_ERROR(result, result)
+    if(!self->instance->streamline.initialize(*r_cast<daxa::Device*>(&self))) {
+        result = DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+    }
+    _DAXA_RETURN_IF_ERROR(result, result)
+#endif // STREAMLINE_ENABLED
 
     VkCommandPool init_cmd_pool = {};
     VkCommandBuffer init_cmd_buffer = {};
@@ -2388,6 +2437,24 @@ auto daxa_ImplDevice::load_device_functions() -> bool
         vkCmdTraceRaysIndirectKHR = r_cast<PFN_vkCmdTraceRaysIndirectKHR>(vkGetDeviceProcAddr(vk_device, "vkCmdTraceRaysIndirectKHR"));
         vkGetRayTracingShaderGroupHandlesKHR = r_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(    vk_device, "vkGetRayTracingShaderGroupHandlesKHR"));
     }
+
+    vkCmdPushDescriptorSetKHR = r_cast<PFN_vkCmdPushDescriptorSetKHR>(vkGetDeviceProcAddr(vk_device, "vkCmdPushDescriptorSetKHR"));
+
+    if(properties.nvx_binary_import)
+    {
+        vkCmdCuLaunchKernelNVX = r_cast<PFN_vkCmdCuLaunchKernelNVX>(vkGetDeviceProcAddr(vk_device, "vkCmdCuLaunchKernelNVX"));
+        vkCreateCuFunctionNVX = r_cast<PFN_vkCreateCuFunctionNVX>(vkGetDeviceProcAddr(vk_device, "vkCreateCuFunctionNVX"));
+        vkCreateCuModuleNVX = r_cast<PFN_vkCreateCuModuleNVX>(vkGetDeviceProcAddr(vk_device, "vkCreateCuModuleNVX"));
+        vkDestroyCuFunctionNVX = r_cast<PFN_vkDestroyCuFunctionNVX>(vkGetDeviceProcAddr(vk_device, "vkDestroyCuFunctionNVX"));
+        vkDestroyCuModuleNVX = r_cast<PFN_vkDestroyCuModuleNVX>(vkGetDeviceProcAddr(vk_device, "vkDestroyCuModuleNVX"));
+    }
+
+    if(properties.nvx_image_view_handle) {
+        vkGetImageViewHandleNVX = r_cast<PFN_vkGetImageViewHandleNVX>(vkGetDeviceProcAddr(vk_device, "vkGetImageViewHandleNVX"));
+        vkGetImageViewHandle64NVX = r_cast<PFN_vkGetImageViewHandle64NVX>(vkGetDeviceProcAddr(vk_device, "vkGetImageViewHandle64NVX"));
+        vkGetImageViewAddressNVX = r_cast<PFN_vkGetImageViewAddressNVX>(vkGetDeviceProcAddr(vk_device, "vkGetImageViewAddressNVX"));
+    }
+
     return true;
 }
 

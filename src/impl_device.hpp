@@ -197,6 +197,22 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR = {};
     PFN_vkCmdTraceRaysIndirectKHR vkCmdTraceRaysIndirectKHR = {};
 
+    // Push Descriptors:
+    PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
+    VkPhysicalDevicePushDescriptorPropertiesKHR push_descriptor_properties = {};
+
+    // NVX binary import
+    PFN_vkCmdCuLaunchKernelNVX vkCmdCuLaunchKernelNVX = {};
+    PFN_vkCreateCuFunctionNVX vkCreateCuFunctionNVX = {};
+    PFN_vkCreateCuModuleNVX vkCreateCuModuleNVX = {};
+    PFN_vkDestroyCuFunctionNVX vkDestroyCuFunctionNVX = {};
+    PFN_vkDestroyCuModuleNVX vkDestroyCuModuleNVX = {};
+
+    // NVX image view handle
+    PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX = {};
+    PFN_vkGetImageViewHandle64NVX vkGetImageViewHandle64NVX = {};
+    PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX = {};
+
     VkBuffer buffer_device_address_buffer = {};
     u64 * buffer_device_address_buffer_host_ptr = {};
     VmaAllocation buffer_device_address_buffer_allocation = {};

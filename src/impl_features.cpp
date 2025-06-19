@@ -167,6 +167,9 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_shader_clock_features_khr);
         }
 
+        low_latency  = extensions.extensions_present[extensions.physical_device_low_latency_nv];
+        nvx_image_view_handle = extensions.extensions_present[extensions.physical_device_image_view_handle_nvx];
+        nvx_binary_import = extensions.extensions_present[extensions.physical_device_binary_import_nvx];
         conservative_rasterization = extensions.extensions_present[extensions.physical_device_conservative_rasterization_ext];
         swapchain = extensions.extensions_present[extensions.physical_device_swapchain_khr];
 
@@ -494,6 +497,10 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_mesh_shader_properties_ext);
         }
 
+        physical_device_push_descriptor_properties_khr.pNext = chain;
+        physical_device_push_descriptor_properties_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR;
+        chain = static_cast<void *>(&physical_device_push_descriptor_properties_khr);
+
         physical_device_properties_2.pNext = chain;
         physical_device_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
     }
@@ -554,6 +561,12 @@ namespace daxa
             out->mesh_shader_properties.value.prefers_compact_vertex_output = static_cast<daxa_Bool8>(properties_struct.physical_device_mesh_shader_properties_ext.prefersCompactVertexOutput);
             out->mesh_shader_properties.value.prefers_compact_primitive_output = static_cast<daxa_Bool8>(properties_struct.physical_device_mesh_shader_properties_ext.prefersCompactPrimitiveOutput);
         }
+        out->push_descriptor_properties.has_value = 1;
+        std::memcpy(
+                &out->push_descriptor_properties.value,
+                r_cast<std::byte const *>(&properties_struct.physical_device_push_descriptor_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
+                sizeof(daxa_PushDescriptorProperties));
+
 
         u32 queue_family_props_count = 0;
         std::vector<VkQueueFamilyProperties> queue_props;

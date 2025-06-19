@@ -26,6 +26,23 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
         explicit_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
+#ifdef STREAMLINE_ENABLED
+    auto _sl_result = DAXA_RESULT_SUCCESS;
+    if (info->enable_streamline && info->sl_features.size > 0) 
+    {   
+        if (!ret.streamline.pre_initialize(info->sl_features.data, info->sl_features.size))
+        {
+            ret.sl_enabled = false;
+            _sl_result = DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+        }
+        else
+        {
+            ret.sl_enabled = true;
+        }
+    }
+    _DAXA_RETURN_IF_ERROR(_sl_result, _sl_result);
+#endif // STREAMLINE_ENABLED
+
     std::vector<char const *> implicit_extensions{};
     implicit_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     implicit_extensions.push_back("VK_KHR_win32_surface");
@@ -152,8 +169,19 @@ auto daxa_ImplInstance::initialize_physical_devices() -> daxa_Result
 auto daxa_ImplInstance::load_global_functions() -> bool 
 {
 #if DAXA_USE_DYNAMIC_VULKAN
-    HMODULE vulkan_lib = LoadLibraryA("vulkan-1.dll");
+#ifdef STREAMLINE_ENABLED
+    // Attempt to load sl.interposer.dll first if Streamline is enabled
+    // FIXME: add support for other platforms
+    vulkan_lib = LoadLibraryA("sl.interposer.dll");
     if (!vulkan_lib) {
+        // Fallback to vulkan-1.dll if there's no interposer
+        vulkan_lib = LoadLibraryA("vulkan-1.dll");
+    }
+#else
+    HMODULE vulkan_lib = LoadLibraryA("vulkan-1.dll");
+#endif
+
+    if(!vulkan_lib) {
         return false;
     }
 
@@ -321,6 +349,14 @@ auto daxa_instance_choose_device(daxa_Instance self, daxa_ImplicitFeatureFlags d
         bool const matches_explicit_features = (info->explicit_features & props.explicit_features) == info->explicit_features;
         bool const matches_implicit_features = (desired_implicit_features & props.implicit_features) == desired_implicit_features;
 
+#ifdef STREAMLINE_ENABLED
+        if(self->info.enable_streamline) {
+            sl::AdapterInfo adapter;
+            adapter.vkPhysicalDevice = self->device_internals[i].vk_handle;
+            matches_info = matches_info && self->streamline.check_features_by_device(adapter);
+        }
+#endif // STREAMLINE_ENABLED
+
         if (no_support_problems && matches_info && matches_explicit_features && matches_implicit_features)
         {
             info->physical_device_index = i;
@@ -405,6 +441,13 @@ void daxa_ImplInstance::zero_ref_callback(ImplHandle const * handle)
     _DAXA_TEST_PRINT("daxa_ImplInstance::zero_ref_callback\n");
     daxa_Instance self = rc_cast<daxa_Instance>(handle);
     VK_CALL_I(self, vkDestroyInstance, self->vk_instance, nullptr);
+#ifdef DAXA_USE_DYNAMIC_VULKAN
+    // FIXME: add support for other platforms
+    if (self->vulkan_lib)
+    {
+        FreeLibrary(self->vulkan_lib);
+    }
+#endif
     delete self;
 }
 

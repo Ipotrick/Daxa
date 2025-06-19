@@ -38,6 +38,7 @@ namespace daxa
         ImplImageViewSlot view_slot = {};
         daxa_ImageInfo info = {};
         VkImage vk_image = {};
+        VkDeviceMemory vk_dev_mem = {};
         VmaAllocation vma_allocation = {};
         daxa_MemoryBlock opt_memory_block = {};
         i32 swapchain_image_index = NOT_OWNED_BY_SWAPCHAIN;

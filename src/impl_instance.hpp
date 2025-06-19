@@ -5,6 +5,10 @@
 
 #include <daxa/c/instance.h>
 
+#ifdef STREAMLINE_ENABLED
+#include <daxa/utils/streamline.hpp>
+#endif // STREAMLINE_ENABLED
+
 struct ImplPhysicalDevice
 {
     PhysicalDeviceExtensionsStruct extensions = {};
@@ -18,11 +22,20 @@ struct daxa_ImplInstance final : ImplHandle
     std::string engine_name = {};
     std::string app_name = {};
     VkInstance vk_instance = {};
+#ifdef STREAMLINE_ENABLED
+    // Streamline
+    bool sl_enabled = false;
+    std::vector<sl::Feature> sl_active_features = {};
+    daxa::StreamlineContext streamline;
+#endif // STREAMLINE_ENABLED
 
     std::vector<ImplPhysicalDevice> device_internals = {};
     std::vector<daxa_DeviceProperties> device_properties = {};
 
 #if DAXA_USE_DYNAMIC_VULKAN
+    // dynamic lib pointer
+    HMODULE vulkan_lib;
+
     PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr;
     PFN_vkGetDeviceProcAddr vkGetDeviceProcAddr;
 

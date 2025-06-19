@@ -195,6 +195,11 @@ namespace daxa
         u32 invocation_reorder_mode = {};
     };
 
+    struct PushDescriptorProperties
+    {
+        u32 max_push_descriptor = {};
+    };
+
 #if !DAXA_REMOVE_DEPRECATED
     struct DeviceFlagsProperties
     {
@@ -317,6 +322,7 @@ namespace daxa
         Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
         Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
         Optional<InvocationReorderProperties> invocation_reorder_properties = {};
+        Optional<PushDescriptorProperties> push_descriptor_properties = {};
         u32 compute_queue_count = {};
         u32 transfer_queue_count = {};
         ImplicitFeatureFlags implicit_features;

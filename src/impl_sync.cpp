@@ -101,6 +101,20 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
     return DAXA_RESULT_SUCCESS;
 }
 
+auto daxa_dvc_wrap_timeline_semaphore(daxa_Device device, VkSemaphore native_semaphore, daxa_TimelineSemaphoreInfo const * info, daxa_TimelineSemaphore * out_semaphore) -> daxa_Result
+{
+    auto ret = daxa_ImplTimelineSemaphore{};
+    ret.device = device;
+    ret.info = *reinterpret_cast<TimelineSemaphoreInfo const *>(info);
+    ret.vk_semaphore = native_semaphore;
+    ret.strong_count = 1;
+    // FIXME: Is this reference needed?
+    // device->inc_weak_refcnt();
+    *out_semaphore = new daxa_ImplTimelineSemaphore{};
+    **out_semaphore = ret;
+    return DAXA_RESULT_SUCCESS;
+}
+
 auto daxa_timeline_semaphore_info(daxa_TimelineSemaphore self) -> daxa_TimelineSemaphoreInfo const *
 {
     return reinterpret_cast<daxa_TimelineSemaphoreInfo const *>(&self->info);
