@@ -3,6 +3,11 @@
 #include <daxa/core.hpp>
 #include <daxa/device.hpp>
 
+#ifdef STREAMLINE_ENABLED
+#include <sl.h>
+#include <daxa/utils/streamline.hpp>
+#endif // STREAMLINE_ENABLED
+
 namespace daxa
 {
     struct InstanceFlagsProperties
@@ -24,6 +29,11 @@ namespace daxa
             InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD;
         SmallString engine_name = "daxa";
         SmallString app_name = "daxa app";
+#ifdef STREAMLINE_ENABLED
+        // Streamline configuration
+        bool enable_streamline = false;
+        Span<sl::Feature const> sl_features = {};
+#endif // STREAMLINE_ENABLED
     };
 
     struct DAXA_EXPORT_CXX Instance final : ManagedPtr<Instance, daxa_Instance>
@@ -45,6 +55,10 @@ namespace daxa
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
         [[nodiscard]] auto info() const -> InstanceInfo const &;
+
+#ifdef STREAMLINE_ENABLED
+        [[nodiscard]] auto streamline() const -> StreamlineContext const &;
+#endif 
 
       protected:
         template <typename T, typename H_T>
