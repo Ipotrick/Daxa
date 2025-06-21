@@ -562,6 +562,8 @@ auto daxa_dvc_device_memory_report(daxa_Device self, daxa_DeviceMemoryReport * r
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_MEMORY_MAP_FAILED, DAXA_RESULT_ERROR_MEMORY_MAP_FAILED);
     }
 
+    std::shared_lock lifetime_lock{self->gpu_sro_table.lifetime_lock};
+
     auto const buffer_list_allocation_size = report->buffer_count;
     auto const image_list_allocation_size = report->image_count;
     auto const tlas_list_allocation_size = report->tlas_count;

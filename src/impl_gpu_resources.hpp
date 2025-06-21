@@ -6,6 +6,13 @@
 
 #include <atomic>
 
+// TODO:    Refactor slots into hot and cold data
+//          hot data should be stored in pre-allocated flat array
+//          cold data should be allocated on demand into growing address stable container (similar to DynamicArenaVector8k)
+
+// TODO:    Remove buffer descriptors.
+// TODO:    Remove tlas descriptors.
+
 namespace daxa
 {
     struct ImplBufferSlot
