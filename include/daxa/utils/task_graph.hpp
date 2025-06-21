@@ -69,7 +69,7 @@ namespace daxa
         /// @brief  Sets the size of the linear allocator of device local, host visible memory used by the linear staging allocator.
         ///         This memory is used internally as well as by tasks via the TaskInterface::get_allocator().
         ///         Setting the size to 0, disables a few task list features but also eliminates the memory allocation.
-        u32 staging_memory_pool_size = 1u << 17u;   // 128kib
+        u32 staging_memory_pool_size = 1u << 17u; // 128kib
         /// @brief  CPU Memory allocated for task data
         u32 task_memory_pool_size = 1u << 19u; // 512kib
         // Useful for debugging tools that are invisible to the graph.
@@ -131,10 +131,12 @@ namespace daxa
     . '. \_____\.
     */
 
+    static inline constexpr usize MAX_INLINE_ATTACHMENTS = 32;
+
     struct InlineTaskInfo
     {
         TaskType task_type = TaskType::GENERAL;
-        std::vector<TaskAttachmentInfo> attachments = {};
+        FixedList<TaskAttachmentInfo, MAX_INLINE_ATTACHMENTS> attachments = {};
         std::function<void(TaskInterface)> task = {};
         std::string_view name = "unnamed";
     };
@@ -205,7 +207,7 @@ namespace daxa
       public:
         struct Internal
         {
-            std::vector<TaskAttachmentInfo> _attachments = {};
+            FixedList<TaskAttachmentInfo, MAX_INLINE_ATTACHMENTS> _attachments = {};
             std::function<void(TaskInterface)> _callback = {};
             std::string_view _name = {};
             TaskType _task_type = TaskType::GENERAL;
@@ -233,7 +235,7 @@ namespace daxa
                 requires((ALLOWED_ACCESS & Allow::READ) != 0)
             {
                 ImageViewType view_override = ImageViewType::MAX_ENUM;
-                (_internal._process_params(STAGE, TaskAccessType::READ,view_override, v), ...);
+                (_internal._process_params(STAGE, TaskAccessType::READ, view_override, v), ...);
                 return InlineTask{std::move(_internal)};
             }
             template <TaskResourceViewOrResourceOrImageViewType... TResources>
@@ -319,7 +321,6 @@ namespace daxa
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::AS_BUILD> acceleration_structure_build;
         };
 
-        
         template <TaskResourceViewOrResource... TResources>
         auto reads(TaskStage stage, TResources... v) -> InlineTask
         {
@@ -363,7 +364,6 @@ namespace daxa
             return InlineTask{std::move(value._internal)};
         }
 
-
         template <TaskResourceViewOrResource... TResources>
         auto reads(TResources... v) -> InlineTask
         {
@@ -395,7 +395,6 @@ namespace daxa
             return samples(TaskStage::NONE, v...);
         }
 
-
         template <TaskResourceViewOrResource... TResources>
         auto uses(TaskAccess access, TResources... v) -> InlineTask
         {
@@ -403,7 +402,6 @@ namespace daxa
             (value._internal._process_params(access.stage, access.type, view_override, v), ...);
             return InlineTask{std::move(value._internal)};
         }
-
 
         auto executes(std::function<void(TaskInterface)> const & c) && -> InlineTask
         {
@@ -466,12 +464,12 @@ namespace daxa
     struct TaskAddInfo
     {
         Queue queue = daxa::QUEUE_NONE;
-    };;
+    };
 
     struct ImplTaskGraph;
 
-    using OpaqueTaskPtr = std::unique_ptr<void, void(*)(void*)>;
-    using OpaqueTaskCallback = void (*)(void*, TaskInterface &);
+    using OpaqueTaskPtr = std::unique_ptr<void, void (*)(void *)>;
+    using OpaqueTaskCallback = void (*)(void *, TaskInterface &);
 
     struct TaskGraph : ManagedPtr<TaskGraph, ImplTaskGraph *>
     {
@@ -570,10 +568,12 @@ namespace daxa
                 void callback(TaskInterface ti) { _task.callback(ti); };
             };
 
-            auto destructor_callback = 
-                [](void* t){ reinterpret_cast<WrapperTask*>(t)->~WrapperTask(); };
-            auto task_callback = 
-                [](void* t, TaskInterface & ti){ reinterpret_cast<WrapperTask*>(t)->callback(ti); };
+            auto destructor_callback =
+                [](void * t)
+            { reinterpret_cast<WrapperTask *>(t)->~WrapperTask(); };
+            auto task_callback =
+                [](void * t, TaskInterface & ti)
+            { reinterpret_cast<WrapperTask *>(t)->callback(ti); };
 
             OpaqueTaskPtr wrapped_task_opaque = {allocate_task_memory(sizeof(WrapperTask), alignof(WrapperTask)), destructor_callback};
             auto wrapped_task = new (wrapped_task_opaque.get()) WrapperTask(std::move(task));
@@ -583,33 +583,43 @@ namespace daxa
             u32 asb_align = detail::get_asb_size_and_alignment(attachments).alignment;
             TaskType task_type = TTask::TASK_TYPE;
             std::string_view name = TTask::TASK_NAME;
-            add_task( 
+            add_task(
                 std::move(wrapped_task_opaque), task_callback,
-                attachments, asb_size, asb_align, task_type, name, add_info );
+                attachments, asb_size, asb_align, task_type, name, add_info);
         }
-        template<typename T>
+        template <typename T>
         void add_task(T && inline_task, TaskAddInfo add_info = {})
             requires std::is_base_of_v<InlineTask, T> || std::is_same_v<InlineTask, T>
         {
-            auto destructor_callback = 
-                [](void* t){ reinterpret_cast<T*>(t)->~T(); };
-            auto task_callback = 
-                [](void* t, TaskInterface & ti){ reinterpret_cast<T*>(t)->callback(ti); };
+            using CallbackT = std::function<void(TaskInterface)>;
 
-            OpaqueTaskPtr task_opaque = {allocate_task_memory(sizeof(T), alignof(T)), destructor_callback};
-            auto task = new (task_opaque.get()) T(std::move(inline_task));
-            std::span<TaskAttachmentInfo> attachments = task->value._internal._attachments;
+            auto destructor_callback =
+                [](void * t)
+            { reinterpret_cast<CallbackT *>(t)->~CallbackT(); };
+            auto task_callback =
+                [](void * t, TaskInterface & ti)
+            { reinterpret_cast<CallbackT *>(t)->operator()(ti); };
+
+            // Allocate task memory and fill wrapped task
+            OpaqueTaskPtr callback_mem_alloc = {allocate_task_memory(sizeof(CallbackT), alignof(CallbackT)), destructor_callback};
+            new (callback_mem_alloc.get()) CallbackT(std::move(inline_task.value._internal._callback));
+
+            // Allocate and copy attachments into smaller memory section
+            usize const attachment_count = inline_task.value._internal._attachments.size();
+            auto attachments = std::span{reinterpret_cast<TaskAttachmentInfo*>(allocate_task_memory(sizeof(TaskAttachmentInfo) * attachment_count, alignof(TaskAttachmentInfo))), attachment_count};
+            std::memcpy(attachments.data(), inline_task.value._internal._attachments.data(), sizeof(TaskAttachmentInfo) * attachments.size());
+
             u32 asb_size = detail::get_asb_size_and_alignment(attachments).size;
             u32 asb_align = detail::get_asb_size_and_alignment(attachments).alignment;
-            TaskType task_type = task->value._internal._task_type;
-            std::string_view name = task->value._internal._name;
-            add_task( 
-                std::move(task_opaque), task_callback,
-                attachments, asb_size, asb_align, task_type, name, add_info );
+            TaskType task_type = inline_task.value._internal._task_type;
+            std::string_view name = inline_task.value._internal._name;
+            add_task(
+                std::move(callback_mem_alloc), task_callback,
+                attachments, asb_size, asb_align, task_type, name, add_info);
         }
         void add_task(InlineTaskInfo const & inline_task_info, TaskAddInfo add_info = {})
         {
-            add_task( InlineTask{inline_task_info}, add_info );
+            add_task(InlineTask{inline_task_info}, add_info);
         }
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
@@ -632,7 +642,7 @@ namespace daxa
 
       private:
         DAXA_EXPORT_CXX void add_task(
-            OpaqueTaskPtr && task_memory, 
+            OpaqueTaskPtr && task_memory,
             OpaqueTaskCallback task_callback,
             std::span<TaskAttachmentInfo> attachments,
             u32 attachment_shader_blob_size,
@@ -641,6 +651,6 @@ namespace daxa
             std::string_view name,
             TaskAddInfo const & add_info);
 
-        DAXA_EXPORT_CXX auto allocate_task_memory(usize size, usize align) -> void*;
+        DAXA_EXPORT_CXX auto allocate_task_memory(usize size, usize align) -> void *;
     };
 } // namespace daxa
