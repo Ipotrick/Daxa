@@ -1,3 +1,5 @@
+#include "impl_core.hpp"
+
 #include "impl_device.hpp"
 #include "impl_pipeline.hpp"
 

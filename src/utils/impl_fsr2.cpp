@@ -1,5 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_FSR2
 
+#include "../impl_core.hpp"
+
 #include "impl_fsr2.hpp"
 
 #include <cstring>

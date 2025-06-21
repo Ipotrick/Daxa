@@ -1,3 +1,5 @@
+#include "impl_core.hpp"
+
 #include "impl_sync.hpp"
 #include "impl_device.hpp"
 

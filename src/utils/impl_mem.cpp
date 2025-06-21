@@ -1,5 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_MEM
 
+#include "../impl_core.hpp"
+
 #include <daxa/utils/mem.hpp>
 #include <utility>
 

@@ -1,5 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
 
+#include "../impl_core.hpp"
+
 #include <algorithm>
 #include <iostream>
 #include <set>

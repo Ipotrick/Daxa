@@ -1,6 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG || DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
 
 #include "../impl_core.hpp"
+
 #include "daxa/utils/pipeline_manager.hpp"
 #include "impl_pipeline_manager.hpp"
 

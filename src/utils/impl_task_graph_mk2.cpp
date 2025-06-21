@@ -1,4 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+
+#include "../impl_core.hpp"
+
 #include "impl_task_graph_mk2.hpp"
 
 namespace daxa

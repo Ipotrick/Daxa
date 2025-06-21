@@ -1,3 +1,5 @@
+#include "impl_core.hpp"
+
 #include "impl_gpu_resources.hpp"
 
 #include <daxa/daxa.inl>

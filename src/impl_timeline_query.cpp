@@ -1,3 +1,5 @@
+#include "impl_core.hpp"
+
 #include "impl_timeline_query.hpp"
 
 #include <utility>

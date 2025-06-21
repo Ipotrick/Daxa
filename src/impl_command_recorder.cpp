@@ -1,3 +1,5 @@
+#include "impl_core.hpp"
+
 #include "impl_command_recorder.hpp"
 
 #include <daxa/c/types.h>
