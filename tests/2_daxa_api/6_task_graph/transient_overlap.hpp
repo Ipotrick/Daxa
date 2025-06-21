@@ -163,57 +163,37 @@ namespace tests
 
             // ========================================== Record tasks =======================================================
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, image_A),
-                    daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, image_B),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Transfer("Task 1 - write image A and B")
+                .writes(image_A, image_B)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     set_initial_image_data(ti, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
                     set_initial_image_data(ti, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
-                },
-                .name = "Task 1 - write image A and B",
-            });
+                }));
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, image_A),
-                    daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, image_B),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Compute("Task 2 - test contents of image A and B")
+                .compute_shader.samples(image_A, image_B)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     validate_image_data(ti, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
                     validate_image_data(ti, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
-                },
-                .name = "Task 2 - test contents of image A and B",
-            });
+                }));
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, image_A),
-                    daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, image_C),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Transfer("Task 3 - write image A and C")
+                .writes(image_A, image_C)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     set_initial_image_data(ti, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE);
                     set_initial_image_data(ti, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE);
-                },
-                .name = "Task 3 - write image A and C",
-            });
+                }));
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, image_A),
-                    daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, image_C),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Compute("Task 4 - test contents of image A and C")
+                .compute_shader.samples(image_A, image_C)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     validate_image_data(ti, image_A, IMAGE_A_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
                     validate_image_data(ti, image_C, IMAGE_C_SIZE, IMAGE_C_VALUE, *test_image_pipeline);
-                },
-                .name = "Task 4 - test contents of image A and C",
-            });
+                }));
             task_graph.submit({});
             task_graph.complete({});
             task_graph.execute({});
@@ -282,47 +262,36 @@ namespace tests
                                                                  .size = {IMAGE_BASE_SIZE.x, IMAGE_BASE_SIZE.y, IMAGE_BASE_SIZE.z},
                                                                  .name = "Image Base"});
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, image_base),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Transfer("Task 0 - write base image value")
+                .writes(image_base)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     set_initial_image_data(ti, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE);
-                },
-                .name = "Task 0 - write base image value",
-            });
+                }));
 
-            task_graph.conditional({.condition_index = 0,
-                                    .when_true = [&]()
-                                    {
+            task_graph.conditional({
+                .condition_index = 0,
+                .when_true = [&]()
+                {
                     auto image_A = task_graph.create_transient_image({
                         .dimensions = 3,
                         .format = daxa::Format::R32_SFLOAT,
                         .size = {IMAGE_A_SIZE.x, IMAGE_A_SIZE.y, IMAGE_A_SIZE.z},
                         .name = "Image A"
                     });
-                    task_graph.add_task({
-                        .attachments = {
-                            daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, image_A),
-                        },
-                        .task = [=](daxa::TaskInterface ti)
+                    task_graph.add_task(daxa::InlineTask::Transfer("Perm True - Task 1 - write image A")
+                        .writes(image_A)
+                        .executes([=](daxa::TaskInterface ti)
                         {
                             set_initial_image_data(ti, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE);
-                        },
-                        .name = "Perm True - Task 1 - write image A",
-                    });
+                        }));
 
-                    task_graph.add_task({
-                        .attachments = {
-                            daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, image_A),
-                        },
-                        .task = [=](daxa::TaskInterface ti)
+                    task_graph.add_task(daxa::InlineTask::Compute("Perm True - Task 2 - check image A")
+                        .samples(image_A)
+                        .executes([=](daxa::TaskInterface ti)
                         {
                             validate_image_data(ti, image_A, IMAGE_A_SIZE, IMAGE_A_VALUE, *test_image_pipeline);
-                        },
-                        .name = "Perm True - Task 2 - check image A",
-                    }); 
+                        }));
                 },
                 .when_false = [&]()
                 {
@@ -333,40 +302,28 @@ namespace tests
                         .name = "Image B"
                     });
 
-                    task_graph.add_task({
-                        .attachments = {
-                            daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, image_B),
-                        },
-                        .task = [=](daxa::TaskInterface ti)
+                    task_graph.add_task(daxa::InlineTask::Transfer("Perm False - Task 1 - write image B")
+                        .writes(image_B)
+                        .executes([=](daxa::TaskInterface ti)
                         {
                             set_initial_image_data(ti, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE);
-                        },
-                        .name = "Perm False - Task 1 - write image B",
-                    });
+                        }));
 
-                    task_graph.add_task({
-                        .attachments = {
-                            daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, image_B),
-                        },
-                        .task = [=](daxa::TaskInterface ti)
+                    task_graph.add_task(daxa::InlineTask::Compute("Perm False - Task 2 - check image B")
+                        .samples(image_B)
+                        .executes([=](daxa::TaskInterface ti)
                         {
                             validate_image_data(ti, image_B, IMAGE_B_SIZE, IMAGE_B_VALUE, *test_image_pipeline);
-                        },
-                        .name = "Perm False - Task 2 - check image B",
-                    }); 
+                        }));
                 }
             });
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, image_base),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Compute("Task 3 - validate base image data")
+                .samples(image_base)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     validate_image_data(ti, image_base, IMAGE_BASE_SIZE, IMAGE_BASE_VALUE, *test_image_pipeline);
-                },
-                .name = "Task 3 - validate base image data",
-            });
+                }));
 
             task_graph.submit({});
             task_graph.complete({});
@@ -459,60 +416,42 @@ namespace tests
                 });
 
             // Record tasks.
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskBufferAccess::TRANSFER_WRITE, long_life_buffer),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Transfer("populate long life buffer")
+                .writes(long_life_buffer)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     set_initial_buffer_data(ti, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE);
-                },
-                .name = "populate long life buffer",
-            });
+                }));
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, medium_life_image),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Transfer("populate medium life image")
+                .writes(medium_life_image)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     set_initial_image_data(ti, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE);
-                },
-                .name = "populate medium life image",
-            });
+                }));
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, long_life_buffer),
-                    daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, medium_life_image),
-                    daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, long_life_image),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask("validate long life buffer, validate medium life image, populate long life image")
+                .compute_shader.reads(long_life_buffer)
+                .compute_shader.samples(medium_life_image)
+                .transfer.writes(long_life_image)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     set_initial_image_data(ti, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE);
                     validate_image_data(ti, medium_life_image, MEDIUM_LIFE_IMAGE_SIZE, MEDIUM_LIFE_IMAGE_VALUE, *test_image_pipeline);
                     validate_buffer_data(ti, long_life_buffer, LONG_LIFE_BUFFER_SIZE, LONG_LIFE_BUFFER_VALUE, *test_buffer_pipeline);
-                },
-                .name = "validate long life buffer, validate medium life image, populate long life image",
-            });
+                }));
 
-            task_graph.add_task({
-                .attachments = { daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_WRITE, short_life_image) },
-                .task = [=](daxa::TaskInterface) {},
-                .name = "dummy use short life image",
-            });
+            task_graph.add_task(daxa::InlineTask::Compute("dummy use short life image")
+                .reads_writes(short_life_image)
+                .executes([=](daxa::TaskInterface ti){}));
 
-            task_graph.add_task({
-                .attachments = {
-                    daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE, short_life_buffer),
-                    daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, long_life_image),
-                },
-                .task = [=](daxa::TaskInterface ti)
+            task_graph.add_task(daxa::InlineTask::Compute("dummy use short life image")
+                .reads_writes(short_life_buffer)
+                .samples(long_life_image)
+                .executes([=](daxa::TaskInterface ti)
                 {
                     validate_image_data(ti, long_life_image, LONG_LIFE_IMAGE_SIZE, LONG_LIFE_IMAGE_VALUE, *test_image_pipeline);
-                },
-                .name = "validate long life image, dummy access short life buffer",
-            });
+                }));
 
             task_graph.submit({});
             task_graph.complete({});

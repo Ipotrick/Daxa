@@ -593,6 +593,8 @@ namespace daxa
         {
             using CallbackT = std::function<void(TaskInterface)>;
 
+            DAXA_DBG_ASSERT_TRUE_M(static_cast<bool>(inline_task.value._internal._callback), "Detected emptry callback on inline task!");
+
             auto destructor_callback =
                 [](void * t)
             { reinterpret_cast<CallbackT *>(t)->~CallbackT(); };
