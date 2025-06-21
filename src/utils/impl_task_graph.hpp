@@ -157,24 +157,23 @@ namespace daxa
     struct ImplPresentInfo
     {
         std::vector<BinarySemaphore> binary_semaphores = {};
-        std::vector<BinarySemaphore> * additional_binary_semaphores = {};
+        std::span<BinarySemaphore> * additional_binary_semaphores = {};
     };
 
     struct TaskBatch
     {
-        std::vector<usize> pipeline_barrier_indices = {};
-        std::vector<usize> wait_split_barrier_indices = {};
-        std::vector<TaskId> tasks = {};
-        std::vector<usize> signal_split_barrier_indices = {};
+        DynamicArenaArray8k<usize> pipeline_barrier_indices = {};
+        DynamicArenaArray8k<usize> wait_split_barrier_indices = {};
+        DynamicArenaArray8k<TaskId> tasks = {};
+        DynamicArenaArray8k<usize> signal_split_barrier_indices = {};
     };
 
     struct QueueSubmitScope
     {
-        daxa::Queue queue = {};
         // These barriers are inserted after all batches and their sync.
-        std::vector<usize> last_minute_barrier_indices = {};
-        std::vector<TaskBatch> task_batches = {};
-        std::vector<u64> used_swapchain_task_images = {};
+        DynamicArenaArray8k<usize> last_minute_barrier_indices = {};
+        DynamicArenaArray8k<TaskBatch> task_batches = {};
+        DynamicArenaArray8k<u64> used_swapchain_task_images = {};
         std::optional<ImplPresentInfo> present_info = {};
     };
 
@@ -182,15 +181,7 @@ namespace daxa
     {
         CommandSubmitInfo submit_info = {};
         TaskSubmitInfo user_submit_info = {};
-        std::array<QueueSubmitScope, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_submit_scopes = {
-            QueueSubmitScope{.queue = daxa::QUEUE_MAIN},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_0},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_1},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_2},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_3},
-            QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_0},
-            QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_1},  
-        };
+        std::array<QueueSubmitScope, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_submit_scopes = {};
     };
 
     auto task_image_access_to_layout_access(TaskAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>;
@@ -217,7 +208,7 @@ namespace daxa
         usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
 
         void add_task(ImplTaskGraph & task_graph_impl, ImplTask & impl_task, TaskId task_id, daxa::Queue queue);
-        void submit(TaskSubmitInfo const & info);
+        void submit(MemoryArena* allocator, TaskSubmitInfo const & info);
         void present(TaskPresentInfo const & info);
     };
 
@@ -419,7 +410,7 @@ namespace daxa
         std::unordered_map<std::string_view, TaskImageView> image_name_to_id = {};
 
         // Are executed in a pre-submission, before any actual task recording/submission.
-        std::vector<TaskBarrier> setup_task_barriers = {};
+        DynamicArenaArray8k<TaskBarrier> setup_task_barriers = {};
 
         usize memory_block_size = {};
         u32 memory_type_bits = 0xFFFFFFFFu;

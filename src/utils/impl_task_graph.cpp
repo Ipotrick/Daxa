@@ -23,6 +23,20 @@ namespace daxa
         return offsets[static_cast<u32>(queue.family)] + queue.index;
     }
 
+    auto flat_index_to_queue(u32 flat_index) -> daxa::Queue
+    {
+        daxa::Queue queues[] = {
+            daxa::QUEUE_MAIN,
+            daxa::QUEUE_COMPUTE_0,
+            daxa::QUEUE_COMPUTE_1,
+            daxa::QUEUE_COMPUTE_2,
+            daxa::QUEUE_COMPUTE_3,
+            daxa::QUEUE_TRANSFER_0,
+            daxa::QUEUE_TRANSFER_1,
+        };
+        return queues[flat_index];
+    }
+
     auto to_string(TaskStage stage) -> std::string_view
     {
         switch (stage)
@@ -885,8 +899,20 @@ namespace daxa
             permutation.buffer_infos = {&impl.mk2.task_memory};
             permutation.image_infos = {&impl.mk2.task_memory};
             permutation.initial_barriers = {&impl.mk2.task_memory};
-            permutation.batch_submit_scopes.push_back({});
+            auto queue_submit_scopes = std::array{
+                QueueSubmitScope{ .last_minute_barrier_indices = {&impl.mk2.task_memory}, .task_batches = {&impl.mk2.task_memory}, .used_swapchain_task_images = {&impl.mk2.task_memory} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {&impl.mk2.task_memory}, .task_batches = {&impl.mk2.task_memory}, .used_swapchain_task_images = {&impl.mk2.task_memory} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {&impl.mk2.task_memory}, .task_batches = {&impl.mk2.task_memory}, .used_swapchain_task_images = {&impl.mk2.task_memory} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {&impl.mk2.task_memory}, .task_batches = {&impl.mk2.task_memory}, .used_swapchain_task_images = {&impl.mk2.task_memory} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {&impl.mk2.task_memory}, .task_batches = {&impl.mk2.task_memory}, .used_swapchain_task_images = {&impl.mk2.task_memory} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {&impl.mk2.task_memory}, .task_batches = {&impl.mk2.task_memory}, .used_swapchain_task_images = {&impl.mk2.task_memory} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {&impl.mk2.task_memory}, .task_batches = {&impl.mk2.task_memory}, .used_swapchain_task_images = {&impl.mk2.task_memory} },
+            };
+            permutation.batch_submit_scopes.push_back(TaskBatchSubmitScope{
+                .queue_submit_scopes = queue_submit_scopes,
+            });
         }
+        impl.setup_task_barriers = {&impl.mk2.task_memory};
         impl.update_active_permutations();
     }
     TaskGraph::~TaskGraph() = default;
@@ -1895,7 +1921,14 @@ namespace daxa
         // Make sure we have enough batches.
         if (first_possible_batch_index >= queue_submit_scope.task_batches.size())
         {
-            queue_submit_scope.task_batches.resize(first_possible_batch_index + 1);
+            queue_submit_scope.task_batches.resize(first_possible_batch_index + 1, 
+                TaskBatch{
+                    .pipeline_barrier_indices = { &impl.mk2.task_memory },
+                    .wait_split_barrier_indices = { &impl.mk2.task_memory },
+                    .tasks = { &impl.mk2.task_memory },
+                    .signal_split_barrier_indices = { &impl.mk2.task_memory },
+                }
+            );
         }
         return first_possible_batch_index;
     }
@@ -2335,7 +2368,7 @@ namespace daxa
                 AccessRelation<decltype(task_buffer)> relation{task_buffer, current_buffer_access, current_access_concurrency};
 
                 // Validate multi-queue use.
-                task_buffer.used_queue_concurrently = task_buffer.used_queue_concurrently || queue_submit_scope.queue != daxa::QUEUE_MAIN;
+                task_buffer.used_queue_concurrently = task_buffer.used_queue_concurrently || queue != daxa::QUEUE_MAIN;
                 if (task_buffer.latest_access_submit_scope_index == current_submit_scope_index)
                 {
                     bool const is_same_queue = queue == task_buffer.latest_access_submit_scope_queue;
@@ -2483,7 +2516,7 @@ namespace daxa
                 auto const & initial_used_image_slice = image_attach.translated_view.slice;
                 PerPermTaskImage & task_image = this->image_infos[used_image_t_id.index];
 
-                task_image.used_queue_concurrently = task_image.used_queue_concurrently || queue_submit_scope.queue != daxa::QUEUE_MAIN;
+                task_image.used_queue_concurrently = task_image.used_queue_concurrently || queue != daxa::QUEUE_MAIN;
 
                 // For transient images we need to record first and last use so that we can later name their allocations
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_image_inital_slices below since
@@ -2612,7 +2645,7 @@ namespace daxa
                         AccessRelation<decltype(tracked_slice)> relation{tracked_slice, current_image_access, current_access_concurrency, tracked_slice.state.latest_layout, current_image_layout};
 
                         // Validate multi-queue use.
-                        task_image.used_queue_concurrently = task_image.used_queue_concurrently || queue_submit_scope.queue != daxa::QUEUE_MAIN;
+                        task_image.used_queue_concurrently = task_image.used_queue_concurrently || queue != daxa::QUEUE_MAIN;
                         ret_new_use_tracked_slice.latest_access_submit_scope_exclusive_locked = tracked_slice.latest_access_submit_scope_exclusive_locked;
                         ret_new_use_tracked_slice.latest_access_submit_scope_concurrent_locked = tracked_slice.latest_access_submit_scope_concurrent_locked;
                         if (tracked_slice.latest_access_submit_scope_index == current_submit_scope_index)
@@ -2799,18 +2832,31 @@ namespace daxa
 
         for (auto & permutation : impl.record_active_permutations)
         {
-            permutation->submit(info);
+            permutation->submit(&impl.mk2.task_memory, info);
         }
     }
 
-    void TaskGraphPermutation::submit(TaskSubmitInfo const & info)
+    void TaskGraphPermutation::submit(MemoryArena* allocator, TaskSubmitInfo const & info)
     {
         // We provide the user submit info to the submit batch.
         // Start a new batch.
         TaskBatchSubmitScope & submit_scope = this->batch_submit_scopes.back();
         submit_scope.submit_info = {};
         submit_scope.user_submit_info = info;
-        this->batch_submit_scopes.push_back({});
+        {
+            auto queue_submit_scopes = std::array{
+                QueueSubmitScope{ .last_minute_barrier_indices = {allocator}, .task_batches = {allocator}, .used_swapchain_task_images = {allocator} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {allocator}, .task_batches = {allocator}, .used_swapchain_task_images = {allocator} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {allocator}, .task_batches = {allocator}, .used_swapchain_task_images = {allocator} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {allocator}, .task_batches = {allocator}, .used_swapchain_task_images = {allocator} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {allocator}, .task_batches = {allocator}, .used_swapchain_task_images = {allocator} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {allocator}, .task_batches = {allocator}, .used_swapchain_task_images = {allocator} },
+                QueueSubmitScope{ .last_minute_barrier_indices = {allocator}, .task_batches = {allocator}, .used_swapchain_task_images = {allocator} },
+            };
+            this->batch_submit_scopes.push_back(TaskBatchSubmitScope{
+                .queue_submit_scopes = queue_submit_scopes,
+            });
+        }
         for (auto & buf : this->buffer_infos)
         {
             if (buf.valid)
@@ -3462,7 +3508,7 @@ namespace daxa
         TaskGraphPermutation & permutation,
         CommandRecorder & recorder)
     {
-        std::array<u8, 2u << 11u> scrach_mem = {};
+        std::array<u8, 1u << 15u> scrach_mem = {};
         MemoryArena scratch_allocator = {"generate_persistent_resource_synch scratch allocator", scrach_mem};
         // Persistent resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not manageable.
@@ -3699,20 +3745,21 @@ namespace daxa
                 }
             }
             std::span<std::pair<daxa::TimelineSemaphore, u64>> wait_sema_array = std::span{wait_sema_mem.data(), count};
-            for (auto & queue_submit_scope : submit_scope.queue_submit_scopes)
+            for (u32 q = 0; q < submit_scope.queue_submit_scopes.size(); ++q)
             {
-
+                auto & queue_submit_scope = submit_scope.queue_submit_scopes[q];
+                daxa::Queue queue = flat_index_to_queue(q);
                 if (queue_submit_scope.task_batches.empty())
                 {
                     // Skip empty submit scopes.
                     continue;
                 }
-                CommandRecorder recorder = impl.info.device.create_command_recorder({queue_submit_scope.queue.family});
+                CommandRecorder recorder = impl.info.device.create_command_recorder({queue.family});
                 ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .permutation = permutation, .recorder = recorder};
 
                 // Setup commands are always recorded in the first submit scope to the default queue
                 // Async compute queue use in the first submit scope is not permitted.
-                if (submit_scope_index == 0 && queue_submit_scope.queue == impl.info.default_queue)
+                if (submit_scope_index == 0 && queue == impl.info.default_queue)
                 {
                     if (impl.info.enable_command_labels)
                     {
@@ -3825,7 +3872,7 @@ namespace daxa
                     usize task_index = 0;
                     for (TaskId const task_id : task_batch.tasks)
                     {
-                        impl.execute_task(impl_runtime, permutation, batch_index, task_index, task_id, queue_submit_scope.queue);
+                        impl.execute_task(impl_runtime, permutation, batch_index, task_index, task_id, queue);
                         task_index += 1;
                     }
                     if (impl.info.use_split_barriers)
@@ -3955,11 +4002,11 @@ namespace daxa
                     {
                         signal_timeline_semaphores.insert(signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                     }
-                    if (queue_submit_scope.queue == daxa::QUEUE_MAIN && impl.staging_memory.has_value())
+                    if (queue == daxa::QUEUE_MAIN && impl.staging_memory.has_value())
                     {
                         signal_timeline_semaphores.emplace_back(impl.staging_memory->timeline_semaphore(), impl.staging_memory->inc_timeline_value());
                     }
-                    u32 flat_queue_idx = flat_queue_index(queue_submit_scope.queue);
+                    u32 flat_queue_idx = flat_queue_index(queue);
                     auto & queue_sema = impl.gpu_submit_timeline_semaphores[flat_queue_idx];
                     wait_timeline_semaphores.insert(
                         wait_timeline_semaphores.end(),
@@ -3967,7 +4014,7 @@ namespace daxa
                         wait_sema_array.end());
                     signal_timeline_semaphores.push_back(std::pair{queue_sema, ++impl.cpu_submit_timeline_values[flat_queue_idx]});
                     daxa::CommandSubmitInfo const submit_info = {
-                        .queue = queue_submit_scope.queue,
+                        .queue = queue,
                         .wait_stages = wait_stages,
                         .command_lists = commands,
                         .wait_binary_semaphores = wait_binary_semaphores,
@@ -4355,18 +4402,20 @@ namespace daxa
             usize submit_scope_index = 0;
             for (auto & submit_scope : permutation.batch_submit_scopes)
             {
-                for (auto & queue_submit_scope : submit_scope.queue_submit_scopes)
+                for (u32 q = 0; q < submit_scope.queue_submit_scopes.size(); ++q)
                 {
+                    auto & queue_submit_scope = submit_scope.queue_submit_scopes[q];
+                    daxa::Queue queue = flat_index_to_queue(q);
                     if (queue_submit_scope.task_batches.empty())
                     {
                         continue;
                     }
 
                     std::format_to(std::back_inserter(out), "{}submit scope: {}\n", indent, submit_scope_index);
-                    std::format_to(std::back_inserter(out), "{} queue: {}\n", indent, daxa::to_string(queue_submit_scope.queue));
+                    std::format_to(std::back_inserter(out), "{} queue: {}\n", indent, daxa::to_string(queue));
                     [[maybe_unused]] FormatIndent const d1{out, indent, true};
                     usize batch_index = 0;
-                    for (auto & task_batch : submit_scope.queue_submit_scopes[flat_queue_index(queue_submit_scope.queue)].task_batches)
+                    for (auto & task_batch : submit_scope.queue_submit_scopes[q].task_batches)
                     {
                         std::format_to(std::back_inserter(out), "{}batch: {}\n", indent, batch_index);
                         batch_index += 1;
