@@ -173,6 +173,7 @@ namespace daxa
         }
         ~InlineTask()
         {
+            value.~InternalValue<Allow::NONE, TaskStage::NONE>();
         }
         InlineTask(InlineTask && other)
         {
