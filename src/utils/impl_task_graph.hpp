@@ -110,8 +110,8 @@ namespace daxa
         /// This boolean is used to check this.
         bool valid = {};
         bool swapchain_semaphore_waited_upon = {};
-        std::vector<ExtendedImageSliceState> last_slice_states = {};
-        std::vector<ExtendedImageSliceState> first_slice_states = {};
+        DynamicArenaArray8k<ExtendedImageSliceState> last_slice_states = {};
+        DynamicArenaArray8k<ExtendedImageSliceState> first_slice_states = {};
         // only for transient images
         ResourceLifetime lifetime = {};
         ImageCreateFlags create_flags = ImageCreateFlagBits::NONE;
@@ -151,7 +151,7 @@ namespace daxa
         Queue queue = {};
         std::span<std::span<ImageViewId>> image_view_cache = {};
         // Used to verify image view cache:
-        std::vector<std::vector<ImageId>> runtime_images_last_execution = {};
+        std::span<DynamicArenaArray8k<ImageId>> runtime_images_last_execution = {};
     };
 
     struct ImplPresentInfo
@@ -204,11 +204,11 @@ namespace daxa
         bool active = {};
         // persistent information:
         TaskImageView swapchain_image = {};
-        std::vector<PerPermTaskBuffer> buffer_infos = {};
-        std::vector<PerPermTaskImage> image_infos = {};
+        DynamicArenaArray8k<PerPermTaskBuffer> buffer_infos = {};
+        DynamicArenaArray8k<PerPermTaskImage> image_infos = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
-        std::vector<TaskBarrier> barriers = {};
-        std::vector<usize> initial_barriers = {};
+        DynamicArenaArray8k<TaskBarrier> barriers = {};
+        DynamicArenaArray8k<usize> initial_barriers = {};
         // TODO(msakmary, pahrens) - Instead of storing batch submit scopes which contain batches
         // we should make a vector of batches which and a second vector of submit scopes which are
         // just offsets into the batches vector

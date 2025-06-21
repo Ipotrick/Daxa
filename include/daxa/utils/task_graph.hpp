@@ -71,7 +71,7 @@ namespace daxa
         ///         Setting the size to 0, disables a few task list features but also eliminates the memory allocation.
         u32 staging_memory_pool_size = 1u << 17u;   // 128kib
         /// @brief  CPU Memory allocated for task data
-        u32 task_memory_pool_size = 1u << 18u; // 256kib
+        u32 task_memory_pool_size = 1u << 19u; // 512kib
         // Useful for debugging tools that are invisible to the graph.
         daxa::ImageUsageFlags additional_transient_image_usage_flags = {};
         // Useful for reflection/ debugging.
@@ -210,7 +210,7 @@ namespace daxa
             std::string_view _name = {};
             TaskType _task_type = TaskType::GENERAL;
 
-            void _process_params(TaskStage stage, TaskAccessType type, ImageViewType & view_override, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
+            void _process_params(TaskStage stage, TaskAccessType type, ImageViewType &, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
             {
                 _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param));
             }
@@ -218,7 +218,7 @@ namespace daxa
             {
                 _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param, view_override));
             }
-            void _process_params(TaskStage stage, TaskAccessType type, ImageViewType & view_override, ImageViewType param)
+            void _process_params(TaskStage, TaskAccessType, ImageViewType & view_override, ImageViewType param)
             {
                 view_override = param;
             }
@@ -567,7 +567,7 @@ namespace daxa
                         }
                     }
                 }
-                virtual void callback(TaskInterface ti) { _task.callback(ti); };
+                void callback(TaskInterface ti) { _task.callback(ti); };
             };
 
             auto destructor_callback = 
@@ -609,7 +609,7 @@ namespace daxa
         }
         void add_task(InlineTaskInfo const & inline_task_info, TaskAddInfo add_info = {})
         {
-            add_task( std::move(InlineTask{inline_task_info}), add_info );
+            add_task( InlineTask{inline_task_info}, add_info );
         }
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);

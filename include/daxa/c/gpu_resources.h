@@ -132,6 +132,8 @@ static daxa_ImageInfo const DAXA_DEFAULT_IMAGE_INFO = {
 static daxa_ImageViewInfo const DAXA_DEFAULT_IMAGE_VIEW_INFO = {
     .type = VK_IMAGE_VIEW_TYPE_2D,
     .format = VK_FORMAT_R8G8B8A8_SRGB,
+    .image = DAXA_ZERO_INIT,
+    .slice = DAXA_ZERO_INIT,
     .name = {.data = DAXA_ZERO_INIT, .size = 0},
 };
 static daxa_SamplerInfo const DAXA_DEFAULT_SAMPLER_INFO = {

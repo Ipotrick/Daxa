@@ -64,8 +64,8 @@ namespace daxa
         template <typename PipeT, typename InfoT>
         struct PipelineState
         {
-            std::shared_ptr<PipeT> pipeline_ptr;
-            InfoT info;
+            std::shared_ptr<PipeT> pipeline_ptr = {};
+            InfoT info = {};
             std::chrono::file_clock::time_point last_hotload_time = {};
             ShaderFileTimeSet observed_hotload_files = {};
         };

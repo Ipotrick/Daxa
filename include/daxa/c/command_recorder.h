@@ -186,7 +186,7 @@ static daxa_RenderAttachmentInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     .store_op = VK_ATTACHMENT_STORE_OP_STORE,
     .clear_value = DAXA_ZERO_INIT,
-    .resolve = {.has_value = 0},
+    .resolve = {.value = DAXA_ZERO_INIT, .has_value = 0},
 };
 
 typedef struct

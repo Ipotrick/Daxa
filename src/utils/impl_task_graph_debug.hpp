@@ -186,12 +186,12 @@ namespace daxa
 #endif
     }
     
-    void validate_attachment_stages(ImplTaskGraph const & impl, ImplTask & task)
+    void validate_attachment_stages([[maybe_unused]] ImplTaskGraph const & impl, [[maybe_unused]] ImplTask & task)
     {
 #if DAXA_VALIDATION
         for_each(
             task.attachments,
-            [&](u32 i, auto & attach)
+            [&](u32, auto & attach)
             {
                 auto const stage = attach.task_access.stage;
                 if (!task_type_allowed_stages(task.task_type, stage))
@@ -203,7 +203,7 @@ namespace daxa
                                     to_string(stage), attach.name, task.name, to_string(task.task_type)));
                 }
             },
-            [&](u32 i, TaskImageAttachmentInfo & attach)
+            [&](u32, TaskImageAttachmentInfo & attach)
             {
                 auto const stage = attach.task_access.stage;
                 if (!task_type_allowed_stages(task.task_type, stage))

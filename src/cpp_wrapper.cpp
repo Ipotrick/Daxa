@@ -570,6 +570,7 @@ namespace daxa
             .wait_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const *>(info.wait_binary_semaphores.data()),
             .wait_binary_semaphore_count = info.wait_binary_semaphores.size(),
             .swapchain = *reinterpret_cast<daxa_Swapchain const *>(&info.swapchain),
+            .queue = std::bit_cast<daxa_Queue>(info.queue),
         };
         check_result(
             daxa_dvc_present(r_cast<daxa_Device>(this->object), &c_present_info),

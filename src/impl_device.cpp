@@ -72,7 +72,7 @@ namespace
     }
 } // namespace
 
-auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::initialize(VkDevice a_vk_device) -> daxa_Result
 {
     VkSemaphoreTypeCreateInfo timeline_ci{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO,
@@ -87,7 +87,7 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
         .flags = {},
     };
 
-    vkGetDeviceQueue(vk_device, vk_queue_family_index, queue_index, &this->vk_queue);
+    vkGetDeviceQueue(a_vk_device, vk_queue_family_index, queue_index, &this->vk_queue);
     daxa_Result result = DAXA_RESULT_SUCCESS;
     if (this->vk_queue == VK_NULL_HANDLE)
     {
@@ -95,7 +95,7 @@ auto daxa_ImplDevice::ImplQueue::initialize(VkDevice vk_device) -> daxa_Result
     }
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    result = static_cast<daxa_Result>(vkCreateSemaphore(vk_device, &vk_semaphore_create_info, nullptr, &this->gpu_queue_local_timeline));
+    result = static_cast<daxa_Result>(vkCreateSemaphore(a_vk_device, &vk_semaphore_create_info, nullptr, &this->gpu_queue_local_timeline));
     _DAXA_RETURN_IF_ERROR(result, result)
 
     return result;
@@ -109,12 +109,12 @@ void daxa_ImplDevice::ImplQueue::cleanup(VkDevice device)
     }
 }
 
-auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit(VkDevice vk_device, std::optional<u64> & out) -> daxa_Result
+auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit(VkDevice a_vk_device, std::optional<u64> & out) -> daxa_Result
 {
     if (this->gpu_queue_local_timeline)
     {
         u64 latest_gpu = {};
-        auto result = static_cast<daxa_Result>(vkGetSemaphoreCounterValue(vk_device, this->gpu_queue_local_timeline, &latest_gpu));
+        auto result = static_cast<daxa_Result>(vkGetSemaphoreCounterValue(a_vk_device, this->gpu_queue_local_timeline, &latest_gpu));
         _DAXA_RETURN_IF_ERROR(result, result);
 
         u64 latest_cpu = this->latest_pending_submit_timeline_value.load(std::memory_order::acquire);
@@ -491,6 +491,7 @@ auto create_acceleration_structure_helper(
             buffer_name.push_back('f');
         auto cinfo = daxa_BufferInfo{
             .size = ret.info.size,
+            .allocate_info = {},
             .name = std::bit_cast<daxa_SmallString>(buffer_name),
         };
         result = daxa_dvc_create_buffer(self, &cinfo, r_cast<daxa_BufferId *>(&ret.buffer_id));

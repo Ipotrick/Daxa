@@ -1252,7 +1252,7 @@ namespace daxa
             auto path_string_size = uint64_t{path_string.size()};
             auto virtual_file_iter = virtual_files.find(path_string);
             bool is_virtual_file = virtual_file_iter != virtual_files.end();
-            flags |= (is_virtual_file << 0);
+            flags |= (static_cast<uint64_t>(is_virtual_file) << 0ull);
             auto time_since_epoch = time_point.time_since_epoch().count();
             out_file.write(reinterpret_cast<char const *>(&flags), sizeof(flags));
             out_file.write(reinterpret_cast<char const *>(&path_string_size), sizeof(path_string_size));
