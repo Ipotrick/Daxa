@@ -5,10 +5,10 @@
 </p>
 
 # Why Daxa?
-✅ Vulkan abstraction built for modern GPUs  
-🚫 No legacy hardware compromises  
+✅ Strong modern GPU focus - no legacy hardware compromises  
 🚀 Bindless by default – no descriptor management nor bindings  
-🛠️ Integrated shader system & render graph  
+🛠️ Shader Build system, shader integration and host/shader code sharing utils  
+🧩 Convenient, efficient TaskGraph rendering framework
 
 Daxa is a Vulkan-powered GPU abstraction purpose-built for modern graphics cards (>Turing, >RDNA, >Arc). Its streamlined design is *directly informed by the capabilities and assumptions of modern architectures*—delivering simplicity, deep shader integration, and predictable performance without legacy compromises.
 
