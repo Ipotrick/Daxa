@@ -263,7 +263,7 @@ namespace daxa
                 return InlineTask{std::move(_internal)};
             }
             template <TaskResourceViewOrResourceOrImageViewType... TResources>
-            auto readwrites_concurrent(TResources... v) -> InlineTask
+            auto reads_writes_concurrent(TResources... v) -> InlineTask
                 requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
             {
                 ImageViewType view_override = ImageViewType::MAX_ENUM;
@@ -350,7 +350,7 @@ namespace daxa
             return InlineTask{std::move(value._internal)};
         }
         template <TaskResourceViewOrResourceOrImageViewType... TResources>
-        auto readwrites_concurrent(TaskStage stage, TResources... v) -> InlineTask
+        auto reads_writes_concurrent(TaskStage stage, TResources... v) -> InlineTask
         {
             ImageViewType view_override = ImageViewType::MAX_ENUM;
             (value._internal._process_params(stage, TaskAccessType::READ_WRITE_CONCURRENT, view_override, v), ...);
@@ -385,9 +385,9 @@ namespace daxa
             return reads_writes(TaskStage::NONE, v...);
         }
         template <TaskResourceViewOrResourceOrImageViewType... TResources>
-        auto readwrites_concurrent(TResources... v) -> InlineTask
+        auto reads_writes_concurrent(TResources... v) -> InlineTask
         {
-            return readwrites_concurrent(TaskStage::NONE, v...);
+            return reads_writes_concurrent(TaskStage::NONE, v...);
         }
         template <TaskImageViewOrTaskImageOrImageViewType... TResources>
         auto samples(TResources... v) -> InlineTask

@@ -149,17 +149,13 @@ namespace tests
         // CREATE IMAGE
         auto task_image = task_graph.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
         // WRITE IMAGE 1
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_image)},
-            .task = [](daxa::TaskInterface) {},
-            .name = APPNAME_PREFIX("write image 1"),
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("write image 1")
+            .writes(task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
         // READ_IMAGE 1
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, task_image)},
-            .task = [](daxa::TaskInterface) {},
-            .name = APPNAME_PREFIX("read image 1"),
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("read image 1")
+            .reads(task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
 
         task_graph.complete({});
         task_graph.execute({});
@@ -185,18 +181,16 @@ namespace tests
             .name = "task graph tested image",
         });
         auto timg_view_l0 = task_image.view({.base_array_layer = 0, .layer_count = 1});
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, timg_view_l0)},
-            .task = [](daxa::TaskInterface) {},
-            .name = APPNAME_PREFIX("write image array layer 1"),
-        });
+        task_graph.add_task(
+            daxa::InlineTask::Compute("write image array layer 1")
+                .writes(timg_view_l0)
+                .executes([](daxa::TaskInterface const & ti) {}));
         // READ_IMAGE 1
         auto timg_view_l1 = task_image.view({.base_array_layer = 1, .layer_count = 1});
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, timg_view_l1)},
-            .task = [](daxa::TaskInterface) {},
-            .name = APPNAME_PREFIX("read image array layer 1"),
-        });
+        task_graph.add_task(
+            daxa::InlineTask::Compute("read image array layer 1")
+                .samples(timg_view_l1)
+                .executes([](daxa::TaskInterface const & ti) {}));
         task_graph.complete({});
         task_graph.execute({});
         std::cout << task_graph.get_debug_string() << std::endl;
@@ -220,17 +214,14 @@ namespace tests
             .name = "task graph tested buffer",
         });
 
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskBufferAccess::HOST_TRANSFER_WRITE, task_buffer)},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("host transfer buffer"),
-        });
+        task_graph.add_task(daxa::InlineTask::Transfer("host transfer buffer")
+            .host.writes(task_buffer)
+            .executes([](daxa::TaskInterface const &) {}));
 
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_buffer)},
-            .task = [](daxa::TaskInterface const &) {},
-            .name = APPNAME_PREFIX("read buffer"),
-        });
+        task_graph.add_task(
+            daxa::InlineTask::Compute("read buffer")
+                .reads(task_buffer)
+                .executes([](daxa::TaskInterface const & ti) {}));
 
         task_graph.complete({});
         task_graph.execute({});
@@ -275,16 +266,12 @@ namespace tests
             });
             // CREATE IMAGE
             task_graph.use_persistent_image(task_image);
-            task_graph.add_task({
-                .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, task_image.view().view({.base_array_layer = 1, .layer_count = 1}))},
-                .task = [](daxa::TaskInterface const &) {},
-                .name = APPNAME_PREFIX("read array layer 2"),
-            });
-            task_graph.add_task({
-                .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_image.view().view({.base_array_layer = 0, .layer_count = 1}))},
-                .task = [](daxa::TaskInterface const &) {},
-                .name = APPNAME_PREFIX("write array layer 1"),
-            });
+            task_graph.add_task(daxa::InlineTask::Compute("read image layer 1")
+                .samples(task_image.view().view({.base_array_layer = 1, .layer_count = 1}))
+                .executes([](daxa::TaskInterface const & ti) {}));
+            task_graph.add_task(daxa::InlineTask::Compute("write image layer 1")
+                .writes(task_image.view().view({.base_array_layer = 0, .layer_count = 1}))
+                .executes([](daxa::TaskInterface const & ti) {}));
             task_graph.complete({});
             task_graph.execute({});
             std::cout << task_graph.get_debug_string() << std::endl;
@@ -338,26 +325,21 @@ namespace tests
 
             task_graph.use_persistent_image(task_image);
 
-            task_graph.add_task({
-                .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, task_image.view().view({.base_array_layer = 1, .layer_count = 1}))},
-                .task = [](daxa::TaskInterface const &) {},
-                .name = APPNAME_PREFIX("read image layer 1"),
-            });
-            task_graph.add_task({
-                .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_image.view().view({.base_array_layer = 3, .layer_count = 1}))},
-                .task = [](daxa::TaskInterface const &) {},
-                .name = APPNAME_PREFIX("write image layer 3"),
-            });
-            task_graph.add_task({
-                .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_image.view().view({.base_array_layer = 0, .layer_count = 4}))},
-                .task = [](daxa::TaskInterface const &) {},
-                .name = APPNAME_PREFIX("write image layer 0 - 1"),
-            });
-            task_graph.add_task({
-                .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, task_image.view().view({.base_array_layer = 0, .layer_count = 4}))},
-                .task = [](daxa::TaskInterface const &) {},
-                .name = APPNAME_PREFIX("read image layer 0 - 3"),
-            });
+            task_graph.add_task(daxa::InlineTask::Compute("samples image layer 1")
+                .samples(task_image.view().view({.base_array_layer = 1, .layer_count = 1}))
+                .executes([](daxa::TaskInterface const & ti) {}));
+
+            task_graph.add_task(daxa::InlineTask::Compute("write image layer 3")
+                .writes(task_image.view().view({.base_array_layer = 3, .layer_count = 1}))
+                .executes([](daxa::TaskInterface const & ti) {}));
+
+            task_graph.add_task(daxa::InlineTask::Compute("write image layer 0 - 1")
+                .writes(task_image.view().view({.base_array_layer = 0, .layer_count = 4}))
+                .executes([](daxa::TaskInterface const & ti) {}));
+
+            task_graph.add_task(daxa::InlineTask::Compute("read image layer 0 - 3")
+                .samples(task_image.view().view({.base_array_layer = 0, .layer_count = 4}))
+                .executes([](daxa::TaskInterface const & ti) {}));
 
             task_graph.complete({});
             task_graph.execute({});
@@ -443,16 +425,16 @@ namespace tests
         };
         using namespace ShaderIntegrationTaskHead;
         task_graph.add_task(WriteImage{
-            .views = std::array{
-                daxa::attachment_view(AT.settings, task_buffer),
-                daxa::attachment_view(AT.image, task_image),
+            .views = WriteImage::Views{
+                .settings = task_buffer,
+                .image = task_image,
             },
             .pipeline = compute_pipeline,
         });
         task_graph.add_task(WriteImage{
-            .views = std::array{
-                daxa::attachment_view(AT.settings, task_buffer),
-                daxa::attachment_view(AT.image, task_image),
+            .views = WriteImage::Views{
+                .settings = task_buffer,
+                .image = task_image,
             },
             .pipeline = compute_pipeline,
         });
@@ -520,24 +502,19 @@ namespace tests
 
         task_graph.use_persistent_image(persistent_task_image);
         task_graph.use_persistent_buffer(persistent_task_buffer);
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::GRAPHICS_SHADER_STORAGE_WRITE_ONLY, persistent_task_image)},
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "write persistent image",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, persistent_task_buffer),
-                daxa::inl_attachment(daxa::TaskImageAccess::GRAPHICS_SHADER_SAMPLED, persistent_task_image),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "read persistent image, read persistent buffer",
-        });
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, persistent_task_buffer)},
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "read persistent buffer",
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("write persistent image")
+            .writes(persistent_task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
+        task_graph.add_task(daxa::InlineTask::Compute("read persistent image, read persistent buffer")
+            .reads(persistent_task_image)
+            .reads(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+            
+        task_graph.add_task(daxa::InlineTask::Raster("read persistent buffer")
+            .raster_shader.reads(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
         task_graph.submit({});
         task_graph.complete({});
 
@@ -588,28 +565,23 @@ namespace tests
         });
 
         task_graph.use_persistent_buffer(persistent_task_buffer);
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_WRITE, persistent_task_buffer)},
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 1) write buffer",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE_CONCURRENT, persistent_task_buffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 2) concurrent write read buffer",
-        });
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE_CONCURRENT, persistent_task_buffer)},
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 3) concurrent write read buffer",
-        });
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, persistent_task_buffer)},
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 4)  read buffer",
-        });
+
+        task_graph.add_task(daxa::InlineTask::Raster("Task 1) concurrent read write buffer")
+            .raster_shader.writes(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
+        task_graph.add_task(daxa::InlineTask::Raster("Task 2) concurrent write read buffer")
+            .raster_shader.reads_writes_concurrent(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
+        task_graph.add_task(daxa::InlineTask::Raster("Task 3) concurrent write read buffer")
+            .raster_shader.reads_writes_concurrent(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+        
+        task_graph.add_task(daxa::InlineTask::Raster("Task 4) read buffer")
+            .raster_shader.reads(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
         task_graph.submit({});
         task_graph.complete({});
 
@@ -661,30 +633,23 @@ namespace tests
         });
 
         task_graph.use_persistent_image(persistent_task_image);
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_ONLY, persistent_task_image)},
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 1) read image",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT, persistent_task_image),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 2) concurrent write read image",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT, persistent_task_image),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 3) concurrent write read image",
-        });
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::VERTEX_SHADER_STORAGE_WRITE_ONLY, persistent_task_image)},
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 4) read image",
-        });
+
+        task_graph.add_task(daxa::InlineTask::Raster("Task 1) read image")
+            .vertex_shader.reads(persistent_task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
+        task_graph.add_task(daxa::InlineTask::Raster("Task 2) concurrent write read image")
+            .vertex_shader.reads_writes_concurrent(persistent_task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
+        task_graph.add_task(daxa::InlineTask::Raster("Task 3) concurrent write read image")
+            .vertex_shader.reads_writes_concurrent(persistent_task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
+        task_graph.add_task(daxa::InlineTask::Raster("Task 4) write image")
+            .vertex_shader.writes(persistent_task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
         task_graph.submit({});
         task_graph.complete({});
 
@@ -734,24 +699,18 @@ namespace tests
         });
 
         task_graph_A.use_persistent_buffer(persistent_task_buffer);
-        task_graph_A.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE_CONCURRENT, persistent_task_buffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 1) concurrent write read buffer",
-        });
+        task_graph_A.add_task(daxa::InlineTask::Raster("Task 1) concurrent write read buffer")
+            .raster_shader.reads_writes_concurrent(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
         task_graph_A.submit({});
         task_graph_A.complete({});
 
         task_graph_B.use_persistent_buffer(persistent_task_buffer);
-        task_graph_B.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ_WRITE_CONCURRENT, persistent_task_buffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "Task 1) concurrent write read buffer",
-        });
+        task_graph_B.add_task(daxa::InlineTask::Raster("Task 1) concurrent write read buffer")
+            .raster_shader.reads_writes_concurrent(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
         task_graph_B.submit({});
         task_graph_B.complete({});
 
@@ -795,37 +754,22 @@ namespace tests
 
         task_graph.use_persistent_buffer(tbuffer);
 
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, tbuffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "write 0",
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("write 0")
+            .writes(tbuffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
 
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE_CONCURRENT, tbuffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "read write concurrent 1",
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("read write concurrent 1")
+            .reads_writes_concurrent(tbuffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
 
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ_WRITE_CONCURRENT, tbuffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "read write concurrent 2",
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("read write concurrent 2")
+            .reads_writes_concurrent(tbuffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
 
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::GRAPHICS_SHADER_READ, tbuffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "read",
-        });
+        task_graph.add_task(daxa::InlineTask::Raster("read")
+            .raster_shader.reads(tbuffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
         task_graph.submit({});
         task_graph.complete({});
 
@@ -875,50 +819,31 @@ namespace tests
         task_graph.use_persistent_buffer(persistent_task_buffer);
         task_graph.use_persistent_buffer(buffer_b);
 
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, buffer_b),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "write buffer b",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, buffer_b),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "write buffer b",
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("write buffer b")
+            .writes(buffer_b)
+            .executes([](daxa::TaskInterface const &) {}));
 
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, persistent_task_buffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "1 write buffer",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, persistent_task_buffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "2 read buffer",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, persistent_task_buffer),
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, buffer_b),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "3 read buffer",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_WRITE, persistent_task_buffer),
-            },
-            .task = [&](daxa::TaskInterface const &) {},
-            .name = "4 write buffer",
-        });
+        task_graph.add_task(daxa::InlineTask::Compute("write buffer b")
+            .writes(buffer_b)
+            .executes([](daxa::TaskInterface const &) {}));
+
+        task_graph.add_task(daxa::InlineTask::Compute("1 write buffer")
+            .writes(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const &) {}));
+
+        task_graph.add_task(daxa::InlineTask::Compute("2 read buffer")
+            .reads(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const &) {}));
+
+        task_graph.add_task(daxa::InlineTask::Compute("3 read buffer")
+            .reads(persistent_task_buffer)
+            .reads(buffer_b)
+            .executes([](daxa::TaskInterface const &) {}));
+            
+        task_graph.add_task(daxa::InlineTask::Compute("4 write buffer")
+            .writes(persistent_task_buffer)
+            .executes([](daxa::TaskInterface const &) {}));
+
         task_graph.submit({});
         task_graph.complete({});
 
@@ -946,22 +871,16 @@ namespace tests
         });
         // CREATE IMAGE
         auto task_image = task_graph.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
-        // WRITE IMAGE 1
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_image),
-                daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, daxa::NullTaskImage),
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, daxa::NullTaskBuffer),
-            },
-            .task = [](daxa::TaskInterface) {},
-            .name = APPNAME_PREFIX("write image 1"),
-        });
-        // READ_IMAGE 1
-        task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_SAMPLED, task_image)},
-            .task = [](daxa::TaskInterface) {},
-            .name = APPNAME_PREFIX("read image 1"),
-        });
+        
+        task_graph.add_task(daxa::InlineTask::Compute("write image 1")
+            .writes(task_image)
+            .writes(daxa::NullTaskImage)
+            .reads(daxa::NullTaskBuffer)
+            .executes([](daxa::TaskInterface const & ti) {}));
+
+        task_graph.add_task(daxa::InlineTask::Compute("read image 1")
+            .samples(task_image)
+            .executes([](daxa::TaskInterface const & ti) {}));
 
         task_graph.complete({});
         task_graph.execute({});
