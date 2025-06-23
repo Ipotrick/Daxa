@@ -639,8 +639,18 @@ namespace daxa
         void queue_wait_idle(Queue queue);
         auto queue_count(QueueFamily queue_count) -> u32;
 
+        /// @brief  Submits a command list to the device.
+        /// @return a unique id for each submit, can be used to wait for it to finish.
+        ///         The id is guaranteed to be unique for every call to this function.
         void submit_commands(CommandSubmitInfo const & submit_info);
         void present_frame(PresentInfo const & info);
+
+        /// @brief  Returns the latest submit index, which is incremented every time a submit is made.
+        auto latest_submit_index() const -> u64;
+        /// @brief Returns the oldest pending submits index. Multiple queues may have different pending submits.
+        ///        This can be used to know when the gpu has caught up to a certain point in time ON ALL QUEUES.
+        ///        Useful for synchronizing the destruction of resources.
+        auto oldest_pending_submit_index() const -> u64;
 
         /// @brief  Actually destroys all resources that are ready to be destroyed.
         ///         When calling destroy, or removing all references to an object, it is zombified not really destroyed.

@@ -11,21 +11,23 @@
 
 namespace daxa
 {
-    struct TransferMemoryPoolInfo
+    struct RingBufferInfo
     {
         Device device = {};
         u32 capacity = 1 << 25;
-        bool use_bar_memory = {};
+        bool prefer_device_memory = true;
         std::string name = {};
     };
 
+    using TransferMemoryPoolInfo = RingBufferInfo;
+
     /// @brief Ring buffer based transfer memory allocator for easy and efficient cpu gpu communication.
-    struct TransferMemoryPool
+    struct RingBuffer
     {
-        DAXA_EXPORT_CXX TransferMemoryPool(TransferMemoryPoolInfo a_info);
-        DAXA_EXPORT_CXX TransferMemoryPool(TransferMemoryPool && other);
-        DAXA_EXPORT_CXX TransferMemoryPool & operator=(TransferMemoryPool && other);
-        DAXA_EXPORT_CXX ~TransferMemoryPool();
+        DAXA_EXPORT_CXX RingBuffer(RingBufferInfo a_info);
+        DAXA_EXPORT_CXX RingBuffer(RingBuffer && other);
+        DAXA_EXPORT_CXX RingBuffer & operator=(RingBuffer && other);
+        DAXA_EXPORT_CXX ~RingBuffer();
 
         struct Allocation
         {
@@ -33,12 +35,12 @@ namespace daxa
             void * host_address = {};
             u32 buffer_offset = {};
             usize size = {};
-            u64 timeline_index = {};
+            u64 submit_index = {};
         };
-        // Returns nullopt if the allocation fails.
+        /// @return returns an Allocation if successful, otherwise returns std::nullopt.
         DAXA_EXPORT_CXX auto allocate(u32 size, u32 alignment_requirement = 16 /* 16 is a save default for most gpu data*/) -> std::optional<Allocation>;
         /// @brief  Allocates a section of a buffer with the size of T, writes the given T to the allocation.
-        /// @return allocation. 
+        /// @return returns an Allocation if successful, otherwise returns std::nullopt.
         template<typename T>
         auto allocate_fill(T const & value, u32 alignment_requirement = alignof(T)) -> std::optional<Allocation>
         {
@@ -50,35 +52,33 @@ namespace daxa
             }
             return std::nullopt;
         }
-        // Returns current timeline index.
-        DAXA_EXPORT_CXX auto timeline_value() const -> usize;
-        // Returns and then increments the current timeline index.
-        // This is useful to ensure that the timeline value used for submits is always increasing.
-        DAXA_EXPORT_CXX auto inc_timeline_value() -> usize;
-        // Returns timeline semaphore that needs to be signaled with the latest timeline value,
-        // on a queue that uses memory from this pool.
-        DAXA_EXPORT_CXX auto timeline_semaphore() -> TimelineSemaphore const &;
+        
         DAXA_EXPORT_CXX auto buffer() const -> daxa::BufferId;
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        DAXA_EXPORT_CXX auto info() const -> TransferMemoryPoolInfo const &;
+        DAXA_EXPORT_CXX auto info() const -> RingBufferInfo const &;
+
+        /// @brief Marks ALL allocations made prior to calling this function as reclaimable.
+        ///        Memory will be reclaimed ONLY AFTER all currently pending submits have completed execution on the GPU.
+        ///        Easiest way to use this is to call it at the end of a frame, so that all allocations made during the frame can be reclaimed.
+        void reuse_memory_after_pending_submits();
 
       private:
         // Reclaim expired memory allocations.
-        DAXA_EXPORT_CXX void reclaim_unused_memory();
+        DAXA_EXPORT_CXX void reclaim_memory();
         struct TrackedAllocation
         {
-            usize timeline_index = {};
+            usize submit_index = {};
             u32 offset = {};
             u32 size = {};
         };
 
-        TransferMemoryPoolInfo m_info = {};
-        TimelineSemaphore gpu_timeline = {};
+        // used to mark allocations and when we can free them.
+        // We can free all allocations before this index.
+        u64 reclaim_submit_index = {};
 
-      private:
-        u64 current_timeline_value = {};
+        RingBufferInfo m_info = {};
         std::deque<TrackedAllocation> live_allocations = {};
         BufferId m_buffer = {};
         daxa::DeviceAddress buffer_device_address = {};
@@ -86,4 +86,6 @@ namespace daxa
         u32 claimed_start = {};
         u32 claimed_size = {};
     };
+    
+    using TransferMemoryPool = RingBuffer;
 } // namespace daxa

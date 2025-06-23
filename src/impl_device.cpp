@@ -1265,6 +1265,30 @@ auto daxa_dvc_queue_count(daxa_Device self, daxa_QueueFamily queue_family, u32 *
     return DAXA_RESULT_SUCCESS;
 }
 
+auto daxa_dvc_latest_submit_index(daxa_Device self, daxa_u64 * submit_index) -> daxa_Result
+{
+    *submit_index = self->global_submit_timeline.load();
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_oldest_pending_submit_index(daxa_Device self, daxa_u64 * submit_index) -> daxa_Result
+{
+    u64 min_pending_device_timeline_value_of_all_queues = std::numeric_limits<u64>::max();
+    for (auto & queue : self->queues)
+    {
+        std::optional<u64> latest_pending_submit = {};
+        auto result = queue.get_oldest_pending_submit(self->vk_device, latest_pending_submit);
+        _DAXA_RETURN_IF_ERROR(result, result)
+
+        if (latest_pending_submit.has_value())
+        {
+            min_pending_device_timeline_value_of_all_queues = std::min(min_pending_device_timeline_value_of_all_queues, latest_pending_submit.value());
+        }
+    }
+    *submit_index = min_pending_device_timeline_value_of_all_queues;
+    return DAXA_RESULT_SUCCESS;
+}
+
 auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
 {
     if (!self->valid_queue(info->queue))
@@ -1436,18 +1460,9 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
     std::unique_lock lifetime_lock{self->gpu_sro_table.lifetime_lock};
     std::unique_lock lock{self->zombies_mtx};
 
-    u64 min_pending_device_timeline_value_of_all_queues = std::numeric_limits<u64>::max();
-    for (auto & queue : self->queues)
-    {
-        std::optional<u64> latest_pending_submit = {};
-        auto result = queue.get_oldest_pending_submit(self->vk_device, latest_pending_submit);
-        _DAXA_RETURN_IF_ERROR(result, result)
-
-        if (latest_pending_submit.has_value())
-        {
-            min_pending_device_timeline_value_of_all_queues = std::min(min_pending_device_timeline_value_of_all_queues, latest_pending_submit.value());
-        }
-    }
+    u64 min_pending_device_timeline_value_of_all_queues = 0;
+    auto result = daxa_dvc_oldest_pending_submit_index(self, &min_pending_device_timeline_value_of_all_queues);
+    _DAXA_RETURN_IF_ERROR(result, result);
 
     auto check_and_cleanup_gpu_resources = [&](auto & zombies, auto const & cleanup_fn)
     {

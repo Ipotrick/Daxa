@@ -12,7 +12,7 @@ auto main() -> int
 {
     daxa::Instance daxa_ctx = daxa::create_instance({});
     daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
-    daxa::TransferMemoryPool tmem{daxa::TransferMemoryPoolInfo{
+    daxa::RingBuffer ring{daxa::RingBufferInfo{
         .device = device,
         .capacity = 256,
         .name = "transient memory pool",
@@ -37,7 +37,7 @@ auto main() -> int
         });
 
         // Can allocate anywhere in the frame with imediately available staging memory.
-        daxa::TransferMemoryPool::Allocation alloc = tmem.allocate(ELEMENT_COUNT * sizeof(uint32_t), 8).value();
+        daxa::TransferMemoryPool::Allocation alloc = ring.allocate(ELEMENT_COUNT * sizeof(uint32_t), 8).value();
         for (u32 i = 0; i < ELEMENT_COUNT; ++i)
         {
             // The Allocation provides a host pointer to the memory.
@@ -47,24 +47,25 @@ auto main() -> int
         // The allocation contains an integer offset into that buffer.
         // It also contains a device address that can be passed to a shader directly.
         cmd.copy_buffer_to_buffer({
-            .src_buffer = tmem.buffer(),
+            .src_buffer = ring.buffer(),
             .dst_buffer = result_buffer,
             .src_offset = alloc.buffer_offset,
             .dst_offset = sizeof(u32) * ELEMENT_COUNT * iteration,
             .size = sizeof(u32) * ELEMENT_COUNT,
         });
 
-        // Need to specify give every subnmit using the mme util timeline semaphore and its value on submission.
-        // This is nessecary for internal tracking.
 
         auto signals = std::array{
             std::pair{gpu_timeline, global_submit_timeline},
-            std::pair{tmem.timeline_semaphore(), tmem.timeline_value()},
         };
         device.submit_commands({
             .command_lists = std::array{cmd.complete_current_commands()},
             .signal_timeline_semaphores = signals,
         });
+
+        // Marks all current allocations to be reclaimed AFTER all currently pending submits have completed execution on the GPU.
+        ring.reuse_memory_after_pending_submits();
+
         global_submit_timeline += 1;
     }
 
@@ -90,6 +91,7 @@ auto main() -> int
         }
     }
     device.destroy_buffer(result_buffer);
+    device.wait_idle();
     device.collect_garbage();
     std::cout << std::flush;
 }

@@ -563,6 +563,24 @@ namespace daxa
             daxa_dvc_submit(r_cast<daxa_Device>(this->object), &c_submit_info),
             "failed to submit commands");
     }
+    
+    auto Device::latest_submit_index() const -> u64
+    {
+        daxa_Result result = DAXA_RESULT_SUCCESS;
+        u64 out_value = {};
+        result = daxa_dvc_latest_submit_index(r_cast<daxa_Device>(this->object), &out_value);
+        check_result(result, "failed to get latest submit index");
+        return out_value;
+    }
+
+    auto Device::oldest_pending_submit_index() const -> u64
+    {
+        daxa_Result result = DAXA_RESULT_SUCCESS;
+        u64 out_value = {};
+        result = daxa_dvc_oldest_pending_submit_index(r_cast<daxa_Device>(this->object), &out_value);
+        check_result(result, "failed to get oldest pending submit index");
+        return out_value;
+    }
 
     void Device::present_frame(PresentInfo const & info)
     {

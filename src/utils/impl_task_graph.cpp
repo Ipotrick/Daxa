@@ -4002,10 +4002,6 @@ namespace daxa
                     {
                         signal_timeline_semaphores.insert(signal_timeline_semaphores.end(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->begin(), submit_scope.user_submit_info.additional_signal_timeline_semaphores->end());
                     }
-                    if (queue == daxa::QUEUE_MAIN && impl.staging_memory.has_value())
-                    {
-                        signal_timeline_semaphores.emplace_back(impl.staging_memory->timeline_semaphore(), impl.staging_memory->inc_timeline_value());
-                    }
                     u32 flat_queue_idx = flat_queue_index(queue);
                     auto & queue_sema = impl.gpu_submit_timeline_semaphores[flat_queue_idx];
                     wait_timeline_semaphores.insert(
@@ -4046,6 +4042,8 @@ namespace daxa
             }
             ++submit_scope_index;
         }
+
+        impl.staging_memory->reuse_memory_after_pending_submits();
 
         // Insert pervious uses into execution info for tje next executions synch.
         for (usize task_buffer_index = 0; task_buffer_index < permutation.buffer_infos.size(); ++task_buffer_index)
@@ -4098,7 +4096,7 @@ namespace daxa
         };
         if (a_info.staging_memory_pool_size != 0)
         {
-            this->staging_memory = TransferMemoryPool{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .use_bar_memory = true, .name = "Transfer Memory Pool"}};
+            this->staging_memory = TransferMemoryPool{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .name = "Transfer Memory Pool"}};
         }
     }
 
