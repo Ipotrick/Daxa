@@ -14,30 +14,30 @@ Daxa is a Vulkan-powered GPU abstraction purpose-built for modern graphics cards
 
 Other than the focus on modern architecture only, what makes Daxa unique?
 
-### Fully descriptor/binding abstraction. Full Bindless in shaders and host side.
+### Full descriptor/binding abstraction. Full Bindless in shaders and host side.
   * buffers, images, samplers, and acceleration structures are all exclusively accessed via IDs or pointers
   * very efficient on modern hardware
   * dramatically simplifies code as it completely removes one of the largest and headache inducing parts of modern GFX APIs
 
 ### Shader Utilities/ Shader Integration.
-  * provides full shader build system with include management, shader hot loading, SPIRV caching and more
-  * provides daxa GLSL and SLANG headers allowing for good bindless and other daxa feature access in shaders
-  * provides daxa.inl file that allows you to write code sharable between host and shader via macros
+  * provides full shader build system with #include management, shader hot loading, SPIRV caching and more
+  * provides daxa GLSL and SLANG headers allowing for bindless and other daxa feature access in shaders
+  * provides daxa.inl file that allows you to write code shareable between host and shader via macros
 
 ### TaskGraph acting as full-on rendering framework for your project.
-  * automatic synchronization, including between multiple separate TaskGraphs and queues
+  * automatic synchronization between tasks,  multiple separate TaskGraphs and queues
   * efficient precompilation model: allows you to record graph once and execute it many times, significantly reducing CPU overhead
-  * tons of utilities within task callbacks such as linear allocator, automatic image view generation
+  * tons of utilities within task callbacks such as linear scratch buffer allocator and automatic image view generation
   * tons of validation checks with detailed error messages explaining the issue and potential solutions
-  * automatic graph optimizations: reordering of tasks reducing barriers, memory-aliased transient resources to reduce memory use and more
+  * automatic graph optimizations: reordering of tasks in order to minimize barriers, memory-aliased transient resources to reduce memory use and more
 
 ### Daxa also includes commonly supported Vulkan-middleware features:
-* automatic resource destruction defer past GPU execution
+* automatic deferring of resource destruction defer past GPU execution
 * internal GPU memory allocator that allows for manual user allocations
 * default parameters for object construction and simplified object creation
-* swapchain sync and frame in flight handling
-* threadsafe (unless otherwise declared on the class)
-* access to modern features such as raytracing, mesh shaders and async compute queues
+* swapchain synchronization and frame in flight handling
+* threadsafe
+* access to modern features such as raytracing, mesh shaders and multi queue
 * smaller utilities such as a ringbuffer class for staging memory or Dear-ImGui integration
 
 ## Getting started
