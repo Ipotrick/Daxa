@@ -289,10 +289,15 @@ auto main() -> int
 
         // So, now all we need to do is execute our task graph!
         loop_task_graph.execute({});
+
+        // The device performs all memory reclaiming in the collect_garbage call.
+        // Usually its the best to call it once at the end of each frame.
         device.collect_garbage();
     }
 
-    device.wait_idle();
-    device.collect_garbage();
     device.destroy_buffer(buffer_id);
+    // No need to call wait idle or collect garbage here,
+    // as the device will automatically call these when its lifetime ends.
+    // device.wait_idle();
+    // device.collect_garbage();
 }
