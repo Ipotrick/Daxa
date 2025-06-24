@@ -11,10 +11,8 @@ struct GpuInput
     daxa_f32vec3 camera_forward;
     float aspect;
     float fov;
-    daxa_f32mat4x4 view_matrix;
-    daxa_f32mat4x4 proj_matrix;
-    daxa_f32mat4x4 view_proj_matrix;
-    daxa_f32mat4x4 inv_view_proj_matrix;
+    float near_plane;
+    float far_plane;
 };
 DAXA_DECL_BUFFER_PTR(GpuInput)
 
@@ -32,4 +30,5 @@ struct ComputePush
     daxa_BufferPtr(GpuInput) ptr;
     daxa_BufferPtr(GpuInput) prev_ptr;
     daxa_u32 frame_index;
+    daxa_u32 render_mode;
 };

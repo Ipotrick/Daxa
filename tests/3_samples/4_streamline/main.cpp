@@ -4,9 +4,14 @@
 
 using namespace daxa::types;
 #include "shaders/shared.inl"
+#define GLM_FORCE_LEFT_HANDED
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/string_cast.hpp>
 #include <daxa/c/device.h>
+#include <sl_matrix_helpers.h>
 
 static constexpr const char * dlss_mode_names[] = {
     "Off",
@@ -28,6 +33,12 @@ static constexpr const char * dlss_g_mode_names[] = {
     "Off",
     "On",
     "Auto"
+};
+
+static constexpr const char * render_mode_names[] = {
+    "Path Tracing",
+    "Motion Vectors",
+    "Depth Buffer"
 };
 
 struct App : BaseApp<App>
@@ -56,6 +67,8 @@ struct App : BaseApp<App>
     bool dlss_g_enabled_last_frame = false;
     bool dlss_g_swap_chain_needs_recreation = false;
     daxa::StreamlineContext streamline = daxa_ctx.streamline();
+
+    u32 render_mode = 0u;
 
     f64 ms;
     f64 avg_ms = 0.0;
@@ -88,8 +101,8 @@ struct App : BaseApp<App>
         glm::vec3 target = glm::vec3(0.0f, 0.0f, 0.0f);
         glm::vec3 up = glm::vec3(0.0f, 1.0f, 0.0f);
         float fov = 60.0f;
-        float near_plane = 0.1f;
-        float far_plane = 1000.0f;
+        float near_plane = 1e-3f;
+        float far_plane = 1e7f;
         
         // Mouse control
         float yaw = -90.0f;
@@ -108,28 +121,20 @@ struct App : BaseApp<App>
     glm::vec3 camera_right = glm::vec3(1.0f, 0.0f, 0.0f);
     glm::vec3 camera_up = glm::vec3(0.0f, 1.0f, 0.0f);
 
+    // Streamline expects row-major matrices
     auto matrix_to_sl(glm::mat4 const & m) -> sl::float4x4
     {
-        // Streamline expects row-major matrices
         sl::float4x4 res;
-        res.row[0].x = m[0][0];
-        res.row[0].y = m[1][0];
-        res.row[0].z = m[2][0];
-        res.row[0].w = m[3][0];
-        res.row[1].x = m[0][1];
-        res.row[1].y = m[1][1];
-        res.row[1].z = m[2][1];
-        res.row[1].w = m[3][1];
-        res.row[2].x = m[0][2];
-        res.row[2].y = m[1][2];
-        res.row[2].z = m[2][2];
-        res.row[2].w = m[3][2];
-        res.row[3].x = m[0][3];
-        res.row[3].y = m[1][3];
-        res.row[3].z = m[2][3];
-        res.row[3].w = m[3][3];
+        // glm::mat4 transposed = glm::transpose(m);
+        // std::memcpy(&res, &transposed, sizeof(sl::float4x4));
+        
+        res.setRow(0, sl::float4(m[0][0], m[1][0], m[2][0], m[3][0]));
+        res.setRow(1, sl::float4(m[0][1], m[1][1], m[2][1], m[3][1]));
+        res.setRow(2, sl::float4(m[0][2], m[1][2], m[2][2], m[3][2]));
+        res.setRow(3, sl::float4(m[0][3], m[1][3], m[2][3], m[3][3]));
+        
         return res;
-    };
+    }
 
     void update_camera() {
         // Store previous matrices
@@ -441,28 +446,9 @@ struct App : BaseApp<App>
         constants.cameraFar = camera.far_plane;
         constants.cameraFOV = glm::radians(camera.fov);
         
-        // motion vector range [-1, 1]
-        constants.mvecScale = sl::float2(1.0f , 1.0f);
-
-        // Adjust projection matrices for D3D/Vulkan clip space differences
-        glm::mat4 proj_matrix_d3d = proj_matrix;
-        glm::mat4 prev_proj_matrix_d3d = prev_proj_matrix;
+        // Motion vector scale
+        constants.mvecScale = { 1.0f, 1.0f}; // This are scale factors used to normalize mvec (to -1,1) mvec in pixel space
         
-        // Vulkan has Y pointing down in clip space, D3D has Y pointing up
-        // So we need to flip the Y component
-        proj_matrix_d3d[1][1] *= -1.0f;
-        prev_proj_matrix_d3d[1][1] *= -1.0f;
-        
-        // Calculate reprojection matrix
-        glm::mat4 reprojection_matrix = prev_proj_matrix_d3d * (prev_view_matrix * glm::inverse(view_matrix)) * glm::inverse(proj_matrix_d3d);
-
-        // Set matrices
-        constants.cameraViewToClip = matrix_to_sl(proj_matrix);
-        constants.clipToCameraView = matrix_to_sl(glm::inverse(proj_matrix));
-        constants.clipToLensClip = matrix_to_sl(glm::mat4(1.0f)); // Identity for no lens distortion
-        constants.clipToPrevClip = matrix_to_sl(reprojection_matrix);
-        constants.prevClipToClip = matrix_to_sl(glm::inverse(reprojection_matrix));
-
         // Camera position and orientation
         constants.cameraPinholeOffset = sl::float2(0.0f, 0.0f);
         constants.cameraPos = sl::float3(camera.position.x, camera.position.y, camera.position.z);
@@ -470,14 +456,27 @@ struct App : BaseApp<App>
         constants.cameraRight = sl::float3(camera_right.x, camera_right.y, camera_right.z);
         constants.cameraFwd = sl::float3(camera_forward.x, camera_forward.y, camera_forward.z);
 
+        // Set view to clip matrices
+        constants.cameraViewToClip = matrix_to_sl(proj_matrix);
+        constants.clipToCameraView = matrix_to_sl(glm::inverse(proj_matrix));
+        
+        // Get reprojection matrix
+        glm::mat4 view_inv = glm::inverse(view_matrix);
+        glm::mat4 proj_inv = glm::inverse(proj_matrix);
+        
+        glm::mat4 reprojection_matrix = proj_inv * view_inv * prev_view_matrix * prev_proj_matrix;
+        
+        constants.clipToPrevClip = matrix_to_sl(reprojection_matrix);
+        constants.prevClipToClip = matrix_to_sl(glm::inverse(reprojection_matrix));
+
         // Depth and motion vector settings
         constants.depthInverted = sl::Boolean::eFalse;
         constants.cameraMotionIncluded = sl::Boolean::eTrue;
         constants.motionVectors3D = sl::Boolean::eFalse;
         constants.reset = frame_count == 0 || !sl_resources.valid ? sl::Boolean::eTrue : sl::Boolean::eFalse;
         constants.motionVectorsJittered = sl::Boolean::eFalse;
-        constants.motionVectorsInvalidValue = 0.0f;
-        
+        constants.motionVectorsDilated = sl::Boolean::eFalse;
+        constants.motionVectorsInvalidValue = FLT_MIN;
         constants.jitterOffset = sl::float2(0.0f, 0.0f);
 
         return constants;
@@ -663,6 +662,34 @@ struct App : BaseApp<App>
         ImGui::NewFrame();
         ImGui::Begin("Settings");
         ImGui::SetWindowFontScale(2.0f);
+        
+
+        ImGui::Text("Debug Options:");
+        i32 prev_render_mode = static_cast<i32>(render_mode);
+        if (ImGui::Combo("Render mode", &prev_render_mode, render_mode_names, IM_ARRAYSIZE(render_mode_names)))
+        {
+            render_mode = static_cast<u32>(prev_render_mode);
+            
+            // Al cambiar a un modo distinto de Path Tracing (0) forzamos DLSS = off
+            if (render_mode != 0 && is_dlss_enabled)
+            {
+                is_dlss_enabled = false;
+                resources_need_resize = true;
+                sl_resources.valid   = false;
+                // libera recursos
+                streamline.free_resources_dlss(true);
+                streamline.free_resources_dlssd(true);
+        #if STREALINE_FG_ENABLED == 1
+                streamline.free_resources_dlssg(true);
+        #endif
+                // reallocate resources
+                release_images();
+                allocate_images();
+                attach_tasks();
+            }
+        }
+        
+        ImGui::Separator();
 
         // Show Engine FPS
         double fps = ms > 0.0 ? 1000.0 / ms : 0.0;
@@ -682,41 +709,44 @@ struct App : BaseApp<App>
         }
 
         ImGui::Separator();
-        
-        if (ImGui::Checkbox("Enable DLSS", &is_dlss_enabled))
-        {
-            // everytime state changes, resources are invalidated
-            resources_need_resize = true;
-            sl_resources.valid   = false;
-            if (!is_dlss_enabled)
-            {
-                // native resolution
-                render_width  = size_x;
-                render_height = size_y;
-                // if DLSS is disabled, free resources
-                streamline.free_resources_dlss(true);
-                streamline.free_resources_dlssd(true);
-#if STREALINE_FG_ENABLED == 1
-                streamline.free_resources_dlssg(true);
-#endif 
-                // reallocate resources
-                release_images();
-                allocate_images();
-                attach_tasks();
-            }
-            else
-            {
-                // if DLSS is activated, re-configure it
-                setup_dlss();
-            }
-        }
 
-        {
-            int reflex_idx = static_cast<int>(reflex_mode);
-            if (ImGui::Combo("Reflex Mode", &reflex_idx, reflex_mode_names, IM_ARRAYSIZE(reflex_mode_names)))
+        if (render_mode == 0) {
+        
+            if (ImGui::Checkbox("Enable DLSS", &is_dlss_enabled))
             {
-                reflex_mode = static_cast<sl::ReflexMode>(reflex_idx);
-                setup_reflex();
+                // everytime state changes, resources are invalidated
+                resources_need_resize = true;
+                sl_resources.valid   = false;
+                if (!is_dlss_enabled)
+                {
+                    // native resolution
+                    render_width  = size_x;
+                    render_height = size_y;
+                    // if DLSS is disabled, free resources
+                    streamline.free_resources_dlss(true);
+                    streamline.free_resources_dlssd(true);
+#if STREALINE_FG_ENABLED == 1
+                    streamline.free_resources_dlssg(true);
+    #endif 
+                    // reallocate resources
+                    release_images();
+                    allocate_images();
+                    attach_tasks();
+                }
+                else
+                {
+                    // if DLSS is activated, re-configure it
+                    setup_dlss();
+                }
+            }
+
+            {
+                int reflex_idx = static_cast<int>(reflex_mode);
+                if (ImGui::Combo("Reflex Mode", &reflex_idx, reflex_mode_names, IM_ARRAYSIZE(reflex_mode_names)))
+                {
+                    reflex_mode = static_cast<sl::ReflexMode>(reflex_idx);
+                    setup_reflex();
+                }
             }
         }
         
@@ -823,18 +853,15 @@ struct App : BaseApp<App>
                 }
             }
         }
+        
         ImGui::End();
         ImGui::Render();
     }
 
     daxa_f32mat4x4 mat4_to_daxa(const glm::mat4 &m) {
+        // GLM is column-major, HLSL/Slang is column-major as well
         daxa_f32mat4x4 result;
-        auto *data = reinterpret_cast<daxa_f32 *>(&result);
-        for (int row = 0; row < 4; ++row) {
-            for (int col = 0; col < 4; ++col) {
-                data[row * 4 + col] = m[row][col];
-            }
-        }
+        std::memcpy(&result, &m[0][0], sizeof(daxa_f32mat4x4));
         return result;
     }
 
@@ -850,12 +877,8 @@ struct App : BaseApp<App>
         gpu_input.camera_forward = {camera_forward.x, camera_forward.y, camera_forward.z};
         gpu_input.aspect = float(render_width) / float(render_height);
         gpu_input.fov = glm::radians(camera.fov);
-
-        gpu_input.view_matrix = mat4_to_daxa(view_matrix);
-        gpu_input.proj_matrix = mat4_to_daxa(proj_matrix);
-        glm::mat4 view_proj = proj_matrix * view_matrix;
-        gpu_input.view_proj_matrix = mat4_to_daxa(view_proj);
-        gpu_input.inv_view_proj_matrix = mat4_to_daxa(glm::inverse(view_proj));
+        gpu_input.near_plane = camera.near_plane;
+        gpu_input.far_plane =  camera.far_plane;
     }
 
     void on_update()
@@ -1212,7 +1235,8 @@ struct App : BaseApp<App>
                     .env_sampler = sampler,
                     .ptr = device.device_address(this->gpu_input_buffer).value(),
                     .prev_ptr = device.device_address(this->gpu_input_buffer_previous).value(),
-                    .frame_index = frame_count
+                    .frame_index = frame_count,
+                    .render_mode = render_mode,
                 };
                 ti.recorder.push_constant(p);
                 ti.recorder.dispatch({(render_width + 7) / 8, (render_height + 7) / 8});

@@ -25,6 +25,7 @@ struct HitInfo
 #define MAX_SPHERES 3
 #define MAX_BOUNCES 3
 #define PI 3.14159265358979323846f
+#define FLT_MIN 1.17549435e-38
 
 static const Sphere spheres[MAX_SPHERES] = {
     {{5, 5, 0}, 1.0, 1},         // light
@@ -95,42 +96,79 @@ float3 sample_sky(float3 dir)
     return p.env_map.get().SampleLevel(p.env_sampler.get(), uv, 0).rgb;
 }
 
-float2 calculate_motion_vector(float3 world_pos, float2 current_pixel, GpuInput current_info, GpuInput prev_info)
+float2 reproj_uv(float3 world_pos,
+    float3 cam_pos,
+    float3 cam_right,
+    float3 cam_up,
+    float3 cam_fwd,
+    float  fov,
+    float  aspect)
 {
-    float2 current_ndc = (current_pixel / float2(current_info.frame_dim)) * 2.0 - 1.0;
-    current_ndc.y = -current_ndc.y; // Flip Y Vulkan
-    
-     float4 prev_clip_pos = mul(prev_info.view_proj_matrix, float4(world_pos, 1.0));
-    prev_clip_pos.xyz /= prev_clip_pos.w;
+    // world→camera
+    float3 co = world_pos - cam_pos;
+    float3 cam_space;
+    cam_space.x = dot(co, cam_right);
+    cam_space.y = dot(co, cam_up);
+    cam_space.z = dot(co, cam_fwd);
 
-    // Motion vector in NDC space
-    return current_ndc - prev_clip_pos.xy;
+    // clip-space projection (GLM/Vulkan LH-ZO mat[0][0]=1/(aspect*tan), mat[1][1]=1/tan)
+    float inv_tan = 1.0 / tan(fov * 0.5);
+    float clip_x  = cam_space.x * (inv_tan / aspect);
+    float clip_y  = cam_space.y * inv_tan;
+    float clip_z  = cam_space.z;
+
+    // NDC
+    float2 ndc = float2(clip_x, clip_y) / clip_z;   // [-1,+1]
+
+    // UV
+    return ndc * 0.5 + 0.5;                      // [0,1]
+}
+
+float2 calculate_motion_vector(float3 world_pos, GpuInput current_info, GpuInput prev_info)
+{
+    float2 uvCurr = reproj_uv(world_pos,
+        current_info.camera_pos,
+        current_info.camera_right,
+        current_info.camera_up,
+        current_info.camera_forward,
+        current_info.fov,
+        current_info.aspect);
+
+    float2 uvPrev = reproj_uv(world_pos,
+            prev_info.camera_pos,
+            prev_info.camera_right,
+            prev_info.camera_up,
+            prev_info.camera_forward,
+            prev_info.fov,
+            prev_info.aspect);
+
+    return (uvPrev - uvCurr) * current_info.frame_dim;
 }
 
 // credits: https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuideDLSS_RR.md
 float3 env_brdf_approx2(float3 specular_color, float alpha, float n_dot_v) 
 { 
-  n_dot_v = abs(n_dot_v); 
-  // [Ray Tracing Gems, Chapter 32]
-  float4 X; 
-  X.x = 1.f; 
-  X.y = n_dot_v; 
-  X.z = n_dot_v * n_dot_v; 
-  X.w = n_dot_v * X.z; 
-  float4 Y; 
-  Y.x = 1.f; 
-  Y.y = alpha; 
-  Y.z = alpha * alpha; 
-  Y.w = alpha * Y.z; 
-  float2x2 M1 = float2x2(0.99044f, -1.28514f, 1.29678f, -0.755907f); 
-  float3x3 M2 = float3x3(1.f, 2.92338f, 59.4188f, 20.3225f, -27.0302f, 222.592f, 121.563f, 626.13f, 316.627f); 
-  float2x2 M3 = float2x2(0.0365463f, 3.32707, 9.0632f, -9.04756); 
-  float3x3 M4 = float3x3(1.f, 3.59685f, -1.36772f, 9.04401f, -16.3174f, 9.22949f, 5.56589f, 19.7886f, -20.2123f); 
-  float bias = dot(mul(M1, X.xy), Y.xy) * rcp(dot(mul(M2, X.xyw), Y.xyw)); 
-  float scale = dot(mul(M3, X.xy), Y.xy) * rcp(dot(mul(M4, X.xzw), Y.xyw)); 
-  // This is a hack for specular reflectance of 0
-  bias *= saturate(specular_color.g * 50); 
-  return mad(specular_color, max(0, scale), max(0, bias)); 
+    n_dot_v = abs(n_dot_v); 
+    // [Ray Tracing Gems, Chapter 32]
+    float4 X; 
+    X.x = 1.f; 
+    X.y = n_dot_v; 
+    X.z = n_dot_v * n_dot_v; 
+    X.w = n_dot_v * X.z; 
+    float4 Y; 
+    Y.x = 1.f; 
+    Y.y = alpha; 
+    Y.z = alpha * alpha; 
+    Y.w = alpha * Y.z; 
+    float2x2 M1 = float2x2(0.99044f, -1.28514f, 1.29678f, -0.755907f); 
+    float3x3 M2 = float3x3(1.f, 2.92338f, 59.4188f, 20.3225f, -27.0302f, 222.592f, 121.563f, 626.13f, 316.627f); 
+    float2x2 M3 = float2x2(0.0365463f, 3.32707, 9.0632f, -9.04756); 
+    float3x3 M4 = float3x3(1.f, 3.59685f, -1.36772f, 9.04401f, -16.3174f, 9.22949f, 5.56589f, 19.7886f, -20.2123f); 
+    float bias = dot(mul(M1, X.xy), Y.xy) * rcp(dot(mul(M2, X.xyw), Y.xyw)); 
+    float scale = dot(mul(M3, X.xy), Y.xy) * rcp(dot(mul(M4, X.xzw), Y.xyw)); 
+    // This is a hack for specular reflectance of 0
+    bias *= saturate(specular_color.g * 50); 
+    return mad(specular_color, max(0, scale), max(0, bias)); 
 } 
 
 void get_material_properties(int hit_id, float n_dot_v, out float3 diffuse_albedo, out float3 specular_albedo, out float roughness)
@@ -144,13 +182,13 @@ void get_material_properties(int hit_id, float n_dot_v, out float3 diffuse_albed
     else if (hit_id == 1) // Red sphere object
     {
         diffuse_albedo = float3(1, 0.3, 0.1);
-        roughness = 0.8;
+        roughness = 1.0;
         specular_albedo = env_brdf_approx2(float3(0.04, 0.04, 0.04), roughness, n_dot_v);
     }
     else // Green ground
     {
         diffuse_albedo = float3(0.5, 0.8, 0.2);
-        roughness = 0.9;
+        roughness = 1.0;
         specular_albedo = env_brdf_approx2(float3(0.04, 0.04, 0.04), roughness, n_dot_v);
     }
 }
@@ -180,14 +218,14 @@ float3 path_trace(float2 pix, out HitInfo first_hit, out float2 motion_vector, o
     first_hit.diffuse_albedo = float3(0, 0, 0);
     first_hit.specular_albedo = float3(0, 0, 0);
     first_hit.roughness = 1.0;
-    first_hit.distance = 1e20;
+    first_hit.distance = info.far_plane;
     first_hit.material_id = -1;
     first_hit.is_emissive = false;
 
     for (int bounce = 0; bounce < MAX_BOUNCES; ++bounce)
     {
         // check intersection
-        float t_min = 1e20;
+        float t_min = info.far_plane;
         int hit_id = -1;
         [unroll] for (int i = 0; i < MAX_SPHERES; i++) if (intersect_sphere(ro, rd, spheres[i], t_hit) && t_hit < t_min)
         {
@@ -260,15 +298,16 @@ float3 path_trace(float2 pix, out HitInfo first_hit, out float2 motion_vector, o
     // Calculate motion vectors
     if (hit_something)
     {
-        motion_vector = calculate_motion_vector(first_hit.position, pix, info, *p.prev_ptr);
-        
+        motion_vector = calculate_motion_vector(first_hit.position, info, *p.prev_ptr);
         // For purely diffuse materials, we use the same motion vector
         spec_motion_vector = motion_vector;
+        first_hit.distance = distance(ro, first_hit.position) / info.far_plane;
     }
     else
     {
-        motion_vector = float2(0.0, 0.0);
-        spec_motion_vector = float2(0.0, 0.0);
+        motion_vector = float2(FLT_MIN, FLT_MIN);
+        spec_motion_vector = float2(FLT_MIN, FLT_MIN);
+        first_hit.distance = 1.0;  // Far plane
     }
 
     return radiance;
@@ -286,7 +325,28 @@ float3 path_trace(float2 pix, out HitInfo first_hit, out float2 motion_vector, o
     float2 spec_motion_vector;
     float3 col = path_trace(coord, first_hit, motion_vector, spec_motion_vector);
 
-    p.image_id.get()[pix.xy] = float4(col, 1.0);
+    if (p.render_mode == 1) {
+        // Visualize motion vectors
+        float2 mv_display = motion_vector;
+        if (motion_vector.x == FLT_MIN && motion_vector.y == FLT_MIN) {
+            p.image_id.get()[pix.xy] = float4(0, 0, 0, 1); // Background black
+        } else {
+            // mv_display = mv_display * 10.0; // Amplify x10
+            // mv_display = saturate(mv_display);
+            
+            p.image_id.get()[pix.xy] = float4(
+                mv_display.x,  // Red = mov X
+                mv_display.y,  // Green = mov Y
+                0, 
+                1
+            );
+        }
+    } else if (p.render_mode == 2) {
+        // Visualize depth
+        p.image_id.get()[pix.xy] = float4(first_hit.distance, first_hit.distance, first_hit.distance, 1);
+    } else {
+        p.image_id.get()[pix.xy] = float4(col, 1);
+    }
     p.diffuse_albedo_id.get()[pix.xy] = first_hit.diffuse_albedo;
     p.specular_albedo_id.get()[pix.xy] = first_hit.specular_albedo;
     
