@@ -253,7 +253,7 @@ struct App : BaseApp<App>
                 if (use_dlss_rr) {
                     streamline.free_resources_dlssd(true);
                 }
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
                 if (use_dlss_fg) {
                     streamline.free_resources_dlssg(true);
                 }
@@ -329,7 +329,7 @@ struct App : BaseApp<App>
         }
     }
 
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
     void query_dlss_g_state()
     {
         if (!use_dlss_fg) return;
@@ -651,7 +651,7 @@ struct App : BaseApp<App>
             if (use_dlss_rr) {
                 streamline.free_resources_dlssd(true);
             }
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
             if (use_dlss_fg) {
                 streamline.free_resources_dlssg(true);
             }
@@ -690,7 +690,7 @@ struct App : BaseApp<App>
                 // libera recursos
                 streamline.free_resources_dlss(true);
                 streamline.free_resources_dlssd(true);
-        #if STREALINE_FG_ENABLED == 1
+        #if STREAMLINE_FG_ENABLED == 1
                 streamline.free_resources_dlssg(true);
         #endif
                 // reallocate resources
@@ -736,7 +736,7 @@ struct App : BaseApp<App>
                     // if DLSS is disabled, free resources
                     streamline.free_resources_dlss(true);
                     streamline.free_resources_dlssd(true);
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
                     streamline.free_resources_dlssg(true);
     #endif 
                     // reallocate resources
@@ -792,7 +792,7 @@ struct App : BaseApp<App>
                 // DLSS Frame Generation
                 ImGui::Separator();
 
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
                 
                 bool dlss_g_wanted = (dlss_g_mode != sl::DLSSGMode::eOff);
                 bool prev_dlss_g_wanted = dlss_g_wanted;
@@ -928,7 +928,7 @@ struct App : BaseApp<App>
         }
         
         loop_task_graph.execute({});
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
         additional_wait_timeline_semaphores.clear();
 #endif 
         result = streamline.pcl_set_marker(sl::PCLMarker::ePresentEnd, frame_count);
@@ -1065,7 +1065,7 @@ struct App : BaseApp<App>
         imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, task_render_image));
 
         
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
         new_task_graph.add_task({
             .attachments = {
                 daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY, task_render_image),
@@ -1409,7 +1409,7 @@ struct App : BaseApp<App>
             },
             .name = "DLSS evaluate",
         });
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
         new_task_graph.add_task({
             .attachments = {
                 daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_READ_ONLY, task_output_image),

@@ -184,21 +184,6 @@ namespace daxa
         std::array<QueueSubmitScope, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_submit_scopes = {};
     };
 
-    struct TaskBatchSubmitScope
-    {
-        CommandSubmitInfo submit_info = {};
-        TaskSubmitInfo user_submit_info = {};
-        std::array<QueueSubmitScope, 11> queue_submit_scopes = {
-            QueueSubmitScope{.queue = daxa::QUEUE_MAIN},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_0},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_1},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_2},
-            QueueSubmitScope{.queue = daxa::QUEUE_COMPUTE_3},
-            QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_0},
-            QueueSubmitScope{.queue = daxa::QUEUE_TRANSFER_1},  
-        };
-    };
-
     auto task_image_access_to_layout_access(TaskAccess const & access) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>;
     auto task_access_to_access(TaskAccess const & access) -> std::pair<Access, TaskAccessConcurrency>;
 

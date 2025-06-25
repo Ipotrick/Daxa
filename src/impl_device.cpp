@@ -1305,7 +1305,7 @@ auto daxa_dvc_oldest_pending_submit_index(daxa_Device self, daxa_u64 * submit_in
     for (auto & queue : self->queues)
     {
         std::optional<u64> latest_pending_submit = {};
-        auto result = queue.get_oldest_pending_submit(self->vk_device, latest_pending_submit);
+        auto result = queue.get_oldest_pending_submit(self, latest_pending_submit);
         _DAXA_RETURN_IF_ERROR(result, result)
 
         if (latest_pending_submit.has_value())

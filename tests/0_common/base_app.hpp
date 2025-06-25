@@ -20,7 +20,7 @@ using Clock = std::chrono::high_resolution_clock;
 #include <daxa/utils/streamline.hpp>
 #endif // STREAMLINE_ENABLED
 
-#define STREALINE_FG_ENABLED 1
+#define STREAMLINE_FG_ENABLED 1
 
 #if !defined(APPNAME)
 #define APPNAME "Daxa App"
@@ -36,10 +36,10 @@ struct BaseApp : AppWindow<T>
         .enable_streamline = true,
         .sl_features = std::array{sl::kFeatureDLSS, 
             sl::kFeatureDLSS_RR
-#if STREALINE_FG_ENABLED == 1
+#if STREAMLINE_FG_ENABLED == 1
             ,
             sl::kFeatureDLSS_G
-#endif // STREALINE_FG_ENABLED
+#endif // STREAMLINE_FG_ENABLED
         }
 #endif // STREAMLINE_ENABLED
     });
@@ -98,9 +98,12 @@ struct BaseApp : AppWindow<T>
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
     daxa::FixedList<daxa::TaskAttachmentInfo, daxa::MAX_INLINE_ATTACHMENTS> imgui_task_attachments{};
 
-#if STREALINE_FG_ENABLED == 1
+#ifdef STREAMLINE_ENABLED
+#if STREAMLINE_FG_ENABLED == 1
     std::vector<std::pair<daxa::TimelineSemaphore, u64>> additional_wait_timeline_semaphores;
+    std::span<std::pair<daxa::TimelineSemaphore, u64>> wait_timeline_span = std::span{additional_wait_timeline_semaphores};
 #endif 
+#endif
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -165,8 +168,10 @@ struct BaseApp : AppWindow<T>
         new_task_graph.add_task(imgui_task_info);
 
         new_task_graph.submit({
-#if STREALINE_FG_ENABLED == 1
-            .additional_wait_timeline_semaphores = &additional_wait_timeline_semaphores
+#ifdef STREAMLINE_ENABLED
+#if STREAMLINE_FG_ENABLED == 1
+            .additional_wait_timeline_semaphores = &wait_timeline_span
+#endif 
 #endif 
         });
         new_task_graph.present({});
