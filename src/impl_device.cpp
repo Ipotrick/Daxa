@@ -1806,17 +1806,18 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     }
 
 #ifdef STREAMLINE_ENABLED
-    if( self->instance->sl_enabled) {
+    if( self->instance->sl_enabled) 
+    {
         self->instance->sl_enabled = self->instance->streamline.check_or_load_features();
         if(!self->instance->sl_enabled) {
             result = result = DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
         }
+        _DAXA_RETURN_IF_ERROR(result, result)
+        if(!self->instance->streamline.initialize(*r_cast<daxa::Device*>(&self))) {
+            result = DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+        }
+        _DAXA_RETURN_IF_ERROR(result, result)
     }
-    _DAXA_RETURN_IF_ERROR(result, result)
-    if(!self->instance->streamline.initialize(*r_cast<daxa::Device*>(&self))) {
-        result = DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
-    }
-    _DAXA_RETURN_IF_ERROR(result, result)
 #endif // STREAMLINE_ENABLED
 
     VkCommandPool init_cmd_pool = {};
