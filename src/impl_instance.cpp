@@ -13,8 +13,14 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
 {
     auto ret = daxa_ImplInstance{};
     // Initialize Vulkan loader
-    if(!ret.load_global_functions())
-        return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+if(!ret.load_global_functions(
+#ifdef STREAMLINE_ENABLED
+    info->enable_streamline ? "sl.interposer.dll" : nullptr
+#else
+    nullptr
+#endif
+))
+    return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
     ret.info = *reinterpret_cast<InstanceInfo const *>(info);
     ret.engine_name = {ret.info.engine_name.data(), ret.info.engine_name.size()};
     ret.info.engine_name = ret.engine_name;
@@ -166,20 +172,18 @@ auto daxa_ImplInstance::initialize_physical_devices() -> daxa_Result
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_ImplInstance::load_global_functions() -> bool 
+auto daxa_ImplInstance::load_global_functions(const char* preferred_lib) -> bool 
 {
+// FIXME: add support for other platforms
 #if DAXA_USE_DYNAMIC_VULKAN
-#ifdef STREAMLINE_ENABLED
-    // Attempt to load sl.interposer.dll first if Streamline is enabled
-    // FIXME: add support for other platforms
-    vulkan_lib = LoadLibraryA("sl.interposer.dll");
+    if(preferred_lib) {
+        vulkan_lib = LoadLibraryA(preferred_lib);
+    }
+
     if (!vulkan_lib) {
-        // Fallback to vulkan-1.dll if there's no interposer
+        // Fallback to vulkan-1.dll
         vulkan_lib = LoadLibraryA("vulkan-1.dll");
     }
-#else
-    HMODULE vulkan_lib = LoadLibraryA("vulkan-1.dll");
-#endif
 
     if(!vulkan_lib) {
         return false;
@@ -197,6 +201,8 @@ auto daxa_ImplInstance::load_global_functions() -> bool
     vkEnumerateInstanceLayerProperties = r_cast<PFN_vkEnumerateInstanceLayerProperties>(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceLayerProperties"));
 
     if (!vkCreateInstance || !vkEnumerateInstanceExtensionProperties || ! vkEnumerateInstanceLayerProperties) {
+        FreeLibrary(vulkan_lib);
+        vulkan_lib = nullptr;
         return false;
     }
 #endif

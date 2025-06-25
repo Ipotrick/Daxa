@@ -67,6 +67,6 @@ struct daxa_ImplInstance final : ImplHandle
 
     auto initialize_physical_devices() -> daxa_Result;
 
-    auto load_global_functions() -> bool;
+    auto load_global_functions(const char* preferred_lib = nullptr) -> bool;
     auto load_instance_functions() -> bool;
 };

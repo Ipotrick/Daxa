@@ -31,7 +31,7 @@ struct BaseApp : AppWindow<T>
 {
 
     daxa::Instance daxa_ctx = daxa::create_instance({
-#ifdef STREAMLINE_ENABLED
+#if defined(STREAMLINE_ENABLED) && defined(ACTIVATE_STREAMLINE)
         .engine_name = "my engine",
         .enable_streamline = true,
         .sl_features = std::array{sl::kFeatureDLSS, 
@@ -98,7 +98,7 @@ struct BaseApp : AppWindow<T>
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
     daxa::FixedList<daxa::TaskAttachmentInfo, daxa::MAX_INLINE_ATTACHMENTS> imgui_task_attachments{};
 
-#ifdef STREAMLINE_ENABLED
+#if defined(STREAMLINE_ENABLED) && defined(ACTIVATE_STREAMLINE)
 #if STREAMLINE_FG_ENABLED == 1
     std::vector<std::pair<daxa::TimelineSemaphore, u64>> additional_wait_timeline_semaphores;
     std::span<std::pair<daxa::TimelineSemaphore, u64>> wait_timeline_span = std::span{additional_wait_timeline_semaphores};
@@ -168,7 +168,7 @@ struct BaseApp : AppWindow<T>
         new_task_graph.add_task(imgui_task_info);
 
         new_task_graph.submit({
-#ifdef STREAMLINE_ENABLED
+#if defined(STREAMLINE_ENABLED) && defined(ACTIVATE_STREAMLINE)
 #if STREAMLINE_FG_ENABLED == 1
             .additional_wait_timeline_semaphores = &wait_timeline_span
 #endif 
