@@ -43,7 +43,7 @@ namespace daxa
     };
 
 #if !DAXA_REMOVE_DEPRECATED
-    struct [[deprecated("Use ShaderCompileInfo2 instead, API:3.1")]] ShaderCompileOptions
+    struct [[deprecated("Use ShaderCompileInfo2 instead, API:3.0.4")]] ShaderCompileOptions
     {
         std::optional<std::string> entry_point = {};
         std::vector<std::filesystem::path> root_paths = {};
@@ -59,13 +59,13 @@ namespace daxa
         void inherit(ShaderCompileOptions const & other);
     };
 
-    struct [[deprecated("Use ShaderCompileInfo2 instead, API:3.1")]] ShaderCompileInfo
+    struct [[deprecated("Use ShaderCompileInfo2 instead, API:3.0.4")]] ShaderCompileInfo
     {
         ShaderSource source = Monostate{};
         ShaderCompileOptions compile_options = {};
     };
 
-    struct [[deprecated("Use RayTracingPipelineCompileInfo2 instead, API:3.1")]] RayTracingPipelineCompileInfo
+    struct [[deprecated("Use RayTracingPipelineCompileInfo2 instead, API:3.0.4")]] RayTracingPipelineCompileInfo
     {
         std::vector<ShaderCompileInfo> ray_gen_infos = {};
         std::vector<ShaderCompileInfo> intersection_infos = {};
@@ -79,14 +79,14 @@ namespace daxa
         std::string name = {};
     };
 
-    struct [[deprecated("Use ComputePipelineCompileInfo2 instead, API:3.1")]] ComputePipelineCompileInfo
+    struct [[deprecated("Use ComputePipelineCompileInfo2 instead, API:3.0.4")]] ComputePipelineCompileInfo
     {
         ShaderCompileInfo shader_info = {};
         u32 push_constant_size = {};
         std::string name = {};
     };
 
-    struct [[deprecated("Use RasterPipelineCompileInfo2 instead, API:3.1")]] RasterPipelineCompileInfo
+    struct [[deprecated("Use RasterPipelineCompileInfo2 instead, API:3.0.4")]] RasterPipelineCompileInfo
     {
         Optional<ShaderCompileInfo> mesh_shader_info = {};
         Optional<ShaderCompileInfo> vertex_shader_info = {};
@@ -102,7 +102,7 @@ namespace daxa
         std::string name = {};
     };
 
-    struct [[deprecated("Use PipelineManagerInfo2 instead, API:3.1")]] PipelineManagerInfo
+    struct [[deprecated("Use PipelineManagerInfo2 instead, API:3.0.4")]] PipelineManagerInfo
     {
         Device device;
         ShaderCompileOptions shader_compile_options = {};
@@ -206,10 +206,10 @@ namespace daxa
     struct DAXA_EXPORT_CXX PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
     {
 #if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use PipelineManager(PipelineManagerInfo2) instead, API:3.1")]] PipelineManager(PipelineManagerInfo info);
-        [[deprecated("Use add_ray_tracing_pipeline2 instead, API:3.1")]] auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
-        [[deprecated("Use add_compute_pipeline2 instead, API:3.1")]] auto add_compute_pipeline(ComputePipelineCompileInfo info) -> Result<std::shared_ptr<ComputePipeline>>;
-        [[deprecated("Use add_raster_pipeline2 instead, API:3.1")]] auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
+        [[deprecated("Use PipelineManager(PipelineManagerInfo2) instead, API:3.0.4")]] PipelineManager(PipelineManagerInfo info);
+        [[deprecated("Use add_ray_tracing_pipeline2 instead, API:3.0.4")]] auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
+        [[deprecated("Use add_compute_pipeline2 instead, API:3.0.4")]] auto add_compute_pipeline(ComputePipelineCompileInfo info) -> Result<std::shared_ptr<ComputePipeline>>;
+        [[deprecated("Use add_raster_pipeline2 instead, API:3.0.4")]] auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
 #endif
 
         PipelineManager() = default;
