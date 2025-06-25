@@ -121,12 +121,15 @@ float2 reproj_uv(float3 world_pos,
     float2 ndc = float2(clip_x, clip_y) / clip_z;   // [-1,+1]
 
     // UV
-    return ndc * 0.5 + 0.5;                      // [0,1]
+    float2 uv = ndc * 0.5 + 0.5;                      // [0,1]
+    uv.y = 1.0 - uv.y;
+    
+    return uv;
 }
 
 float2 calculate_motion_vector(float3 world_pos, GpuInput current_info, GpuInput prev_info)
 {
-    float2 uvCurr = reproj_uv(world_pos,
+    float2 uv_curr = reproj_uv(world_pos,
         current_info.camera_pos,
         current_info.camera_right,
         current_info.camera_up,
@@ -134,7 +137,7 @@ float2 calculate_motion_vector(float3 world_pos, GpuInput current_info, GpuInput
         current_info.fov,
         current_info.aspect);
 
-    float2 uvPrev = reproj_uv(world_pos,
+    float2 uv_prev = reproj_uv(world_pos,
             prev_info.camera_pos,
             prev_info.camera_right,
             prev_info.camera_up,
@@ -142,7 +145,7 @@ float2 calculate_motion_vector(float3 world_pos, GpuInput current_info, GpuInput
             prev_info.fov,
             prev_info.aspect);
 
-    return (uvPrev - uvCurr) * current_info.frame_dim;
+    return (uv_prev - uv_curr) * current_info.frame_dim;
 }
 
 // credits: https://github.com/NVIDIA-RTX/Streamline/blob/main/docs/ProgrammingGuideDLSS_RR.md
@@ -306,7 +309,7 @@ float3 path_trace(float2 pix, out HitInfo first_hit, out float2 motion_vector, o
     else
     {
         motion_vector = float2(FLT_MIN, FLT_MIN);
-        spec_motion_vector = float2(FLT_MIN, FLT_MIN);
+        spec_motion_vector = motion_vector;
         first_hit.distance = 1.0;  // Far plane
     }
 
@@ -326,17 +329,19 @@ float3 path_trace(float2 pix, out HitInfo first_hit, out float2 motion_vector, o
     float3 col = path_trace(coord, first_hit, motion_vector, spec_motion_vector);
 
     if (p.render_mode == 1) {
-        // Visualize motion vectors
         float2 mv_display = motion_vector;
         if (motion_vector.x == FLT_MIN && motion_vector.y == FLT_MIN) {
-            p.image_id.get()[pix.xy] = float4(0, 0, 0, 1); // Background black
+            p.image_id.get()[pix.xy] = float4(0, 0, 0, 1);
         } else {
-            // mv_display = mv_display * 10.0; // Amplify x10
-            // mv_display = saturate(mv_display);
+            // Normalizar de pixel space a [-1, 1]
+            float2 mv_normalized = motion_vector / p.ptr.frame_dim;
+            
+            // Map [0, 1]
+            mv_display = saturate(mv_normalized * 50.0 + 0.5);  // Amplification
             
             p.image_id.get()[pix.xy] = float4(
-                mv_display.x,  // Red = mov X
-                mv_display.y,  // Green = mov Y
+                mv_display.x,
+                mv_display.y,
                 0, 
                 1
             );

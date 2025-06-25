@@ -124,15 +124,24 @@ struct App : BaseApp<App>
     // Streamline expects row-major matrices
     auto matrix_to_sl(glm::mat4 const & m) -> sl::float4x4
     {
+        // Streamline expects row-major matrices
         sl::float4x4 res;
-        // glm::mat4 transposed = glm::transpose(m);
-        // std::memcpy(&res, &transposed, sizeof(sl::float4x4));
-        
-        res.setRow(0, sl::float4(m[0][0], m[1][0], m[2][0], m[3][0]));
-        res.setRow(1, sl::float4(m[0][1], m[1][1], m[2][1], m[3][1]));
-        res.setRow(2, sl::float4(m[0][2], m[1][2], m[2][2], m[3][2]));
-        res.setRow(3, sl::float4(m[0][3], m[1][3], m[2][3], m[3][3]));
-        
+        res.row[0].x = m[0][0];
+        res.row[0].y = m[1][0];
+        res.row[0].z = m[2][0];
+        res.row[0].w = m[3][0];
+        res.row[1].x = m[0][1];
+        res.row[1].y = m[1][1];
+        res.row[1].z = m[2][1];
+        res.row[1].w = m[3][1];
+        res.row[2].x = m[0][2];
+        res.row[2].y = m[1][2];
+        res.row[2].z = m[2][2];
+        res.row[2].w = m[3][2];
+        res.row[3].x = m[0][3];
+        res.row[3].y = m[1][3];
+        res.row[3].z = m[2][3];
+        res.row[3].w = m[3][3];
         return res;
     }
 
@@ -447,7 +456,7 @@ struct App : BaseApp<App>
         constants.cameraFOV = glm::radians(camera.fov);
         
         // Motion vector scale
-        constants.mvecScale = { 1.0f, 1.0f}; // This are scale factors used to normalize mvec (to -1,1) mvec in pixel space
+        constants.mvecScale = { 1.0f / static_cast<float>(render_width), 1.0f / static_cast<float>(render_height)}; // This are scale factors used to normalize mvec (to -1,1) mvec in pixel space
         
         // Camera position and orientation
         constants.cameraPinholeOffset = sl::float2(0.0f, 0.0f);
@@ -468,6 +477,8 @@ struct App : BaseApp<App>
         
         constants.clipToPrevClip = matrix_to_sl(reprojection_matrix);
         constants.prevClipToClip = matrix_to_sl(glm::inverse(reprojection_matrix));
+
+        constants.clipToLensClip = matrix_to_sl(glm::mat4(1.0f));
 
         // Depth and motion vector settings
         constants.depthInverted = sl::Boolean::eFalse;
@@ -856,13 +867,6 @@ struct App : BaseApp<App>
         
         ImGui::End();
         ImGui::Render();
-    }
-
-    daxa_f32mat4x4 mat4_to_daxa(const glm::mat4 &m) {
-        // GLM is column-major, HLSL/Slang is column-major as well
-        daxa_f32mat4x4 result;
-        std::memcpy(&result, &m[0][0], sizeof(daxa_f32mat4x4));
-        return result;
     }
 
 
