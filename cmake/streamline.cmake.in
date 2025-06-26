@@ -1,0 +1,67 @@
+@PACKAGE_INIT@
+
+message(STATUS "=== STREAMLINE CMAKE LOADED ===")
+message(STATUS "STREAMLINE_ENABLED: @STREAMLINE_ENABLED@")
+message(STATUS "Current list dir: ${CMAKE_CURRENT_LIST_DIR}")
+
+if(@STREAMLINE_ENABLED@ AND WIN32)
+    message(STATUS "Streamline support is enabled")
+    
+    # Function to copy Streamline DLLs
+    function(daxa_copy_streamline_dlls target_name)
+        message(STATUS "=== daxa_copy_streamline_dlls called for: ${target_name} ===")
+        
+        # First try from the vcpkg installation directory
+        set(SEARCH_PATHS
+            "${CMAKE_CURRENT_LIST_DIR}/../../bin"
+            "@STREAMLINE_SOURCE_DLL_PATH@"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/Daxa/lib/streamline-sdk/bin/x64"
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/Daxa/lib/Streamline-sdk/bin/x64"  # Con S mayúscula
+        )
+        
+        message(STATUS "Searching for DLLs in:")
+        foreach(PATH ${SEARCH_PATHS})
+            message(STATUS "  - ${PATH}")
+        endforeach()
+        
+        set(FOUND_DLLS)
+        foreach(SEARCH_PATH ${SEARCH_PATHS})
+            if(EXISTS "${SEARCH_PATH}")
+                file(GLOB TEMP_DLLS "${SEARCH_PATH}/*.dll")
+                if(TEMP_DLLS)
+                    list(APPEND FOUND_DLLS ${TEMP_DLLS})
+                    message(STATUS "✓ Found DLLs in: ${SEARCH_PATH}")
+                    break()
+                endif()
+            endif()
+        endforeach()
+        
+        if(FOUND_DLLS)
+            list(REMOVE_DUPLICATES FOUND_DLLS)
+            list(LENGTH FOUND_DLLS DLL_COUNT)
+            message(STATUS "Will copy ${DLL_COUNT} DLLs")
+            foreach(DLL ${FOUND_DLLS})
+                get_filename_component(DLL_NAME ${DLL} NAME)
+                if(DLL_NAME MATCHES "^(sl\\.|nvngx)")
+                    message(STATUS "  - ${DLL_NAME}")
+                    add_custom_command(TARGET ${target_name} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            "${DLL}"
+                            "$<TARGET_FILE_DIR:${target_name}>"
+                        COMMENT "Copying ${DLL_NAME}"
+                    )
+                endif()
+            endforeach()
+        else()
+            message(WARNING "No Streamline DLLs found!")
+        endif()
+    endfunction()
+    
+    # Public macro
+    macro(daxa_setup_streamline target_name)
+        message(STATUS "daxa_setup_streamline macro called")
+        daxa_copy_streamline_dlls(${target_name})
+    endmacro()
+else()
+    message(STATUS "Streamline support is NOT enabled")
+endif()

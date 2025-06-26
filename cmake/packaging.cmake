@@ -45,6 +45,13 @@ if(DAXA_ENABLE_UTILS_TASK_GRAPH)
 # No package management work to do
 endif()
 
+if(DAXA_USE_STREAMLINE)
+    file(APPEND ${CMAKE_BINARY_DIR}/config.cmake.in [=[
+# Include Streamline configuration if it exists
+include("${CMAKE_CURRENT_LIST_DIR}/streamline.cmake" OPTIONAL)
+]=])
+endif()
+
 configure_package_config_file(${CMAKE_BINARY_DIR}/config.cmake.in
     ${CMAKE_CURRENT_BINARY_DIR}/daxa-config.cmake
     INSTALL_DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa
@@ -59,6 +66,12 @@ install(
     ${CMAKE_CURRENT_BINARY_DIR}/daxa-config-version.cmake
     DESTINATION
     ${CMAKE_INSTALL_DATADIR}/daxa)
+if(DAXA_USE_STREAMLINE AND EXISTS "${CMAKE_CURRENT_BINARY_DIR}/streamline.cmake")
+    install(FILES 
+        ${CMAKE_CURRENT_BINARY_DIR}/streamline.cmake
+        DESTINATION ${CMAKE_INSTALL_DATADIR}/daxa
+    )
+endif()
 install(TARGETS daxa EXPORT daxa-targets)
 if(BUILD_SHARED_LIBS AND WIN32)
     install(FILES $<TARGET_PDB_FILE:${PROJECT_NAME}> DESTINATION bin OPTIONAL)

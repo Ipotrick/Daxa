@@ -305,10 +305,12 @@ if(DAXA_USE_STREAMLINE)
                 )
             endif()
             
+            # IMPORTANT: Make sure the DLLs are installed in bin
             if(STREAMLINE_DLLS)
                 install(FILES ${STREAMLINE_DLLS}
                     DESTINATION "${CMAKE_INSTALL_BINDIR}"
                 )
+                message(STATUS "Installing ${CMAKE_MATCH_COUNT} Streamline DLLs to ${CMAKE_INSTALL_BINDIR}")
             endif()
         endif()
     endif()
@@ -343,6 +345,27 @@ else()
     target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_DISABLED=1)
     message(STATUS "❌ Streamline integration: DISABLED")
 endif()
+
+if(DAXA_INSTALL AND STREAMLINE_ENABLED)
+    # Configure the Streamline configuration file with correct paths
+    # Save the SDK's absolute path for later use
+    get_filename_component(STREAMLINE_SDK_ABSOLUTE_PATH "${STREAMLINE_SDK_DIR}" ABSOLUTE)
+    
+    # For vcpkg overlay ports, we need to handle paths specially
+    set(STREAMLINE_SOURCE_DLL_PATH "${STREAMLINE_SDK_ABSOLUTE_PATH}/bin/x64")
+    
+    configure_file(
+        "${CMAKE_CURRENT_LIST_DIR}/cmake/streamline.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/streamline.cmake"
+        @ONLY
+    )
+    
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/streamline.cmake"
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/daxa"
+    )
+endif()
+
+# === STREAMLINE INTEGRATION ENDS ===
 
 if(DAXA_ENABLE_TESTS)
     add_subdirectory(tests)
