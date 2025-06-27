@@ -15,8 +15,7 @@ if(@STREAMLINE_ENABLED@ AND WIN32)
         set(SEARCH_PATHS
             "${CMAKE_CURRENT_LIST_DIR}/../../bin"
             "@STREAMLINE_SOURCE_DLL_PATH@"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/Daxa/lib/streamline-sdk/bin/x64"
-            "${CMAKE_CURRENT_SOURCE_DIR}/lib/Daxa/lib/Streamline-sdk/bin/x64"  # Con S mayúscula
+            "${CMAKE_CURRENT_SOURCE_DIR}/lib/Daxa/lib/Streamline-sdk/bin/x64"
         )
         
         message(STATUS "Searching for DLLs in:")
@@ -42,15 +41,13 @@ if(@STREAMLINE_ENABLED@ AND WIN32)
             message(STATUS "Will copy ${DLL_COUNT} DLLs")
             foreach(DLL ${FOUND_DLLS})
                 get_filename_component(DLL_NAME ${DLL} NAME)
-                if(DLL_NAME MATCHES "^(sl\\.|nvngx)")
-                    message(STATUS "  - ${DLL_NAME}")
-                    add_custom_command(TARGET ${target_name} POST_BUILD
-                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                            "${DLL}"
-                            "$<TARGET_FILE_DIR:${target_name}>"
-                        COMMENT "Copying ${DLL_NAME}"
-                    )
-                endif()
+                message(STATUS "  - ${DLL_NAME}")
+                add_custom_command(TARGET ${target_name} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL}"
+                        "$<TARGET_FILE_DIR:${target_name}>"
+                    COMMENT "Copying ${DLL_NAME}"
+                )
             endforeach()
         else()
             message(WARNING "No Streamline DLLs found!")

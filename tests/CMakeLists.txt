@@ -36,6 +36,24 @@ function(DAXA_CREATE_TEST)
             )
         endif()
     endif()
+    
+    if(DAXA_USE_STREAMLINE AND WIN32)
+        # Find Streamline DLLs
+        set(STREAMLINE_SDK_DIR "${CMAKE_CURRENT_LIST_DIR}/../lib/Streamline-sdk")
+        file(GLOB STREAMLINE_DLLS "${STREAMLINE_SDK_DIR}/bin/x64/*.dll")
+        
+        if(STREAMLINE_DLLS)
+            foreach(DLL_PATH ${STREAMLINE_DLLS})
+                get_filename_component(DLL_NAME ${DLL_PATH} NAME)
+                add_custom_command(TARGET daxa_test_${FOLDER_NAME} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${DLL_PATH}"
+                        "$<TARGET_FILE_DIR:daxa_test_${FOLDER_NAME}>"
+                    COMMENT "Copying ${DLL_NAME} to test ${FOLDER_NAME}"
+                )
+            endforeach()
+        endif()
+    endif()
 endfunction()
 
 function(DAXA_CREATE_TEST_C)
