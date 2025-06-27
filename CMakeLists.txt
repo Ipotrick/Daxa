@@ -30,6 +30,9 @@ endif()
 if(DAXA_ENABLE_TESTS)
     list(APPEND VCPKG_MANIFEST_FEATURES "tests")
 endif()
+if(DAXA_USE_STREAMLINE)
+    list(APPEND VCPKG_MANIFEST_FEATURES "utils-streamline")
+endif()
 
 project(daxa VERSION 3.0.2)
 
@@ -83,6 +86,7 @@ add_library(daxa
     "src/utils/impl_fsr2.cpp"
     "src/utils/impl_mem.cpp"
     "src/utils/impl_pipeline_manager.cpp"
+    "src/utils/impl_streamline.cpp"
 )
 
 add_library(daxa::daxa ALIAS daxa)
@@ -203,7 +207,6 @@ endif()
 target_link_libraries(daxa
     PRIVATE
     GPUOpen::VulkanMemoryAllocator
-    Vulkan::Vulkan
 )
 
 target_include_directories(daxa
@@ -240,6 +243,130 @@ endif()
 
 set_project_warnings(daxa)
 
+
+# === STREAMLINE SMART INTEGRATION ===
+
+option(DAXA_USE_STREAMLINE "Use Streamline to access Nvidia DLSS+ tools" OFF)
+set(STREAMLINE_ENABLED FALSE)
+set(STREAMLINE_MODE "NONE")
+set(STREAMLINE_ENABLED_FOR_FRAME TRUE)
+
+option(DAXA_USE_DYNAMIC_VULKAN "Use dynamic loading for Vulkan functions" OFF)
+
+if(DAXA_USE_STREAMLINE)
+    set(STREAMLINE_SDK_DIR "${CMAKE_CURRENT_LIST_DIR}/lib/Streamline-sdk")
+    if(EXISTS "${STREAMLINE_SDK_DIR}/include/sl.h")
+        message(STATUS "✓ Found official Streamline SDK")
+        set(STREAMLINE_ENABLED TRUE)
+        set(STREAMLINE_MODE "SDK")
+        
+        # Use expression generators to differentiate build/install
+        target_include_directories(${PROJECT_NAME} 
+            PUBLIC 
+            $<BUILD_INTERFACE:${STREAMLINE_SDK_DIR}/include>
+            $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/streamline>
+        )
+        
+        if(WIN32 AND EXISTS "${STREAMLINE_SDK_DIR}/lib/x64/sl.interposer.lib")
+            target_link_libraries(${PROJECT_NAME} 
+                PRIVATE 
+                $<BUILD_INTERFACE:${STREAMLINE_SDK_DIR}/lib/x64/sl.interposer.lib>
+                $<INSTALL_INTERFACE:${CMAKE_INSTALL_LIBDIR}/sl.interposer.lib>
+            )
+            message(STATUS "✓ Linked Streamline library")
+            
+            # Copy DLLs
+            file(GLOB STREAMLINE_DLLS "${STREAMLINE_SDK_DIR}/bin/x64/*.dll")
+            if(STREAMLINE_DLLS)
+                list(LENGTH STREAMLINE_DLLS DLL_COUNT)
+                message(STATUS "✓ Found ${DLL_COUNT} Streamline DLLs")
+                foreach(DLL_PATH ${STREAMLINE_DLLS})
+                    get_filename_component(DLL_NAME ${DLL_PATH} NAME)
+                    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                            "${DLL_PATH}"
+                            "$<TARGET_FILE_DIR:${PROJECT_NAME}>"
+                        COMMENT "Copying ${DLL_NAME}"
+                    )
+                endforeach()
+            endif()
+        endif()
+        
+        # Install Streamline files when DAXA_INSTALL is active
+        if(DAXA_INSTALL)
+            install(DIRECTORY "${STREAMLINE_SDK_DIR}/include/"
+                DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/streamline"
+                FILES_MATCHING PATTERN "*.h"
+            )
+            
+            if(WIN32 AND EXISTS "${STREAMLINE_SDK_DIR}/lib/x64/sl.interposer.lib")
+                install(FILES "${STREAMLINE_SDK_DIR}/lib/x64/sl.interposer.lib"
+                    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+                )
+            endif()
+            
+            # IMPORTANT: Make sure the DLLs are installed in bin
+            if(STREAMLINE_DLLS)
+                install(FILES ${STREAMLINE_DLLS}
+                    DESTINATION "${CMAKE_INSTALL_BINDIR}"
+                )
+                message(STATUS "Installing ${CMAKE_MATCH_COUNT} Streamline DLLs to ${CMAKE_INSTALL_BINDIR}")
+            endif()
+        endif()
+    endif()
+endif()
+
+# Macro configuration based on mode
+if(STREAMLINE_ENABLED AND DAXA_USE_STREAMLINE)
+    set(DAXA_USE_DYNAMIC_VULKAN TRUE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        SL_VULKAN=1
+    )
+    target_compile_definitions(${PROJECT_NAME} PUBLIC
+        STREAMLINE_ENABLED=1
+    )
+    if(STREAMLINE_ENABLED_FOR_FRAME) 
+        target_compile_definitions(${PROJECT_NAME} PUBLIC
+            STREAMLINE_ENABLED_FOR_FRAME=1
+        )
+    endif()
+
+    # Specific mode
+    if(STREAMLINE_MODE STREQUAL "SDK")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_SDK_MODE=1)
+    elseif(STREAMLINE_MODE STREQUAL "COMPILED")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_COMPILED_MODE=1)
+    elseif(STREAMLINE_MODE STREQUAL "HEADERS_ONLY")
+        target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_HEADERS_ONLY=1)
+    endif()
+    
+    message(STATUS "🚀 Streamline integration: ${STREAMLINE_MODE}")
+else()
+    target_compile_definitions(${PROJECT_NAME} PRIVATE STREAMLINE_DISABLED=1)
+    message(STATUS "❌ Streamline integration: DISABLED")
+endif()
+
+if(DAXA_INSTALL AND STREAMLINE_ENABLED)
+    # Configure the Streamline configuration file with correct paths
+    # Save the SDK's absolute path for later use
+    get_filename_component(STREAMLINE_SDK_ABSOLUTE_PATH "${STREAMLINE_SDK_DIR}" ABSOLUTE)
+    
+    # For vcpkg overlay ports, we need to handle paths specially
+    set(STREAMLINE_SOURCE_DLL_PATH "${STREAMLINE_SDK_ABSOLUTE_PATH}/bin/x64")
+    
+    configure_file(
+        "${CMAKE_CURRENT_LIST_DIR}/cmake/streamline.cmake.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/streamline.cmake"
+        @ONLY
+    )
+    
+    install(FILES "${CMAKE_CURRENT_BINARY_DIR}/streamline.cmake"
+        DESTINATION "${CMAKE_INSTALL_DATAROOTDIR}/daxa"
+    )
+endif()
+
+# === STREAMLINE INTEGRATION ENDS ===
+
 if(DAXA_ENABLE_TESTS)
     add_subdirectory(tests)
 endif()
@@ -253,3 +380,48 @@ endif()
 if(DAXA_INSTALL)
     include("${CMAKE_CURRENT_LIST_DIR}/cmake/packaging.cmake")
 endif()
+
+if(DAXA_USE_DYNAMIC_VULKAN)
+    message(STATUS "✓ Vulkan functions will be loaded dynamically")
+    add_definitions(-DVK_NO_PROTOTYPES)
+    add_definitions(-DVMA_DYNAMIC_VULKAN_FUNCTIONS=1)
+    add_definitions(-DVMA_STATIC_VULKAN_FUNCTIONS=0)
+    add_definitions(-DDAXA_USE_DYNAMIC_VULKAN=1)
+else()
+    message(STATUS "✓ Vulkan functions will be loaded statically")
+    target_link_libraries(daxa PRIVATE Vulkan::Vulkan)
+endif()
+
+target_include_directories(daxa
+    PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}/include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(X11)
+    if(X11_FOUND)
+        target_compile_definitions(daxa
+            PUBLIC
+            DAXA_BUILT_WITH_X11=true
+        )
+        target_link_libraries(daxa
+            PRIVATE
+            ${X11_LIBRARIES}
+        )
+    endif()
+
+    find_package(Wayland)
+    if(Wayland_FOUND)
+        target_compile_definitions(daxa
+            PUBLIC
+            DAXA_BUILT_WITH_WAYLAND=true
+        )
+        target_link_libraries(daxa
+            PRIVATE
+            ${Wayland_LIBRARIES}
+        )
+    endif()
+endif()
+
+set_project_warnings(daxa)

@@ -72,7 +72,7 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
         .hwnd = static_cast<HWND>(handle),
     };
     {
-        auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWin32SurfaceKHR"));
+        auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(VK_GET_INSTANCE_PROC_ADDR(instance)(instance->vk_instance, "vkCreateWin32SurfaceKHR"));
         VkResult const vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
         return std::bit_cast<daxa_Result>(vk_result);
     }
@@ -91,7 +91,7 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
             .surface = static_cast<wl_surface *>(handle),
         };
         {
-            auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
+            auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>( VK_GET_INSTANCE_PROC_ADDR()(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
             VkResult vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
             return std::bit_cast<daxa_Result>(vk_result);
         }
@@ -124,7 +124,7 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
 #define DAXA_ASSIGN_ARRAY_3(SRC) \
     & { (SRC)[0], (SRC)[1], (SRC)[3] }
 
-auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties
+auto construct_daxa_physical_device_properties(daxa_Instance instance, VkPhysicalDevice physical_device) -> daxa_DeviceProperties
 {
     daxa_DeviceProperties ret = {};
 
@@ -152,12 +152,19 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
         .pNext = nullptr,
     };
 
+    bool push_constants_supported = false;
+    VkPhysicalDevicePushDescriptorPropertiesKHR physical_device_push_descriptor_properties_khr = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PUSH_DESCRIPTOR_PROPERTIES_KHR,
+        .pNext = nullptr,
+        .maxPushDescriptors = 0
+    };
+
     void * pNextChain = nullptr;
 
     u32 count = 0;
-    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &count, nullptr);
+    VK_CALL_I(instance, vkEnumerateDeviceExtensionProperties, physical_device, nullptr, &count, nullptr);
     std::vector<VkExtensionProperties> extensions(count);
-    vkEnumerateDeviceExtensionProperties(physical_device, nullptr, &count, extensions.data());
+    VK_CALL_I(instance, vkEnumerateDeviceExtensionProperties, physical_device, nullptr, &count, extensions.data());
     for (auto & extension : extensions)
     {
         if (std::strcmp(extension.extensionName, VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME) == 0)
@@ -184,6 +191,12 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
             vk_physical_device_mesh_shader_properties_ext.pNext = pNextChain;
             pNextChain = &vk_physical_device_mesh_shader_properties_ext;
         }
+        if (std::strcmp(extension.extensionName, VK_KHR_PUSH_DESCRIPTOR_EXTENSION_NAME) == 0)
+        {
+            push_constants_supported = true;
+            physical_device_push_descriptor_properties_khr.pNext = pNextChain;
+            pNextChain = &physical_device_push_descriptor_properties_khr;
+        }
     }
 
     VkPhysicalDeviceProperties2 vk_physical_device_properties2 = {
@@ -191,7 +204,7 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
         .pNext = pNextChain,
     };
 
-    vkGetPhysicalDeviceProperties2(physical_device, &vk_physical_device_properties2);
+    VK_CALL_I(instance, vkGetPhysicalDeviceProperties2, physical_device, &vk_physical_device_properties2);
     // physical device properties are ABI compatible UP TO the mesh_shader_properties field.
     std::memcpy(
         &ret,
@@ -233,12 +246,19 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
         ret.mesh_shader_properties.value.prefers_compact_vertex_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactVertexOutput);
         ret.mesh_shader_properties.value.prefers_compact_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactPrimitiveOutput);
     }
+    if(push_constants_supported) {
+        ret.push_descriptor_properties.has_value = 1;
+        std::memcpy(
+            &ret.push_descriptor_properties.value,
+            r_cast<std::byte const *>(&physical_device_push_descriptor_properties_khr) + sizeof(void *) * 2, // skip sType and pNext
+            sizeof(daxa_PushDescriptorProperties));
+    }
 
     u32 queue_family_props_count = 0;
     std::vector<VkQueueFamilyProperties> queue_props;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_props_count, nullptr);
+    VK_CALL_I(instance, vkGetPhysicalDeviceQueueFamilyProperties, physical_device, &queue_family_props_count, nullptr);
     queue_props.resize(queue_family_props_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_props_count, queue_props.data());
+    VK_CALL_I(instance, vkGetPhysicalDeviceQueueFamilyProperties, physical_device, &queue_family_props_count, queue_props.data());
     std::vector<VkBool32> supports_present;
     supports_present.resize(queue_family_props_count);
 

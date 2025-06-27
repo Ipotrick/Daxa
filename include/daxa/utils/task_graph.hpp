@@ -131,7 +131,7 @@ namespace daxa
     . '. \_____\.
     */
 
-    static inline constexpr usize MAX_INLINE_ATTACHMENTS = 32;
+    static inline constexpr usize MAX_INLINE_ATTACHMENTS = 48;
 
     struct InlineTaskInfo
     {
