@@ -70,16 +70,16 @@ namespace daxa
         auto set_dlss_options(sl::DLSSOptions & options) -> daxa_Result;
         auto get_dlss_state(sl::DLSSState & out_state) -> daxa_Result;
         auto get_dlss_optimal_settings(sl::DLSSOptions const & options, sl::DLSSOptimalSettings & out_settings) -> daxa_Result;
-        auto evaluate_dlss(CommandRecorder & recorder) -> daxa_Result;
-        auto evaluate_dlss(std::vector<sl::ResourceTag> const & resource_tags, CommandRecorder & recorder) -> daxa_Result;
+        auto evaluate_dlss(VkCommandBuffer & cmd) -> daxa_Result;
+        auto evaluate_dlss(std::vector<sl::ResourceTag> const & resource_tags, VkCommandBuffer & cmd) -> daxa_Result;
         auto free_resources_dlss(bool wait_idle) -> daxa_Result;
 
         // DLSS-RR specific helpers
         auto set_dlssd_options(sl::DLSSDOptions & options) -> daxa_Result;
         auto get_dlssd_state(sl::DLSSDState & out_state) -> daxa_Result;
         auto get_dlssd_optimal_settings(sl::DLSSDOptions const & options, sl::DLSSDOptimalSettings & out_settings) -> daxa_Result;
-        auto evaluate_dlssd(CommandRecorder & recorder) -> daxa_Result;
-        auto evaluate_dlssd(std::vector<sl::ResourceTag> const & resource_tags, CommandRecorder & recorder) -> daxa_Result;
+        auto evaluate_dlssd(VkCommandBuffer & cmd) -> daxa_Result;
+        auto evaluate_dlssd(std::vector<sl::ResourceTag> const & resource_tags, VkCommandBuffer & cmd) -> daxa_Result;
         auto free_resources_dlssd(bool wait_idle) -> daxa_Result;
 
         // DLSS-G specific helpers

@@ -146,16 +146,16 @@ namespace daxa
         return impl.get_dlss_optimal_settings(options, out_settings);
     }
 
-    auto StreamlineContext::evaluate_dlss(CommandRecorder & recorder) -> daxa_Result
+    auto StreamlineContext::evaluate_dlss(VkCommandBuffer & cmd) -> daxa_Result
     {
         auto & impl = *r_cast<ImplStreamlineContext *>(this->object);
-        return impl.evaluate_dlss(recorder);
+        return impl.evaluate_dlss(cmd);
     }
 
-    auto StreamlineContext::evaluate_dlss(std::vector<sl::ResourceTag> const & resource_tags, CommandRecorder & recorder) -> daxa_Result
+    auto StreamlineContext::evaluate_dlss(std::vector<sl::ResourceTag> const & resource_tags, VkCommandBuffer & cmd) -> daxa_Result
     {
         auto & impl = *r_cast<ImplStreamlineContext *>(this->object);
-        return impl.evaluate_dlss(resource_tags, recorder);
+        return impl.evaluate_dlss(resource_tags, cmd);
     }
 
     auto StreamlineContext::free_resources_dlss(bool wait_idle) -> daxa_Result
@@ -186,16 +186,16 @@ namespace daxa
         return impl.get_dlssd_optimal_settings(options, out_settings);
     }
 
-    auto StreamlineContext::evaluate_dlssd(CommandRecorder & recorder) -> daxa_Result
+    auto StreamlineContext::evaluate_dlssd(VkCommandBuffer & cmd) -> daxa_Result
     {
         auto & impl = *r_cast<ImplStreamlineContext *>(this->object);
-        return impl.evaluate_dlssd(recorder);
+        return impl.evaluate_dlssd(cmd);
     }
 
-    auto StreamlineContext::evaluate_dlssd(std::vector<sl::ResourceTag> const & resource_tags, CommandRecorder & recorder) -> daxa_Result
+    auto StreamlineContext::evaluate_dlssd(std::vector<sl::ResourceTag> const & resource_tags, VkCommandBuffer & cmd) -> daxa_Result
     {
         auto & impl = *r_cast<ImplStreamlineContext *>(this->object);
-        return impl.evaluate_dlssd(resource_tags, recorder);
+        return impl.evaluate_dlssd(resource_tags, cmd);
     }
 
     auto StreamlineContext::free_resources_dlssd(bool wait_idle) -> daxa_Result
@@ -607,7 +607,7 @@ namespace daxa
         return DAXA_RESULT_SUCCESS;
     }
 
-    auto ImplStreamlineContext::evaluate_dlss(CommandRecorder & recorder) -> daxa_Result
+    auto ImplStreamlineContext::evaluate_dlss(VkCommandBuffer & cmd) -> daxa_Result
     {
         if(!initialized)
             return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
@@ -620,11 +620,10 @@ namespace daxa
 
         sl::ViewportHandle view(viewport);
         const sl::BaseStructure * inputs[] = {&view};
-        return SL2DaxaResult(slEvaluateFeature(sl::kFeatureDLSS, *token, inputs, static_cast<uint32_t>(std::size(inputs)),
-                                               daxa_cmd_get_vk_command_buffer(*reinterpret_cast<daxa_CommandRecorder *>(&recorder))));
+        return SL2DaxaResult(slEvaluateFeature(sl::kFeatureDLSS, *token, inputs, static_cast<uint32_t>(std::size(inputs)), cmd));
     }
 
-    auto ImplStreamlineContext::evaluate_dlss(std::vector<sl::ResourceTag> const & resource_tags, CommandRecorder & recorder) -> daxa_Result
+    auto ImplStreamlineContext::evaluate_dlss(std::vector<sl::ResourceTag> const & resource_tags, VkCommandBuffer & cmd) -> daxa_Result
     {
         if(!initialized)
             return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
@@ -647,7 +646,8 @@ namespace daxa
         return SL2DaxaResult(slEvaluateFeature(sl::kFeatureDLSS, *token, 
                                             inputs.data(), 
                                             static_cast<uint32_t>(inputs.size()),
-                                            daxa_cmd_get_vk_command_buffer(*reinterpret_cast<daxa_CommandRecorder *>(&recorder))));
+                                            cmd)
+        );
     }
 
     auto ImplStreamlineContext::free_resources_dlss(bool wait_idle) -> daxa_Result
@@ -717,7 +717,7 @@ namespace daxa
         return DAXA_RESULT_SUCCESS;
     }
 
-    auto ImplStreamlineContext::evaluate_dlssd(CommandRecorder & recorder) -> daxa_Result
+    auto ImplStreamlineContext::evaluate_dlssd(VkCommandBuffer & cmd) -> daxa_Result
     {
         if(!initialized)
             return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
@@ -736,13 +736,13 @@ namespace daxa
                 sl::kFeatureDLSS_RR,
                 *token,
                 inputs,
-                static_cast<uint32_t>(std::size(inputs)),
-                daxa_cmd_get_vk_command_buffer(*reinterpret_cast<daxa_CommandRecorder *>(&recorder))
+                static_cast<uint32_t>(std::size(inputs)), 
+                cmd
             )
         );
     }
 
-    auto ImplStreamlineContext::evaluate_dlssd(std::vector<sl::ResourceTag> const & resource_tags, CommandRecorder & recorder) -> daxa_Result
+    auto ImplStreamlineContext::evaluate_dlssd(std::vector<sl::ResourceTag> const & resource_tags, VkCommandBuffer & cmd) -> daxa_Result
     {
         if(!initialized)
             return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
@@ -766,7 +766,7 @@ namespace daxa
                 *token,
                 inputs.data(),
                 static_cast<uint32_t>(inputs.size()),
-                daxa_cmd_get_vk_command_buffer(*reinterpret_cast<daxa_CommandRecorder *>(&recorder))
+                cmd
             )
         );
     }

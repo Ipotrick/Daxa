@@ -1393,16 +1393,17 @@ struct App : BaseApp<App>
             {
                 if (is_dlss_enabled)
                 {
+                    auto cmd = daxa_cmd_get_vk_command_buffer(*reinterpret_cast<daxa_CommandRecorder *>(&ti.recorder));
                     daxa_Result r;
                     if (use_dlss_rr)
                     {
-                        r = streamline.evaluate_dlssd(ti.recorder);
+                        r = streamline.evaluate_dlssd(cmd);
                         if (r != DAXA_RESULT_SUCCESS)
                             std::cerr<<"Failed to evaluate DLSS-RR!\n";
                     }
                     else
                     {
-                        r = streamline.evaluate_dlss(ti.recorder);
+                        r = streamline.evaluate_dlss(cmd);
                         if (r != DAXA_RESULT_SUCCESS)
                             std::cerr<<"Failed to evaluate DLSS!\n";
                     }
