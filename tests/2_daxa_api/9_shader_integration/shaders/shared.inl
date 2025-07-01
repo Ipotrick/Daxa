@@ -14,9 +14,9 @@ struct TestU64Alignment
 };
 DAXA_DECL_BUFFER_PTR_ALIGN(TestU64Alignment, 8)
 
-DAXA_DECL_TASK_HEAD_BEGIN(TestShaderTaskHead)
-DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ,         daxa_BufferPtr(TestU64Alignment),   align_test_src)
-DAXA_TH_BUFFER_PTR(COMPUTE_SHADER_READ_WRITE,   daxa_RWBufferPtr(TestU64Alignment), align_test_dst)
+DAXA_DECL_COMPUTE_TASK_HEAD_BEGIN(TestShaderTaskHead)
+DAXA_TH_BUFFER_PTR(READ,         daxa_BufferPtr(TestU64Alignment),   align_test_src)
+DAXA_TH_BUFFER_PTR(READ_WRITE,   daxa_RWBufferPtr(TestU64Alignment), align_test_dst)
 DAXA_DECL_TASK_HEAD_END
 
 struct TestShaderPush
@@ -27,25 +27,25 @@ struct TestShaderPush
 // Only used to check complication of All Task Head Uses:
 DAXA_DECL_TASK_HEAD_BEGIN(TestTaskHead)
 // Declares used task image, that is NOT accessable within the shader.
-DAXA_TH_IMAGE(              TRANSFER_READ, REGULAR_2D,                      copy_read_img)
+DAXA_TH_IMAGE(              TRANSFER::READ, REGULAR_2D,                         copy_read_img)
 // Declares used task buffer, that is NOT accessable within the shader.
-DAXA_TH_BUFFER(             TRANSFER_READ,                                  copy_read_buf)
+DAXA_TH_BUFFER(             TRANSFER::READ,                                     copy_read_buf)
 // Declares used task image, that is used as a storage image with type 2d, accessable in shader as glsl type image2D.
-DAXA_TH_IMAGE_ID(           COMPUTE_SHADER_STORAGE_READ_ONLY, REGULAR_2D,   shader_id_read_img)
+DAXA_TH_IMAGE_ID(           COMPUTE_SHADER::READ, REGULAR_2D,                   shader_id_read_img)
 // Declares used task buffer, accessable in shader as a buffer id.
-DAXA_TH_BUFFER_ID(          COMPUTE_SHADER_READ,                            shader_id_read_buf)
+DAXA_TH_BUFFER_ID(          COMPUTE_SHADER::READ,                               shader_id_read_buf)
 // Declares used task buffer likfe above, with the difference that its a buffer ptr in the shader.
-DAXA_TH_BUFFER_PTR(         COMPUTE_SHADER_READ, daxa_BufferPtr(uint),      shader_ptr_read_buf)
+DAXA_TH_BUFFER_PTR(         COMPUTE_SHADER::READ,   daxa_BufferPtr(uint),       shader_ptr_read_buf)
+// There are also shortened versions for convenience:
+DAXA_TH_BUFFER_PTR(         CS::READ,               daxa_BufferPtr(uint),       shader_ptr_read_buf2)
 DAXA_DECL_TASK_HEAD_END
 
 // The above task head will be translated to the following struct in glsl:
 // struct TestTaskHead {
 //   daxa_ImageViewId shader_id_read_img;
-//   daxa_ImageViewId shader_id_read_array_img[2];
 //   daxa_BufferId shader_id_read_buf;
-//   daxa_BufferId shader_id_read_array_buf[2];
 //   daxa_BufferPtr(uint) shader_ptr_read_buf;
-//   daxa_BufferPtr(uint) shader_ptr_read_array_buf[2];
+//   daxa_BufferPtr(uint) shader_ptr_read_buf2;
 // };
 
 struct TestTaskPush

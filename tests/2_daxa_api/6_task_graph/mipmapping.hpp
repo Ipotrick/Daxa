@@ -478,8 +478,8 @@ namespace tests
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
                                 new_task_graph.add_task(daxa::InlineTaskWithHead<MipMapH::Task>{
                                     .views = daxa::InlineTaskWithHead<MipMapH::Task>::Views{
-                                        .lower_mip = task_render_image.view().view({.base_mip_level = i}),
-                                        .higher_mip = task_render_image.view().view({.base_mip_level = i + 1}),
+                                        .lower_mip = task_render_image.view().mips(i),
+                                        .higher_mip = task_render_image.view().mips(i+1),
                                     },
                                     .task = [=](daxa::TaskInterface ti)
                                     {
@@ -510,7 +510,7 @@ namespace tests
                             .dst_image = tri.get(task_swapchain_image).ids[0],
                         }); 
                     }));
-                auto render_img_view = task_render_image.view().view({.level_count = 5});
+                auto render_img_view = task_render_image.view().mips(0,5);
                 new_task_graph.add_task(daxa::InlineTask::Transfer("bit to swapchain")
                     .reads(render_img_view)
                     .writes(task_swapchain_image)

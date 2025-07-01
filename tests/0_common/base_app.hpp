@@ -131,16 +131,19 @@ struct BaseApp : AppWindow<T>
 
         reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
-        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskImageAccess::COLOR_ATTACHMENT, task_swapchain_image));
-        auto imgui_task_info = daxa::InlineTaskInfo{
-            .attachments = std::move(imgui_task_attachments),
-            .task = [this](daxa::TaskInterface const & ti)
+        auto imgui_task = daxa::InlineTask::Raster("Dear ImGui")
+            .ca.reads_writes(task_swapchain_image)
+            .executes([=](daxa::TaskInterface ti)
             {
                 imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.get(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
-            },
-            .name = "ImGui Task",
-        };
-        new_task_graph.add_task(imgui_task_info);
+            });
+
+        for (int i = 0; i < imgui_task_attachments.size(); ++i)
+        {
+            imgui_task.attach(imgui_task_attachments[i]);
+        }
+
+        new_task_graph.add_task(std::move(imgui_task));
 
         new_task_graph.submit({});
         new_task_graph.present({});
