@@ -23,12 +23,12 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
         .queryCount = ret.info.query_count,
         .pipelineStatistics = {},
     };
-    auto vk_result = vkCreateQueryPool(ret.device->vk_device, &vk_query_pool_create_info, nullptr, &ret.vk_timeline_query_pool);
+    auto vk_result = VK_CALL_D(device, vkCreateQueryPool, ret.device->vk_device, &vk_query_pool_create_info, nullptr, &ret.vk_timeline_query_pool);
     if (vk_result != VK_SUCCESS)
     {
         return std::bit_cast<daxa_Result>(vk_result);
     }
-    vkResetQueryPool(ret.device->vk_device, ret.vk_timeline_query_pool, 0, ret.info.query_count);
+    VK_CALL_D(device, vkResetQueryPool, ret.device->vk_device, ret.vk_timeline_query_pool, 0, ret.info.query_count);
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
     {
         VkDebugUtilsObjectNameInfoEXT const query_pool_name_info{
@@ -38,7 +38,7 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_timeline_query_pool),
             .pObjectName = ret.info_name.c_str(),
         };
-        ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &query_pool_name_info);
+        VK_CALL_D_EXT(device, vkSetDebugUtilsObjectNameEXT, ret.device->vk_device, &query_pool_name_info);
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
@@ -62,7 +62,8 @@ auto daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool self, u32 sta
     {
         return DAXA_RESULT_RANGE_OUT_OF_BOUNDS;
     }
-    auto vk_result = vkGetQueryPoolResults(
+    auto vk_result = VK_CALL_D(self->device,
+        vkGetQueryPoolResults,
         self->device->vk_device,
         self->vk_timeline_query_pool,
         start,

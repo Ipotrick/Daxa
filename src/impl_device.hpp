@@ -38,6 +38,139 @@ struct daxa_ImplDevice final : public ImplHandle
     VkDevice vk_device = {};
     VmaAllocator vma_allocator = {};
 
+#if DAXA_USE_DYNAMIC_VULKAN
+    // Platform specific surface functions
+#if defined(_WIN32)
+    PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR;
+#endif
+#if defined(__linux__)
+    PFN_vkCreateXlibSurfaceKHR vkCreateXlibSurfaceKHR;
+    PFN_vkCreateWaylandSurfaceKHR vkCreateWaylandSurfaceKHR;
+#endif
+
+    // Swapchain functions:
+    PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR;
+    PFN_vkDestroySwapchainKHR vkDestroySwapchainKHR;
+    PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR;
+    PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR;
+    PFN_vkQueuePresentKHR vkQueuePresentKHR;
+    
+    // Device functions:
+    PFN_vkGetDeviceQueue vkGetDeviceQueue;
+    PFN_vkCreateCommandPool vkCreateCommandPool;
+    PFN_vkDestroyCommandPool vkDestroyCommandPool;
+    PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers;
+    PFN_vkFreeCommandBuffers vkFreeCommandBuffers;
+    PFN_vkBeginCommandBuffer vkBeginCommandBuffer;
+    PFN_vkEndCommandBuffer vkEndCommandBuffer;
+    PFN_vkResetCommandBuffer vkResetCommandBuffer;
+    PFN_vkCmdBeginRenderPass vkCmdBeginRenderPass;
+    PFN_vkCmdEndRenderPass vkCmdEndRenderPass;
+    PFN_vkCmdBindPipeline vkCmdBindPipeline;
+    PFN_vkCmdSetViewport vkCmdSetViewport;
+    PFN_vkCmdSetScissor vkCmdSetScissor;
+    PFN_vkCmdDraw vkCmdDraw;
+    PFN_vkCmdDrawIndexed vkCmdDrawIndexed;
+    PFN_vkCmdDrawIndirect vkCmdDrawIndirect;
+    PFN_vkCmdDrawIndexedIndirect vkCmdDrawIndexedIndirect;
+    PFN_vkCmdDrawIndirectCount vkCmdDrawIndirectCount;
+    PFN_vkCmdDrawIndexedIndirectCount vkCmdDrawIndexedIndirectCount;
+    PFN_vkCmdDispatch vkCmdDispatch;
+    PFN_vkCmdDispatchIndirect vkCmdDispatchIndirect;
+    PFN_vkCmdCopyBuffer vkCmdCopyBuffer;
+    PFN_vkCmdCopyImage vkCmdCopyImage;
+    PFN_vkCmdBlitImage vkCmdBlitImage;
+    PFN_vkCmdCopyBufferToImage vkCmdCopyBufferToImage;
+    PFN_vkCmdCopyImageToBuffer vkCmdCopyImageToBuffer;
+    PFN_vkCmdUpdateBuffer vkCmdUpdateBuffer;
+    PFN_vkCmdFillBuffer vkCmdFillBuffer;
+    PFN_vkCmdClearColorImage vkCmdClearColorImage;
+    PFN_vkCmdClearDepthStencilImage vkCmdClearDepthStencilImage;
+    PFN_vkCmdResolveImage vkCmdResolveImage;
+    PFN_vkCmdSetEvent vkCmdSetEvent;
+    PFN_vkCmdResetEvent vkCmdResetEvent;
+    PFN_vkCmdWaitEvents2 vkCmdWaitEvents2;
+    PFN_vkCmdPipelineBarrier vkCmdPipelineBarrier;
+    PFN_vkCmdPushConstants vkCmdPushConstants;
+    PFN_vkCmdBindDescriptorSets vkCmdBindDescriptorSets;
+    PFN_vkCmdBindVertexBuffers vkCmdBindVertexBuffers;
+    PFN_vkCmdBindIndexBuffer vkCmdBindIndexBuffer;
+    PFN_vkResetCommandPool vkResetCommandPool;
+    PFN_vkCmdBeginRendering vkCmdBeginRendering;
+    PFN_vkCmdEndRendering vkCmdEndRendering;
+    PFN_vkCmdSetDepthBias vkCmdSetDepthBias;
+    PFN_vkCmdSetEvent2 vkCmdSetEvent2;
+    PFN_vkCmdWriteTimestamp2 vkCmdWriteTimestamp2;
+    PFN_vkCmdResetQueryPool vkCmdResetQueryPool;
+    
+    // Memory management functions:
+    PFN_vkAllocateMemory vkAllocateMemory;
+    PFN_vkFreeMemory vkFreeMemory;
+    PFN_vkMapMemory vkMapMemory;
+    PFN_vkUnmapMemory vkUnmapMemory;
+    PFN_vkFlushMappedMemoryRanges vkFlushMappedMemoryRanges;
+    PFN_vkInvalidateMappedMemoryRanges vkInvalidateMappedMemoryRanges;
+    PFN_vkBindBufferMemory vkBindBufferMemory;
+    PFN_vkBindImageMemory vkBindImageMemory;
+    PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements;
+    PFN_vkGetImageMemoryRequirements vkGetImageMemoryRequirements;
+    PFN_vkGetDeviceBufferMemoryRequirements vkGetDeviceBufferMemoryRequirements;
+    PFN_vkGetDeviceImageMemoryRequirements vkGetDeviceImageMemoryRequirements;
+    
+    // Resource creation/destruction functions:
+    PFN_vkCreateBuffer vkCreateBuffer;
+    PFN_vkDestroyBuffer vkDestroyBuffer;
+    PFN_vkCreateImage vkCreateImage;
+    PFN_vkDestroyImage vkDestroyImage;
+    PFN_vkCreateImageView vkCreateImageView;
+    PFN_vkDestroyImageView vkDestroyImageView;
+    PFN_vkCreateSampler vkCreateSampler;
+    PFN_vkDestroySampler vkDestroySampler;
+    PFN_vkCreateDescriptorSetLayout vkCreateDescriptorSetLayout;
+    PFN_vkDestroyDescriptorSetLayout vkDestroyDescriptorSetLayout;
+    PFN_vkCreatePipelineLayout vkCreatePipelineLayout;
+    PFN_vkDestroyPipelineLayout vkDestroyPipelineLayout;
+    PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines;
+    PFN_vkCreateComputePipelines vkCreateComputePipelines;
+    PFN_vkDestroyPipeline vkDestroyPipeline;
+    PFN_vkCreateDescriptorPool vkCreateDescriptorPool;
+    PFN_vkDestroyDescriptorPool vkDestroyDescriptorPool;
+    PFN_vkResetDescriptorPool vkResetDescriptorPool;
+    PFN_vkAllocateDescriptorSets vkAllocateDescriptorSets;
+    PFN_vkFreeDescriptorSets vkFreeDescriptorSets;
+    PFN_vkUpdateDescriptorSets vkUpdateDescriptorSets;
+    
+    // Synchronization functions:
+    PFN_vkCreateSemaphore vkCreateSemaphore;
+    PFN_vkDestroySemaphore vkDestroySemaphore;
+    PFN_vkCreateFence vkCreateFence;
+    PFN_vkDestroyFence vkDestroyFence;
+    PFN_vkWaitForFences vkWaitForFences;
+    PFN_vkResetFences vkResetFences;
+    PFN_vkQueueSubmit vkQueueSubmit;
+    PFN_vkQueueWaitIdle vkQueueWaitIdle;
+    PFN_vkDeviceWaitIdle vkDeviceWaitIdle;
+    PFN_vkSignalSemaphore vkSignalSemaphore;
+    PFN_vkWaitSemaphores vkWaitSemaphores;
+    PFN_vkCreateEvent vkCreateEvent;
+    PFN_vkDestroyEvent vkDestroyEvent;
+    PFN_vkSetEvent vkSetEvent;
+    PFN_vkResetEvent vkResetEvent;
+    PFN_vkCmdPipelineBarrier2 vkCmdPipelineBarrier2;
+    
+    // Query functions:
+    PFN_vkCreateQueryPool vkCreateQueryPool;
+    PFN_vkDestroyQueryPool vkDestroyQueryPool;
+    PFN_vkResetQueryPool vkResetQueryPool;
+    PFN_vkGetQueryPoolResults vkGetQueryPoolResults;
+
+    // Additional functions:
+    PFN_vkGetSemaphoreCounterValue vkGetSemaphoreCounterValue;
+    PFN_vkGetBufferDeviceAddress vkGetBufferDeviceAddress;
+
+    // NOTE: more function references here
+#endif
+
     // Dynamic State:
     PFN_vkCmdSetRasterizationSamplesEXT vkCmdSetRasterizationSamplesEXT = {};
 
@@ -63,6 +196,22 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkGetRayTracingShaderGroupHandlesKHR vkGetRayTracingShaderGroupHandlesKHR = {};
     PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR = {};
     PFN_vkCmdTraceRaysIndirectKHR vkCmdTraceRaysIndirectKHR = {};
+
+    // Push Descriptors:
+    PFN_vkCmdPushDescriptorSetKHR vkCmdPushDescriptorSetKHR = {};
+    VkPhysicalDevicePushDescriptorPropertiesKHR push_descriptor_properties = {};
+
+    // NVX binary import
+    PFN_vkCmdCuLaunchKernelNVX vkCmdCuLaunchKernelNVX = {};
+    PFN_vkCreateCuFunctionNVX vkCreateCuFunctionNVX = {};
+    PFN_vkCreateCuModuleNVX vkCreateCuModuleNVX = {};
+    PFN_vkDestroyCuFunctionNVX vkDestroyCuFunctionNVX = {};
+    PFN_vkDestroyCuModuleNVX vkDestroyCuModuleNVX = {};
+
+    // NVX image view handle
+    PFN_vkGetImageViewHandleNVX vkGetImageViewHandleNVX = {};
+    PFN_vkGetImageViewHandle64NVX vkGetImageViewHandle64NVX = {};
+    PFN_vkGetImageViewAddressNVX vkGetImageViewAddressNVX = {};
 
     VkBuffer buffer_device_address_buffer = {};
     u64 * buffer_device_address_buffer_host_ptr = {};
@@ -119,9 +268,9 @@ struct daxa_ImplDevice final : public ImplHandle
         // atomically synchronized:
         std::atomic_uint64_t latest_pending_submit_timeline_value = {};
 
-        auto initialize(VkDevice vk_device) -> daxa_Result;
-        void cleanup(VkDevice device);
-        auto get_oldest_pending_submit(VkDevice vk_device, std::optional<u64> & out) -> daxa_Result;
+        auto initialize(daxa_Device device) -> daxa_Result;
+        void cleanup(daxa_Device device);
+        auto get_oldest_pending_submit(daxa_Device device, std::optional<u64> & out) -> daxa_Result;
     };
     std::array<ImplQueue, DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT + 1> queues = {
         ImplQueue{.family = DAXA_QUEUE_FAMILY_MAIN, .queue_index = 0},
@@ -174,4 +323,6 @@ struct daxa_ImplDevice final : public ImplHandle
     static auto create_2(daxa_Instance instance, daxa_DeviceInfo2 const & info, ImplPhysicalDevice const & physical_device, daxa_DeviceProperties const & properties, daxa_Device device) -> daxa_Result;
     static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
     static void zero_ref_callback(ImplHandle const * handle);
+
+    auto load_device_functions() -> bool;
 };

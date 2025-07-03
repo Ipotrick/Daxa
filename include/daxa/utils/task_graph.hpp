@@ -131,7 +131,7 @@ namespace daxa
     . '. \_____\.
     */
 
-    static inline constexpr usize MAX_INLINE_ATTACHMENTS = 32;
+    static inline constexpr usize MAX_INLINE_ATTACHMENTS = 48;
 
 #if !DAXA_REMOVE_DEPRECATED
     struct [[deprecated("Use struct InlineTask constructors instead, API:3.1")]] InlineTaskInfo

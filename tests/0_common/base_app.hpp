@@ -16,15 +16,33 @@ using namespace std::chrono_literals;
 
 using Clock = std::chrono::high_resolution_clock;
 
+#ifdef STREAMLINE_ENABLED
+#include <daxa/utils/streamline.hpp>
+#endif // STREAMLINE_ENABLED
+
+#define STREAMLINE_FG_ENABLED 1
+
 #if !defined(APPNAME)
 #define APPNAME "Daxa App"
 #endif
 #define APPNAME_PREFIX(x) ("[" APPNAME "] " x)
-
 template <typename T>
 struct BaseApp : AppWindow<T>
 {
-    daxa::Instance daxa_ctx = daxa::create_instance({});
+
+    daxa::Instance daxa_ctx = daxa::create_instance({
+#if defined(STREAMLINE_ENABLED) && defined(ACTIVATE_STREAMLINE)
+        .engine_name = "my engine",
+        .enable_streamline = true,
+        .sl_features = std::array{sl::kFeatureDLSS, 
+            sl::kFeatureDLSS_RR
+#if STREAMLINE_FG_ENABLED == 1
+            ,
+            sl::kFeatureDLSS_G
+#endif // STREAMLINE_FG_ENABLED
+        }
+#endif // STREAMLINE_ENABLED
+    });
     daxa::Device device = [&]()
     {
         daxa::DeviceInfo2 info = {.name = "default device"};
@@ -79,6 +97,13 @@ struct BaseApp : AppWindow<T>
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
     daxa::FixedList<daxa::TaskAttachmentInfo, daxa::MAX_INLINE_ATTACHMENTS> imgui_task_attachments{};
+
+#if defined(STREAMLINE_ENABLED) && defined(ACTIVATE_STREAMLINE)
+#if STREAMLINE_FG_ENABLED == 1
+    std::vector<std::pair<daxa::TimelineSemaphore, u64>> additional_wait_timeline_semaphores;
+    std::span<std::pair<daxa::TimelineSemaphore, u64>> wait_timeline_span = std::span{additional_wait_timeline_semaphores};
+#endif 
+#endif
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
@@ -145,7 +170,13 @@ struct BaseApp : AppWindow<T>
 
         new_task_graph.add_task(std::move(imgui_task));
 
-        new_task_graph.submit({});
+        new_task_graph.submit({
+#if defined(STREAMLINE_ENABLED) && defined(ACTIVATE_STREAMLINE)
+#if STREAMLINE_FG_ENABLED == 1
+            .additional_wait_timeline_semaphores = &wait_timeline_span
+#endif 
+#endif 
+        });
         new_task_graph.present({});
         new_task_graph.complete({});
 

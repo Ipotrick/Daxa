@@ -12,6 +12,15 @@
 auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_instance) -> daxa_Result
 {
     auto ret = daxa_ImplInstance{};
+    // Initialize Vulkan loader
+if(!ret.load_global_functions(
+#ifdef STREAMLINE_ENABLED
+    info->enable_streamline ? "sl.interposer.dll" : nullptr
+#else
+    nullptr
+#endif
+))
+    return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
     ret.info = *reinterpret_cast<InstanceInfo const *>(info);
     ret.engine_name = {ret.info.engine_name.data(), ret.info.engine_name.size()};
     ret.info.engine_name = ret.engine_name;
@@ -23,6 +32,23 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
         explicit_extensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
+#ifdef STREAMLINE_ENABLED
+    auto _sl_result = DAXA_RESULT_SUCCESS;
+    if (info->enable_streamline && info->sl_features.size > 0) 
+    {   
+        if (!ret.streamline.pre_initialize(info->sl_features.data, info->sl_features.size))
+        {
+            ret.sl_enabled = false;
+            _sl_result = DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+        }
+        else
+        {
+            ret.sl_enabled = true;
+        }
+    }
+    _DAXA_RETURN_IF_ERROR(_sl_result, _sl_result);
+#endif // STREAMLINE_ENABLED
+
     std::vector<char const *> implicit_extensions{};
     implicit_extensions.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     implicit_extensions.push_back("VK_KHR_win32_surface");
@@ -32,11 +58,11 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     // Check existence of extensions:
     std::vector<VkExtensionProperties> instance_extensions = {};
     uint32_t instance_extension_count = {};
-    daxa_Result result = static_cast<daxa_Result>(vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, nullptr));
+    daxa_Result result = static_cast<daxa_Result>(VK_CALL_I(&ret, vkEnumerateInstanceExtensionProperties, nullptr, &instance_extension_count, nullptr));
     _DAXA_RETURN_IF_ERROR(result, result);
 
     instance_extensions.resize(instance_extension_count);
-    result = static_cast<daxa_Result>(vkEnumerateInstanceExtensionProperties(nullptr, &instance_extension_count, instance_extensions.data()));
+    result = static_cast<daxa_Result>(VK_CALL_I(&ret, vkEnumerateInstanceExtensionProperties, nullptr, &instance_extension_count, instance_extensions.data()));
     _DAXA_RETURN_IF_ERROR(result, result);
 
     std::vector<char const *> enabled_extensions{};
@@ -95,8 +121,13 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
         .enabledExtensionCount = static_cast<uint32_t>(enabled_extensions.size()),
         .ppEnabledExtensionNames = enabled_extensions.data(),
     };
-    result = static_cast<daxa_Result>(vkCreateInstance(&instance_ci, nullptr, &ret.vk_instance));
+    result = static_cast<daxa_Result>(VK_CALL_I(&ret, vkCreateInstance, &instance_ci, nullptr, &ret.vk_instance));
     _DAXA_RETURN_IF_ERROR(result, result);
+
+    // Initialize Vulkan loader
+    if (!ret.load_instance_functions()) {
+        return DAXA_RESULT_ERROR_INITIALIZATION_FAILED;
+    }
 
     result = ret.initialize_physical_devices();
     _DAXA_RETURN_IF_ERROR(result, result);
@@ -110,14 +141,14 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
 auto daxa_ImplInstance::initialize_physical_devices() -> daxa_Result
 {
     u32 device_count = {};
-    daxa_Result result = static_cast<daxa_Result>(vkEnumeratePhysicalDevices(this->vk_instance, &device_count, nullptr));
+    daxa_Result result = static_cast<daxa_Result>(VK_CALL_I(this, vkEnumeratePhysicalDevices, this->vk_instance, &device_count, nullptr));
     _DAXA_RETURN_IF_ERROR(result, result);
 
     std::vector<VkPhysicalDevice> vk_physical_devices = {};
     this->device_internals.resize(device_count);
     this->device_properties.resize(device_count);
     vk_physical_devices.resize(device_count);
-    result = static_cast<daxa_Result>(vkEnumeratePhysicalDevices(this->vk_instance, &device_count, vk_physical_devices.data()));
+    result = static_cast<daxa_Result>(VK_CALL_I(this, vkEnumeratePhysicalDevices, this->vk_instance, &device_count, vk_physical_devices.data()));
     _DAXA_RETURN_IF_ERROR(result, result);
 
     for (u32 i = 0; i < device_count; ++i)
@@ -127,18 +158,91 @@ auto daxa_ImplInstance::initialize_physical_devices() -> daxa_Result
         internals.vk_handle = vk_physical_devices[i];
 
         // Init extensions:
-        result = internals.extensions.initialize(internals.vk_handle);
+        result = internals.extensions.initialize(this, internals.vk_handle);
         _DAXA_RETURN_IF_ERROR(result, result);
 
         // Init features:
         internals.features.initialize(internals.extensions);
-        vkGetPhysicalDeviceFeatures2(internals.vk_handle, &internals.features.physical_device_features_2);
+        VK_CALL_I(this, vkGetPhysicalDeviceFeatures2, internals.vk_handle, &internals.features.physical_device_features_2);
 
         // Init properties:
-        fill_daxa_device_properties(internals.extensions, internals.features, internals.vk_handle, &properties);
+        fill_daxa_device_properties(internals.extensions, internals.features, this, internals.vk_handle, &properties);
     }
 
     return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_ImplInstance::load_global_functions(const char* preferred_lib) -> bool 
+{
+// FIXME: add support for other platforms
+#if DAXA_USE_DYNAMIC_VULKAN
+    if(preferred_lib) {
+        vulkan_lib = LoadLibraryA(preferred_lib);
+    }
+
+    if (!vulkan_lib) {
+        // Fallback to vulkan-1.dll
+        vulkan_lib = LoadLibraryA("vulkan-1.dll");
+    }
+
+    if(!vulkan_lib) {
+        return false;
+    }
+
+    vkGetInstanceProcAddr = r_cast<PFN_vkGetInstanceProcAddr>(GetProcAddress(vulkan_lib, "vkGetInstanceProcAddr"));
+    if (!vkGetInstanceProcAddr) {
+        FreeLibrary(vulkan_lib);
+        return false;
+    }
+
+    // global functions
+    vkCreateInstance = r_cast<PFN_vkCreateInstance>(vkGetInstanceProcAddr(nullptr, "vkCreateInstance"));
+    vkEnumerateInstanceExtensionProperties = r_cast<PFN_vkEnumerateInstanceExtensionProperties>(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceExtensionProperties"));
+    vkEnumerateInstanceLayerProperties = r_cast<PFN_vkEnumerateInstanceLayerProperties>(vkGetInstanceProcAddr(nullptr, "vkEnumerateInstanceLayerProperties"));
+
+    if (!vkCreateInstance || !vkEnumerateInstanceExtensionProperties || ! vkEnumerateInstanceLayerProperties) {
+        FreeLibrary(vulkan_lib);
+        vulkan_lib = nullptr;
+        return false;
+    }
+#endif
+    return true;
+}
+
+
+auto daxa_ImplInstance::load_instance_functions() -> bool 
+{
+#if DAXA_USE_DYNAMIC_VULKAN
+    if (!vk_instance || !vkGetInstanceProcAddr) {
+        return false;
+    }
+    // load vkGetDeviceProcAddr
+    vkGetDeviceProcAddr = r_cast<PFN_vkGetDeviceProcAddr>(vkGetInstanceProcAddr(vk_instance, "vkGetDeviceProcAddr"));
+    // Instance functions
+    vkDestroyInstance = r_cast<PFN_vkDestroyInstance>(vkGetInstanceProcAddr(vk_instance, "vkDestroyInstance"));
+    vkEnumeratePhysicalDevices = r_cast<PFN_vkEnumeratePhysicalDevices>(vkGetInstanceProcAddr(vk_instance, "vkEnumeratePhysicalDevices"));
+    vkGetPhysicalDeviceProperties = r_cast<PFN_vkGetPhysicalDeviceProperties>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceProperties"));
+    vkGetPhysicalDeviceFeatures = r_cast<PFN_vkGetPhysicalDeviceFeatures>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceFeatures"));
+    vkGetPhysicalDeviceQueueFamilyProperties = r_cast<PFN_vkGetPhysicalDeviceQueueFamilyProperties>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceQueueFamilyProperties"));
+    vkCreateDevice = r_cast<PFN_vkCreateDevice>(vkGetInstanceProcAddr(vk_instance, "vkCreateDevice"));
+    vkDestroyDevice = r_cast<PFN_vkDestroyDevice>(vkGetInstanceProcAddr(vk_instance, "vkDestroyDevice"));
+    vkEnumerateDeviceExtensionProperties = r_cast<PFN_vkEnumerateDeviceExtensionProperties>(vkGetInstanceProcAddr(vk_instance, "vkEnumerateDeviceExtensionProperties"));
+    vkGetPhysicalDeviceProperties2 = r_cast<PFN_vkGetPhysicalDeviceProperties2>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceProperties2"));
+    vkGetPhysicalDeviceFeatures2 = r_cast<PFN_vkGetPhysicalDeviceFeatures2>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceFeatures2"));
+
+    // Surface functions
+    vkGetPhysicalDeviceSurfaceSupportKHR = r_cast<PFN_vkGetPhysicalDeviceSurfaceSupportKHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceSurfaceSupportKHR"));
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR = r_cast<PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceSurfaceCapabilitiesKHR"));
+    vkGetPhysicalDeviceSurfaceFormatsKHR = r_cast<PFN_vkGetPhysicalDeviceSurfaceFormatsKHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceSurfaceFormatsKHR"));
+    vkGetPhysicalDeviceSurfacePresentModesKHR = r_cast<PFN_vkGetPhysicalDeviceSurfacePresentModesKHR>(vkGetInstanceProcAddr(vk_instance, "vkGetPhysicalDeviceSurfacePresentModesKHR"));
+    
+    // Shader Functions
+    vkCreateShaderModule = r_cast<PFN_vkCreateShaderModule>(vkGetInstanceProcAddr(vk_instance, "vkCreateShaderModule"));
+    vkDestroyShaderModule = r_cast<PFN_vkDestroyShaderModule>(vkGetInstanceProcAddr(vk_instance, "vkDestroyShaderModule"));
+
+    vkDestroySurfaceKHR = r_cast<PFN_vkDestroySurfaceKHR>(vkGetInstanceProcAddr(vk_instance, "vkDestroySurfaceKHR"));
+#endif
+    return true;
 }
 
 auto daxa_instance_create_device(daxa_Instance self, daxa_DeviceInfo const * legacy_info, daxa_Device * out_device) -> daxa_Result
@@ -251,6 +355,14 @@ auto daxa_instance_choose_device(daxa_Instance self, daxa_ImplicitFeatureFlags d
         bool const matches_explicit_features = (info->explicit_features & props.explicit_features) == info->explicit_features;
         bool const matches_implicit_features = (desired_implicit_features & props.implicit_features) == desired_implicit_features;
 
+#ifdef STREAMLINE_ENABLED
+        if(self->info.enable_streamline) {
+            sl::AdapterInfo adapter;
+            adapter.vkPhysicalDevice = self->device_internals[i].vk_handle;
+            matches_info = matches_info && self->streamline.check_features_by_device(adapter);
+        }
+#endif // STREAMLINE_ENABLED
+
         if (no_support_problems && matches_info && matches_explicit_features && matches_implicit_features)
         {
             info->physical_device_index = i;
@@ -334,7 +446,14 @@ void daxa_ImplInstance::zero_ref_callback(ImplHandle const * handle)
 {
     _DAXA_TEST_PRINT("daxa_ImplInstance::zero_ref_callback\n");
     daxa_Instance self = rc_cast<daxa_Instance>(handle);
-    vkDestroyInstance(self->vk_instance, nullptr);
+    VK_CALL_I(self, vkDestroyInstance, self->vk_instance, nullptr);
+#ifdef DAXA_USE_DYNAMIC_VULKAN
+    // FIXME: add support for other platforms
+    if (self->vulkan_lib)
+    {
+        FreeLibrary(self->vulkan_lib);
+    }
+#endif
     delete self;
 }
 

@@ -1162,7 +1162,7 @@ namespace daxa
             Extractor views = {};
             std::memcpy(&views, &type, SIZEOF_EXTRACTOR);
             auto ret = daxa::AttachmentViews<ATTACHMENT_COUNT>{};
-            for (daxa::u32 i = 0; i < ATTACHMENT_COUNT; ++i)
+            for (u32 i = 0; i < ATTACHMENT_COUNT; ++i)
             {
                 ret.views[i] = views.initializers[i];
             }
@@ -1258,7 +1258,7 @@ namespace daxa
         auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                              \
         {                                                                                                                                      \
             DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                 \
-            for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                        \
+            for (u32 i = 0; i < data.size(); ++i)                                                                                        \
                 this->value[i] = data[i];                                                                                                      \
             return *this;                                                                                                                      \
         }                                                                                                                                      \

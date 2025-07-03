@@ -3353,6 +3353,7 @@ namespace daxa
             impl.create_transient_runtime_buffers_and_tlas(permutation);
             impl.create_transient_runtime_images(permutation);
 
+
             // Insert static initialization barriers for non persistent resources:
             // Buffers never need layout initialization, only images.
             for (u32 task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
