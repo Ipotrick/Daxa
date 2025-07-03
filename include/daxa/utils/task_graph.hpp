@@ -131,8 +131,6 @@ namespace daxa
     . '. \_____\.
     */
 
-    static inline constexpr usize MAX_TASK_ATTACHMENTS = 48;
-
 #if !DAXA_REMOVE_DEPRECATED
     struct [[deprecated("Use struct InlineTask constructors instead, API:3.1")]] InlineTaskInfo
     {
@@ -146,7 +144,7 @@ namespace daxa
     namespace detail
     {
         template <typename TaskHeadAttachmentDeclT>
-        auto convert_head_attachment(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage = TaskStage::NONE) -> TaskAttachmentInfo
+        auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage = TaskStage::NONE) -> TaskAttachmentInfo
         {
             TaskAttachmentInfo ret = {};
             switch (attachment_decl.type)
@@ -254,7 +252,7 @@ namespace daxa
         {
         };
 
-        static constexpr inline usize TASK_ATTACHMENT_COUNT = 0;
+        static constexpr inline usize ATTACHMENT_COUNT = 0;
     };
 
     DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
@@ -445,14 +443,14 @@ namespace daxa
                     stage = task_type_default_stage(_internal._task_type);
                 }
 
-                typename TaskHeadT::AttachmentViews av = views; // calls conversion operator
-                for (u32 i = 0; i < TaskHeadT::TASK_ATTACHMENT_COUNT; ++i)
+                auto av = views.convert_to_array(); // converts views to flat array
+                for (u32 i = 0; i < TaskHeadT::ATTACHMENT_COUNT; ++i)
                 {
                     TaskAttachmentInfo & attach = _internal._attachments[i];
-                    if (daxa::holds_alternative<TaskViewUndefined>(av.views[i])) // skip unassigned views
+                    if (daxa::holds_alternative<TaskViewUndefined>(av[i])) // skip unassigned views
                     {
                     }
-                    else if (TaskBufferView * buffer_ptr = daxa::get_if<TaskBufferView>(&av.views[i]); buffer_ptr != nullptr)
+                    else if (TaskBufferView * buffer_ptr = daxa::get_if<TaskBufferView>(&av[i]); buffer_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!buffer_ptr->is_empty(), error_message_unassigned_buffer_view(attach.value.buffer.name, _internal._name));
                         if (!keep_access)
@@ -462,7 +460,7 @@ namespace daxa
                         }
                         attach.value.buffer.view = *buffer_ptr;
                     }
-                    else if (TaskImageView * image_ptr = daxa::get_if<TaskImageView>(&av.views[i]); image_ptr != nullptr)
+                    else if (TaskImageView * image_ptr = daxa::get_if<TaskImageView>(&av[i]); image_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!image_ptr->is_empty(), error_message_unassigned_image_view(attach.value.image.name, _internal._name));
                         if (!keep_access)
@@ -472,7 +470,7 @@ namespace daxa
                         }
                         attach.value.image.view = *image_ptr;
                     }
-                    else if (TaskBlasView * blas_ptr = daxa::get_if<TaskBlasView>(&av.views[i]); blas_ptr != nullptr)
+                    else if (TaskBlasView * blas_ptr = daxa::get_if<TaskBlasView>(&av[i]); blas_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!blas_ptr->is_empty(), error_message_unassigned_tlas_view(attach.value.blas.name, _internal._name));
                         if (!keep_access)
@@ -482,7 +480,7 @@ namespace daxa
                         }
                         attach.value.blas.view = *blas_ptr;
                     }
-                    else if (TaskTlasView * tlas_ptr = daxa::get_if<TaskTlasView>(&av.views[i]); tlas_ptr != nullptr)
+                    else if (TaskTlasView * tlas_ptr = daxa::get_if<TaskTlasView>(&av[i]); tlas_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!tlas_ptr->is_empty(), error_message_unassigned_blas_view(attach.value.tlas.name, _internal._name));
                         if (!keep_access)
@@ -609,20 +607,20 @@ namespace daxa
 
         static inline constexpr bool HAS_HEAD = !std::is_same_v<TaskHeadT, NoTaskHeadStruct>;
 
-        template <typename NewTaskHeadT>
-        auto uses_head() -> TInlineTask<NewTaskHeadT>
+        template <typename NewTaskHeadInfo>
+        auto uses_head() -> TInlineTask<NewTaskHeadInfo>
             requires(!HAS_HEAD)
         {
             DAXA_DBG_ASSERT_TRUE_M(value._internal._attachments.size() == 0, "Detected invalid task head attachment use! Task heads must be added to tasks BEFORE ANY non-head attachments are added to a task!");
-            auto head_default_stage = task_type_default_stage(NewTaskHeadT::TASK_TYPE);
+            auto head_default_stage = task_type_default_stage(NewTaskHeadInfo::TYPE);
             if (value._internal._name.size() == 0)
             {
-                value._internal._name = NewTaskHeadT::TASK_NAME;
+                value._internal._name = NewTaskHeadInfo::NAME;
             }
-            TInlineTask<NewTaskHeadT> ret = {};
-            for (u32 i = 0; i < NewTaskHeadT::TASK_ATTACHMENT_COUNT; ++i)
+            TInlineTask<NewTaskHeadInfo> ret = {};
+            for (u32 i = 0; i < NewTaskHeadInfo::ATTACHMENT_COUNT; ++i)
             {
-                ret.value._internal._attachments.push_back(detail::convert_head_attachment(NewTaskHeadT::AT._internal.value[i], {}, head_default_stage));
+                ret.value._internal._attachments.push_back(detail::convert_to_task_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, head_default_stage));
             }
             ret.value._internal._callback = this->value._internal._callback;
             ret.value._internal._name = this->value._internal._name;
@@ -831,13 +829,14 @@ namespace daxa
             struct WrapperTask
             {
                 NoRefTTask _task;
-                std::array<TaskAttachmentInfo, NoRefTTask::TASK_ATTACHMENT_COUNT> _attachments = {};
+                std::array<TaskAttachmentInfo, NoRefTTask::Info::ATTACHMENT_COUNT> _attachments = {};
                 WrapperTask(NoRefTTask const & task) : _task{task}
                 {
-                    auto default_stage = task_type_default_stage(NoRefTTask::TASK_TYPE);
-                    for (u32 i = 0; i < NoRefTTask::TASK_ATTACHMENT_COUNT; ++i)
+                    auto default_stage = task_type_default_stage(NoRefTTask::Info::TYPE);
+                    auto view_array = task.views.convert_to_array();
+                    for (u32 i = 0; i < NoRefTTask::Info::ATTACHMENT_COUNT; ++i)
                     {
-                        _attachments[i] = detail::convert_head_attachment(ATTACHMENTS[i], task.views.views[i], default_stage);
+                        _attachments[i] = detail::convert_to_task_attachment_info(ATTACHMENTS[i], view_array[i], default_stage);
                     }
                 }
                 void callback(TaskInterface ti) { _task.callback(ti); };
@@ -856,8 +855,8 @@ namespace daxa
             std::span<TaskAttachmentInfo> attachments = wrapped_task->_attachments;
             u32 asb_size = detail::get_asb_size_and_alignment(attachments).size;
             u32 asb_align = detail::get_asb_size_and_alignment(attachments).alignment;
-            TaskType task_type = TTask::TASK_TYPE;
-            std::string_view name = TTask::TASK_NAME;
+            TaskType task_type = TTask::Info::TYPE;
+            std::string_view name = TTask::Info::NAME;
             add_task(
                 std::move(wrapped_task_opaque), task_callback,
                 attachments, asb_size, asb_align, task_type, name, add_info);

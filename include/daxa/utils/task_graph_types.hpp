@@ -22,6 +22,8 @@
 
 namespace daxa
 {
+    static inline constexpr usize MAX_TASK_ATTACHMENTS = 48;
+
     enum struct TaskAttachmentType : u8
     {
         UNDEFINED,
@@ -1086,36 +1088,6 @@ namespace daxa
         daxa::TaskTlasView,
         daxa::TaskImageView>;
 
-    template <usize ATTACHMENT_COUNT>
-    struct AttachmentViews
-    {
-        [[deprecated("Use Views instead; API:3.1")]] AttachmentViews(std::array<daxa::TaskViewIndexVariant, ATTACHMENT_COUNT> const & index_view_pairs)
-        {
-            for (TaskViewIndexVariant const & vari : index_view_pairs)
-            {
-                if (auto * buffer_pair = get_if<std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>>(&vari))
-                {
-                    views[buffer_pair->first.value] = buffer_pair->second;
-                }
-                else if (auto * blas_pair = get_if<std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>>(&vari))
-                {
-                    views[blas_pair->first.value] = blas_pair->second;
-                }
-                else if (auto * tlas_pair = get_if<std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>>(&vari))
-                {
-                    views[tlas_pair->first.value] = tlas_pair->second;
-                }
-                else
-                {
-                    auto const & img_pair = get<std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>>(vari);
-                    views[img_pair.first.value] = img_pair.second;
-                }
-            }
-        }
-        AttachmentViews() = default;
-        std::array<TaskViewVariant, ATTACHMENT_COUNT> views = {};
-    };
-
     /*
     ⠀⠀⢀⣀⣄⣀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢀⣴⠾⠛⠛⠷⣦⡀⠀⠀⠀⠀⠀⠀
     ⢠⣶⠛⠋⠉⡙⢷⡀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣾⣿⠐⡡⢂⠢⠈⠻⣦⡀⠀⠀⠀⠀
@@ -1219,7 +1191,7 @@ namespace daxa
             return TaskResourceT{};
         }
 
-        static auto convert(auto const & type) -> daxa::AttachmentViews<ATTACHMENT_COUNT>
+        static auto convert_to_array(auto const & type) -> std::array<TaskViewVariant, ATTACHMENT_COUNT>
         {
             // Binary compatible with TaskHeadStruct for Views type.
             struct Extractor
@@ -1233,33 +1205,39 @@ namespace daxa
             static_assert(SIZEOF_TYPE == SIZEOF_EXTRACTOR, "DAXA_STATIC_ERROR: TaskAttachmentViews Extractor type abi does not match actual views type!");
             Extractor views = {};
             std::memcpy(&views, &type, SIZEOF_EXTRACTOR);
-            auto ret = daxa::AttachmentViews<ATTACHMENT_COUNT>{};
+            auto ret = std::array<TaskViewVariant, ATTACHMENT_COUNT>{};
             for (daxa::u32 i = 0; i < ATTACHMENT_COUNT; ++i)
             {
-                ret.views[i] = views.initializers[i];
+                ret[i] = views.initializers[i];
             }
             return ret;
         }
     };
 
-#define DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, HEAD_TYPE)                    \
-    namespace HEAD_NAME                                                          \
-    {                                                                            \
-        static inline constexpr char NAME[] = #HEAD_NAME;                        \
-        static inline constexpr daxa::TaskType TYPE = daxa::TaskType::HEAD_TYPE; \
-        template <typename TDecl, daxa::usize ATTACHMENT_COUNT>                  \
-        struct TaskHeadStruct                                                    \
-        {                                                                        \
-            typename TDecl::InternalT _internal = {};                            \
-            operator daxa::AttachmentViews<ATTACHMENT_COUNT>() const             \
-                requires(!TDecl::DECL_ATTACHMENTS)                               \
-            {                                                                    \
-                return TDecl::convert(*this);                                    \
-            }                                                                    \
-            auto _convert() const -> daxa::AttachmentViews<ATTACHMENT_COUNT>     \
-                requires(!TDecl::DECL_ATTACHMENTS)                               \
-            {                                                                    \
-                return TDecl::convert(*this);                                    \
+#define DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, HEAD_TYPE)                                    \
+    namespace HEAD_NAME                                                                          \
+    {                                                                                            \
+        static inline constexpr char _NAME[] = #HEAD_NAME;                                       \
+        static inline constexpr daxa::TaskType _TYPE = daxa::TaskType::HEAD_TYPE;                \
+        template <typename TDecl, daxa::usize ATTACHMENT_COUNT>                                  \
+        struct TaskHeadStruct                                                                    \
+        {                                                                                        \
+            typename TDecl::InternalT _internal = {};                                            \
+                                                                                                 \
+            auto convert_to_array() const -> std::array<daxa::TaskViewVariant, ATTACHMENT_COUNT> \
+                requires(!TDecl::DECL_ATTACHMENTS)                                               \
+            {                                                                                    \
+                return TDecl::convert_to_array(*this);                                           \
+            }                                                                                    \
+            constexpr auto span() const                                                          \
+                requires(!!TDecl::DECL_ATTACHMENTS)                                              \
+            {                                                                                    \
+                return std::span{_internal.value};                                               \
+            }                                                                                    \
+            constexpr auto at(daxa::usize idx) const -> daxa::TaskAttachment const &             \
+                requires(!!TDecl::DECL_ATTACHMENTS)                                              \
+            {                                                                                    \
+                return _internal.value.at(idx);                                                  \
             }
 
 #define DAXA_DECL_TASK_HEAD_BEGIN(HEAD_NAME) DAXA_DECL_TASK_HEAD_BEGIN_PROTO(HEAD_NAME, GENERAL)
@@ -1312,40 +1290,51 @@ namespace daxa
                 __VA_ARGS__})};
 #endif
 
-#define DAXA_DECL_TASK_HEAD_END                                                                                                                \
-    }                                                                                                                                          \
-    ;                                                                                                                                          \
-    static inline constexpr auto ATTACHMENT_COUNT = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256>, 256>{}._internal.count; \
-    using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                   \
-    using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                         \
-    static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                \
-    static inline constexpr auto const & AT = ATTACHMENTS;                                                                                     \
-    static inline constexpr auto ATTACHMENT_INDICES = ATTACHMENTS_T{};                                                                         \
-    static inline constexpr auto const & AI = ATTACHMENT_INDICES;                                                                              \
-    struct alignas(daxa::detail::get_asb_size_and_alignment(AT._internal.value).alignment) AttachmentShaderBlob                                \
-    {                                                                                                                                          \
-        std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT._internal.value).size> value = {};                                   \
-        AttachmentShaderBlob() = default;                                                                                                      \
-        AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                                                \
-        auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                              \
-        {                                                                                                                                      \
-            DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                 \
-            for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                        \
-                this->value[i] = data[i];                                                                                                      \
-            return *this;                                                                                                                      \
-        }                                                                                                                                      \
-    };                                                                                                                                         \
-    struct Task : public daxa::IPartialTask                                                                                                    \
-    {                                                                                                                                          \
-        static inline constexpr daxa::TaskType TASK_TYPE = TYPE;                                                                               \
-        static inline constexpr char const * TASK_NAME = NAME;                                                                                 \
-        using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
-        using Views = VIEWS_T;                                                                                                                 \
-        static constexpr auto const & AT = ATTACHMENTS_T{};                                                                                    \
-        static constexpr decltype(ATTACHMENT_COUNT) TASK_ATTACHMENT_COUNT = ATTACHMENT_COUNT;                                                  \
-    };                                                                                                                                         \
-    using Info = Task;                                                                                                                         \
-    }                                                                                                                                          \
+#define DAXA_DECL_TASK_HEAD_END                                                                                                                         \
+    }                                                                                                                                                   \
+    ;                                                                                                                                                   \
+    struct Info                                                                                                                                         \
+    {                                                                                                                                                   \
+        static inline constexpr daxa::TaskType TYPE = _TYPE;                                                                                            \
+        static inline constexpr char const * NAME = _NAME;                                                                                              \
+        static inline constexpr auto ATTACHMENT_COUNT =                                                                                                 \
+            TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<daxa::MAX_TASK_ATTACHMENTS>, daxa::MAX_TASK_ATTACHMENTS>{}                     \
+                ._internal.count;                                                                                                                       \
+        using Views = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                                \
+        using AttachmentViews = Views;                                                                                                                  \
+        static inline constexpr auto ATTACHMENTS = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>{}; \
+        static inline constexpr auto AT = ATTACHMENTS;                                                                                                  \
+        struct alignas(daxa::detail::get_asb_size_and_alignment(ATTACHMENTS.span()).alignment) AttachmentShaderBlob                                     \
+        {                                                                                                                                               \
+            std::array<std::byte, daxa::detail::get_asb_size_and_alignment(ATTACHMENTS.span()).size> value = {};                                        \
+            AttachmentShaderBlob() = default;                                                                                                           \
+            AttachmentShaderBlob(std::span<std::byte const> data) { *this = data; }                                                                     \
+            auto operator=(std::span<std::byte const> data) -> AttachmentShaderBlob &                                                                   \
+            {                                                                                                                                           \
+                DAXA_DBG_ASSERT_TRUE_M(this->value.size() == data.size(), "Blob size missmatch!");                                                      \
+                for (daxa::u32 i = 0; i < data.size(); ++i)                                                                                             \
+                    this->value[i] = data[i];                                                                                                           \
+                return *this;                                                                                                                           \
+            }                                                                                                                                           \
+        };                                                                                                                                              \
+    };                                                                                                                                                  \
+    /*deprecated("Use Head::Info instead; API:3.1")*/ using Views = Info::Views;                                                                        \
+    /*deprecated("Use Head::Info instead; API:3.1")*/ using AttachmentViews = Info::Views;                                                              \
+    /*deprecated("Use Head::Info instead; API:3.1")*/ using AttachmentShaderBlob = Info::AttachmentShaderBlob;                                          \
+    [[deprecated("Use Head::Info instead; API:3.1")]] static inline constexpr daxa::TaskType TYPE = Info::TYPE;                                         \
+    [[deprecated("Use Head::Info instead; API:3.1")]] static inline constexpr char const * NAME = Info::NAME;                                           \
+    [[deprecated("Use Head::Info instead; API:3.1")]] static constexpr decltype(Info::ATTACHMENT_COUNT) ATTACHMENT_COUNT = Info::ATTACHMENT_COUNT;      \
+    [[deprecated("Use Head::Info instead; API:3.1")]] static constexpr auto const & ATTACHMENTS = Info::ATTACHMENTS;                                    \
+    [[deprecated("Use Head::Info instead; API:3.1")]] static constexpr auto const & AT = Info::ATTACHMENTS;                                             \
+    struct Task : public daxa::IPartialTask                                                                                                             \
+    {                                                                                                                                                   \
+        using Info = Info;                                                                                                                              \
+        static constexpr auto const & ATTACHMENTS = Info::ATTACHMENTS;                                                                                  \
+        static constexpr auto const & AT = Info::ATTACHMENTS;                                                                                           \
+        using Views = Info::Views;                                                                                                                      \
+        using AttachmentViews = Info::Views;                                                                                                            \
+    };                                                                                                                                                  \
+    }                                                                                                                                                   \
     ;
 
 #define DAXA_TH_BLOB(HEAD_NAME, field_name) HEAD_NAME::AttachmentShaderBlob field_name;
