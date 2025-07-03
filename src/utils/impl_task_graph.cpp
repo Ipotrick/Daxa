@@ -1163,8 +1163,8 @@ namespace daxa
         auto name = info.name.size() > 0 ? std::string(info.name) : std::string("clear buffer: ") + std::string(impl.global_buffer_infos.at(view.index).get_name());
 
         TaskBufferClearInfo cinfo = info;
-        add_task(InlineTask::Transfer(name).writes(view).executes([=](TaskInterface ti)
-                                                                  {
+        add_task(InlineTask::Transfer(name).writes(view).uses_queue(info.queue).executes([=](TaskInterface ti)
+                                                                                         {
             for (u32 runtime_buf = 0; runtime_buf < ti.get(TaskBufferAttachmentIndex{0}).ids.size(); ++runtime_buf)
             {
                 auto actual_size = ti.info(TaskBufferAttachmentIndex{0}, runtime_buf).value().size;
@@ -1176,8 +1176,7 @@ namespace daxa
                     .size = size,
                     .clear_value = cinfo.clear_value,
                 });
-            } }),
-                 {info.queue});
+            } }));
     }
 
     DAXA_EXPORT_CXX void TaskGraph::clear_image(TaskImageClearInfo const & info)
@@ -1189,17 +1188,22 @@ namespace daxa
         auto name = info.name.size() > 0 ? std::string(info.name) : std::string("clear image: ") + std::string(impl.global_image_infos.at(view.index).get_name());
 
         TaskImageClearInfo cinfo = info;
-        add_task(InlineTask::Transfer(name).writes(view).executes([=](TaskInterface ti)
-                                                                  {
-            for (u32 runtime_img = 0; runtime_img < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_img)
-            {
-                ti.recorder.clear_image(ImageClearInfo{
-                    .clear_value = cinfo.clear_value,
-                    .dst_image = ti.get(TaskImageAttachmentIndex{0}).ids[runtime_img],
-                    .dst_slice = cinfo.view.slice,
-                });
-            } }),
-                 {info.queue});
+        add_task(
+            InlineTask::Transfer(name)
+                .writes(view)
+                .uses_queue(info.queue)
+                .executes(
+                    [=](TaskInterface ti)
+                    {
+                        for (u32 runtime_img = 0; runtime_img < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_img)
+                        {
+                            ti.recorder.clear_image(ImageClearInfo{
+                                .clear_value = cinfo.clear_value,
+                                .dst_image = ti.get(TaskImageAttachmentIndex{0}).ids[runtime_img],
+                                .dst_slice = cinfo.view.slice,
+                            });
+                        }
+                    }));
     }
 
     DAXA_EXPORT_CXX void TaskGraph::copy_buffer_to_buffer(TaskBufferCopyInfo const & info)
@@ -1213,19 +1217,25 @@ namespace daxa
 
         auto name = info.name.size() > 0 ? std::string(info.name) : std::string("copy ") + std::string(impl.global_buffer_infos.at(src.index).get_name()) + " to " + std::string(impl.global_buffer_infos.at(dst.index).get_name());
 
-        add_task(InlineTask::Transfer(name).reads(src).writes(dst).executes([=](TaskInterface ti)
-                                                                            {
-            DAXA_DBG_ASSERT_TRUE_M(ti.get(src_i).ids.size() == ti.get(dst_i).ids.size(), "given src and dst must have the same number of runtime resources");
-            for (u32 runtime_buf = 0; runtime_buf < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_buf)
-            {
-                DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_buf).value().size == ti.info(dst_i, runtime_buf).value().size, "given src and dst must have the same size");
-                ti.recorder.copy_buffer_to_buffer(BufferCopyInfo{
-                    .src_buffer = ti.get(src_i).ids[runtime_buf],
-                    .dst_buffer = ti.get(src_i).ids[runtime_buf],
-                    .size = ti.info(src_i, runtime_buf).value().size,
-                });
-            } }),
-                 {info.queue});
+        add_task(
+            InlineTask::Transfer(name)
+                .reads(src)
+                .writes(dst)
+                .uses_queue(info.queue)
+                .executes(
+                    [=](TaskInterface ti)
+                    {
+                        DAXA_DBG_ASSERT_TRUE_M(ti.get(src_i).ids.size() == ti.get(dst_i).ids.size(), "given src and dst must have the same number of runtime resources");
+                        for (u32 runtime_buf = 0; runtime_buf < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_buf)
+                        {
+                            DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_buf).value().size == ti.info(dst_i, runtime_buf).value().size, "given src and dst must have the same size");
+                            ti.recorder.copy_buffer_to_buffer(BufferCopyInfo{
+                                .src_buffer = ti.get(src_i).ids[runtime_buf],
+                                .dst_buffer = ti.get(src_i).ids[runtime_buf],
+                                .size = ti.info(src_i, runtime_buf).value().size,
+                            });
+                        }
+                    }));
     }
 
     DAXA_EXPORT_CXX void TaskGraph::copy_image_to_image(TaskImageCopyInfo const & info)
@@ -1239,30 +1249,36 @@ namespace daxa
 
         auto name = info.name.size() > 0 ? std::string(info.name) : std::string("copy ") + std::string(impl.global_image_infos.at(src.index).get_name()) + " to " + std::string(impl.global_image_infos.at(dst.index).get_name());
 
-        add_task(InlineTask::Transfer(name).reads(src).writes(dst).executes([=, copy_slice = src.slice](TaskInterface ti)
-                                                                            {
-            DAXA_DBG_ASSERT_TRUE_M(ti.get(src_i).ids.size() == ti.get(dst_i).ids.size(), "given src and dst must have the same number of runtime resources");
-            for (u32 runtime_img = 0; runtime_img < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_img)
-            {
-                DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().size == ti.info(dst_i, runtime_img).value().size, "given src and dst must have the same size");
-                DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().array_layer_count == ti.info(dst_i, runtime_img).value().array_layer_count, "given src and dst must have the same array layer count");
-                DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().mip_level_count == ti.info(dst_i, runtime_img).value().mip_level_count, "given src and dst must have the same mip level count");
-                for (u32 mip = copy_slice.base_mip_level; mip < (copy_slice.base_mip_level + copy_slice.level_count); ++mip)
-                {
-                    ImageArraySlice const array_copy_slice = ImageArraySlice::slice(dst.slice, mip);
-                    ti.recorder.copy_image_to_image(ImageCopyInfo{
-                        .src_image = ti.get(src_i).ids[runtime_img],
-                        .dst_image = ti.get(dst_i).ids[runtime_img],
-                        .src_slice = array_copy_slice,
-                        .dst_slice = array_copy_slice,
-                        .extent = {
-                            std::max(1u, ti.info(src_i, runtime_img).value().size.x >> mip),
-                            std::max(1u, ti.info(src_i, runtime_img).value().size.y >> mip),
-                            std::max(1u, ti.info(src_i, runtime_img).value().size.z >> mip),
-                        }});
-                }
-            } }),
-                 {info.queue});
+        add_task(
+            InlineTask::Transfer(name)
+                .reads(src)
+                .writes(dst)
+                .uses_queue(info.queue)
+                .executes(
+                    [=, copy_slice = src.slice](TaskInterface ti)
+                    {
+                        DAXA_DBG_ASSERT_TRUE_M(ti.get(src_i).ids.size() == ti.get(dst_i).ids.size(), "given src and dst must have the same number of runtime resources");
+                        for (u32 runtime_img = 0; runtime_img < ti.get(TaskImageAttachmentIndex{0}).ids.size(); ++runtime_img)
+                        {
+                            DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().size == ti.info(dst_i, runtime_img).value().size, "given src and dst must have the same size");
+                            DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().array_layer_count == ti.info(dst_i, runtime_img).value().array_layer_count, "given src and dst must have the same array layer count");
+                            DAXA_DBG_ASSERT_TRUE_M(ti.info(src_i, runtime_img).value().mip_level_count == ti.info(dst_i, runtime_img).value().mip_level_count, "given src and dst must have the same mip level count");
+                            for (u32 mip = copy_slice.base_mip_level; mip < (copy_slice.base_mip_level + copy_slice.level_count); ++mip)
+                            {
+                                ImageArraySlice const array_copy_slice = ImageArraySlice::slice(dst.slice, mip);
+                                ti.recorder.copy_image_to_image(ImageCopyInfo{
+                                    .src_image = ti.get(src_i).ids[runtime_img],
+                                    .dst_image = ti.get(dst_i).ids[runtime_img],
+                                    .src_slice = array_copy_slice,
+                                    .dst_slice = array_copy_slice,
+                                    .extent = {
+                                        std::max(1u, ti.info(src_i, runtime_img).value().size.x >> mip),
+                                        std::max(1u, ti.info(src_i, runtime_img).value().size.y >> mip),
+                                        std::max(1u, ti.info(src_i, runtime_img).value().size.z >> mip),
+                                    }});
+                            }
+                        }
+                    }));
     }
 
     static inline constexpr std::array<ImageId, 64> NULL_IMG_ARRAY = {};
@@ -2032,14 +2048,14 @@ namespace daxa
         u32 attachment_shader_blob_alignment,
         TaskType task_type,
         std::string_view name,
-        TaskAddInfo const & add_info)
+        Queue queue)
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_not_compiled(impl);
 
         TaskId const task_id = impl.tasks.size();
 
-        auto queue = add_info.queue == QUEUE_NONE ? impl.info.default_queue : add_info.queue;
+        queue = queue == QUEUE_NONE ? impl.info.default_queue : queue;
 
         auto runtime_images_last_execution_array = impl.mk2.task_memory.allocate_trivial_span_fill<DynamicArenaArray8k<ImageId>>(
             attachments.size(),

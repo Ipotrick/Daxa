@@ -287,20 +287,29 @@ namespace daxa
             value._internal._name = std::move(name);
             value._internal._task_type = task_type;
             value._internal._default_stage = task_type_default_stage(task_type);
+
+            if constexpr(!std::is_same_v<TaskHeadT, NoTaskHeadStruct>)
+            {
+                *this = uses_head<TaskHeadT>();
+            }
         }
         static auto Raster(std::string_view name) -> TInlineTask
+            requires std::is_same_v<TaskHeadT, NoTaskHeadStruct>
         {
             return TInlineTask(name, TaskType::RASTER);
         }
         static auto Compute(std::string_view name) -> TInlineTask
+            requires std::is_same_v<TaskHeadT, NoTaskHeadStruct>
         {
             return TInlineTask(name, TaskType::COMPUTE);
         }
         static auto RayTracing(std::string_view name) -> TInlineTask
+            requires std::is_same_v<TaskHeadT, NoTaskHeadStruct>
         {
             return TInlineTask(name, TaskType::RAY_TRACING);
         }
         static auto Transfer(std::string_view name) -> TInlineTask
+            requires std::is_same_v<TaskHeadT, NoTaskHeadStruct>
         {
             return TInlineTask(name, TaskType::TRANSFER);
         }
@@ -319,11 +328,13 @@ namespace daxa
             this->value._internal._name = std::move(other.value._internal._name);
             this->value._internal._task_type = std::move(other.value._internal._task_type);
             this->value._internal._default_stage = std::move(other.value._internal._default_stage);
+            this->value._internal._queue = std::move(other.value._internal._queue);
             other.value._internal._attachments = {};
             other.value._internal._callback = {};
             other.value._internal._name = {};
             other.value._internal._task_type = {};
             other.value._internal._default_stage = {};
+            other.value._internal._queue = {};
         }
         TInlineTask(TInlineTask const & other)
         {
@@ -333,6 +344,7 @@ namespace daxa
             this->value._internal._name = other.value._internal._name;
             this->value._internal._task_type = other.value._internal._task_type;
             this->value._internal._default_stage = other.value._internal._default_stage;
+            this->value._internal._queue = other.value._internal._queue;
         }
 
       private:
@@ -354,6 +366,7 @@ namespace daxa
             std::string_view _name = {};
             TaskType _task_type = TaskType::GENERAL;
             TaskStage _default_stage = TaskStage::ANY_COMMAND;
+            Queue _queue = QUEUE_MAIN;
 
             void _process_parameter(TaskStage, TaskAccessType, ImageViewType &, TaskStage) {}
             void _process_parameter(TaskStage stage, TaskAccessType type, ImageViewType &, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
@@ -739,6 +752,12 @@ namespace daxa
             return *reinterpret_cast<TInlineTask<NoTaskHeadStruct> const *>(this);
         }
 
+        auto uses_queue(Queue queue) -> TInlineTask &
+        {
+            this->value._internal._queue = queue;
+            return *this;
+        }
+
       private:
         TInlineTask(Internal && internal)
         {
@@ -748,6 +767,12 @@ namespace daxa
 
     using InlineTask = TInlineTask<NoTaskHeadStruct>;
     using Task = TInlineTask<NoTaskHeadStruct>;
+    
+    template <typename HeadInfoT>
+    auto HeadTask(std::string_view name = {}) -> TInlineTask<HeadInfoT>
+    {
+        return daxa::Task(name, HeadInfoT::TYPE).uses_head<HeadInfoT>();
+    }
 
     struct TaskBufferClearInfo
     {
@@ -783,11 +808,6 @@ namespace daxa
         std::string_view name = {};
     };
 
-    struct TaskAddInfo
-    {
-        Queue queue = QUEUE_NONE;
-    };
-
     struct ImplTaskGraph;
 
     using OpaqueTaskPtr = std::unique_ptr<void, void (*)(void *)>;
@@ -821,7 +841,7 @@ namespace daxa
 
         template <typename TTask>
             requires std::is_base_of_v<IPartialTask, TTask>
-        void add_task(TTask const & task, TaskAddInfo add_info = {})
+        void add_task(TTask const & task)
         {
             using NoRefTTask = std::remove_reference_t<TTask>;
             static constexpr auto const & ATTACHMENTS = NoRefTTask::AT._internal.value;
@@ -859,10 +879,10 @@ namespace daxa
             std::string_view name = TTask::Info::NAME;
             add_task(
                 std::move(wrapped_task_opaque), task_callback,
-                attachments, asb_size, asb_align, task_type, name, add_info);
+                attachments, asb_size, asb_align, task_type, name, QUEUE_MAIN);
         }
         template <typename TaskHeadType>
-        void add_task(TInlineTask<TaskHeadType> const & inline_task, TaskAddInfo add_info = {})
+        void add_task(TInlineTask<TaskHeadType> const & inline_task)
         {
             using CallbackT = std::function<void(TaskInterface)>;
 
@@ -890,13 +910,13 @@ namespace daxa
             std::string_view name = inline_task.value._internal._name;
             add_task(
                 std::move(callback_mem_alloc), task_callback,
-                attachments, asb_size, asb_align, task_type, name, add_info);
+                attachments, asb_size, asb_align, task_type, name, inline_task.value._internal._queue);
         }
 
 #if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use add_task(T && inline_task) instead, API:3.1")]] void add_task(InlineTaskInfo const & inline_task_info, TaskAddInfo add_info = {})
+        [[deprecated("Use add_task(T && inline_task) instead, API:3.1")]] void add_task(InlineTaskInfo const & inline_task_info)
         {
-            add_task(InlineTask{inline_task_info}, add_info);
+            add_task(InlineTask{inline_task_info});
         }
 #endif
 
@@ -927,7 +947,7 @@ namespace daxa
             u32 attachment_shader_blob_alignment,
             TaskType task_type,
             std::string_view name,
-            TaskAddInfo const & add_info);
+            Queue queue);
 
         DAXA_EXPORT_CXX auto allocate_task_memory(usize size, usize align) -> void *;
     };
