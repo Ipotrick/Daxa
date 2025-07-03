@@ -131,13 +131,13 @@ namespace daxa
     . '. \_____\.
     */
 
-    static inline constexpr usize MAX_INLINE_ATTACHMENTS = 32;
+    static inline constexpr usize MAX_TASK_ATTACHMENTS = 48;
 
 #if !DAXA_REMOVE_DEPRECATED
     struct [[deprecated("Use struct InlineTask constructors instead, API:3.1")]] InlineTaskInfo
     {
         TaskType task_type = TaskType::GENERAL;
-        FixedList<TaskAttachmentInfo, MAX_INLINE_ATTACHMENTS> attachments = {};
+        FixedList<TaskAttachmentInfo, MAX_TASK_ATTACHMENTS> attachments = {};
         std::function<void(TaskInterface)> task = {};
         std::string_view name = "unnamed";
     };
@@ -351,7 +351,7 @@ namespace daxa
 
         struct Internal
         {
-            FixedList<TaskAttachmentInfo, MAX_INLINE_ATTACHMENTS> _attachments = {};
+            FixedList<TaskAttachmentInfo, MAX_TASK_ATTACHMENTS> _attachments = {};
             std::function<void(TaskInterface)> _callback = {};
             std::string_view _name = {};
             TaskType _task_type = TaskType::GENERAL;

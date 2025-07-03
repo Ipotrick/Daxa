@@ -78,7 +78,7 @@ struct BaseApp : AppWindow<T>
     f32 time = 0.0f, delta_time = 1.0f;
 
     daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
-    daxa::FixedList<daxa::TaskAttachmentInfo, daxa::MAX_INLINE_ATTACHMENTS> imgui_task_attachments{};
+    daxa::FixedList<daxa::TaskAttachmentInfo, daxa::MAX_TASK_ATTACHMENTS> imgui_task_attachments{};
 
     BaseApp() : AppWindow<T>(APPNAME)
     {
