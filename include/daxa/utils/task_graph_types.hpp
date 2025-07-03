@@ -175,6 +175,12 @@ namespace daxa
 
         static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;
+
+        static constexpr TaskAccess DEPTH_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
+        static constexpr TaskAccess STENCIL_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
+        static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
+        static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
+
         static constexpr TaskAccess PRESENT = TaskAccess{TaskStage::PRESENT, TaskAccessType::READ, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStage::INDIRECT_COMMAND, TaskAccessType::READ, TaskAttachmentType::BUFFER};
         static constexpr TaskAccess ICR = INDIRECT_COMMAND_READ;
@@ -289,10 +295,6 @@ namespace daxa
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::FS::READ;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::FS::READ_WRITE;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::FS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess DEPTH_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess STENCIL_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess DEPTH_STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RESOLVE_WRITE = TaskAccessConsts::RESOLVE::READ_WRITE;
 #endif // #if !DAXA_REMOVE_DEPRECATED
@@ -1244,7 +1246,6 @@ namespace daxa
     static inline constexpr auto ATTACHMENT_COUNT = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256>, 256>{}._internal.count; \
     using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                   \
     using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                         \
-    using AttachmentViews = VIEWS_T;                                                                                                           \
     static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                \
     static inline constexpr auto const & AT = ATTACHMENTS;                                                                                     \
     static inline constexpr auto ATTACHMENT_INDICES = ATTACHMENTS_T{};                                                                         \

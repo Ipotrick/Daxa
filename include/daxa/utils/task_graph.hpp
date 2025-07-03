@@ -241,6 +241,11 @@ namespace daxa
         static constexpr inline usize TASK_ATTACHMENT_COUNT = 0;
     };
 
+    DAXA_EXPORT_CXX auto error_message_unassigned_buffer_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+    DAXA_EXPORT_CXX auto error_message_unassigned_image_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+    DAXA_EXPORT_CXX auto error_message_unassigned_tlas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+    DAXA_EXPORT_CXX auto error_message_unassigned_blas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+
     template <typename TaskHeadT>
     struct TInlineTask
     {
@@ -405,7 +410,7 @@ namespace daxa
                     }
                     else if (TaskBufferView * buffer_ptr = daxa::get_if<TaskBufferView>(&av.views[i]); buffer_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!buffer_ptr->is_empty(), std::format("Detected empty TaskBufferView in attachment \"{}\" view assignment in task \"{}\"!", attach.value.buffer.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!buffer_ptr->is_empty(), error_message_unassigned_buffer_view(attach.value.buffer.name, _internal._name));
                         if (!keep_access)
                         {
                             attach.value.buffer.task_access.stage = stage;
@@ -415,7 +420,7 @@ namespace daxa
                     }
                     else if (TaskImageView * image_ptr = daxa::get_if<TaskImageView>(&av.views[i]); image_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!image_ptr->is_empty(), std::format("Detected empty TaskImageView in attachment \"{}\" view assignment in task \"{}\"!", attach.value.image.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!image_ptr->is_empty(), error_message_unassigned_image_view(attach.value.image.name, _internal._name));
                         if (!keep_access)
                         {
                             attach.value.image.task_access.stage = stage;
@@ -425,7 +430,7 @@ namespace daxa
                     }
                     else if (TaskBlasView * blas_ptr = daxa::get_if<TaskBlasView>(&av.views[i]); blas_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!blas_ptr->is_empty(), std::format("Detected empty TaskBlasView in attachment \"{}\" view assignment in task \"{}\"!", attach.value.blas.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!blas_ptr->is_empty(), error_message_unassigned_tlas_view(attach.value.blas.name, _internal._name));
                         if (!keep_access)
                         {
                             attach.value.blas.task_access.stage = stage;
@@ -435,7 +440,7 @@ namespace daxa
                     }
                     else if (TaskTlasView * tlas_ptr = daxa::get_if<TaskTlasView>(&av.views[i]); tlas_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!tlas_ptr->is_empty(), std::format("Detected empty TaskTlasView in attachment \"{}\" view assignment in task \"{}\"!", attach.value.tlas.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!tlas_ptr->is_empty(), error_message_unassigned_blas_view(attach.value.tlas.name, _internal._name));
                         if (!keep_access)
                         {
                             attach.value.tlas.task_access.stage = stage;
@@ -602,10 +607,11 @@ namespace daxa
             };
             return *this;
         }
-    
-        operator TInlineTask<NoTaskHeadStruct>() const requires (HAS_HEAD)
+
+        operator TInlineTask<NoTaskHeadStruct>() const
+            requires(HAS_HEAD)
         {
-            return *reinterpret_cast<TInlineTask<NoTaskHeadStruct> const*>(this);
+            return *reinterpret_cast<TInlineTask<NoTaskHeadStruct> const *>(this);
         }
 
       private:
