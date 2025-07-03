@@ -476,12 +476,13 @@ namespace tests
                             for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                             {
                                 std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
-                                new_task_graph.add_task(daxa::InlineTaskWithHead<MipMapH::Task>{
-                                    .views = daxa::InlineTaskWithHead<MipMapH::Task>::Views{
+                                new_task_graph.add_task(daxa::Task::Transfer("test")
+                                    .uses_head<MipMapH::Info>()
+                                    .head_views({
                                         .lower_mip = task_render_image.view().mips(i),
                                         .higher_mip = task_render_image.view().mips(i+1),
-                                    },
-                                    .task = [=](daxa::TaskInterface ti)
+                                    })
+                                    .executes([=](daxa::TaskInterface ti)
                                     {
                                         ti.recorder.blit_image_to_image({
                                             .src_image = ti.get(MipMapH::AT.lower_mip).ids[0],
@@ -492,8 +493,7 @@ namespace tests
                                             .dst_offsets = {{{0, 0, 0}, {next_mip_size[0], next_mip_size[1], next_mip_size[2]}}},
                                             .filter = daxa::Filter::LINEAR,
                                         });
-                                    },
-                                });
+                                    }));
                                 mip_size = next_mip_size;
                             }
                         }

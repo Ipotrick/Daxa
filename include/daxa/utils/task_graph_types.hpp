@@ -912,7 +912,7 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    using TaskViewVariant = Variant<
+    using TaskViewIndexVariant = Variant<
         std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>,
         std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>,
         std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>,
@@ -940,7 +940,11 @@ namespace daxa
 
     template <typename T>
     concept TaskResourceViewOrResourceOrImageViewType =
-        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T> || std::is_same_v<ImageViewType, T>;
+        TaskResourceViewOrResource<T> || std::is_same_v<ImageViewType, T>;
+
+    template <typename T>
+    concept TaskResourceViewOrResourceOrImageViewTypeOrStage =
+        TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStage>;
 
     template <typename T>
     concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
@@ -997,12 +1001,23 @@ namespace daxa
     {
     };
 
+    struct TaskViewUndefined
+    {
+    };
+
+    using TaskViewVariant = Variant<
+        TaskViewUndefined,
+        daxa::TaskBufferView,
+        daxa::TaskBlasView,
+        daxa::TaskTlasView,
+        daxa::TaskImageView>;
+
     template <usize ATTACHMENT_COUNT>
     struct AttachmentViews
     {
-        AttachmentViews(std::array<daxa::TaskViewVariant, ATTACHMENT_COUNT> const & index_view_pairs)
+        [[deprecated("Use Views instead; API:3.1")]] AttachmentViews(std::array<daxa::TaskViewIndexVariant, ATTACHMENT_COUNT> const & index_view_pairs)
         {
-            for (TaskViewVariant const & vari : index_view_pairs)
+            for (TaskViewIndexVariant const & vari : index_view_pairs)
             {
                 if (auto * buffer_pair = get_if<std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>>(&vari))
                 {
@@ -1024,13 +1039,7 @@ namespace daxa
             }
         }
         AttachmentViews() = default;
-        std::array<Variant<
-                       daxa::TaskBufferView,
-                       daxa::TaskBlasView,
-                       daxa::TaskTlasView,
-                       daxa::TaskImageView>,
-                   ATTACHMENT_COUNT>
-            views = {};
+        std::array<TaskViewVariant, ATTACHMENT_COUNT> views = {};
     };
 
     /*
@@ -1080,61 +1089,16 @@ namespace daxa
     /// ============================== HEAVY TEMPLATE METAPROGRAMMING AHEAD ============================
     /// ========================================= DO NOT PANIC =========================================
 
-    struct TaskAttachmentViewWrapperRaw
-    {
-        TaskAttachmentType type = TaskAttachmentType::UNDEFINED;
-        union Value
-        {
-            u32 undefined;
-            TaskBufferView buffer;
-            TaskBlasView blas;
-            TaskTlasView tlas;
-            TaskImageView image;
-        } value = {.undefined = {}};
-    };
-
     template <typename T>
     struct TaskAttachmentViewWrapper
     {
-        TaskAttachmentViewWrapperRaw _value = {};
-
+        TaskViewVariant _value;
         TaskAttachmentViewWrapper()
         {
-            if constexpr (std::is_same_v<T, TaskBufferView>)
-            {
-                _value = {TaskAttachmentType::BUFFER, {.buffer = TaskBufferView{}}};
-            }
-            if constexpr (std::is_same_v<T, TaskBlasView>)
-            {
-                _value = {TaskAttachmentType::BLAS, {.blas = TaskBlasView{}}};
-            }
-            if constexpr (std::is_same_v<T, TaskTlasView>)
-            {
-                _value = {TaskAttachmentType::TLAS, {.tlas = TaskTlasView{}}};
-            }
-            if constexpr (std::is_same_v<T, TaskImageView>)
-            {
-                _value = {TaskAttachmentType::IMAGE, {.image = TaskImageView{}}};
-            }
+            _value = TaskViewUndefined{};
         }
-        TaskAttachmentViewWrapper(TaskBufferViewOrTaskBuffer auto const & v)
-            requires(std::is_same_v<T, TaskBufferView>)
-            : _value{TaskAttachmentType::BUFFER, {.buffer = v}}
-        {
-        }
-        TaskAttachmentViewWrapper(TaskBlasViewOrTaskBlas auto const & v)
-            requires(std::is_same_v<T, TaskBlasView>)
-            : _value{TaskAttachmentType::BLAS, {.blas = v}}
-        {
-        }
-        TaskAttachmentViewWrapper(TaskTlasViewOrTaskTlas auto const & v)
-            requires(std::is_same_v<T, TaskTlasView>)
-            : _value{TaskAttachmentType::TLAS, {.tlas = v}}
-        {
-        }
-        TaskAttachmentViewWrapper(TaskImageViewOrTaskImage auto const & v)
-            requires(std::is_same_v<T, TaskImageView>)
-            : _value{TaskAttachmentType::IMAGE, {.image = v}}
+        TaskAttachmentViewWrapper(T const & v)
+            : _value{v}
         {
         }
     };
@@ -1187,7 +1151,7 @@ namespace daxa
             struct Extractor
             {
                 u32 dummy = {};
-                std::array<TaskAttachmentViewWrapperRaw, ATTACHMENT_COUNT> initializers = {};
+                std::array<TaskViewVariant, ATTACHMENT_COUNT> initializers = {};
             };
             // Compilers collapse here. Usually type traits start to fail so we will just memcpy here until we get c++26 reflection.
             static constexpr u32 SIZEOF_EXTRACTOR = sizeof(Extractor);
@@ -1198,23 +1162,7 @@ namespace daxa
             auto ret = daxa::AttachmentViews<ATTACHMENT_COUNT>{};
             for (daxa::u32 i = 0; i < ATTACHMENT_COUNT; ++i)
             {
-                switch (views.initializers[i].type)
-                {
-                case TaskAttachmentType::BUFFER:
-                    ret.views[i] = views.initializers[i].value.buffer;
-                    break;
-                case TaskAttachmentType::BLAS:
-                    ret.views[i] = views.initializers[i].value.blas;
-                    break;
-                case TaskAttachmentType::TLAS:
-                    ret.views[i] = views.initializers[i].value.tlas;
-                    break;
-                case TaskAttachmentType::IMAGE:
-                    ret.views[i] = views.initializers[i].value.image;
-                    break;
-                default:
-                    DAXA_DBG_ASSERT_TRUE_M(false, "Invalid attachment type!");
-                }
+                ret.views[i] = views.initializers[i];
             }
             return ret;
         }
@@ -1230,6 +1178,11 @@ namespace daxa
         {                                                                        \
             typename TDecl::InternalT _internal = {};                            \
             operator daxa::AttachmentViews<ATTACHMENT_COUNT>() const             \
+                requires(!TDecl::DECL_ATTACHMENTS)                               \
+            {                                                                    \
+                return TDecl::convert(*this);                                    \
+            }                                                                    \
+            auto _convert() const -> daxa::AttachmentViews<ATTACHMENT_COUNT>     \
                 requires(!TDecl::DECL_ATTACHMENTS)                               \
             {                                                                    \
                 return TDecl::convert(*this);                                    \
@@ -1291,8 +1244,11 @@ namespace daxa
     static inline constexpr auto ATTACHMENT_COUNT = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<256>, 256>{}._internal.count; \
     using ATTACHMENTS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentDecls<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                   \
     using VIEWS_T = TaskHeadStruct<daxa::TaskHeadStructSpecializeAttachmentViews<ATTACHMENT_COUNT>, ATTACHMENT_COUNT>;                         \
+    using AttachmentViews = VIEWS_T;                                                                                                           \
     static inline constexpr auto ATTACHMENTS = ATTACHMENTS_T{};                                                                                \
     static inline constexpr auto const & AT = ATTACHMENTS;                                                                                     \
+    static inline constexpr auto ATTACHMENT_INDICES = ATTACHMENTS_T{};                                                                         \
+    static inline constexpr auto const & AI = ATTACHMENT_INDICES;                                                                              \
     struct alignas(daxa::detail::get_asb_size_and_alignment(AT._internal.value).alignment) AttachmentShaderBlob                                \
     {                                                                                                                                          \
         std::array<std::byte, daxa::detail::get_asb_size_and_alignment(AT._internal.value).size> value = {};                                   \
@@ -1313,7 +1269,7 @@ namespace daxa
         using AttachmentViews = daxa::AttachmentViews<ATTACHMENT_COUNT>;                                                                       \
         using Views = VIEWS_T;                                                                                                                 \
         static constexpr auto const & AT = ATTACHMENTS_T{};                                                                                    \
-        static constexpr auto ATTACH_COUNT = ATTACHMENT_COUNT;                                                                                 \
+        static constexpr decltype(ATTACHMENT_COUNT) TASK_ATTACHMENT_COUNT = ATTACHMENT_COUNT;                                                  \
     };                                                                                                                                         \
     using Info = Task;                                                                                                                         \
     }                                                                                                                                          \
@@ -1375,42 +1331,42 @@ namespace daxa
     }
 
 #if !DAXA_REMOVE_DEPRECATED
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>(index, view);
     }
 
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskBlasAttachmentIndex index, TaskBlasView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskBlasAttachmentIndex index, TaskBlasView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>(index, view);
     }
 
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskTlasAttachmentIndex index, TaskTlasView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskTlasAttachmentIndex index, TaskTlasView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>(index, view);
     }
 
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
 
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>(index, view);
     }
 
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskBlasAttachmentIndex index, TaskBlasView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskBlasAttachmentIndex index, TaskBlasView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>(index, view);
     }
 
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskTlasAttachmentIndex index, TaskTlasView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskTlasAttachmentIndex index, TaskTlasView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>(index, view);
     }
 
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewVariant
+    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewIndexVariant
     {
         return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
     }
