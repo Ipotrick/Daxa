@@ -349,9 +349,11 @@ namespace daxa
 
     struct TaskAttachmentInfo;
 
-    struct TaskImageView : public TaskGPUResourceView
+    struct TaskImageView
     {
-        daxa::ImageMipArraySlice slice = {};
+        TaskResourceIndex task_graph_index = {};
+        TaskResourceIndex index = {};
+        ImageMipArraySlice slice = {};
 #if !DAXA_REMOVE_DEPRECATED
         [[deprecated("Use .mips and .layers instead, API:3.1")]] auto view(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageView
         {
@@ -376,7 +378,36 @@ namespace daxa
         }
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskImageView const & other) const = default;
+
+        operator TaskGPUResourceView &()
+        {
+            return *reinterpret_cast<TaskGPUResourceView *>(this);
+        }
+        operator TaskGPUResourceView const &() const
+        {
+            return *reinterpret_cast<TaskGPUResourceView const *>(this);
+        }
+
+        auto is_empty() const -> bool { return operator TaskGPUResourceView const &().is_empty(); }
+        auto is_persistent() const -> bool { return operator TaskGPUResourceView const &().is_persistent(); }
+        auto is_null() const -> bool { return operator TaskGPUResourceView const &().is_null(); }
     };
+
+    struct Test
+    {
+        TaskResourceIndex task_graph_index = {};
+        TaskResourceIndex index = {};
+        ImageMipArraySlice slice = {};
+    };
+
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
+    // The TaskImageView::operator TaskGPUResourceView const&() const are only valid IF AND ONLY IF:
+    // * TaskGPUResourceView and TaskImageView are standard layout
+    // * TaskGPUResourceView and TaskImageView share a common initial sequence for all fields in TaskGPUResourceView
+    static_assert(std::is_standard_layout_v<TaskGPUResourceView>);
+    static_assert(std::is_standard_layout_v<TaskImageView>);
+    static_assert(std::is_corresponding_member(&TaskGPUResourceView::index, &TaskImageView::index)); // Tests for common initial sequence up to TaskGPUResourceView::index.
+#endif
 
     static constexpr inline TaskBufferView NullTaskBuffer = []()
     {
@@ -586,35 +617,74 @@ namespace daxa
     {
     };
 
-    struct TaskBufferAttachmentInfo : TaskBufferAttachment
+    struct TaskBufferAttachmentInfo
     {
+        using INDEX_TYPE = TaskBufferAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::BUFFER;
+        char const * name = {};
+        TaskAccess task_access = {};
+        Access access = {};
+        u8 shader_array_size = {};
+        bool shader_as_address = {};
+
         TaskBufferView view = {};
         TaskBufferView translated_view = {};
         std::span<BufferId const> ids = {};
     };
 
-    struct TaskBlasAttachmentInfo : TaskBlasAttachment
+    static_assert(std::is_standard_layout_v<TaskBufferAttachmentInfo>);
+
+    struct TaskBlasAttachmentInfo
     {
+        using INDEX_TYPE = TaskBlasAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::BLAS;
+        char const * name = {};
+        TaskAccess task_access = {};
+        Access access = {};
+
         TaskBlasView view = {};
         TaskBlasView translated_view = {};
         std::span<BlasId const> ids = {};
     };
 
-    struct TaskTlasAttachmentInfo : TaskTlasAttachment
+    static_assert(std::is_standard_layout_v<TaskBlasAttachmentInfo>);
+
+    struct TaskTlasAttachmentInfo
     {
+        using INDEX_TYPE = TaskTlasAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::TLAS;
+        char const * name = {};
+        TaskAccess task_access = {};
+        Access access = {};
+        bool shader_as_address = {};
+
         TaskTlasView view = {};
         TaskTlasView translated_view = {};
         std::span<TlasId const> ids = {};
     };
 
-    struct TaskImageAttachmentInfo : TaskImageAttachment
+    static_assert(std::is_standard_layout_v<TaskTlasAttachmentInfo>);
+
+    struct TaskImageAttachmentInfo
     {
+        using INDEX_TYPE = TaskImageAttachmentIndex;
+        static constexpr TaskAttachmentType ATTACHMENT_TYPE = TaskAttachmentType::IMAGE;
+        char const * name = {};
+        TaskAccess task_access = {};
+        Access access = {};
+        ImageViewType view_type = ImageViewType::MAX_ENUM;
+        u8 shader_array_size = {};
+        bool shader_as_index = {};
+        TaskHeadImageArrayType shader_array_type = {};
+
         TaskImageView view = {};
         TaskImageView translated_view = {};
         ImageLayout layout = {};
         std::span<ImageId const> ids = {};
         std::span<ImageViewId const> view_ids = {};
     };
+
+    static_assert(std::is_standard_layout_v<TaskImageAttachmentInfo>);
 
     struct TaskAttachmentInfo
     {
@@ -686,6 +756,8 @@ namespace daxa
             }
         }
     };
+
+    static_assert(std::is_standard_layout_v<TaskAttachmentInfo>);
 
     using TaskAttachmentInfoVariant = Variant<
         TaskBufferAttachmentInfo,

@@ -819,7 +819,7 @@ namespace daxa
     auto TaskImage::view() const -> TaskImageView
     {
         auto & impl = *r_cast<ImplPersistentTaskImage *>(this->object);
-        return TaskImageView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
+        return TaskImageView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
     auto TaskImage::info() const -> TaskImageInfo const &
@@ -1013,7 +1013,7 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
         DAXA_DBG_ASSERT_TRUE_M(!impl.image_name_to_id.contains(image.info().name), "task image names must be unique");
-        TaskImageView const task_image_id{{.task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.global_image_infos.size())}};
+        TaskImageView const task_image_id{.task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.global_image_infos.size())};
 
         for (auto & permutation : impl.permutations)
         {
@@ -1096,10 +1096,10 @@ namespace daxa
 
         info.name = impl.mk2.task_memory.allocate_copy_string(info.name);
 
-        TaskImageView task_image_view = {{
+        TaskImageView task_image_view = {
             .task_graph_index = impl.unique_index,
             .index = static_cast<u32>(impl.global_image_infos.size()),
-        }};
+        };
         task_image_view.slice = {
             .level_count = info.mip_level_count,
             .layer_count = info.array_layer_count,
@@ -1301,7 +1301,7 @@ namespace daxa
                 << " in task graph \""
                 << info.name
                 << "\". Please make sure to declare persistent resource use to each task graph that uses this image with the function use_persistent_image!");
-            return TaskImageView{{.task_graph_index = this->unique_index, .index = persistent_image_index_to_local_index.at(id.index)}, id.slice};
+            return TaskImageView{.task_graph_index = this->unique_index, .index = persistent_image_index_to_local_index.at(id.index), .slice = id.slice};
         }
         else
         {
@@ -1312,7 +1312,7 @@ namespace daxa
                 << " in task graph \""
                 << info.name
                 << "\". Please make sure that you only use transient image within the list they are created in!");
-            return TaskImageView{{.task_graph_index = this->unique_index, .index = id.index}, id.slice};
+            return TaskImageView{.task_graph_index = this->unique_index, .index = id.index, .slice = id.slice};
         }
     }
 
@@ -1334,7 +1334,7 @@ namespace daxa
     void validate_runtime_image_slice(ImplTaskGraph & impl, TaskGraphPermutation const & perm, u32 use_index, u32 task_image_index, ImageMipArraySlice const & access_slice)
     {
 #if DAXA_VALIDATION
-        auto const actual_images = impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, perm);
+        auto const actual_images = impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, perm);
         std::string_view task_name = impl.global_image_infos[task_image_index].get_name();
         for (u32 index = 0; index < actual_images.size(); ++index)
         {
@@ -1359,7 +1359,7 @@ namespace daxa
     {
 #if DAXA_VALIDATION
         ImageUsageFlags const use_flags = access_to_usage(task_access);
-        auto const actual_images = impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, perm);
+        auto const actual_images = impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, perm);
         std::string_view task_image_name = impl.global_image_infos[task_image_index].get_name();
         for (auto image : actual_images)
         {
@@ -3321,7 +3321,7 @@ namespace daxa
             // Buffers never need layout initialization, only images.
             for (u32 task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
             {
-                TaskImageView const task_image_id = {{impl.unique_index, task_image_index}};
+                TaskImageView const task_image_id = {impl.unique_index, task_image_index};
                 auto & task_image = permutation.image_infos[task_image_index];
                 PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[task_image_index];
                 if (task_image.valid && !glob_task_image.is_persistent())
@@ -3552,7 +3552,7 @@ namespace daxa
                             previous_access_slices[previous_access_slice_index].latest_layout;
                         if (!(both_accesses_read && both_layouts_same))
                         {
-                            for (auto execution_image_id : impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, permutation))
+                            for (auto execution_image_id : impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, permutation))
                             {
                                 ImageMemoryBarrierInfo const img_barrier_info{
                                     .src_access = previous_access_slices[previous_access_slice_index].latest_access,
@@ -3614,7 +3614,7 @@ namespace daxa
                 // we need to synchronize from an undefined state to initialize the layout of the image.
                 for (auto & remaining_first_accesse : remaining_first_accesses)
                 {
-                    for (auto execution_image_id : impl.get_actual_images(TaskImageView{{.task_graph_index = impl.unique_index, .index = task_image_index}}, permutation))
+                    for (auto execution_image_id : impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, permutation))
                     {
                         ImageMemoryBarrierInfo const img_barrier_info{
                             .src_access = AccessConsts::NONE,
@@ -4100,7 +4100,7 @@ namespace daxa
                 auto & perm_image = permutation.image_infos.at(image_info_idx);
                 if (!global_image.is_persistent() && perm_image.valid)
                 {
-                    info.device.destroy_image(get_actual_images(TaskImageView{{.task_graph_index = unique_index, .index = image_info_idx}}, permutation)[0]);
+                    info.device.destroy_image(get_actual_images(TaskImageView{.task_graph_index = unique_index, .index = image_info_idx}, permutation)[0]);
                 }
             }
         }

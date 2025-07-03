@@ -387,22 +387,46 @@ namespace daxa
             }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto reads(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ) != 0) { return _process_parameters(TaskAccessType::READ, STAGE, v...); }
+            auto reads(TParams... v) -> TInlineTask &
+                requires((ALLOWED_ACCESS & Allow::READ) != 0)
+            {
+                return _process_parameters(TaskAccessType::READ, STAGE, v...);
+            }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto writes(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::WRITE) != 0) { return _process_parameters(TaskAccessType::WRITE, STAGE, v...); }
+            auto writes(TParams... v) -> TInlineTask &
+                requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
+            {
+                return _process_parameters(TaskAccessType::WRITE, STAGE, v...);
+            }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto writes_concurrent(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::WRITE) != 0) { return _process_parameters(TaskAccessType::WRITE_CONCURRENT, STAGE, v...); }
+            auto writes_concurrent(TParams... v) -> TInlineTask &
+                requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
+            {
+                return _process_parameters(TaskAccessType::WRITE_CONCURRENT, STAGE, v...);
+            }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto reads_writes(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0) { return _process_parameters(TaskAccessType::READ_WRITE, STAGE, v...); }
+            auto reads_writes(TParams... v) -> TInlineTask &
+                requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
+            {
+                return _process_parameters(TaskAccessType::READ_WRITE, STAGE, v...);
+            }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto reads_writes_concurrent(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0) { return _process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, STAGE, v...); }
+            auto reads_writes_concurrent(TParams... v) -> TInlineTask &
+                requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
+            {
+                return _process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, STAGE, v...);
+            }
 
             template <TaskImageViewOrTaskImageOrImageViewType... TParams>
-            auto samples(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0) { return _process_parameters(TaskAccessType::SAMPLED, STAGE, v...); }
+            auto samples(TParams... v) -> TInlineTask &
+                requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0)
+            {
+                return _process_parameters(TaskAccessType::SAMPLED, STAGE, v...);
+            }
 
             // task head attachment interface:
 
@@ -415,7 +439,7 @@ namespace daxa
                 {
                     stage = STAGE;
                 }
-                
+
                 if (stage == TaskStage::NONE)
                 {
                     stage = task_type_default_stage(_internal._task_type);
@@ -472,17 +496,41 @@ namespace daxa
                 return *reinterpret_cast<TInlineTask *>(this);
             }
 
-            auto reads(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ, STAGE); }
+            auto reads(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::READ, STAGE);
+            }
 
-            auto writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE, STAGE); }
+            auto writes(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::WRITE, STAGE);
+            }
 
-            auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE_CONCURRENT, STAGE); }
+            auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::WRITE_CONCURRENT, STAGE);
+            }
 
-            auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE, STAGE); }
+            auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::READ_WRITE, STAGE);
+            }
 
-            auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, STAGE); }
+            auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, STAGE);
+            }
 
-            auto samples(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::SAMPLED, STAGE); }
+            auto samples(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::SAMPLED, STAGE);
+            }
         };
 
       public:
@@ -514,6 +562,20 @@ namespace daxa
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::AS_BUILD> acceleration_structure_build;
         };
 
+      private:
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
+        // Per c++ spec, it is only legal to access multiple union members at the same time IF AND ONLY IF:
+        // * all types in the union are standard layout
+        // * all types in the union share a common initial sequence for all members accessed
+        //   * or all types within the union are layout compatible
+        using TEST_TYPE_A = InternalValue<Allow::NONE, TaskStage::NONE>;
+        using TEST_TYPE_B = InternalValue<Allow::NONE, TaskStage::NONE>;
+        static constexpr inline bool UNION_MEMBERS_ARE_STANDART_LAYOUT = std::is_standard_layout_v<TEST_TYPE_A> && std::is_standard_layout_v<TEST_TYPE_B>;
+        static constexpr inline bool UNION_MEMBERS_ARE_LAYOUT_COMPATIBLE = std::is_layout_compatible_v<TEST_TYPE_A, TEST_TYPE_B>;
+        static_assert(UNION_MEMBERS_ARE_STANDART_LAYOUT && UNION_MEMBERS_ARE_LAYOUT_COMPATIBLE);
+#endif
+
+      public:
         // untyped inline attachments interface:
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
@@ -568,35 +630,91 @@ namespace daxa
             return ret;
         }
 
-        auto reads(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ, value._internal._default_stage); }
+        auto reads(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::READ, value._internal._default_stage);
+        }
 
-        auto writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE, value._internal._default_stage); }
+        auto writes(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::WRITE, value._internal._default_stage);
+        }
 
-        auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE_CONCURRENT, value._internal._default_stage); }
+        auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::WRITE_CONCURRENT, value._internal._default_stage);
+        }
 
-        auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE, value._internal._default_stage); }
+        auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::READ_WRITE, value._internal._default_stage);
+        }
 
-        auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage); }
+        auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage);
+        }
 
-        auto samples(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::SAMPLED, value._internal._default_stage); }
+        auto samples(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::SAMPLED, value._internal._default_stage);
+        }
 
-        auto head_views(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::NONE, TaskStage::NONE, true); }
+        auto head_views(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::NONE, TaskStage::NONE, true);
+        }
 
         // overloads for stage:
 
-        auto reads(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ, stage); }
+        auto reads(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::READ, stage);
+        }
 
-        auto writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE, stage); }
+        auto writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::WRITE, stage);
+        }
 
-        auto writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE_CONCURRENT, stage); }
+        auto writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::WRITE_CONCURRENT, stage);
+        }
 
-        auto reads_writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE, stage); }
+        auto reads_writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::READ_WRITE, stage);
+        }
 
-        auto reads_writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, stage); }
+        auto reads_writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, stage);
+        }
 
-        auto samples(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::SAMPLED, stage); }
+        auto samples(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::SAMPLED, stage);
+        }
 
-        auto uses(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(std::is_same_v<TaskHeadT, NoTaskHeadStruct>) { return value._process_th_views(views, TaskAccessType::NONE, stage); }
+        auto uses(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(std::is_same_v<TaskHeadT, NoTaskHeadStruct>)
+        {
+            return value._process_th_views(views, TaskAccessType::NONE, stage);
+        }
 
         // callback Interface:
 
