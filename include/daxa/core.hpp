@@ -4,6 +4,10 @@
 #include <optional>
 #include <string>
 
+#if defined(DAXA_CORE_USER_DEFINED_H)
+#include DAXA_CORE_USER_DEFINED_H
+#endif
+
 #if !defined(DAXA_VALIDATION)
 #if defined(NDEBUG) && !defined(RELWITHDEBINFO)
 #define DAXA_VALIDATION 0
@@ -12,49 +16,44 @@
 #endif
 #endif
 
+#if !defined(DAXA_GPU_ID_VALIDATION)
 #if DAXA_VALIDATION
+#define DAXA_GPU_ID_VALIDATION 1
+#else
+#define DAXA_GPU_ID_VALIDATION 0
+#endif
+#endif
+
+#if !defined(DAXA_THROW_M)
 #include <iostream>
 #include <stdexcept>
 
-#define DAXA_GPU_ID_VALIDATION 1
-
-#define DAXA_DBG_ASSERT_FAIL_STRING "[[DAXA ASSERT FAILURE]]"
-
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)                                              \
-    do                                                                            \
-    {                                                                             \
-        if (std::is_constant_evaluated())                                         \
-        {                                                                         \
-            /* how do we check this??? static_assert(x); */                       \
-        }                                                                         \
-        else if (!(x))                                                            \
-        {                                                                         \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
-        }                                                                         \
-    } while (false)
-#define DAXA_DBG_ASSERT_TRUE_MS(x, STREAM)                                        \
-    do                                                                            \
-    {                                                                             \
-        if (std::is_constant_evaluated())                                         \
-        {                                                                         \
-            /* how do we check this??? static_assert(x); */                       \
-        }                                                                         \
-        else if (!(x))                                                            \
-        {                                                                         \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " STREAM << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
-        }                                                                         \
-    } while (false)
-#else
-
-#define DAXA_DBG_ASSERT_TRUE_M(x, m)
-#define DAXA_DBG_ASSERT_TRUE_MS(x, m)
-
+#define DAXA_THROW_M(e, m)                                        \
+    std::cerr << "[[DAXA ASSERT FAILURE]]: " << (m) << std::endl; \
+    throw std::runtime_error(e)
 #endif
 
-#if !defined(DAXA_GPU_ID_VALIDATION)
-#define DAXA_GPU_ID_VALIDATION 0
+#if !defined(DAXA_DBG_ASSERT_TRUE_M)
+#if DAXA_VALIDATION
+#define DAXA_DBG_ASSERT_TRUE_M(x, m)                         \
+    do                                                       \
+    {                                                        \
+        if (std::is_constant_evaluated())                    \
+        {                                                    \
+            /* how do we check this??? static_assert(x); */  \
+        }                                                    \
+        else if (!(x))                                       \
+        {                                                    \
+            DAXA_THROW_M("DAXA DEBUG ASSERTION FAILURE", m); \
+        }                                                    \
+    } while (false)
+#else
+#define DAXA_DBG_ASSERT_TRUE_M(x, m)
+#endif
+#endif
+
+#if !defined(DAXA_REMOVE_DEPRECATED)
+#define DAXA_REMOVE_DEPRECATED 1
 #endif
 
 #if !defined(DAXA_REMOVE_DEPRECATED)
