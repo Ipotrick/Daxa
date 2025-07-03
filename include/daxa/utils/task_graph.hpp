@@ -146,7 +146,7 @@ namespace daxa
     namespace detail
     {
         template <typename TaskHeadAttachmentDeclT>
-        auto convert_head_attachment(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view) -> TaskAttachmentInfo
+        auto convert_head_attachment(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage = TaskStage::NONE) -> TaskAttachmentInfo
         {
             TaskAttachmentInfo ret = {};
             switch (attachment_decl.type)
@@ -156,6 +156,10 @@ namespace daxa
                 TaskBufferAttachmentInfo info;
                 info.name = attachment_decl.value.buffer.name;
                 info.task_access = attachment_decl.value.buffer.task_access;
+                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
+                {
+                    info.task_access.stage = default_stage;
+                }
                 info.shader_array_size = attachment_decl.value.buffer.shader_array_size;
                 info.shader_as_address = attachment_decl.value.buffer.shader_as_address;
                 if (auto * ptr = get_if<TaskBufferView>(&view))
@@ -174,6 +178,10 @@ namespace daxa
                 TaskTlasAttachmentInfo info;
                 info.name = attachment_decl.value.tlas.name;
                 info.task_access = attachment_decl.value.tlas.task_access;
+                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
+                {
+                    info.task_access.stage = default_stage;
+                }
                 info.shader_as_address = attachment_decl.value.tlas.shader_as_address;
                 if (auto * ptr = get_if<TaskTlasView>(&view))
                 {
@@ -191,6 +199,10 @@ namespace daxa
                 TaskBlasAttachmentInfo info;
                 info.name = attachment_decl.value.blas.name;
                 info.task_access = attachment_decl.value.blas.task_access;
+                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
+                {
+                    info.task_access.stage = default_stage;
+                }
                 if (auto * ptr = get_if<TaskBlasView>(&view))
                 {
                     info.view = *ptr;
@@ -207,6 +219,10 @@ namespace daxa
                 TaskImageAttachmentInfo info;
                 info.name = attachment_decl.value.image.name;
                 info.task_access = attachment_decl.value.image.task_access;
+                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
+                {
+                    info.task_access.stage = default_stage;
+                }
                 info.view_type = attachment_decl.value.image.view_type;
                 info.shader_array_size = attachment_decl.value.image.shader_array_size;
                 info.shader_array_type = attachment_decl.value.image.shader_array_type;
@@ -241,6 +257,8 @@ namespace daxa
         static constexpr inline usize TASK_ATTACHMENT_COUNT = 0;
     };
 
+    DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
+
     DAXA_EXPORT_CXX auto error_message_unassigned_buffer_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_unassigned_image_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_unassigned_tlas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
@@ -260,6 +278,7 @@ namespace daxa
         {
             value = {}; // Prevents ICE
             value._internal._task_type = info.task_type;
+            value._internal._default_stage = task_type_default_stage(info.task_type);
             value._internal._attachments = info.attachments;
             value._internal._callback = info.task;
             value._internal._name = info.name;
@@ -269,6 +288,7 @@ namespace daxa
         {
             value._internal._name = std::move(name);
             value._internal._task_type = task_type;
+            value._internal._default_stage = task_type_default_stage(task_type);
         }
         static auto Raster(std::string_view name) -> TInlineTask
         {
@@ -300,10 +320,12 @@ namespace daxa
             this->value._internal._callback = std::move(other.value._internal._callback);
             this->value._internal._name = std::move(other.value._internal._name);
             this->value._internal._task_type = std::move(other.value._internal._task_type);
+            this->value._internal._default_stage = std::move(other.value._internal._default_stage);
             other.value._internal._attachments = {};
             other.value._internal._callback = {};
             other.value._internal._name = {};
             other.value._internal._task_type = {};
+            other.value._internal._default_stage = {};
         }
         TInlineTask(TInlineTask const & other)
         {
@@ -312,6 +334,7 @@ namespace daxa
             this->value._internal._callback = other.value._internal._callback;
             this->value._internal._name = other.value._internal._name;
             this->value._internal._task_type = other.value._internal._task_type;
+            this->value._internal._default_stage = other.value._internal._default_stage;
         }
 
       private:
@@ -328,10 +351,11 @@ namespace daxa
 
         struct Internal
         {
-            FixedList<TaskAttachmentInfo, MAX_INLINE_ATTACHMENTS + TaskHeadT::TASK_ATTACHMENT_COUNT> _attachments = {};
+            FixedList<TaskAttachmentInfo, MAX_INLINE_ATTACHMENTS> _attachments = {};
             std::function<void(TaskInterface)> _callback = {};
             std::string_view _name = {};
             TaskType _task_type = TaskType::GENERAL;
+            TaskStage _default_stage = TaskStage::ANY_COMMAND;
 
             void _process_parameter(TaskStage, TaskAccessType, ImageViewType &, TaskStage) {}
             void _process_parameter(TaskStage stage, TaskAccessType type, ImageViewType &, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
@@ -355,15 +379,6 @@ namespace daxa
             // inline attachment interface:
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto _process_parameters(TaskAccessType access, TParams... v) -> TInlineTask &
-            {
-                ImageViewType view_override = ImageViewType::MAX_ENUM;
-                constexpr TaskStage stage = STAGE;
-                (_internal._process_parameter(stage, access, view_override, v), ...);
-                return *reinterpret_cast<TInlineTask *>(this);
-            }
-
-            template <TaskResourceViewOrResourceOrImageViewType... TParams>
             auto _process_parameters(TaskAccessType access, TaskStage stage, TParams... v) -> TInlineTask &
             {
                 ImageViewType view_override = ImageViewType::MAX_ENUM;
@@ -372,22 +387,22 @@ namespace daxa
             }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto reads(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ) != 0) { return _process_parameters(TaskAccessType::READ, v...); }
+            auto reads(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ) != 0) { return _process_parameters(TaskAccessType::READ, STAGE, v...); }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto writes(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::WRITE) != 0) { return _process_parameters(TaskAccessType::WRITE, v...); }
+            auto writes(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::WRITE) != 0) { return _process_parameters(TaskAccessType::WRITE, STAGE, v...); }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto writes_concurrent(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::WRITE) != 0) { return _process_parameters(TaskAccessType::WRITE_CONCURRENT, v...); }
+            auto writes_concurrent(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::WRITE) != 0) { return _process_parameters(TaskAccessType::WRITE_CONCURRENT, STAGE, v...); }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto reads_writes(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0) { return _process_parameters(TaskAccessType::READ_WRITE, v...); }
+            auto reads_writes(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0) { return _process_parameters(TaskAccessType::READ_WRITE, STAGE, v...); }
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto reads_writes_concurrent(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0) { return _process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, v...); }
+            auto reads_writes_concurrent(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0) { return _process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, STAGE, v...); }
 
             template <TaskImageViewOrTaskImageOrImageViewType... TParams>
-            auto samples(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0) { return _process_parameters(TaskAccessType::SAMPLED, v...); }
+            auto samples(TParams... v) -> TInlineTask & requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0) { return _process_parameters(TaskAccessType::SAMPLED, STAGE, v...); }
 
             // task head attachment interface:
 
@@ -399,6 +414,11 @@ namespace daxa
                 if constexpr (!IS_GENERIC_CALL)
                 {
                     stage = STAGE;
+                }
+                
+                if (stage == TaskStage::NONE)
+                {
+                    stage = task_type_default_stage(_internal._task_type);
                 }
 
                 typename TaskHeadT::AttachmentViews av = views; // calls conversion operator
@@ -452,33 +472,17 @@ namespace daxa
                 return *reinterpret_cast<TInlineTask *>(this);
             }
 
-            auto reads(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ); }
+            auto reads(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ, STAGE); }
 
-            auto writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE); }
+            auto writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE, STAGE); }
 
-            auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE_CONCURRENT); }
+            auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE_CONCURRENT, STAGE); }
 
-            auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE); }
+            auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE, STAGE); }
 
-            auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT); }
+            auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, STAGE); }
 
-            auto samples(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::SAMPLED); }
-
-            // overloads for stage:
-
-            auto reads(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ, stage); }
-
-            auto writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE, stage); }
-
-            auto writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::WRITE_CONCURRENT, stage); }
-
-            auto reads_writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE, stage); }
-
-            auto reads_writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, stage); }
-
-            auto samples(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::SAMPLED, stage); }
-
-            auto uses(TaskAccess access, TaskHeadT::Views const & views) -> TInlineTask & requires(std::is_same_v<TaskHeadT, NoTaskHeadStruct>) { return _process_th_views(views, access.type, access.stage); }
+            auto samples(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return _process_th_views(views, TaskAccessType::SAMPLED, STAGE); }
         };
 
       public:
@@ -513,25 +517,25 @@ namespace daxa
         // untyped inline attachments interface:
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ, v...); }
+        auto reads(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE, v...); }
+        auto writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, v...); }
+        auto writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads_writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE, v...); }
+        auto reads_writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads_writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, v...); }
+        auto reads_writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto samples(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, v...); }
+        auto samples(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResource... TParams>
-        auto uses(TaskAccess access, TParams... v) -> TInlineTask & { return value._process_parameters(access, v...); }
+        auto uses(TaskAccess access, TParams... v) -> TInlineTask & { return value._process_parameters(access.type, access.stage, v...); }
 
         auto uses(TaskAttachmentInfo const & inl_attachment) -> TInlineTask &
         {
@@ -548,10 +552,11 @@ namespace daxa
             requires(!HAS_HEAD)
         {
             DAXA_DBG_ASSERT_TRUE_M(value._internal._attachments.size() == 0, "Detected invalid task head attachment use! Task heads must be added to tasks BEFORE ANY non-head attachments are added to a task!");
+            auto head_default_stage = task_type_default_stage(NewTaskHeadT::TASK_TYPE);
             TInlineTask<NewTaskHeadT> ret = {};
             for (u32 i = 0; i < NewTaskHeadT::TASK_ATTACHMENT_COUNT; ++i)
             {
-                ret.value._internal._attachments.push_back(detail::convert_head_attachment(NewTaskHeadT::AT._internal.value[i], {}));
+                ret.value._internal._attachments.push_back(detail::convert_head_attachment(NewTaskHeadT::AT._internal.value[i], {}, head_default_stage));
             }
             ret.value._internal._callback = this->value._internal._callback;
             ret.value._internal._name = this->value._internal._name;
@@ -559,17 +564,17 @@ namespace daxa
             return ret;
         }
 
-        auto reads(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ); }
+        auto reads(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ, value._internal._default_stage); }
 
-        auto writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE); }
+        auto writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE, value._internal._default_stage); }
 
-        auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE_CONCURRENT); }
+        auto writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::WRITE_CONCURRENT, value._internal._default_stage); }
 
-        auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE); }
+        auto reads_writes(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE, value._internal._default_stage); }
 
-        auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT); }
+        auto reads_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage); }
 
-        auto samples(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::SAMPLED); }
+        auto samples(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::SAMPLED, value._internal._default_stage); }
 
         auto head_views(TaskHeadT::Views const & views) -> TInlineTask & requires(HAS_HEAD) { return value._process_th_views(views, TaskAccessType::NONE, TaskStage::NONE, true); }
 
@@ -707,9 +712,10 @@ namespace daxa
                 std::array<TaskAttachmentInfo, NoRefTTask::TASK_ATTACHMENT_COUNT> _attachments = {};
                 WrapperTask(NoRefTTask const & task) : _task{task}
                 {
+                    auto default_stage = task_type_default_stage(NoRefTTask::TASK_TYPE);
                     for (u32 i = 0; i < NoRefTTask::TASK_ATTACHMENT_COUNT; ++i)
                     {
-                        _attachments[i] = detail::convert_head_attachment(ATTACHMENTS[i], task.views.views[i]);
+                        _attachments[i] = detail::convert_head_attachment(ATTACHMENTS[i], task.views.views[i], default_stage);
                     }
                 }
                 void callback(TaskInterface ti) { _task.callback(ti); };

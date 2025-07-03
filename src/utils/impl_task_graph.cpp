@@ -1962,41 +1962,6 @@ namespace daxa
             });
     }
 
-    void apply_attachment_stage_overrides(ImplTaskGraph const & impl, ImplTask & task)
-    {
-        TaskStage default_stage = task_type_default_stage(task.task_type);
-        auto apply_validate_stage_override = [&](u32 i, auto & attach)
-        {
-            if (attach.task_access.stage == TaskStage::NONE)
-            {
-                // Apply default stage:
-                if (default_stage != TaskStage::NONE)
-                {
-                    attach.task_access.stage = default_stage;
-                }
-                DAXA_DBG_ASSERT_TRUE_M(
-                    attach.task_access.stage != TaskStage::NONE,
-                    std::format("Detected TaskAttachment (\"{}\", idx {}) in Task \"{}\" with no stage set."
-                                "The stage of a TaskAttachment must be set in either 1. the task head, 2. the access type or 3. in a view stage override!",
-                                attach.name, i, task.name));
-            }
-        };
-        for_each(
-            task.attachments,
-            [&](u32 i, auto & attach)
-            {
-                apply_validate_stage_override(i, attach);
-                validate_buffer_blas_tlas_task_view(task, i, attach);
-                attach.translated_view = impl.buffer_blas_tlas_id_to_local_id(attach.view);
-            },
-            [&](u32 i, TaskImageAttachmentInfo & attach)
-            {
-                apply_validate_stage_override(i, attach);
-                validate_image_task_view(task, i, attach);
-                attach.translated_view = impl.id_to_local_id(attach.view);
-            });
-    }
-
     void validate_task_type_queue(ImplTaskGraph const &, ImplTask & task, Queue queue)
     {
         TaskType task_type = task.task_type;
@@ -2091,11 +2056,10 @@ namespace daxa
             .image_view_cache = allocate_view_cache(impl, attachments),
             .runtime_images_last_execution = runtime_images_last_execution_array,
         };
-        apply_attachment_stage_overrides(impl, impl_task);
+        validate_attachment_stages(impl, impl_task);
         validate_task_type_queue(impl, impl_task, queue);
         validate_attachment_views(impl, impl_task);
         translate_persistent_ids(impl, impl_task);
-        validate_attachment_stages(impl, impl_task);
         validate_overlapping_attachment_views(impl, impl_task);
 
         for (auto * permutation : impl.record_active_permutations)
