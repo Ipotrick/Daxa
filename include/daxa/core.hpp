@@ -27,7 +27,7 @@
         {                                                                         \
             /* how do we check this??? static_assert(x); */                       \
         }                                                                         \
-        else if (!(x))                                                            \
+        else if (!(x)) [[unlikely]]                                               \
         {                                                                         \
             std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
             throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
@@ -40,7 +40,7 @@
         {                                                                         \
             /* how do we check this??? static_assert(x); */                       \
         }                                                                         \
-        else if (!(x))                                                            \
+        else if (!(x)) [[unlikely]]                                               \
         {                                                                         \
             std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " STREAM << std::endl; \
             throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
