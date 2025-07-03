@@ -553,6 +553,10 @@ namespace daxa
         {
             DAXA_DBG_ASSERT_TRUE_M(value._internal._attachments.size() == 0, "Detected invalid task head attachment use! Task heads must be added to tasks BEFORE ANY non-head attachments are added to a task!");
             auto head_default_stage = task_type_default_stage(NewTaskHeadT::TASK_TYPE);
+            if (value._internal._name.size() == 0)
+            {
+                value._internal._name = NewTaskHeadT::TASK_NAME;
+            }
             TInlineTask<NewTaskHeadT> ret = {};
             for (u32 i = 0; i < NewTaskHeadT::TASK_ATTACHMENT_COUNT; ++i)
             {
