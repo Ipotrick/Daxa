@@ -1,5 +1,6 @@
 #include <0_common/window.hpp>
 #include <thread>
+#include <chrono>
 
 namespace tests
 {

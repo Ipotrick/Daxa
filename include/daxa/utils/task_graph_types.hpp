@@ -790,7 +790,7 @@ namespace daxa
         auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
-        auto layout(TaskImageIndexOrView auto timage, u32 array_index = 0) const -> ImageLayout
+        auto layout(TaskImageIndexOrView auto timage, [[maybe_unused]] u32 array_index = 0) const -> ImageLayout
         {
             return this->get(timage).layout;
         }

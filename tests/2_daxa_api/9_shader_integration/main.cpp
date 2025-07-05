@@ -221,7 +221,7 @@ namespace tests
         using IA = daxa::TaskImageAccess;
 
         task_graph.add_task({
-            .attachments = std::vector<daxa::TaskAttachmentInfo>{
+            .attachments = {
                 daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, handles_buffer),
                 daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, f32_buffer),
                 daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_WRITE_ONLY, f32_image),

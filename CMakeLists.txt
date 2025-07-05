@@ -1,35 +1,6 @@
 cmake_minimum_required(VERSION 3.21)
 
 include("${CMAKE_CURRENT_LIST_DIR}/cmake/warnings.cmake")
-if(DAXA_USE_VCPKG)
-    include("${CMAKE_CURRENT_LIST_DIR}/cmake/vcpkg.cmake")
-endif()
-
-if(DAXA_ENABLE_UTILS_TASK_GRAPH)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-task-graph")
-    set(DAXA_ENABLE_UTILS_MEM true)
-endif()
-if(DAXA_ENABLE_UTILS_FSR2)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-fsr2")
-endif()
-if(DAXA_ENABLE_UTILS_IMGUI)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-imgui")
-endif()
-if(DAXA_ENABLE_UTILS_MEM)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-mem")
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-glslang")
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-slang")
-endif()
-if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
-    list(APPEND VCPKG_MANIFEST_FEATURES "utils-pipeline-manager-spirv-validation")
-endif()
-if(DAXA_ENABLE_TESTS)
-    list(APPEND VCPKG_MANIFEST_FEATURES "tests")
-endif()
 
 project(daxa VERSION 3.0.2)
 
@@ -103,10 +74,7 @@ endif()
 
 target_compile_features(daxa PUBLIC cxx_std_20)
 
-find_package(Vulkan REQUIRED)
-find_package(VulkanMemoryAllocator CONFIG REQUIRED)
-
-include(GNUInstallDirs)
+include("${CMAKE_CURRENT_LIST_DIR}/cmake/deps.cmake")
 
 target_compile_definitions(daxa
     PUBLIC
@@ -118,15 +86,16 @@ if(DAXA_USE_STATIC_CRT AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
 endif()
 
 if(DAXA_ENABLE_UTILS_FSR2)
+    message(FATAL_ERROR "Unsupported Right now")
     target_compile_definitions(daxa
         PUBLIC
         DAXA_BUILT_WITH_UTILS_FSR2=true
     )
-    find_package(fsr2 CONFIG REQUIRED)
+    # find_package(fsr2 CONFIG REQUIRED)
     target_link_libraries(daxa
         PRIVATE
-        fsr2::ffx_fsr2_api
-        fsr2::ffx_fsr2_api_vk
+        # fsr2::ffx_fsr2_api
+        # fsr2::ffx_fsr2_api_vk
     )
 endif()
 if(DAXA_ENABLE_UTILS_IMGUI)
@@ -134,7 +103,6 @@ if(DAXA_ENABLE_UTILS_IMGUI)
         PUBLIC
         DAXA_BUILT_WITH_UTILS_IMGUI=true
     )
-    find_package(imgui CONFIG REQUIRED)
     target_link_libraries(daxa
         PUBLIC
         imgui::imgui
@@ -151,8 +119,6 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG)
         PUBLIC
         DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG=true
     )
-    find_package(glslang CONFIG REQUIRED)
-    find_package(Threads REQUIRED)
     target_link_libraries(daxa
         PRIVATE
         glslang::glslang
@@ -164,23 +130,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
         PUBLIC
         DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG=true
     )
-    find_library(SLANG_LIB slang)
-    target_link_libraries(daxa PRIVATE ${SLANG_LIB})
-
-    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-        # NOTE(grundlett): Really hacky. It appears there's no way to create plugin dll dependencies...
-        # see https://gitlab.kitware.com/cmake/cmake/-/issues/22993
-        find_program(SLANG_DLL slang.dll)
-        find_program(SLANG_GLSLANG_DLL slang-glslang.dll)
-        add_custom_command(TARGET daxa POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E copy ${SLANG_DLL} $<TARGET_FILE_DIR:daxa>
-            COMMAND ${CMAKE_COMMAND} -E copy ${SLANG_GLSLANG_DLL} $<TARGET_FILE_DIR:daxa>
-        )
-    else()
-        # TODO(grundlett) ...
-        # find_file(SLANG_DLL libslang.so)
-        # find_file(SLANG_GLSLANG_DLL libslang-glslang.so)
-    endif()
+    target_link_libraries(daxa PRIVATE slang::slang slang::glslang)
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     target_compile_definitions(daxa
@@ -248,8 +198,4 @@ if(DAXA_ENABLE_TOOLS)
     add_executable(daxa_tools_compile_imgui_shaders "src/utils/impl_imgui.cpp")
     target_compile_definitions(daxa_tools_compile_imgui_shaders PRIVATE DAXA_COMPILE_IMGUI_SHADERS=true)
     target_link_libraries(daxa_tools_compile_imgui_shaders PRIVATE daxa::daxa)
-endif()
-
-if(DAXA_INSTALL)
-    include("${CMAKE_CURRENT_LIST_DIR}/cmake/packaging.cmake")
 endif()

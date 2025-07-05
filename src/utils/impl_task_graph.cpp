@@ -1921,7 +1921,7 @@ namespace daxa
         // Make sure we have enough batches.
         if (first_possible_batch_index >= queue_submit_scope.task_batches.size())
         {
-            queue_submit_scope.task_batches.resize(first_possible_batch_index + 1, 
+            queue_submit_scope.task_batches.resize(static_cast<u32>(first_possible_batch_index + 1), 
                 TaskBatch{
                     .pipeline_barrier_indices = { &impl.mk2.task_memory },
                     .wait_split_barrier_indices = { &impl.mk2.task_memory },

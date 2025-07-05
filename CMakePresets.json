@@ -10,21 +10,20 @@
             "name": "defaults",
             "hidden": true,
             "binaryDir": "${sourceDir}/build/${presetName}",
-            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "generator": "Ninja Multi-Config",
             "cacheVariables": {
                 "CMAKE_MODULE_PATH": "${sourceDir}/cmake/modules",
-                "DAXA_USE_VCPKG": true,
                 "DAXA_ENABLE_UTILS_FSR2": false,
                 "DAXA_ENABLE_UTILS_IMGUI": true,
-                "DAXA_ENABLE_UTILS_MEM": false,
+                "DAXA_ENABLE_UTILS_MEM": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_GLSLANG": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG": true,
                 "DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION": false,
                 "DAXA_ENABLE_UTILS_TASK_GRAPH": true,
                 "DAXA_ENABLE_TESTS": true,
-                "DAXA_ENABLE_TOOLS": true,
-                "DAXA_ENABLE_STATIC_ANALYSIS": false
+                "DAXA_ENABLE_TOOLS": false,
+                "DAXA_ENABLE_STATIC_ANALYSIS": false,
+                "CMAKE_EXPORT_COMPILE_COMMANDS": true
             }
         },
         {

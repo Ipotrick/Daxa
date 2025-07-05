@@ -156,24 +156,25 @@ namespace daxa
 
         MemoryArena * allocator = {};
         u32 element_count = {};
+        struct DebugView
+        {
+            T (*block_allocation0)[BLOCK_SIZES[0]];
+            T (*block_allocation1)[BLOCK_SIZES[1]];
+            T (*block_allocation2)[BLOCK_SIZES[2]];
+            T (*block_allocation3)[BLOCK_SIZES[3]];
+            T (*block_allocation4)[BLOCK_SIZES[4]];
+            T (*block_allocation5)[BLOCK_SIZES[5]];
+            T (*block_allocation6)[BLOCK_SIZES[6]];
+            T (*block_allocation7)[BLOCK_SIZES[7]];
+            T (*block_allocation8)[BLOCK_SIZES[8]];
+            T (*block_allocation9)[BLOCK_SIZES[9]];
+            T (*block_allocation10)[BLOCK_SIZES[10]];
+            T (*block_allocation11)[BLOCK_SIZES[11]];
+        };
         union
         {
             T * block_allocations[BLOCK_COUNT] = {};
-            struct DebugView
-            {
-                T (*block_allocation0)[BLOCK_SIZES[0]];
-                T (*block_allocation1)[BLOCK_SIZES[1]];
-                T (*block_allocation2)[BLOCK_SIZES[2]];
-                T (*block_allocation3)[BLOCK_SIZES[3]];
-                T (*block_allocation4)[BLOCK_SIZES[4]];
-                T (*block_allocation5)[BLOCK_SIZES[5]];
-                T (*block_allocation6)[BLOCK_SIZES[6]];
-                T (*block_allocation7)[BLOCK_SIZES[7]];
-                T (*block_allocation8)[BLOCK_SIZES[8]];
-                T (*block_allocation9)[BLOCK_SIZES[9]];
-                T (*block_allocation10)[BLOCK_SIZES[10]];
-                T (*block_allocation11)[BLOCK_SIZES[11]];
-            } debug_view;
+            DebugView debug_view;
         };
 
         struct BlockIndex
