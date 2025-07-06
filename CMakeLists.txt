@@ -51,7 +51,7 @@ add_library(daxa
     "src/utils/impl_task_graph.cpp"
     "src/utils/impl_task_graph_mk2.cpp"
     "src/utils/impl_imgui.cpp"
-    "src/utils/impl_fsr2.cpp"
+    "src/utils/impl_fsr3.cpp"
     "src/utils/impl_mem.cpp"
     "src/utils/impl_pipeline_manager.cpp"
 )
@@ -85,17 +85,14 @@ if(DAXA_USE_STATIC_CRT AND CMAKE_CXX_COMPILER_ID STREQUAL "MSVC")
     set_property(TARGET ${PROJECT_NAME} PROPERTY MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 endif()
 
-if(DAXA_ENABLE_UTILS_FSR2)
-    message(FATAL_ERROR "Unsupported Right now")
+if(DAXA_ENABLE_UTILS_FSR3)
     target_compile_definitions(daxa
         PUBLIC
-        DAXA_BUILT_WITH_UTILS_FSR2=true
+        DAXA_BUILT_WITH_UTILS_FSR3=true
     )
-    # find_package(fsr2 CONFIG REQUIRED)
     target_link_libraries(daxa
         PRIVATE
-        # fsr2::ffx_fsr2_api
-        # fsr2::ffx_fsr2_api_vk
+        ffx_sdk::ffx_sdk
     )
 endif()
 if(DAXA_ENABLE_UTILS_IMGUI)

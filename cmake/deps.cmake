@@ -151,17 +151,47 @@ if (DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG AND NOT TARGET slang::slang)
     set_property(TARGET Slang PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${Slang_INCLUDE_DIR})
 endif()
 
-# NOTE(grundlett): disabled because it tries downloading submodules with media and shit and I
-# can't be bothered to figure out how this works right now just for the sake of getting the unused
-# FSR2 util to work.
+if (DAXA_ENABLE_UTILS_FSR3)
+    FetchContent_Declare(
+        ffx_sdk
+        URL https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/releases/download/v1.1.4/FidelityFX-SDK-v1.1.4.zip
+        SOURCE_SUBDIR "nonexistent-subdir"
+    )
+    FetchContent_MakeAvailable(ffx_sdk)
 
-# if (DAXA_ENABLE_UTILS_FSR2)
-#     option(FFX_FSR2_API_DX12 "" OFF)
-#     option(FFX_FSR2_API_VK "" ON)
-#     FetchContent_Declare(
-#         ffx_fsr2_sdk
-#         GIT_REPOSITORY https://github.com/GPUOpen-Effects/FidelityFX-FSR2
-#         GIT_TAG v2.2.1
-#     )
-#     FetchContent_MakeAvailable(ffx_fsr2_sdk)
-# endif()
+    find_path(ffx_sdk_INCLUDE_DIR
+        ffx_api/ffx_api.h
+        HINTS ${ffx_sdk_SOURCE_DIR}/ffx-api/include
+        NO_DEFAULT_PATH
+        DOC "Directory that includes ffx_api/ffx_api.h."
+    )
+    mark_as_advanced(ffx_sdk_INCLUDE_DIR)
+
+    find_library(ffx_sdk_LIBRARY
+        NAMES amd_fidelityfx_vk
+        HINTS ${ffx_sdk_SOURCE_DIR}/ffx-api/bin
+        NO_DEFAULT_PATH
+        DOC "ffx_sdk linker library"
+    )
+    mark_as_advanced(ffx_sdk_LIBRARY)
+
+    find_file(ffx_sdk_DLL
+        NAMES amd_fidelityfx_vk.dll
+        HINTS ${ffx_sdk_SOURCE_DIR}/ffx-api/bin
+        NO_DEFAULT_PATH
+        DOC "ffx_sdk shared library (.dll)"
+    )
+    mark_as_advanced(ffx_sdk_DLL)
+
+    add_library(lib_ffx_sdk SHARED IMPORTED)
+
+    set_target_properties(
+        lib_ffx_sdk PROPERTIES
+        IMPORTED_LOCATION ${ffx_sdk_DLL}
+    )
+    set_property(TARGET lib_ffx_sdk PROPERTY IMPORTED_IMPLIB ${ffx_sdk_LIBRARY})
+
+    add_library(ffx_sdk::ffx_sdk ALIAS lib_ffx_sdk)
+
+    set_property(TARGET lib_ffx_sdk PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${ffx_sdk_INCLUDE_DIR})
+endif()
