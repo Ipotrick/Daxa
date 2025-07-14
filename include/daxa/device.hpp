@@ -11,8 +11,9 @@
 
 namespace daxa
 {
-    static constexpr inline u32 MAX_COMPUTE_QUEUE_COUNT = 8u;
+    static constexpr inline u32 MAX_COMPUTE_QUEUE_COUNT = 4u;
     static constexpr inline u32 MAX_TRANSFER_QUEUE_COUNT = 2u;
+    static constexpr inline u32 MAX_TOTAL_QUEUE_COUNT = 1u + DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT;
 
     enum struct DeviceType
     {
