@@ -32,13 +32,13 @@ Other than the focus on modern architecture only, what makes Daxa unique?
   * automatic graph optimizations: reordering of tasks in order to minimize barriers, memory-aliased transient resources to reduce memory use and more
 
 ### Daxa also includes commonly supported Vulkan-middleware features:
-* automatic deferring of resource destruction defer past GPU execution
-* internal GPU memory allocator that allows for manual user allocations
-* default parameters for object construction and simplified object creation
+* automatic deferring of resource destruction post GPU execution
+* internal GPU memory allocator
+* default parameters for object construction, simplified object creation
 * swapchain synchronization and frame in flight handling
-* threadsafe
+* threadsafety
 * access to modern features such as raytracing, mesh shaders and multi queue
-* smaller utilities such as a ringbuffer class for staging memory or Dear-ImGui integration
+* utilitiy classes such as a ringbuffer for staging memory or Dear-ImGui integration
 
 ## Getting started
 
