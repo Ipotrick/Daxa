@@ -1300,6 +1300,7 @@ namespace daxa
         static inline constexpr ImageUsageFlags TRANSIENT_ATTACHMENT = {0x00000040};
         static inline constexpr ImageUsageFlags FRAGMENT_DENSITY_MAP = {0x00000200};
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
+        static inline constexpr ImageUsageFlags HOST_TRANSFER = {0x00400000};
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageUsageFlags const &) -> std::string;

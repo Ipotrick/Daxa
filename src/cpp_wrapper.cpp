@@ -486,6 +486,24 @@ namespace daxa
         return {};
     }
 
+    void Device::copy_memory_to_image(MemoryToImageCopyInfo const& info) 
+    {
+        auto result = daxa_dvc_copy_memory_to_image(r_cast<daxa_Device>(this->object), r_cast<daxa_MemoryToImageCopyInfo const*>(&info));
+        check_result(result, "failed copy memory to image");
+    }
+
+    void Device::copy_image_to_memory(ImageToMemoryCopyInfo const& info) 
+    {
+        auto result = daxa_dvc_copy_image_to_memory(r_cast<daxa_Device>(this->object), r_cast<daxa_ImageToMemoryCopyInfo const*>(&info));
+        check_result(result, "failed copy image to memory");
+    }
+
+    void Device::transition_image_layout(HostImageLayoutTransitionInfo const& info) 
+    {
+        auto result = daxa_dvc_transition_image_layout(r_cast<daxa_Device>(this->object), r_cast<daxa_HostImageLayoutTransitionInfo const*>(&info));
+        check_result(result, "failed host transition image layout");
+    }
+
 #define DAXA_DECL_DVC_CREATE_FN(Name, name)                        \
     auto Device::create_##name(Name##Info const & info)->Name      \
     {                                                              \

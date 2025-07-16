@@ -258,6 +258,7 @@ namespace daxa
         SUBGROUP_SIZE_CONTROL,
         COMPUTE_FULL_SUBGROUPS,
         SCALAR_BLOCK_LAYOUT,
+        HOST_IMAGE_COPY,
         ACCELERATION_STRUCTURE_CAPTURE_REPLAY,
         VULKAN_MEMORY_MODEL,
         ROBUST_BUFFER_ACCESS2,
@@ -344,6 +345,47 @@ namespace daxa
         SmallString name = {};
     };
 #endif
+
+    struct MemoryImageCopyFlagProperties
+    {
+        using Data = u32;
+    };
+    using MemoryImageCopyFlags = Flags<MemoryImageCopyFlagProperties>;
+    struct MemoryImageCopyFlagBits
+    {
+        static inline constexpr MemoryImageCopyFlags NONE = {0};
+        static inline constexpr MemoryImageCopyFlags MEMCPY = {0x1 << 0};
+    };
+
+    struct MemoryToImageCopyInfo
+    {
+        MemoryImageCopyFlagBits flags = {};
+        std::byte const* memory_ptr = {};
+        ImageId image = {};
+        ImageLayout image_layout = {};
+        ImageArraySlice image_slice = {};
+        Offset3D image_offset = {};
+        Extent3D image_extent = {};
+    };
+
+    struct ImageToMemoryCopyInfo
+    {
+        MemoryImageCopyFlagBits flags = {};
+        ImageId image = {};
+        ImageLayout image_layout = {};
+        ImageArraySlice image_slice = {};
+        Offset3D image_offset = {};
+        Extent3D image_extent = {};
+        std::byte* memory_ptr = {};
+    };
+
+    struct HostImageLayoutTransitionInfo
+    {
+        ImageId image = {};
+        ImageLayout old_image_layout = {};
+        ImageLayout new_image_layout = {};
+        ImageMipArraySlice image_slice = {};
+    };
 
     struct DeviceInfo2
     {
@@ -623,6 +665,10 @@ namespace daxa
             }
             return {};
         }
+
+        void copy_memory_to_image(MemoryToImageCopyInfo const & info);
+        void copy_image_to_memory(ImageToMemoryCopyInfo const & info);
+        void transition_image_layout(HostImageLayoutTransitionInfo const & info);
 
         [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
