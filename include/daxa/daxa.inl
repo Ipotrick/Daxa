@@ -21,6 +21,7 @@
 #define DAXA_LANGUAGE DAXA_LANGUAGE_C
 #include <daxa/c/daxa.h>
 /// @brief Buffer ptr enable is ignored in c++.
+#define DAXA_FWD_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
@@ -34,6 +35,7 @@
 #define DAXA_LANGUAGE DAXA_LANGUAGE_CPP
 #include <daxa/daxa.hpp>
 /// @brief Buffer ptr enable is ignored in c++.
+#define DAXA_FWD_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
