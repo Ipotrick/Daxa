@@ -255,8 +255,6 @@ namespace daxa
         static constexpr inline usize ATTACHMENT_COUNT = 0;
     };
 
-    DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
-
     DAXA_EXPORT_CXX auto error_message_unassigned_buffer_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_unassigned_image_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_unassigned_tlas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
