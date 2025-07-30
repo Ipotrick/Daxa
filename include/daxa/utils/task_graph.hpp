@@ -737,7 +737,7 @@ namespace daxa
         }
 
         template <typename... CallbackParamsT>
-        auto executes(void (*callback)(TaskInterface, CallbackParamsT...), CallbackParamsT... params) -> TInlineTask &
+        auto executes(void (*callback)(TaskInterface, CallbackParamsT...), std::remove_reference_t<std::remove_const_t<CallbackParamsT>>... params) -> TInlineTask &
         {
             this->value._internal._callback = [=](TaskInterface ti)
             {
