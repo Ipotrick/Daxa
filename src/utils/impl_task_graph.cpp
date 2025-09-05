@@ -2083,7 +2083,7 @@ namespace daxa
             permutation->add_task(impl, impl_task, task_id, queue);
         }
 
-        impl.tasks.emplace_back(std::move(impl_task));
+        impl.tasks.push_back(impl_task);
     }
 
     thread_local std::vector<ImageMipArraySlice> tl_new_access_slices = {};
@@ -4045,6 +4045,7 @@ namespace daxa
           mk2{info.task_memory_pool_size}
     {
         info.name = mk2.task_memory.allocate_copy_string(info.name);
+        tasks = DynamicArenaArray8k<ImplTask>(&mk2.task_memory);
 
         gpu_submit_timeline_semaphores = std::array{
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline MAIN"}),

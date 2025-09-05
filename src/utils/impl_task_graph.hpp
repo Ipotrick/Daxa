@@ -397,7 +397,7 @@ namespace daxa
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
         std::vector<TaskGraphPermutation> permutations = {};
-        std::vector<ImplTask> tasks = {};
+        DynamicArenaArray8k<ImplTask> tasks = {};
         // TODO: replace with faster hash map.
         std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
         std::unordered_map<u32, u32> persistent_image_index_to_local_index;
