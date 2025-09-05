@@ -134,7 +134,7 @@ namespace daxa
     . '. \_____\.
     */    
 
-    static constexpr inline daxa::usize MAX_TASK_CALLBACK_DATA_SIZE = 256ull - sizeof(daxa::u64); 
+    static constexpr inline daxa::usize MAX_TASK_CALLBACK_DATA_SIZE = 512ull - sizeof(daxa::u64); 
 
     template<typename T>
     concept TaskCallbackLambda = std::is_copy_constructible_v<T> && sizeof(T) <= MAX_TASK_CALLBACK_DATA_SIZE && alignof(T) <= alignof(daxa::u64);
@@ -916,7 +916,7 @@ namespace daxa
         DAXA_EXPORT_CXX void copy_image_to_image(TaskImageCopyInfo const & info);
 
         template <typename TTask>
-            requires std::is_base_of_v<IPartialTask, TTask> && std::is_copy_constructible_v<TTask>
+            requires std::is_base_of_v<IPartialTask, TTask> && std::is_trivially_copy_constructible_v<TTask>
         void add_task(TTask const & task)
         {
             using NoRefTTask = std::remove_reference_t<TTask>;
