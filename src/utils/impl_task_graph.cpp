@@ -433,7 +433,7 @@ namespace daxa
         return index == 0 && task_graph_index == 0;
     }
 
-    auto TaskGPUResourceView::is_persistent() const -> bool
+    auto TaskGPUResourceView::is_external() const -> bool
     {
         return task_graph_index == std::numeric_limits<u32>::max() && !is_null();
     }
@@ -952,7 +952,7 @@ namespace daxa
         }
 
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
+            .task_buffer_data = PermIndepTaskBufferInfo::External{
                 .buffer_blas_tlas = buffer,
             },
         });
@@ -977,7 +977,7 @@ namespace daxa
         }
 
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
+            .task_buffer_data = PermIndepTaskBufferInfo::External{
                 .buffer_blas_tlas = blas,
             },
         });
@@ -1000,7 +1000,7 @@ namespace daxa
         }
 
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .task_buffer_data = PermIndepTaskBufferInfo::Persistent{
+            .task_buffer_data = PermIndepTaskBufferInfo::External{
                 .buffer_blas_tlas = tlas,
             },
         });
@@ -1030,7 +1030,7 @@ namespace daxa
         }
 
         impl.global_image_infos.emplace_back(PermIndepTaskImageInfo{
-            .task_image_data = PermIndepTaskImageInfo::Persistent{
+            .task_image_data = PermIndepTaskImageInfo::External{
                 .image = image,
             }});
         impl.persistent_image_index_to_local_index[image.view().index] = task_image_id.index;
@@ -1053,7 +1053,7 @@ namespace daxa
             });
         }
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .task_buffer_data = PermIndepTaskBufferInfo::Transient{
+            .task_buffer_data = PermIndepTaskBufferInfo::Owned{
                 .type = TaskAttachmentType::BUFFER,
                 .info = info,
             }});
@@ -1078,7 +1078,7 @@ namespace daxa
             });
         }
         impl.global_buffer_infos.emplace_back(PermIndepTaskBufferInfo{
-            .task_buffer_data = PermIndepTaskBufferInfo::Transient{
+            .task_buffer_data = PermIndepTaskBufferInfo::Owned{
                 .type = TaskAttachmentType::TLAS,
                 .info = info,
             },
@@ -1117,7 +1117,7 @@ namespace daxa
         }
 
         impl.global_image_infos.push_back(PermIndepTaskImageInfo{
-            .task_image_data = PermIndepTaskImageInfo::Transient{
+            .task_image_data = PermIndepTaskImageInfo::Owned{
                 .info = info,
             }});
         impl.image_name_to_id[info.name] = task_image_view;
@@ -1127,31 +1127,31 @@ namespace daxa
     DAXA_EXPORT_CXX auto TaskGraph::transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo const &
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        DAXA_DBG_ASSERT_TRUE_M(!transient.is_persistent(), "given view must be transient");
+        DAXA_DBG_ASSERT_TRUE_M(!transient.is_external(), "given view must be transient");
         DAXA_DBG_ASSERT_TRUE_M(transient.task_graph_index == impl.unique_index, "given view must be created by the given task graph");
         DAXA_DBG_ASSERT_TRUE_M(transient.index < impl.global_buffer_infos.size(), "given view has invalid index");
 
-        return daxa::get<PermIndepTaskBufferInfo::Transient>(impl.global_buffer_infos.at(transient.index).task_buffer_data).info;
+        return daxa::get<PermIndepTaskBufferInfo::Owned>(impl.global_buffer_infos.at(transient.index).task_buffer_data).info;
     }
 
     DAXA_EXPORT_CXX auto TaskGraph::transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo const &
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        DAXA_DBG_ASSERT_TRUE_M(!transient.is_persistent(), "given view must be transient");
+        DAXA_DBG_ASSERT_TRUE_M(!transient.is_external(), "given view must be transient");
         DAXA_DBG_ASSERT_TRUE_M(transient.task_graph_index == impl.unique_index, "given view must be created by the given task graph");
         DAXA_DBG_ASSERT_TRUE_M(transient.index < impl.global_buffer_infos.size(), "given view has invalid index");
 
-        return daxa::get<PermIndepTaskBufferInfo::Transient>(impl.global_buffer_infos.at(transient.index).task_buffer_data).info;
+        return daxa::get<PermIndepTaskBufferInfo::Owned>(impl.global_buffer_infos.at(transient.index).task_buffer_data).info;
     }
 
     DAXA_EXPORT_CXX auto TaskGraph::transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo const &
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        DAXA_DBG_ASSERT_TRUE_M(!transient.is_persistent(), "given view must be transient");
+        DAXA_DBG_ASSERT_TRUE_M(!transient.is_external(), "given view must be transient");
         DAXA_DBG_ASSERT_TRUE_M(transient.task_graph_index == impl.unique_index, "given view must be created by the given task graph");
         DAXA_DBG_ASSERT_TRUE_M(transient.index < impl.global_image_infos.size(), "given view has invalid index");
 
-        return daxa::get<PermIndepTaskImageInfo::Transient>(impl.global_image_infos.at(transient.index).task_image_data).info;
+        return daxa::get<PermIndepTaskImageInfo::Owned>(impl.global_image_infos.at(transient.index).task_image_data).info;
     }
 
     DAXA_EXPORT_CXX void TaskGraph::clear_buffer(TaskBufferClearInfo const & info)
@@ -1290,10 +1290,10 @@ namespace daxa
             return NULL_IMG_ARRAY;
         }
         auto const & global_image = global_image_infos.at(id.index);
-        if (global_image.is_persistent())
+        if (global_image.is_external())
         {
-            return {global_image.get_persistent().actual_images.data(),
-                    global_image.get_persistent().actual_images.size()};
+            return {global_image.get_external().actual_images.data(),
+                    global_image.get_external().actual_images.size()};
         }
         else
         {
@@ -1308,7 +1308,7 @@ namespace daxa
         if (id.is_null())
             return id;
         DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task image id. Please make sure to only use initialized task image ids.");
-        if (id.is_persistent())
+        if (id.is_external())
         {
             DAXA_DBG_ASSERT_TRUE_MS(
                 persistent_image_index_to_local_index.contains(id.index),
@@ -1519,11 +1519,11 @@ namespace daxa
             {
                 continue;
             }
-            if (!impl.global_buffer_infos.at(local_buffer_i).is_persistent())
+            if (!impl.global_buffer_infos.at(local_buffer_i).is_external())
             {
                 continue;
             }
-            auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_persistent().actual_ids;
+            auto const & runtime_ids = impl.global_buffer_infos.at(local_buffer_i).get_external().actual_ids;
             std::visit([&](auto const & runtime_ids)
                        {
                 DAXA_DBG_ASSERT_TRUE_M(
@@ -1551,11 +1551,11 @@ namespace daxa
             {
                 continue;
             }
-            if (!impl.global_image_infos.at(local_image_i).is_persistent())
+            if (!impl.global_image_infos.at(local_image_i).is_external())
             {
                 continue;
             }
-            auto const & runtime_images = impl.global_image_infos.at(local_image_i).get_persistent().actual_images;
+            auto const & runtime_images = impl.global_image_infos.at(local_image_i).get_external().actual_images;
             DAXA_DBG_ASSERT_TRUE_M(
                 !runtime_images.empty(),
                 std::format(
@@ -1730,7 +1730,7 @@ namespace daxa
         {
             info.pre_task_callback(interface);
         }
-        task.task_callback(task.task_memory.get(), interface);
+        task.task_callback(interface, task.task_callback_memory);
         if (info.post_task_callback)
         {
             info.post_task_callback(interface);
@@ -1884,7 +1884,7 @@ namespace daxa
                 PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[attach.translated_view.index];
                 DAXA_DBG_ASSERT_TRUE_M(!task_image.swapchain_semaphore_waited_upon, "swapchain image is already presented!");
 
-                if (glob_task_image.is_persistent() && glob_task_image.get_persistent().info.swapchain_image)
+                if (glob_task_image.is_external() && glob_task_image.get_external().info.swapchain_image)
                 {
                     if (perm.swapchain_image_first_use_submit_scope_index == std::numeric_limits<u64>::max())
                     {
@@ -2041,8 +2041,8 @@ namespace daxa
     }
 
     void TaskGraph::add_task(
-        OpaqueTaskPtr && task_memory,
-        OpaqueTaskCallback task_callback,
+        void (*task_callback)(daxa::TaskInterface, void*),
+        u64* task_callback_memory,
         std::span<TaskAttachmentInfo> attachments,
         u32 attachment_shader_blob_size,
         u32 attachment_shader_blob_alignment,
@@ -2061,8 +2061,8 @@ namespace daxa
             attachments.size(),
             DynamicArenaArray8k<ImageId>{&impl.mk2.task_memory});
         auto impl_task = ImplTask{
-            .task_memory = std::move(task_memory),
             .task_callback = task_callback,
+            .task_callback_memory = task_callback_memory,
             .attachments = attachments,
             .attachment_shader_blob_size = attachment_shader_blob_size,
             .attachment_shader_blob_alignment = attachment_shader_blob_alignment,
@@ -2241,7 +2241,7 @@ namespace daxa
             {
                 if (attach.view.is_null())
                     return;
-                if (attach.view.is_persistent())
+                if (attach.view.is_external())
                 {
                     buffer_infos[attach.translated_view.index].valid = true;
                 }
@@ -2250,7 +2250,7 @@ namespace daxa
             {
                 if (attach.view.is_null())
                     return;
-                if (attach.view.is_persistent())
+                if (attach.view.is_external())
                 {
                     image_infos[attach.translated_view.index].valid = true;
                 }
@@ -2298,7 +2298,7 @@ namespace daxa
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_buffer_first_access below since
                 // they both overlap in what they are doing
                 buffer_attach.access = current_buffer_access;
-                if (!task_graph_impl.global_buffer_infos.at(buffer_attach.translated_view.index).is_persistent())
+                if (!task_graph_impl.global_buffer_infos.at(buffer_attach.translated_view.index).is_external())
                 {
                     auto & buffer_first_use = task_buffer.lifetime.first_use;
                     auto & buffer_last_use = task_buffer.lifetime.last_use;
@@ -2482,7 +2482,7 @@ namespace daxa
                 // For transient images we need to record first and last use so that we can later name their allocations
                 // TODO(msakmary, pahrens) We should think about how to combine this with update_image_inital_slices below since
                 // they both overlap in what they are doing
-                if (!task_graph_impl.global_image_infos.at(used_image_t_id.index).is_persistent())
+                if (!task_graph_impl.global_image_infos.at(used_image_t_id.index).is_external())
                 {
                     auto & image_first_use = task_image.lifetime.first_use;
                     auto & image_last_use = task_image.lifetime.last_use;
@@ -2902,9 +2902,9 @@ namespace daxa
             auto const & glob_buffer = global_buffer_infos.at(buffer_info_idx);
             auto & perm_buffer = permutation.buffer_infos.at(buffer_info_idx);
 
-            if (!glob_buffer.is_persistent() && perm_buffer.valid)
+            if (!glob_buffer.is_external() && perm_buffer.valid)
             {
-                auto const & transient_info = daxa::get<PermIndepTaskBufferInfo::Transient>(glob_buffer.task_buffer_data);
+                auto const & transient_info = daxa::get<PermIndepTaskBufferInfo::Owned>(glob_buffer.task_buffer_data);
 
                 if (transient_info.type == TaskAttachmentType::BUFFER)
                 {
@@ -2947,13 +2947,13 @@ namespace daxa
             auto const & glob_image = global_image_infos.at(image_info_idx);
             auto & perm_image = permutation.image_infos.at(image_info_idx);
 
-            if (!glob_image.is_persistent() && perm_image.valid)
+            if (!glob_image.is_external() && perm_image.valid)
             {
                 DAXA_DBG_ASSERT_TRUE_M(perm_image.usage != ImageUsageFlagBits::NONE,
-                                       std::string("Transient image is not used in this permutation but marked as valid either: ") +
+                                       std::string("Owned image is not used in this permutation but marked as valid either: ") +
                                            std::string("\t- it was used as PRESENT which is not allowed for transient images") +
                                            std::string("\t- it was used as NONE which makes no sense - just don't mark it as used in the task"));
-                auto const & transient_image_info = daxa::get<PermIndepTaskImageInfo::Transient>(glob_image.task_image_data).info;
+                auto const & transient_image_info = daxa::get<PermIndepTaskImageInfo::Owned>(glob_image.task_image_data).info;
                 perm_image.actual_image = info.device.create_image_from_memory_block(
                     MemoryBlockImageInfo{
                         .image_info = ImageInfo{
@@ -2985,10 +2985,10 @@ namespace daxa
             {
                 PerPermTaskImage & permut_image = permutation.image_infos[image_i];
                 PermIndepTaskImageInfo & global_image = global_image_infos[image_i];
-                if (!global_image.is_persistent())
+                if (!global_image.is_external())
                 {
                     transient_resource_count += 1;
-                    TaskTransientImageInfo trans_img_info = daxa::get<PermIndepTaskImageInfo::Transient>(global_image.task_image_data).info;
+                    TaskTransientImageInfo trans_img_info = daxa::get<PermIndepTaskImageInfo::Owned>(global_image.task_image_data).info;
                     ImageInfo image_info{
                         // .flags = trans_img_info.flags,
                         .dimensions = trans_img_info.dimensions,
@@ -3009,10 +3009,10 @@ namespace daxa
             {
                 PerPermTaskBuffer & permut_buffer = permutation.buffer_infos[buffer_i];
                 PermIndepTaskBufferInfo & global_buffer = global_buffer_infos[buffer_i];
-                if (!global_buffer.is_persistent())
+                if (!global_buffer.is_external())
                 {
                     transient_resource_count += 1;
-                    TaskTransientBufferInfo trans_buf_info = daxa::get<PermIndepTaskBufferInfo::Transient>(global_buffer.task_buffer_data).info;
+                    TaskTransientBufferInfo trans_buf_info = daxa::get<PermIndepTaskBufferInfo::Owned>(global_buffer.task_buffer_data).info;
                     BufferInfo buffer_info{
                         .size = trans_buf_info.size,
                         .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
@@ -3052,7 +3052,7 @@ namespace daxa
 
             for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
             {
-                if (global_image_infos.at(perm_image_idx).is_persistent() ||
+                if (global_image_infos.at(perm_image_idx).is_external() ||
                     !permutation.image_infos.at(perm_image_idx).valid ||
                     permutation.image_infos.at(perm_image_idx).used_queue_concurrently)
                 {
@@ -3065,7 +3065,7 @@ namespace daxa
                 if (perm_task_image.lifetime.first_use.submit_scope_index == std::numeric_limits<u32>::max() ||
                     perm_task_image.lifetime.last_use.submit_scope_index == std::numeric_limits<u32>::max())
                 {
-                    // TODO(msakmary) Transient image created but not used - should we somehow warn the user about this?
+                    // TODO(msakmary) Owned image created but not used - should we somehow warn the user about this?
                     permutation.image_infos.at(perm_image_idx).valid = false;
                     continue;
                 }
@@ -3086,7 +3086,7 @@ namespace daxa
 
             for (u32 perm_buffer_idx = 0; perm_buffer_idx < permutation.buffer_infos.size(); perm_buffer_idx++)
             {
-                if (global_buffer_infos.at(perm_buffer_idx).is_persistent())
+                if (global_buffer_infos.at(perm_buffer_idx).is_external())
                 {
                     continue;
                 }
@@ -3096,7 +3096,7 @@ namespace daxa
                 if (perm_task_buffer.lifetime.first_use.submit_scope_index == std::numeric_limits<u32>::max() ||
                     perm_task_buffer.lifetime.last_use.submit_scope_index == std::numeric_limits<u32>::max())
                 {
-                    // TODO(msakmary) Transient buffer created but not used - should we somehow warn the user about this?
+                    // TODO(msakmary) Owned buffer created but not used - should we somehow warn the user about this?
                     permutation.buffer_infos.at(perm_buffer_idx).valid = false;
                     continue;
                 }
@@ -3224,7 +3224,7 @@ namespace daxa
             {
                 for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
                 {
-                    if (global_image_infos.at(perm_image_idx).is_persistent() ||
+                    if (global_image_infos.at(perm_image_idx).is_external() ||
                         !permutation.image_infos.at(perm_image_idx).valid ||
                         !permutation.image_infos.at(perm_image_idx).used_queue_concurrently)
                     {
@@ -3252,7 +3252,7 @@ namespace daxa
                 }
                 for (u32 perm_buffer_idx = 0; perm_buffer_idx < permutation.buffer_infos.size(); perm_buffer_idx++)
                 {
-                    if (global_buffer_infos.at(perm_buffer_idx).is_persistent() ||
+                    if (global_buffer_infos.at(perm_buffer_idx).is_external() ||
                         !permutation.buffer_infos.at(perm_buffer_idx).valid ||
                         !permutation.buffer_infos.at(perm_buffer_idx).used_queue_concurrently)
                     {
@@ -3340,7 +3340,7 @@ namespace daxa
                 TaskImageView const task_image_id = {impl.unique_index, task_image_index};
                 auto & task_image = permutation.image_infos[task_image_index];
                 PermIndepTaskImageInfo const & glob_task_image = impl.global_image_infos[task_image_index];
-                if (task_image.valid && !glob_task_image.is_persistent())
+                if (task_image.valid && !glob_task_image.is_external())
                 {
                     // Insert barriers, initializing all the initially accesses subresource ranges to the correct layout.
                     for (auto & first_access : task_image.first_slice_states)
@@ -3471,7 +3471,7 @@ namespace daxa
     {
         std::array<u8, 1u << 15u> scrach_mem = {};
         MemoryArena scratch_allocator = {"generate_persistent_resource_synch scratch allocator", scrach_mem};
-        // Persistent resources need just in time synch between executions,
+        // External resources need just in time synch between executions,
         // as pre generating the transitions between all permutations is not manageable.
         std::string out;
         std::string indent;
@@ -3484,9 +3484,9 @@ namespace daxa
         {
             auto & task_buffer = permutation.buffer_infos[task_buffer_index];
             auto & glob_buffer_info = impl.global_buffer_infos[task_buffer_index];
-            if (task_buffer.valid && glob_buffer_info.is_persistent())
+            if (task_buffer.valid && glob_buffer_info.is_external())
             {
-                auto & persistent_data = glob_buffer_info.get_persistent();
+                auto & persistent_data = glob_buffer_info.get_external();
                 bool const no_prev_access = persistent_data.latest_access == AccessConsts::NONE;
                 bool const read_on_read_same_access =
                     persistent_data.latest_access == permutation.buffer_infos[task_buffer_index].first_access &&
@@ -3537,14 +3537,14 @@ namespace daxa
             // Iterate over all persistent images.
             // Find all intersections between tracked slices of first use and previous use.
             // Synch on the intersection and delete the intersected part from the tracked slice of the previous use.
-            if (task_image.valid && exec_image.is_persistent())
+            if (task_image.valid && exec_image.is_external())
             {
                 if (impl.info.record_debug_information)
                 {
                     std::format_to(std::back_inserter(out), "{}sync from previous uses:\n", indent);
                     begin_indent(out, indent, true);
                 }
-                auto & previous_access_slices = exec_image.get_persistent().latest_slice_states;
+                auto & previous_access_slices = exec_image.get_external().latest_slice_states;
                 for (u32 previous_access_slice_index = 0; previous_access_slice_index < previous_access_slices.size();)
                 {
                     bool broke_inner_loop = false;
@@ -3910,7 +3910,7 @@ namespace daxa
                         Swapchain const & swapchain = impl.info.swapchain.value();
                         if (submit_scope_index == permutation.swapchain_image_first_use_submit_scope_index)
                         {
-                            ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_persistent();
+                            ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_external();
                             // It can happen, that a previous task graph accessed the swapchain image.
                             // In that case the acquire semaphore is already waited upon and by extension we wait on the previous access and therefore on the acquire.
                             // So we must not wait in the case that the semaphore is already waited upon.
@@ -3937,7 +3937,7 @@ namespace daxa
                             signal_timeline_semaphores.emplace_back(
                                 swapchain.gpu_timeline_semaphore(),
                                 swapchain.current_cpu_timeline_value());
-                            ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_persistent();
+                            ImplPersistentTaskImage & swapchain_image = impl.global_image_infos.at(permutation.swapchain_image.index).get_external();
                             swapchain_image.waited_on_acquire = true;
                             wait_binary_semaphores.push_back(impl.info.swapchain.value().current_acquire_semaphore());
                             signal_binary_semaphores.push_back(impl.info.swapchain.value().current_present_semaphore());
@@ -4009,19 +4009,19 @@ namespace daxa
         // Insert pervious uses into execution info for tje next executions synch.
         for (usize task_buffer_index = 0; task_buffer_index < permutation.buffer_infos.size(); ++task_buffer_index)
         {
-            bool const is_persistent = daxa::holds_alternative<PermIndepTaskBufferInfo::Persistent>(impl.global_buffer_infos[task_buffer_index].task_buffer_data);
-            if (permutation.buffer_infos[task_buffer_index].valid && is_persistent)
+            bool const is_external = daxa::holds_alternative<PermIndepTaskBufferInfo::External>(impl.global_buffer_infos[task_buffer_index].task_buffer_data);
+            if (permutation.buffer_infos[task_buffer_index].valid && is_external)
             {
-                daxa::get<PermIndepTaskBufferInfo::Persistent>(impl.global_buffer_infos[task_buffer_index].task_buffer_data).get().latest_access = permutation.buffer_infos[task_buffer_index].latest_access;
+                daxa::get<PermIndepTaskBufferInfo::External>(impl.global_buffer_infos[task_buffer_index].task_buffer_data).get().latest_access = permutation.buffer_infos[task_buffer_index].latest_access;
             }
         }
         for (usize task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
         {
             if (
                 permutation.image_infos[task_image_index].valid &&
-                impl.global_image_infos[task_image_index].is_persistent())
+                impl.global_image_infos[task_image_index].is_external())
             {
-                auto & persistent_image = impl.global_image_infos[task_image_index].get_persistent();
+                auto & persistent_image = impl.global_image_infos[task_image_index].get_external();
                 for (auto const & extended_state : permutation.image_infos[task_image_index].last_slice_states)
                 {
                     persistent_image.latest_slice_states.push_back(extended_state.state);
@@ -4088,7 +4088,7 @@ namespace daxa
             {
                 auto const & global_buffer = global_buffer_infos.at(buffer_info_idx);
                 PerPermTaskBuffer & perm_buffer = permutation.buffer_infos.at(buffer_info_idx);
-                if (!global_buffer.is_persistent() &&
+                if (!global_buffer.is_external() &&
                     perm_buffer.valid)
                 {
                     if (auto const * id = std::get_if<BufferId>(&perm_buffer.actual_id))
@@ -4114,7 +4114,7 @@ namespace daxa
             {
                 auto const & global_image = global_image_infos.at(image_info_idx);
                 auto & perm_image = permutation.image_infos.at(image_info_idx);
-                if (!global_image.is_persistent() && perm_image.valid)
+                if (!global_image.is_external() && perm_image.valid)
                 {
                     info.device.destroy_image(get_actual_images(TaskImageView{.task_graph_index = unique_index, .index = image_info_idx}, permutation)[0]);
                 }
@@ -4131,9 +4131,9 @@ namespace daxa
         }
         auto const & glob_image = global_image_infos[local_id.index];
         std::string persistent_info;
-        if (global_image_infos[local_id.index].is_persistent())
+        if (global_image_infos[local_id.index].is_external())
         {
-            u32 const persistent_index = global_image_infos[local_id.index].get_persistent().unique_index;
+            u32 const persistent_index = global_image_infos[local_id.index].get_external().unique_index;
             persistent_info = std::format(", persistent index: {}", persistent_index);
         }
         std::format_to(std::back_inserter(out), "{}task image name: \"{}\", id: ({}){}\n", indent, glob_image.get_name(), to_string(local_id), persistent_info);
@@ -4161,9 +4161,9 @@ namespace daxa
         auto const & actual_ids = get_actual_buffer_blas_tlas_generic(local_id, permutation);
         std::string_view type_str = buffer_blas_tlas_str(local_id, permutation);
         std::string persistent_info;
-        if (global_buffer_infos[local_id.index].is_persistent())
+        if (global_buffer_infos[local_id.index].is_external())
         {
-            u32 const persistent_index = global_buffer_infos[local_id.index].get_persistent().unique_index;
+            u32 const persistent_index = global_buffer_infos[local_id.index].get_external().unique_index;
             persistent_info = std::format(", persistent index: {}", persistent_index);
         }
         std::format_to(std::back_inserter(out), "{}task {} name: \"{}\", id: ({}){}\n", indent, type_str, glob_buffer.get_name(), to_string(local_id), persistent_info);
@@ -4284,7 +4284,7 @@ namespace daxa
         std::format_to(std::back_inserter(out), "{}Resource lifetimes and aliasing:\n", indent);
         for (u32 perm_image_idx = 0; perm_image_idx < permutation.image_infos.size(); perm_image_idx++)
         {
-            if (global_image_infos.at(perm_image_idx).is_persistent() || !permutation.image_infos.at(perm_image_idx).valid)
+            if (global_image_infos.at(perm_image_idx).is_external() || !permutation.image_infos.at(perm_image_idx).valid)
             {
                 continue;
             }
@@ -4303,7 +4303,7 @@ namespace daxa
         }
         for (u32 perm_buffer_idx = 0; perm_buffer_idx < permutation.buffer_infos.size(); perm_buffer_idx++)
         {
-            if (global_buffer_infos.at(perm_buffer_idx).is_persistent() || !permutation.buffer_infos.at(perm_buffer_idx).valid)
+            if (global_buffer_infos.at(perm_buffer_idx).is_external() || !permutation.buffer_infos.at(perm_buffer_idx).valid)
             {
                 continue;
             }

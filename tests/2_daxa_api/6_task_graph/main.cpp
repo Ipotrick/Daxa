@@ -10,7 +10,7 @@ DAXA_DECL_TASK_HEAD_END
 
 void example_task_callback(daxa::TaskInterface ti)
 {
-    auto const & AI = ExampleTaskHead::ATTACHMENT_INDICES;
+    auto const & AI = ExampleTaskHead::Info::AT;
 
     // There are two ways to get the info for any attachment:
     {
@@ -965,6 +965,17 @@ namespace tests
 
 auto main() -> i32
 {
+    std::array dd = {1,2,3,4,5,6,7,8};
+    int i = 0;
+    daxa::TaskCallback f;
+    auto l = [=](daxa::TaskInterface ti) { printf("test: %i\n", dd[0]); };
+    f.store(l);
+
+    daxa::Device d;
+    daxa::CommandRecorder r;
+    daxa::TaskInterface t(d,r);
+    f.execute(t);
+
     tests::head_task_syntax();
     tests::concurrent_read_on_read();
     tests::read_on_readwriteconcurrent();

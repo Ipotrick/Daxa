@@ -326,7 +326,7 @@ namespace daxa
         TaskResourceIndex index = {};
 
         auto is_empty() const -> bool;
-        auto is_persistent() const -> bool;
+        auto is_external() const -> bool;
         auto is_null() const -> bool;
 
         auto operator<=>(TaskGPUResourceView const & other) const = default;
@@ -391,7 +391,7 @@ namespace daxa
         }
 
         auto is_empty() const -> bool { return operator TaskGPUResourceView const &().is_empty(); }
-        auto is_persistent() const -> bool { return operator TaskGPUResourceView const &().is_persistent(); }
+        auto is_external() const -> bool { return operator TaskGPUResourceView const &().is_external(); }
         auto is_null() const -> bool { return operator TaskGPUResourceView const &().is_null(); }
     };
 
