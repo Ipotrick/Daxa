@@ -1344,12 +1344,14 @@ namespace daxa
         {
         case ImageLayout::UNDEFINED: return "UNDEFINED";
         case ImageLayout::GENERAL: return "GENERAL";
+#if !DAXA_REMOVE_DEPRECATED
         case ImageLayout::TRANSFER_SRC_OPTIMAL: return "TRANSFER_SRC_OPTIMAL";
         case ImageLayout::TRANSFER_DST_OPTIMAL: return "TRANSFER_DST_OPTIMAL";
         case ImageLayout::READ_ONLY_OPTIMAL: return "READ_ONLY_OPTIMAL";
         case ImageLayout::ATTACHMENT_OPTIMAL: return "ATTACHMENT_OPTIMAL";
+#endif
         case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";
-        default: return "UNIMPLEMENTED CASE";
+        default: return "INVALID LAYOUT";
         }
     }
 

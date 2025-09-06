@@ -2058,7 +2058,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .srcAccessMask = VK_ACCESS_HOST_WRITE_BIT,
             .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
             .oldLayout = {},
-            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .image = self->vk_null_image,
@@ -2084,10 +2084,10 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .imageOffset = VkOffset3D{0, 0, 0},
             .imageExtent = VkExtent3D{1, 1, 1},
         };
-        vkCmdCopyBufferToImage(init_cmd_buffer, self->vk_null_buffer, self->vk_null_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &vk_buffer_image_copy);
+        vkCmdCopyBufferToImage(init_cmd_buffer, self->vk_null_buffer, self->vk_null_image, VK_IMAGE_LAYOUT_GENERAL, 1, &vk_buffer_image_copy);
         vk_image_mem_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
         vk_image_mem_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-        vk_image_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        vk_image_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL,
         vk_image_mem_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL,
         vk_image_mem_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         vk_image_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -2624,7 +2624,7 @@ auto daxa_dvc_copy_memory_to_image(daxa_Device self, daxa_MemoryToImageCopyInfo 
         .sType = VK_STRUCTURE_TYPE_COPY_MEMORY_TO_IMAGE_INFO_EXT,
         .pNext = nullptr,
         .dstImage = image.vk_image,
-        .dstImageLayout = static_cast<VkImageLayout>(info->image_layout),
+        .dstImageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .regionCount = 1,
         .pRegions = &vk_memory_to_image_copy,
     };
@@ -2655,7 +2655,7 @@ auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo 
         .sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_MEMORY_INFO_EXT,
         .pNext = nullptr,
         .srcImage = image.vk_image,
-        .srcImageLayout = static_cast<VkImageLayout>(info->image_layout),
+        .srcImageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .regionCount = 1,
         .pRegions = &vk_image_to_memory_copy,
     };

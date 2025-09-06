@@ -365,7 +365,7 @@ namespace tests
             },
             daxa::ImageSliceState{
                 .latest_access = daxa::AccessConsts::COMPUTE_SHADER_READ,
-                .latest_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
+                .latest_layout = daxa::ImageLayout::GENERAL,
                 .slice = {.base_array_layer = 2, .layer_count = 2},
             }};
         auto task_image = daxa::TaskImage({

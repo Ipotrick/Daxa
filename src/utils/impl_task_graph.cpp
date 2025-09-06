@@ -389,34 +389,11 @@ namespace daxa
                                         taccess.stage == TaskStage::DEPTH_STENCIL_ATTACHMENT ||
                                         taccess.stage == TaskStage::RESOLVE;
 
-        ImageLayout layout = ImageLayout::UNDEFINED;
-        if (used_in_shader)
-        {
-            if (taccess.type == TaskAccessType::SAMPLED)
-            {
-                layout = ImageLayout::READ_ONLY_OPTIMAL;
-            }
-            else
-            {
-                layout = ImageLayout::GENERAL;
-            }
-        }
-        if (used_as_attachment)
-        {
-            layout = ImageLayout::ATTACHMENT_OPTIMAL;
-        }
+        ImageLayout layout = ImageLayout::GENERAL;
+        
         if (taccess.stage == TaskStage::PRESENT)
         {
             layout = ImageLayout::PRESENT_SRC;
-        }
-        if (taccess.stage == TaskStage::TRANSFER)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(taccess.type == TaskAccessType::READ || taccess.type == TaskAccessType::WRITE, "Images can only be either write-only OR read-only for transfer ops");
-            layout = taccess.type == TaskAccessType::READ ? ImageLayout::TRANSFER_SRC_OPTIMAL : ImageLayout::TRANSFER_DST_OPTIMAL;
-        }
-        if (taccess.stage == TaskStage::ANY_COMMAND)
-        {
-            layout = ImageLayout::GENERAL;
         }
         return {layout, access, concurrency};
     }

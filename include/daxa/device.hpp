@@ -362,7 +362,7 @@ namespace daxa
         MemoryImageCopyFlagBits flags = {};
         std::byte const* memory_ptr = {};
         ImageId image = {};
-        ImageLayout image_layout = {};
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout image_layout = {};
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
         Extent3D image_extent = {};
@@ -372,7 +372,7 @@ namespace daxa
     {
         MemoryImageCopyFlagBits flags = {};
         ImageId image = {};
-        ImageLayout image_layout = {};
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout image_layout = {};
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
         Extent3D image_extent = {};

@@ -519,7 +519,7 @@ typedef struct
     daxa_MemoryImageCopyFlagBits flags;
     uint8_t const* memory_ptr;
     daxa_ImageId image_id;
-    daxa_ImageLayout image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
@@ -532,7 +532,7 @@ typedef struct
 {
     daxa_MemoryImageCopyFlagBits flags;
     daxa_ImageId image_id;
-    daxa_ImageLayout image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;

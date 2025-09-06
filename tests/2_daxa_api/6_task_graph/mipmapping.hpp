@@ -242,9 +242,7 @@ namespace tests
                 auto dst_size = device.image_info(dst_image_id).value().size;
                 recorder.blit_image_to_image({
                     .src_image = src_image_id,
-                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = dst_image_id,
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(src_size.x), static_cast<i32>(src_size.y), 1}}},
                     .dst_offsets = {
                         {
@@ -262,9 +260,7 @@ namespace tests
                     f32 s2 = (scl_2 - 1.0f) / scl_2;
                     recorder.blit_image_to_image({
                         .src_image = src_image_id,
-                        .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                         .dst_image = dst_image_id,
-                        .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                         .src_slice = {
                             .mip_level = static_cast<u32>(i + 1),
                         },
@@ -299,11 +295,10 @@ namespace tests
                 recorder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
-                    .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .dst_layout = daxa::ImageLayout::GENERAL,
                     .image_id = swapchain_image,
                 });
                 recorder.clear_image({
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                     .dst_image = swapchain_image,
                 });
@@ -337,7 +332,7 @@ namespace tests
                         .src_access = daxa::AccessConsts::NONE,
                         .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                         .src_layout = daxa::ImageLayout::UNDEFINED,
-                        .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                        .dst_layout = daxa::ImageLayout::GENERAL,
                         .image_slice = {
                             .base_mip_level = 1,
                             .level_count = 4,
@@ -352,8 +347,8 @@ namespace tests
                         recorder.pipeline_barrier_image_transition({
                             .src_access = (i == 0 ? daxa::AccessConsts::COMPUTE_SHADER_WRITE : daxa::AccessConsts::TRANSFER_WRITE),
                             .dst_access = daxa::AccessConsts::BLIT_READ,
-                            .src_layout = (i == 0 ? daxa::ImageLayout::GENERAL : daxa::ImageLayout::TRANSFER_DST_OPTIMAL),
-                            .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                            .src_layout = daxa::ImageLayout::GENERAL,
+                            .dst_layout = daxa::ImageLayout::GENERAL,
                             .image_slice = {
                                 .base_mip_level = i,
                                 .level_count = 1,
@@ -365,9 +360,7 @@ namespace tests
                         std::array<i32, 3> next_mip_size = {std::max<i32>(1, mip_size[0] / 2), std::max<i32>(1, mip_size[1] / 2), std::max<i32>(1, mip_size[2] / 2)};
                         recorder.blit_image_to_image({
                             .src_image = render_image,
-                            .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                             .dst_image = render_image,
-                            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .src_slice = {
                                 .mip_level = i,
                                 .base_array_layer = 0,
@@ -387,8 +380,8 @@ namespace tests
                     recorder.pipeline_barrier_image_transition({
                         .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                         .dst_access = daxa::AccessConsts::TRANSFER_READ,
-                        .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                        .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+                        .src_layout = daxa::ImageLayout::GENERAL,
+                        .dst_layout = daxa::ImageLayout::GENERAL,
                         .image_slice = {
                             .base_mip_level = 4,
                             .level_count = 1,
@@ -401,23 +394,23 @@ namespace tests
                 recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .src_layout = daxa::ImageLayout::GENERAL,
+                    .dst_layout = daxa::ImageLayout::GENERAL,
                     .image_id = swapchain_image,
                 });
                 blit_image_to_swapchain(recorder, render_image, swapchain_image);
                 recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
-                    .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-                    .dst_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+                    .src_layout = daxa::ImageLayout::GENERAL,
+                    .dst_layout = daxa::ImageLayout::GENERAL,
                     .image_id = swapchain_image,
                 });
                 draw_ui(recorder, swapchain_image);
                 recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
                     .dst_access = {.stages = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = daxa::AccessTypeFlagBits::NONE},
-                    .src_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+                    .src_layout = daxa::ImageLayout::GENERAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
@@ -505,7 +498,6 @@ namespace tests
                     .executes([=, this](daxa::TaskInterface tri)
                     { 
                         tri.recorder.clear_image({
-                            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                             .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                             .dst_image = tri.get(task_swapchain_image).ids[0],
                         }); 

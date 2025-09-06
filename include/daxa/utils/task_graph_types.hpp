@@ -681,7 +681,7 @@ namespace daxa
 
         TaskImageView view = {};
         TaskImageView translated_view = {};
-        ImageLayout layout = {};
+        [[deprecated("Parameter Ignored, always layout general; API:3.2")]] ImageLayout layout = {};
         std::span<ImageId const> ids = {};
         std::span<ImageViewId const> view_ids = {};
     };
@@ -799,9 +799,10 @@ namespace daxa
         auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
+        [[deprecated("Layout is guaranteed to always be general, stop using this function; API:3.2")]] 
         auto layout(TaskImageIndexOrView auto timage) const -> ImageLayout
         {
-            return this->get(timage).layout;
+            return daxa::ImageLayout::GENERAL;
         }
         auto info(TaskIndexOrView auto tresource, u32 array_index = 0) const
         {
