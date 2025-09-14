@@ -64,6 +64,11 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkCmdTraceRaysKHR vkCmdTraceRaysKHR = {};
     PFN_vkCmdTraceRaysIndirectKHR vkCmdTraceRaysIndirectKHR = {};
 
+    // Host image copy:
+    PFN_vkTransitionImageLayoutEXT vkTransitionImageLayoutEXT = {};
+    PFN_vkCopyMemoryToImageEXT vkCopyMemoryToImageEXT = {};
+    PFN_vkCopyImageToMemoryEXT vkCopyImageToMemoryEXT = {};
+
     VkBuffer buffer_device_address_buffer = {};
     u64 * buffer_device_address_buffer_host_ptr = {};
     VmaAllocation buffer_device_address_buffer_allocation = {};

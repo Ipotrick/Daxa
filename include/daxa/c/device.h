@@ -236,6 +236,7 @@ typedef enum
     DAXA_MISSING_REQUIRED_VK_FEATURE_SUBGROUP_SIZE_CONTROL,
     DAXA_MISSING_REQUIRED_VK_FEATURE_COMPUTE_FULL_SUBGROUPS,
     DAXA_MISSING_REQUIRED_VK_FEATURE_SCALAR_BLOCK_LAYOUT,
+    DAXA_MISSING_REQUIRED_VK_FEATURE_HOST_IMAGE_COPY,
     DAXA_MISSING_REQUIRED_VK_FEATURE_ACCELERATION_STRUCTURE_CAPTURE_REPLAY,
     DAXA_MISSING_REQUIRED_VK_FEATURE_VULKAN_MEMORY_MODEL,
     DAXA_MISSING_REQUIRED_VK_FEATURE_ROBUST_BUFFER_ACCESS2,
@@ -507,6 +508,49 @@ typedef struct
 
 static daxa_DeviceMemoryReport const DAXA_DEFAULT_DEVICE_MEMORY_REPORT_INFO = DAXA_ZERO_INIT;
 
+typedef enum
+{
+    DAXA_MEMORY_TO_IMAGE_COPY_FLAG_NONE = 0x0,
+    DAXA_MEMORY_TO_IMAGE_COPY_FLAG_MEMCPY = 0x1,
+} daxa_MemoryImageCopyFlagBits;
+
+typedef struct
+{
+    daxa_MemoryImageCopyFlagBits flags;
+    uint8_t const* memory_ptr;
+    daxa_ImageId image_id;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
+    daxa_ImageArraySlice image_slice;
+    VkOffset3D image_offset;
+    VkExtent3D image_extent;
+
+} daxa_MemoryToImageCopyInfo;
+
+static daxa_MemoryToImageCopyInfo const DAXA_DEFAULT_MEMORY_TO_IMAGE_COPY_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
+    daxa_MemoryImageCopyFlagBits flags;
+    daxa_ImageId image_id;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
+    daxa_ImageArraySlice image_slice;
+    VkOffset3D image_offset;
+    VkExtent3D image_extent;
+    uint8_t* memory_ptr;
+} daxa_ImageToMemoryCopyInfo;
+
+static daxa_ImageToMemoryCopyInfo const DAXA_DEFAULT_IMAGE_TO_MEMORY_COPY_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
+    daxa_ImageId image_id;
+    daxa_ImageLayout old_image_layout;
+    daxa_ImageLayout new_image_layout;
+    daxa_ImageMipArraySlice image_slice;
+} daxa_HostImageLayoutTransitionInfo;
+
+static daxa_HostImageLayoutTransitionInfo const DAXA_DEFAULT_HOST_IMAGE_LAYOUT_TRANSITION_INFO = DAXA_ZERO_INIT;
+
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_device_memory_report(daxa_Device device, daxa_DeviceMemoryReport * report);
 DAXA_EXPORT DAXA_NO_DISCARD VkMemoryRequirements
@@ -620,6 +664,13 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa_Event * out_event);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryPoolInfo const * info, daxa_TimelineQueryPool * out_timeline_query_pool);
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_copy_memory_to_image(daxa_Device device, daxa_MemoryToImageCopyInfo const * info);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_copy_image_to_memory(daxa_Device device, daxa_ImageToMemoryCopyInfo const * info);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_transition_image_layout(daxa_Device device, daxa_HostImageLayoutTransitionInfo const * info);
 
 DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);

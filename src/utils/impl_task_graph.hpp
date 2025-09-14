@@ -141,8 +141,8 @@ namespace daxa
 
     struct ImplTask
     {
-        OpaqueTaskPtr task_memory = {nullptr, [](void*){}};
-        OpaqueTaskCallback task_callback = [](void*, TaskInterface &){};
+        void (*task_callback)(daxa::TaskInterface, void*) = {};
+        u64* task_callback_memory = {};                             // holds captured variables
         std::span<TaskAttachmentInfo> attachments = {};
         u32 attachment_shader_blob_size = {};
         u32 attachment_shader_blob_alignment = {};
@@ -269,7 +269,7 @@ namespace daxa
 
     struct PermIndepTaskBufferInfo
     {
-        struct Persistent
+        struct External
         {
             std::variant<TaskBuffer, TaskBlas, TaskTlas> buffer_blas_tlas = {};
 
@@ -288,44 +288,44 @@ namespace daxa
                 return *ret;
             }
         };
-        struct Transient
+        struct Owned
         {
             TaskAttachmentType type = {};
             TaskTransientBufferInfo info = {};
         };
-        Variant<Persistent, Transient> task_buffer_data;
+        Variant<External, Owned> task_buffer_data;
 
         inline auto get_name() const -> std::string_view
         {
-            if (is_persistent())
+            if (is_external())
             {
                 std::string_view ret = {};
                 std::visit([&](auto const & info)
-                           { ret = info.name; }, get_persistent().info);
+                           { ret = info.name; }, get_external().info);
                 return ret;
             }
             else
             {
-                return daxa::get<Transient>(task_buffer_data).info.name;
+                return daxa::get<Owned>(task_buffer_data).info.name;
             }
         }
-        inline auto get_persistent() -> ImplPersistentTaskBufferBlasTlas &
+        inline auto get_external() -> ImplPersistentTaskBufferBlasTlas &
         {
-            return daxa::get<Persistent>(task_buffer_data).get();
+            return daxa::get<External>(task_buffer_data).get();
         }
-        inline auto get_persistent() const -> ImplPersistentTaskBufferBlasTlas const &
+        inline auto get_external() const -> ImplPersistentTaskBufferBlasTlas const &
         {
-            return daxa::get<Persistent>(task_buffer_data).get();
+            return daxa::get<External>(task_buffer_data).get();
         }
-        inline auto is_persistent() const -> bool
+        inline auto is_external() const -> bool
         {
-            return daxa::holds_alternative<Persistent>(task_buffer_data);
+            return daxa::holds_alternative<External>(task_buffer_data);
         }
     };
 
     struct PermIndepTaskImageInfo
     {
-        struct Persistent
+        struct External
         {
             TaskImage image = {};
             auto get() -> ImplPersistentTaskImage &
@@ -337,34 +337,36 @@ namespace daxa
                 return **r_cast<ImplPersistentTaskImage const * const *>(&image);
             }
         };
-        struct Transient
+        struct Owned
         {
             TaskTransientImageInfo info = {};
+            // When the resource is temporal we have to store the in-between-runs state of the resource
+            
         };
-        Variant<Persistent, Transient> task_image_data;
+        Variant<External, Owned> task_image_data;
 
         inline auto get_name() const -> std::string_view
         {
-            if (is_persistent())
+            if (is_external())
             {
-                return get_persistent().info.name;
+                return get_external().info.name;
             }
             else
             {
-                return daxa::get<Transient>(task_image_data).info.name;
+                return daxa::get<Owned>(task_image_data).info.name;
             }
         }
-        inline auto get_persistent() -> ImplPersistentTaskImage &
+        inline auto get_external() -> ImplPersistentTaskImage &
         {
-            return daxa::get<Persistent>(task_image_data).get();
+            return daxa::get<External>(task_image_data).get();
         }
-        inline auto get_persistent() const -> ImplPersistentTaskImage const &
+        inline auto get_external() const -> ImplPersistentTaskImage const &
         {
-            return daxa::get<Persistent>(task_image_data).get();
+            return daxa::get<External>(task_image_data).get();
         }
-        inline auto is_persistent() const -> bool
+        inline auto is_external() const -> bool
         {
-            return daxa::holds_alternative<Persistent>(task_image_data);
+            return daxa::holds_alternative<External>(task_image_data);
         }
     };
 
@@ -395,7 +397,7 @@ namespace daxa
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
         std::vector<TaskGraphPermutation> permutations = {};
-        std::vector<ImplTask> tasks = {};
+        DynamicArenaArray8k<ImplTask> tasks = {};
         // TODO: replace with faster hash map.
         std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
         std::unordered_map<u32, u32> persistent_image_index_to_local_index;
@@ -441,11 +443,11 @@ namespace daxa
                 return NULL_ID_ARRAY;
             }
             auto const & global_buffer = global_buffer_infos.at(id.index);
-            if (global_buffer.is_persistent())
+            if (global_buffer.is_external())
             {
                 return std::span{
-                    std::get<std::vector<typename TaskIdT::ID_T>>(global_buffer.get_persistent().actual_ids).data(),
-                    std::get<std::vector<typename TaskIdT::ID_T>>(global_buffer.get_persistent().actual_ids).size(),
+                    std::get<std::vector<typename TaskIdT::ID_T>>(global_buffer.get_external().actual_ids).data(),
+                    std::get<std::vector<typename TaskIdT::ID_T>>(global_buffer.get_external().actual_ids).size(),
                 };
             }
             else
@@ -468,11 +470,11 @@ namespace daxa
                 return std::span{NULL_ID_ARRAY.data(), NULL_ID_ARRAY.size()};
             }
             auto const & global_buffer = global_buffer_infos.at(id.index);
-            if (global_buffer.is_persistent())
+            if (global_buffer.is_external())
             {
                 GetActualIdsVariant ret = std::span{NULL_ID_ARRAY.data(), NULL_ID_ARRAY.size()};
                 std::visit([&](auto const & ids)
-                           { ret = std::span{ids.data(), ids.size()}; }, global_buffer.get_persistent().actual_ids);
+                           { ret = std::span{ids.data(), ids.size()}; }, global_buffer.get_external().actual_ids);
                 return ret;
             }
             else
@@ -494,9 +496,9 @@ namespace daxa
             }
             static constexpr std::string_view names[3] = {"buffer", "blas", "tlas"};
             auto const & global_buffer = global_buffer_infos.at(id.index);
-            if (global_buffer.is_persistent())
+            if (global_buffer.is_external())
             {
-                return names[global_buffer.get_persistent().actual_ids.index()];
+                return names[global_buffer.get_external().actual_ids.index()];
             }
             else
             {
@@ -512,7 +514,7 @@ namespace daxa
             if (id.is_null())
                 return id;
             DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task buffer id. Please make sure to only use initialized task buffer ids.");
-            if (id.is_persistent())
+            if (id.is_external())
             {
                 DAXA_DBG_ASSERT_TRUE_M(
                     persistent_buffer_index_to_local_index.contains(id.index),

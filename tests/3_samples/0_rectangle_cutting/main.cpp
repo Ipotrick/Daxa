@@ -259,7 +259,7 @@ struct App : AppWindow<App>
         recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
             .src_layout = daxa::ImageLayout::UNDEFINED,
-            .dst_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = swapchain_image,
         });
 
@@ -284,7 +284,7 @@ struct App : AppWindow<App>
 
         recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
-            .src_layout = daxa::ImageLayout::ATTACHMENT_OPTIMAL,
+            .src_layout = daxa::ImageLayout::GENERAL,
             .dst_layout = daxa::ImageLayout::PRESENT_SRC,
             .image_id = swapchain_image,
         });

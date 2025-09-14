@@ -165,13 +165,11 @@ struct App : BaseApp<App>
         new_task_graph.use_persistent_image(task_render_image);
         new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
 
-        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, task_render_image));
+        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskAccessConsts::FRAGMENT_SHADER::SAMPLED, task_render_image));
 
-        new_task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::HOST_TRANSFER_WRITE, task_gpu_input_buffer),
-            },
-            .task = [this](daxa::TaskInterface ti)
+        new_task_graph.add_task(daxa::InlineTask::Transfer("Upload Input")
+            .host.writes(task_gpu_input_buffer)
+            .executes([=](daxa::TaskInterface ti)
             {
                 ti.recorder.reset_timestamps({
                     .query_pool = timeline_query_pool,
@@ -196,15 +194,11 @@ struct App : BaseApp<App>
                     .dst_buffer = gpu_input_buffer,
                     .size = sizeof(GpuInput),
                 });
-            },
-            .name = ("Upload Input"),
-        });
-        new_task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskBufferAccess::COMPUTE_SHADER_READ, task_gpu_input_buffer),
-                daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_render_image),
-            },
-            .task = [this](daxa::TaskInterface ti)
+            }));
+        new_task_graph.add_task(daxa::InlineTask::Compute("Draw (Compute)")
+            .reads(task_gpu_input_buffer)
+            .writes(task_render_image)
+            .executes([=](daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*compute_pipeline);
                 auto t = this->render_image.default_view();
@@ -216,21 +210,15 @@ struct App : BaseApp<App>
                 };
                 ti.recorder.push_constant(p);
                 ti.recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
-            },
-            .name = ("Draw (Compute)"),
-        });
-        new_task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_READ, task_render_image),
-                daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, task_swapchain_image),
-            },
-            .task = [this](daxa::TaskInterface ti)
+            }));
+        new_task_graph.add_task(daxa::InlineTask::Transfer("Blit (render to swapchain)")
+            .reads(task_render_image)
+            .writes(task_swapchain_image)
+            .executes([=](daxa::TaskInterface ti)
             {
                 ti.recorder.blit_image_to_image({
                     .src_image = ti.get(task_render_image).ids[0],
-                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.get(task_swapchain_image).ids[0],
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
@@ -240,9 +228,7 @@ struct App : BaseApp<App>
                     .pipeline_stage = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE,
                     .query_index = 1,
                 });
-            },
-            .name = "Blit (render to swapchain)",
-        });
+            }));
     }
 };
 
