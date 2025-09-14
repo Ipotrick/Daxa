@@ -294,21 +294,8 @@ namespace daxa
             TaskTransientBufferInfo info = {};
         };
         Variant<External, Owned> task_buffer_data;
+        std::string_view name = {};
 
-        inline auto get_name() const -> std::string_view
-        {
-            if (is_external())
-            {
-                std::string_view ret = {};
-                std::visit([&](auto const & info)
-                           { ret = info.name; }, get_external().info);
-                return ret;
-            }
-            else
-            {
-                return daxa::get<Owned>(task_buffer_data).info.name;
-            }
-        }
         inline auto get_external() -> ImplPersistentTaskBufferBlasTlas &
         {
             return daxa::get<External>(task_buffer_data).get();
@@ -344,18 +331,8 @@ namespace daxa
             
         };
         Variant<External, Owned> task_image_data;
+        std::string_view name = {};
 
-        inline auto get_name() const -> std::string_view
-        {
-            if (is_external())
-            {
-                return get_external().info.name;
-            }
-            else
-            {
-                return daxa::get<Owned>(task_image_data).info.name;
-            }
-        }
         inline auto get_external() -> ImplPersistentTaskImage &
         {
             return daxa::get<External>(task_image_data).get();
