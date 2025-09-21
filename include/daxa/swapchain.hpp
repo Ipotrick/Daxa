@@ -27,7 +27,7 @@ namespace daxa
         PresentMode present_mode = PresentMode::FIFO;
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
-        usize max_allowed_frames_in_flight = 2;
+        usize max_allowed_frames_in_flight = 3;
         QueueFamily queue_family = {};
         SmallString name = {};
     };
