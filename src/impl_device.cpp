@@ -1427,8 +1427,6 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
     };
 
     auto result = static_cast<daxa_Result>(vkQueuePresentKHR(self->get_queue(info->queue).vk_queue, &present_info));
-    _DAXA_RETURN_IF_ERROR(result, result)
-
     return std::bit_cast<daxa_Result>(result);
 }
 

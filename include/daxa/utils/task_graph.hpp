@@ -158,24 +158,24 @@ namespace daxa
             value._internal._callback = info.task;
             value._internal._name = info.name;
         }
-        InlineTask(std::string name, TaskType task_type = TaskType::GENERAL)
+        InlineTask(char const * name, TaskType task_type = TaskType::GENERAL)
         {
-            value._internal._name = std::move(name);
+            value._internal._name = name;
             value._internal._task_type = task_type;
         }
-        static auto Raster(std::string name) -> InlineTask
+        static auto Raster(char const * name) -> InlineTask
         {
             return InlineTask(name, TaskType::RASTER);
         }
-        static auto Compute(std::string name) -> InlineTask
+        static auto Compute(char const * name) -> InlineTask
         {
             return InlineTask(name, TaskType::COMPUTE);
         }
-        static auto RayTracing(std::string name) -> InlineTask
+        static auto RayTracing(char const * name) -> InlineTask
         {
             return InlineTask(name, TaskType::RAY_TRACING);
         }
-        static auto Transfer(std::string name) -> InlineTask
+        static auto Transfer(char const * name) -> InlineTask
         {
             return InlineTask(name, TaskType::TRANSFER);
         }
@@ -224,7 +224,7 @@ namespace daxa
         {
             std::vector<TaskAttachmentInfo> _attachments = {};
             std::function<void(TaskInterface)> _callback = {};
-            std::string _name = {};
+            char const * _name = {};
             TaskType _task_type = TaskType::GENERAL;
 
             void _process_params(TaskStage stage, TaskAccessType type, ImageViewType & view_override, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
@@ -250,7 +250,7 @@ namespace daxa
                 requires((ALLOWED_ACCESS & Allow::READ) != 0)
             {
                 ImageViewType view_override = ImageViewType::MAX_ENUM;
-                (_internal._process_params(STAGE, TaskAccessType::READ,view_override, v), ...);
+                (_internal._process_params(STAGE, TaskAccessType::READ, view_override, v), ...);
                 return InlineTask{std::move(_internal)};
             }
             template <TaskResourceViewOrResourceOrImageViewType... TResources>
@@ -336,7 +336,6 @@ namespace daxa
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::AS_BUILD> acceleration_structure_build;
         };
 
-        
         template <TaskResourceViewOrResource... TResources>
         auto reads(TaskStage stage, TResources... v) -> InlineTask
         {
@@ -380,7 +379,6 @@ namespace daxa
             return InlineTask{std::move(value._internal)};
         }
 
-
         template <TaskResourceViewOrResource... TResources>
         auto reads(TResources... v) -> InlineTask
         {
@@ -412,7 +410,6 @@ namespace daxa
             return samples(TaskStage::NONE, v...);
         }
 
-
         template <TaskResourceViewOrResource... TResources>
         auto uses(TaskAccess access, TResources... v) -> InlineTask
         {
@@ -420,7 +417,6 @@ namespace daxa
             (value._internal._process_params(access.stage, access.type, view_override, v), ...);
             return InlineTask{std::move(value._internal)};
         }
-
 
         auto executes(std::function<void(TaskInterface)> const & c) && -> InlineTask
         {
@@ -582,7 +578,7 @@ namespace daxa
         {
             add_task(std::make_unique<InlineTask>(inline_task_info));
         }
-        template<typename T>
+        template <typename T>
         void add_task(T && inline_task)
             requires std::is_base_of_v<InlineTask, T> || std::is_same_v<InlineTask, T>
         {
