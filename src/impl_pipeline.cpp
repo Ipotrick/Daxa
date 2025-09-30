@@ -177,6 +177,23 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         vk_conservative_raster_state.extraPrimitiveOverestimationSize = conservative_raster_info.size;
         vk_raster_state.pNext = &vk_conservative_raster_state;
     }
+
+    auto vk_line_raster_state = VkPipelineRasterizationLineStateCreateInfoKHR{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+    };
+    if (
+        ret.info.raster.line_raster_info.has_value() &&
+        (device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION))
+    {
+        auto const & line_raster_info = ret.info.raster.line_raster_info.value();
+        vk_line_raster_state.lineRasterizationMode = static_cast<VkLineRasterizationMode>(line_raster_info.mode);
+        vk_line_raster_state.stippledLineEnable = line_raster_info.stippled;
+        vk_line_raster_state.lineStippleFactor = line_raster_info.stipple_factor;
+        vk_line_raster_state.lineStipplePattern = line_raster_info.stipple_pattern;
+        vk_raster_state.pNext = &vk_line_raster_state;
+    }
+
     DepthTestInfo const no_depth = {};
     VkPipelineDepthStencilStateCreateInfo const vk_depth_stencil_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,

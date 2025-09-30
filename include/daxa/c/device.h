@@ -270,6 +270,7 @@ typedef enum
     DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN = 0x1 << 12,
     DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16 = 0x1 << 13,
     DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK = 0x1 << 14,
+    DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION = 0x1 << 15,
 } daxa_DeviceImplicitFeatureFlagBits;
 
 typedef daxa_DeviceImplicitFeatureFlagBits daxa_ImplicitFeatureFlags;

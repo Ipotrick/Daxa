@@ -1719,6 +1719,15 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
+    enum struct LineRasterizationMode
+    {
+        DEFAULT = 0,
+        RECTANGULAR = 1,
+        BRESENHAM = 2,
+        RECTANGULAR_SMOOTH = 3,
+        MAX_ENUM = 0x7fffffff,
+    };
+
     enum struct PrimitiveTopology
     {
         POINT_LIST = 0,

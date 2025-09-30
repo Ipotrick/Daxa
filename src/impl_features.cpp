@@ -165,6 +165,13 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_shader_clock_features_khr);
         }
 
+        if (extensions.extensions_present[extensions.physical_device_line_rasterization_khr])
+        {
+            physical_device_line_rasterization_features_khr.pNext = chain;
+            physical_device_line_rasterization_features_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_LINE_RASTERIZATION_FEATURES_KHR;
+            chain = static_cast<void *>(&physical_device_line_rasterization_features_khr);
+        }
+
         conservative_rasterization = extensions.extensions_present[extensions.physical_device_conservative_rasterization_ext];
         swapchain = extensions.extensions_present[extensions.physical_device_swapchain_khr];
 
@@ -315,6 +322,15 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_shader_clock_features_khr.shaderDeviceClock),
     };
 
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_line_rasterization_features_khr.rectangularLines),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_line_rasterization_features_khr.bresenhamLines),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_line_rasterization_features_khr.smoothLines),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_line_rasterization_features_khr.stippledRectangularLines),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_line_rasterization_features_khr.stippledBresenhamLines),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_line_rasterization_features_khr.stippledSmoothLines),
+    };
+
     constexpr static std::array IMPLICIT_FEATURES = std::array{
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING},
@@ -332,6 +348,7 @@ namespace daxa
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SWAPCHAIN},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_INT16},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION},
     };
 
     // === Explicit Features ===

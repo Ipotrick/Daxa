@@ -128,6 +128,14 @@ typedef struct
 
 typedef struct
 {
+    VkLineRasterizationModeKHR mode;
+    daxa_Bool8 stippled;
+    uint32_t stipple_factor;
+    uint16_t stipple_pattern;
+} daxa_LineRasterInfo;
+
+typedef struct
+{
     VkPrimitiveTopology primitive_topology;
     daxa_Bool8 primitive_restart_enable;
     VkPolygonMode polygon_mode;
@@ -141,6 +149,7 @@ typedef struct
     float depth_bias_slope_factor;
     float line_width;
     daxa_Optional(daxa_ConservativeRasterInfo) conservative_raster_info;
+    daxa_Optional(daxa_LineRasterInfo) line_raster_info;
     daxa_Optional(VkSampleCountFlagBits) static_state_sample_count;
 } daxa_RasterizerInfo;
 

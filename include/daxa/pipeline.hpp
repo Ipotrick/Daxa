@@ -140,6 +140,14 @@ namespace daxa
         float size = {};
     };
 
+    struct LineRasterInfo
+    {
+        LineRasterizationMode mode = {};
+        daxa_Bool8 stippled = {};
+        uint32_t stipple_factor = {};
+        uint16_t stipple_pattern = {};
+    };
+
     enum struct RasterizationSamples : u32
     {
         E1 = 0x00000001,
@@ -163,6 +171,7 @@ namespace daxa
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
         Optional<ConservativeRasterInfo> conservative_raster_info = {};
+        Optional<LineRasterInfo> line_raster_info = {};
         // When left as none, the pipeline will use the current msaa value of the command recorder.
         Optional<RasterizationSamples> static_state_sample_count = {};
     };
