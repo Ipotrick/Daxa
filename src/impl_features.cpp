@@ -223,7 +223,7 @@ namespace daxa
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.subgroupSizeControl), DAXA_MISSING_REQUIRED_VK_FEATURE_SUBGROUP_SIZE_CONTROL},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.computeFullSubgroups), DAXA_MISSING_REQUIRED_VK_FEATURE_COMPUTE_FULL_SUBGROUPS},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_scalar_block_layout_features.scalarBlockLayout), DAXA_MISSING_REQUIRED_VK_FEATURE_SCALAR_BLOCK_LAYOUT},
-        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_host_image_copy_features_ext.hostImageCopy), DAXA_MISSING_REQUIRED_VK_FEATURE_SCALAR_BLOCK_LAYOUT},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_host_image_copy_features_ext.hostImageCopy), DAXA_MISSING_REQUIRED_VK_FEATURE_HOST_IMAGE_COPY},
     };
 
     // === Implicit Features ===

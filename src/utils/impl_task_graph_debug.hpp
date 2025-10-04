@@ -113,7 +113,7 @@ namespace daxa
                                 "Attachments \"{}\" and \"{}\" both refer to the same task buffer \"{}\" in task \"{}\";\n"
                                 "All buffer attachments must refer to different buffers within each task!",
                                 a.name, b.name,
-                                impl.global_buffer_infos[a.view.index].get_name(),
+                                impl.global_buffer_infos[a.view.index].name,
                                 task.name));
                     },
                     [&](u32, TaskImageAttachmentInfo const &) {});
@@ -139,7 +139,7 @@ namespace daxa
                                 "Attachments \"{}\" and \"{}\" refer overlapping slices ({} and {}) to the same task image \"{}\" in task \"{}\";"
                                 "All task image attachment views and their slices must refer to disjoint parts of images within each task!",
                                 a.name, b.name, to_string(a.view.slice), to_string(b.view.slice),
-                                impl.global_image_infos.at(b.translated_view.index).get_name(),
+                                impl.global_image_infos.at(b.translated_view.index).name,
                                 task.name));
                     });
             });
