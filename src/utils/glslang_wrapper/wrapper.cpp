@@ -197,9 +197,9 @@ void GLSLANG_WRAPPER_DLL_EXPORT glslang_wrapper_compile(GlslangWrapperCompileInf
 
     glslang::SpvOptions spv_options{};
     spv_options.generateDebugInfo = info.use_debug_info; // -g
-    // spv_options.emitNonSemanticShaderDebugInfo = use_debug_info; // -gV
-    // if (spv_options.emitNonSemanticShaderDebugInfo)
-    //     spv_options.emitNonSemanticShaderDebugSource = use_debug_info; // -gVS
+    spv_options.emitNonSemanticShaderDebugInfo = info.use_debug_info; // -gV
+    if (spv_options.emitNonSemanticShaderDebugInfo)
+        spv_options.emitNonSemanticShaderDebugSource = info.use_debug_info; // -gVS
     spv_options.stripDebugInfo = !info.use_debug_info;
 
     if (spv_options.emitNonSemanticShaderDebugInfo)
