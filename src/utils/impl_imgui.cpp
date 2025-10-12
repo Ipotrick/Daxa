@@ -377,7 +377,7 @@ namespace daxa
         recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-            .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::GENERAL,
             .image_slice = {
                 .base_mip_level = 0,
                 .level_count = 1,
@@ -389,7 +389,6 @@ namespace daxa
         recorder.copy_buffer_to_image({
             .buffer = texture_staging_buffer,
             .image = font_sheet,
-            .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_slice = {
                 .mip_level = 0,
                 .base_array_layer = 0,
@@ -401,8 +400,8 @@ namespace daxa
         recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
-            .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
-            .dst_layout = daxa::ImageLayout::READ_ONLY_OPTIMAL,
+            .src_layout = daxa::ImageLayout::GENERAL,
+            .dst_layout = daxa::ImageLayout::GENERAL,
             .image_slice = {
                 .base_mip_level = 0,
                 .level_count = 1,

@@ -312,7 +312,7 @@ auto daxa_cmd_copy_buffer_to_image(daxa_CommandRecorder self, daxa_BufferImageCo
         self->current_command_data.vk_cmd_buffer,
         self->device->slot(info->buffer).vk_buffer,
         img_slot.vk_image,
-        static_cast<VkImageLayout>(info->image_layout),
+        VK_IMAGE_LAYOUT_GENERAL,
         1,
         &vk_buffer_image_copy);
     return DAXA_RESULT_SUCCESS;
@@ -335,7 +335,7 @@ auto daxa_cmd_copy_image_to_buffer(daxa_CommandRecorder self, daxa_ImageBufferCo
     vkCmdCopyImageToBuffer(
         self->current_command_data.vk_cmd_buffer,
         img_slot.vk_image,
-        static_cast<VkImageLayout>(info->image_layout),
+        VK_IMAGE_LAYOUT_GENERAL,
         self->device->slot(info->buffer).vk_buffer,
         1,
         &vk_buffer_image_copy);
@@ -358,9 +358,9 @@ auto daxa_cmd_copy_image_to_image(daxa_CommandRecorder self, daxa_ImageCopyInfo 
     vkCmdCopyImage(
         self->current_command_data.vk_cmd_buffer,
         src_slot.vk_image,
-        static_cast<VkImageLayout>(info->src_image_layout),
+        VK_IMAGE_LAYOUT_GENERAL,
         dst_slot.vk_image,
-        static_cast<VkImageLayout>(info->dst_image_layout),
+        VK_IMAGE_LAYOUT_GENERAL,
         1,
         &vk_image_copy);
     return DAXA_RESULT_SUCCESS;
@@ -381,9 +381,9 @@ auto daxa_cmd_blit_image_to_image(daxa_CommandRecorder self, daxa_ImageBlitInfo 
     vkCmdBlitImage(
         self->current_command_data.vk_cmd_buffer,
         src_slot.vk_image,
-        static_cast<VkImageLayout>(info->src_image_layout),
+        VK_IMAGE_LAYOUT_GENERAL,
         dst_slot.vk_image,
-        static_cast<VkImageLayout>(info->dst_image_layout),
+        VK_IMAGE_LAYOUT_GENERAL,
         1,
         &vk_blit,
         static_cast<VkFilter>(info->filter));
@@ -497,7 +497,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
         vkCmdClearDepthStencilImage(
             self->current_command_data.vk_cmd_buffer,
             img_slot.vk_image,
-            static_cast<VkImageLayout>(info->image_layout),
+            VK_IMAGE_LAYOUT_GENERAL,
             &info->clear_value.values.depthStencil,
             1,
             &sub_range);
@@ -512,7 +512,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
         vkCmdClearColorImage(
             self->current_command_data.vk_cmd_buffer,
             img_slot.vk_image,
-            static_cast<VkImageLayout>(info->image_layout),
+            VK_IMAGE_LAYOUT_GENERAL,
             &info->clear_value.values.color,
             1,
             &sub_range);
@@ -870,7 +870,7 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
             .sType = VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO,
             .pNext = nullptr,
             .imageView = self->device->slot(in.image_view).vk_image_view,
-            .imageLayout = std::bit_cast<VkImageLayout>(in.layout),
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
             .resolveMode = VkResolveModeFlagBits::VK_RESOLVE_MODE_NONE,
             .resolveImageView = VK_NULL_HANDLE,
             .resolveImageLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -882,7 +882,7 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
         {
             out.resolveMode = static_cast<VkResolveModeFlagBits>(in.resolve.value.mode);
             out.resolveImageView = self->device->slot(in.resolve.value.image).vk_image_view;
-            out.resolveImageLayout = std::bit_cast<VkImageLayout>(in.resolve.value.layout);
+            out.resolveImageLayout = VK_IMAGE_LAYOUT_GENERAL;
         }
     };
 

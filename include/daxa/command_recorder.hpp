@@ -26,9 +26,9 @@ namespace daxa
     struct ImageBlitInfo
     {
         ImageId src_image = {};
-        ImageLayout src_image_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout src_image_layout = ImageLayout::GENERAL;
         ImageId dst_image = {};
-        ImageLayout dst_image_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout dst_image_layout = ImageLayout::GENERAL;
         ImageArraySlice src_slice = {};
         std::array<Offset3D, 2> src_offsets = {};
         ImageArraySlice dst_slice = {};
@@ -50,7 +50,7 @@ namespace daxa
         BufferId buffer = {};
         usize buffer_offset = {};
         ImageId image = {};
-        ImageLayout image_layout = ImageLayout::TRANSFER_DST_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout image_layout = ImageLayout::GENERAL;
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
         Extent3D image_extent = {};
@@ -59,7 +59,7 @@ namespace daxa
     struct ImageBufferCopyInfo
     {
         ImageId image = {};
-        ImageLayout image_layout = ImageLayout::TRANSFER_SRC_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout image_layout = ImageLayout::GENERAL;
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
         Extent3D image_extent = {};
@@ -70,9 +70,9 @@ namespace daxa
     struct ImageCopyInfo
     {
         ImageId src_image = {};
-        ImageLayout src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout src_image_layout = daxa::ImageLayout::GENERAL;
         ImageId dst_image = {};
-        ImageLayout dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout dst_image_layout = daxa::ImageLayout::GENERAL;
         ImageArraySlice src_slice = {};
         Offset3D src_offset = {};
         ImageArraySlice dst_slice = {};
@@ -82,7 +82,7 @@ namespace daxa
 
     struct ImageClearInfo
     {
-        ImageLayout dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout dst_image_layout = daxa::ImageLayout::GENERAL;
         ClearValue clear_value = {};
         ImageId dst_image = {};
         ImageMipArraySlice dst_slice = {};
@@ -109,13 +109,13 @@ namespace daxa
     {
         ResolveMode mode = ResolveMode::AVERAGE;
         ImageViewId image = {};
-        ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout layout = ImageLayout::GENERAL;
     };
 
     struct RenderAttachmentInfo
     {
         ImageViewId image_view = {};
-        ImageLayout layout = ImageLayout::ATTACHMENT_OPTIMAL;
+        [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout layout = ImageLayout::GENERAL;
         AttachmentLoadOp load_op = AttachmentLoadOp::DONT_CARE;
         AttachmentStoreOp store_op = AttachmentStoreOp::STORE;
         ClearValue clear_value = {};

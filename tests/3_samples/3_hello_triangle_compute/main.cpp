@@ -87,9 +87,9 @@ struct App : BaseApp<App>
     {
         new_task_graph.use_persistent_image(task_render_image);
 
-        new_task_graph.add_task({
-            .attachments = {daxa::inl_attachment(daxa::TaskImageAccess::COMPUTE_SHADER_STORAGE_WRITE_ONLY, task_render_image)},
-            .task = [this](daxa::TaskInterface ti)
+        new_task_graph.add_task(daxa::InlineTask::Compute(APPNAME_PREFIX("Draw (Compute)"))
+            .writes(task_render_image)
+            .executes([this](daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*compute_pipeline);
                 ti.recorder.push_constant(ComputePush{
@@ -97,27 +97,19 @@ struct App : BaseApp<App>
                     .frame_dim = {size_x, size_y},
                 });
                 ti.recorder.dispatch({(size_x + 7) / 8, (size_y + 7) / 8});
-            },
-            .name = APPNAME_PREFIX("Draw (Compute)"),
-        });
-        new_task_graph.add_task({
-            .attachments = {
-                {daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_READ, task_render_image)},
-                {daxa::inl_attachment(daxa::TaskImageAccess::TRANSFER_WRITE, task_swapchain_image)},
-            },
-            .task = [this](daxa::TaskInterface ti)
+            }));
+        new_task_graph.add_task(daxa::InlineTask::Transfer(APPNAME_PREFIX("Blit (render to swapchain)"))
+            .reads(task_render_image)
+            .writes(task_swapchain_image)
+            .executes([this](daxa::TaskInterface ti)
             {
                 ti.recorder.blit_image_to_image({
                     .src_image = ti.get(task_render_image).ids[0],
-                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.get(task_swapchain_image).ids[0],
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
-            },
-            .name = APPNAME_PREFIX("Blit (render to swapchain)"),
-        });
+            }));
     }
 };
 

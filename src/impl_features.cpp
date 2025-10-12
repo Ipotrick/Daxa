@@ -167,6 +167,13 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_shader_clock_features_khr);
         }
 
+        if (extensions.extensions_present[extensions.physical_device_host_image_copy_ext])
+        {
+            physical_device_host_image_copy_features_ext.pNext = chain;
+            physical_device_host_image_copy_features_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_FEATURES_EXT;
+            chain = static_cast<void *>(&physical_device_host_image_copy_features_ext);
+        }
+
         conservative_rasterization = extensions.extensions_present[extensions.physical_device_conservative_rasterization_ext];
         swapchain = extensions.extensions_present[extensions.physical_device_swapchain_khr];
 
@@ -216,6 +223,7 @@ namespace daxa
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.subgroupSizeControl), DAXA_MISSING_REQUIRED_VK_FEATURE_SUBGROUP_SIZE_CONTROL},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_subgroup_size_control_features.computeFullSubgroups), DAXA_MISSING_REQUIRED_VK_FEATURE_COMPUTE_FULL_SUBGROUPS},
         RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_scalar_block_layout_features.scalarBlockLayout), DAXA_MISSING_REQUIRED_VK_FEATURE_SCALAR_BLOCK_LAYOUT},
+        RequiredFeature{offsetof(PhysicalDeviceFeaturesStruct, physical_device_host_image_copy_features_ext.hostImageCopy), DAXA_MISSING_REQUIRED_VK_FEATURE_HOST_IMAGE_COPY},
     };
 
     // === Implicit Features ===

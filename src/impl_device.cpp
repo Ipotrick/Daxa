@@ -1789,6 +1789,10 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             self->vkCmdTraceRaysIndirectKHR = r_cast<PFN_vkCmdTraceRaysIndirectKHR>(vkGetDeviceProcAddr(self->vk_device, "vkCmdTraceRaysIndirectKHR"));
             self->vkGetRayTracingShaderGroupHandlesKHR = r_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetRayTracingShaderGroupHandlesKHR"));
         }
+
+        self->vkTransitionImageLayoutEXT = r_cast<PFN_vkTransitionImageLayoutEXT>(vkGetDeviceProcAddr(self->vk_device, "vkTransitionImageLayoutEXT"));
+        self->vkCopyMemoryToImageEXT = r_cast<PFN_vkCopyMemoryToImageEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCopyMemoryToImageEXT"));
+        self->vkCopyImageToMemoryEXT = r_cast<PFN_vkCopyImageToMemoryEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCopyImageToMemoryEXT"));
     }
 
     VkCommandPool init_cmd_pool = {};
@@ -2050,7 +2054,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .srcAccessMask = VK_ACCESS_HOST_WRITE_BIT,
             .dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
             .oldLayout = {},
-            .newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+            .newLayout = VK_IMAGE_LAYOUT_GENERAL,
             .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
             .image = self->vk_null_image,
@@ -2076,10 +2080,10 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .imageOffset = VkOffset3D{0, 0, 0},
             .imageExtent = VkExtent3D{1, 1, 1},
         };
-        vkCmdCopyBufferToImage(init_cmd_buffer, self->vk_null_buffer, self->vk_null_image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &vk_buffer_image_copy);
+        vkCmdCopyBufferToImage(init_cmd_buffer, self->vk_null_buffer, self->vk_null_image, VK_IMAGE_LAYOUT_GENERAL, 1, &vk_buffer_image_copy);
         vk_image_mem_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT,
         vk_image_mem_barrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT | VK_ACCESS_MEMORY_WRITE_BIT,
-        vk_image_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+        vk_image_mem_barrier.oldLayout = VK_IMAGE_LAYOUT_GENERAL,
         vk_image_mem_barrier.newLayout = VK_IMAGE_LAYOUT_GENERAL,
         vk_image_mem_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         vk_image_mem_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
@@ -2592,6 +2596,89 @@ void daxa_ImplDevice::zombify_blas(BlasId id)
 {
     _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_blas\n");
     zombiefy(this, id, gpu_sro_table.blas_slots, this->blas_zombies);
+}
+
+auto daxa_dvc_copy_memory_to_image(daxa_Device self, daxa_MemoryToImageCopyInfo const * info) -> daxa_Result
+{
+    if(!daxa_dvc_is_image_valid(self, info->image_id))
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
+    }
+
+    ImplImageSlot const & image = self->slot(info->image_id);
+    VkMemoryToImageCopyEXT vk_memory_to_image_copy = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_TO_IMAGE_COPY_EXT,
+        .pNext = nullptr,
+        .pHostPointer = info->memory_ptr,
+        .memoryRowLength = 0,
+        .memoryImageHeight = 0,
+        .imageSubresource = make_subresource_layers(info->image_slice, image.aspect_flags),
+        .imageOffset = info->image_offset,
+        .imageExtent = info->image_extent,
+    };
+    VkCopyMemoryToImageInfoEXT vk_memory_to_image_copy_ext = {
+        .sType = VK_STRUCTURE_TYPE_COPY_MEMORY_TO_IMAGE_INFO_EXT,
+        .pNext = nullptr,
+        .dstImage = image.vk_image,
+        .dstImageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .regionCount = 1,
+        .pRegions = &vk_memory_to_image_copy,
+    };
+    auto result =  static_cast<daxa_Result>(self->vkCopyMemoryToImageEXT(self->vk_device, &vk_memory_to_image_copy_ext));
+    _DAXA_RETURN_IF_ERROR(result, result);
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo const * info) -> daxa_Result
+{
+    if(!daxa_dvc_is_image_valid(self, info->image_id))
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
+    }
+
+    ImplImageSlot const & image = self->slot(info->image_id);
+    VkImageToMemoryCopyEXT vk_image_to_memory_copy = {
+        .sType = VK_STRUCTURE_TYPE_IMAGE_TO_MEMORY_COPY_EXT,
+        .pNext = nullptr,
+        .pHostPointer = info->memory_ptr,
+        .memoryRowLength = 0,
+        .memoryImageHeight = 0,
+        .imageSubresource = make_subresource_layers(info->image_slice, image.aspect_flags),
+        .imageOffset = info->image_offset,
+        .imageExtent = info->image_extent,
+    };
+    VkCopyImageToMemoryInfoEXT vk_image_to_memory_copy_ext = {
+        .sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_MEMORY_INFO_EXT,
+        .pNext = nullptr,
+        .srcImage = image.vk_image,
+        .srcImageLayout = VK_IMAGE_LAYOUT_GENERAL,
+        .regionCount = 1,
+        .pRegions = &vk_image_to_memory_copy,
+    };
+    auto result =  static_cast<daxa_Result>(self->vkCopyImageToMemoryEXT(self->vk_device, &vk_image_to_memory_copy_ext));
+    _DAXA_RETURN_IF_ERROR(result, result);
+    return result;
+}
+
+auto daxa_dvc_transition_image_layout(daxa_Device self, daxa_HostImageLayoutTransitionInfo const * info) -> daxa_Result
+{
+    if(!daxa_dvc_is_image_valid(self, info->image_id))
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
+    }
+
+    ImplImageSlot const & image = self->slot(info->image_id);
+    VkHostImageLayoutTransitionInfoEXT vk_host_image_layout_transition_info = {
+        .sType = VK_STRUCTURE_TYPE_HOST_IMAGE_LAYOUT_TRANSITION_INFO_EXT,
+        .pNext = nullptr,
+        .image = image.vk_image,
+        .oldLayout = static_cast<VkImageLayout>(info->old_image_layout),
+        .newLayout = static_cast<VkImageLayout>(info->new_image_layout),
+        .subresourceRange = make_subresource_range(info->image_slice, image.aspect_flags),
+    };
+    auto result =  static_cast<daxa_Result>(self->vkTransitionImageLayoutEXT(self->vk_device, 1, &vk_host_image_layout_transition_info));
+    _DAXA_RETURN_IF_ERROR(result, result);
+    return result;
 }
 
 // --- End Internal Functions ---

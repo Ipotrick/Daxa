@@ -1110,9 +1110,7 @@ struct App : BaseApp<App>
             {
                 ti.recorder.blit_image_to_image({
                     .src_image = ti.get(task_render_image).ids[0],
-                    .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
                     .dst_image = ti.get(task_swapchain_image).ids[0],
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
