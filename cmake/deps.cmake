@@ -74,6 +74,7 @@ if (DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG AND NOT TARGET slang::slang)
         slang
         URL https://github.com/shader-slang/slang/releases/download/v${Slang_VERSION}/slang-${Slang_VERSION}-windows-x86_64.zip
         # URL https://github.com/shader-slang/slang/releases/download/v2025.11/slang-2025.11-windows-x86_64.zip
+        DOWNLOAD_EXTRACT_TIMESTAMP 1
     )
     FetchContent_MakeAvailable(slang)
 
