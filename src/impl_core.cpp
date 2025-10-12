@@ -129,28 +129,20 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
     daxa_DeviceProperties ret = {};
 
     bool ray_tracing_pipeline_supported = false;
-    VkPhysicalDeviceRayTracingPipelinePropertiesKHR vk_physical_device_ray_tracing_pipeline_properties_khr = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR,
-        .pNext = nullptr,
-    };
+    VkPhysicalDeviceRayTracingPipelinePropertiesKHR vk_physical_device_ray_tracing_pipeline_properties_khr = {};
+    vk_physical_device_ray_tracing_pipeline_properties_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_PIPELINE_PROPERTIES_KHR;
 
     bool acceleration_structure_supported = false;
-    VkPhysicalDeviceAccelerationStructurePropertiesKHR vk_physical_device_acceleration_structure_properties_khr = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR,
-        .pNext = nullptr,
-    };
+    VkPhysicalDeviceAccelerationStructurePropertiesKHR vk_physical_device_acceleration_structure_properties_khr = {};
+    vk_physical_device_ray_tracing_pipeline_properties_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_PROPERTIES_KHR;
 
     bool invocation_reorder_supported = false;
-    VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV vk_physical_device_ray_tracing_invocation_reorder_properties_nv = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV,
-        .pNext = nullptr,
-    };
+    VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV vk_physical_device_ray_tracing_invocation_reorder_properties_nv = {};
+    vk_physical_device_ray_tracing_invocation_reorder_properties_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_RAY_TRACING_INVOCATION_REORDER_PROPERTIES_NV;
 
     bool mesh_shader_supported = false;
-    VkPhysicalDeviceMeshShaderPropertiesEXT vk_physical_device_mesh_shader_properties_ext = {
-        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT,
-        .pNext = nullptr,
-    };
+    VkPhysicalDeviceMeshShaderPropertiesEXT vk_physical_device_mesh_shader_properties_ext = {};
+    vk_physical_device_mesh_shader_properties_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
 
     void * pNextChain = nullptr;
 
@@ -189,6 +181,7 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
     VkPhysicalDeviceProperties2 vk_physical_device_properties2 = {
         .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2,
         .pNext = pNextChain,
+        .properties = {},
     };
 
     vkGetPhysicalDeviceProperties2(physical_device, &vk_physical_device_properties2);
@@ -355,10 +348,8 @@ void daxa_as_build_info_to_vk(
         u32 const geo_count = static_cast<u32>(info.geometries.values.triangles.count);
         for (u32 geo_i = 0; geo_i < geo_count; ++geo_i)
         {
-            auto geo_info = VkAccelerationStructureGeometryKHR{
-                .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR,
-                .pNext = nullptr,
-            };
+            auto geo_info = VkAccelerationStructureGeometryKHR{};
+            geo_info.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_GEOMETRY_KHR;
             if (info.geometries.index == 0) // triangles
             {
                 geo_info.geometryType = VK_GEOMETRY_TYPE_TRIANGLES_KHR,

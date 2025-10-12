@@ -469,7 +469,7 @@ namespace daxa
         if (daxa::holds_alternative<daxa::ShaderFile>(info.source) && info.name.empty())
         {
             auto const & shader_file = daxa::get<daxa::ShaderFile>(info.source);
-            info.name = (shader_file.path.string() + "::") + info.entry_point.value();
+            info.name = (shader_file.path.string() + "::") + info.entry_point.value_or("main");
         }
     }
 

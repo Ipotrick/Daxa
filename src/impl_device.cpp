@@ -334,7 +334,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        // .image = ret.vk_image, // FILL THIS LATER!
+        .image = {}, // FILL THIS LATER!
         .viewType = vk_image_view_type,
         .format = *r_cast<VkFormat const *>(&info->format),
         .components = VkComponentMapping{
@@ -835,10 +835,8 @@ auto daxa_dvc_get_tlas_build_sizes(
         vk_geometry_infos,
         primitive_counts,
         primitive_counts_ptrs);
-    VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {
-        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
-        .pNext = nullptr,
-    };
+    VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {};
+    vk_acceleration_structure_build_sizes_info_khr.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
     self->vkGetAccelerationStructureBuildSizesKHR(
         self->vk_device,
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
@@ -875,10 +873,8 @@ auto daxa_dvc_get_blas_build_sizes(
         vk_geometry_infos,
         primitive_counts,
         primitive_counts_ptrs);
-    VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {
-        .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
-        .pNext = nullptr,
-    };
+    VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {};
+    vk_acceleration_structure_build_sizes_info_khr.sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR;
     self->vkGetAccelerationStructureBuildSizesKHR(
         self->vk_device,
         VK_ACCELERATION_STRUCTURE_BUILD_TYPE_DEVICE_KHR,
@@ -1560,7 +1556,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
             }
 
             vkFreeCommandBuffers(self->vk_device, zombie.vk_cmd_pool, static_cast<u32>(zombie.allocated_command_buffers.size()), zombie.allocated_command_buffers.data());
-            auto result = static_cast<daxa_Result>(vkResetCommandPool(self->vk_device, zombie.vk_cmd_pool, {}));
+            result = static_cast<daxa_Result>(vkResetCommandPool(self->vk_device, zombie.vk_cmd_pool, {}));
             _DAXA_RETURN_IF_ERROR(result, result)
 
             self->command_pool_pools[zombie.queue_family].put_back(zombie.vk_cmd_pool);

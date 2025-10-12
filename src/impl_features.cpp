@@ -506,7 +506,7 @@ namespace daxa
         physical_device_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
     }
 
-    void fill_daxa_device_properties(PhysicalDeviceExtensionsStruct const & extensions, PhysicalDeviceFeaturesStruct const & features, VkPhysicalDevice physical_device, daxa_DeviceProperties * out)
+    void fill_daxa_device_properties([[maybe_unused]] PhysicalDeviceExtensionsStruct const & extensions, PhysicalDeviceFeaturesStruct const & features, VkPhysicalDevice physical_device, daxa_DeviceProperties * out)
     {
         auto flags = create_feature_flags(features);
         out->implicit_features = flags.first;
