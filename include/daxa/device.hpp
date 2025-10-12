@@ -317,6 +317,7 @@ namespace daxa
         Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
         Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
         Optional<InvocationReorderProperties> invocation_reorder_properties = {};
+        u32 required_subgroup_size_stages;
         u32 compute_queue_count = {};
         u32 transfer_queue_count = {};
         ImplicitFeatureFlags implicit_features;

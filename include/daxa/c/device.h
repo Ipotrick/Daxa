@@ -289,6 +289,7 @@ typedef struct
     daxa_Optional(daxa_RayTracingPipelineProperties) ray_tracing_pipeline_properties;
     daxa_Optional(daxa_AccelerationStructureProperties) acceleration_structure_properties;
     daxa_Optional(daxa_RayTracingInvocationReorderProperties) ray_tracing_invocation_reorder_properties;
+    daxa_u32 required_subgroup_size_stages;
     daxa_u32 compute_queue_count;
     daxa_u32 transfer_queue_count;
     daxa_ImplicitFeatureFlags implicit_features;
@@ -628,6 +629,8 @@ DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
 DAXA_EXPORT VkPhysicalDevice
 daxa_dvc_get_vk_physical_device(daxa_Device device);
+DAXA_EXPORT daxa_Result
+daxa_dvc_get_vk_queue(daxa_Device self, daxa_Queue queue, VkQueue* vk_queue, uint32_t* vk_queue_family_index);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_queue_wait_idle(daxa_Device device, daxa_Queue queue);

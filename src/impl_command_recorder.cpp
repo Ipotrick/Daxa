@@ -1208,6 +1208,11 @@ void daxa_cmd_end_label(daxa_CommandRecorder self)
     }
 }
 
+void daxa_cmd_reset_assumed_state(daxa_CommandRecorder self)
+{
+    self->current_pipeline = daxa_ImplCommandRecorder::NoPipeline{};
+}
+
 void daxa_cmd_flush_barriers(daxa_CommandRecorder self)
 {
     if (self->memory_barrier_batch_count > 0 || self->image_barrier_batch_count > 0)

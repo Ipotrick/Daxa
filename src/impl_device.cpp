@@ -1234,6 +1234,20 @@ auto daxa_dvc_get_vk_physical_device(daxa_Device self) -> VkPhysicalDevice
     return self->vk_physical_device;
 }
 
+auto daxa_dvc_get_vk_queue(daxa_Device self, daxa_Queue queue, VkQueue* vk_queue, uint32_t* vk_queue_family_index) -> daxa_Result
+{
+    if (!self->valid_queue(queue))
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
+    }
+    auto const& daxa_queue = self->get_queue(queue);
+    if (vk_queue)
+        *vk_queue = daxa_queue.vk_queue;
+    if (vk_queue_family_index)
+        *vk_queue_family_index = daxa_queue.vk_queue_family_index;
+    return DAXA_RESULT_SUCCESS;
+}
+
 auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 {
     PROFILE_FUNC();

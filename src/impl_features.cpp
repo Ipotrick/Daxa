@@ -172,6 +172,11 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_line_rasterization_features_khr);
         }
 
+        physical_device_shader_demote_to_helper_invocation_features.pNext = chain;
+        physical_device_shader_demote_to_helper_invocation_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES;
+        physical_device_shader_demote_to_helper_invocation_features.shaderDemoteToHelperInvocation = true;
+        chain = static_cast<void *>(&physical_device_shader_demote_to_helper_invocation_features);
+
         conservative_rasterization = extensions.extensions_present[extensions.physical_device_conservative_rasterization_ext];
         swapchain = extensions.extensions_present[extensions.physical_device_swapchain_khr];
 
@@ -509,6 +514,10 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_mesh_shader_properties_ext);
         }
 
+        physical_device_subgroup_size_control_properties.pNext = chain;
+        physical_device_subgroup_size_control_properties.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SUBGROUP_SIZE_CONTROL_PROPERTIES;
+        chain = static_cast<void *>(&physical_device_subgroup_size_control_properties);
+
         physical_device_properties_2.pNext = chain;
         physical_device_properties_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PROPERTIES_2;
     }
@@ -569,6 +578,8 @@ namespace daxa
             out->mesh_shader_properties.value.prefers_compact_vertex_output = static_cast<daxa_Bool8>(properties_struct.physical_device_mesh_shader_properties_ext.prefersCompactVertexOutput);
             out->mesh_shader_properties.value.prefers_compact_primitive_output = static_cast<daxa_Bool8>(properties_struct.physical_device_mesh_shader_properties_ext.prefersCompactPrimitiveOutput);
         }
+
+        out->required_subgroup_size_stages = properties_struct.physical_device_subgroup_size_control_properties.requiredSubgroupSizeStages;
 
         u32 queue_family_props_count = 0;
         std::vector<VkQueueFamilyProperties> queue_props;

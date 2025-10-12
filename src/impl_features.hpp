@@ -124,6 +124,7 @@ namespace daxa
         VkPhysicalDeviceShaderAtomicFloatFeaturesEXT physical_device_shader_atomic_float_features_ext = {};
         VkPhysicalDeviceShaderClockFeaturesKHR physical_device_shader_clock_features_khr = {};
         VkPhysicalDeviceLineRasterizationFeaturesKHR physical_device_line_rasterization_features_khr = {};
+        VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures physical_device_shader_demote_to_helper_invocation_features = {};
         VkPhysicalDeviceFeatures2 physical_device_features_2 = {};
         bool conservative_rasterization = {};
         bool swapchain = {};
@@ -143,6 +144,7 @@ namespace daxa
         VkPhysicalDeviceAccelerationStructurePropertiesKHR physical_device_acceleration_structure_properties_khr = {};
         VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV physical_device_ray_tracing_invocation_reorder_properties_nv = {};
         VkPhysicalDeviceMeshShaderPropertiesEXT physical_device_mesh_shader_properties_ext = {};
+        VkPhysicalDeviceSubgroupSizeControlProperties physical_device_subgroup_size_control_properties = {};
         VkPhysicalDeviceProperties2 physical_device_properties_2 = {};
 
         void initialize(daxa_DeviceImplicitFeatureFlagBits implicit_features);

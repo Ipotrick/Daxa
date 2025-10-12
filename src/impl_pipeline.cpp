@@ -38,14 +38,28 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         }
         vk_shader_modules.push_back(vk_shader_module);
         entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
-        require_subgroup_size_vkstructs.push_back({
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
-            .pNext = nullptr,
-            .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
-        });
+
+        // NOTE(grundlett): For now, just silently disable required subgroup size for stages that are unsupported
+        bool const requested_required_subgroup_size = shader_info.required_subgroup_size.has_value();
+        bool const supports_required_subgroup_size_for_stage = (device->properties.required_subgroup_size_stages & shader_stage) != 0;
+        bool const uses_required_subgroup_size = requested_required_subgroup_size && supports_required_subgroup_size_for_stage;
+        if (uses_required_subgroup_size)
+            require_subgroup_size_vkstructs.push_back({
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+                .pNext = nullptr,
+                .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
+            });
+        
+        // NOTE(grundlett): However, we'll explicitly error if we requested the subgroup size for mesh shaders and its unsupported.
+        if (shader_stage == VK_SHADER_STAGE_MESH_BIT_EXT && requested_required_subgroup_size && !supports_required_subgroup_size_for_stage)
+        {
+            _DAXA_DEBUG_BREAK
+            return VK_ERROR_FEATURE_NOT_PRESENT;
+        }
+
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstructs.back() : nullptr,
+            .pNext = uses_required_subgroup_size ? &require_subgroup_size_vkstructs.back() : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
@@ -372,6 +386,17 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         return std::bit_cast<daxa_Result>(module_result);
     }
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+
+    bool const requested_required_subgroup_size = ret.info.shader_info.required_subgroup_size.has_value();
+    bool const supports_required_subgroup_size_for_stage = (device->properties.required_subgroup_size_stages & VK_SHADER_STAGE_COMPUTE_BIT) != 0;
+    bool const uses_required_subgroup_size = requested_required_subgroup_size && supports_required_subgroup_size_for_stage;
+
+    if (!supports_required_subgroup_size_for_stage)
+    {
+        _DAXA_DEBUG_BREAK
+        return std::bit_cast<daxa_Result>(module_result);
+    }
+
     VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
         .pNext = nullptr,
@@ -383,7 +408,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         .flags = {},
         .stage = VkPipelineShaderStageCreateInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = ret.info.shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstruct : nullptr,
+            .pNext = uses_required_subgroup_size ? &require_subgroup_size_vkstruct : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(ret.info.shader_info.create_flags),
             .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
             .module = vk_shader_module,
@@ -513,14 +538,20 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         }
         vk_shader_modules.push_back(vk_shader_module);
         entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
-        require_subgroup_size_vkstructs.push_back({
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
-            .pNext = nullptr,
-            .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
-        });
+
+        bool const requested_required_subgroup_size = shader_info.required_subgroup_size.has_value();
+        bool const supports_required_subgroup_size_for_stage = (device->properties.required_subgroup_size_stages & shader_stage) != 0;
+        bool const uses_required_subgroup_size = requested_required_subgroup_size && supports_required_subgroup_size_for_stage;
+
+        if (uses_required_subgroup_size)
+            require_subgroup_size_vkstructs.push_back({
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+                .pNext = nullptr,
+                .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
+            });
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstructs.back() : nullptr,
+            .pNext = uses_required_subgroup_size ? &require_subgroup_size_vkstructs.back() : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
