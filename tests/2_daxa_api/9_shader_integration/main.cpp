@@ -133,9 +133,9 @@ namespace tests
             }
         };
         task_graph.add_task(TestTask{
-            .views = std::array{ 
-                TestShaderTaskHead::AT.align_test_src | src,
-                TestShaderTaskHead::AT.align_test_dst | dst,
+            .views = TestTask::Views{ 
+                .align_test_src = src,
+                .align_test_dst = dst,
             },
             .pipeline = compute_pipeline,
         });
@@ -217,17 +217,11 @@ namespace tests
             .name = "f32 buffer",
         });
 
-        using BA = daxa::TaskBufferAccess;
-        using IA = daxa::TaskImageAccess;
-
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, handles_buffer),
-                daxa::inl_attachment(BA::COMPUTE_SHADER_WRITE, f32_buffer),
-                daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_WRITE_ONLY, f32_image),
-                daxa::inl_attachment(IA::COMPUTE_SHADER_STORAGE_READ_ONLY, u32_image),
-            },
-            .task = [=](daxa::TaskInterface ti)
+        task_graph.add_task(daxa::InlineTask::Compute("bindless write access")
+            .writes(handles_buffer, f32_buffer)
+            .writes(f32_image)
+            .reads(u32_image)
+            .executes([=](daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*bindless_access);
                 ti.recorder.push_constant(BindlessTestPush{
@@ -240,25 +234,18 @@ namespace tests
                     .next_shader_input = ti.device_address(handles_buffer).value(),
                 });
                 ti.recorder.dispatch({1, 1, 1});
-            },
-            .name = "bindless access",
-        });
-        task_graph.add_task({
-            .attachments = {
-                daxa::inl_attachment(BA::COMPUTE_SHADER_READ, handles_buffer),
-                daxa::inl_attachment(BA::COMPUTE_SHADER_READ, f32_buffer),
-                daxa::inl_attachment(IA::COMPUTE_SHADER_SAMPLED, f32_image),
-            },
-            .task = [=](daxa::TaskInterface ti)
+            }));
+        task_graph.add_task(daxa::InlineTask::Compute("bindless reads access 2")
+            .reads(handles_buffer, f32_buffer)
+            .samples(f32_image)
+            .executes([=](daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*bindless_access_followup);
                 ti.recorder.push_constant(BindlessTestFollowPush{
                     .shader_input = ti.device_address(handles_buffer).value(),
                 });
                 ti.recorder.dispatch({1, 1, 1});
-            },
-            .name = "bindless access",
-        });
+            }));
         task_graph.submit({});
         task_graph.complete({});
         task_graph.execute({});

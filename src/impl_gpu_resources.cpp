@@ -457,7 +457,7 @@ namespace daxa
         VkDescriptorImageInfo const vk_descriptor_image_info_sampled{
             .sampler = VK_NULL_HANDLE,
             .imageView = vk_image_view,
-            .imageLayout = VK_IMAGE_LAYOUT_READ_ONLY_OPTIMAL,
+            .imageLayout = VK_IMAGE_LAYOUT_GENERAL,
         };
 
         VkWriteDescriptorSet const vk_write_descriptor_set_sampled{

@@ -31,9 +31,9 @@ static daxa_CommandRecorderInfo const DAXA_DEFAULT_COMMAND_RECORDER_INFO = DAXA_
 typedef struct
 {
     daxa_ImageId src_image;
-    daxa_ImageLayout src_image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout src_image_layout;
     daxa_ImageId dst_image;
-    daxa_ImageLayout dst_image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout dst_image_layout;
     daxa_ImageArraySlice src_slice;
     VkOffset3D src_offsets[2];
     daxa_ImageArraySlice dst_slice;
@@ -43,9 +43,9 @@ typedef struct
 
 static daxa_ImageBlitInfo const DAXA_DEFAULT_IMAGE_BLIT_INFO = {
     .src_image = DAXA_ZERO_INIT,
-    .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    .src_image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .dst_image = DAXA_ZERO_INIT,
-    .dst_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .dst_image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .src_slice = DAXA_ZERO_INIT,
     .src_offsets = DAXA_ZERO_INIT,
     .dst_slice = DAXA_ZERO_INIT,
@@ -69,7 +69,7 @@ typedef struct
     daxa_BufferId buffer;
     size_t buffer_offset;
     daxa_ImageId image;
-    daxa_ImageLayout image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
@@ -79,7 +79,7 @@ static daxa_BufferImageCopyInfo const DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
     .buffer = DAXA_ZERO_INIT,
     .buffer_offset = 0,
     .image = DAXA_ZERO_INIT,
-    .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .image_slice = DAXA_ZERO_INIT,
     .image_offset = DAXA_ZERO_INIT,
     .image_extent = DAXA_ZERO_INIT,
@@ -88,7 +88,7 @@ static daxa_BufferImageCopyInfo const DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
 typedef struct
 {
     daxa_ImageId image;
-    daxa_ImageLayout image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
@@ -98,7 +98,7 @@ typedef struct
 
 static daxa_ImageBufferCopyInfo const DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
     .image = DAXA_ZERO_INIT,
-    .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    .image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .image_slice = DAXA_ZERO_INIT,
     .image_offset = DAXA_ZERO_INIT,
     .image_extent = DAXA_ZERO_INIT,
@@ -109,9 +109,9 @@ static daxa_ImageBufferCopyInfo const DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
 typedef struct
 {
     daxa_ImageId src_image;
-    daxa_ImageLayout src_image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout src_image_layout;
     daxa_ImageId dst_image;
-    daxa_ImageLayout dst_image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout dst_image_layout;
     daxa_ImageArraySlice src_slice;
     VkOffset3D src_offset;
     daxa_ImageArraySlice dst_slice;
@@ -121,9 +121,9 @@ typedef struct
 
 static daxa_ImageCopyInfo const DAXA_DEFAULT_IMAGE_COPY_INFO = {
     .src_image = DAXA_ZERO_INIT,
-    .src_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    .src_image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .dst_image = DAXA_ZERO_INIT,
-    .dst_image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .dst_image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .src_slice = DAXA_ZERO_INIT,
     .src_offset = DAXA_ZERO_INIT,
     .dst_slice = DAXA_ZERO_INIT,
@@ -133,7 +133,7 @@ static daxa_ImageCopyInfo const DAXA_DEFAULT_IMAGE_COPY_INFO = {
 
 typedef struct
 {
-    daxa_ImageLayout image_layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     // Make sure this stays abi compatible with daxa::ClearValue
     daxa_Variant(VkClearValue) clear_value;
     daxa_ImageId image;
@@ -141,7 +141,7 @@ typedef struct
 } daxa_ImageClearInfo;
 
 static daxa_ImageClearInfo const DAXA_DEFAULT_IMAGE_CLEAR_INFO = {
-    .image_layout = DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+    .image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .clear_value = DAXA_ZERO_INIT,
     .image = DAXA_ZERO_INIT,
     .dst_slice = DAXA_ZERO_INIT,
@@ -161,19 +161,19 @@ typedef struct
 {
     VkResolveModeFlagBits mode;
     daxa_ImageViewId image;
-    daxa_ImageLayout layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout layout;
 } daxa_AttachmentResolveInfo;
 
 static daxa_AttachmentResolveInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_RESOLVE_INFO = {
     .mode = VK_RESOLVE_MODE_AVERAGE_BIT,
     .image = {},
-    .layout = DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+    .layout = DAXA_IMAGE_LAYOUT_GENERAL,
 };
 
 typedef struct
 {
     daxa_ImageViewId image_view;
-    daxa_ImageLayout layout;
+    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout layout;
     VkAttachmentLoadOp load_op;
     VkAttachmentStoreOp store_op;
     daxa_Variant(VkClearValue) clear_value;
@@ -182,7 +182,7 @@ typedef struct
 
 static daxa_RenderAttachmentInfo const DAXA_DEFAULT_RENDER_ATTACHMENT_INFO = {
     .image_view = DAXA_ZERO_INIT,
-    .layout = DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL,
+    .layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .load_op = VK_ATTACHMENT_LOAD_OP_DONT_CARE,
     .store_op = VK_ATTACHMENT_STORE_OP_STORE,
     .clear_value = DAXA_ZERO_INIT,

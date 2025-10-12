@@ -58,6 +58,7 @@ static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_DEPTH_STENCIL_ATTACHMENT =
 static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_TRANSIENT_ATTACHMENT = 0x00000040;
 static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_FRAGMENT_DENSITY_MAP = 0x00000200;
 static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00000100;
+static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_HOST_TRANSFER = 0x00400000;
 
 typedef enum
 {

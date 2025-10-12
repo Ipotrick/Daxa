@@ -1300,6 +1300,7 @@ namespace daxa
         static inline constexpr ImageUsageFlags TRANSIENT_ATTACHMENT = {0x00000040};
         static inline constexpr ImageUsageFlags FRAGMENT_DENSITY_MAP = {0x00000200};
         static inline constexpr ImageUsageFlags FRAGMENT_SHADING_RATE_ATTACHMENT = {0x00000100};
+        static inline constexpr ImageUsageFlags HOST_TRANSFER = {0x00400000};
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageUsageFlags const &) -> std::string;
@@ -1347,10 +1348,12 @@ namespace daxa
     {
         UNDEFINED = 0,
         GENERAL = 1,
-        TRANSFER_SRC_OPTIMAL = 6,
-        TRANSFER_DST_OPTIMAL = 7,
-        READ_ONLY_OPTIMAL = 1000314000,
-        ATTACHMENT_OPTIMAL = 1000314001,
+#if !DAXA_REMOVE_DEPRECATED
+        TRANSFER_SRC_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 6,
+        TRANSFER_DST_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 7,
+        READ_ONLY_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 1000314000,
+        ATTACHMENT_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 1000314001,
+#endif
         PRESENT_SRC = 1000001002,
         MAX_ENUM = 0x7fffffff,
     };

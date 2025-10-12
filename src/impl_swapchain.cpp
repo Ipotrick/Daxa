@@ -104,7 +104,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         return result;
     }
     // We have an acquire semaphore for each frame in flight.
-    for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight + 1; i++)
+    for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight; i++)
     {
         BinarySemaphore sema = {};
         daxa_BinarySemaphoreInfo const sema_info = {};
@@ -192,7 +192,7 @@ auto daxa_swp_wait_for_next_frame(daxa_Swapchain self) -> daxa_Result
         static_cast<u64>(
             std::max<i64>(
                 0,
-                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight))));
+                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight) - 1ll)));
     return waited_wo_timeout ? DAXA_RESULT_SUCCESS : DAXA_RESULT_TIMEOUT;
 }
 
@@ -204,9 +204,9 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
         static_cast<u64>(
             std::max<i64>(
                 0,
-                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight))));
+                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight) - 1ll)));
     _DAXA_RETURN_IF_ERROR(result, result);
-    self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % (self->info.max_allowed_frames_in_flight + 1);
+    self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % (self->info.max_allowed_frames_in_flight);
     BinarySemaphore & acquire_semaphore = self->acquire_semaphores[self->acquire_semaphore_index];
     result = static_cast<daxa_Result>(vkAcquireNextImageKHR(
         self->device->vk_device,

@@ -171,42 +171,39 @@ namespace tests
         recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_1,
         });
 
         recorder.copy_buffer_to_image({
             .buffer = device_local_buffer,
             .image = image_1,
-            .image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
         recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
-            .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_1,
         });
 
         recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_2,
         });
 
         recorder.copy_image_to_image({
             .src_image = image_1,
-            .src_image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .dst_image = image_2,
-            .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
             .extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
         recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
-            .dst_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
+            .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_2,
         });
 
@@ -218,7 +215,6 @@ namespace tests
 
         recorder.copy_image_to_buffer({
             .image = image_2,
-            .image_layout = daxa::ImageLayout::TRANSFER_SRC_OPTIMAL,
             .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
             .buffer = device_local_buffer,
         });

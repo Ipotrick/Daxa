@@ -32,21 +32,21 @@ Other than the focus on modern architecture only, what makes Daxa unique?
   * automatic graph optimizations: reordering of tasks in order to minimize barriers, memory-aliased transient resources to reduce memory use and more
 
 ### Daxa also includes commonly supported Vulkan-middleware features:
-* automatic deferring of resource destruction defer past GPU execution
-* internal GPU memory allocator that allows for manual user allocations
-* default parameters for object construction and simplified object creation
+* automatic deferring of resource destruction post GPU execution
+* internal GPU memory allocator
+* default parameters for object construction, simplified object creation
 * swapchain synchronization and frame in flight handling
-* threadsafe
+* threadsafety
 * access to modern features such as raytracing, mesh shaders and multi queue
-* smaller utilities such as a ringbuffer class for staging memory or Dear-ImGui integration
+* utilitiy classes such as a ringbuffer for staging memory or Dear-ImGui integration
 
 ## Getting started
 
-To begin using Daxa, visit [daxa.dev](https://daxa.dev/), where you'll find a comprehensive tutorial and a Wiki containing detailed information about the Daxa API.
+To begin using Daxa, visit [docs.daxa.dev](https://docs.daxa.dev/), where you'll find a comprehensive tutorial and a Wiki containing detailed information about the Daxa API.
 
-- [Daxa Tutorial](https://tutorial.daxa.dev/)
-- [Daxa Wiki](https://wiki.daxa.dev/)
+* [Daxa Tutorial](https://docs.daxa.dev/tutorial/)
+* [Daxa Wiki](https://docs.daxa.dev/wiki/)
 
-Additionally, the Daxa repository includes a collection of example projects located in the **tests** folder
+Additionally, the Daxa repository includes a collection of example projects located in the **tests** folder.
 
 Working on something with Daxa? Whether it's a renderer, a tool, or just a small experiment—feel free to share it or ask questions on the [Discord server](https://discord.gg/MJPJvZ4FK5). It’s a good place to connect with others using Daxa and stay up to date with ongoing work.

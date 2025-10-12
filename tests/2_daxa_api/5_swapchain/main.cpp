@@ -85,19 +85,18 @@ namespace tests
                 recorder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
-                    .dst_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .dst_layout = daxa::ImageLayout::GENERAL,
                     .image_id = swapchain_image,
                 });
 
                 recorder.clear_image({
-                    .dst_image_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
                     .dst_image = swapchain_image,
                 });
 
                 recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .src_layout = daxa::ImageLayout::TRANSFER_DST_OPTIMAL,
+                    .src_layout = daxa::ImageLayout::GENERAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
