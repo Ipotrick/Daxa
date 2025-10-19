@@ -50,7 +50,6 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT = {};
     PFN_vkCmdDrawMeshTasksIndirectEXT vkCmdDrawMeshTasksIndirectEXT = {};
     PFN_vkCmdDrawMeshTasksIndirectCountEXT vkCmdDrawMeshTasksIndirectCountEXT = {};
-    VkPhysicalDeviceMeshShaderPropertiesEXT mesh_shader_properties = {};
 
     // Ray tracing:
     PFN_vkGetAccelerationStructureBuildSizesKHR vkGetAccelerationStructureBuildSizesKHR = {};

@@ -135,6 +135,7 @@ namespace daxa
         VkPhysicalDeviceAccelerationStructurePropertiesKHR physical_device_acceleration_structure_properties_khr = {};
         VkPhysicalDeviceRayTracingInvocationReorderPropertiesNV physical_device_ray_tracing_invocation_reorder_properties_nv = {};
         VkPhysicalDeviceMeshShaderPropertiesEXT physical_device_mesh_shader_properties_ext = {};
+        VkPhysicalDeviceHostImageCopyPropertiesEXT physical_device_host_image_copy_properties_ext = {};
         VkPhysicalDeviceProperties2 physical_device_properties_2 = {};
 
         void initialize(daxa_DeviceImplicitFeatureFlagBits implicit_features);
