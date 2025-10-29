@@ -578,9 +578,9 @@ namespace daxa
         {
             out->host_image_copy_properties.has_value = 1;
             std::memcpy(
-                &out->host_image_copy_properties.value,
-                r_cast<std::byte const *>(&properties_struct.physical_device_host_image_copy_properties_ext) + sizeof(void *) * 2, // skip sType and pNext
-                sizeof(daxa_HostImageCopyProperties));
+                &out->host_image_copy_properties.value.optimal_tiling_layout_uuid[0],
+                r_cast<std::byte const *>(&properties_struct.physical_device_host_image_copy_properties_ext.optimalTilingLayoutUUID[0]),
+                sizeof(daxa_HostImageCopyProperties::optimal_tiling_layout_uuid));
             out->host_image_copy_properties.value.identical_memory_type_requirements = static_cast<daxa_Bool8>(properties_struct.physical_device_host_image_copy_properties_ext.identicalMemoryTypeRequirements);
         }
 

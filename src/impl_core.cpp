@@ -250,10 +250,11 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
     if (host_image_copy_supported)
     {
         ret.host_image_copy_properties.has_value = 1;
+        // skip not just sType and pNext, but also the src and dst image layout arrays.
         std::memcpy(
-            &ret.host_image_copy_properties.value,
-            r_cast<std::byte const *>(&vk_physical_device_host_image_copy_properties_ext) + sizeof(void *) * 2, // skip sType and pNext
-            sizeof(daxa_HostImageCopyProperties));
+            &ret.host_image_copy_properties.value.optimal_tiling_layout_uuid[0],
+            r_cast<std::byte const *>(&vk_physical_device_host_image_copy_properties_ext.optimalTilingLayoutUUID[0]),
+            sizeof(daxa_HostImageCopyProperties::optimal_tiling_layout_uuid));
         ret.host_image_copy_properties.value.identical_memory_type_requirements = static_cast<daxa_Bool8>(vk_physical_device_host_image_copy_properties_ext.identicalMemoryTypeRequirements);
     }
 

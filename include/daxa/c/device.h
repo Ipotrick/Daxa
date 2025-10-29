@@ -168,10 +168,6 @@ typedef struct
 // Is NOT ABI Compatible with VkPhysicalDeviceHostImageCopyProperties!
 typedef struct
 {
-    uint32_t copy_src_layout_count;
-    daxa_ImageLayout * copy_src_layouts;
-    uint32_t copy_dst_layout_count;
-    daxa_ImageLayout * copy_dst_layouts;
     uint8_t optimal_tiling_layout_uuid[16U];
     daxa_Bool8 identical_memory_type_requirements;
 } daxa_HostImageCopyProperties;
@@ -529,7 +525,7 @@ typedef enum
 typedef struct
 {
     daxa_MemoryImageCopyFlagBits flags;
-    uint8_t const* memory_ptr;
+    uint8_t const * memory_ptr;
     daxa_ImageId image_id;
     /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
@@ -548,7 +544,7 @@ typedef struct
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
-    uint8_t* memory_ptr;
+    uint8_t * memory_ptr;
 } daxa_ImageToMemoryCopyInfo;
 
 static daxa_ImageToMemoryCopyInfo const DAXA_DEFAULT_IMAGE_TO_MEMORY_COPY_INFO = DAXA_ZERO_INIT;
