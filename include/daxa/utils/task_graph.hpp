@@ -850,6 +850,26 @@ namespace daxa
         return daxa::Task(name, HeadInfoT::TYPE).uses_head<HeadInfoT>();
     }
 
+    inline auto RasterTask(std::string_view name) -> Task
+    {
+        return Task::Raster(name);
+    }
+
+    inline auto ComputeTask(std::string_view name) -> Task
+    {
+        return Task::Compute(name);
+    }
+
+    inline auto RayTracingTask(std::string_view name) -> Task
+    {
+        return Task::RayTracing(name);
+    }
+
+    inline auto TransferTask(std::string_view name) -> Task
+    {
+        return Task::Transfer(name);
+    }
+
     struct TaskBufferClearInfo
     {
         TaskBufferView buffer = {};
