@@ -144,6 +144,12 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
     VkPhysicalDeviceMeshShaderPropertiesEXT vk_physical_device_mesh_shader_properties_ext = {};
     vk_physical_device_mesh_shader_properties_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_MESH_SHADER_PROPERTIES_EXT;
 
+    bool host_image_copy_supported = false;
+    VkPhysicalDeviceHostImageCopyPropertiesEXT vk_physical_device_host_image_copy_properties_ext = {
+        .sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_HOST_IMAGE_COPY_PROPERTIES_EXT,
+        .pNext = nullptr,
+    };
+
     void * pNextChain = nullptr;
 
     u32 count = 0;
@@ -176,6 +182,12 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
             vk_physical_device_mesh_shader_properties_ext.pNext = pNextChain;
             pNextChain = &vk_physical_device_mesh_shader_properties_ext;
         }
+        if (std::strcmp(extension.extensionName, VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME) == 0)
+        {
+            host_image_copy_supported = true;
+            vk_physical_device_host_image_copy_properties_ext.pNext = pNextChain;
+            pNextChain = &vk_physical_device_host_image_copy_properties_ext;
+        }
     }
 
     VkPhysicalDeviceProperties2 vk_physical_device_properties2 = {
@@ -186,10 +198,12 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
 
     vkGetPhysicalDeviceProperties2(physical_device, &vk_physical_device_properties2);
     // physical device properties are ABI compatible UP TO the mesh_shader_properties field.
+    static_assert(offsetof(daxa_DeviceProperties, mesh_shader_properties) == offsetof(VkPhysicalDeviceProperties, sparseProperties));
     std::memcpy(
         &ret,
-        r_cast<std::byte const *>(&vk_physical_device_properties2) + sizeof(void *) * 2 /* skip sType and pNext */,
+        r_cast<std::byte const *>(&vk_physical_device_properties2) + sizeof(void *) * 2, // skip sType and pNext
         offsetof(daxa_DeviceProperties, mesh_shader_properties));
+
     if (ray_tracing_pipeline_supported)
     {
         ret.ray_tracing_pipeline_properties.has_value = 1;
@@ -225,6 +239,16 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
         ret.mesh_shader_properties.value.prefers_local_invocation_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersLocalInvocationPrimitiveOutput);
         ret.mesh_shader_properties.value.prefers_compact_vertex_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactVertexOutput);
         ret.mesh_shader_properties.value.prefers_compact_primitive_output = static_cast<daxa_Bool8>(vk_physical_device_mesh_shader_properties_ext.prefersCompactPrimitiveOutput);
+    }
+    if (host_image_copy_supported)
+    {
+        ret.host_image_copy_properties.has_value = 1;
+        // skip not just sType and pNext, but also the src and dst image layout arrays.
+        std::memcpy(
+            &ret.host_image_copy_properties.value.optimal_tiling_layout_uuid[0],
+            r_cast<std::byte const *>(&vk_physical_device_host_image_copy_properties_ext.optimalTilingLayoutUUID[0]),
+            sizeof(daxa_HostImageCopyProperties::optimal_tiling_layout_uuid));
+        ret.host_image_copy_properties.value.identical_memory_type_requirements = static_cast<daxa_Bool8>(vk_physical_device_host_image_copy_properties_ext.identicalMemoryTypeRequirements);
     }
 
     u32 queue_family_props_count = 0;

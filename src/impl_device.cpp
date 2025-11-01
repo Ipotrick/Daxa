@@ -1790,9 +1790,12 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             self->vkGetRayTracingShaderGroupHandlesKHR = r_cast<PFN_vkGetRayTracingShaderGroupHandlesKHR>(vkGetDeviceProcAddr(self->vk_device, "vkGetRayTracingShaderGroupHandlesKHR"));
         }
 
-        self->vkTransitionImageLayoutEXT = r_cast<PFN_vkTransitionImageLayoutEXT>(vkGetDeviceProcAddr(self->vk_device, "vkTransitionImageLayoutEXT"));
-        self->vkCopyMemoryToImageEXT = r_cast<PFN_vkCopyMemoryToImageEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCopyMemoryToImageEXT"));
-        self->vkCopyImageToMemoryEXT = r_cast<PFN_vkCopyImageToMemoryEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCopyImageToMemoryEXT"));
+        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY)
+        {
+            self->vkTransitionImageLayoutEXT = r_cast<PFN_vkTransitionImageLayoutEXT>(vkGetDeviceProcAddr(self->vk_device, "vkTransitionImageLayoutEXT"));
+            self->vkCopyMemoryToImageEXT = r_cast<PFN_vkCopyMemoryToImageEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCopyMemoryToImageEXT"));
+            self->vkCopyImageToMemoryEXT = r_cast<PFN_vkCopyImageToMemoryEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCopyImageToMemoryEXT"));
+        }
     }
 
     VkCommandPool init_cmd_pool = {};
@@ -2600,6 +2603,10 @@ void daxa_ImplDevice::zombify_blas(BlasId id)
 
 auto daxa_dvc_copy_memory_to_image(daxa_Device self, daxa_MemoryToImageCopyInfo const * info) -> daxa_Result
 {
+    if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY) == 0)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT, DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT);
+    }
     if(!daxa_dvc_is_image_valid(self, info->image_id))
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
@@ -2631,6 +2638,10 @@ auto daxa_dvc_copy_memory_to_image(daxa_Device self, daxa_MemoryToImageCopyInfo 
 
 auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo const * info) -> daxa_Result
 {
+    if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY) == 0)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT, DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT);
+    }
     if(!daxa_dvc_is_image_valid(self, info->image_id))
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
@@ -2662,6 +2673,10 @@ auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo 
 
 auto daxa_dvc_transition_image_layout(daxa_Device self, daxa_HostImageLayoutTransitionInfo const * info) -> daxa_Result
 {
+    if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY) == 0)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT, DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT);
+    }
     if(!daxa_dvc_is_image_valid(self, info->image_id))
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);

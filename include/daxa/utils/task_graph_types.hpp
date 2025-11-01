@@ -834,7 +834,16 @@ namespace daxa
         }
         auto view(TaskImageIndexOrView auto timg, u32 index = 0)
         {
-            return this->get(timg).view_ids[index];
+            auto const v = this->get(timg).view_ids[index];
+            DAXA_DBG_ASSERT_TRUE_M(
+                !v.is_empty(), 
+                "Failed to return cached image view for image attachment!\n"
+                "A likely cause for this error is that no daxa::ImageViewType was specified for the attachment.\n"
+                "To specify an image view type for a task attachment you can either:\n"
+                "1. add the view type to the attachment within a task head as the second parameter: DAXA_TG_IMAGE(COLOR_ATTACHMENT, REGULAR_2D, image_name), OR\n"
+                "2. add the view type when adding the attachment to the task: task.color_attachment.reads_writes(daxa::ImageViewType::REGULAR_2D, image)"
+            );
+            return v;
         }
     };
 

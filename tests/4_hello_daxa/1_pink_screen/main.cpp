@@ -71,7 +71,7 @@ auto main() -> int
     // These are settings of the choosen gpu, what resource limits, explicit features, name etc you want for the device.
     daxa::DeviceInfo2 device_info = {
         .explicit_features = {},
-        .max_allowed_buffers = 1024,
+        .max_allowed_buffers = 1024, // maximum number of resources is fixed and predetermined.
         .name = "my device",
     };
 
