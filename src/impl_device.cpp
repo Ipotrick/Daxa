@@ -1637,6 +1637,13 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     // Queue Selection and Verification
     u32 vk_queue_request_count = {};
     std::array<VkDeviceQueueCreateInfo, 3> queues_ci = {};
+    std::array<f32, std::max(DAXA_MAX_COMPUTE_QUEUE_COUNT, DAXA_MAX_TRANSFER_QUEUE_COUNT)> queue_priorities = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    struct QueueRequest
+    {
+        u32 vk_family_index;
+        u32 count;
+    };
+    std::array<QueueRequest, 3> vk_queue_requests = {};
     {
         u32 queue_family_props_count = 0;
         std::vector<VkQueueFamilyProperties> queue_props;
@@ -1647,12 +1654,6 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         supports_present.resize(queue_family_props_count);
 
         // SELECT QUEUE FAMILIES
-        struct QueueRequest
-        {
-            u32 vk_family_index;
-            u32 count;
-        };
-        std::array<QueueRequest, 3> vk_queue_requests = {};
         for (u32 i = 0; i < queue_family_props_count; i++)
         {
             bool const supports_graphics = queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
@@ -1689,8 +1690,6 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             result = DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND;
         }
         _DAXA_RETURN_IF_ERROR(result, result)
-
-        std::array<f32, std::max(DAXA_MAX_COMPUTE_QUEUE_COUNT, DAXA_MAX_TRANSFER_QUEUE_COUNT)> queue_priorities = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
 
         for (u32 family = 0; family < vk_queue_request_count; ++family)
         {
