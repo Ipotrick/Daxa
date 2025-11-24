@@ -474,7 +474,7 @@ namespace tests
         struct WriteImage : ShaderIntegrationTaskHead::Task
         {
             AttachmentViews views = {};
-            std::shared_ptr<daxa::ComputePipeline> pipeline = {};
+            daxa::ComputePipeline* pipeline = {};
             void callback(daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*pipeline);
@@ -488,14 +488,14 @@ namespace tests
                 .settings = task_buffer.view(),
                 .image = task_image.view(),
             },
-            .pipeline = compute_pipeline,
+            .pipeline = compute_pipeline.get(),
         });
         task_graph.add_task(WriteImage{
             .views = WriteImage::Views{
                 .settings = task_buffer.view(),
                 .image = task_image.view(),
             },
-            .pipeline = compute_pipeline,
+            .pipeline = compute_pipeline.get(),
         });
         task_graph.submit({});
 
