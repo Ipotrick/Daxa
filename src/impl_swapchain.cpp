@@ -107,7 +107,9 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight; i++)
     {
         BinarySemaphore sema = {};
-        daxa_BinarySemaphoreInfo const sema_info = {};
+        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
+        binary_sema_name.size = static_cast<u8>(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i) );
+        daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
         {
@@ -120,7 +122,9 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     for (u32 i = 0; i < ret.images.size(); i++)
     {
         BinarySemaphore sema = {};
-        daxa_BinarySemaphoreInfo const sema_info = {};
+        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
+        binary_sema_name.size = static_cast<u8>(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i) );
+        daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
         {
@@ -130,10 +134,11 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         ret.present_semaphores.push_back(std::move(sema));
     }
 
-    auto timeline_sema_name = SmallString(std::string{ret.info.name.view()} + " ts");
+    daxa_SmallString name = DAXA_DEFAULT_SMALL_STRING;
+    name.size = static_cast<u8>(DAXA_SMALL_STRING_CAPACITY, std::snprintf(name.data, DAXA_SMALL_STRING_CAPACITY, "%s Timeline Sema", info->name.data) );
     auto timeline_sema_info = daxa_TimelineSemaphoreInfo{
         .initial_value = 0,
-        .name = std::bit_cast<daxa_SmallString>(timeline_sema_name),
+        .name = name,
     };
     result = daxa_dvc_create_timeline_semaphore(device, &timeline_sema_info, r_cast<daxa_TimelineSemaphore *>(&ret.gpu_frame_timeline));
     if (result != DAXA_RESULT_SUCCESS)
