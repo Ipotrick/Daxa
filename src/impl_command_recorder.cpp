@@ -24,7 +24,7 @@ auto validate_queue_family(daxa_QueueFamily recorder_qf, daxa_QueueFamily comman
     return result;
 }
 
-auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
+auto get_vk_image_memory_barrier(daxa_BarrierImageTransitionInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
 {
     return VkImageMemoryBarrier2{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -42,7 +42,7 @@ auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barri
     };
 }
 
-auto get_vk_memory_barrier(daxa_MemoryBarrierInfo const & memory_barrier) -> VkMemoryBarrier2
+auto get_vk_memory_barrier(daxa_BarrierInfo const & memory_barrier) -> VkMemoryBarrier2
 {
     return VkMemoryBarrier2{
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
@@ -523,7 +523,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_MemoryBarrierInfo const * info)
+void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_BarrierInfo const * info)
 {
     if (self->memory_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
     {
@@ -542,7 +542,7 @@ void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_MemoryBarrierInfo
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_ImageMemoryBarrierInfo const * info) -> daxa_Result
+auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_BarrierImageTransitionInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->image_id)
     if (self->image_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
@@ -550,6 +550,7 @@ auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_
         daxa_cmd_flush_barriers(self);
     }
     auto const & img_slot = self->device->slot(info->image_id);
+    auto const & default_view_slot = self->device->slot(std::bit_cast<daxa::ImageId>(info->image_id).default_view());
     self->image_barrier_batch.at(self->image_barrier_batch_count++) = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
         .pNext = nullptr,
@@ -562,7 +563,7 @@ auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = img_slot.vk_image,
-        .subresourceRange = make_subresource_range(info->image_slice, img_slot.aspect_flags),
+        .subresourceRange = make_subresource_range(default_view_slot.info.slice, img_slot.aspect_flags),
     };
     return DAXA_RESULT_SUCCESS;
 }

@@ -7,25 +7,33 @@ namespace daxa
 {
     struct Device;
 
-    struct MemoryBarrierInfo
+    struct BarrierInfo
     {
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
     };
 
-    [[nodiscard]] auto to_string(MemoryBarrierInfo const & info) -> std::string;
+#if !DAXA_REMOVE_DEPRECATED
+    using MemoryBarrierInfo [[deprecated("Use BarrierInfo instead; API:3.2")]] = BarrierInfo;
+#endif
 
-    struct ImageMemoryBarrierInfo
+    [[nodiscard]] auto to_string(BarrierInfo const & info) -> std::string;
+
+    struct BarrierImageTransitionInfo
     {
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
         ImageLayout src_layout = ImageLayout::UNDEFINED;
         ImageLayout dst_layout = ImageLayout::UNDEFINED;
-        ImageMipArraySlice image_slice = {};
+        [[deprecated("Ignored parameter, whole image will be transitioned; API:3.2")]] ImageMipArraySlice image_slice = {};
         ImageId image_id = {};
     };
 
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
+#if !DAXA_REMOVE_DEPRECATED
+    using ImageMemoryBarrierInfo [[deprecated("Use BarrierImageTransitionInfo instead; API:3.2")]] = BarrierImageTransitionInfo;
+#endif
+
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(BarrierImageTransitionInfo const & info) -> std::string;
 
     struct BinarySemaphoreInfo
     {
@@ -97,8 +105,8 @@ namespace daxa
 
     struct EventSignalInfo
     {
-        daxa::Span<MemoryBarrierInfo const> memory_barriers = {};
-        daxa::Span<ImageMemoryBarrierInfo const> image_barriers = {};
+        daxa::Span<BarrierInfo const> memory_barriers = {};
+        daxa::Span<BarrierImageTransitionInfo const> image_barriers = {};
         Event & event;
     };
 

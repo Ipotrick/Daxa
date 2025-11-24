@@ -1124,8 +1124,8 @@ namespace daxa
             r_cast<daxa_BuildAccelerationStucturesInfo const *>(&info));
         check_result(result, "failed to build acceleration structures");
     }
-    DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, pipeline_barrier, MemoryBarrierInfo)
-    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, pipeline_barrier, BarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_barrier_image_transition, BarrierImageTransitionInfo)
     DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, signal_event, EventSignalInfo)
 
     void CommandRecorder::wait_events(daxa::Span<EventWaitInfo const> const & infos)
@@ -1295,12 +1295,12 @@ namespace daxa
         }
     }
 
-    auto to_string(MemoryBarrierInfo const & info) -> std::string
+    auto to_string(BarrierInfo const & info) -> std::string
     {
         return std::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
     }
 
-    auto to_string(ImageMemoryBarrierInfo const & info) -> std::string
+    auto to_string(BarrierImageTransitionInfo const & info) -> std::string
     {
         return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}",
                            to_string(info.src_access),

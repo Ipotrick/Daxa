@@ -96,7 +96,14 @@ typedef struct
 {
     daxa_Access src_access;
     daxa_Access dst_access;
-} daxa_MemoryBarrierInfo;
+} daxa_BarrierInfo;
+
+static const daxa_BarrierInfo DAXA_DEFAULT_BARRIER_INFO = DAXA_ZERO_INIT;
+
+#if !DAXA_REMOVE_DEPRECATED
+/* deprecated("Use daxa_BarrierInfo instead; API:3.2") */
+#define daxa_MemoryBarrierInfo daxa_BarrierInfo
+#endif
 
 typedef struct
 {
@@ -104,14 +111,23 @@ typedef struct
     daxa_Access dst_access;
     daxa_ImageLayout src_layout;
     daxa_ImageLayout dst_layout;
-    daxa_ImageMipArraySlice image_slice;
+    /* deprecated("Ignored parameter, whole image will be transitioned; API:3.2") */ daxa_ImageMipArraySlice image_slice;
     daxa_ImageId image_id;
-} daxa_ImageMemoryBarrierInfo;
+} daxa_BarrierImageTransitionInfo;
+
+#if !DAXA_REMOVE_DEPRECATED
+/* deprecated("Use daxa_BarrierImageTransitionInfo instead; API:3.2") */
+#define daxa_BarrierImageTransitionInfo daxa_BarrierImageTransitionInfo
+#endif
+
+static const daxa_BarrierImageTransitionInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
     daxa_SmallString name;
 } daxa_BinarySemaphoreInfo;
+
+static const daxa_BinarySemaphoreInfo DAXA_DEFAULT_BINARY_SEMAPHORE_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT daxa_BinarySemaphoreInfo const *
 daxa_binary_semaphore_info(daxa_BinarySemaphore binary_semaphore);
@@ -129,6 +145,8 @@ typedef struct
     uint64_t initial_value;
     daxa_SmallString name;
 } daxa_TimelineSemaphoreInfo;
+
+static const daxa_TimelineSemaphoreInfo DAXA_DEFAULT_TIMELINE_SEMAPHORE_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT daxa_TimelineSemaphoreInfo const *
 daxa_timeline_semaphore_info(daxa_TimelineSemaphore timeline_semaphore);
@@ -155,14 +173,18 @@ typedef struct
     daxa_SmallString name;
 } daxa_EventInfo;
 
+static const daxa_EventInfo DAXA_DEFAULT_EVENT_INFO = DAXA_ZERO_INIT;
+
 typedef struct
 {
-    daxa_MemoryBarrierInfo const * memory_barriers;
+    daxa_BarrierInfo const * memory_barriers;
     uint64_t memory_barrier_count;
-    daxa_ImageMemoryBarrierInfo const * image_memory_barriers;
+    daxa_BarrierImageTransitionInfo const * image_memory_barriers;
     uint64_t image_memory_barrier_count;
     daxa_Event * event;
 } daxa_EventSignalInfo;
+
+static const daxa_EventSignalInfo DAXA_DEFAULT_EVENT_SIGNAL_INFO = DAXA_ZERO_INIT;
 
 typedef daxa_EventSignalInfo daxa_EventWaitInfo;
 
@@ -179,5 +201,7 @@ typedef struct
     daxa_TimelineSemaphore semaphore;
     uint64_t value;
 } daxa_TimelinePair;
+
+static const daxa_TimelinePair DAXA_DEFAULT_TIMELINE_PAIR = DAXA_ZERO_INIT;
 
 #endif // #if __DAXA_SYNC_H__

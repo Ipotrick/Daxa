@@ -251,15 +251,6 @@ namespace daxa
         SmallString name = {};
     };
 
-    struct SetUniformBufferInfo
-    {
-        // Binding slot the buffer will be bound to.
-        u32 slot = {};
-        BufferId buffer = {};
-        usize size = {};
-        usize offset = {};
-    };
-
     struct DepthBiasInfo
     {
         f32 constant_factor = {};
@@ -385,11 +376,11 @@ namespace daxa
         /// @brief  Successive pipeline barrier calls are combined.
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
         /// @param info parameters.
-        void pipeline_barrier(MemoryBarrierInfo const & info);
+        void pipeline_barrier(BarrierInfo const & info);
         /// @brief  Successive pipeline barrier calls are combined.
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
         /// @param info parameters.
-        void pipeline_barrier_image_transition(ImageMemoryBarrierInfo const & info);
+        void pipeline_barrier_image_transition(BarrierImageTransitionInfo const & info);
         void signal_event(EventSignalInfo const & info);
         void wait_events(daxa::Span<EventWaitInfo const> const & infos);
         void wait_event(EventWaitInfo const & info);

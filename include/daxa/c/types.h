@@ -184,6 +184,11 @@ typedef enum
 
 typedef daxa_FixedList(char, DAXA_SMALL_STRING_CAPACITY) daxa_SmallString;
 
+static daxa_SmallString const DAXA_DEFAULT_SMALL_STRING = { 
+    .data = DAXA_ZERO_INIT,
+    .size = DAXA_ZERO_INIT,
+};
+
 typedef struct
 {
     uint32_t base_mip_level;
