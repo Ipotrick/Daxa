@@ -108,7 +108,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     {
         BinarySemaphore sema = {};
         daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
-        binary_sema_name.size = static_cast<u8>(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i) );
+        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
         daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
@@ -123,7 +123,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     {
         BinarySemaphore sema = {};
         daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
-        binary_sema_name.size = static_cast<u8>(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i) );
+        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
         daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         if (result != DAXA_RESULT_SUCCESS)
@@ -134,12 +134,8 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         ret.present_semaphores.push_back(std::move(sema));
     }
 
-    daxa_SmallString name = DAXA_DEFAULT_SMALL_STRING;
-    name.size = static_cast<u8>(DAXA_SMALL_STRING_CAPACITY, std::snprintf(name.data, DAXA_SMALL_STRING_CAPACITY, "%s Timeline Sema", info->name.data) );
-    auto timeline_sema_info = daxa_TimelineSemaphoreInfo{
-        .initial_value = 0,
-        .name = name,
-    };
+    auto timeline_sema_info = daxa_TimelineSemaphoreInfo{};
+    timeline_sema_info.name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(timeline_sema_info.name.data, DAXA_SMALL_STRING_CAPACITY, "%s Timeline Sema", info->name.data)));
     result = daxa_dvc_create_timeline_semaphore(device, &timeline_sema_info, r_cast<daxa_TimelineSemaphore *>(&ret.gpu_frame_timeline));
     if (result != DAXA_RESULT_SUCCESS)
     {
@@ -193,11 +189,12 @@ auto daxa_swp_set_present_mode(daxa_Swapchain self, VkPresentModeKHR present_mod
 
 auto daxa_swp_wait_for_next_frame(daxa_Swapchain self) -> daxa_Result
 {
+    self->cpu_frame_timeline += 1;
     auto waited_wo_timeout = self->gpu_frame_timeline.wait_for_value(
         static_cast<u64>(
             std::max<i64>(
-                0,
-                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight) - 1ll)));
+                0ll,
+                self->cpu_frame_timeline - static_cast<i64>(self->info.max_allowed_frames_in_flight))));
     return waited_wo_timeout ? DAXA_RESULT_SUCCESS : DAXA_RESULT_TIMEOUT;
 }
 
@@ -205,13 +202,8 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
 {
     daxa_Result result = {};
     result = daxa_swp_wait_for_next_frame(self);
-    [[maybe_unused]] auto _ignored = self->gpu_frame_timeline.wait_for_value(
-        static_cast<u64>(
-            std::max<i64>(
-                0,
-                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight) - 1ll)));
     _DAXA_RETURN_IF_ERROR(result, result);
-    self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % (self->info.max_allowed_frames_in_flight);
+    self->acquire_semaphore_index = self->cpu_frame_timeline % self->info.max_allowed_frames_in_flight;
     BinarySemaphore & acquire_semaphore = self->acquire_semaphores[self->acquire_semaphore_index];
     result = static_cast<daxa_Result>(vkAcquireNextImageKHR(
         self->device->vk_device,
@@ -219,9 +211,7 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
         (**r_cast<daxa_BinarySemaphore *>(&acquire_semaphore)).vk_semaphore,
         nullptr,
         &self->current_image_index));
-
     // We only bump the cpu timeline, when the acquire succeeds.
-    self->cpu_frame_timeline += 1;
     *out_image_id = static_cast<daxa_ImageId>(self->images[self->current_image_index]);
     return result;
 }
