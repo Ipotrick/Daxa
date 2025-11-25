@@ -316,7 +316,7 @@ namespace daxa
 
     auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool;
 
-    auto task_type_default_stage(TaskType task_type) -> TaskStage;
+    DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
 
     using TaskResourceIndex = u32;
 
