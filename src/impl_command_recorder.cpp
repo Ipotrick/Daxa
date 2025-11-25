@@ -287,8 +287,8 @@ auto daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder self, daxa_BufferCopyIn
     }
     vkCmdCopyBuffer(
         self->current_command_data.vk_cmd_buffer,
-        src_slot.vk_buffer,
-        dst_slot.vk_buffer,
+        self->device->hot_slot(info->src_buffer).vk_buffer,
+        self->device->hot_slot(info->dst_buffer).vk_buffer,
         1,
         vk_buffer_copy);
     return DAXA_RESULT_SUCCESS;
@@ -310,7 +310,7 @@ auto daxa_cmd_copy_buffer_to_image(daxa_CommandRecorder self, daxa_BufferImageCo
     };
     vkCmdCopyBufferToImage(
         self->current_command_data.vk_cmd_buffer,
-        self->device->slot(info->buffer).vk_buffer,
+        self->device->hot_slot(info->buffer).vk_buffer,
         img_slot.vk_image,
         VK_IMAGE_LAYOUT_GENERAL,
         1,
@@ -336,7 +336,7 @@ auto daxa_cmd_copy_image_to_buffer(daxa_CommandRecorder self, daxa_ImageBufferCo
         self->current_command_data.vk_cmd_buffer,
         img_slot.vk_image,
         VK_IMAGE_LAYOUT_GENERAL,
-        self->device->slot(info->buffer).vk_buffer,
+        self->device->hot_slot(info->buffer).vk_buffer,
         1,
         &vk_buffer_image_copy);
     return DAXA_RESULT_SUCCESS;
@@ -471,7 +471,7 @@ auto daxa_cmd_clear_buffer(daxa_CommandRecorder self, daxa_BufferClearInfo const
     }
     vkCmdFillBuffer(
         self->current_command_data.vk_cmd_buffer,
-        self->device->slot(info->buffer).vk_buffer,
+        self->device->hot_slot(info->buffer).vk_buffer,
         static_cast<VkDeviceSize>(info->offset),
         static_cast<VkDeviceSize>(info->size),
         info->clear_value);
@@ -826,7 +826,7 @@ auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirect
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND, DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND);
     }
-    vkCmdDispatchIndirect(self->current_command_data.vk_cmd_buffer, self->device->slot(info->indirect_buffer).vk_buffer, info->offset);
+    vkCmdDispatchIndirect(self->current_command_data.vk_cmd_buffer, self->device->hot_slot(info->indirect_buffer).vk_buffer, info->offset);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1001,7 +1001,7 @@ void daxa_cmd_set_depth_bias(daxa_CommandRecorder self, daxa_DepthBiasInfo const
 auto daxa_cmd_set_index_buffer(daxa_CommandRecorder self, daxa_SetIndexBufferInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->buffer)
-    vkCmdBindIndexBuffer(self->current_command_data.vk_cmd_buffer, self->device->slot(info->buffer).vk_buffer, info->offset, info->index_type);
+    vkCmdBindIndexBuffer(self->current_command_data.vk_cmd_buffer, self->device->hot_slot(info->buffer).vk_buffer, info->offset, info->index_type);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1022,7 +1022,7 @@ auto daxa_cmd_draw_indirect(daxa_CommandRecorder self, daxa_DrawIndirectInfo con
     {
         vkCmdDrawIndexedIndirect(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
             info->draw_count,
             info->draw_command_stride);
@@ -1031,7 +1031,7 @@ auto daxa_cmd_draw_indirect(daxa_CommandRecorder self, daxa_DrawIndirectInfo con
     {
         vkCmdDrawIndirect(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
             info->draw_count,
             info->draw_command_stride);
@@ -1046,9 +1046,9 @@ auto daxa_cmd_draw_indirect_count(daxa_CommandRecorder self, daxa_DrawIndirectCo
     {
         vkCmdDrawIndexedIndirectCount(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
-            self->device->slot(info->count_buffer).vk_buffer,
+            self->device->hot_slot(info->count_buffer).vk_buffer,
             info->count_buffer_offset,
             info->max_draw_count,
             info->draw_command_stride);
@@ -1057,9 +1057,9 @@ auto daxa_cmd_draw_indirect_count(daxa_CommandRecorder self, daxa_DrawIndirectCo
     {
         vkCmdDrawIndirectCount(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
-            self->device->slot(info->count_buffer).vk_buffer,
+            self->device->hot_slot(info->count_buffer).vk_buffer,
             info->count_buffer_offset,
             info->max_draw_count,
             info->draw_command_stride);
@@ -1082,7 +1082,7 @@ auto daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandRecorder self, daxa_DrawMeshT
     {
         self->device->vkCmdDrawMeshTasksIndirectEXT(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->offset,
             info->draw_count,
             info->stride);
@@ -1099,9 +1099,9 @@ auto daxa_cmd_draw_mesh_tasks_indirect_count(
     {
         self->device->vkCmdDrawMeshTasksIndirectCountEXT(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->offset,
-            self->device->slot(info->count_buffer).vk_buffer,
+            self->device->hot_slot(info->count_buffer).vk_buffer,
             info->count_offset,
             info->max_count,
             info->stride);

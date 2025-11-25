@@ -161,6 +161,13 @@ struct daxa_ImplDevice final : public ImplHandle
     auto slot(daxa_TlasId id) const -> ImplTlasSlot const &;
     auto slot(daxa_BlasId id) const -> ImplBlasSlot const &;
 
+    auto hot_slot(daxa_BufferId id) const -> ImplBufferSlot::HotData const &;
+    auto hot_slot(daxa_ImageId id) const -> ImplImageSlot::HotData const &;
+    auto hot_slot(daxa_ImageViewId id) const -> ImplImageViewSlot::HotData const &;
+    auto hot_slot(daxa_SamplerId id) const -> ImplSamplerSlot::HotData const &;
+    auto hot_slot(daxa_TlasId id) const -> ImplTlasSlot::HotData const &;
+    auto hot_slot(daxa_BlasId id) const -> ImplBlasSlot::HotData const &;
+
     void cleanup_buffer(BufferId id);
     void cleanup_image(ImageId id);
     void cleanup_image_view(ImageViewId id);

@@ -357,11 +357,11 @@ void daxa_as_build_info_to_vk(
             .mode = info.update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
             .srcAccelerationStructure =
                 info.src_tlas.value != 0
-                    ? device->slot(info.src_tlas).vk_acceleration_structure
+                    ? device->hot_slot(info.src_tlas).vk_acceleration_structure
                     : nullptr,
             .dstAccelerationStructure =
                 info.dst_tlas.value != 0
-                    ? device->slot(info.dst_tlas).vk_acceleration_structure
+                    ? device->hot_slot(info.dst_tlas).vk_acceleration_structure
                     : nullptr,
             .geometryCount = info.instance_count,
             .pGeometries = vk_geo_array_ptr,
@@ -422,11 +422,11 @@ void daxa_as_build_info_to_vk(
             .mode = info.update ? VK_BUILD_ACCELERATION_STRUCTURE_MODE_UPDATE_KHR : VK_BUILD_ACCELERATION_STRUCTURE_MODE_BUILD_KHR,
             .srcAccelerationStructure =
                 info.src_blas.value != 0
-                    ? device->slot(info.src_blas).vk_acceleration_structure
+                    ? device->hot_slot(info.src_blas).vk_acceleration_structure
                     : nullptr,
             .dstAccelerationStructure =
                 info.dst_blas.value != 0
-                    ? device->slot(info.dst_blas).vk_acceleration_structure
+                    ? device->hot_slot(info.dst_blas).vk_acceleration_structure
                     : nullptr,
             .geometryCount = geo_count,
             .pGeometries = vk_geo_array_ptr,
