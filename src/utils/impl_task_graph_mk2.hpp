@@ -304,23 +304,17 @@ namespace daxa
             return at(element_count - 1);
         }
 
-        template<bool CONST_ITER>
-        struct IterInternalT;
-
-        template <> struct IterInternalT<true> { using TYPE = DynamicArenaArray8k<T> const*; };
-        template <> struct IterInternalT<false> { using TYPE = DynamicArenaArray8k<T>*; };
-
-        template <typename IT, bool CONST_ITER>
+        template <typename IT, bool CONST_ITER, typename IterT>
         struct ForwardIterator
         {
-            IterInternalT<CONST_ITER>::TYPE vector = {};
+            IterT vector = {};
             u32 current_index = {};
 
             using difference_type = std::ptrdiff_t;
             using value_type = T;
 
             ForwardIterator() = default;
-            ForwardIterator(IterInternalT<CONST_ITER>::TYPE vector, u32 current_index)
+            ForwardIterator(IterT vector, u32 current_index)
                 : vector{vector},
                   current_index{current_index}
             {
@@ -374,8 +368,8 @@ namespace daxa
             }
         };
 
-        using Iterator = ForwardIterator<T, false>;
-        using ConstIterator = ForwardIterator<T, true>;
+        using Iterator = ForwardIterator<T, false, DynamicArenaArray8k<T> *>;
+        using ConstIterator = ForwardIterator<T, true, DynamicArenaArray8k<T> const*>;
 
         auto begin() -> Iterator { return Iterator{this, 0}; }
         auto begin() const -> ConstIterator { return ConstIterator{this, 0}; }
