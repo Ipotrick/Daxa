@@ -201,7 +201,7 @@ namespace daxa
         return ret;
     }
 
-    auto upgrade_shader_compile_info(ShaderCompileInfo const & src) -> ShaderCompileInfo2
+    [[deprecated]] auto upgrade_shader_compile_info(ShaderCompileInfo const & src) -> ShaderCompileInfo2
     {
         ShaderCompileInfo2 ret = {};
         ret.source = src.source;
@@ -404,8 +404,6 @@ namespace daxa
 
     auto PipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
     {
-        auto & impl = *r_cast<ImplPipelineManager *>(this->object);
-
         auto update_info_vector = [&](auto const & infos)
         {
             std::vector<ShaderCompileInfo2> converted_infos = {};
@@ -1256,20 +1254,20 @@ namespace daxa
             auto time_since_epoch = time_point.time_since_epoch().count();
             out_file.write(reinterpret_cast<char const *>(&flags), sizeof(flags));
             out_file.write(reinterpret_cast<char const *>(&path_string_size), sizeof(path_string_size));
-            out_file.write(path_string.data(), path_string.size());
+            out_file.write(path_string.data(), static_cast<std::streamsize>(path_string.size()));
             if (is_virtual_file)
             {
                 auto const & virtual_file_contents = virtual_file_iter->second.contents;
                 auto virtual_file_size = uint64_t{virtual_file_contents.size()};
                 out_file.write(reinterpret_cast<char const *>(&virtual_file_size), sizeof(virtual_file_size));
-                out_file.write(virtual_file_contents.data(), virtual_file_contents.size());
+                out_file.write(virtual_file_contents.data(), static_cast<std::streamsize>(virtual_file_contents.size()));
             }
             else
             {
                 out_file.write(reinterpret_cast<char const *>(&time_since_epoch), sizeof(time_since_epoch));
             }
         }
-        out_file.write(reinterpret_cast<char const *>(spirv.data()), header.spirv_size);
+        out_file.write(reinterpret_cast<char const *>(spirv.data()), static_cast<std::streamsize>(header.spirv_size));
     }
 
     auto ImplPipelineManager::try_load_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash) -> Result<std::vector<u32>>
@@ -1299,7 +1297,7 @@ namespace daxa
                 auto is_virtual_file = ((flags >> 0) & 1) != 0;
                 in_file.read(reinterpret_cast<char *>(&path_string_size), sizeof(path_string_size));
                 path_string.resize(path_string_size);
-                in_file.read(path_string.data(), path_string_size);
+                in_file.read(path_string.data(), static_cast<std::streamsize>(path_string_size));
                 path = path_string;
                 if (is_virtual_file)
                 {
@@ -1308,7 +1306,7 @@ namespace daxa
 
                     in_file.read(reinterpret_cast<char *>(&virtual_file_size), sizeof(virtual_file_size));
                     virtual_file_contents.resize(virtual_file_size);
-                    in_file.read(virtual_file_contents.data(), virtual_file_size);
+                    in_file.read(virtual_file_contents.data(), static_cast<std::streamsize>(virtual_file_size));
 
                     auto virtual_file_iter = virtual_files.find(path_string);
                     if (virtual_file_iter == virtual_files.end())
@@ -1340,7 +1338,7 @@ namespace daxa
 
             auto spirv = std::vector<u32>{};
             spirv.resize(header.spirv_size / sizeof(u32));
-            in_file.read(reinterpret_cast<char *>(spirv.data()), header.spirv_size);
+            in_file.read(reinterpret_cast<char *>(spirv.data()), static_cast<std::streamsize>(header.spirv_size));
             return Result<std::vector<u32>>{spirv};
         }
         return Result<std::vector<u32>>(std::string_view{"no cache found"});
@@ -1772,9 +1770,9 @@ namespace daxa
             session_desc.targets = &target_desc;
             session_desc.targetCount = 1;
             session_desc.searchPaths = search_paths.data();
-            session_desc.searchPathCount = search_paths.size();
+            session_desc.searchPathCount = static_cast<SlangInt>(search_paths.size());
             session_desc.preprocessorMacros = macros.data();
-            session_desc.preprocessorMacroCount = macros.size();
+            session_desc.preprocessorMacroCount = static_cast<SlangInt>(macros.size());
             session_desc.defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR;
 
             slang_backend.global_session->createSession(session_desc, session.writeRef());
@@ -1831,11 +1829,11 @@ namespace daxa
 
         Slang::ComPtr<slang::IModule> shader_module = {};
         auto * refl = slangRequest->getReflection();
-        auto entry_point_n = spReflection_getEntryPointCount(refl);
-        int32_t entry_point_index = -1;
-        for (uint32_t i = 0; i < entry_point_n; ++i)
+        i32 entry_point_n = static_cast<i32>(spReflection_getEntryPointCount(refl));
+        i32 entry_point_index = -1;
+        for (i32 i = 0; i < entry_point_n; ++i)
         {
-            auto * entry_refl = spReflection_getEntryPointByIndex(refl, i);
+            auto * entry_refl = spReflection_getEntryPointByIndex(refl, static_cast<u32>(i));
             auto const * entry_name = spReflectionEntryPoint_getName(entry_refl);
             if (strcmp(entry_name, shader_info.entry_point.value().c_str()) == 0)
             {

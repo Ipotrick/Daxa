@@ -197,7 +197,7 @@ namespace daxa
     };
 #endif
 
-    namespace detail
+    inline namespace detail
     {
         template <typename TaskHeadAttachmentDeclT>
         auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage = TaskStage::NONE) -> TaskAttachmentInfo
@@ -979,8 +979,6 @@ namespace daxa
         template <typename TaskHeadType>
         void add_task(TInlineTask<TaskHeadType> const & inline_task)
         {
-            using CallbackT = std::function<void(TaskInterface)>;
-
             DAXA_DBG_ASSERT_TRUE_M(static_cast<bool>(inline_task.value._internal._callback), "Detected empty callback on inline task!");
 
             auto task_callback = inline_task.value._internal._callback.callback;

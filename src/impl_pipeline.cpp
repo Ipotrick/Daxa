@@ -435,7 +435,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
 
     ret.shader_groups.resize(ret.info.shader_groups.size());
-    for (int i = 0; i < ret.shader_groups.size(); ++i)
+    for (u32 i = 0; i < ret.shader_groups.size(); ++i)
     {
         ret.shader_groups[i] = ret.info.shader_groups[i];
     }
@@ -570,6 +570,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             .closestHitShader = shader_group.closest_hit_shader_index,
             .anyHitShader = shader_group.any_hit_shader_index,
             .intersectionShader = shader_group.intersection_shader_index,
+            .pShaderGroupCaptureReplayHandle = {},
         };
         groups.push_back(group);
     }

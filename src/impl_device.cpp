@@ -333,7 +333,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         .sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
         .pNext = nullptr,
         .flags = {},
-        // .image = ret.vk_image, // FILL THIS LATER!
+        .image = {}, // FILL THIS LATER!
         .viewType = vk_image_view_type,
         .format = *r_cast<VkFormat const *>(&info->format),
         .components = VkComponentMapping{
@@ -838,6 +838,9 @@ auto daxa_dvc_get_tlas_build_sizes(
     VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
         .pNext = nullptr,
+        .accelerationStructureSize = {},
+        .updateScratchSize = {},
+        .buildScratchSize = {},
     };
     self->vkGetAccelerationStructureBuildSizesKHR(
         self->vk_device,
@@ -878,6 +881,9 @@ auto daxa_dvc_get_blas_build_sizes(
     VkAccelerationStructureBuildSizesInfoKHR vk_acceleration_structure_build_sizes_info_khr = {
         .sType = VK_STRUCTURE_TYPE_ACCELERATION_STRUCTURE_BUILD_SIZES_INFO_KHR,
         .pNext = nullptr,
+        .accelerationStructureSize = {},
+        .updateScratchSize = {},
+        .buildScratchSize = {},
     };
     self->vkGetAccelerationStructureBuildSizesKHR(
         self->vk_device,
@@ -2678,6 +2684,7 @@ auto daxa_dvc_copy_memory_to_image(daxa_Device self, daxa_MemoryToImageCopyInfo 
     VkCopyMemoryToImageInfoEXT vk_memory_to_image_copy_ext = {
         .sType = VK_STRUCTURE_TYPE_COPY_MEMORY_TO_IMAGE_INFO_EXT,
         .pNext = nullptr,
+        .flags = {},
         .dstImage = image.vk_image,
         .dstImageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .regionCount = 1,
@@ -2700,7 +2707,6 @@ auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo 
     }
 
     ImplImageSlot const & image = self->slot(info->image_id);
-    ImplImageSlot::HotData const & image_hot_data = self->hot_slot(info->image_id);
     VkImageToMemoryCopyEXT vk_image_to_memory_copy = {
         .sType = VK_STRUCTURE_TYPE_IMAGE_TO_MEMORY_COPY_EXT,
         .pNext = nullptr,
@@ -2714,6 +2720,7 @@ auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo 
     VkCopyImageToMemoryInfoEXT vk_image_to_memory_copy_ext = {
         .sType = VK_STRUCTURE_TYPE_COPY_IMAGE_TO_MEMORY_INFO_EXT,
         .pNext = nullptr,
+        .flags = {},
         .srcImage = image.vk_image,
         .srcImageLayout = VK_IMAGE_LAYOUT_GENERAL,
         .regionCount = 1,

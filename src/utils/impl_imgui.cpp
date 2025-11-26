@@ -378,12 +378,6 @@ namespace daxa
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
             .dst_layout = daxa::ImageLayout::GENERAL,
-            .image_slice = {
-                .base_mip_level = 0,
-                .level_count = 1,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
             .image_id = font_sheet,
         });
         recorder.copy_buffer_to_image({
@@ -397,18 +391,9 @@ namespace daxa
             .image_offset = {0, 0, 0},
             .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
         });
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
-            .src_layout = daxa::ImageLayout::GENERAL,
-            .dst_layout = daxa::ImageLayout::GENERAL,
-            .image_slice = {
-                .base_mip_level = 0,
-                .level_count = 1,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
-            .image_id = font_sheet,
         });
         auto executable_commands = recorder.complete_current_commands();
         this->info.device.submit_commands({

@@ -1302,12 +1302,11 @@ namespace daxa
 
     auto to_string(BarrierImageTransitionInfo const & info) -> std::string
     {
-        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), slice: {}, id: {}",
+        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), id: {}",
                            to_string(info.src_access),
                            to_string(info.dst_access),
                            to_string(info.src_layout),
                            to_string(info.dst_layout),
-                           to_string(info.image_slice),
                            to_string(info.image_id));
     }
 
@@ -1344,12 +1343,6 @@ namespace daxa
         {
         case ImageLayout::UNDEFINED: return "UNDEFINED";
         case ImageLayout::GENERAL: return "GENERAL";
-#if !DAXA_REMOVE_DEPRECATED
-        case ImageLayout::TRANSFER_SRC_OPTIMAL: return "TRANSFER_SRC_OPTIMAL";
-        case ImageLayout::TRANSFER_DST_OPTIMAL: return "TRANSFER_DST_OPTIMAL";
-        case ImageLayout::READ_ONLY_OPTIMAL: return "READ_ONLY_OPTIMAL";
-        case ImageLayout::ATTACHMENT_OPTIMAL: return "ATTACHMENT_OPTIMAL";
-#endif
         case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";
         default: return "INVALID LAYOUT";
         }

@@ -384,8 +384,9 @@ namespace daxa
     auto task_image_access_to_layout_access(TaskAccess const & taccess) -> std::tuple<ImageLayout, Access, TaskAccessConcurrency>
     {
         auto const [access, concurrency] = task_access_to_access(taccess);
-        bool const used_in_shader = is_task_stage_shader_access(taccess.stage);
-        bool const used_as_attachment = taccess.stage == TaskStage::COLOR_ATTACHMENT ||
+        // Kept for future reference:
+        [[maybe_unused]] bool const used_in_shader = is_task_stage_shader_access(taccess.stage);
+        [[maybe_unused]] bool const used_as_attachment = taccess.stage == TaskStage::COLOR_ATTACHMENT ||
                                         taccess.stage == TaskStage::DEPTH_STENCIL_ATTACHMENT ||
                                         taccess.stage == TaskStage::RESOLVE;
 
@@ -1934,7 +1935,7 @@ namespace daxa
         // Make sure we have enough batches.
         if (first_possible_batch_index >= queue_submit_scope.task_batches.size())
         {
-            queue_submit_scope.task_batches.resize(first_possible_batch_index + 1,
+            queue_submit_scope.task_batches.resize(static_cast<u32>(first_possible_batch_index) + 1u,
                                                    TaskBatch{
                                                        .pipeline_barrier_indices = {&impl.mk2.task_memory},
                                                        .wait_split_barrier_indices = {&impl.mk2.task_memory},
@@ -3452,7 +3453,6 @@ namespace daxa
                     .dst_access = barrier.dst_access,
                     .src_layout = barrier.layout_before,
                     .dst_layout = barrier.layout_after,
-                    .image_slice = barrier.slice,
                     .image_id = image,
                 });
             }
@@ -3570,7 +3570,6 @@ namespace daxa
                                     .dst_access = remaining_first_accesses[first_access_slice_index].state.latest_access,
                                     .src_layout = previous_access_slices[previous_access_slice_index].latest_layout,
                                     .dst_layout = remaining_first_accesses[first_access_slice_index].state.latest_layout,
-                                    .image_slice = intersection,
                                     .image_id = execution_image_id,
                                 };
                                 recorder.pipeline_barrier_image_transition(img_barrier_info);
@@ -3632,7 +3631,6 @@ namespace daxa
                             .dst_access = remaining_first_accesse.state.latest_access,
                             .src_layout = ImageLayout::UNDEFINED,
                             .dst_layout = remaining_first_accesse.state.latest_layout,
-                            .image_slice = remaining_first_accesse.state.slice,
                             .image_id = execution_image_id,
                         };
                         recorder.pipeline_barrier_image_transition(img_barrier_info);
@@ -3804,7 +3802,6 @@ namespace daxa
                                         .dst_access = split_barrier.dst_access,
                                         .src_layout = split_barrier.layout_before,
                                         .dst_layout = split_barrier.layout_after,
-                                        .image_slice = split_barrier.slice,
                                         .image_id = image,
                                     });
                                 }
@@ -3868,7 +3865,6 @@ namespace daxa
                                         .dst_access = task_split_barrier.dst_access,
                                         .src_layout = task_split_barrier.layout_before,
                                         .dst_layout = task_split_barrier.layout_after,
-                                        .image_slice = task_split_barrier.slice,
                                         .image_id = image,
                                     });
                                 }

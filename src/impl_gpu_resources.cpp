@@ -64,11 +64,11 @@ namespace daxa
 
         u32 max_tlas = 1024; // TODO(Raytracing): Should we have a smarter limit?
         u32 max_blas = max_acceleration_structures;
-        max_tlas = round_up_to_pages(max_tlas, GpuResourcePool<>::PAGE_SIZE);
-        max_blas = round_up_to_pages(max_blas, GpuResourcePool<>::PAGE_SIZE);
-        max_buffers = round_up_to_pages(max_buffers, GpuResourcePool<>::PAGE_SIZE);
-        max_images = round_up_to_pages(max_images, GpuResourcePool<>::PAGE_SIZE);
-        max_samplers = round_up_to_pages(max_samplers, GpuResourcePool<>::PAGE_SIZE);
+        max_tlas = round_up_to_pages(max_tlas, static_cast<u32>(GpuResourcePool<>::PAGE_SIZE));
+        max_blas = round_up_to_pages(max_blas, static_cast<u32>(GpuResourcePool<>::PAGE_SIZE));
+        max_buffers = round_up_to_pages(max_buffers, static_cast<u32>(GpuResourcePool<>::PAGE_SIZE));
+        max_images = round_up_to_pages(max_images, static_cast<u32>(GpuResourcePool<>::PAGE_SIZE));
+        max_samplers = round_up_to_pages(max_samplers, static_cast<u32>(GpuResourcePool<>::PAGE_SIZE));
 
         buffer_slots.max_resources = max_buffers;
         image_slots.max_resources = max_images;

@@ -202,7 +202,7 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
     daxa_Result result = {};
     result = daxa_swp_wait_for_next_frame(self);
     _DAXA_RETURN_IF_ERROR(result, result);
-    self->acquire_semaphore_index = (self->cpu_frame_timeline + 1ll) % self->info.max_allowed_frames_in_flight;
+    self->acquire_semaphore_index = static_cast<u64>((self->cpu_frame_timeline + 1ll)) % self->info.max_allowed_frames_in_flight;
     BinarySemaphore & acquire_semaphore = self->acquire_semaphores[self->acquire_semaphore_index];
     result = static_cast<daxa_Result>(vkAcquireNextImageKHR(
         self->device->vk_device,
@@ -238,7 +238,7 @@ auto daxa_swp_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaph
 
 auto daxa_swp_current_cpu_timeline_value(daxa_Swapchain self) -> u64
 {
-    return self->cpu_frame_timeline;
+    return static_cast<u64>(std::max(0ll, self->cpu_frame_timeline));
 }
 
 auto daxa_swp_info(daxa_Swapchain self) -> daxa_SwapchainInfo const *

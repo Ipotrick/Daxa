@@ -800,7 +800,7 @@ namespace daxa
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
         [[deprecated("Layout is guaranteed to always be general, stop using this function; API:3.2")]] 
-        auto layout(TaskImageIndexOrView auto timage) const -> ImageLayout
+        auto layout(TaskImageIndexOrView auto) const -> ImageLayout
         {
             return daxa::ImageLayout::GENERAL;
         }

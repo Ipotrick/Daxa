@@ -224,12 +224,10 @@ namespace daxa
 
         auto try_zombify(GPUResourceId id) -> bool
         {
-            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-            if (page >= this->valid_page_count.load(std::memory_order_relaxed))
+            if (id.index >= this->max_resources)
             {
                 return false;
             }
-            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
             u64 version = id.version;
             // Explicitly mark as zombie
             u64 const new_version = (version + 1) | VERSION_ZOMBIE_BIT;
@@ -247,9 +245,7 @@ namespace daxa
          */
         auto is_id_valid(GPUResourceId id) const -> bool
         {
-            auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
-            auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
-            if (id.version == 0 || page >= this->valid_page_count.load(std::memory_order_relaxed))
+            if (id.index >= this->max_resources)
             {
                 return false;
             }
@@ -264,11 +260,9 @@ namespace daxa
          */
         auto version_of_slot(u32 idx) const -> u64
         {
-            auto const page = static_cast<usize>(idx) >> PAGE_BITS;
-            auto const offset = static_cast<usize>(idx) & PAGE_MASK;
-            if (page >= this->valid_page_count.load(std::memory_order_relaxed))
+            if (idx >= this->max_resources)
             {
-                return 0;
+                return false;
             }
             return this->hot_data.at(std::min(idx, this->max_resources)).second;
         }
