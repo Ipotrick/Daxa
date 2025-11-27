@@ -105,7 +105,9 @@ static const daxa_BarrierInfo DAXA_DEFAULT_BARRIER_INFO = DAXA_ZERO_INIT;
 #define daxa_MemoryBarrierInfo daxa_BarrierInfo
 #endif
 
-typedef struct
+#if !DAXA_REMOVE_DEPRECATED
+
+/* deprecated("Use ImageBarrierInfo instead; API:3.2") */ typedef struct
 {
     daxa_Access src_access;
     daxa_Access dst_access;
@@ -113,14 +115,28 @@ typedef struct
     daxa_ImageLayout dst_layout;
     /* deprecated("Ignored parameter, whole image will be transitioned; API:3.2") */ daxa_ImageMipArraySlice image_slice;
     daxa_ImageId image_id;
-} daxa_BarrierImageTransitionInfo;
+} daxa_ImageMemoryBarrierInfo;
 
-#if !DAXA_REMOVE_DEPRECATED
-/* deprecated("Use daxa_BarrierImageTransitionInfo instead; API:3.2") */
-#define daxa_BarrierImageTransitionInfo daxa_BarrierImageTransitionInfo
+static const daxa_ImageMemoryBarrierInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_INFO = DAXA_ZERO_INIT;
+
 #endif
 
-static const daxa_BarrierImageTransitionInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_INFO = DAXA_ZERO_INIT;
+enum daxa_ImageBarrierMemoryOp
+{
+    DAXA_IMAGE_BARRIER_MEMORY_OP_KEEP_GENERAL = 0,
+    DAXA_IMAGE_BARRIER_MEMORY_OP_TO_GENERAL = 1,
+    DAXA_IMAGE_BARRIER_MEMORY_OP_TO_PRESENT_SRC = 2,
+};
+
+typedef struct
+{
+    daxa_Access src_access;
+    daxa_Access dst_access;
+    daxa_ImageId image_id;
+    daxa_ImageBarrierMemoryOp memory_op;
+} daxa_ImageBarrierInfo;
+
+static const daxa_ImageBarrierInfo DAXA_DEFAULT_IMAGE_BARRIER_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -177,10 +193,10 @@ static const daxa_EventInfo DAXA_DEFAULT_EVENT_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
-    daxa_BarrierInfo const * memory_barriers;
-    uint64_t memory_barrier_count;
-    daxa_BarrierImageTransitionInfo const * image_memory_barriers;
-    uint64_t image_memory_barrier_count;
+    daxa_BarrierInfo const * barriers;
+    uint64_t barrier_count;
+    daxa_ImageBarrierInfo const * image_barriers;
+    uint64_t image_barrier_count;
     daxa_Event * event;
 } daxa_EventSignalInfo;
 

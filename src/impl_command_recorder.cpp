@@ -24,7 +24,7 @@ auto validate_queue_family(daxa_QueueFamily recorder_qf, daxa_QueueFamily comman
     return result;
 }
 
-auto get_vk_image_memory_barrier(daxa_BarrierImageTransitionInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
+auto get_vk_image_memory_barrier(daxa_ImageBarrierInfo const & image_barrier, daxa_ImageMipArraySlice image_slice, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
 {
     return VkImageMemoryBarrier2{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -33,12 +33,12 @@ auto get_vk_image_memory_barrier(daxa_BarrierImageTransitionInfo const & image_b
         .srcAccessMask = image_barrier.src_access.access_type,
         .dstStageMask = image_barrier.dst_access.stages,
         .dstAccessMask = image_barrier.dst_access.access_type,
-        .oldLayout = static_cast<VkImageLayout>(image_barrier.src_layout),
-        .newLayout = static_cast<VkImageLayout>(image_barrier.dst_layout),
+        .oldLayout = image_barrier.memory_op == DAXA_IMAGE_BARRIER_MEMORY_OP_TO_GENERAL ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL,
+        .newLayout = image_barrier.memory_op == DAXA_IMAGE_BARRIER_MEMORY_OP_TO_PRESENT_SRC ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_GENERAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = vk_image,
-        .subresourceRange = make_subresource_range(image_barrier.image_slice, aspect_flags),
+        .subresourceRange = make_subresource_range(image_slice, aspect_flags),
     };
 }
 
@@ -520,9 +520,6 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
     return DAXA_RESULT_SUCCESS;
 }
 
-/// @brief  Successive pipeline barrier calls are combined.
-///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
-/// @param info parameters.
 void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_BarrierInfo const * info)
 {
     if (self->memory_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
@@ -539,10 +536,25 @@ void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_BarrierInfo const
     };
 }
 
-/// @brief  Successive pipeline barrier calls are combined.
-///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
-/// @param info parameters.
-auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_BarrierImageTransitionInfo const * info) -> daxa_Result
+auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_ImageMemoryBarrierInfo const * info) -> daxa_Result
+{
+    // All non general image layouts are treated as general layout.
+    daxa_ImageBarrierInfo new_info = {};
+    new_info.src_access = info->src_access;
+    new_info.dst_access = info->dst_access;
+    new_info.image_id = info->image_id;
+    if (info->src_layout == DAXA_IMAGE_LAYOUT_UNDEFINED)
+    {
+        new_info.memory_op = DAXA_IMAGE_BARRIER_MEMORY_OP_TO_GENERAL;
+    }
+    if (info->dst_layout == DAXA_IMAGE_LAYOUT_PRESENT_SRC)
+    {
+        new_info.memory_op = DAXA_IMAGE_BARRIER_MEMORY_OP_TO_PRESENT_SRC;
+    }
+    return daxa_cmd_pipeline_image_barrier(self, &new_info);
+}
+
+auto daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder self, daxa_ImageBarrierInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->image_id)
     if (self->image_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
@@ -550,21 +562,7 @@ auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_
         daxa_cmd_flush_barriers(self);
     }
     auto const & img_slot = self->device->slot(info->image_id);
-    auto const & default_view_slot = self->device->slot(std::bit_cast<daxa::ImageId>(info->image_id).default_view());
-    self->image_barrier_batch.at(self->image_barrier_batch_count++) = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .pNext = nullptr,
-        .srcStageMask = info->src_access.stages,
-        .srcAccessMask = info->src_access.access_type,
-        .dstStageMask = info->dst_access.stages,
-        .dstAccessMask = info->dst_access.access_type,
-        .oldLayout = static_cast<VkImageLayout>(info->src_layout),
-        .newLayout = static_cast<VkImageLayout>(info->dst_layout),
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = img_slot.vk_image,
-        .subresourceRange = make_subresource_range(default_view_slot.info.slice, img_slot.aspect_flags),
-    };
+    self->image_barrier_batch.at(self->image_barrier_batch_count++) = get_vk_image_memory_barrier(*info, img_slot.view_slot.info.slice, img_slot.vk_image, img_slot.aspect_flags);
     return DAXA_RESULT_SUCCESS;
 }
 struct SplitBarrierDependencyInfoBuffer
@@ -582,19 +580,21 @@ void daxa_cmd_signal_event(daxa_CommandRecorder self, daxa_EventSignalInfo const
     daxa_cmd_flush_barriers(self);
     tl_split_barrier_dependency_infos_aux_buffer.push_back({});
     auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
-    for (u64 i = 0; i < info->memory_barrier_count; ++i)
+    for (u64 i = 0; i < info->barrier_count; ++i)
     {
-        auto const & memory_barrier = info->memory_barriers[i];
-        dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
+        auto const & barrier = info->barriers[i];
+        dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(barrier));
     }
-    for (u64 i = 0; i < info->image_memory_barrier_count; ++i)
+    for (u64 i = 0; i < info->image_barrier_count; ++i)
     {
-        auto const & image_memory_barrier = info->image_memory_barriers[i];
+        auto const & image_barrier = info->image_barriers[i];
+        auto const & img_slot = self->device->slot(image_barrier.image_id);
         dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
             get_vk_image_memory_barrier(
-                image_memory_barrier,
-                self->device->slot(image_memory_barrier.image_id).vk_image,
-                self->device->slot(image_memory_barrier.image_id).aspect_flags));
+                image_barrier,
+                img_slot.view_slot.info.slice,
+                img_slot.vk_image,
+                img_slot.aspect_flags));
     }
     VkDependencyInfo const vk_dependency_info = get_vk_dependency_info(
         dependency_infos_aux_buffer.vk_image_memory_barriers,
@@ -611,18 +611,20 @@ void daxa_cmd_wait_events(daxa_CommandRecorder self, daxa_EventWaitInfo const * 
         auto const & end_info = infos[i];
         tl_split_barrier_dependency_infos_aux_buffer.push_back({});
         auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
-        for (u64 j = 0; j < end_info.memory_barrier_count; ++j)
+        for (u64 j = 0; j < end_info.barrier_count; ++j)
         {
-            auto const & memory_barrier = end_info.memory_barriers[j];
-            dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
+            auto const & barrier = end_info.barriers[j];
+            dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(barrier));
         }
-        for (u64 j = 0; j < end_info.image_memory_barrier_count; ++j)
+        for (u64 j = 0; j < end_info.image_barrier_count; ++j)
         {
-            auto const & image_barrier = end_info.image_memory_barriers[j];
+            auto const & image_barrier = end_info.image_barriers[j];
+            auto const & img_slot = self->device->slot(image_barrier.image_id);
             dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(get_vk_image_memory_barrier(
                 image_barrier,
-                self->device->slot(image_barrier.image_id).vk_image,
-                self->device->slot(image_barrier.image_id).aspect_flags));
+                img_slot.view_slot.info.slice,
+                img_slot.vk_image,
+                img_slot.aspect_flags));
         }
         tl_split_barrier_dependency_infos_buffer.push_back(get_vk_dependency_info(
             dependency_infos_aux_buffer.vk_image_memory_barriers,

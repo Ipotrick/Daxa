@@ -3423,7 +3423,7 @@ namespace daxa
     }
 
     thread_local std::vector<EventWaitInfo> tl_split_barrier_wait_infos = {};
-    thread_local std::vector<BarrierImageTransitionInfo> tl_image_barrier_infos = {};
+    thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
     thread_local std::vector<BarrierInfo> tl_memory_barrier_infos = {};
     void insert_pipeline_barrier(ImplTaskGraph const & impl, TaskGraphPermutation & perm, CommandRecorder & command_list, TaskBarrier & barrier)
     {
@@ -3565,7 +3565,7 @@ namespace daxa
                         {
                             for (auto execution_image_id : impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, permutation))
                             {
-                                BarrierImageTransitionInfo const img_barrier_info{
+                                ImageMemoryBarrierInfo const img_barrier_info{
                                     .src_access = previous_access_slices[previous_access_slice_index].latest_access,
                                     .dst_access = remaining_first_accesses[first_access_slice_index].state.latest_access,
                                     .src_layout = previous_access_slices[previous_access_slice_index].latest_layout,
@@ -3626,7 +3626,7 @@ namespace daxa
                 {
                     for (auto execution_image_id : impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, permutation))
                     {
-                        BarrierImageTransitionInfo const img_barrier_info{
+                        ImageMemoryBarrierInfo const img_barrier_info{
                             .src_access = AccessConsts::NONE,
                             .dst_access = remaining_first_accesse.state.latest_access,
                             .src_layout = ImageLayout::UNDEFINED,
@@ -3788,7 +3788,7 @@ namespace daxa
                                     .dst_access = split_barrier.dst_access,
                                 });
                                 tl_split_barrier_wait_infos.push_back(EventWaitInfo{
-                                    .memory_barriers = std::span{&tl_memory_barrier_infos.back(), 1},
+                                    .barriers = std::span{&tl_memory_barrier_infos.back(), 1},
                                     .event = split_barrier.split_barrier_state,
                                 });
                             }
@@ -3797,12 +3797,21 @@ namespace daxa
                                 usize const img_bar_vec_start_size = tl_image_barrier_infos.size();
                                 for (auto image : impl.get_actual_images(split_barrier.image_id, permutation))
                                 {
-                                    tl_image_barrier_infos.push_back(BarrierImageTransitionInfo{
+                                    ImageBarrierMemoryOp op = {};
+                                    if (split_barrier.layout_before == ImageLayout::UNDEFINED)
+                                    {
+                                        op = ImageBarrierMemoryOp::TO_GENERAL;
+                                    }
+                                    if (split_barrier.layout_after == ImageLayout::PRESENT_SRC)
+                                    {
+                                        op = ImageBarrierMemoryOp::TO_PRESENT_SRC;
+                                    }
+
+                                    tl_image_barrier_infos.push_back(ImageBarrierInfo{
                                         .src_access = split_barrier.src_access,
                                         .dst_access = split_barrier.dst_access,
-                                        .src_layout = split_barrier.layout_before,
-                                        .dst_layout = split_barrier.layout_after,
                                         .image_id = image,
+                                        .memory_op = op,
                                     });
                                 }
                                 usize const img_bar_vec_end_size = tl_image_barrier_infos.size();
@@ -3852,7 +3861,7 @@ namespace daxa
                                     .dst_access = task_split_barrier.dst_access,
                                 };
                                 impl_runtime.recorder.signal_event({
-                                    .memory_barriers = std::span{&memory_barrier, 1},
+                                    .barriers = std::span{&memory_barrier, 1},
                                     .event = task_split_barrier.split_barrier_state,
                                 });
                             }
@@ -3860,12 +3869,20 @@ namespace daxa
                             {
                                 for (auto image : impl.get_actual_images(task_split_barrier.image_id, permutation))
                                 {
+                                    ImageBarrierMemoryOp op = {};
+                                    if (task_split_barrier.layout_before == ImageLayout::UNDEFINED)
+                                    {
+                                        op = ImageBarrierMemoryOp::TO_GENERAL;
+                                    }
+                                    if (task_split_barrier.layout_after == ImageLayout::PRESENT_SRC)
+                                    {
+                                        op = ImageBarrierMemoryOp::TO_PRESENT_SRC;
+                                    }
                                     tl_image_barrier_infos.push_back({
                                         .src_access = task_split_barrier.src_access,
                                         .dst_access = task_split_barrier.dst_access,
-                                        .src_layout = task_split_barrier.layout_before,
-                                        .dst_layout = task_split_barrier.layout_after,
                                         .image_id = image,
+                                        .memory_op = op,
                                     });
                                 }
                                 impl_runtime.recorder.signal_event({

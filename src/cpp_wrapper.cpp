@@ -1125,7 +1125,9 @@ namespace daxa
         check_result(result, "failed to build acceleration structures");
     }
     DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, pipeline_barrier, BarrierInfo)
-    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_barrier_image_transition, BarrierImageTransitionInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_image_barrier, ImageBarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_barrier_image_transition, ImageMemoryBarrierInfo)
+
     DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, signal_event, EventSignalInfo)
 
     void CommandRecorder::wait_events(daxa::Span<EventWaitInfo const> const & infos)
@@ -1300,13 +1302,33 @@ namespace daxa
         return std::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
     }
 
-    auto to_string(BarrierImageTransitionInfo const & info) -> std::string
+    [[deprecated]] auto to_string(ImageMemoryBarrierInfo const & info) -> std::string
     {
-        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), id: {}",
+        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), id: {}, SLICE IGNORED",
                            to_string(info.src_access),
                            to_string(info.dst_access),
                            to_string(info.src_layout),
                            to_string(info.dst_layout),
+                           to_string(info.image_id));
+    }
+    
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string
+    {
+        ImageLayout src_layout = ImageLayout::GENERAL;
+        ImageLayout dst_layout = ImageLayout::GENERAL;
+        if (info.memory_op == ImageBarrierMemoryOp::TO_GENERAL)
+        {
+            src_layout = ImageLayout::UNDEFINED;
+        }
+        if (info.memory_op == ImageBarrierMemoryOp::TO_PRESENT_SRC)
+        {
+            dst_layout = ImageLayout::PRESENT_SRC;
+        }
+        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), id: {}",
+                           to_string(info.src_access),
+                           to_string(info.dst_access),
+                           to_string(src_layout),
+                           to_string(dst_layout),
                            to_string(info.image_id));
     }
 
