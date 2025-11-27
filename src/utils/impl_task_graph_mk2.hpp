@@ -447,6 +447,22 @@ namespace daxa
         auto empty() const -> bool { return element_count == 0u; }
     };
 
+    // We still have to do image barriers EVEN WHEN THE LAYOUT DOES NOT CHANGE, as RDNA will still want to do some compression/decompression operations via stage/access analysis:
+    // https://docs.vulkan.org/features/latest/features/proposals/VK_KHR_unified_image_layouts.html
+
+
+
+
+    struct TrackedImageAccess
+    {
+        u16 accessed_mips = 0u;
+
+    };
+
+    struct TrackedImage
+    {
+    };
+
     struct ImplTaskGraphMk2
     {
         MemoryArena task_memory = {};

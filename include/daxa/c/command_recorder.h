@@ -445,7 +445,7 @@ daxa_cmd_pipeline_barrier(daxa_CommandRecorder cmd_enc, daxa_BarrierInfo const *
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder cmd_enc, daxa_BarrierImageTransitionInfo const * info);
+daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder cmd_enc, daxa_ImageBarrierInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_signal_event(daxa_CommandRecorder cmd_enc, daxa_EventSignalInfo const * info);
 DAXA_EXPORT void

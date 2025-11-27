@@ -168,9 +168,10 @@ namespace tests
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
         });
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+            .src_layout = daxa::ImageLayout::GENERAL,
             .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_1,
         });
@@ -181,14 +182,15 @@ namespace tests
             .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
+            .src_layout = daxa::ImageLayout::GENERAL,
             .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_1,
         });
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_2,
@@ -200,9 +202,10 @@ namespace tests
             .extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
+            .src_layout = daxa::ImageLayout::GENERAL,
             .dst_layout = daxa::ImageLayout::GENERAL,
             .image_id = image_2,
         });

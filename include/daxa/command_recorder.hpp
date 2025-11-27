@@ -380,11 +380,15 @@ namespace daxa
         /// @brief  Successive pipeline barrier calls are combined.
         ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
         /// @param info parameters.
-        void pipeline_barrier_image_transition(BarrierImageTransitionInfo const & info);
+        void pipeline_image_barrier(ImageBarrierInfo const & info);
         void signal_event(EventSignalInfo const & info);
         void wait_events(daxa::Span<EventWaitInfo const> const & infos);
         void wait_event(EventWaitInfo const & info);
         void reset_event(ResetEventInfo const & info);
+        
+#if !DAXA_REMOVE_DEPRECATED
+        [[deprecated("Use pipeline_image_barrier instead, API:3.2")]] void pipeline_barrier_image_transition(ImageBarrierInfo const & info);
+#endif
 
         /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
         ///         Zombifies object after submitting the commands.

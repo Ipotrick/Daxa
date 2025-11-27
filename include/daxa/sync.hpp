@@ -19,7 +19,7 @@ namespace daxa
 
     [[nodiscard]] auto to_string(BarrierInfo const & info) -> std::string;
 
-    struct BarrierImageTransitionInfo
+    struct ImageBarrierInfo
     {
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
@@ -30,10 +30,10 @@ namespace daxa
     };
 
 #if !DAXA_REMOVE_DEPRECATED
-    using ImageMemoryBarrierInfo [[deprecated("Use BarrierImageTransitionInfo instead; API:3.2")]] = BarrierImageTransitionInfo;
+    using ImageMemoryBarrierInfo [[deprecated("Use ImageBarrierInfo instead; API:3.2")]] = ImageBarrierInfo;
 #endif
 
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(BarrierImageTransitionInfo const & info) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string;
 
     struct BinarySemaphoreInfo
     {
@@ -106,7 +106,7 @@ namespace daxa
     struct EventSignalInfo
     {
         daxa::Span<BarrierInfo const> memory_barriers = {};
-        daxa::Span<BarrierImageTransitionInfo const> image_barriers = {};
+        daxa::Span<ImageBarrierInfo const> image_barriers = {};
         Event & event;
     };
 

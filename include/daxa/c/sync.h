@@ -113,14 +113,14 @@ typedef struct
     daxa_ImageLayout dst_layout;
     /* deprecated("Ignored parameter, whole image will be transitioned; API:3.2") */ daxa_ImageMipArraySlice image_slice;
     daxa_ImageId image_id;
-} daxa_BarrierImageTransitionInfo;
+} daxa_ImageBarrierInfo;
 
 #if !DAXA_REMOVE_DEPRECATED
-/* deprecated("Use daxa_BarrierImageTransitionInfo instead; API:3.2") */
-#define daxa_BarrierImageTransitionInfo daxa_BarrierImageTransitionInfo
+/* deprecated("Use daxa_ImageBarrierInfo instead; API:3.2") */
+#define daxa_ImageBarrierInfo daxa_ImageBarrierInfo
 #endif
 
-static const daxa_BarrierImageTransitionInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_INFO = DAXA_ZERO_INIT;
+static const daxa_ImageBarrierInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
@@ -179,7 +179,7 @@ typedef struct
 {
     daxa_BarrierInfo const * memory_barriers;
     uint64_t memory_barrier_count;
-    daxa_BarrierImageTransitionInfo const * image_memory_barriers;
+    daxa_ImageBarrierInfo const * image_memory_barriers;
     uint64_t image_memory_barrier_count;
     daxa_Event * event;
 } daxa_EventSignalInfo;

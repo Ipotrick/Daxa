@@ -1125,7 +1125,13 @@ namespace daxa
         check_result(result, "failed to build acceleration structures");
     }
     DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, pipeline_barrier, BarrierInfo)
-    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_barrier_image_transition, BarrierImageTransitionInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_image_barrier, ImageBarrierInfo)
+
+    [[deprecated]] void CommandRecorder::pipeline_barrier_image_transition(ImageBarrierInfo const & info)
+    {
+        this->pipeline_image_barrier(info);
+    }
+
     DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, signal_event, EventSignalInfo)
 
     void CommandRecorder::wait_events(daxa::Span<EventWaitInfo const> const & infos)
@@ -1300,7 +1306,7 @@ namespace daxa
         return std::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
     }
 
-    auto to_string(BarrierImageTransitionInfo const & info) -> std::string
+    auto to_string(ImageBarrierInfo const & info) -> std::string
     {
         return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), id: {}",
                            to_string(info.src_access),

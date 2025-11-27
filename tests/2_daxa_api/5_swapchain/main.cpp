@@ -81,7 +81,7 @@ namespace tests
                     .name = ("recorder (clearcolor)"),
                 });
 
-                recorder.pipeline_barrier_image_transition({
+                recorder.pipeline_image_barrier({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::GENERAL,
@@ -93,7 +93,7 @@ namespace tests
                     .dst_image = swapchain_image,
                 });
 
-                recorder.pipeline_barrier_image_transition({
+                recorder.pipeline_image_barrier({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::GENERAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,
