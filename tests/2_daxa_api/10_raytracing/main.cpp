@@ -628,7 +628,7 @@ namespace tests
                     .size = cam_buffer_size,
                 });
 
-                recorder.pipeline_image_barrier({
+                recorder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::GENERAL,
@@ -671,7 +671,7 @@ namespace tests
                 });
 #endif // ACTIVATE_ATOMIC_FLOAT
 
-                recorder.pipeline_image_barrier({
+                recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::GENERAL,
                     .dst_layout = daxa::ImageLayout::PRESENT_SRC,

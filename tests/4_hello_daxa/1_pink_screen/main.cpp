@@ -180,7 +180,7 @@ auto main() -> int
 
         daxa::CommandRecorder recorder = device.create_command_recorder({.name = "my command recorder"});
 
-        recorder.pipeline_image_barrier({
+        recorder.pipeline_barrier_image_transition({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
             .src_layout = daxa::ImageLayout::UNDEFINED,
             .dst_layout = daxa::ImageLayout::GENERAL,
@@ -194,7 +194,7 @@ auto main() -> int
             .dst_slice = swapchain_image_full_slice,
         });
 
-        recorder.pipeline_image_barrier({
+        recorder.pipeline_barrier_image_transition({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .src_layout = daxa::ImageLayout::GENERAL,
             .dst_layout = daxa::ImageLayout::PRESENT_SRC,

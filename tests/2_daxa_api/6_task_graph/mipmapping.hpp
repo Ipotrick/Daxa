@@ -292,7 +292,7 @@ namespace tests
                 }
                 auto recorder = device.create_command_recorder({});
 
-                recorder.pipeline_image_barrier({
+                recorder.pipeline_barrier_image_transition({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
                     .dst_layout = daxa::ImageLayout::GENERAL,
@@ -312,7 +312,7 @@ namespace tests
                     .dst_access = daxa::AccessConsts::TRANSFER_READ,
                 });
                 update_gpu_input(recorder, mipmapping_gpu_input_buffer);
-                recorder.pipeline_image_barrier({
+                recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::NONE,
                     .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
                     .src_layout = daxa::ImageLayout::UNDEFINED,
@@ -328,7 +328,7 @@ namespace tests
                     auto image_info = device.image_info(render_image).value();
                     std::array<i32, 3> mip_size = {static_cast<i32>(image_info.size.x), static_cast<i32>(image_info.size.y), static_cast<i32>(image_info.size.z)};
 
-                    recorder.pipeline_image_barrier({
+                    recorder.pipeline_barrier_image_transition({
                         .src_access = daxa::AccessConsts::NONE,
                         .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                         .src_layout = daxa::ImageLayout::UNDEFINED,
@@ -344,7 +344,7 @@ namespace tests
 
                     for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
                     {
-                        recorder.pipeline_image_barrier({
+                        recorder.pipeline_barrier_image_transition({
                             .src_access = (i == 0 ? daxa::AccessConsts::COMPUTE_SHADER_WRITE : daxa::AccessConsts::TRANSFER_WRITE),
                             .dst_access = daxa::AccessConsts::BLIT_READ,
                             .src_layout = daxa::ImageLayout::GENERAL,
@@ -377,7 +377,7 @@ namespace tests
                         });
                         mip_size = next_mip_size;
                     }
-                    recorder.pipeline_image_barrier({
+                    recorder.pipeline_barrier_image_transition({
                         .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                         .dst_access = daxa::AccessConsts::TRANSFER_READ,
                         .src_layout = daxa::ImageLayout::GENERAL,
@@ -391,7 +391,7 @@ namespace tests
                         .image_id = render_image,
                     });
                 }
-                recorder.pipeline_image_barrier({
+                recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .src_layout = daxa::ImageLayout::GENERAL,
@@ -399,7 +399,7 @@ namespace tests
                     .image_id = swapchain_image,
                 });
                 blit_image_to_swapchain(recorder, render_image, swapchain_image);
-                recorder.pipeline_image_barrier({
+                recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
                     .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
                     .src_layout = daxa::ImageLayout::GENERAL,
@@ -407,7 +407,7 @@ namespace tests
                     .image_id = swapchain_image,
                 });
                 draw_ui(recorder, swapchain_image);
-                recorder.pipeline_image_barrier({
+                recorder.pipeline_barrier_image_transition({
                     .src_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
                     .dst_access = {.stages = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = daxa::AccessTypeFlagBits::NONE},
                     .src_layout = daxa::ImageLayout::GENERAL,

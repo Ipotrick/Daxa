@@ -3423,7 +3423,7 @@ namespace daxa
     }
 
     thread_local std::vector<EventWaitInfo> tl_split_barrier_wait_infos = {};
-    thread_local std::vector<ImageBarrierInfo> tl_image_barrier_infos = {};
+    thread_local std::vector<BarrierImageTransitionInfo> tl_image_barrier_infos = {};
     thread_local std::vector<BarrierInfo> tl_memory_barrier_infos = {};
     void insert_pipeline_barrier(ImplTaskGraph const & impl, TaskGraphPermutation & perm, CommandRecorder & command_list, TaskBarrier & barrier)
     {
@@ -3448,7 +3448,7 @@ namespace daxa
                         std::string(" of task image \"") +
                         std::string(impl.global_image_infos[barrier.image_id.index].name) +
                         std::string("\" is invalid"));
-                command_list.pipeline_image_barrier({
+                command_list.pipeline_barrier_image_transition({
                     .src_access = barrier.src_access,
                     .dst_access = barrier.dst_access,
                     .src_layout = barrier.layout_before,
@@ -3565,14 +3565,14 @@ namespace daxa
                         {
                             for (auto execution_image_id : impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, permutation))
                             {
-                                ImageBarrierInfo const img_barrier_info{
+                                BarrierImageTransitionInfo const img_barrier_info{
                                     .src_access = previous_access_slices[previous_access_slice_index].latest_access,
                                     .dst_access = remaining_first_accesses[first_access_slice_index].state.latest_access,
                                     .src_layout = previous_access_slices[previous_access_slice_index].latest_layout,
                                     .dst_layout = remaining_first_accesses[first_access_slice_index].state.latest_layout,
                                     .image_id = execution_image_id,
                                 };
-                                recorder.pipeline_image_barrier(img_barrier_info);
+                                recorder.pipeline_barrier_image_transition(img_barrier_info);
                                 if (impl.info.record_debug_information)
                                 {
                                     std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
@@ -3626,14 +3626,14 @@ namespace daxa
                 {
                     for (auto execution_image_id : impl.get_actual_images(TaskImageView{.task_graph_index = impl.unique_index, .index = task_image_index}, permutation))
                     {
-                        ImageBarrierInfo const img_barrier_info{
+                        BarrierImageTransitionInfo const img_barrier_info{
                             .src_access = AccessConsts::NONE,
                             .dst_access = remaining_first_accesse.state.latest_access,
                             .src_layout = ImageLayout::UNDEFINED,
                             .dst_layout = remaining_first_accesse.state.latest_layout,
                             .image_id = execution_image_id,
                         };
-                        recorder.pipeline_image_barrier(img_barrier_info);
+                        recorder.pipeline_barrier_image_transition(img_barrier_info);
                         if (impl.info.record_debug_information)
                         {
                             std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
@@ -3797,7 +3797,7 @@ namespace daxa
                                 usize const img_bar_vec_start_size = tl_image_barrier_infos.size();
                                 for (auto image : impl.get_actual_images(split_barrier.image_id, permutation))
                                 {
-                                    tl_image_barrier_infos.push_back(ImageBarrierInfo{
+                                    tl_image_barrier_infos.push_back(BarrierImageTransitionInfo{
                                         .src_access = split_barrier.src_access,
                                         .dst_access = split_barrier.dst_access,
                                         .src_layout = split_barrier.layout_before,
