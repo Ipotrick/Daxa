@@ -49,7 +49,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
                 .pNext = nullptr,
                 .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
             });
-        
+
         // NOTE(grundlett): However, we'll explicitly error if we requested the subgroup size for mesh shaders and its unsupported.
         if (shader_stage == VK_SHADER_STAGE_MESH_BIT_EXT && requested_required_subgroup_size && !supports_required_subgroup_size_for_stage)
         {
@@ -468,10 +468,10 @@ auto daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline self) -> u64
         self->device->instance);
 }
 
-auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipeline * out_pipeline) -> daxa_Result
+template<typename PipelineT, typename ImplPipelineT>
+auto daxa_dvc_create_ray_tracing_pipeline_or_library(daxa_Device device, daxa_RayTracingPipelineInfo const * info, PipelineT * out_pipeline) -> daxa_Result
 {
-    _DAXA_TEST_PRINT("daxa_dvc_create_ray_tracing_pipeline\n");
-    daxa_ImplRayTracingPipeline ret = {};
+    ImplPipelineT ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
 
@@ -625,7 +625,8 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     u32 const stages_count = static_cast<u32>(stages.size());
 
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
-    VkRayTracingPipelineCreateInfoKHR const vk_ray_tracing_pipeline_create_info{
+
+    VkRayTracingPipelineCreateInfoKHR vk_ray_tracing_pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
         .pNext = nullptr,
         .flags = {},
@@ -641,6 +642,37 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = 0,
     };
+
+    VkRayTracingPipelineInterfaceCreateInfoKHR library_interface_info{
+        .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .maxPipelineRayPayloadSize = 256,
+        .maxPipelineRayHitAttributeSize = 4,
+    };
+
+    std::vector<VkPipeline> libraries;
+    libraries.reserve(ret.info.pipeline_libraries.size());
+    for (auto & pipeline_library : ret.info.pipeline_libraries)
+        libraries.push_back(pipeline_library.get()->vk_pipeline);
+
+    auto pipeline_library_info = VkPipelineLibraryCreateInfoKHR{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .libraryCount = static_cast<uint32_t>(libraries.size()),
+        .pLibraries = libraries.data(),
+    };
+
+    if constexpr (std::is_same_v<PipelineT, daxa_RayTracingPipeline>)
+    {
+        vk_ray_tracing_pipeline_create_info.pLibraryInfo = libraries.empty() ? nullptr : &pipeline_library_info;
+        vk_ray_tracing_pipeline_create_info.pLibraryInterface = libraries.empty() ? nullptr : &library_interface_info;
+    }
+    else
+    {
+        vk_ray_tracing_pipeline_create_info.flags = VK_PIPELINE_CREATE_LIBRARY_BIT_KHR;
+        vk_ray_tracing_pipeline_create_info.pLibraryInterface = &library_interface_info;
+    }
+
     auto pipeline_result = ret.device->vkCreateRayTracingPipelinesKHR(
         ret.device->vk_device,
         VK_NULL_HANDLE,
@@ -669,9 +701,19 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
-    *out_pipeline = new daxa_ImplRayTracingPipeline{};
+    *out_pipeline = new ImplPipelineT{};
     **out_pipeline = ret;
     return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_create_ray_tracing_pipeline_library(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipelineLibrary * out_pipeline) -> daxa_Result
+{
+    return daxa_dvc_create_ray_tracing_pipeline_or_library<daxa_RayTracingPipelineLibrary, daxa_ImplRayTracingPipelineLibrary>(device, info, out_pipeline);
+}
+
+auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipeline * out_pipeline) -> daxa_Result
+{
+    return daxa_dvc_create_ray_tracing_pipeline_or_library<daxa_RayTracingPipeline, daxa_ImplRayTracingPipeline>(device, info, out_pipeline);
 }
 
 inline auto get_aligned(u64 operand, u64 granularity) -> u64
@@ -897,6 +939,23 @@ auto daxa_ray_tracing_pipeline_inc_refcnt(daxa_RayTracingPipeline self) -> u64
 }
 
 auto daxa_ray_tracing_pipeline_dec_refcnt(daxa_RayTracingPipeline self) -> u64
+{
+    return self->dec_refcnt(
+        &ImplPipeline::zero_ref_callback,
+        self->device->instance);
+}
+
+auto daxa_ray_tracing_pipeline_library_info(daxa_RayTracingPipelineLibrary self) -> daxa_RayTracingPipelineInfo const *
+{
+    return reinterpret_cast<daxa_RayTracingPipelineInfo const *>(&self->info);
+}
+
+auto daxa_ray_tracing_pipeline_library_inc_refcnt(daxa_RayTracingPipelineLibrary self) -> u64
+{
+    return self->inc_refcnt();
+}
+
+auto daxa_ray_tracing_pipeline_library_dec_refcnt(daxa_RayTracingPipelineLibrary self) -> u64
 {
     return self->dec_refcnt(
         &ImplPipeline::zero_ref_callback,

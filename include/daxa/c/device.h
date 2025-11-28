@@ -248,6 +248,7 @@ typedef enum
     DAXA_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY = 0x1 << 1,
     DAXA_EXPLICIT_FEATURE_FLAG_VK_MEMORY_MODEL = 0x1 << 2,
     DAXA_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2 = 0x1 << 3,
+    DAXA_EXPLICIT_FEATURE_FLAG_PIPELINE_LIBRARY_GROUP_HANDLES = 0x1 << 4,
 } daxa_DeviceExplicitFeatureFlagBits;
 
 typedef daxa_DeviceExplicitFeatureFlagBits daxa_ExplicitFeatureFlags;
@@ -612,6 +613,8 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipeline * out_pipeline);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_ray_tracing_pipeline_library(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipelineLibrary * out_pipeline);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

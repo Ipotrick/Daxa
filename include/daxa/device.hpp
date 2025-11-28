@@ -275,6 +275,7 @@ namespace daxa
         static inline constexpr ExplicitFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {0x1 << 1};
         static inline constexpr ExplicitFeatureFlags VK_MEMORY_MODEL = {0x1 << 2};
         static inline constexpr ExplicitFeatureFlags ROBUSTNESS_2 = {0x1 << 3};
+        static inline constexpr ExplicitFeatureFlags PIPELINE_LIBRARY_GROUP_HANDLES = {0x1 << 4};
     };
 
     struct ImplicitFeatureProperties
@@ -617,6 +618,7 @@ namespace daxa
         [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
         [[nodiscard]] auto create_ray_tracing_pipeline(RayTracingPipelineInfo const & info) -> RayTracingPipeline;
+        [[nodiscard]] auto create_ray_tracing_pipeline_library(RayTracingPipelineInfo const & info) -> RayTracingPipelineLibrary;
 
         [[nodiscard]] auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         [[nodiscard]] auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;

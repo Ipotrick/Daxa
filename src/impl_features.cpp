@@ -172,6 +172,13 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_line_rasterization_features_khr);
         }
 
+        if (extensions.extensions_present[extensions.physical_device_pipeline_library_group_handles_ext])
+        {
+            physical_device_pipeline_library_group_handles_ext.pNext = chain;
+            physical_device_pipeline_library_group_handles_ext.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PIPELINE_LIBRARY_GROUP_HANDLES_FEATURES_EXT;
+            chain = static_cast<void *>(&physical_device_pipeline_library_group_handles_ext);
+        }
+
         physical_device_shader_demote_to_helper_invocation_features.pNext = chain;
         physical_device_shader_demote_to_helper_invocation_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES;
         physical_device_shader_demote_to_helper_invocation_features.shaderDemoteToHelperInvocation = true;
@@ -388,11 +395,16 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_vulkan_memory_model_features.vulkanMemoryModelDeviceScope),
     };
 
+    constexpr static std::array PHYSICAL_DEVICE_PIPELINE_LIBRARY_GROUP_HANDLES_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_pipeline_library_group_handles_ext.pipelineLibraryGroupHandles),
+    };
+
     constexpr static std::array EXPLICIT_FEATURES = std::array{
         ExplicitFeature{PHYSICAL_DEVICE_ROBUSTNESS_2_EXT_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_ROBUSTNESS_2},
         ExplicitFeature{PHYSICAL_DEVICE_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY},
         ExplicitFeature{PHYSICAL_DEVICE_ACCELERATION_STRUCTURE_CAPTURE_REPLAY_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_ACCELERATION_STRUCTURE_CAPTURE_REPLAY},
         ExplicitFeature{PHYSICAL_DEVICE_VK_MEMORY_MODEL_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_VK_MEMORY_MODEL},
+        ExplicitFeature{PHYSICAL_DEVICE_PIPELINE_LIBRARY_GROUP_HANDLES_VK_FEATURES, DAXA_EXPLICIT_FEATURE_FLAG_PIPELINE_LIBRARY_GROUP_HANDLES},
     };
 
     // === Feature Processing ===

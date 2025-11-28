@@ -509,10 +509,14 @@ namespace daxa
                      "failed to create command recorder");
         return ret;
     }
+    
+    using daxa_RayTracingPipelineLibraryInfo = daxa_RayTracingPipelineInfo;
+    using RayTracingPipelineLibraryInfo = RayTracingPipelineInfo;
 
     DAXA_DECL_DVC_CREATE_FN(RasterPipeline, raster_pipeline)
     DAXA_DECL_DVC_CREATE_FN(ComputePipeline, compute_pipeline)
     DAXA_DECL_DVC_CREATE_FN(RayTracingPipeline, ray_tracing_pipeline)
+    DAXA_DECL_DVC_CREATE_FN(RayTracingPipelineLibrary, ray_tracing_pipeline_library)
     DAXA_DECL_DVC_CREATE_FN(Swapchain, swapchain)
     DAXA_DECL_DVC_CREATE_FN(BinarySemaphore, binary_semaphore)
     DAXA_DECL_DVC_CREATE_FN(TimelineSemaphore, timeline_semaphore)
@@ -873,7 +877,7 @@ namespace daxa
 
     auto RayTracingPipeline::info() const -> RayTracingPipelineInfo const &
     {
-        return *r_cast<RayTracingPipelineInfo const *>(rc_cast<daxa_RayTracingPipeline>(this->object));
+        return *r_cast<RayTracingPipelineInfo const *>(daxa_ray_tracing_pipeline_info(rc_cast<daxa_RayTracingPipeline>(this->object)));
     }
 
     auto RayTracingPipeline::create_default_sbt() const -> SbtPair
@@ -904,9 +908,31 @@ namespace daxa
         return daxa_ray_tracing_pipeline_dec_refcnt(rc_cast<daxa_RayTracingPipeline>(object));
     }
 
+    auto RayTracingPipelineLibrary::info() const -> RayTracingPipelineInfo const &
+    {
+        return *r_cast<RayTracingPipelineInfo const *>(daxa_ray_tracing_pipeline_library_info(rc_cast<daxa_RayTracingPipelineLibrary>(this->object)));
+    }
+
+    void RayTracingPipelineLibrary::get_shader_group_handles(void * out_blob) const
+    {
+        auto daxa_res = daxa_ray_tracing_pipeline_get_shader_group_handles(
+            rc_cast<daxa_RayTracingPipeline>(this->object), out_blob);
+        check_result(daxa_res, "failed in get_shader_group_handles");
+    }
+
+    auto RayTracingPipelineLibrary::inc_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_ray_tracing_pipeline_library_inc_refcnt(rc_cast<daxa_RayTracingPipelineLibrary>(object));
+    }
+
+    auto RayTracingPipelineLibrary::dec_refcnt(ImplHandle const * object) -> u64
+    {
+        return daxa_ray_tracing_pipeline_library_dec_refcnt(rc_cast<daxa_RayTracingPipelineLibrary>(object));
+    }
+
     auto ComputePipeline::info() const -> ComputePipelineInfo const &
     {
-        return *r_cast<ComputePipelineInfo const *>(rc_cast<daxa_ComputePipeline>(this->object));
+        return *r_cast<ComputePipelineInfo const *>(daxa_compute_pipeline_info(rc_cast<daxa_ComputePipeline>(this->object)));
     }
 
     auto ComputePipeline::inc_refcnt(ImplHandle const * object) -> u64
@@ -921,7 +947,7 @@ namespace daxa
 
     auto RasterPipeline::info() const -> RasterPipelineInfo const &
     {
-        return *r_cast<RasterPipelineInfo const *>(rc_cast<daxa_RasterPipeline>(this->object));
+        return *r_cast<RasterPipelineInfo const *>(daxa_raster_pipeline_info(rc_cast<daxa_RasterPipeline>(this->object)));
     }
 
     auto RasterPipeline::inc_refcnt(ImplHandle const * object) -> u64

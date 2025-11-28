@@ -6,6 +6,7 @@
 
 
 #include <daxa/c/device.h>
+#include <vulkan/vulkan_core.h>
 
 // Adding a new vulkan feature bool to daxa:
 //
@@ -45,6 +46,7 @@ namespace daxa
             physical_device_swapchain_khr,
             physical_device_conservative_rasterization_ext,
             physical_device_pipeline_library_khr,
+            physical_device_pipeline_library_group_handles_ext,
             physical_device_ray_tracing_maintenance_1_khr,
             physical_device_deferred_host_operation_khr,
             physical_device_acceleration_structure_khr,
@@ -69,6 +71,7 @@ namespace daxa
             VK_KHR_SWAPCHAIN_EXTENSION_NAME,
             VK_EXT_CONSERVATIVE_RASTERIZATION_EXTENSION_NAME,
             VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME,
+            VK_EXT_PIPELINE_LIBRARY_GROUP_HANDLES_EXTENSION_NAME,
             VK_KHR_RAY_TRACING_MAINTENANCE_1_EXTENSION_NAME,
             VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME,
             VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME,
@@ -124,6 +127,7 @@ namespace daxa
         VkPhysicalDeviceShaderAtomicFloatFeaturesEXT physical_device_shader_atomic_float_features_ext = {};
         VkPhysicalDeviceShaderClockFeaturesKHR physical_device_shader_clock_features_khr = {};
         VkPhysicalDeviceLineRasterizationFeaturesKHR physical_device_line_rasterization_features_khr = {};
+        VkPhysicalDevicePipelineLibraryGroupHandlesFeaturesEXT physical_device_pipeline_library_group_handles_ext = {};
         VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures physical_device_shader_demote_to_helper_invocation_features = {};
         VkPhysicalDeviceFeatures2 physical_device_features_2 = {};
         bool conservative_rasterization = {};

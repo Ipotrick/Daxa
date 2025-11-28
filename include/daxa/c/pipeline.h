@@ -45,6 +45,7 @@ typedef struct
     daxa_SpanToConst(daxa_RayTracingShaderInfo) closest_hit_stages;
     daxa_SpanToConst(daxa_RayTracingShaderInfo) any_hit_stages;
     daxa_SpanToConst(daxa_RayTracingShaderGroupInfo) shader_groups;
+    daxa_SpanToConst(daxa_RayTracingPipelineLibrary) pipeline_libraries;
     uint32_t max_ray_recursion_depth;
     uint32_t push_constant_size;
     daxa_SmallString name;
@@ -58,6 +59,7 @@ static daxa_RayTracingPipelineInfo const DAXA_DEFAULT_RAY_TRACING_PIPELINE_INFO 
     .closest_hit_stages = DAXA_ZERO_INIT,
     .any_hit_stages = DAXA_ZERO_INIT,
     .shader_groups = DAXA_ZERO_INIT,
+    .pipeline_libraries = DAXA_ZERO_INIT,
     .max_ray_recursion_depth = DAXA_ZERO_INIT,
     .push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE,
     .name = DAXA_ZERO_INIT,
@@ -77,6 +79,18 @@ DAXA_EXPORT uint64_t
 daxa_ray_tracing_pipeline_inc_refcnt(daxa_RayTracingPipeline pipeline);
 DAXA_EXPORT uint64_t
 daxa_ray_tracing_pipeline_dec_refcnt(daxa_RayTracingPipeline pipeline);
+
+DAXA_EXPORT daxa_RayTracingPipelineInfo const *
+daxa_ray_tracing_pipeline_library_info(daxa_RayTracingPipelineLibrary pipeline_library);
+
+// out_blob must be the size of the group_count * raytracing_properties.shaderGroupHandleSize
+DAXA_EXPORT daxa_Result
+daxa_ray_tracing_pipeline_library_get_shader_group_handles(daxa_RayTracingPipelineLibrary pipeline_library, void *out_blob);
+
+DAXA_EXPORT uint64_t
+daxa_ray_tracing_pipeline_library_inc_refcnt(daxa_RayTracingPipelineLibrary pipeline_library);
+DAXA_EXPORT uint64_t
+daxa_ray_tracing_pipeline_library_dec_refcnt(daxa_RayTracingPipelineLibrary pipeline_library);
 
 // COMPUTE PIPELINE
 
