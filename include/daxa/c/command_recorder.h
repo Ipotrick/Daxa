@@ -446,10 +446,6 @@ daxa_cmd_pipeline_barrier(daxa_CommandRecorder cmd_enc, daxa_BarrierInfo const *
 /// @param info parameters.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder cmd_enc, daxa_ImageBarrierInfo const * info);
-#if !DAXA_REMOVE_DEPRECATED
-DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder cmd_enc, daxa_ImageMemoryBarrierInfo const * info);
-#endif
 DAXA_EXPORT void
 daxa_cmd_signal_event(daxa_CommandRecorder cmd_enc, daxa_EventSignalInfo const * info);
 DAXA_EXPORT void

@@ -15,7 +15,8 @@ namespace tests
         {
             // When creating a device you have to fill out DeviceInfo2.
             // Choose a name, resource limits, explicit features.
-            // After that is done, list the physical devices and choose one of them.
+            // Then choose a suitable physical device and assign that devices index into device_info.physical_device_index.
+            // Finally, create the device.
 
             daxa::DeviceInfo2 device_info = {.name = "my device"};
 

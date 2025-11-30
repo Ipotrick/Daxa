@@ -256,10 +256,9 @@ struct App : AppWindow<App>
             .dst_access = daxa::AccessConsts::VERTEX_SHADER_READ,
         });
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
-            .src_layout = daxa::ImageLayout::UNDEFINED,
-            .dst_layout = daxa::ImageLayout::GENERAL,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = swapchain_image,
         });
 
@@ -282,10 +281,9 @@ struct App : AppWindow<App>
 
         imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, swapchain_image, size_x, size_y);
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
-            .src_layout = daxa::ImageLayout::GENERAL,
-            .dst_layout = daxa::ImageLayout::PRESENT_SRC,
+            .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
             .image_id = swapchain_image,
         });
 

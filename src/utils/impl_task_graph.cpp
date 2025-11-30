@@ -3448,7 +3448,7 @@ namespace daxa
                         std::string(" of task image \"") +
                         std::string(impl.global_image_infos[barrier.image_id.index].name) +
                         std::string("\" is invalid"));
-                command_list.pipeline_barrier_image_transition({
+                command_list.pipeline_image_barrier({
                     .src_access = barrier.src_access,
                     .dst_access = barrier.dst_access,
                     .src_layout = barrier.layout_before,
@@ -3572,7 +3572,7 @@ namespace daxa
                                     .dst_layout = remaining_first_accesses[first_access_slice_index].state.latest_layout,
                                     .image_id = execution_image_id,
                                 };
-                                recorder.pipeline_barrier_image_transition(img_barrier_info);
+                                recorder.pipeline_image_barrier(img_barrier_info);
                                 if (impl.info.record_debug_information)
                                 {
                                     std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));
@@ -3633,7 +3633,7 @@ namespace daxa
                             .dst_layout = remaining_first_accesse.state.latest_layout,
                             .image_id = execution_image_id,
                         };
-                        recorder.pipeline_barrier_image_transition(img_barrier_info);
+                        recorder.pipeline_image_barrier(img_barrier_info);
                         if (impl.info.record_debug_information)
                         {
                             std::format_to(std::back_inserter(out), "{}{}\n", indent, to_string(img_barrier_info));

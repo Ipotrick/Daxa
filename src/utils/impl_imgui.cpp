@@ -374,7 +374,7 @@ namespace daxa
         std::memcpy(staging_buffer_data, pixels, upload_size);
 
         auto recorder = this->info.device.create_command_recorder({.name = "dear ImGui Font Sheet Upload"});
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
             .dst_layout = daxa::ImageLayout::GENERAL,

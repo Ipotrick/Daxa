@@ -536,24 +536,6 @@ void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_BarrierInfo const
     };
 }
 
-auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_ImageMemoryBarrierInfo const * info) -> daxa_Result
-{
-    // All non general image layouts are treated as general layout.
-    daxa_ImageBarrierInfo new_info = {};
-    new_info.src_access = info->src_access;
-    new_info.dst_access = info->dst_access;
-    new_info.image_id = info->image_id;
-    if (info->src_layout == DAXA_IMAGE_LAYOUT_UNDEFINED)
-    {
-        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL;
-    }
-    if (info->dst_layout == DAXA_IMAGE_LAYOUT_PRESENT_SRC)
-    {
-        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC;
-    }
-    return daxa_cmd_pipeline_image_barrier(self, &new_info);
-}
-
 auto daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder self, daxa_ImageBarrierInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->image_id)
