@@ -377,7 +377,7 @@ namespace daxa
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-            .dst_layout = daxa::ImageLayout::GENERAL,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = font_sheet,
         });
         recorder.copy_buffer_to_image({

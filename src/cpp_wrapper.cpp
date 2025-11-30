@@ -1127,7 +1127,7 @@ namespace daxa
     DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, pipeline_barrier, BarrierInfo)
     DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_image_barrier, ImageBarrierInfo)
 
-    [[deprecated]] void CommandRecorder::pipeline_image_barrier(ImageMemoryBarrierInfo const & info)
+    [[deprecated]] void CommandRecorder::pipeline_barrier_image_transition(ImageMemoryBarrierInfo const & info)
     {
         // All non general image layouts are treated as general layout.
         ImageBarrierInfo new_info = {};

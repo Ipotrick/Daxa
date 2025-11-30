@@ -387,7 +387,7 @@ namespace daxa
         void reset_event(ResetEventInfo const & info);
 
 #if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use pipeline_image_barrier instead, API:3.2")]] void pipeline_image_barrier(ImageMemoryBarrierInfo const & info);
+        [[deprecated("Use pipeline_image_barrier instead, API:3.2")]] void pipeline_barrier_image_transition(ImageMemoryBarrierInfo const & info);
 #endif
 
         /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
