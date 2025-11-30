@@ -209,6 +209,8 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             &ret.vma_allocation,
             &vma_allocation_info));
         _DAXA_RETURN_IF_ERROR(result, result)
+
+        hot_data.host_address = vma_allocation_info.pMappedData;
     }
     else
     {
@@ -226,6 +228,8 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             hot_data.vk_buffer,
             {}));
         _DAXA_RETURN_IF_ERROR(result, result)
+
+        hot_data.host_address = (mem_block.alloc_info.pMappedData != nullptr) ? (static_cast<void*>(static_cast<u8*>(mem_block.alloc_info.pMappedData) + opt_offset)) : nullptr;
     }
 
     VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
@@ -235,8 +239,6 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     };
 
     hot_data.device_address = vkGetBufferDeviceAddress(self->vk_device, &vk_buffer_device_address_info);
-
-    hot_data.host_address = host_accessible ? vma_allocation_info.pMappedData : nullptr;
 
     self->buffer_device_address_buffer_host_ptr[id.index] = hot_data.device_address;
 

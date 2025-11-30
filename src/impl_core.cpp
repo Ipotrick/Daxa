@@ -558,9 +558,17 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
         return DAXA_RESULT_ERROR_UNKNOWN;
     }
 
+    auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(info->flags);
+    if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
+        ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
+        ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
+    {
+        vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+    }
+
     VmaAllocationCreateInfo const create_info{
-        .flags = info->flags,
-        .usage = VMA_MEMORY_USAGE_GPU_ONLY,
+        .flags = vma_allocation_flags,
+        .usage = VMA_MEMORY_USAGE_UNKNOWN,
         .requiredFlags = {}, // TODO: idk what this is...
         .preferredFlags = {},
         .memoryTypeBits = {}, // TODO: idk what this is....
@@ -568,11 +576,8 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
         .pUserData = {},
         .priority = 0.5f,
     };
-    auto result = vmaAllocateMemory(self->vma_allocator, &info->requirements, &create_info, &ret.allocation, &ret.alloc_info);
-    if (result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(result);
-    }
+    auto result = static_cast<daxa_Result>(vmaAllocateMemory(self->vma_allocator, &info->requirements, &create_info, &ret.allocation, &ret.alloc_info));
+    _DAXA_RETURN_IF_ERROR(result, result)
 
     ret.strong_count = 1;
     self->inc_weak_refcnt();
