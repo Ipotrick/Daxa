@@ -628,10 +628,9 @@ namespace tests
                     .size = cam_buffer_size,
                 });
 
-                recorder.pipeline_barrier_image_transition({
+                recorder.pipeline_image_barrier({
                     .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
-                    .src_layout = daxa::ImageLayout::UNDEFINED,
-                    .dst_layout = daxa::ImageLayout::GENERAL,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                     .image_id = swapchain_image,
                 });
 
@@ -671,10 +670,9 @@ namespace tests
                 });
 #endif // ACTIVATE_ATOMIC_FLOAT
 
-                recorder.pipeline_barrier_image_transition({
+                recorder.pipeline_image_barrier({
                     .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
-                    .src_layout = daxa::ImageLayout::GENERAL,
-                    .dst_layout = daxa::ImageLayout::PRESENT_SRC,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                     .image_id = swapchain_image,
                 });
 

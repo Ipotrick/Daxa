@@ -41,7 +41,7 @@ struct WindowInfo
 struct DrawTask : DrawTri::Task
 {
     AttachmentViews views = {};
-    std::shared_ptr<daxa::RasterPipeline> pipeline = {};
+    daxa::RasterPipeline* pipeline = {};
     void callback(daxa::TaskInterface ti)
     {
         daxa::ImageInfo color_img_info = ti.info(AT.render_target).value();
@@ -172,11 +172,11 @@ auto main() -> int
 
     // And a task to draw to the screen
     loop_task_graph.add_task(DrawTask{
-        .views = std::array{
-            daxa::attachment_view(DrawTri::AT.resolve_target, task_swapchain_image),
-            daxa::attachment_view(DrawTri::AT.render_target, trender_image),
+        .views = DrawTask::Views{
+            .resolve_target = task_swapchain_image.view(),
+            .render_target = trender_image.view(),
         },
-        .pipeline = pipeline,
+        .pipeline = pipeline.get(),
     });
 
     loop_task_graph.submit({});

@@ -121,12 +121,12 @@ static const daxa_ImageMemoryBarrierInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_I
 
 #endif
 
-enum daxa_ImageLayoutOperation
+typedef enum
 {
     DAXA_IMAGE_LAYOUT_OPERATION_NONE = 0,
     DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL = 1,
     DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC = 2,
-};
+} daxa_ImageLayoutOperation;
 
 typedef struct
 {
