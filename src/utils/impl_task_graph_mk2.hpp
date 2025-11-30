@@ -8,8 +8,6 @@
 #include <daxa/utils/task_graph_types.hpp>
 #include <memory_resource>
 
-#define DAXA_TASK_GRAPH_MAX_CONDITIONALS 5
-
 // This file should house the rewrite of taskgraph.
 // Please DO NOT INCLUDE ANY existing impl TG headers.
 // Please ONLY INCLUDE public api task graph headers.
@@ -210,29 +208,6 @@ namespace daxa
 
     struct ImplTaskGraph;
 
-    struct TaskGraphPermutation
-    {
-        // record time information:
-        bool active = {};
-        // persistent information:
-        TaskImageView swapchain_image = {};
-        DynamicArenaArray8k<PerPermTaskBuffer> buffer_infos = {};
-        DynamicArenaArray8k<PerPermTaskImage> image_infos = {};
-        std::vector<TaskSplitBarrier> split_barriers = {};
-        DynamicArenaArray8k<TaskBarrier> barriers = {};
-        DynamicArenaArray8k<usize> initial_barriers = {};
-        // TODO(msakmary, pahrens) - Instead of storing batch submit scopes which contain batches
-        // we should make a vector of batches which and a second vector of submit scopes which are
-        // just offsets into the batches vector
-        std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
-        usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
-        usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
-
-        void add_task(ImplTaskGraph & task_graph_impl, ImplTask & impl_task, TaskId task_id, daxa::Queue queue);
-        void submit(MemoryArena* allocator, TaskSubmitInfo const & info);
-        void present(TaskPresentInfo const & info);
-    };
-
     struct ImplPersistentTaskBufferBlasTlas final : ImplHandle
     {
         ImplPersistentTaskBufferBlasTlas(TaskBufferInfo a_info);
@@ -372,7 +347,6 @@ namespace daxa
     {
         // interface:
         ImplTaskGraph & task_graph;
-        TaskGraphPermutation & permutation;
         CommandRecorder & recorder;
         ImplTask * current_task = {};
         types::DeviceAddress device_address = {};
@@ -392,9 +366,26 @@ namespace daxa
 
         MemoryArena task_memory = {};
 
+        // persistent information:
+        TaskImageView swapchain_image = {};
+        DynamicArenaArray8k<PerPermTaskBuffer> buffer_infos = {};
+        DynamicArenaArray8k<PerPermTaskImage> image_infos = {};
+        std::vector<TaskSplitBarrier> split_barriers = {};
+        DynamicArenaArray8k<TaskBarrier> barriers = {};
+        DynamicArenaArray8k<usize> initial_barriers = {};
+        // TODO(msakmary, pahrens) - Instead of storing batch submit scopes which contain batches
+        // we should make a vector of batches which and a second vector of submit scopes which are
+        // just offsets into the batches vector
+        std::vector<TaskBatchSubmitScope> batch_submit_scopes = {};
+        usize swapchain_image_first_use_submit_scope_index = std::numeric_limits<usize>::max();
+        usize swapchain_image_last_use_submit_scope_index = std::numeric_limits<usize>::max();
+
+        void add_task(ImplTaskGraph & task_graph_impl, ImplTask & impl_task, TaskId task_id, daxa::Queue queue);
+        void submit(MemoryArena* allocator, TaskSubmitInfo const & info);
+        void present(TaskPresentInfo const & info);
+
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
-        std::vector<TaskGraphPermutation> permutations = {};
         DynamicArenaArray8k<ImplTask> tasks = {};
         // TODO: replace with faster hash map.
         std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
@@ -403,7 +394,6 @@ namespace daxa
         // record time information:
         u32 record_active_conditional_scopes = {};
         u32 record_conditional_states = {};
-        std::vector<TaskGraphPermutation *> record_active_permutations = {};
         std::unordered_map<std::string_view, TaskBufferView> buffer_name_to_id = {};
         std::unordered_map<std::string_view, TaskBlasView> blas_name_to_id = {};
         std::unordered_map<std::string_view, TaskTlasView> tlas_name_to_id = {};
@@ -419,7 +409,6 @@ namespace daxa
 
         // execution time information:
         std::optional<daxa::TransferMemoryPool> staging_memory = {};
-        std::array<bool, DAXA_TASK_GRAPH_MAX_CONDITIONALS> execution_time_current_conditionals = {};
 
         // post execution information:
         u32 chosen_permutation_last_execution = {};
@@ -433,7 +422,7 @@ namespace daxa
         std::array<u64, DAXA_MAX_TOTAL_QUEUE_COUNT> cpu_submit_timeline_values = {};
 
         template <typename TaskIdT>
-        auto get_actual_buffer_blas_tlas(TaskIdT id, TaskGraphPermutation const & perm) const -> std::span<typename TaskIdT::ID_T const>
+        auto get_actual_buffer_blas_tlas(TaskIdT id) const -> std::span<typename TaskIdT::ID_T const>
         {
             static constexpr std::array<typename TaskIdT::ID_T, 64> NULL_ID_ARRAY = {};
             if (id.is_null())
@@ -450,7 +439,7 @@ namespace daxa
             }
             else
             {
-                auto const & perm_buffer = perm.buffer_infos.at(id.index);
+                auto const & perm_buffer = buffer_infos.at(id.index);
                 DAXA_DBG_ASSERT_TRUE_M(perm_buffer.valid, "Can not get actual buffer - buffer is not valid in this permutation");
                 return std::span{&std::get<typename TaskIdT::ID_T>(perm_buffer.actual_id), 1};
             }
@@ -460,7 +449,7 @@ namespace daxa
             std::span<BufferId const>,
             std::span<BlasId const>,
             std::span<TlasId const>>;
-        auto get_actual_buffer_blas_tlas_generic(TaskGPUResourceView id, TaskGraphPermutation const & perm) const -> GetActualIdsVariant
+        auto get_actual_buffer_blas_tlas_generic(TaskGPUResourceView id) const -> GetActualIdsVariant
         {
             static constexpr std::array<BufferId const, 64> NULL_ID_ARRAY = {};
             if (id.is_null())
@@ -477,7 +466,7 @@ namespace daxa
             }
             else
             {
-                auto const & perm_buffer = perm.buffer_infos.at(id.index);
+                auto const & perm_buffer = buffer_infos.at(id.index);
                 DAXA_DBG_ASSERT_TRUE_M(perm_buffer.valid, "Can not get actual buffer - buffer is not valid in this permutation");
                 GetActualIdsVariant ret = std::span{NULL_ID_ARRAY.data(), NULL_ID_ARRAY.size()};
                 std::visit([&](auto const & id)
@@ -486,7 +475,7 @@ namespace daxa
             }
         }
 
-        auto buffer_blas_tlas_str(TaskGPUResourceView id, TaskGraphPermutation const & perm) const -> std::string_view
+        auto buffer_blas_tlas_str(TaskGPUResourceView id) const -> std::string_view
         {
             if (id.is_null())
             {
@@ -500,7 +489,7 @@ namespace daxa
             }
             else
             {
-                auto const & perm_buffer = perm.buffer_infos.at(id.index);
+                auto const & perm_buffer = buffer_infos.at(id.index);
                 DAXA_DBG_ASSERT_TRUE_M(perm_buffer.valid, "Can not get actual buffer - buffer is not valid in this permutation");
                 return names[perm_buffer.actual_id.index()];
             }
@@ -533,21 +522,14 @@ namespace daxa
         }
 
         // auto get_actual_buffers(TaskBufferView id, TaskGraphPermutation const & perm) const -> std::span<BufferId const>;
-        auto get_actual_images(TaskImageView id, TaskGraphPermutation const & perm) const -> std::span<ImageId const>;
+        auto get_actual_images(TaskImageView id) const -> std::span<ImageId const>;
         auto id_to_local_id(TaskImageView id) const -> TaskImageView;
-        void update_active_permutations();
-        void update_image_view_cache(ImplTask & task, TaskGraphPermutation const & permutation);
-        void execute_task(ImplTaskRuntimeInterface & impl_runtime, TaskGraphPermutation & permutation, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id, Queue queue);
-        void insert_pre_batch_barriers(TaskGraphPermutation & permutation);
-        void create_transient_runtime_buffers_and_tlas(TaskGraphPermutation & permutation);
-        void create_transient_runtime_images(TaskGraphPermutation & permutation);
+        void update_image_view_cache(ImplTask & task);
+        void execute_task(ImplTaskRuntimeInterface & impl_runtime, usize batch_index, TaskBatchId in_batch_task_index, TaskId task_id, Queue queue);
+        void insert_pre_batch_barriers();
+        void create_transient_runtime_buffers_and_tlas();
+        void create_transient_runtime_images();
         void allocate_transient_resources();
-        void print_task_buffer_blas_tlas_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskGPUResourceView local_id);
-        void print_task_image_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation, TaskImageView image);
-        void print_task_barrier_to(std::string & out, std::string & indent, TaskGraphPermutation const & permutation, usize index, bool const split_barrier);
-        void print_task_to(std::string & out, std::string & indent, TaskGraphPermutation const & permutation, TaskId task_id);
-        void print_permutation_aliasing_to(std::string & out, std::string indent, TaskGraphPermutation const & permutation);
-        void debug_print();
 
         static void zero_ref_callback(ImplHandle const * handle);
     };
