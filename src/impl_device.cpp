@@ -2733,6 +2733,21 @@ auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo 
 
 auto daxa_dvc_transition_image_layout(daxa_Device self, daxa_HostImageLayoutTransitionInfo const * info) -> daxa_Result
 {
+    daxa_HostImageLayoutOperationInfo new_info = {};
+    new_info.image_id = info->image_id;
+    if (info->old_image_layout == DAXA_IMAGE_LAYOUT_UNDEFINED)
+    {
+        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL;
+    }
+    if (info->new_image_layout == DAXA_IMAGE_LAYOUT_PRESENT_SRC)
+    {
+        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC;
+    }
+    return daxa_dvc_image_layout_operation(self, &new_info);
+}
+
+auto daxa_dvc_image_layout_operation(daxa_Device self, daxa_HostImageLayoutOperationInfo const * info) -> daxa_Result
+{
     if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY) == 0)
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT, DAXA_RESULT_ERROR_EXTENSION_NOT_PRESENT);
@@ -2747,9 +2762,9 @@ auto daxa_dvc_transition_image_layout(daxa_Device self, daxa_HostImageLayoutTran
         .sType = VK_STRUCTURE_TYPE_HOST_IMAGE_LAYOUT_TRANSITION_INFO_EXT,
         .pNext = nullptr,
         .image = image.vk_image,
-        .oldLayout = static_cast<VkImageLayout>(info->old_image_layout),
-        .newLayout = static_cast<VkImageLayout>(info->new_image_layout),
-        .subresourceRange = make_subresource_range(info->image_slice, image.aspect_flags),
+        .oldLayout = info->layout_operation == DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL,
+        .newLayout = info->layout_operation == DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_GENERAL,
+        .subresourceRange = make_subresource_range(image.view_slot.info.slice, image.aspect_flags),
     };
     auto result =  static_cast<daxa_Result>(self->vkTransitionImageLayoutEXT(self->vk_device, 1, &vk_host_image_layout_transition_info));
     _DAXA_RETURN_IF_ERROR(result, result);

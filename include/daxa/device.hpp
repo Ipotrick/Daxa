@@ -378,12 +378,20 @@ namespace daxa
         std::byte* memory_ptr = {};
     };
 
-    struct HostImageLayoutTransitionInfo
+#if !DAXA_REMOVE_DEPRECATED
+    struct [[deprecated("Use HostImageLayoutOperationInfo instead; API:3.2")]] HostImageLayoutTransitionInfo
     {
         ImageId image = {};
         ImageLayout old_image_layout = {};
         ImageLayout new_image_layout = {};
         ImageMipArraySlice image_slice = {};
+    };
+#endif
+
+    struct HostImageLayoutOperationInfo
+    {
+        ImageId image = {};
+        ImageLayoutOperation layout_operation = {};
     };
 
     struct DeviceInfo2
@@ -667,7 +675,11 @@ namespace daxa
 
         void copy_memory_to_image(MemoryToImageCopyInfo const & info);
         void copy_image_to_memory(ImageToMemoryCopyInfo const & info);
-        void transition_image_layout(HostImageLayoutTransitionInfo const & info);
+        void image_layout_operation(HostImageLayoutOperationInfo const & info);
+
+        #if !DAXA_REMOVE_DEPRECATED
+        [[deprecated("Use image_layout_operation instead; API:3.2")]] void transition_image_layout(HostImageLayoutTransitionInfo const & info);
+        #endif
 
         [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;

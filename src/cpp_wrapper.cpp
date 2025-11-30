@@ -504,6 +504,12 @@ namespace daxa
         check_result(result, "failed host transition image layout");
     }
 
+    void Device::image_layout_operation(HostImageLayoutOperationInfo const& info) 
+    {
+        auto result = daxa_dvc_image_layout_operation(r_cast<daxa_Device>(this->object), r_cast<daxa_HostImageLayoutOperationInfo const*>(&info));
+        check_result(result, "failed host image layout operation");
+    }
+
 #define DAXA_DECL_DVC_CREATE_FN(Name, name)                        \
     auto Device::create_##name(Name##Info const & info)->Name      \
     {                                                              \

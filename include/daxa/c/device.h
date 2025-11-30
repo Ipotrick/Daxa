@@ -549,6 +549,8 @@ typedef struct
 
 static daxa_ImageToMemoryCopyInfo const DAXA_DEFAULT_IMAGE_TO_MEMORY_COPY_INFO = DAXA_ZERO_INIT;
 
+#if !DAXA_REMOVE_DEPRECATED
+/* deprecated("Use daxa_HostImageLayoutOperationInfo instead; API:3.2") */
 typedef struct
 {
     daxa_ImageId image_id;
@@ -558,6 +560,15 @@ typedef struct
 } daxa_HostImageLayoutTransitionInfo;
 
 static daxa_HostImageLayoutTransitionInfo const DAXA_DEFAULT_HOST_IMAGE_LAYOUT_TRANSITION_INFO = DAXA_ZERO_INIT;
+#endif
+
+typedef struct
+{
+    daxa_ImageId image_id;
+    daxa_ImageLayoutOperation layout_operation;
+} daxa_HostImageLayoutOperationInfo;
+
+static daxa_HostImageLayoutOperationInfo const DAXA_DEFAULT_HOST_IMAGE_LAYOUT_OPERATION_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_device_memory_report(daxa_Device device, daxa_DeviceMemoryReport * report);
@@ -677,8 +688,15 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_copy_memory_to_image(daxa_Device device, daxa_MemoryToImageCopyInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_copy_image_to_memory(daxa_Device device, daxa_ImageToMemoryCopyInfo const * info);
+
+#if !DAXA_REMOVE_DEPRECATED
+/* deprecated("Use image_layout_operation instead; API:3.2") */
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_transition_image_layout(daxa_Device device, daxa_HostImageLayoutTransitionInfo const * info);
+#endif
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_image_layout_operation(daxa_Device device, daxa_HostImageLayoutOperationInfo const * info);
 
 DAXA_EXPORT VkDevice
 daxa_dvc_get_vk_device(daxa_Device device);
