@@ -377,8 +377,8 @@ namespace daxa
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = font_sheet,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
         recorder.copy_buffer_to_image({
             .buffer = texture_staging_buffer,
