@@ -3797,21 +3797,21 @@ namespace daxa
                                 usize const img_bar_vec_start_size = tl_image_barrier_infos.size();
                                 for (auto image : impl.get_actual_images(split_barrier.image_id, permutation))
                                 {
-                                    ImageBarrierMemoryOp op = {};
+                                    ImageLayoutOperation op = {};
                                     if (split_barrier.layout_before == ImageLayout::UNDEFINED)
                                     {
-                                        op = ImageBarrierMemoryOp::TO_GENERAL;
+                                        op = ImageLayoutOperation::TO_GENERAL;
                                     }
                                     if (split_barrier.layout_after == ImageLayout::PRESENT_SRC)
                                     {
-                                        op = ImageBarrierMemoryOp::TO_PRESENT_SRC;
+                                        op = ImageLayoutOperation::TO_PRESENT_SRC;
                                     }
 
                                     tl_image_barrier_infos.push_back(ImageBarrierInfo{
                                         .src_access = split_barrier.src_access,
                                         .dst_access = split_barrier.dst_access,
                                         .image_id = image,
-                                        .memory_op = op,
+                                        .layout_operation = op,
                                     });
                                 }
                                 usize const img_bar_vec_end_size = tl_image_barrier_infos.size();
@@ -3869,20 +3869,20 @@ namespace daxa
                             {
                                 for (auto image : impl.get_actual_images(task_split_barrier.image_id, permutation))
                                 {
-                                    ImageBarrierMemoryOp op = {};
+                                    ImageLayoutOperation op = {};
                                     if (task_split_barrier.layout_before == ImageLayout::UNDEFINED)
                                     {
-                                        op = ImageBarrierMemoryOp::TO_GENERAL;
+                                        op = ImageLayoutOperation::TO_GENERAL;
                                     }
                                     if (task_split_barrier.layout_after == ImageLayout::PRESENT_SRC)
                                     {
-                                        op = ImageBarrierMemoryOp::TO_PRESENT_SRC;
+                                        op = ImageLayoutOperation::TO_PRESENT_SRC;
                                     }
                                     tl_image_barrier_infos.push_back({
                                         .src_access = task_split_barrier.src_access,
                                         .dst_access = task_split_barrier.dst_access,
                                         .image_id = image,
-                                        .memory_op = op,
+                                        .layout_operation = op,
                                     });
                                 }
                                 impl_runtime.recorder.signal_event({

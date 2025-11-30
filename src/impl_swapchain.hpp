@@ -50,7 +50,7 @@ struct daxa_ImplSwapchain final : ImplHandle
     std::vector<BinarySemaphore> acquire_semaphores = {};
     std::vector<BinarySemaphore> present_semaphores = {};
     // Monotonically increasing frame index.
-    i64 cpu_frame_timeline = -1ll;
+    i64 cpu_frame_timeline = 0ll;
     // cpu_frame_timeline % frames in flight. used to index the acquire semaphores.
     usize acquire_semaphore_index = {};
     // Gpu timeline semaphore used to track how far behind the gpu is.

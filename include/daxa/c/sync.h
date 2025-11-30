@@ -121,11 +121,11 @@ static const daxa_ImageMemoryBarrierInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_I
 
 #endif
 
-enum daxa_ImageBarrierMemoryOp
+enum daxa_ImageLayoutOperation
 {
-    DAXA_IMAGE_BARRIER_MEMORY_OP_KEEP_GENERAL = 0,
-    DAXA_IMAGE_BARRIER_MEMORY_OP_TO_GENERAL = 1,
-    DAXA_IMAGE_BARRIER_MEMORY_OP_TO_PRESENT_SRC = 2,
+    DAXA_IMAGE_LAYOUT_OPERATION_NONE = 0,
+    DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL = 1,
+    DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC = 2,
 };
 
 typedef struct
@@ -133,7 +133,7 @@ typedef struct
     daxa_Access src_access;
     daxa_Access dst_access;
     daxa_ImageId image_id;
-    daxa_ImageBarrierMemoryOp memory_op;
+    daxa_ImageLayoutOperation layout_operation;
 } daxa_ImageBarrierInfo;
 
 static const daxa_ImageBarrierInfo DAXA_DEFAULT_IMAGE_BARRIER_INFO = DAXA_ZERO_INIT;

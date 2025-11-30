@@ -1048,13 +1048,6 @@ namespace daxa
             u32 size = {};
             u32 alignment = {};
         };
-        template <typename T>
-        auto constexpr align_up(T value, T align) -> T
-        {
-            if (value == 0 || align == 0)
-                return 0;
-            return (value + align - static_cast<T>(1)) / align * align;
-        }
         constexpr auto get_asb_size_and_alignment(auto const & attachment_array) -> AsbSizeAlignment
         {
             AsbSizeAlignment size_align = {};

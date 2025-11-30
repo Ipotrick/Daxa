@@ -33,8 +33,8 @@ auto get_vk_image_memory_barrier(daxa_ImageBarrierInfo const & image_barrier, da
         .srcAccessMask = image_barrier.src_access.access_type,
         .dstStageMask = image_barrier.dst_access.stages,
         .dstAccessMask = image_barrier.dst_access.access_type,
-        .oldLayout = image_barrier.memory_op == DAXA_IMAGE_BARRIER_MEMORY_OP_TO_GENERAL ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL,
-        .newLayout = image_barrier.memory_op == DAXA_IMAGE_BARRIER_MEMORY_OP_TO_PRESENT_SRC ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_GENERAL,
+        .oldLayout = image_barrier.layout_operation == DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL,
+        .newLayout = image_barrier.layout_operation == DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_GENERAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = vk_image,
@@ -545,11 +545,11 @@ auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_
     new_info.image_id = info->image_id;
     if (info->src_layout == DAXA_IMAGE_LAYOUT_UNDEFINED)
     {
-        new_info.memory_op = DAXA_IMAGE_BARRIER_MEMORY_OP_TO_GENERAL;
+        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL;
     }
     if (info->dst_layout == DAXA_IMAGE_LAYOUT_PRESENT_SRC)
     {
-        new_info.memory_op = DAXA_IMAGE_BARRIER_MEMORY_OP_TO_PRESENT_SRC;
+        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC;
     }
     return daxa_cmd_pipeline_image_barrier(self, &new_info);
 }

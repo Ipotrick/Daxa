@@ -80,5 +80,18 @@ namespace daxa
         : task_memory{ "TaskGraph task memory pool", task_memory_size }
     {
     } 
+
+    void ImplTaskGraphMk2::add_task(
+        void (*task_callback)(daxa::TaskInterface, void*),
+        u64* task_callback_memory,
+        std::span<TaskAttachmentInfo> attachments,
+        u32 attachment_shader_blob_size,
+        u32 attachment_shader_blob_alignment,
+        TaskType task_type,
+        std::string_view name,
+        Queue queue)
+    {
+        
+    }
 }
 #endif

@@ -1312,15 +1312,15 @@ namespace daxa
                            to_string(info.image_id));
     }
     
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string
+    DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string
     {
         ImageLayout src_layout = ImageLayout::GENERAL;
         ImageLayout dst_layout = ImageLayout::GENERAL;
-        if (info.memory_op == ImageBarrierMemoryOp::TO_GENERAL)
+        if (info.layout_operation == ImageLayoutOperation::TO_GENERAL)
         {
             src_layout = ImageLayout::UNDEFINED;
         }
-        if (info.memory_op == ImageBarrierMemoryOp::TO_PRESENT_SRC)
+        if (info.layout_operation == ImageLayoutOperation::TO_PRESENT_SRC)
         {
             dst_layout = ImageLayout::PRESENT_SRC;
         }

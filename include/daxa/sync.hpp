@@ -33,9 +33,9 @@ namespace daxa
     [[nodiscard]] [[deprecated("Use ImageBarrierInfo instead; API:3.2")]] DAXA_EXPORT_CXX auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
 #endif
 
-    enum struct ImageBarrierMemoryOp
+    enum struct ImageLayoutOperation
     {
-        KEEP_GENERAL = 0,
+        NONE = 0,
         TO_GENERAL = 1,
         TO_PRESENT_SRC = 2,
     };
@@ -45,7 +45,7 @@ namespace daxa
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
         ImageId image_id = {};
-        ImageBarrierMemoryOp memory_op = {};
+        ImageLayoutOperation layout_operation = {};
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string;
