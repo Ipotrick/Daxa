@@ -141,6 +141,39 @@ namespace tests
             exit(-1);
         }
     }
+    void sro_aliased_suballocation_host_memory(daxa::Instance & instance)
+    {
+        constexpr daxa::BufferInfo host_test_buffer_info = {
+            .size = 64,
+            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .name = "host test buffer",
+        };
+        try
+        {
+            auto device = instance.create_device_2(instance.choose_device({}, {}));
+            auto test_buffer_mem_req = device.memory_requirements(host_test_buffer_info);
+            auto pessimised_mem_req = daxa::MemoryRequirements{
+                .size = test_buffer_mem_req.size,
+                .alignment = test_buffer_mem_req.alignment,
+                .memory_type_bits = test_buffer_mem_req.memory_type_bits,
+            };
+            auto test_memory_block = device.create_memory({
+                .requirements = pessimised_mem_req,
+                .flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            });
+            auto memory_block_test_buffer = device.create_buffer_from_memory_block({
+                .buffer_info = test_buffer_info,
+                .memory_block = test_memory_block,
+            });
+            [[maybe_unused]] auto dummy = device.buffer_host_address(memory_block_test_buffer).value();
+            device.destroy_buffer(memory_block_test_buffer);
+        }
+        catch (std::runtime_error error)
+        {
+            std::cout << "failed test \"sro_aliased_suballocation\": " << error.what() << std::endl;
+            exit(-1);
+        }
+    }
     void acceleration_structure_creation(daxa::Instance & instance)
     {
         try
@@ -176,6 +209,7 @@ auto main() -> int
     tests::device_selection(instance);
     tests::sro_creation(instance);
     tests::sro_aliased_suballocation(instance);
+    tests::sro_aliased_suballocation_host_memory(instance);
     tests::acceleration_structure_creation(instance);
     std::cout << "completed all tests successfully!" << std::endl;
 }

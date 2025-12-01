@@ -150,7 +150,7 @@ struct MemoryBlockZombie
 struct daxa_ImplMemoryBlock final : ImplHandle
 {
     daxa_Device device = {};
-    MemoryBlockInfo info = {};
+    daxa_MemoryBlockInfo info = {};
     VmaAllocation allocation = {};
     VmaAllocationInfo alloc_info = {};
 

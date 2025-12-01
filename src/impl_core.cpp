@@ -549,29 +549,33 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
 {
     daxa_ImplMemoryBlock ret = {};
     ret.device = self;
-    ret.info = std::bit_cast<daxa::MemoryBlockInfo>(*info);
+    ret.info = *info;
 
     if (info->requirements.memoryTypeBits == 0)
     {
-        // TODO(capi): This should not be here, the point is to return an error!
-        // DAXA_DBG_ASSERT_TRUE_M(false, "memory_type_bits must be non zero");
-        return DAXA_RESULT_ERROR_UNKNOWN;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_ZERO_REQUIRED_MEMORY_TYPE_BITS, DAXA_RESULT_ERROR_ZERO_REQUIRED_MEMORY_TYPE_BITS)
     }
 
-    auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(info->flags);
-    if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
-        ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
-        ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
+    VkMemoryPropertyFlags required_properties = {};
+    daxa_MemoryFlags vma_allocation_flags = info->flags;
+    if (((vma_allocation_flags & DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM) != 0u) ||
+        ((vma_allocation_flags & DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE) != 0u))
     {
         vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        required_properties |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+
+        if ((vma_allocation_flags & DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE) != 0u)
+        {
+            required_properties |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        }
     }
 
     VmaAllocationCreateInfo const create_info{
         .flags = vma_allocation_flags,
         .usage = VMA_MEMORY_USAGE_UNKNOWN,
-        .requiredFlags = {}, // TODO: idk what this is...
+        .requiredFlags = required_properties,
         .preferredFlags = {},
-        .memoryTypeBits = {}, // TODO: idk what this is....
+        .memoryTypeBits = info->requirements.memoryTypeBits,
         .pool = {},
         .pUserData = {},
         .priority = 0.5f,

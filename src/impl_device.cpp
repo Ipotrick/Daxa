@@ -178,17 +178,17 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     };
 
     bool host_accessible = false;
+    daxa_MemoryFlags vma_allocation_flags = opt_memory_block != nullptr ? opt_memory_block->info.flags : info->allocate_info;
+    if (((vma_allocation_flags & DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM) != 0u) ||
+        ((vma_allocation_flags & DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE) != 0u))
+    {
+        vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
+        host_accessible = true;
+    }
+
     VmaAllocationInfo vma_allocation_info = {};
     if (opt_memory_block == nullptr)
     {
-        auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(info->allocate_info);
-        if (((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT) != 0u) ||
-            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT) != 0u) ||
-            ((vma_allocation_flags & VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT) != 0u))
-        {
-            vma_allocation_flags |= VMA_ALLOCATION_CREATE_MAPPED_BIT;
-            host_accessible = true;
-        }
 
         VmaAllocationCreateInfo const vma_allocation_create_info{
             .flags = vma_allocation_flags,
@@ -210,7 +210,10 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             &vma_allocation_info));
         _DAXA_RETURN_IF_ERROR(result, result)
 
-        hot_data.host_address = vma_allocation_info.pMappedData;
+        if (host_accessible)
+        {
+            hot_data.host_address = vma_allocation_info.pMappedData;
+        }
     }
     else
     {
@@ -229,7 +232,10 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             {}));
         _DAXA_RETURN_IF_ERROR(result, result)
 
-        hot_data.host_address = (mem_block.alloc_info.pMappedData != nullptr) ? (static_cast<void*>(static_cast<u8*>(mem_block.alloc_info.pMappedData) + opt_offset)) : nullptr;
+        if (host_accessible)
+        {
+            hot_data.host_address = static_cast<void*>(static_cast<u8*>(opt_memory_block->alloc_info.pMappedData) + opt_offset);
+        }
     }
 
     VkBufferDeviceAddressInfo const vk_buffer_device_address_info{
@@ -755,9 +761,6 @@ auto daxa_default_device_score(daxa_DeviceProperties const * c_properties) -> i3
 {
     DeviceProperties const * properties = r_cast<DeviceProperties const *>(c_properties);
     i32 score = 0;
-    // TODO: Maybe just return an unconditional score of 1 to make it so the
-    // first GPU is selected. In `daxa_instance_create_device`, incompatible
-    // devices should be discarded.
     switch (properties->device_type)
     {
     case daxa::DeviceType::DISCRETE_GPU: score += 10000; break;
@@ -791,7 +794,6 @@ auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const
         .memoryRequirements = {},
     };
     vkGetDeviceBufferMemoryRequirements(self->vk_device, &buffer_requirement_info, &mem_requirements);
-    // MemoryRequirements ret = std::bit_cast<MemoryRequirements>(mem_requirements.memoryRequirements);
     return mem_requirements.memoryRequirements;
 }
 
@@ -1219,7 +1221,7 @@ auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId id, void ** ou
     }
     if (hot_data->host_address == 0)
     {
-        return DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE, DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE);
     }
     *out_addr = hot_data->host_address;
     return DAXA_RESULT_SUCCESS;
