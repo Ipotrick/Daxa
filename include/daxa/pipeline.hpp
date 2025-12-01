@@ -86,7 +86,7 @@ namespace daxa
 
         struct SbtPair { daxa::BufferId buffer; RayTracingShaderBindingTable table; };
         [[nodiscard]] auto create_default_sbt() const -> SbtPair;
-        void get_shader_group_handles(void *out_blob) const;
+        void get_shader_group_handles(void *out_blob, uint32_t first_group = 0, int32_t group_count = -1) const;
 
       protected:
         template <typename T, typename H_T>
@@ -104,7 +104,7 @@ namespace daxa
         /// @return reference to info of object.
         [[nodiscard]] auto info() const -> RayTracingPipelineInfo const &;
 
-        void get_shader_group_handles(void *out_blob) const;
+        void get_shader_group_handles(void *out_blob, uint32_t first_group = 0, int32_t group_count = -1) const;
 
       protected:
         template <typename T, typename H_T>

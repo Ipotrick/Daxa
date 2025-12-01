@@ -72,8 +72,9 @@ DAXA_EXPORT daxa_Result
 daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeline, daxa_RayTracingShaderBindingTable * out_sbt, daxa_BufferId * out_buffer);
 
 // out_blob must be the size of the group_count * raytracing_properties.shaderGroupHandleSize
+// if group_count is -1, this function will infer it from the groups specified in pipeline creation
 DAXA_EXPORT daxa_Result
-daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void *out_blob);
+daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void *out_blob, uint32_t first_group, int32_t group_count);
 
 DAXA_EXPORT uint64_t
 daxa_ray_tracing_pipeline_inc_refcnt(daxa_RayTracingPipeline pipeline);
@@ -84,8 +85,9 @@ DAXA_EXPORT daxa_RayTracingPipelineInfo const *
 daxa_ray_tracing_pipeline_library_info(daxa_RayTracingPipelineLibrary pipeline_library);
 
 // out_blob must be the size of the group_count * raytracing_properties.shaderGroupHandleSize
+// if group_count is -1, this function will infer it from the groups specified in pipeline creation
 DAXA_EXPORT daxa_Result
-daxa_ray_tracing_pipeline_library_get_shader_group_handles(daxa_RayTracingPipelineLibrary pipeline_library, void *out_blob);
+daxa_ray_tracing_pipeline_library_get_shader_group_handles(daxa_RayTracingPipelineLibrary pipeline_library, void *out_blob, uint32_t first_group, int32_t group_count);
 
 DAXA_EXPORT uint64_t
 daxa_ray_tracing_pipeline_library_inc_refcnt(daxa_RayTracingPipelineLibrary pipeline_library);

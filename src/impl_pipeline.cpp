@@ -907,11 +907,11 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void * out_blob) -> daxa_Result
+auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void * out_blob, uint32_t first_group, int32_t group_count) -> daxa_Result
 {
     auto * device = pipeline->device;
 
-    u32 const handle_count = static_cast<u32>(pipeline->shader_groups.size());
+    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : group_count;
     u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
 
     u32 const data_size = handle_count * handle_size;
@@ -920,7 +920,28 @@ auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline 
     auto vk_result = device->vkGetRayTracingShaderGroupHandlesKHR(
         device->vk_device,
         pipeline->vk_pipeline,
-        0,
+        first_group,
+        handle_count,
+        data_size,
+        out_blob);
+
+    return static_cast<daxa_Result>(vk_result);
+}
+
+auto daxa_ray_tracing_pipeline_library_get_shader_group_handles(daxa_RayTracingPipelineLibrary pipeline, void * out_blob, uint32_t first_group, int32_t group_count) -> daxa_Result
+{
+    auto * device = pipeline->device;
+
+    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : group_count;
+    u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
+
+    u32 const data_size = handle_count * handle_size;
+
+    // Get the shader group handles
+    auto vk_result = device->vkGetRayTracingShaderGroupHandlesKHR(
+        device->vk_device,
+        pipeline->vk_pipeline,
+        first_group,
         handle_count,
         data_size,
         out_blob);

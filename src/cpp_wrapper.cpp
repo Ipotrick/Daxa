@@ -891,10 +891,10 @@ namespace daxa
         return result;
     }
 
-    void RayTracingPipeline::get_shader_group_handles(void * out_blob) const
+    void RayTracingPipeline::get_shader_group_handles(void * out_blob, uint32_t first_group, int32_t group_count) const
     {
         auto daxa_res = daxa_ray_tracing_pipeline_get_shader_group_handles(
-            rc_cast<daxa_RayTracingPipeline>(this->object), out_blob);
+            rc_cast<daxa_RayTracingPipeline>(this->object), out_blob, first_group, group_count);
         check_result(daxa_res, "failed in get_shader_group_handles");
     }
 
@@ -913,10 +913,10 @@ namespace daxa
         return *r_cast<RayTracingPipelineInfo const *>(daxa_ray_tracing_pipeline_library_info(rc_cast<daxa_RayTracingPipelineLibrary>(this->object)));
     }
 
-    void RayTracingPipelineLibrary::get_shader_group_handles(void * out_blob) const
+    void RayTracingPipelineLibrary::get_shader_group_handles(void * out_blob, uint32_t first_group, int32_t group_count) const
     {
-        auto daxa_res = daxa_ray_tracing_pipeline_get_shader_group_handles(
-            rc_cast<daxa_RayTracingPipeline>(this->object), out_blob);
+        auto daxa_res = daxa_ray_tracing_pipeline_library_get_shader_group_handles(
+            rc_cast<daxa_RayTracingPipelineLibrary>(this->object), out_blob, first_group, group_count);
         check_result(daxa_res, "failed in get_shader_group_handles");
     }
 
