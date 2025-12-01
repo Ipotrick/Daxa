@@ -62,7 +62,7 @@ namespace daxa
         /// @brief Marks ALL allocations made prior to calling this function as reclaimable.
         ///        Memory will be reclaimed ONLY AFTER all currently pending submits have completed execution on the GPU.
         ///        Easiest way to use this is to call it at the end of a frame, so that all allocations made during the frame can be reclaimed.
-        void reuse_memory_after_pending_submits();
+        DAXA_EXPORT_CXX void reuse_memory_after_pending_submits();
 
       private:
         // Reclaim expired memory allocations.
