@@ -245,7 +245,7 @@ namespace daxa
          */
         auto is_id_valid(GPUResourceId id) const -> bool
         {
-            if (id.index >= this->max_resources)
+            if (id.index >= this->max_resources || id.version == 0)
             {
                 return false;
             }

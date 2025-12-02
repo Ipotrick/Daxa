@@ -569,6 +569,10 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
             required_properties |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
         }
     }
+    else
+    {
+        required_properties |= VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    }
 
     VmaAllocationCreateInfo const create_info{
         .flags = vma_allocation_flags,

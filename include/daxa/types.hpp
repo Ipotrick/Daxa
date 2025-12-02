@@ -132,11 +132,13 @@ namespace daxa
 
         [[nodiscard]] auto value() -> T &
         {
+            DAXA_DBG_ASSERT_TRUE_M(has_value(), "ATTEMPTED TO READ VALUE OF NULL OPTIONAL");
             return this->m_value;
         }
 
         [[nodiscard]] auto value() const -> T const &
         {
+            DAXA_DBG_ASSERT_TRUE_M(has_value(), "ATTEMPTED TO READ VALUE OF NULL OPTIONAL");
             return this->m_value;
         }
 

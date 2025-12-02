@@ -667,7 +667,7 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
     }
     if (current_pipeline_push_constant_size < info->size)
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED);
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSH_CONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSH_CONSTANT_RANGE_EXCEEDED);
     }
     // Always write the whole range, fill with 0xFF to the size of the push constant.
     // This makes validation and renderdoc happy as well as help debug uninitialized push constant data

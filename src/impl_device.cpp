@@ -218,9 +218,17 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     else
     {
         auto const & mem_block = *opt_memory_block;
-        ret.opt_memory_block = opt_memory_block;
-        opt_memory_block->inc_weak_refcnt();
 
+        bool const invalidMemoryFlags = info->allocate_info != DAXA_MEMORY_FLAG_NONE;
+        if (invalidMemoryFlags)
+        {
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION, DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION);
+        }
+
+        // copy flags from memory block to buffer info.
+        ret.info.allocate_info = opt_memory_block->info.flags;
+
+        ret.opt_memory_block = opt_memory_block;
         result = static_cast<daxa_Result>(vkCreateBuffer(self->vk_device, &vk_buffer_create_info, nullptr, &hot_data.vk_buffer));
         _DAXA_RETURN_IF_ERROR(result, result)
 
@@ -230,8 +238,13 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             opt_offset,
             hot_data.vk_buffer,
             {}));
+        if (result != DAXA_RESULT_SUCCESS)
+        {
+            vkDestroyBuffer(self->vk_device, hot_data.vk_buffer, nullptr);
+        }
         _DAXA_RETURN_IF_ERROR(result, result)
 
+        opt_memory_block->inc_weak_refcnt();
         if (host_accessible)
         {
             hot_data.host_address = static_cast<void*>(static_cast<u8*>(opt_memory_block->alloc_info.pMappedData) + opt_offset);
@@ -382,9 +395,17 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
     else
     {
         daxa_ImplMemoryBlock const & mem_block = *opt_memory_block;
+        
+        bool const invalidMemoryFlags = info->allocate_info != DAXA_MEMORY_FLAG_NONE;
+        if (invalidMemoryFlags)
+        {
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION, DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION);
+        }
+
+        // copy flags from memory block to image info.
+        ret.info.allocate_info = opt_memory_block->info.flags;
+
         ret.opt_memory_block = opt_memory_block;
-        opt_memory_block->inc_weak_refcnt();
-        // TODO(pahrens): Add validation for memory requirements.
         result = static_cast<daxa_Result>(vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_IMAGE);
 
@@ -394,11 +415,17 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             opt_offset,
             ret.vk_image,
             {}));
+        if (result != DAXA_RESULT_SUCCESS)
+        {
+            vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
+        }
         _DAXA_RETURN_IF_ERROR(result, result);
 
         vk_image_view_create_info.image = ret.vk_image;
         result = static_cast<daxa_Result>(vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW);
+        
+        opt_memory_block->inc_weak_refcnt();
     }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
