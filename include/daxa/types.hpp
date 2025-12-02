@@ -1315,12 +1315,12 @@ namespace daxa
     struct MemoryFlagBits
     {
         static inline constexpr MemoryFlags NONE = {0x00000000};
-        static inline constexpr MemoryFlags DEDICATED_MEMORY = {0x00000001};
-        static inline constexpr MemoryFlags CAN_ALIAS = {0x00000200};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags DEDICATED_MEMORY = {0x00000001};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags CAN_ALIAS = {0x00000200};
         static inline constexpr MemoryFlags HOST_ACCESS_SEQUENTIAL_WRITE = {0x00000400};
         static inline constexpr MemoryFlags HOST_ACCESS_RANDOM = {0x00000800};
-        static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = {0x00010000};
-        static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = {0x00010000};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
     };
 
     enum struct ColorSpace

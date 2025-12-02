@@ -214,12 +214,12 @@ typedef struct
 
 typedef uint32_t daxa_MemoryFlags;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_NONE = 0x00000000;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
 
 typedef struct
 {

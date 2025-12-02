@@ -2000,7 +2000,6 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         VmaAllocationInfo vma_allocation_info = {};
 
         auto vma_allocation_flags = static_cast<VmaAllocationCreateFlags>(
-            VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT |
             VMA_ALLOCATION_CREATE_MAPPED_BIT |
             VMA_ALLOCATION_CREATE_HOST_ACCESS_RANDOM_BIT);
 
@@ -2041,13 +2040,13 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .sample_count = 1,
             .usage = ImageUsageFlagBits::SHADER_SAMPLED | ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::TRANSFER_DST,
             .sharing_mode = SharingMode::CONCURRENT,
-            .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
+            .allocate_info = {},
         };
         VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(
             self, *r_cast<daxa_ImageInfo const *>(&image_info));
 
         VmaAllocationCreateInfo const null_img_allocation_create_info{
-            .flags = VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT,
+            .flags = {},
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .requiredFlags = {},
             .preferredFlags = {},
@@ -2202,7 +2201,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         };
 
         VmaAllocationCreateInfo const bda_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT),
+            .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .requiredFlags = {},
             .preferredFlags = {},

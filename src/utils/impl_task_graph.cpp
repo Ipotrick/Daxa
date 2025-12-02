@@ -3000,7 +3000,7 @@ namespace daxa
                         .array_layer_count = trans_img_info.array_layer_count,
                         .sample_count = trans_img_info.sample_count,
                         .usage = permut_image.usage,
-                        .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
+                        .allocate_info = {},
                         .name = "Dummy to figure mem requirements",
                     };
                     permut_image.memory_requirements = info.device.memory_requirements({image_info});
@@ -3017,7 +3017,7 @@ namespace daxa
                     TaskTransientBufferInfo trans_buf_info = daxa::get<PermIndepTaskBufferInfo::Owned>(global_buffer.task_buffer_data).info;
                     BufferInfo buffer_info{
                         .size = trans_buf_info.size,
-                        .allocate_info = MemoryFlagBits::DEDICATED_MEMORY,
+                        .allocate_info = {},
                         .name = "Dummy to figure mem requirements",
                     };
                     permut_buffer.memory_requirements = info.device.memory_requirements({buffer_info});
@@ -3304,7 +3304,7 @@ namespace daxa
                 .alignment = max_alignment_requirement,
                 .memory_type_bits = memory_type_bits,
             },
-            .flags = MemoryFlagBits::DEDICATED_MEMORY,
+            .flags = {},
         });
     }
 
