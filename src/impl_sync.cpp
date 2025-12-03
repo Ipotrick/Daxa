@@ -2,6 +2,7 @@
 
 #include "impl_sync.hpp"
 #include "impl_device.hpp"
+#include "impl_instance.hpp"
 
 // --- Begin API Functions ---
 

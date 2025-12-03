@@ -338,7 +338,7 @@ namespace daxa
 #endif
         TInlineTask(std::string_view name, TaskType task_type = TaskType::GENERAL)
         {
-            value._internal._name = std::move(name);
+            value._internal._name = name;
             value._internal._task_type = task_type;
             value._internal._default_stage = task_type_default_stage(task_type);
 

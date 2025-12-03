@@ -171,8 +171,8 @@ namespace tests
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = image_1,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         recorder.copy_buffer_to_image({
@@ -184,14 +184,14 @@ namespace tests
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = image_1,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         recorder.pipeline_image_barrier({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = image_2,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         recorder.copy_image_to_image({
@@ -203,8 +203,8 @@ namespace tests
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = image_2,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         // Barrier to make sure device_local_buffer is has no write after read hazard.

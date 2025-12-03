@@ -83,8 +83,8 @@ namespace tests
 
                 recorder.pipeline_image_barrier({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                     .image_id = swapchain_image,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                 });
 
                 recorder.clear_image({
@@ -94,8 +94,8 @@ namespace tests
 
                 recorder.pipeline_image_barrier({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                     .image_id = swapchain_image,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                 });
 
                 auto executalbe_commands = recorder.complete_current_commands();

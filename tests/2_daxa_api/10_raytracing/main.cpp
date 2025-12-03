@@ -110,7 +110,7 @@ namespace tests
                 swapchain = device.create_swapchain({
                     .native_window = get_native_handle(),
                     .native_window_platform = get_native_platform(),
-                    .surface_format_selector = [](daxa::Format format) -> i32
+                    .surface_format_selector = [](daxa::Format format, daxa::ColorSpace colorspace) -> i32
                     {
                         if (format == daxa::Format::B8G8R8A8_UNORM)
                         {
@@ -630,8 +630,8 @@ namespace tests
 
                 recorder.pipeline_image_barrier({
                     .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
-                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                     .image_id = swapchain_image,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                 });
 
                 recorder.set_pipeline(*rt_pipeline);
@@ -672,8 +672,8 @@ namespace tests
 
                 recorder.pipeline_image_barrier({
                     .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
-                    .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                     .image_id = swapchain_image,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                 });
 
                 // recorder.pipeline_barrier({

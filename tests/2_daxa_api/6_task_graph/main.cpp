@@ -120,14 +120,14 @@ namespace tests
         int i = 5;
 
         auto old_task_syntax = OldTaskHeadSyntaxTask{
+            .f = f,
+            .i = i,
             .views = OldTaskHeadSyntaxTask::Views{
                 .buffer0 = {},
                 .image0 = {},
                 .image1 = {},
                 .test_buffer_no_shader = {},
             },
-            .f = f,
-            .i = i,
         };
 
         daxa::TaskBufferView cmd_view = daxa::NullTaskBuffer;

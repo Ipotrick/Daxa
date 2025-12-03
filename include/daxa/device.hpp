@@ -277,6 +277,7 @@ namespace daxa
         static inline constexpr ExplicitFeatureFlags ACCELERATION_STRUCTURE_CAPTURE_REPLAY = {0x1 << 1};
         static inline constexpr ExplicitFeatureFlags VK_MEMORY_MODEL = {0x1 << 2};
         static inline constexpr ExplicitFeatureFlags ROBUSTNESS_2 = {0x1 << 3};
+        static inline constexpr ExplicitFeatureFlags PIPELINE_LIBRARY_GROUP_HANDLES = {0x1 << 4};
     };
 
     struct ImplicitFeatureProperties
@@ -302,6 +303,7 @@ namespace daxa
         static inline constexpr ImplicitFeatureFlags SWAPCHAIN = {0x1 << 12};
         static inline constexpr ImplicitFeatureFlags SHADER_INT16 = {0x1 << 13};
         static inline constexpr ImplicitFeatureFlags SHADER_CLOCK = {0x1 << 14};
+        static inline constexpr ImplicitFeatureFlags LINE_RASTERIZATION = {0x1 << 15};
     };
 
     struct DeviceProperties
@@ -318,6 +320,7 @@ namespace daxa
         Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
         Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
         Optional<InvocationReorderProperties> invocation_reorder_properties = {};
+        u32 required_subgroup_size_stages;
         u32 compute_queue_count = {};
         u32 transfer_queue_count = {};
         ImplicitFeatureFlags implicit_features;
@@ -684,6 +687,7 @@ namespace daxa
         [[nodiscard]] auto create_raster_pipeline(RasterPipelineInfo const & info) -> RasterPipeline;
         [[nodiscard]] auto create_compute_pipeline(ComputePipelineInfo const & info) -> ComputePipeline;
         [[nodiscard]] auto create_ray_tracing_pipeline(RayTracingPipelineInfo const & info) -> RayTracingPipeline;
+        [[nodiscard]] auto create_ray_tracing_pipeline_library(RayTracingPipelineInfo const & info) -> RayTracingPipelineLibrary;
 
         [[nodiscard]] auto create_swapchain(SwapchainInfo const & info) -> Swapchain;
         [[nodiscard]] auto create_command_recorder(CommandRecorderInfo const & info) -> CommandRecorder;

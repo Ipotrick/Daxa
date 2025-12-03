@@ -258,8 +258,8 @@ struct App : AppWindow<App>
 
         recorder.pipeline_image_barrier({
             .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_WRITE,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
             .image_id = swapchain_image,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         auto render_recorder = std::move(recorder).begin_renderpass({
@@ -283,8 +283,8 @@ struct App : AppWindow<App>
 
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
-            .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
             .image_id = swapchain_image,
+            .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
         });
 
         device.submit_commands({

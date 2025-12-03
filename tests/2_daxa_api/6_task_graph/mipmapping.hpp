@@ -294,8 +294,8 @@ namespace tests
 
                 recorder.pipeline_image_barrier({
                     .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                     .image_id = swapchain_image,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                 });
                 recorder.clear_image({
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
@@ -314,8 +314,8 @@ namespace tests
                 recorder.pipeline_image_barrier({
                     .src_access = daxa::AccessConsts::NONE,
                     .dst_access = daxa::AccessConsts::COMPUTE_SHADER_WRITE,
-                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                     .image_id = render_image,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                 });
                 recorder.pipeline_barrier({
                     .src_access = daxa::AccessConsts::TRANSFER_WRITE,
@@ -329,8 +329,8 @@ namespace tests
                     recorder.pipeline_image_barrier({
                         .src_access = daxa::AccessConsts::NONE,
                         .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-                        .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                         .image_id = render_image,
+                        .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                     });
 
                     for (u32 i = 0; i < image_info.mip_level_count - 1; ++i)
@@ -381,8 +381,8 @@ namespace tests
                 recorder.pipeline_image_barrier({
                     .src_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
                     .dst_access = {.stages = daxa::PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = daxa::AccessTypeFlagBits::NONE},
-                    .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                     .image_id = swapchain_image,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                 });
                 device.submit_commands({
                     .command_lists = std::array{recorder.complete_current_commands()},

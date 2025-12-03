@@ -5,6 +5,8 @@
 #include <daxa/gpu_resources.hpp>
 
 #include <atomic>
+#include <mutex>
+#include <shared_mutex>
 
 // TODO:    Refactor slots into hot and cold data
 //          hot data should be stored in pre-allocated flat array

@@ -12,18 +12,19 @@
 #include <deque>
 #include <cstring>
 #include <memory>
-#include <format>
 
+#include <format>
 #if DAXA_VALIDATION
 #include <iostream>
 #include <cstdlib>
-#include <stdexcept>
 
 #define DAXA_GPU_ID_VALIDATION 1
 #endif
 
 #if defined(_WIN32)
+#ifndef VK_USE_PLATFORM_WIN32_KHR
 #define VK_USE_PLATFORM_WIN32_KHR
+#endif
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -49,10 +50,14 @@
 
 // INCLUDE ORDER MUST STAY LIKE THIS:
 // ensure we always compile in the deprecated functions to avoid link issues
+#ifdef DAXA_REMOVE_DEPRECATED
+#undef DAXA_REMOVE_DEPRECATED
+#endif
+
 #define DAXA_REMOVE_DEPRECATED 0
 #include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
-#include <vk_mem_alloc.h>
+#include <vma/vk_mem_alloc.h>
 #include <daxa/c/daxa.h>
 
 using namespace daxa;

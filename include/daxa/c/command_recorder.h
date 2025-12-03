@@ -539,6 +539,9 @@ daxa_cmd_begin_label(daxa_CommandRecorder cmd_enc, daxa_CommandLabelInfo const *
 DAXA_EXPORT void
 daxa_cmd_end_label(daxa_CommandRecorder cmd_enc);
 
+DAXA_EXPORT void
+daxa_cmd_reset_assumed_state(daxa_CommandRecorder cmd_enc);
+
 // Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 DAXA_EXPORT void
 daxa_cmd_flush_barriers(daxa_CommandRecorder cmd_enc);

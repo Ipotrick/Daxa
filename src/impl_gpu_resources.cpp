@@ -3,6 +3,7 @@
 #include "impl_gpu_resources.hpp"
 
 #include <daxa/daxa.inl>
+#include <format>
 
 namespace daxa
 {
