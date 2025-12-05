@@ -196,6 +196,12 @@ namespace daxa
         u32 invocation_reorder_mode = {};
     };
 
+    struct HostImageCopyProperties
+    {
+        u8 optimal_tiling_layout_uuid[16U];
+        bool identical_memory_type_requirements;
+    };
+
 #if !DAXA_REMOVE_DEPRECATED
     struct DeviceFlagsProperties
     {
@@ -320,6 +326,7 @@ namespace daxa
         Optional<RayTracingPipelineProperties> ray_tracing_properties = {};
         Optional<AccelerationStructureProperties> acceleration_structure_properties = {};
         Optional<InvocationReorderProperties> invocation_reorder_properties = {};
+        Optional<HostImageCopyProperties> host_image_copy_properties = {};
         u32 required_subgroup_size_stages;
         u32 compute_queue_count = {};
         u32 transfer_queue_count = {};
