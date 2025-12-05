@@ -1216,7 +1216,8 @@ auto daxa_cmd_get_vk_command_pool(daxa_CommandRecorder self) -> VkCommandPool
 
 void daxa_destroy_command_recorder(daxa_CommandRecorder self)
 {
-    self->device->gpu_sro_table.lifetime_lock.unlock_shared();
+    // CAUSED UB: EASILY CAUSED RECURSIVE SHARED LOCKING WHEN CALLING COLLECT GARBAGE OR SUBMIT WHILE THE THREAD OWNS AN ALIVE CMD RECORDER. THIS IS ILLEGAL IN C++!
+    // self->device->gpu_sro_table.lifetime_lock.unlock_shared();
     self->dec_refcnt(
         daxa_ImplCommandRecorder::zero_ref_callback,
         self->device->instance);
@@ -1252,8 +1253,8 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
-    // TODO(lifetime): Maybe we should have a try lock variant?
-    ret.device->gpu_sro_table.lifetime_lock.lock_shared();
+    // CAUSED UB: EASILY CAUSED RECURSIVE SHARED LOCKING WHEN CALLING COLLECT GARBAGE OR SUBMIT WHILE THE THREAD OWNS AN ALIVE CMD RECORDER. THIS IS ILLEGAL IN C++!
+    // ret.device->gpu_sro_table.lifetime_lock.lock_shared();
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_cmd_list = new daxa_ImplCommandRecorder{};
@@ -1288,11 +1289,7 @@ void executable_cmd_list_execute_deferred_destructions(daxa_Device device, Execu
         case DEFERRED_DESTRUCTION_BUFFER_INDEX: _ignore = daxa_dvc_destroy_buffer(device, std::bit_cast<daxa_BufferId>(id)); break;
         case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(device, std::bit_cast<daxa_ImageId>(id)); break;
         case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(device, std::bit_cast<daxa_ImageViewId>(id)); break;
-        case DEFERRED_DESTRUCTION_SAMPLER_INDEX:
-            _ignore = daxa_dvc_destroy_sampler(device, std::bit_cast<daxa_SamplerId>(id));
-            break;
-            // TODO(capi): DO NOT THROW FROM A C FUNCTION
-            // default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: _ignore = daxa_dvc_destroy_sampler(device, std::bit_cast<daxa_SamplerId>(id)); break;
         }
     }
     cmd_list.deferred_destructions.clear();
@@ -1335,7 +1332,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_CommandRecorder>(handle);
     u64 const submit_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    std::unique_lock const lock{self->device->zombies_mtx};
+    std::unique_lock const lock{self->device->zombies_mtx}; // lock is recursive
     executable_cmd_list_execute_deferred_destructions(self->device, self->current_command_data);
     self->device->command_list_zombies.emplace_front(
         submit_timeline,

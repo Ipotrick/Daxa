@@ -1484,8 +1484,6 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     auto result = static_cast<daxa_Result>(vkQueueSubmit(queue.vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE));
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    std::unique_lock const lock{self->zombies_mtx};
-
     return DAXA_RESULT_SUCCESS;
 }
 
