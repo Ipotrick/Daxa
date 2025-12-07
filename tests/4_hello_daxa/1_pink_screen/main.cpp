@@ -131,12 +131,12 @@ auto main() -> int
         // The platform would also be retrieved from the windowing API,
         // or by hard-coding it depending on the OS.
         .native_window_platform = native_window_platform,
-        .surface_format_selector = [](daxa::Format format)
+        .surface_format_selector = [](daxa::Format format, daxa::ColorSpace colorspace)
         {
             switch (format)
             {
             case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format);
+            default: return daxa::default_format_score(format, colorspace);
             }
         },
         .present_mode = daxa::PresentMode::MAILBOX,
@@ -180,12 +180,10 @@ auto main() -> int
 
         daxa::CommandRecorder recorder = device.create_command_recorder({.name = "my command recorder"});
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .src_layout = daxa::ImageLayout::UNDEFINED,
-            .dst_layout = daxa::ImageLayout::GENERAL,
-            .image_slice = swapchain_image_full_slice,
             .image_id = swapchain_image,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         recorder.clear_image({
@@ -194,12 +192,10 @@ auto main() -> int
             .dst_slice = swapchain_image_full_slice,
         });
 
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .src_layout = daxa::ImageLayout::GENERAL,
-            .dst_layout = daxa::ImageLayout::PRESENT_SRC,
-            .image_slice = swapchain_image_full_slice,
             .image_id = swapchain_image,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         // Here we create executable commands from the currently recorded commands from the command recorder.

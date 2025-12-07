@@ -7,25 +7,48 @@ namespace daxa
 {
     struct Device;
 
-    struct MemoryBarrierInfo
+    struct BarrierInfo
     {
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
     };
 
-    [[nodiscard]] auto to_string(MemoryBarrierInfo const & info) -> std::string;
+#if !DAXA_REMOVE_DEPRECATED
+    using MemoryBarrierInfo [[deprecated("Use BarrierInfo instead; API:3.2")]] = BarrierInfo;
+#endif
 
-    struct ImageMemoryBarrierInfo
+    [[nodiscard]] auto to_string(BarrierInfo const & info) -> std::string;
+
+#if !DAXA_REMOVE_DEPRECATED
+    struct [[deprecated("Use ImageBarrierInfo instead; API:3.2")]] ImageMemoryBarrierInfo
     {
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
         ImageLayout src_layout = ImageLayout::UNDEFINED;
         ImageLayout dst_layout = ImageLayout::UNDEFINED;
-        ImageMipArraySlice image_slice = {};
+        [[deprecated("Ignored parameter, whole image will be transitioned; API:3.2")]] ImageMipArraySlice image_slice = {};
         ImageId image_id = {};
     };
 
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
+    [[nodiscard]] [[deprecated("Use ImageBarrierInfo instead; API:3.2")]] DAXA_EXPORT_CXX auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
+#endif
+
+    enum struct ImageLayoutOperation
+    {
+        NONE = 0,
+        TO_GENERAL = 1,
+        TO_PRESENT_SRC = 2,
+    };
+
+    struct ImageBarrierInfo
+    {
+        Access src_access = AccessConsts::NONE;
+        Access dst_access = AccessConsts::NONE;
+        ImageId image_id = {};
+        ImageLayoutOperation layout_operation = {};
+    };
+
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string;
 
     struct BinarySemaphoreInfo
     {
@@ -97,8 +120,8 @@ namespace daxa
 
     struct EventSignalInfo
     {
-        daxa::Span<MemoryBarrierInfo const> memory_barriers = {};
-        daxa::Span<ImageMemoryBarrierInfo const> image_barriers = {};
+        daxa::Span<BarrierInfo const> barriers = {};
+        daxa::Span<ImageBarrierInfo const> image_barriers = {};
         Event & event;
     };
 

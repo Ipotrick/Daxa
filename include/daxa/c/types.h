@@ -106,11 +106,11 @@ typedef enum
     DAXA_RESULT_INVALID_TLAS_ID = (1 << 30) + 52,
     DAXA_RESULT_INVALID_BLAS_ID = (1 << 30) + 53,
     DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING = (1 << 30) + 54,
-    DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND = (1 << 30) + 55,
-    DAXA_RESULT_NO_RASTER_PIPELINE_BOUND = (1 << 30) + 56,
-    DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND = (1 << 30) + 57,
-    DAXA_RESULT_NO_PIPELINE_BOUND = (1 << 30) + 58,
-    DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED = (1 << 30) + 59,
+    DAXA_RESULT_NO_COMPUTE_PIPELINE_SET = (1 << 30) + 55,
+    DAXA_RESULT_NO_RASTER_PIPELINE_SET = (1 << 30) + 56,
+    DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET = (1 << 30) + 57,
+    DAXA_RESULT_NO_PIPELINE_SET = (1 << 30) + 58,
+    DAXA_RESULT_PUSH_CONSTANT_RANGE_EXCEEDED = (1 << 30) + 59,
     DAXA_RESULT_MESH_SHADER_NOT_DEVICE_ENABLED = (1 << 30) + 60,
     DAXA_RESULT_ERROR_COPY_OUT_OF_BOUNDS = (1 << 30) + 61,
     DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND = (1 << 30) + 62,
@@ -126,6 +126,8 @@ typedef enum
     DAXA_RESULT_ERROR_COMPUTE_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER = (1 << 30) + 72,
     DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER = (1 << 30) + 73,
     DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER = (1 << 30) + 74,
+    DAXA_RESULT_ERROR_ZERO_REQUIRED_MEMORY_TYPE_BITS = (1 << 30) + 75,
+    DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION = (1 << 30) + 76,
     DAXA_RESULT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_Result;
 
@@ -184,6 +186,11 @@ typedef enum
 
 typedef daxa_FixedList(char, DAXA_SMALL_STRING_CAPACITY) daxa_SmallString;
 
+static daxa_SmallString const DAXA_DEFAULT_SMALL_STRING = { 
+    .data = DAXA_ZERO_INIT,
+    .size = DAXA_ZERO_INIT,
+};
+
 typedef struct
 {
     uint32_t base_mip_level;
@@ -207,12 +214,12 @@ typedef struct
 
 typedef uint32_t daxa_MemoryFlags;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_NONE = 0x00000000;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
-static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
+/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
 
 typedef struct
 {

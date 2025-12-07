@@ -120,14 +120,14 @@ namespace tests
         int i = 5;
 
         auto old_task_syntax = OldTaskHeadSyntaxTask{
+            .f = f,
+            .i = i,
             .views = OldTaskHeadSyntaxTask::Views{
                 .buffer0 = {},
                 .image0 = {},
                 .image1 = {},
                 .test_buffer_no_shader = {},
             },
-            .f = f,
-            .i = i,
         };
 
         daxa::TaskBufferView cmd_view = daxa::NullTaskBuffer;
@@ -474,7 +474,7 @@ namespace tests
         struct WriteImage : ShaderIntegrationTaskHead::Task
         {
             AttachmentViews views = {};
-            std::shared_ptr<daxa::ComputePipeline> pipeline = {};
+            daxa::ComputePipeline* pipeline = {};
             void callback(daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*pipeline);
@@ -488,14 +488,14 @@ namespace tests
                 .settings = task_buffer.view(),
                 .image = task_image.view(),
             },
-            .pipeline = compute_pipeline,
+            .pipeline = compute_pipeline.get(),
         });
         task_graph.add_task(WriteImage{
             .views = WriteImage::Views{
                 .settings = task_buffer.view(),
                 .image = task_image.view(),
             },
-            .pipeline = compute_pipeline,
+            .pipeline = compute_pipeline.get(),
         });
         task_graph.submit({});
 

@@ -7,6 +7,7 @@
 
 #include "impl_sync.hpp"
 #include "impl_device.hpp"
+#include "impl_instance.hpp"
 
 /// --- Begin Helpers ---
 
@@ -24,7 +25,7 @@ auto validate_queue_family(daxa_QueueFamily recorder_qf, daxa_QueueFamily comman
     return result;
 }
 
-auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barrier, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
+auto get_vk_image_memory_barrier(daxa_ImageBarrierInfo const & image_barrier, daxa_ImageMipArraySlice image_slice, VkImage vk_image, VkImageAspectFlags aspect_flags) -> VkImageMemoryBarrier2
 {
     return VkImageMemoryBarrier2{
         .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
@@ -33,16 +34,16 @@ auto get_vk_image_memory_barrier(daxa_ImageMemoryBarrierInfo const & image_barri
         .srcAccessMask = image_barrier.src_access.access_type,
         .dstStageMask = image_barrier.dst_access.stages,
         .dstAccessMask = image_barrier.dst_access.access_type,
-        .oldLayout = static_cast<VkImageLayout>(image_barrier.src_layout),
-        .newLayout = static_cast<VkImageLayout>(image_barrier.dst_layout),
+        .oldLayout = image_barrier.layout_operation == DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_GENERAL,
+        .newLayout = image_barrier.layout_operation == DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_GENERAL,
         .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
         .image = vk_image,
-        .subresourceRange = make_subresource_range(image_barrier.image_slice, aspect_flags),
+        .subresourceRange = make_subresource_range(image_slice, aspect_flags),
     };
 }
 
-auto get_vk_memory_barrier(daxa_MemoryBarrierInfo const & memory_barrier) -> VkMemoryBarrier2
+auto get_vk_memory_barrier(daxa_BarrierInfo const & memory_barrier) -> VkMemoryBarrier2
 {
     return VkMemoryBarrier2{
         .sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER_2,
@@ -211,6 +212,7 @@ void remember_ids(daxa_CommandRecorder self, T id)
 template <typename... Args>
 auto check_ids(daxa_CommandRecorder self, Args... args) -> daxa_Result
 {
+#if DAXA_VALIDATION
     if (!(only_check_buffer(self, args) && ...))
     {
         return DAXA_RESULT_INVALID_BUFFER_ID;
@@ -235,6 +237,7 @@ auto check_ids(daxa_CommandRecorder self, Args... args) -> daxa_Result
     {
         return DAXA_RESULT_INVALID_BLAS_ID;
     }
+#endif
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -287,8 +290,8 @@ auto daxa_cmd_copy_buffer_to_buffer(daxa_CommandRecorder self, daxa_BufferCopyIn
     }
     vkCmdCopyBuffer(
         self->current_command_data.vk_cmd_buffer,
-        src_slot.vk_buffer,
-        dst_slot.vk_buffer,
+        self->device->hot_slot(info->src_buffer).vk_buffer,
+        self->device->hot_slot(info->dst_buffer).vk_buffer,
         1,
         vk_buffer_copy);
     return DAXA_RESULT_SUCCESS;
@@ -310,7 +313,7 @@ auto daxa_cmd_copy_buffer_to_image(daxa_CommandRecorder self, daxa_BufferImageCo
     };
     vkCmdCopyBufferToImage(
         self->current_command_data.vk_cmd_buffer,
-        self->device->slot(info->buffer).vk_buffer,
+        self->device->hot_slot(info->buffer).vk_buffer,
         img_slot.vk_image,
         VK_IMAGE_LAYOUT_GENERAL,
         1,
@@ -336,7 +339,7 @@ auto daxa_cmd_copy_image_to_buffer(daxa_CommandRecorder self, daxa_ImageBufferCo
         self->current_command_data.vk_cmd_buffer,
         img_slot.vk_image,
         VK_IMAGE_LAYOUT_GENERAL,
-        self->device->slot(info->buffer).vk_buffer,
+        self->device->hot_slot(info->buffer).vk_buffer,
         1,
         &vk_buffer_image_copy);
     return DAXA_RESULT_SUCCESS;
@@ -471,7 +474,7 @@ auto daxa_cmd_clear_buffer(daxa_CommandRecorder self, daxa_BufferClearInfo const
     }
     vkCmdFillBuffer(
         self->current_command_data.vk_cmd_buffer,
-        self->device->slot(info->buffer).vk_buffer,
+        self->device->hot_slot(info->buffer).vk_buffer,
         static_cast<VkDeviceSize>(info->offset),
         static_cast<VkDeviceSize>(info->size),
         info->clear_value);
@@ -520,12 +523,9 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
     return DAXA_RESULT_SUCCESS;
 }
 
-/// @brief  Successive pipeline barrier calls are combined.
-///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
-/// @param info parameters.
-void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_MemoryBarrierInfo const * info)
+void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_BarrierInfo const * info)
 {
-    if (self->memory_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
+    if (self->memory_barrier_batch_count == COMMAND_RECORDER_BARRIER_MAX_BATCH_SIZE)
     {
         daxa_cmd_flush_barriers(self);
     }
@@ -539,31 +539,15 @@ void daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_MemoryBarrierInfo
     };
 }
 
-/// @brief  Successive pipeline barrier calls are combined.
-///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
-/// @param info parameters.
-auto daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder self, daxa_ImageMemoryBarrierInfo const * info) -> daxa_Result
+auto daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder self, daxa_ImageBarrierInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->image_id)
-    if (self->image_barrier_batch_count == COMMAND_LIST_BARRIER_MAX_BATCH_SIZE)
+    if (self->image_barrier_batch_count == COMMAND_RECORDER_BARRIER_MAX_BATCH_SIZE)
     {
         daxa_cmd_flush_barriers(self);
     }
     auto const & img_slot = self->device->slot(info->image_id);
-    self->image_barrier_batch.at(self->image_barrier_batch_count++) = {
-        .sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER_2,
-        .pNext = nullptr,
-        .srcStageMask = info->src_access.stages,
-        .srcAccessMask = info->src_access.access_type,
-        .dstStageMask = info->dst_access.stages,
-        .dstAccessMask = info->dst_access.access_type,
-        .oldLayout = static_cast<VkImageLayout>(info->src_layout),
-        .newLayout = static_cast<VkImageLayout>(info->dst_layout),
-        .srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-        .image = img_slot.vk_image,
-        .subresourceRange = make_subresource_range(info->image_slice, img_slot.aspect_flags),
-    };
+    self->image_barrier_batch.at(self->image_barrier_batch_count++) = get_vk_image_memory_barrier(*info, img_slot.view_slot.info.slice, img_slot.vk_image, img_slot.aspect_flags);
     return DAXA_RESULT_SUCCESS;
 }
 struct SplitBarrierDependencyInfoBuffer
@@ -581,19 +565,21 @@ void daxa_cmd_signal_event(daxa_CommandRecorder self, daxa_EventSignalInfo const
     daxa_cmd_flush_barriers(self);
     tl_split_barrier_dependency_infos_aux_buffer.push_back({});
     auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
-    for (u64 i = 0; i < info->memory_barrier_count; ++i)
+    for (u64 i = 0; i < info->barrier_count; ++i)
     {
-        auto const & memory_barrier = info->memory_barriers[i];
-        dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
+        auto const & barrier = info->barriers[i];
+        dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(barrier));
     }
-    for (u64 i = 0; i < info->image_memory_barrier_count; ++i)
+    for (u64 i = 0; i < info->image_barrier_count; ++i)
     {
-        auto const & image_memory_barrier = info->image_memory_barriers[i];
+        auto const & image_barrier = info->image_barriers[i];
+        auto const & img_slot = self->device->slot(image_barrier.image_id);
         dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(
             get_vk_image_memory_barrier(
-                image_memory_barrier,
-                self->device->slot(image_memory_barrier.image_id).vk_image,
-                self->device->slot(image_memory_barrier.image_id).aspect_flags));
+                image_barrier,
+                img_slot.view_slot.info.slice,
+                img_slot.vk_image,
+                img_slot.aspect_flags));
     }
     VkDependencyInfo const vk_dependency_info = get_vk_dependency_info(
         dependency_infos_aux_buffer.vk_image_memory_barriers,
@@ -610,18 +596,20 @@ void daxa_cmd_wait_events(daxa_CommandRecorder self, daxa_EventWaitInfo const * 
         auto const & end_info = infos[i];
         tl_split_barrier_dependency_infos_aux_buffer.push_back({});
         auto & dependency_infos_aux_buffer = tl_split_barrier_dependency_infos_aux_buffer.back();
-        for (u64 j = 0; j < end_info.memory_barrier_count; ++j)
+        for (u64 j = 0; j < end_info.barrier_count; ++j)
         {
-            auto const & memory_barrier = end_info.memory_barriers[j];
-            dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(memory_barrier));
+            auto const & barrier = end_info.barriers[j];
+            dependency_infos_aux_buffer.vk_memory_barriers.push_back(get_vk_memory_barrier(barrier));
         }
-        for (u64 j = 0; j < end_info.image_memory_barrier_count; ++j)
+        for (u64 j = 0; j < end_info.image_barrier_count; ++j)
         {
-            auto const & image_barrier = end_info.image_memory_barriers[j];
+            auto const & image_barrier = end_info.image_barriers[j];
+            auto const & img_slot = self->device->slot(image_barrier.image_id);
             dependency_infos_aux_buffer.vk_image_memory_barriers.push_back(get_vk_image_memory_barrier(
                 image_barrier,
-                self->device->slot(image_barrier.image_id).vk_image,
-                self->device->slot(image_barrier.image_id).aspect_flags));
+                img_slot.view_slot.info.slice,
+                img_slot.vk_image,
+                img_slot.aspect_flags));
         }
         tl_split_barrier_dependency_infos_buffer.push_back(get_vk_dependency_info(
             dependency_infos_aux_buffer.vk_image_memory_barriers,
@@ -661,7 +649,7 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
     daxa_cmd_flush_barriers(self);
     if (daxa::holds_alternative<daxa_ImplCommandRecorder::NoPipeline>(self->current_pipeline))
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_PIPELINE_BOUND, DAXA_RESULT_NO_PIPELINE_BOUND);
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_PIPELINE_SET, DAXA_RESULT_NO_PIPELINE_SET);
     }
     VkPipelineLayout vk_pipeline_layout = {};
     u32 current_pipeline_push_constant_size = {};
@@ -682,7 +670,7 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
     }
     if (current_pipeline_push_constant_size < info->size)
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSHCONSTANT_RANGE_EXCEEDED);
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_PUSH_CONSTANT_RANGE_EXCEEDED, DAXA_RESULT_PUSH_CONSTANT_RANGE_EXCEEDED);
     }
     // Always write the whole range, fill with 0xFF to the size of the push constant.
     // This makes validation and renderdoc happy as well as help debug uninitialized push constant data
@@ -751,7 +739,7 @@ auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND, DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND);
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET, DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET);
     }
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
@@ -780,7 +768,7 @@ auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndir
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND, DAXA_RESULT_NO_RAYTRACING_PIPELINE_BOUND);
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET, DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET);
     }
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
@@ -809,7 +797,7 @@ auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND, DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND);
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_SET, DAXA_RESULT_NO_COMPUTE_PIPELINE_SET);
     }
     vkCmdDispatch(self->current_command_data.vk_cmd_buffer, info->x, info->y, info->z);
     return DAXA_RESULT_SUCCESS;
@@ -823,9 +811,9 @@ auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirect
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer)
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND, DAXA_RESULT_NO_COMPUTE_PIPELINE_BOUND);
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_SET, DAXA_RESULT_NO_COMPUTE_PIPELINE_SET);
     }
-    vkCmdDispatchIndirect(self->current_command_data.vk_cmd_buffer, self->device->slot(info->indirect_buffer).vk_buffer, info->offset);
+    vkCmdDispatchIndirect(self->current_command_data.vk_cmd_buffer, self->device->hot_slot(info->indirect_buffer).vk_buffer, info->offset);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1000,7 +988,7 @@ void daxa_cmd_set_depth_bias(daxa_CommandRecorder self, daxa_DepthBiasInfo const
 auto daxa_cmd_set_index_buffer(daxa_CommandRecorder self, daxa_SetIndexBufferInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->buffer)
-    vkCmdBindIndexBuffer(self->current_command_data.vk_cmd_buffer, self->device->slot(info->buffer).vk_buffer, info->offset, info->index_type);
+    vkCmdBindIndexBuffer(self->current_command_data.vk_cmd_buffer, self->device->hot_slot(info->buffer).vk_buffer, info->offset, info->index_type);
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1021,7 +1009,7 @@ auto daxa_cmd_draw_indirect(daxa_CommandRecorder self, daxa_DrawIndirectInfo con
     {
         vkCmdDrawIndexedIndirect(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
             info->draw_count,
             info->draw_command_stride);
@@ -1030,7 +1018,7 @@ auto daxa_cmd_draw_indirect(daxa_CommandRecorder self, daxa_DrawIndirectInfo con
     {
         vkCmdDrawIndirect(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
             info->draw_count,
             info->draw_command_stride);
@@ -1045,9 +1033,9 @@ auto daxa_cmd_draw_indirect_count(daxa_CommandRecorder self, daxa_DrawIndirectCo
     {
         vkCmdDrawIndexedIndirectCount(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
-            self->device->slot(info->count_buffer).vk_buffer,
+            self->device->hot_slot(info->count_buffer).vk_buffer,
             info->count_buffer_offset,
             info->max_draw_count,
             info->draw_command_stride);
@@ -1056,9 +1044,9 @@ auto daxa_cmd_draw_indirect_count(daxa_CommandRecorder self, daxa_DrawIndirectCo
     {
         vkCmdDrawIndirectCount(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->indirect_buffer_offset,
-            self->device->slot(info->count_buffer).vk_buffer,
+            self->device->hot_slot(info->count_buffer).vk_buffer,
             info->count_buffer_offset,
             info->max_draw_count,
             info->draw_command_stride);
@@ -1081,7 +1069,7 @@ auto daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandRecorder self, daxa_DrawMeshT
     {
         self->device->vkCmdDrawMeshTasksIndirectEXT(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->offset,
             info->draw_count,
             info->stride);
@@ -1098,9 +1086,9 @@ auto daxa_cmd_draw_mesh_tasks_indirect_count(
     {
         self->device->vkCmdDrawMeshTasksIndirectCountEXT(
             self->current_command_data.vk_cmd_buffer,
-            self->device->slot(info->indirect_buffer).vk_buffer,
+            self->device->hot_slot(info->indirect_buffer).vk_buffer,
             info->offset,
-            self->device->slot(info->count_buffer).vk_buffer,
+            self->device->hot_slot(info->count_buffer).vk_buffer,
             info->count_offset,
             info->max_count,
             info->stride);
@@ -1157,6 +1145,11 @@ void daxa_cmd_end_label(daxa_CommandRecorder self)
     }
 }
 
+void daxa_cmd_reset_assumed_state(daxa_CommandRecorder self)
+{
+    self->current_pipeline = daxa_ImplCommandRecorder::NoPipeline{};
+}
+
 void daxa_cmd_flush_barriers(daxa_CommandRecorder self)
 {
     if (self->memory_barrier_batch_count > 0 || self->image_barrier_batch_count > 0)
@@ -1185,17 +1178,14 @@ auto daxa_cmd_complete_current_commands(
     daxa_ExecutableCommandList * out_executable_cmds) -> daxa_Result
 {
     daxa_cmd_flush_barriers(self);
-    auto vk_result = vkEndCommandBuffer(self->current_command_data.vk_cmd_buffer);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkEndCommandBuffer(self->current_command_data.vk_cmd_buffer));
+    _DAXA_RETURN_IF_ERROR(result, result);
     auto cmd_data = std::move(self->current_command_data);
-    auto result = self->generate_new_current_command_data();
+    result = self->generate_new_current_command_data();
     if (result != DAXA_RESULT_SUCCESS)
     {
         self->current_command_data = std::move(cmd_data);
-        return result;
+        _DAXA_RETURN_IF_ERROR(result, result);
     }
     *out_executable_cmds = new daxa_ImplExecutableCommandList{
         .cmd_recorder = self,
@@ -1223,7 +1213,8 @@ auto daxa_cmd_get_vk_command_pool(daxa_CommandRecorder self) -> VkCommandPool
 
 void daxa_destroy_command_recorder(daxa_CommandRecorder self)
 {
-    self->device->gpu_sro_table.lifetime_lock.unlock_shared();
+    // CAUSED UB: EASILY CAUSED RECURSIVE SHARED LOCKING WHEN CALLING COLLECT GARBAGE OR SUBMIT WHILE THE THREAD OWNS AN ALIVE CMD RECORDER. THIS IS ILLEGAL IN C++!
+    // self->device->gpu_sro_table.lifetime_lock.unlock_shared();
     self->dec_refcnt(
         daxa_ImplCommandRecorder::zero_ref_callback,
         self->device->instance);
@@ -1245,7 +1236,7 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
     {
         std::unique_lock lock{device->command_pool_pools[info->queue_family].mtx};
         device->command_pool_pools[info->queue_family].put_back(vk_cmd_pool);
-        return result;
+        _DAXA_RETURN_IF_ERROR(result, result);
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
@@ -1259,8 +1250,8 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &cmd_pool_name_info);
     }
-    // TODO(lifetime): Maybe we should have a try lock variant?
-    ret.device->gpu_sro_table.lifetime_lock.lock_shared();
+    // CAUSED UB: EASILY CAUSED RECURSIVE SHARED LOCKING WHEN CALLING COLLECT GARBAGE OR SUBMIT WHILE THE THREAD OWNS AN ALIVE CMD RECORDER. THIS IS ILLEGAL IN C++!
+    // ret.device->gpu_sro_table.lifetime_lock.lock_shared();
     ret.strong_count = 1;
     device->inc_weak_refcnt();
     *out_cmd_list = new daxa_ImplCommandRecorder{};
@@ -1295,11 +1286,7 @@ void executable_cmd_list_execute_deferred_destructions(daxa_Device device, Execu
         case DEFERRED_DESTRUCTION_BUFFER_INDEX: _ignore = daxa_dvc_destroy_buffer(device, std::bit_cast<daxa_BufferId>(id)); break;
         case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(device, std::bit_cast<daxa_ImageId>(id)); break;
         case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(device, std::bit_cast<daxa_ImageViewId>(id)); break;
-        case DEFERRED_DESTRUCTION_SAMPLER_INDEX:
-            _ignore = daxa_dvc_destroy_sampler(device, std::bit_cast<daxa_SamplerId>(id));
-            break;
-            // TODO(capi): DO NOT THROW FROM A C FUNCTION
-            // default: DAXA_DBG_ASSERT_TRUE_M(false, "unreachable");
+        case DEFERRED_DESTRUCTION_SAMPLER_INDEX: _ignore = daxa_dvc_destroy_sampler(device, std::bit_cast<daxa_SamplerId>(id)); break;
         }
     }
     cmd_list.deferred_destructions.clear();
@@ -1314,22 +1301,16 @@ auto daxa_ImplCommandRecorder::generate_new_current_command_data() -> daxa_Resul
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
     };
-    auto vk_result = vkAllocateCommandBuffers(this->device->vk_device, &vk_command_buffer_allocate_info, &this->current_command_data.vk_cmd_buffer);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkAllocateCommandBuffers(this->device->vk_device, &vk_command_buffer_allocate_info, &this->current_command_data.vk_cmd_buffer));
+    _DAXA_RETURN_IF_ERROR(result, result);
     VkCommandBufferBeginInfo const vk_command_buffer_begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = nullptr,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         .pInheritanceInfo = {},
     };
-    vk_result = vkBeginCommandBuffer(this->current_command_data.vk_cmd_buffer, &vk_command_buffer_begin_info);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    result = static_cast<daxa_Result>(vkBeginCommandBuffer(this->current_command_data.vk_cmd_buffer, &vk_command_buffer_begin_info));
+    _DAXA_RETURN_IF_ERROR(result, result);
     this->allocated_command_buffers.push_back(this->current_command_data.vk_cmd_buffer);
     this->current_command_data.used_buffers.reserve(12);
     this->current_command_data.used_images.reserve(12);
@@ -1342,7 +1323,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_CommandRecorder>(handle);
     u64 const submit_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    std::unique_lock const lock{self->device->zombies_mtx};
+    std::unique_lock const lock{self->device->zombies_mtx}; // lock is recursive
     executable_cmd_list_execute_deferred_destructions(self->device, self->current_command_data);
     self->device->command_list_zombies.emplace_front(
         submit_timeline,

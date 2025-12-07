@@ -316,7 +316,7 @@ namespace daxa
 
     auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool;
 
-    auto task_type_default_stage(TaskType task_type) -> TaskStage;
+    DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
 
     using TaskResourceIndex = u32;
 
@@ -800,7 +800,7 @@ namespace daxa
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
         [[deprecated("Layout is guaranteed to always be general, stop using this function; API:3.2")]] 
-        auto layout(TaskImageIndexOrView auto timage) const -> ImageLayout
+        auto layout(TaskImageIndexOrView auto) const -> ImageLayout
         {
             return daxa::ImageLayout::GENERAL;
         }
@@ -1048,13 +1048,6 @@ namespace daxa
             u32 size = {};
             u32 alignment = {};
         };
-        template <typename T>
-        auto constexpr align_up(T value, T align) -> T
-        {
-            if (value == 0 || align == 0)
-                return 0;
-            return (value + align - static_cast<T>(1)) / align * align;
-        }
         constexpr auto get_asb_size_and_alignment(auto const & attachment_array) -> AsbSizeAlignment
         {
             AsbSizeAlignment size_align = {};

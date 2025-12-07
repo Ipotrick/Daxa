@@ -368,23 +368,18 @@ namespace daxa
         auto texture_staging_buffer = this->info.device.create_buffer({
             .size = static_cast<u32>(upload_size),
             .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .name = "dear ImGui texture staging buffer",
         });
 
         u8 * staging_buffer_data = this->info.device.buffer_host_address_as<u8>(texture_staging_buffer).value();
         std::memcpy(staging_buffer_data, pixels, upload_size);
 
         auto recorder = this->info.device.create_command_recorder({.name = "dear ImGui Font Sheet Upload"});
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-            .dst_layout = daxa::ImageLayout::GENERAL,
-            .image_slice = {
-                .base_mip_level = 0,
-                .level_count = 1,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
             .image_id = font_sheet,
+            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
         recorder.copy_buffer_to_image({
             .buffer = texture_staging_buffer,
@@ -397,18 +392,9 @@ namespace daxa
             .image_offset = {0, 0, 0},
             .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
         });
-        recorder.pipeline_barrier_image_transition({
+        recorder.pipeline_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
-            .src_layout = daxa::ImageLayout::GENERAL,
-            .dst_layout = daxa::ImageLayout::GENERAL,
-            .image_slice = {
-                .base_mip_level = 0,
-                .level_count = 1,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
-            .image_id = font_sheet,
         });
         auto executable_commands = recorder.complete_current_commands();
         this->info.device.submit_commands({
@@ -454,7 +440,7 @@ namespace daxa
 
 DAXA_DECL_PUSH_CONSTANT(Push, push)
 
-#if DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_VERTEX
+#if GL_VERTEX_SHADER
 
 layout(location = 0) out struct
 {
@@ -479,7 +465,7 @@ void main()
     gl_Position = vec4(aPos * push.scale + push.translate, 0, 1);
 }
 
-#elif DAXA_SHADER_STAGE == DAXA_SHADER_STAGE_FRAGMENT
+#elif GL_FRAGMENT_SHADER
 
 layout(location = 0) out daxa_f32vec4 fColor;
 layout(location = 0) in struct

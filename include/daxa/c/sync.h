@@ -96,22 +96,54 @@ typedef struct
 {
     daxa_Access src_access;
     daxa_Access dst_access;
-} daxa_MemoryBarrierInfo;
+} daxa_BarrierInfo;
 
-typedef struct
+static const daxa_BarrierInfo DAXA_DEFAULT_BARRIER_INFO = DAXA_ZERO_INIT;
+
+#if !DAXA_REMOVE_DEPRECATED
+/* deprecated("Use daxa_BarrierInfo instead; API:3.2") */
+#define daxa_MemoryBarrierInfo daxa_BarrierInfo
+#endif
+
+#if !DAXA_REMOVE_DEPRECATED
+
+/* deprecated("Use ImageBarrierInfo instead; API:3.2") */ typedef struct
 {
     daxa_Access src_access;
     daxa_Access dst_access;
     daxa_ImageLayout src_layout;
     daxa_ImageLayout dst_layout;
-    daxa_ImageMipArraySlice image_slice;
+    /* deprecated("Ignored parameter, whole image will be transitioned; API:3.2") */ daxa_ImageMipArraySlice image_slice;
     daxa_ImageId image_id;
 } daxa_ImageMemoryBarrierInfo;
+
+static const daxa_ImageMemoryBarrierInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_INFO = DAXA_ZERO_INIT;
+
+#endif
+
+typedef enum
+{
+    DAXA_IMAGE_LAYOUT_OPERATION_NONE = 0,
+    DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL = 1,
+    DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC = 2,
+} daxa_ImageLayoutOperation;
+
+typedef struct
+{
+    daxa_Access src_access;
+    daxa_Access dst_access;
+    daxa_ImageId image_id;
+    daxa_ImageLayoutOperation layout_operation;
+} daxa_ImageBarrierInfo;
+
+static const daxa_ImageBarrierInfo DAXA_DEFAULT_IMAGE_BARRIER_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
     daxa_SmallString name;
 } daxa_BinarySemaphoreInfo;
+
+static const daxa_BinarySemaphoreInfo DAXA_DEFAULT_BINARY_SEMAPHORE_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT daxa_BinarySemaphoreInfo const *
 daxa_binary_semaphore_info(daxa_BinarySemaphore binary_semaphore);
@@ -129,6 +161,8 @@ typedef struct
     uint64_t initial_value;
     daxa_SmallString name;
 } daxa_TimelineSemaphoreInfo;
+
+static const daxa_TimelineSemaphoreInfo DAXA_DEFAULT_TIMELINE_SEMAPHORE_INFO = DAXA_ZERO_INIT;
 
 DAXA_EXPORT daxa_TimelineSemaphoreInfo const *
 daxa_timeline_semaphore_info(daxa_TimelineSemaphore timeline_semaphore);
@@ -155,14 +189,18 @@ typedef struct
     daxa_SmallString name;
 } daxa_EventInfo;
 
+static const daxa_EventInfo DAXA_DEFAULT_EVENT_INFO = DAXA_ZERO_INIT;
+
 typedef struct
 {
-    daxa_MemoryBarrierInfo const * memory_barriers;
-    uint64_t memory_barrier_count;
-    daxa_ImageMemoryBarrierInfo const * image_memory_barriers;
-    uint64_t image_memory_barrier_count;
+    daxa_BarrierInfo const * barriers;
+    uint64_t barrier_count;
+    daxa_ImageBarrierInfo const * image_barriers;
+    uint64_t image_barrier_count;
     daxa_Event * event;
 } daxa_EventSignalInfo;
+
+static const daxa_EventSignalInfo DAXA_DEFAULT_EVENT_SIGNAL_INFO = DAXA_ZERO_INIT;
 
 typedef daxa_EventSignalInfo daxa_EventWaitInfo;
 
@@ -179,5 +217,7 @@ typedef struct
     daxa_TimelineSemaphore semaphore;
     uint64_t value;
 } daxa_TimelinePair;
+
+static const daxa_TimelinePair DAXA_DEFAULT_TIMELINE_PAIR = DAXA_ZERO_INIT;
 
 #endif // #if __DAXA_SYNC_H__

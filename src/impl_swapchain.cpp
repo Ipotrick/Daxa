@@ -2,6 +2,7 @@
 
 #include "impl_swapchain.hpp"
 #include "impl_device.hpp"
+#include "impl_instance.hpp"
 
 #include <utility>
 #include <bit>
@@ -27,67 +28,56 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     ret.device = device;
     ret.info = *reinterpret_cast<SwapchainInfo const *>(info);
     auto result = ret.recreate_surface();
-    if (result != DAXA_RESULT_SUCCESS)
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    defer
     {
-        ret.full_cleanup();
-        return result;
-    }
+        if (result != DAXA_RESULT_SUCCESS)
+        {
+            ret.full_cleanup();
+        }
+    };
 
     if (info->queue_family >= DAXA_QUEUE_FAMILY_MAX_ENUM || device->queue_families[info->queue_family].queue_count == 0)
     {
-        ret.full_cleanup();
-        return DAXA_RESULT_ERROR_INVALID_QUEUE_FAMILY;
+        _DAXA_RETURN_IF_ERROR(result, result);
     }
 
     // Save supported present modes.
     u32 present_mode_count = {};
-    auto vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
         ret.device->vk_physical_device,
         ret.vk_surface,
         &present_mode_count,
-        nullptr);
-    if (vk_result != VK_SUCCESS)
-    {
-        ret.full_cleanup();
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+        nullptr));
+    _DAXA_RETURN_IF_ERROR(result, result);
+
     ret.supported_present_modes.resize(present_mode_count);
-    vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
         device->vk_physical_device,
         ret.vk_surface,
         &present_mode_count,
-        r_cast<VkPresentModeKHR *>(ret.supported_present_modes.data()));
-    if (vk_result != VK_SUCCESS)
-    {
-        ret.full_cleanup();
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+        r_cast<VkPresentModeKHR *>(ret.supported_present_modes.data())));
+    _DAXA_RETURN_IF_ERROR(result, result);
 
     // Format Selection:
     u32 format_count = 0;
-    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, nullptr);
-    if (vk_result != VK_SUCCESS)
-    {
-        ret.full_cleanup();
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, nullptr));
+    _DAXA_RETURN_IF_ERROR(result, result);
+    
     std::vector<VkSurfaceFormatKHR> surface_formats;
     surface_formats.resize(format_count);
-    vk_result = vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, surface_formats.data());
-    if (vk_result != VK_SUCCESS)
-    {
-        ret.full_cleanup();
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, surface_formats.data()));
+    _DAXA_RETURN_IF_ERROR(result, result);
+
     if (format_count == 0)
     {
-        ret.full_cleanup();
-        return DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND, DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND);
     }
     auto format_comparator = [&](auto const & a, auto const & b) -> bool
     {
-        return ret.info.surface_format_selector(std::bit_cast<Format>(a.format)) <
-               ret.info.surface_format_selector(std::bit_cast<Format>(b.format));
+        return ret.info.surface_format_selector(std::bit_cast<Format>(a.format), std::bit_cast<ColorSpace>(a.colorSpace)) <
+               ret.info.surface_format_selector(std::bit_cast<Format>(b.format), std::bit_cast<ColorSpace>(b.colorSpace));
     };
     auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
     if (best_format == surface_formats.end())
@@ -98,49 +88,37 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     ret.vk_surface_format = *best_format;
 
     result = ret.recreate();
-    if (result != DAXA_RESULT_SUCCESS)
-    {
-        ret.full_cleanup();
-        return result;
-    }
+    _DAXA_RETURN_IF_ERROR(result, result);
+    
     // We have an acquire semaphore for each frame in flight.
     for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight; i++)
     {
         BinarySemaphore sema = {};
-        daxa_BinarySemaphoreInfo const sema_info = {};
+        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
+        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
+        daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
-        if (result != DAXA_RESULT_SUCCESS)
-        {
-            ret.full_cleanup();
-            return result;
-        }
+        _DAXA_RETURN_IF_ERROR(result, result);
+
         ret.acquire_semaphores.push_back(std::move(sema));
     }
     // We have a present semaphore for each swapchain image.
     for (u32 i = 0; i < ret.images.size(); i++)
     {
         BinarySemaphore sema = {};
-        daxa_BinarySemaphoreInfo const sema_info = {};
+        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
+        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
+        daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
-        if (result != DAXA_RESULT_SUCCESS)
-        {
-            ret.full_cleanup();
-            return result;
-        }
+        _DAXA_RETURN_IF_ERROR(result, result);
+
         ret.present_semaphores.push_back(std::move(sema));
     }
 
-    auto timeline_sema_name = SmallString(std::string{ret.info.name.view()} + " ts");
-    auto timeline_sema_info = daxa_TimelineSemaphoreInfo{
-        .initial_value = 0,
-        .name = std::bit_cast<daxa_SmallString>(timeline_sema_name),
-    };
+    auto timeline_sema_info = daxa_TimelineSemaphoreInfo{};
+    timeline_sema_info.name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(timeline_sema_info.name.data, DAXA_SMALL_STRING_CAPACITY, "%s Timeline Sema", info->name.data)));
     result = daxa_dvc_create_timeline_semaphore(device, &timeline_sema_info, r_cast<daxa_TimelineSemaphore *>(&ret.gpu_frame_timeline));
-    if (result != DAXA_RESULT_SUCCESS)
-    {
-        ret.full_cleanup();
-        return result;
-    }
+    _DAXA_RETURN_IF_ERROR(result, result);
 
     ret.strong_count = 1;
     *out_swapchain = new daxa_ImplSwapchain{};
@@ -171,6 +149,7 @@ auto daxa_swp_resize(daxa_Swapchain self) -> daxa_Result
         [[maybe_unused]] auto ignored = vkDeviceWaitIdle(self->device->vk_device);
         self->full_cleanup();
     }
+    _DAXA_RETURN_IF_ERROR(result, result);
     return result;
 }
 
@@ -183,7 +162,8 @@ auto daxa_swp_set_present_mode(daxa_Swapchain self, VkPresentModeKHR present_mod
         [[maybe_unused]] auto ignored = vkDeviceWaitIdle(self->device->vk_device);
         self->full_cleanup();
     }
-    return result;
+    _DAXA_RETURN_IF_ERROR(result, result);
+    return DAXA_RESULT_SUCCESS;
 }
 
 auto daxa_swp_wait_for_next_frame(daxa_Swapchain self) -> daxa_Result
@@ -191,22 +171,19 @@ auto daxa_swp_wait_for_next_frame(daxa_Swapchain self) -> daxa_Result
     auto waited_wo_timeout = self->gpu_frame_timeline.wait_for_value(
         static_cast<u64>(
             std::max<i64>(
-                0,
-                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight) - 1ll)));
-    return waited_wo_timeout ? DAXA_RESULT_SUCCESS : DAXA_RESULT_TIMEOUT;
+                0ll,
+                self->cpu_frame_timeline + 1ll - static_cast<i64>(self->info.max_allowed_frames_in_flight))));
+    auto result = waited_wo_timeout ? DAXA_RESULT_SUCCESS : DAXA_RESULT_TIMEOUT;
+    _DAXA_RETURN_IF_ERROR(result, result);
+    return DAXA_RESULT_SUCCESS;
 }
 
 auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_id) -> daxa_Result
 {
     daxa_Result result = {};
     result = daxa_swp_wait_for_next_frame(self);
-    [[maybe_unused]] auto _ignored = self->gpu_frame_timeline.wait_for_value(
-        static_cast<u64>(
-            std::max<i64>(
-                0,
-                static_cast<i64>(self->cpu_frame_timeline) - static_cast<i64>(self->info.max_allowed_frames_in_flight) - 1ll)));
     _DAXA_RETURN_IF_ERROR(result, result);
-    self->acquire_semaphore_index = (self->cpu_frame_timeline + 1) % (self->info.max_allowed_frames_in_flight);
+    self->acquire_semaphore_index = static_cast<u64>((self->cpu_frame_timeline + 1ll)) % self->info.max_allowed_frames_in_flight;
     BinarySemaphore & acquire_semaphore = self->acquire_semaphores[self->acquire_semaphore_index];
     result = static_cast<daxa_Result>(vkAcquireNextImageKHR(
         self->device->vk_device,
@@ -215,9 +192,13 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
         nullptr,
         &self->current_image_index));
 
-    // We only bump the cpu timeline, when the acquire succeeds.
-    self->cpu_frame_timeline += 1;
-    *out_image_id = static_cast<daxa_ImageId>(self->images[self->current_image_index]);
+    if (result == DAXA_RESULT_SUCCESS)
+    {
+        // We only bump the cpu timeline, when the acquire succeeds.
+        *out_image_id = static_cast<daxa_ImageId>(self->images[self->current_image_index]);
+        self->cpu_frame_timeline += 1;
+    }
+
     return result;
 }
 
@@ -238,7 +219,7 @@ auto daxa_swp_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaph
 
 auto daxa_swp_current_cpu_timeline_value(daxa_Swapchain self) -> u64
 {
-    return self->cpu_frame_timeline;
+    return static_cast<u64>(std::max(0ll, self->cpu_frame_timeline));
 }
 
 auto daxa_swp_info(daxa_Swapchain self) -> daxa_SwapchainInfo const *
@@ -452,7 +433,6 @@ auto daxa_ImplSwapchain::recreate_surface() -> daxa_Result
 
 void daxa_ImplSwapchain::zero_ref_callback(ImplHandle const * handle)
 {
-    _DAXA_TEST_PRINT("      daxa_ImplSwapchain::zero_ref_callback\n");
     auto * self = rc_cast<daxa_Swapchain>(handle);
     if (self->device != nullptr)
     {

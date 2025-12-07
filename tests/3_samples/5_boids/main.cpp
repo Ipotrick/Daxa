@@ -20,7 +20,7 @@ DAXA_DECL_TASK_HEAD_END
 struct UpdateBoidsTask : UpdateBoids::Task
 {
     AttachmentViews views = {};
-    std::shared_ptr<daxa::ComputePipeline> update_boids_pipeline = {};
+    daxa::ComputePipeline* update_boids_pipeline = {};
     void callback(daxa::TaskInterface ti)
     {
         ti.recorder.set_pipeline(*update_boids_pipeline);
@@ -163,7 +163,7 @@ struct App : AppWindow<App>
     struct DrawBoidsTask : DrawBoidsH::Task
     {
         AttachmentViews views = {};
-        std::shared_ptr<daxa::RasterPipeline> draw_pipeline = {};
+        daxa::RasterPipeline* draw_pipeline = {};
         u32 * size_x = {};
         u32 * size_y = {};
         void callback(daxa::TaskInterface ti) const
@@ -226,17 +226,17 @@ struct App : AppWindow<App>
         using namespace UpdateBoids;
         new_task_graph.add_task(UpdateBoidsTask{
             .views = UpdateBoidsTask::Views{
-                .current = task_boids_current,
-                .previous = task_boids_old,
+                .current = task_boids_current.view(),
+                .previous = task_boids_old.view(),
             },
-            .update_boids_pipeline = update_boids_pipeline,
+            .update_boids_pipeline = update_boids_pipeline.get(),
         });
         new_task_graph.add_task(DrawBoidsTask{
             .views = DrawBoidsTask::Views{
-                .boids = task_boids_current,
-                .render_image = task_swapchain_image,
+                .boids = task_boids_current.view(),
+                .render_image = task_swapchain_image.view(),
             },
-            .draw_pipeline = draw_pipeline,
+            .draw_pipeline = draw_pipeline.get(),
             .size_x = &size_x,
             .size_y = &size_y,
         });

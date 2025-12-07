@@ -28,6 +28,7 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     implicit_extensions.push_back("VK_KHR_win32_surface");
     implicit_extensions.push_back("VK_KHR_xlib_surface");
     implicit_extensions.push_back("VK_KHR_wayland_surface");
+    implicit_extensions.push_back("VK_EXT_swapchain_colorspace");
 
     // Check existence of extensions:
     std::vector<VkExtensionProperties> instance_extensions = {};
@@ -332,7 +333,6 @@ auto daxa_instance_get_vk_instance(daxa_Instance self) -> VkInstance
 
 void daxa_ImplInstance::zero_ref_callback(ImplHandle const * handle)
 {
-    _DAXA_TEST_PRINT("daxa_ImplInstance::zero_ref_callback\n");
     daxa_Instance self = rc_cast<daxa_Instance>(handle);
     vkDestroyInstance(self->vk_instance, nullptr);
     delete self;

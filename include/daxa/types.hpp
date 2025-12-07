@@ -132,11 +132,13 @@ namespace daxa
 
         [[nodiscard]] auto value() -> T &
         {
+            DAXA_DBG_ASSERT_TRUE_M(has_value(), "ATTEMPTED TO READ VALUE OF NULL OPTIONAL");
             return this->m_value;
         }
 
         [[nodiscard]] auto value() const -> T const &
         {
+            DAXA_DBG_ASSERT_TRUE_M(has_value(), "ATTEMPTED TO READ VALUE OF NULL OPTIONAL");
             return this->m_value;
         }
 
@@ -165,7 +167,7 @@ namespace daxa
             }
             m_size = static_cast<FixedListSizeT>(in_size);
         }
-        template <usize IN_SIZE>
+        template <daxa::usize IN_SIZE>
             requires(IN_SIZE <= CAPACITY)
         FixedList(std::array<T, IN_SIZE> const & in)
         {
@@ -1313,12 +1315,12 @@ namespace daxa
     struct MemoryFlagBits
     {
         static inline constexpr MemoryFlags NONE = {0x00000000};
-        static inline constexpr MemoryFlags DEDICATED_MEMORY = {0x00000001};
-        static inline constexpr MemoryFlags CAN_ALIAS = {0x00000200};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags DEDICATED_MEMORY = {0x00000001};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags CAN_ALIAS = {0x00000200};
         static inline constexpr MemoryFlags HOST_ACCESS_SEQUENTIAL_WRITE = {0x00000400};
         static inline constexpr MemoryFlags HOST_ACCESS_RANDOM = {0x00000800};
-        static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = {0x00010000};
-        static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = {0x00010000};
+        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
     };
 
     enum struct ColorSpace
@@ -1722,6 +1724,15 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
+    enum struct LineRasterizationMode
+    {
+        DEFAULT = 0,
+        RECTANGULAR = 1,
+        BRESENHAM = 2,
+        RECTANGULAR_SMOOTH = 3,
+        MAX_ENUM = 0x7fffffff,
+    };
+
     enum struct PrimitiveTopology
     {
         POINT_LIST = 0,
@@ -1884,4 +1895,12 @@ namespace daxa
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily family) -> std::string_view;
+    
+    template <typename T>
+    auto constexpr align_up(T value, T align) -> T
+    {
+        if (value == 0 || align == 0)
+            return 0;
+        return (value + align - static_cast<T>(1)) / align * align;
+    }
 } // namespace daxa

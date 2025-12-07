@@ -197,7 +197,7 @@ namespace daxa
     };
 #endif
 
-    namespace detail
+    inline namespace detail
     {
         template <typename TaskHeadAttachmentDeclT>
         auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage = TaskStage::NONE) -> TaskAttachmentInfo
@@ -311,8 +311,6 @@ namespace daxa
         static constexpr inline usize ATTACHMENT_COUNT = 0;
     };
 
-    DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
-
     DAXA_EXPORT_CXX auto error_message_unassigned_buffer_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_unassigned_image_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_unassigned_tlas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
@@ -340,7 +338,7 @@ namespace daxa
 #endif
         TInlineTask(std::string_view name, TaskType task_type = TaskType::GENERAL)
         {
-            value._internal._name = std::move(name);
+            value._internal._name = name;
             value._internal._task_type = task_type;
             value._internal._default_stage = task_type_default_stage(task_type);
 
@@ -850,6 +848,26 @@ namespace daxa
         return daxa::Task(name, HeadInfoT::TYPE).uses_head<HeadInfoT>();
     }
 
+    inline auto RasterTask(std::string_view name) -> Task
+    {
+        return Task::Raster(name);
+    }
+
+    inline auto ComputeTask(std::string_view name) -> Task
+    {
+        return Task::Compute(name);
+    }
+
+    inline auto RayTracingTask(std::string_view name) -> Task
+    {
+        return Task::RayTracing(name);
+    }
+
+    inline auto TransferTask(std::string_view name) -> Task
+    {
+        return Task::Transfer(name);
+    }
+
     struct TaskBufferClearInfo
     {
         TaskBufferView buffer = {};
@@ -959,8 +977,6 @@ namespace daxa
         template <typename TaskHeadType>
         void add_task(TInlineTask<TaskHeadType> const & inline_task)
         {
-            using CallbackT = std::function<void(TaskInterface)>;
-
             DAXA_DBG_ASSERT_TRUE_M(static_cast<bool>(inline_task.value._internal._callback), "Detected empty callback on inline task!");
 
             auto task_callback = inline_task.value._internal._callback.callback;

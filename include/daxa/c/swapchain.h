@@ -3,6 +3,7 @@
 
 #include <daxa/c/gpu_resources.h>
 #include <daxa/c/sync.h>
+#include <vulkan/vulkan_core.h>
 
 DAXA_EXPORT int32_t
 daxa_default_format_selector(VkFormat format);
