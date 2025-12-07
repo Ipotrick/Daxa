@@ -36,7 +36,6 @@ void example_task_callback(daxa::TaskInterface ti)
         [[maybe_unused]] daxa::ImageViewType view_type = ti.get(AI.image0).view_type;
         [[maybe_unused]] u8 shader_array_size = ti.get(AI.image0).shader_array_size;
         [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(AI.image0).shader_array_type;
-        [[maybe_unused]] daxa::ImageLayout layout = ti.get(AI.image0).layout;
         [[maybe_unused]] daxa::TaskImageView view = ti.get(AI.image0).view;
         [[maybe_unused]] std::span<daxa::ImageId const> ids = ti.get(AI.image0).ids;
         [[maybe_unused]] std::span<daxa::ImageViewId const> view_ids = ti.get(AI.image0).view_ids;
