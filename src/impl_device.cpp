@@ -2208,7 +2208,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         };
 
         VmaAllocationCreateInfo const bda_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT),
+            .flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT | VMA_ALLOCATION_CREATE_MAPPED_BIT,
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .requiredFlags = {},
             .preferredFlags = {},
@@ -2218,10 +2218,11 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .priority = 0.5f,
         };
 
-        result = static_cast<daxa_Result>(vmaCreateBuffer(self->vma_allocator, &bda_buffer_create_info, &bda_allocation_create_info, &self->buffer_device_address_buffer, &self->buffer_device_address_buffer_allocation, nullptr));
-        _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER)
-        result = static_cast<daxa_Result>(vmaMapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation, r_cast<void **>(&self->buffer_device_address_buffer_host_ptr)));
-        _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER)
+        VmaAllocationInfo vma_allocation_info = {};
+        result = static_cast<daxa_Result>(vmaCreateBuffer(self->vma_allocator, &bda_buffer_create_info, &bda_allocation_create_info, &self->buffer_device_address_buffer, &self->buffer_device_address_buffer_allocation, &vma_allocation_info));
+        _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_BDA_BUFFER);
+
+        self->buffer_device_address_buffer_host_ptr = static_cast<u64*>(vma_allocation_info.pMappedData);
     }
 
     // Set debug names:
@@ -2612,7 +2613,6 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     {
         pool_pool.cleanup(self);
     }
-    vmaUnmapMemory(self->vma_allocator, self->buffer_device_address_buffer_allocation);
     vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);
     self->gpu_sro_table.cleanup(self->vk_device);
     vmaDestroyImage(self->vma_allocator, self->vk_null_image, self->vk_null_image_vma_allocation);
@@ -2719,7 +2719,7 @@ auto daxa_dvc_copy_memory_to_image(daxa_Device self, daxa_MemoryToImageCopyInfo 
         .regionCount = 1,
         .pRegions = &vk_memory_to_image_copy,
     };
-    auto result =  static_cast<daxa_Result>(self->vkCopyMemoryToImageEXT(self->vk_device, &vk_memory_to_image_copy_ext));
+    auto result = static_cast<daxa_Result>(self->vkCopyMemoryToImageEXT(self->vk_device, &vk_memory_to_image_copy_ext));
     _DAXA_RETURN_IF_ERROR(result, result);
     return DAXA_RESULT_SUCCESS;
 }
@@ -2755,7 +2755,7 @@ auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo 
         .regionCount = 1,
         .pRegions = &vk_image_to_memory_copy,
     };
-    auto result =  static_cast<daxa_Result>(self->vkCopyImageToMemoryEXT(self->vk_device, &vk_image_to_memory_copy_ext));
+    auto result = static_cast<daxa_Result>(self->vkCopyImageToMemoryEXT(self->vk_device, &vk_image_to_memory_copy_ext));
     _DAXA_RETURN_IF_ERROR(result, result);
     return result;
 }
