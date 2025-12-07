@@ -204,6 +204,8 @@ constexpr bool is_daxa_result_success(daxa_Result v)
 /// Daxa Implementation Core Library
 /// 
 
+#include <functional>
+
 namespace daxa
 {
     template <typename T>
@@ -212,10 +214,12 @@ namespace daxa
     struct MemoryArena
     {
         std::unique_ptr<u8[]> owned_allocation = {};
+        std::vector<std::unique_ptr<u8[], std::function<void(u8*)>>> spill_allocations = {};
         u8* memory = {};
         u32 size = {};
         u32 used_size = {};
         u32 allocations_made = {};
+        bool allow_spill_allocations = true;
         std::string_view name = {};
 
         MemoryArena() = default;
@@ -246,12 +250,28 @@ namespace daxa
                 used_size = new_used_size;
                 return new_allocation;
             }
-            DAXA_DBG_ASSERT_TRUE_M(
-                false,
-                std::format(
-                    "MemoryArena \"{}\" ran out of memory (missing_size: {}, total_size: {}, used_size: {}) while trying to allocate: {} (align: {})!",
-                    name, new_used_size - used_size, size, used_size, a_size * a_count, a_align));
-            return nullptr;
+            else
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    allow_spill_allocations,
+                    std::format(
+                        "MemoryArena \"{}\" ran out of memory (missing_size: {}, total_size: {}, used_size: {}) while trying to allocate: {} (align: {})!",
+                        name, new_used_size - used_size, size, used_size, a_size * a_count, a_align));
+                if (allow_spill_allocations)
+                {
+                    u8* ptr = static_cast<u8*>(operator new[](a_size * a_count, std::align_val_t{a_align}));
+                    auto deleter = [a_align](u8* p) {
+                        operator delete[](p, std::align_val_t{a_align});
+                    };
+                    auto alloc = std::unique_ptr<u8[], std::function<void(u8*)>>(ptr, deleter);
+                    spill_allocations.push_back(std::move(alloc));
+                    return spill_allocations.back().get();
+                }
+                else
+                {
+                    return nullptr;
+                }
+            }
         }
 
         template <typename T>
@@ -426,7 +446,7 @@ namespace daxa
 
         void push_back(T const & v)
         {
-            DAXA_DBG_ASSERT_TRUE_M(element_count < CAPACITY, "ERROR: exceeded MemoryArenaVector64k capacity");
+            DAXA_DBG_ASSERT_TRUE_M(element_count < CAPACITY, "ERROR: exceeded DynamicArenaArray8k capacity");
             u32 index = element_count++;
             auto bi = BlockIndex::element_index_to_block(index);
 
@@ -445,7 +465,7 @@ namespace daxa
 
         void reserve(u32 new_size)
         {
-            DAXA_DBG_ASSERT_TRUE_M(new_size <= CAPACITY, "ERROR: exceeded MemoryArenaVector64k capacity");
+            DAXA_DBG_ASSERT_TRUE_M(new_size <= CAPACITY, "ERROR: exceeded DynamicArenaArray8k capacity");
 
             auto bi = BlockIndex::element_index_to_block(std::max(new_size, 1u) - 1u);
             auto max_block = bi.block;
@@ -475,13 +495,13 @@ namespace daxa
 
         auto back() -> T &
         {
-            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty Vector");
+            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty DynamicArenaArray8k");
             return at(element_count - 1);
         }
 
         auto back() const -> T const &
         {
-            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty Vector");
+            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty DynamicArenaArray8k");
             return at(element_count - 1);
         }
 
@@ -626,5 +646,15 @@ namespace daxa
         }
 
         auto empty() const -> bool { return element_count == 0u; }
+
+        auto clone_to_contiguous() const -> std::span<T>
+        {
+            std::span<T> ret = this->allocator->allocate_trivial_span<T>(this->size());
+            for (u32 i = 0; i < this->size(); ++i)
+            {
+                ret[i] = this->at(i);
+            }
+            return ret;
+        }
     };
 }
