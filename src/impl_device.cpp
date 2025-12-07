@@ -1363,7 +1363,8 @@ auto daxa_dvc_oldest_pending_submit_index(daxa_Device self, daxa_u64 * submit_in
 
 auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
 {
-    MemoryArena m_arena = MemoryArena{"daxa_dvc_submit dyn stack memory", 1u << 13u /*8kib*/};
+    std::array<u8, 1u << 13u /*8kib*/> stack_memory;
+    MemoryArena m_arena = MemoryArena{"daxa_dvc_submit dyn stack memory", stack_memory};
 
     if (!self->valid_queue(info->queue))
     {

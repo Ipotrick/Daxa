@@ -214,7 +214,7 @@ namespace daxa
     struct MemoryArena
     {
         std::unique_ptr<u8[]> owned_allocation = {};
-        std::vector<std::unique_ptr<u8[], std::function<void(u8*)>>> spill_allocations = {};
+        std::unique_ptr<std::vector<std::unique_ptr<u8[], std::function<void(u8*)>>>> spill_allocations = {}; // vector behind unique ptr as compilers gen slow code for destructor otherwise
         u8* memory = {};
         u32 size = {};
         u32 used_size = {};
@@ -257,6 +257,10 @@ namespace daxa
                     std::format(
                         "MemoryArena \"{}\" ran out of memory (missing_size: {}, total_size: {}, used_size: {}) while trying to allocate: {} (align: {})!",
                         name, new_used_size - used_size, size, used_size, a_size * a_count, a_align));
+                if (!this->spill_allocations)
+                {
+                    this->spill_allocations = std::make_unique<std::vector<std::unique_ptr<u8[], std::function<void(u8*)>>>>();
+                }
                 if (allow_spill_allocations)
                 {
                     u8* ptr = static_cast<u8*>(operator new[](a_size * a_count, std::align_val_t{a_align}));
@@ -264,22 +268,14 @@ namespace daxa
                         operator delete[](p, std::align_val_t{a_align});
                     };
                     auto alloc = std::unique_ptr<u8[], std::function<void(u8*)>>(ptr, deleter);
-                    spill_allocations.push_back(std::move(alloc));
-                    return spill_allocations.back().get();
+                    spill_allocations->push_back(std::move(alloc));
+                    return spill_allocations->back().get();
                 }
                 else
                 {
                     return nullptr;
                 }
             }
-        }
-
-        template <typename T>
-        auto allocate_single(auto && values) -> std::unique_ptr<T, void (*)(T *)>
-        {
-            auto alloc = allocate(sizeof(T), alignof(T));
-            return std::unique_ptr{new (alloc) T(std::forward(values)), [](T * v)
-                                   { v->~T(); }};
         }
 
         template <TrivialType T>
