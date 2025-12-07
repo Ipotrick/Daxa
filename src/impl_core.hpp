@@ -293,12 +293,7 @@ namespace daxa
         auto allocate_trivial_span(usize count) -> std::span<T>
         {
             auto alloc = allocate(sizeof(T), alignof(T), count);
-            auto span = std::span<T>{reinterpret_cast<T *>(alloc), count};
-            for (auto & v : span)
-            {
-                new (&v) T();
-            }
-            return span;
+            return std::span<T>{reinterpret_cast<T *>(alloc), count};
         }
 
         template <TrivialType T>
@@ -409,10 +404,12 @@ namespace daxa
         auto clone(MemoryArena * a_allocator) const -> DynamicArenaArray8k<T>
         {
             DynamicArenaArray8k<T> ret = { a_allocator };
-            ret.reserve(element_count);
-            for (u32 i = 0; i < element_count; ++i)
+            ret.reserve(this->element_count);
+            ret.element_count = this->element_count;
+            for (u32 e = 0; e < this->element_count; ++e)
             {
-                ret.push_back(this->at(i));
+                auto bi = BlockIndex::element_index_to_block(static_cast<u32>(e));
+                ret.block_allocations[bi.block][bi.in_block_index] = this->block_allocations[bi.block][bi.in_block_index];
             }
             return ret;
         }
@@ -649,10 +646,19 @@ namespace daxa
 
         auto clone_to_contiguous() const -> std::span<T>
         {
-            std::span<T> ret = this->allocator->allocate_trivial_span<T>(this->size());
-            for (u32 i = 0; i < this->size(); ++i)
+            std::span<T> ret = this->allocator->allocate_trivial_span<T>(this->element_count);
+            u32 i = 0;
+            for (u32 block = 0; block < BLOCK_COUNT; ++block)
             {
-                ret[i] = this->at(i);
+                for (u32 e = 0; e < BLOCK_SIZES[block]; ++e)
+                {
+                    if (i >= this->element_count)
+                    {
+                        return ret;
+                    }
+                    ret[i] = this->block_allocations[block][e];
+                    ++i;
+                }
             }
             return ret;
         }
