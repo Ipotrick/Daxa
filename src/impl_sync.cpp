@@ -16,11 +16,8 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
         .pNext = nullptr,
         .flags = {},
     };
-    auto vk_result = vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore));
+    _DAXA_RETURN_IF_ERROR(result, result);
     if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.view().empty()))
     {
         auto c_str = ret.info.name.c_str();
@@ -78,11 +75,8 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
         .pNext = &timeline_vk_semaphore,
         .flags = {},
     };
-    auto vk_result = vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkCreateSemaphore(device->vk_device, &vk_semaphore_create_info, nullptr, &ret.vk_semaphore));
+    _DAXA_RETURN_IF_ERROR(result, result);
     if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.span().empty()))
     {
         auto c_str = ret.info.name.c_str();
@@ -150,7 +144,6 @@ auto daxa_timeline_semaphore_inc_refcnt(daxa_TimelineSemaphore self) -> u64
 
 auto daxa_timeline_semaphore_dec_refcnt(daxa_TimelineSemaphore self) -> u64
 {
-    _DAXA_TEST_PRINT("daxa_timeline_semaphore_dec_refcnt\n");
     return self->dec_refcnt(
         &daxa_ImplTimelineSemaphore::zero_ref_callback,
         self->device->instance);
@@ -167,11 +160,8 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
         .flags = VK_EVENT_CREATE_DEVICE_ONLY_BIT,
     };
     VkEvent event = {};
-    auto vk_result = vkCreateEvent(ret.device->vk_device, &vk_event_create_info, nullptr, &event);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkCreateEvent(ret.device->vk_device, &vk_event_create_info, nullptr, &event));
+    _DAXA_RETURN_IF_ERROR(result, result);
     ret.vk_event = event;
     if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.view().empty()))
     {
@@ -231,7 +221,6 @@ void daxa_ImplBinarySemaphore::zero_ref_callback(ImplHandle const * handle)
 
 void daxa_ImplTimelineSemaphore::zero_ref_callback(ImplHandle const * handle)
 {
-    _DAXA_TEST_PRINT("daxa_ImplTimelineSemaphore::zero_ref_callback\n");
     auto * self = rc_cast<daxa_TimelineSemaphore>(handle);
     std::unique_lock const lock{self->device->zombies_mtx};
     u64 const main_queue_cpu_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);

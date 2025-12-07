@@ -1178,17 +1178,14 @@ auto daxa_cmd_complete_current_commands(
     daxa_ExecutableCommandList * out_executable_cmds) -> daxa_Result
 {
     daxa_cmd_flush_barriers(self);
-    auto vk_result = vkEndCommandBuffer(self->current_command_data.vk_cmd_buffer);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkEndCommandBuffer(self->current_command_data.vk_cmd_buffer));
+    _DAXA_RETURN_IF_ERROR(result, result);
     auto cmd_data = std::move(self->current_command_data);
-    auto result = self->generate_new_current_command_data();
+    result = self->generate_new_current_command_data();
     if (result != DAXA_RESULT_SUCCESS)
     {
         self->current_command_data = std::move(cmd_data);
-        return result;
+        _DAXA_RETURN_IF_ERROR(result, result);
     }
     *out_executable_cmds = new daxa_ImplExecutableCommandList{
         .cmd_recorder = self,
@@ -1239,7 +1236,7 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
     {
         std::unique_lock lock{device->command_pool_pools[info->queue_family].mtx};
         device->command_pool_pools[info->queue_family].put_back(vk_cmd_pool);
-        return result;
+        _DAXA_RETURN_IF_ERROR(result, result);
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
@@ -1304,22 +1301,16 @@ auto daxa_ImplCommandRecorder::generate_new_current_command_data() -> daxa_Resul
         .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
         .commandBufferCount = 1,
     };
-    auto vk_result = vkAllocateCommandBuffers(this->device->vk_device, &vk_command_buffer_allocate_info, &this->current_command_data.vk_cmd_buffer);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkAllocateCommandBuffers(this->device->vk_device, &vk_command_buffer_allocate_info, &this->current_command_data.vk_cmd_buffer));
+    _DAXA_RETURN_IF_ERROR(result, result);
     VkCommandBufferBeginInfo const vk_command_buffer_begin_info{
         .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
         .pNext = nullptr,
         .flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         .pInheritanceInfo = {},
     };
-    vk_result = vkBeginCommandBuffer(this->current_command_data.vk_cmd_buffer, &vk_command_buffer_begin_info);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    result = static_cast<daxa_Result>(vkBeginCommandBuffer(this->current_command_data.vk_cmd_buffer, &vk_command_buffer_begin_info));
+    _DAXA_RETURN_IF_ERROR(result, result);
     this->allocated_command_buffers.push_back(this->current_command_data.vk_cmd_buffer);
     this->current_command_data.used_buffers.reserve(12);
     this->current_command_data.used_images.reserve(12);

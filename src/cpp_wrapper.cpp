@@ -233,13 +233,11 @@ namespace daxa
 
     auto Instance::inc_refcnt(ImplHandle const * object) -> u64
     {
-        _DAXA_TEST_PRINT("instance inc refcnt\n");
         return daxa_instance_inc_refcnt(rc_cast<daxa_Instance>(object));
     }
 
     auto Instance::dec_refcnt(ImplHandle const * object) -> u64
     {
-        _DAXA_TEST_PRINT("instance dec refcnt\n");
         return daxa_instance_dec_refcnt(rc_cast<daxa_Instance>(object));
     }
 

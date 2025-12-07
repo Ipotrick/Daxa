@@ -1180,14 +1180,13 @@ auto template_hot_or_slot(auto & self, auto id)
     }
     else
     {
-        return self->slot(id);
+        return self->slot(id); 
     }
 }
 
 #define _DAXA_DECL_COMMON_GP_RES_FUNCTIONS(name, Name, NAME, SLOT_NAME, vk_name, VK_NAME)                                \
     auto daxa_dvc_destroy_##name(daxa_Device self, daxa_##Name##Id id) -> daxa_Result                                    \
     {                                                                                                                    \
-        _DAXA_TEST_PRINT("STRONG daxa_dvc_destroy_%s\n", #name);                                                         \
         auto success = self->gpu_sro_table.SLOT_NAME.try_zombify(std::bit_cast<GPUResourceId>(id));                      \
         if (success)                                                                                                     \
         {                                                                                                                \
@@ -1642,13 +1641,11 @@ auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
 
 auto daxa_dvc_inc_refcnt(daxa_Device self) -> u64
 {
-    _DAXA_TEST_PRINT("device inc refcnt from %u to %u\n", self->strong_count, self->strong_count + 1);
     return self->inc_refcnt();
 }
 
 auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
 {
-    _DAXA_TEST_PRINT("device dec refcnt from %u to %u\n", self->strong_count, self->strong_count - 1);
     return self->dec_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
         self->instance);
@@ -2476,7 +2473,6 @@ void daxa_ImplDevice::cleanup_buffer(BufferId id)
 
 void daxa_ImplDevice::cleanup_image(ImageId id)
 {
-    _DAXA_TEST_PRINT("cleanup image\n");
     auto gid = std::bit_cast<GPUResourceId>(id);
     ImplImageSlot const & image_slot = gpu_sro_table.image_slots.unsafe_get(gid);
     {
@@ -2607,7 +2603,6 @@ auto daxa_ImplDevice::hot_slot(daxa_BlasId id) const -> ImplBlasSlot::HotData co
 
 void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zero_ref_callback\n");
     auto self = rc_cast<daxa_Device>(handle);
     auto result = daxa_dvc_wait_idle(self);
     DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to wait idle");
@@ -2665,37 +2660,31 @@ void zombiefy(daxa_Device self, T id, auto & slots, auto & zombies)
 
 void daxa_ImplDevice::zombify_buffer(BufferId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_buffer\n");
     zombiefy(this, id, gpu_sro_table.buffer_slots, this->buffer_zombies);
 }
 
 void daxa_ImplDevice::zombify_image(ImageId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_image (%i,%i)\n", id.index, id.version);
     zombiefy(this, id, gpu_sro_table.image_slots, this->image_zombies);
 }
 
 void daxa_ImplDevice::zombify_image_view(ImageViewId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_image_view\n");
     zombiefy(this, id, gpu_sro_table.image_slots, this->image_view_zombies);
 }
 
 void daxa_ImplDevice::zombify_sampler(SamplerId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_sampler\n");
     zombiefy(this, id, gpu_sro_table.sampler_slots, this->sampler_zombies);
 }
 
 void daxa_ImplDevice::zombify_tlas(TlasId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_tlas\n");
     zombiefy(this, id, gpu_sro_table.tlas_slots, this->tlas_zombies);
 }
 
 void daxa_ImplDevice::zombify_blas(BlasId id)
 {
-    _DAXA_TEST_PRINT("daxa_ImplDevice::zombify_blas\n");
     zombiefy(this, id, gpu_sro_table.blas_slots, this->blas_zombies);
 }
 

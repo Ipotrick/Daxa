@@ -73,8 +73,9 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
     };
     {
         auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWin32SurfaceKHR"));
-        VkResult const vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
-        return std::bit_cast<daxa_Result>(vk_result);
+        auto result = static_cast<daxa_Result>(func(instance->vk_instance, &surface_ci, nullptr, out_surface));
+        _DAXA_RETURN_IF_ERROR(result, result);
+        return result;
     }
 #elif defined(__linux__)
     switch (std::bit_cast<daxa::NativeWindowPlatform>(platform))
@@ -92,8 +93,9 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
         };
         {
             auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
-            VkResult vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
-            return std::bit_cast<daxa_Result>(vk_result);
+            auto result = static_cast<daxa_Result>(func(instance->vk_instance, &surface_ci, nullptr, out_surface));
+            _DAXA_RETURN_IF_ERROR(result, result);
+            return result;
         }
     }
     break;
@@ -111,8 +113,9 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
         };
         {
             auto func = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateXlibSurfaceKHR"));
-            VkResult vk_result = func(instance->vk_instance, &surface_ci, nullptr, out_surface);
-            return std::bit_cast<daxa_Result>(vk_result);
+            auto result = static_cast<daxa_Result>(func(instance->vk_instance, &surface_ci, nullptr, out_surface));
+            _DAXA_RETURN_IF_ERROR(result, result);
+            return result;
         }
     }
     break;
@@ -515,14 +518,12 @@ auto ImplHandle::get_refcnt() const -> u64
 
 auto ImplHandle::impl_inc_weak_refcnt([[maybe_unused]] char const * callsite) const -> u64
 {
-    _DAXA_TEST_PRINT("called \"inc_weak_refcnt\" in \"%s\"\n", callsite);
     auto & mut_weak_ref = this->weak_count;
     return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance /*unused*/, [[maybe_unused]] char const * callsite) const -> u64
 {
-    _DAXA_TEST_PRINT("called \"dec_weak_refcnt\" in \"%s\"\n", callsite);
     auto & mut_weak_ref = this->weak_count;
     auto prev = std::atomic_ref{mut_weak_ref}.fetch_sub(1, std::memory_order::relaxed);
     if (prev == 1)
