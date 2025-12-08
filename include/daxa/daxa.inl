@@ -1,4 +1,5 @@
-#pragma once
+#ifndef DAXA_DAXA_INL
+#define DAXA_DAXA_INL
 
 #define DAXA_GPU_TABLE_SET_BINDING 0
 #define DAXA_STORAGE_BUFFER_BINDING 0
@@ -20,6 +21,7 @@
 #define DAXA_LANGUAGE DAXA_LANGUAGE_C
 #include <daxa/c/daxa.h>
 /// @brief Buffer ptr enable is ignored in c++.
+#define DAXA_FWD_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
@@ -33,6 +35,7 @@
 #define DAXA_LANGUAGE DAXA_LANGUAGE_CPP
 #include <daxa/daxa.hpp>
 /// @brief Buffer ptr enable is ignored in c++.
+#define DAXA_FWD_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE)
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN)
 /// @brief Buffer ptr types map to the buffer device address type in daxa.
@@ -44,7 +47,7 @@
 
 #define DAXA_SHADER 1
 #define DAXA_LANGUAGE DAXA_LANGUAGE_GLSL
-#include <daxa/daxa.glsl>
+#include "daxa/daxa.glsl"
 
 #else // SLANG
 
@@ -52,4 +55,5 @@
 #define DAXA_LANGUAGE DAXA_LANGUAGE_SLANG
 #include "daxa/daxa.slang"
 
+#endif
 #endif

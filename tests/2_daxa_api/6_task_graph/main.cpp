@@ -36,7 +36,6 @@ void example_task_callback(daxa::TaskInterface ti)
         [[maybe_unused]] daxa::ImageViewType view_type = ti.get(AI.image0).view_type;
         [[maybe_unused]] u8 shader_array_size = ti.get(AI.image0).shader_array_size;
         [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(AI.image0).shader_array_type;
-        [[maybe_unused]] daxa::ImageLayout layout = ti.get(AI.image0).layout;
         [[maybe_unused]] daxa::TaskImageView view = ti.get(AI.image0).view;
         [[maybe_unused]] std::span<daxa::ImageId const> ids = ti.get(AI.image0).ids;
         [[maybe_unused]] std::span<daxa::ImageViewId const> view_ids = ti.get(AI.image0).view_ids;
@@ -120,14 +119,14 @@ namespace tests
         int i = 5;
 
         auto old_task_syntax = OldTaskHeadSyntaxTask{
+            .f = f,
+            .i = i,
             .views = OldTaskHeadSyntaxTask::Views{
                 .buffer0 = {},
                 .image0 = {},
                 .image1 = {},
                 .test_buffer_no_shader = {},
             },
-            .f = f,
-            .i = i,
         };
 
         daxa::TaskBufferView cmd_view = daxa::NullTaskBuffer;
@@ -474,7 +473,7 @@ namespace tests
         struct WriteImage : ShaderIntegrationTaskHead::Task
         {
             AttachmentViews views = {};
-            std::shared_ptr<daxa::ComputePipeline> pipeline = {};
+            daxa::ComputePipeline* pipeline = {};
             void callback(daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*pipeline);
@@ -488,14 +487,14 @@ namespace tests
                 .settings = task_buffer.view(),
                 .image = task_image.view(),
             },
-            .pipeline = compute_pipeline,
+            .pipeline = compute_pipeline.get(),
         });
         task_graph.add_task(WriteImage{
             .views = WriteImage::Views{
                 .settings = task_buffer.view(),
                 .image = task_image.view(),
             },
-            .pipeline = compute_pipeline,
+            .pipeline = compute_pipeline.get(),
         });
         task_graph.submit({});
 

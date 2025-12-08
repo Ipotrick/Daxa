@@ -1,9 +1,9 @@
-#pragma once
+#ifndef DAXA_DAXA_GLSL
+#define DAXA_DAXA_GLSL
 
 // Optional features:
 // #define DAXA_IMAGE_INT64
 // #define DAXA_RAY_TRACING
-// #define DAXA_BUFFER_PTR_COMPAT
 
 #extension GL_EXT_nonuniform_qualifier : enable
 #extension GL_EXT_buffer_reference : enable
@@ -169,11 +169,7 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
     return daxa_buffer_device_address_buffer.addresses[daxa_buffer_id_to_index(buffer_id)];
 }
 
-#if defined(DAXA_BUFFER_PTR_COMPAT)
-#define _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(DAXA_TYPE, STRUCT_TYPE) daxa_##DAXA_TYPE##STRUCT_TYPE##_helper
-#else
 #define _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(DAXA_TYPE, STRUCT_TYPE) daxa_##DAXA_TYPE##STRUCT_TYPE
-#endif
 /// @brief  Pointer like syntax for a read write buffer device address blocks containing the given struct
 ///         The buffer reference block contains a single member called value of the given type.
 ///         These types are just redefines for bda blocks, so they have all the glsl syntax like casting to a u64 working.
@@ -185,17 +181,10 @@ daxa_u64 daxa_id_to_address(daxa_BufferId buffer_id)
 /// @param STRUCT_TYPE Struct type contained by the buffer device address block / "pointed to type".
 #define daxa_BufferPtr(STRUCT_TYPE) _DAXA_BUFFER_PTR_INSTANTIATION_HELPER(BufferPtr, STRUCT_TYPE)
 /// @brief  Defines a macro for more explicitly visible "dereferencing" of buffer pointers.
-#if defined(DAXA_BUFFER_PTR_COMPAT)
-#define deref(BUFFER_PTR) daxa_ptr_get(BUFFER_PTR).value
-#define deref_i(BUFFER_PTR, INDEX) ((daxa_ptr_get(BUFFER_PTR) + INDEX).value)
-#define advance(BUFFER_PTR, offset) daxa_ptr_advance(BUFFER_PTR, offset)
-#define as_address(x) (x).address
-#else
 #define deref(BUFFER_PTR) (BUFFER_PTR).value
 #define deref_i(BUFFER_PTR, INDEX) ((BUFFER_PTR + INDEX).value)
 #define advance(BUFFER_PTR, offset) (BUFFER_PTR + offset)
 #define as_address(x) uint64_t(x)
-#endif
 
 /// @brief Defines the buffer reference used in all buffer references in daxa glsl. Can also be used to declare new buffer references.
 #define DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN) layout(buffer_reference, scalar, buffer_reference_align = ALIGN) buffer
@@ -237,49 +226,6 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
 ///         daxa_BufferPtr(T) t_ptr0 = ...;
 ///         daxa_BufferPtrT   t_ptr1 = ...;
 ///     }
-#if defined(DAXA_BUFFER_PTR_COMPAT)
-#define _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)                                        \
-    DAXA_DECL_BUFFER_REFERENCE daxa_RWBufferPtr##STRUCT_TYPE                             \
-    {                                                                                    \
-        STRUCT_TYPE value;                                                               \
-    };                                                                                   \
-    DAXA_DECL_BUFFER_REFERENCE daxa_BufferPtr##STRUCT_TYPE                               \
-    {                                                                                    \
-        readonly STRUCT_TYPE value;                                                      \
-    };                                                                                   \
-    struct daxa_BufferPtr##STRUCT_TYPE##_helper                                          \
-    {                                                                                    \
-        uint64_t address;                                                                \
-    };                                                                                   \
-    struct daxa_RWBufferPtr##STRUCT_TYPE##_helper                                        \
-    {                                                                                    \
-        uint64_t address;                                                                \
-    };                                                                                   \
-    daxa_BufferPtr##STRUCT_TYPE                                                          \
-    daxa_ptr_get(daxa_BufferPtr##STRUCT_TYPE##_helper ptr)                               \
-    {                                                                                    \
-        return daxa_BufferPtr##STRUCT_TYPE(ptr.address);                                 \
-    }                                                                                    \
-    daxa_RWBufferPtr##STRUCT_TYPE                                                        \
-    daxa_ptr_get(daxa_RWBufferPtr##STRUCT_TYPE##_helper ptr)                             \
-    {                                                                                    \
-        return daxa_RWBufferPtr##STRUCT_TYPE(ptr.address);                               \
-    }                                                                                    \
-    daxa_BufferPtr##STRUCT_TYPE##_helper                                                 \
-    daxa_ptr_advance(daxa_BufferPtr##STRUCT_TYPE##_helper ptr, uint64_t offset)          \
-    {                                                                                    \
-        daxa_BufferPtr##STRUCT_TYPE temp = daxa_BufferPtr##STRUCT_TYPE(ptr.address);     \
-        temp = temp + offset;                                                            \
-        return daxa_BufferPtr##STRUCT_TYPE##_helper(uint64_t(temp));                     \
-    }                                                                                    \
-    daxa_RWBufferPtr##STRUCT_TYPE##_helper                                               \
-    daxa_ptr_advance(daxa_RWBufferPtr##STRUCT_TYPE##_helper ptr, uint64_t offset)        \
-    {                                                                                    \
-        daxa_RWBufferPtr##STRUCT_TYPE temp = daxa_RWBufferPtr##STRUCT_TYPE(ptr.address); \
-        temp = temp + offset;                                                            \
-        return daxa_RWBufferPtr##STRUCT_TYPE##_helper(uint64_t(temp));                   \
-    }
-#else
 #define _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)            \
     DAXA_DECL_BUFFER_REFERENCE daxa_RWBufferPtr##STRUCT_TYPE \
     {                                                        \
@@ -289,54 +235,14 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
     {                                                        \
         readonly STRUCT_TYPE value;                          \
     };
-#endif
+#define _DAXA_FWD_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)         \
+    DAXA_DECL_BUFFER_REFERENCE daxa_RWBufferPtr##STRUCT_TYPE; \
+    DAXA_DECL_BUFFER_REFERENCE daxa_BufferPtr##STRUCT_TYPE;
+
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)
 
-#if defined(DAXA_BUFFER_PTR_COMPAT)
-#define _DAXA_DECL_BUFFER_PTR_ALIGN_HELPER(STRUCT_TYPE, ALIGN)                           \
-    DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN)                                              \
-    daxa_RWBufferPtr##STRUCT_TYPE                                                        \
-    {                                                                                    \
-        STRUCT_TYPE value;                                                               \
-    };                                                                                   \
-    DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN)                                              \
-    daxa_BufferPtr##STRUCT_TYPE                                                          \
-    {                                                                                    \
-        readonly STRUCT_TYPE value;                                                      \
-    };                                                                                   \
-    struct daxa_BufferPtr##STRUCT_TYPE##_helper                                          \
-    {                                                                                    \
-        uint64_t address;                                                                \
-    };                                                                                   \
-    struct daxa_RWBufferPtr##STRUCT_TYPE##_helper                                        \
-    {                                                                                    \
-        uint64_t address;                                                                \
-    };                                                                                   \
-    daxa_BufferPtr##STRUCT_TYPE                                                          \
-    daxa_ptr_get(daxa_BufferPtr##STRUCT_TYPE##_helper ptr)                               \
-    {                                                                                    \
-        return daxa_BufferPtr##STRUCT_TYPE(ptr.address);                                 \
-    }                                                                                    \
-    daxa_RWBufferPtr##STRUCT_TYPE                                                        \
-    daxa_ptr_get(daxa_RWBufferPtr##STRUCT_TYPE##_helper ptr)                             \
-    {                                                                                    \
-        return daxa_RWBufferPtr##STRUCT_TYPE(ptr.address);                               \
-    }                                                                                    \
-    daxa_BufferPtr##STRUCT_TYPE##_helper                                                 \
-    daxa_ptr_advance(daxa_BufferPtr##STRUCT_TYPE##_helper ptr, uint64_t offset)          \
-    {                                                                                    \
-        daxa_BufferPtr##STRUCT_TYPE temp = daxa_BufferPtr##STRUCT_TYPE(ptr.address);     \
-        temp = temp + offset;                                                            \
-        return daxa_BufferPtr##STRUCT_TYPE##_helper(uint64_t(temp));                     \
-    }                                                                                    \
-    daxa_RWBufferPtr##STRUCT_TYPE##_helper                                               \
-    daxa_ptr_advance(daxa_RWBufferPtr##STRUCT_TYPE##_helper ptr, uint64_t offset)        \
-    {                                                                                    \
-        daxa_RWBufferPtr##STRUCT_TYPE temp = daxa_RWBufferPtr##STRUCT_TYPE(ptr.address); \
-        temp = temp + offset;                                                            \
-        return daxa_RWBufferPtr##STRUCT_TYPE##_helper(uint64_t(temp));                   \
-    }
-#else
+#define DAXA_FWD_DECL_BUFFER_PTR(STRUCT_TYPE) _DAXA_FWD_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)
+
 #define _DAXA_DECL_BUFFER_PTR_ALIGN_HELPER(STRUCT_TYPE, ALIGN) \
     DAXA_DECL_BUFFER_REFERENCE_ALIGN(ALIGN)                    \
     daxa_RWBufferPtr##STRUCT_TYPE                              \
@@ -348,7 +254,6 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
     {                                                          \
         readonly STRUCT_TYPE value;                            \
     };
-#endif
 #define DAXA_DECL_BUFFER_PTR_ALIGN(STRUCT_TYPE, ALIGN) _DAXA_DECL_BUFFER_PTR_ALIGN_HELPER(STRUCT_TYPE, ALIGN)
 
 /// @brief Defines a push constant using daxa's predefined push constant layout.
@@ -619,3 +524,5 @@ DAXA_DECL_BUFFER_PTR(daxa_u64vec3)
 DAXA_DECL_BUFFER_PTR(daxa_BufferId)
 DAXA_DECL_BUFFER_PTR(daxa_ImageViewId)
 DAXA_DECL_BUFFER_PTR(daxa_SamplerId)
+
+#endif

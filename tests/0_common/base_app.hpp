@@ -4,8 +4,6 @@
 #include <0_common/window.hpp>
 
 #include <thread>
-#include <chrono>
-using namespace std::chrono_literals;
 #include <iostream>
 #include <cmath>
 
@@ -113,7 +111,7 @@ struct BaseApp : AppWindow<T>
         }
         else
         {
-            std::this_thread::sleep_for(1ms);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
 
         return false;
@@ -133,7 +131,7 @@ struct BaseApp : AppWindow<T>
         reinterpret_cast<T *>(this)->record_tasks(new_task_graph);
 
         auto imgui_task = daxa::InlineTask::Raster("Dear ImGui")
-            .ca.reads_writes(task_swapchain_image)
+            .color_attachment.reads_writes(task_swapchain_image)
             .executes([=](daxa::TaskInterface ti)
             {
                 imgui_renderer.record_commands(ImGui::GetDrawData(), ti.recorder, ti.get(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y);
@@ -141,7 +139,7 @@ struct BaseApp : AppWindow<T>
 
         for (int i = 0; i < imgui_task_attachments.size(); ++i)
         {
-            imgui_task.attach(imgui_task_attachments[i]);
+            imgui_task.uses(imgui_task_attachments[i]);
         }
 
         new_task_graph.add_task(std::move(imgui_task));

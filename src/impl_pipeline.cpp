@@ -2,12 +2,12 @@
 
 #include "impl_device.hpp"
 #include "impl_pipeline.hpp"
+#include "impl_instance.hpp"
 
 // --- Begin API Functions ---
 
 auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline) -> daxa_Result
 {
-    _DAXA_TEST_PRINT("daxa_dvc_create_raster_pipeline\n");
     daxa_ImplRasterPipeline ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<RasterPipelineInfo const *>(info);
@@ -21,7 +21,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     auto const MAXIMUM_GRAPHICS_STAGES = 6;
     require_subgroup_size_vkstructs.reserve(MAXIMUM_GRAPHICS_STAGES);
 
-    auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> VkResult
+    auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> daxa_Result
     {
         VkShaderModule vk_shader_module = nullptr;
         VkShaderModuleCreateInfo const vk_shader_module_create_info{
@@ -31,22 +31,33 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             .codeSize = static_cast<u32>(shader_info.byte_code_size * sizeof(u32)),
             .pCode = shader_info.byte_code,
         };
-        auto result = vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
-        if (result != VK_SUCCESS)
-        {
-            _DAXA_DEBUG_BREAK
-            return result;
-        }
+        auto result = static_cast<daxa_Result>(vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module));
+        _DAXA_RETURN_IF_ERROR(result, result);
+
         vk_shader_modules.push_back(vk_shader_module);
         entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
-        require_subgroup_size_vkstructs.push_back({
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
-            .pNext = nullptr,
-            .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
-        });
+
+        // NOTE(grundlett): For now, just silently disable required subgroup size for stages that are unsupported
+        bool const requested_required_subgroup_size = shader_info.required_subgroup_size.has_value();
+        bool const supports_required_subgroup_size_for_stage = (device->properties.required_subgroup_size_stages & shader_stage) != 0;
+        bool const uses_required_subgroup_size = requested_required_subgroup_size && supports_required_subgroup_size_for_stage;
+        if (uses_required_subgroup_size)
+            require_subgroup_size_vkstructs.push_back({
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+                .pNext = nullptr,
+                .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
+            });
+
+        // NOTE(grundlett): However, we'll explicitly error if we requested the subgroup size for mesh shaders and its unsupported.
+        if (shader_stage == VK_SHADER_STAGE_MESH_BIT_EXT && requested_required_subgroup_size && !supports_required_subgroup_size_for_stage)
+        {
+            result = DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT;
+        }
+        _DAXA_RETURN_IF_ERROR(result, result);
+
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstructs.back() : nullptr,
+            .pNext = uses_required_subgroup_size ? &require_subgroup_size_vkstructs.back() : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
@@ -54,21 +65,20 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
             .pSpecializationInfo = nullptr,
         };
         vk_pipeline_shader_stage_create_infos.push_back(vk_pipeline_shader_stage_create_info);
-        return result;
+        return DAXA_RESULT_SUCCESS;
     };
 
 #define DAXA_DECL_TRY_CREATE_MODULE(name, NAME)                                                                                 \
     if (ret.info.name##_shader_info.has_value())                                                                                \
     {                                                                                                                           \
         auto result = create_shader_module(ret.info.name##_shader_info.value(), VkShaderStageFlagBits::VK_SHADER_STAGE_##NAME); \
-        if (result != VK_SUCCESS)                                                                                               \
+        if (result != DAXA_RESULT_SUCCESS)                                                                                      \
         {                                                                                                                       \
             for (auto module : vk_shader_modules)                                                                               \
             {                                                                                                                   \
                 vkDestroyShaderModule(ret.device->vk_device, module, nullptr);                                                  \
             }                                                                                                                   \
-            _DAXA_DEBUG_BREAK                                                                                                   \
-            return std::bit_cast<daxa_Result>(result);                                                                          \
+            _DAXA_RETURN_IF_ERROR(result, result);                                                                              \
         }                                                                                                                       \
     }
     DAXA_DECL_TRY_CREATE_MODULE(vertex, VERTEX_BIT)
@@ -178,6 +188,23 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         vk_conservative_raster_state.extraPrimitiveOverestimationSize = conservative_raster_info.size;
         vk_raster_state.pNext = &vk_conservative_raster_state;
     }
+
+    auto vk_line_raster_state = VkPipelineRasterizationLineStateCreateInfoKHR{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+    };
+    if (
+        ret.info.raster.line_raster_info.has_value() &&
+        (device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION))
+    {
+        auto const & line_raster_info = ret.info.raster.line_raster_info.value();
+        vk_line_raster_state.lineRasterizationMode = static_cast<VkLineRasterizationMode>(line_raster_info.mode);
+        vk_line_raster_state.stippledLineEnable = line_raster_info.stippled;
+        vk_line_raster_state.lineStippleFactor = line_raster_info.stipple_factor;
+        vk_line_raster_state.lineStipplePattern = line_raster_info.stipple_pattern;
+        vk_raster_state.pNext = &vk_line_raster_state;
+    }
+
     DepthTestInfo const no_depth = {};
     VkPipelineDepthStencilStateCreateInfo const vk_depth_stencil_state{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO,
@@ -337,7 +364,6 @@ auto daxa_raster_pipeline_dec_refcnt(daxa_RasterPipeline self) -> u64
 
 auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineInfo const * info, daxa_ComputePipeline * out_pipeline) -> daxa_Result
 {
-    _DAXA_TEST_PRINT("daxa_dvc_create_compute_pipeline\n");
     daxa_ImplComputePipeline ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<ComputePipelineInfo const *>(info);
@@ -356,6 +382,17 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         return std::bit_cast<daxa_Result>(module_result);
     }
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
+
+    bool const requested_required_subgroup_size = ret.info.shader_info.required_subgroup_size.has_value();
+    bool const supports_required_subgroup_size_for_stage = (device->properties.required_subgroup_size_stages & VK_SHADER_STAGE_COMPUTE_BIT) != 0;
+    bool const uses_required_subgroup_size = requested_required_subgroup_size && supports_required_subgroup_size_for_stage;
+
+    if (!supports_required_subgroup_size_for_stage)
+    {
+        _DAXA_DEBUG_BREAK
+        return std::bit_cast<daxa_Result>(module_result);
+    }
+
     VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
         .pNext = nullptr,
@@ -367,7 +404,7 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         .flags = {},
         .stage = VkPipelineShaderStageCreateInfo{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = ret.info.shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstruct : nullptr,
+            .pNext = uses_required_subgroup_size ? &require_subgroup_size_vkstruct : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(ret.info.shader_info.create_flags),
             .stage = VkShaderStageFlagBits::VK_SHADER_STAGE_COMPUTE_BIT,
             .module = vk_shader_module,
@@ -427,15 +464,15 @@ auto daxa_compute_pipeline_dec_refcnt(daxa_ComputePipeline self) -> u64
         self->device->instance);
 }
 
-auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipeline * out_pipeline) -> daxa_Result
+template <typename PipelineT, typename ImplPipelineT>
+auto daxa_dvc_create_ray_tracing_pipeline_or_library(daxa_Device device, daxa_RayTracingPipelineInfo const * info, PipelineT * out_pipeline) -> daxa_Result
 {
-    _DAXA_TEST_PRINT("daxa_dvc_create_ray_tracing_pipeline\n");
-    daxa_ImplRayTracingPipeline ret = {};
+    ImplPipelineT ret = {};
     ret.device = device;
     ret.info = *reinterpret_cast<RayTracingPipelineInfo const *>(info);
 
     ret.shader_groups.resize(ret.info.shader_groups.size());
-    for (usize i = 0; i < ret.shader_groups.size(); ++i)
+    for (u32 i = 0; i < ret.shader_groups.size(); ++i)
     {
         ret.shader_groups[i] = ret.info.shader_groups[i];
     }
@@ -479,7 +516,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     // Necessary to prevent re-allocation
     require_subgroup_size_vkstructs.reserve(all_stages_count);
 
-    auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> VkResult
+    auto create_shader_module = [&](ShaderInfo const & shader_info, VkShaderStageFlagBits shader_stage) -> daxa_Result
     {
         VkShaderModule vk_shader_module = nullptr;
         VkShaderModuleCreateInfo const vk_shader_module_create_info{
@@ -489,22 +526,25 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             .codeSize = static_cast<u32>(shader_info.byte_code_size * sizeof(u32)),
             .pCode = shader_info.byte_code,
         };
-        auto result = vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module);
-        if (result != VK_SUCCESS)
-        {
-            _DAXA_DEBUG_BREAK
-            return result;
-        }
+        auto result = static_cast<daxa_Result>(vkCreateShaderModule(ret.device->vk_device, &vk_shader_module_create_info, nullptr, &vk_shader_module));
+        _DAXA_RETURN_IF_ERROR(result, result);
+
         vk_shader_modules.push_back(vk_shader_module);
         entry_point_names.push_back(std::make_unique<std::string>(shader_info.entry_point.view().begin(), shader_info.entry_point.view().end()));
-        require_subgroup_size_vkstructs.push_back({
-            .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
-            .pNext = nullptr,
-            .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
-        });
+
+        bool const requested_required_subgroup_size = shader_info.required_subgroup_size.has_value();
+        bool const supports_required_subgroup_size_for_stage = (device->properties.required_subgroup_size_stages & shader_stage) != 0;
+        bool const uses_required_subgroup_size = requested_required_subgroup_size && supports_required_subgroup_size_for_stage;
+
+        if (uses_required_subgroup_size)
+            require_subgroup_size_vkstructs.push_back({
+                .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_REQUIRED_SUBGROUP_SIZE_CREATE_INFO,
+                .pNext = nullptr,
+                .requiredSubgroupSize = shader_info.required_subgroup_size.value_or(0),
+            });
         VkPipelineShaderStageCreateInfo const vk_pipeline_shader_stage_create_info{
             .sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO,
-            .pNext = shader_info.required_subgroup_size.has_value() ? &require_subgroup_size_vkstructs.back() : nullptr,
+            .pNext = uses_required_subgroup_size ? &require_subgroup_size_vkstructs.back() : nullptr,
             .flags = std::bit_cast<VkPipelineShaderStageCreateFlags>(shader_info.create_flags),
             .stage = shader_stage,
             .module = vk_shader_module,
@@ -512,15 +552,12 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             .pSpecializationInfo = nullptr,
         };
         stages.push_back(vk_pipeline_shader_stage_create_info);
-        return result;
+        return DAXA_RESULT_SUCCESS;
     };
 
 #define DAXA_DECL_TRY_CREATE_RAY_TRACING_MODULE(stage, NAME)                                            \
     auto result = create_shader_module(stage, VkShaderStageFlagBits::VK_SHADER_STAGE_##NAME##_BIT_KHR); \
-    if (result != VK_SUCCESS)                                                                           \
-    {                                                                                                   \
-        return std::bit_cast<daxa_Result>(result);                                                      \
-    }
+    _DAXA_RETURN_IF_ERROR(result, result);
 
     for (FixedListSizeT i = 0; i < raygen_count; ++i)
     {
@@ -570,7 +607,7 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
             .closestHitShader = shader_group.closest_hit_shader_index,
             .anyHitShader = shader_group.any_hit_shader_index,
             .intersectionShader = shader_group.intersection_shader_index,
-            .pShaderGroupCaptureReplayHandle = nullptr,
+            .pShaderGroupCaptureReplayHandle = {},
         };
         groups.push_back(group);
     }
@@ -579,7 +616,8 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     u32 const stages_count = static_cast<u32>(stages.size());
 
     ret.vk_pipeline_layout = ret.device->gpu_sro_table.pipeline_layouts.at((ret.info.push_constant_size + 3) / 4);
-    VkRayTracingPipelineCreateInfoKHR const vk_ray_tracing_pipeline_create_info{
+
+    VkRayTracingPipelineCreateInfoKHR vk_ray_tracing_pipeline_create_info{
         .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_CREATE_INFO_KHR,
         .pNext = nullptr,
         .flags = {},
@@ -595,20 +633,47 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
         .basePipelineHandle = VK_NULL_HANDLE,
         .basePipelineIndex = 0,
     };
-    auto pipeline_result = ret.device->vkCreateRayTracingPipelinesKHR(
+
+    VkRayTracingPipelineInterfaceCreateInfoKHR library_interface_info{
+        .sType = VK_STRUCTURE_TYPE_RAY_TRACING_PIPELINE_INTERFACE_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .maxPipelineRayPayloadSize = 256,
+        .maxPipelineRayHitAttributeSize = 4,
+    };
+
+    std::vector<VkPipeline> libraries;
+    libraries.reserve(ret.info.pipeline_libraries.size());
+    for (auto & pipeline_library : ret.info.pipeline_libraries)
+        libraries.push_back(pipeline_library.get()->vk_pipeline);
+
+    auto pipeline_library_info = VkPipelineLibraryCreateInfoKHR{
+        .sType = VK_STRUCTURE_TYPE_PIPELINE_LIBRARY_CREATE_INFO_KHR,
+        .pNext = nullptr,
+        .libraryCount = static_cast<uint32_t>(libraries.size()),
+        .pLibraries = libraries.data(),
+    };
+
+    if constexpr (std::is_same_v<PipelineT, daxa_RayTracingPipeline>)
+    {
+        vk_ray_tracing_pipeline_create_info.pLibraryInfo = libraries.empty() ? nullptr : &pipeline_library_info;
+        vk_ray_tracing_pipeline_create_info.pLibraryInterface = libraries.empty() ? nullptr : &library_interface_info;
+    }
+    else
+    {
+        vk_ray_tracing_pipeline_create_info.flags = VK_PIPELINE_CREATE_LIBRARY_BIT_KHR;
+        vk_ray_tracing_pipeline_create_info.pLibraryInterface = &library_interface_info;
+    }
+
+    auto pipeline_result = static_cast<daxa_Result>(ret.device->vkCreateRayTracingPipelinesKHR(
         ret.device->vk_device,
         VK_NULL_HANDLE,
         VK_NULL_HANDLE,
         1u,
         &vk_ray_tracing_pipeline_create_info,
         nullptr,
-        &ret.vk_pipeline);
+        &ret.vk_pipeline));
+    _DAXA_RETURN_IF_ERROR(pipeline_result, pipeline_result);
 
-    if (pipeline_result != VK_SUCCESS)
-    {
-        _DAXA_DEBUG_BREAK
-        return std::bit_cast<daxa_Result>(pipeline_result);
-    }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
     {
         auto name_cstr = ret.info.name.c_str();
@@ -623,9 +688,19 @@ auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPip
     }
     ret.strong_count = 1;
     device->inc_weak_refcnt();
-    *out_pipeline = new daxa_ImplRayTracingPipeline{};
+    *out_pipeline = new ImplPipelineT{};
     **out_pipeline = ret;
     return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_create_ray_tracing_pipeline_library(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipelineLibrary * out_pipeline) -> daxa_Result
+{
+    return daxa_dvc_create_ray_tracing_pipeline_or_library<daxa_RayTracingPipelineLibrary, daxa_ImplRayTracingPipelineLibrary>(device, info, out_pipeline);
+}
+
+auto daxa_dvc_create_ray_tracing_pipeline(daxa_Device device, daxa_RayTracingPipelineInfo const * info, daxa_RayTracingPipeline * out_pipeline) -> daxa_Result
+{
+    return daxa_dvc_create_ray_tracing_pipeline_or_library<daxa_RayTracingPipeline, daxa_ImplRayTracingPipeline>(device, info, out_pipeline);
 }
 
 inline auto get_aligned(u64 operand, u64 granularity) -> u64
@@ -757,7 +832,7 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     {
         auto const destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer_id);
         _DAXA_RETURN_IF_ERROR(destroy_buffer_result, destroy_buffer_result);
-        return get_host_address_result;
+        _DAXA_RETURN_IF_ERROR(get_host_address_result, get_host_address_result);
     }
 
     // Find the SBT addresses of each group
@@ -767,7 +842,7 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     {
         auto const destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer_id);
         _DAXA_RETURN_IF_ERROR(destroy_buffer_result, destroy_buffer_result);
-        return device_address_result;
+        _DAXA_RETURN_IF_ERROR(device_address_result, device_address_result);
     }
     raygen_region.deviceAddress = sbt_address;
     miss_region.deviceAddress = sbt_address + raygen_region.size;
@@ -819,25 +894,48 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void * out_blob) -> daxa_Result
+auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline pipeline, void * out_blob, uint32_t first_group, int32_t group_count) -> daxa_Result
 {
     auto * device = pipeline->device;
 
-    u32 const handle_count = static_cast<u32>(pipeline->shader_groups.size());
+    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : group_count;
     u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
 
     u32 const data_size = handle_count * handle_size;
 
     // Get the shader group handles
-    auto vk_result = device->vkGetRayTracingShaderGroupHandlesKHR(
+    auto result = static_cast<daxa_Result>(device->vkGetRayTracingShaderGroupHandlesKHR(
         device->vk_device,
         pipeline->vk_pipeline,
-        0,
+        first_group,
         handle_count,
         data_size,
-        out_blob);
+        out_blob));
+    _DAXA_RETURN_IF_ERROR(result, result);
 
-    return static_cast<daxa_Result>(vk_result);
+    return result;
+}
+
+auto daxa_ray_tracing_pipeline_library_get_shader_group_handles(daxa_RayTracingPipelineLibrary pipeline, void * out_blob, uint32_t first_group, int32_t group_count) -> daxa_Result
+{
+    auto * device = pipeline->device;
+
+    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : group_count;
+    u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
+
+    u32 const data_size = handle_count * handle_size;
+
+    // Get the shader group handles
+    auto result = static_cast<daxa_Result>(device->vkGetRayTracingShaderGroupHandlesKHR(
+        device->vk_device,
+        pipeline->vk_pipeline,
+        first_group,
+        handle_count,
+        data_size,
+        out_blob));
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    return result;
 }
 
 auto daxa_ray_tracing_pipeline_info(daxa_RayTracingPipeline self) -> daxa_RayTracingPipelineInfo const *
@@ -857,13 +955,29 @@ auto daxa_ray_tracing_pipeline_dec_refcnt(daxa_RayTracingPipeline self) -> u64
         self->device->instance);
 }
 
+auto daxa_ray_tracing_pipeline_library_info(daxa_RayTracingPipelineLibrary self) -> daxa_RayTracingPipelineInfo const *
+{
+    return reinterpret_cast<daxa_RayTracingPipelineInfo const *>(&self->info);
+}
+
+auto daxa_ray_tracing_pipeline_library_inc_refcnt(daxa_RayTracingPipelineLibrary self) -> u64
+{
+    return self->inc_refcnt();
+}
+
+auto daxa_ray_tracing_pipeline_library_dec_refcnt(daxa_RayTracingPipelineLibrary self) -> u64
+{
+    return self->dec_refcnt(
+        &ImplPipeline::zero_ref_callback,
+        self->device->instance);
+}
+
 // --- End API Functions ---
 
 // --- Begin Internals ---
 
 void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
 {
-    _DAXA_TEST_PRINT("ImplPipeline::zero_ref_callback\n");
     auto * self = rc_cast<ImplPipeline *>(handle);
     std::unique_lock const lock{self->device->zombies_mtx};
     u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);

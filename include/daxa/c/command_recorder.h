@@ -440,12 +440,12 @@ daxa_cmd_clear_image(daxa_CommandRecorder cmd_enc, daxa_ImageClearInfo const * i
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
 DAXA_EXPORT void
-daxa_cmd_pipeline_barrier(daxa_CommandRecorder cmd_enc, daxa_MemoryBarrierInfo const * info);
+daxa_cmd_pipeline_barrier(daxa_CommandRecorder cmd_enc, daxa_BarrierInfo const * info);
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_pipeline_barrier_image_transition(daxa_CommandRecorder cmd_enc, daxa_ImageMemoryBarrierInfo const * info);
+daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder cmd_enc, daxa_ImageBarrierInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_signal_event(daxa_CommandRecorder cmd_enc, daxa_EventSignalInfo const * info);
 DAXA_EXPORT void
@@ -538,6 +538,9 @@ DAXA_EXPORT void
 daxa_cmd_begin_label(daxa_CommandRecorder cmd_enc, daxa_CommandLabelInfo const * info);
 DAXA_EXPORT void
 daxa_cmd_end_label(daxa_CommandRecorder cmd_enc);
+
+DAXA_EXPORT void
+daxa_cmd_reset_assumed_state(daxa_CommandRecorder cmd_enc);
 
 // Is called by all other commands. Flushes internal pipeline barrier list to actual vulkan call.
 DAXA_EXPORT void

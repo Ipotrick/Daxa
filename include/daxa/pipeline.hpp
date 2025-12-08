@@ -61,6 +61,7 @@ namespace daxa
         Span<ShaderInfo const> closest_hit_shaders = {};
         Span<ShaderInfo const> miss_hit_shaders = {};
         Span<RayTracingShaderGroupInfo const> shader_groups = {};
+        Span<struct RayTracingPipelineLibrary const> pipeline_libraries = {};
         u32 max_ray_recursion_depth = {};
         u32 push_constant_size = DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE;
         SmallString name = {};
@@ -85,7 +86,25 @@ namespace daxa
 
         struct SbtPair { daxa::BufferId buffer; RayTracingShaderBindingTable table; };
         [[nodiscard]] auto create_default_sbt() const -> SbtPair;
-        void get_shader_group_handles(void *out_blob) const;
+        void get_shader_group_handles(void *out_blob, uint32_t first_group = 0, int32_t group_count = -1) const;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        static auto inc_refcnt(ImplHandle const * object) -> u64;
+        static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+
+    struct DAXA_EXPORT_CXX RayTracingPipelineLibrary final : ManagedPtr<RayTracingPipelineLibrary, daxa_RayTracingPipelineLibrary>
+    {
+        RayTracingPipelineLibrary() = default;
+
+        /// THREADSAFETY:
+        /// * reference MUST NOT be read after the object is destroyed.
+        /// @return reference to info of object.
+        [[nodiscard]] auto info() const -> RayTracingPipelineInfo const &;
+
+        void get_shader_group_handles(void *out_blob, uint32_t first_group = 0, int32_t group_count = -1) const;
 
       protected:
         template <typename T, typename H_T>
@@ -140,6 +159,14 @@ namespace daxa
         float size = {};
     };
 
+    struct LineRasterInfo
+    {
+        LineRasterizationMode mode = {};
+        daxa_Bool8 stippled = {};
+        uint32_t stipple_factor = {};
+        uint16_t stipple_pattern = {};
+    };
+
     enum struct RasterizationSamples : u32
     {
         E1 = 0x00000001,
@@ -163,6 +190,7 @@ namespace daxa
         f32 depth_bias_slope_factor = 0.0f;
         f32 line_width = 1.0f;
         Optional<ConservativeRasterInfo> conservative_raster_info = {};
+        Optional<LineRasterInfo> line_raster_info = {};
         // When left as none, the pipeline will use the current msaa value of the command recorder.
         Optional<RasterizationSamples> static_state_sample_count = {};
     };

@@ -5,6 +5,7 @@
 #include <utility>
 
 #include "impl_device.hpp"
+#include "impl_instance.hpp"
 
 // --- Begin API Functions ---
 
@@ -23,11 +24,8 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
         .queryCount = ret.info.query_count,
         .pipelineStatistics = {},
     };
-    auto vk_result = vkCreateQueryPool(ret.device->vk_device, &vk_query_pool_create_info, nullptr, &ret.vk_timeline_query_pool);
-    if (vk_result != VK_SUCCESS)
-    {
-        return std::bit_cast<daxa_Result>(vk_result);
-    }
+    auto result = static_cast<daxa_Result>(vkCreateQueryPool(ret.device->vk_device, &vk_query_pool_create_info, nullptr, &ret.vk_timeline_query_pool));
+    _DAXA_RETURN_IF_ERROR(result, result);
     vkResetQueryPool(ret.device->vk_device, ret.vk_timeline_query_pool, 0, ret.info.query_count);
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
     {
@@ -60,9 +58,9 @@ auto daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool self, u32 sta
     }
     if (!(start + count - 1 < self->info.query_count))
     {
-        return DAXA_RESULT_RANGE_OUT_OF_BOUNDS;
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_RANGE_OUT_OF_BOUNDS, DAXA_RESULT_RANGE_OUT_OF_BOUNDS);
     }
-    auto vk_result = vkGetQueryPoolResults(
+    auto result = static_cast<daxa_Result>(vkGetQueryPoolResults(
         self->device->vk_device,
         self->vk_timeline_query_pool,
         start,
@@ -70,8 +68,12 @@ auto daxa_timeline_query_pool_query_results(daxa_TimelineQueryPool self, u32 sta
         count * 2ul * sizeof(u64),
         out_results,
         2ul * sizeof(u64),
-        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT);
-    return std::bit_cast<daxa_Result>(vk_result);
+        VK_QUERY_RESULT_64_BIT | VK_QUERY_RESULT_WITH_AVAILABILITY_BIT));
+    if (result != DAXA_RESULT_SUCCESS && result != DAXA_RESULT_NOT_READY)
+    {
+        _DAXA_RETURN_IF_ERROR(result, result);
+    }
+    return result;
 }
 
 auto daxa_timeline_query_pool_inc_refcnt(daxa_TimelineQueryPool self) -> u64

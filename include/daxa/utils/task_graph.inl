@@ -1,5 +1,7 @@
-#pragma once
-#include "../daxa.inl"
+#ifndef DAXA_TASK_GRAPH_INL
+#define DAXA_TASK_GRAPH_INL
+
+#include "daxa/daxa.inl"
 
 /**
  * DAXA_TH_IMAGE:
@@ -99,4 +101,5 @@
 #include "task_graph_types.hpp"
 #else // C
 #error TASK GRAPH INL ONLY SUPPORTED IN SHADERS AND C++!
+#endif
 #endif

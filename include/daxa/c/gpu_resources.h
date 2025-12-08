@@ -2,6 +2,7 @@
 #define __DAXA_GPU_RESOURCES_H__
 
 #include "types.h"
+#include <vma/vk_mem_alloc.h>
 
 #include <daxa/c/types.h>
 
