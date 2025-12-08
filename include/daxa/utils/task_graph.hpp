@@ -137,7 +137,7 @@ namespace daxa
     static constexpr inline daxa::usize MAX_TASK_CALLBACK_DATA_SIZE = 512ull - sizeof(daxa::u64); 
 
     template<typename T>
-    concept TaskCallbackLambda = std::is_copy_constructible_v<T> && sizeof(T) <= MAX_TASK_CALLBACK_DATA_SIZE && alignof(T) <= alignof(daxa::u64);
+    concept TaskCallbackLambda = std::is_copy_constructible_v<T> && std::is_trivially_destructible_v<T> && sizeof(T) <= MAX_TASK_CALLBACK_DATA_SIZE && alignof(T) <= alignof(daxa::u64);
 
     struct TaskCallback
     {
@@ -152,7 +152,7 @@ namespace daxa
             size = sizeof(f);
             callback = [](daxa::TaskInterface ti, void* v)
             {
-                TFunc & f_local = *reinterpret_cast<TFunc*>(v);
+                TFunc & f_local = *static_cast<TFunc*>(v);
                 f_local(ti);
             };
         }
