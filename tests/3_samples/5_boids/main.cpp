@@ -172,7 +172,6 @@ struct App : AppWindow<App>
                 .color_attachments = std::array{
                     daxa::RenderAttachmentInfo{
                         .image_view = ti.get(AT.render_image).view_ids[0],
-                        .layout = daxa::ImageLayout::GENERAL,
                         .load_op = daxa::AttachmentLoadOp::CLEAR,
                         .store_op = daxa::AttachmentStoreOp::STORE,
                         .clear_value = std::array<f32, 4>{1.0f, 1.0f, 1.0f, 1.0f},

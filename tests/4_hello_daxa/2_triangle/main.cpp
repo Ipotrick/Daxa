@@ -43,75 +43,6 @@ struct WindowInfo
     bool swapchain_out_of_date = false;
 };
 
-// Attachments are declared via a task head in the shared.inl file
-// Now, we define the draw tasks cpu side callback
-
-void draw_swapchain_task_callback(daxa::TaskInterface ti, daxa::RasterPipeline * pipeline)
-{
-    // The task heads namesapce can be removed locally via a using:
-    using namespace DrawToSwapchainH;
-
-    // AT is shortened for ATTACHMENTS.
-    // DrawToSwapchainH::ATTACHMENTS is a struct with a index constant for each attachment,
-    // used to reference the attachments within callbacks.
-    // DrawToSwapchainH::ATTACHMENTS / DrawToSwapchainH::AT
-
-    {
-        // The task head declares a list of indices, one for each attachment.
-        // They are inside a constant under the heads namespace:
-        [[maybe_unused]] daxa::TaskImageAttachmentIndex image_attach_index = AT.color_target;
-    }
-    {
-        // For convenience, each task that derives from the heads base task
-        // can also access it directly without the heads namespace:
-        [[maybe_unused]] daxa::TaskImageAttachmentIndex image_attach_index = AT.color_target;
-    }
-
-    // The task interface provides a way to get the attachment info:
-    auto image_info = ti.info(AT.color_target).value();
-    auto image_id = ti.id(AT.color_target);
-    auto image_view_id = ti.view(AT.color_target);
-    auto image_layout = ti.layout(AT.color_target);
-
-    // Same for buffers:
-    auto buffer_info = ti.info(AT.vertices).value();
-    auto buffer_id = ti.id(AT.vertices);
-    auto buffer_host_address = ti.buffer_host_address(AT.vertices).value();
-    auto buffer_device_address = ti.buffer_device_address(AT.vertices).value();
-
-    // When starting a render pass via a rasterization pipeline, daxa "eats" a generic command recorder
-    // and turns it into a RenderCommandRecorder.
-    // Only the RenderCommandRecorder can record raster commands.
-    // The RenderCommandRecorder can only record commands that are valid within a render pass.
-    // This way daxa ensures typesafety for command recording.
-    daxa::RenderCommandRecorder render_recorder = std::move(ti.recorder).begin_renderpass({
-        .color_attachments = std::array{
-            daxa::RenderAttachmentInfo{
-                .image_view = ti.view(AT.color_target),
-                .load_op = daxa::AttachmentLoadOp::CLEAR,
-                .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
-            },
-        },
-        .render_area = {.width = image_info.size.x, .height = image_info.size.y},
-    });
-    // Here, we'll bind the pipeline to be used in the draw call below
-    render_recorder.set_pipeline(*pipeline);
-
-    // Very importantly, task graph packs up our attachment shader data into a byte blob.
-    // We need to pass this blob to our shader somehow.
-    // The typical way to do this is to assign the blob to the push constant.
-    render_recorder.push_constant(MyPushConstant{
-        .attachments = ti.attachment_shader_blob,
-    });
-    // and issue the draw call with the desired number of vertices.
-    render_recorder.draw({.vertex_count = 3});
-
-    // VERY IMPORTANT! A renderpass must be ended after finishing!
-    // The ending of a render pass returns back the original command recorder.
-    // Assign it back to the task interfaces command recorder.
-    ti.recorder = std::move(render_recorder).end_renderpass();
-}
-
 auto main() -> int
 {
     auto window_info = WindowInfo{.width = 800, .height = 600};
@@ -167,6 +98,7 @@ auto main() -> int
         .default_enable_debug_info = true,
         .name = "my pipeline manager",
     });
+
     // Then just adding it to the pipeline manager
     std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
@@ -192,74 +124,17 @@ auto main() -> int
 
     // We'll start by "allocating" the memory on the GPU by creating
     // a buffer with the device.
-    auto buffer_id = device.create_buffer({
+    daxa::BufferId vertex_buffer = device.create_buffer({
         .size = sizeof(MyVertex) * 3,
-        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Will attempt to allocate device local host writable memory.
-        .name = "my vertex data",
+        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Will allocate buffer in host visible vram
+        .name = "vertex buffer",
     });
 
     // To upload the vertex data, we query the buffers pointer and write the vertices directly.
-    std::array<MyVertex, 3> * vert_buf_ptr = device.buffer_host_address_as<std::array<MyVertex, 3>>(buffer_id).value();
-    *vert_buf_ptr = std::array{
-        MyVertex{.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}},
-        MyVertex{.position = {+0.5f, +0.5f, 0.0f}, .color = {0.0f, 1.0f, 0.0f}},
-        MyVertex{.position = {+0.0f, -0.5f, 0.0f}, .color = {0.0f, 0.0f, 1.0f}},
-    };
-
-    // When using TaskGraph, we must create "virtual" resources (we call
-    // them task resources) whose usages are tracked, allowing for correct
-    // synchronization for them.
-
-    // The first we'll make is the swapchain image task resource
-    // We could immediately give this task image a image id.
-    // But in the case of the swapchain images we need to reacquire a new image every frame.
-    auto task_swapchain_image = daxa::TaskImage{{.swapchain_image = true, .name = "swapchain image"}};
-
-    // We will also create a buffer task resource, for our MyVertex buffer buffer_id
-    // We do something a little special here, which is that we set the initial access
-    // of the buffer to be vertex shader read, and that's because we'll create a task
-    // list which will upload the buffer
-    auto task_vertex_buffer = daxa::TaskBuffer({
-        .initial_buffers = {.buffers = std::array{buffer_id}},
-        .name = "task vertex buffer",
-    });
-
-    auto loop_task_graph = daxa::TaskGraph({
-        .device = device,
-        .swapchain = swapchain,
-        .name = "loop",
-    });
-
-    // We need to explicitly declare all uses of persistent task resources!
-    // This not a technical limitation but an intentional choice.
-    // Manually marking used resources makes it possible to detect errors in your graph recording.
-    loop_task_graph.use_persistent_buffer(task_vertex_buffer);
-    loop_task_graph.use_persistent_image(task_swapchain_image);
-
-    // Construct a task for drawing the swapchain using the task heads Info struct and the predefined callback:
-    auto draw_swapchain_task =
-        daxa::HeadTask<DrawToSwapchainH::Info>()
-            .head_views({
-                .color_target = task_swapchain_image.view(),
-                .vertices = task_vertex_buffer.view(),
-            })
-            .executes(draw_swapchain_task_callback, pipeline.get());
-
-    // Insert the task into the graph:
-    loop_task_graph.add_task(draw_swapchain_task);
-
-    // We now need to tell the task graph that these commands will be submitted,
-    // and that we have no additional information to provide. This exists in
-    // order to allow more advanced Vulkan users to do much more complicated
-    // things, that we don't care about, and that you can create a whole app
-    // without ever touching.
-    loop_task_graph.submit({});
-
-    // And tell the task graph to do the present step.
-    loop_task_graph.present({});
-    // Finally, we complete the task graph, which essentially compiles the
-    // dependency graph between tasks, and inserts the most optimal synchronization!
-    loop_task_graph.complete({});
+    MyVertex * vert_buf_ptr = device.buffer_host_address_as<MyVertex>(vertex_buffer).value();
+    vert_buf_ptr[0] = {.position = {-0.5f, +0.5f, 0.0f}, .color = {1.0f, 0.0f, 0.0f}};
+    vert_buf_ptr[1] = {.position = {+0.5f, +0.5f, 0.0f}, .color = {0.0f, 1.0f, 0.0f}};
+    vert_buf_ptr[2] = {.position = {+0.0f, -0.5f, 0.0f}, .color = {0.0f, 0.0f, 1.0f}};
 
     while (true)
     {
@@ -275,24 +150,102 @@ auto main() -> int
             window_info.swapchain_out_of_date = false;
         }
 
-        // acquire the next image as usual,
-        auto swapchain_image = swapchain.acquire_next_image();
+        // acquire_next_image will wait until a frame in flight is available, then attempt to acquire a new swapchain image.
+        // If the acquisition fails, it will return a null image id (is_empty() -> true).
+        daxa::ImageId swapchain_image = swapchain.acquire_next_image();
         if (swapchain_image.is_empty())
         {
             continue;
         }
-        // We update the image id of the task swapchain image.
-        task_swapchain_image.set_images({.images = std::span{&swapchain_image, 1}});
 
-        // So, now all we need to do is execute our task graph!
-        loop_task_graph.execute({});
+        // Record and submit frame gpu commands
+        {
+            daxa::CommandRecorder recorder = device.create_command_recorder({.name = "Main Loop Cmd Recorder"});
+
+            // Daxa stores and maintains meta information about all created resources such as images: 
+            // The result of most image/buffer device functions return an optional that will be nullopt in the case that the given id is invalid.
+            daxa::ImageInfo swapchain_image_info = device.image_info(swapchain_image).value();
+
+            // Daxa uses image layout GENERAL for all access, generally there is no need for image pipeline barriers in daxa.
+            // The usage of layout general for everything is efficient on modern gpus.
+            // Vulkan image layouts are mostly a thing for mobile gpus and older AMD gpus.
+            // Modern gpus no longer care, so daxa abstracts layouts completely.
+            // There are two transitions that must still be done:
+            // * initialization of an image before its first usage via daxa::ImageLayoutOperation::TO_GENERAL
+            // * conversion to a presentable format via daxa::ImageLayoutOperation::TO_PRESENT_SRC
+            // This tutorial shows both these transitions.
+            recorder.pipeline_image_barrier({
+                .dst_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
+                .image_id = swapchain_image,
+                .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
+            });
+
+            // When starting a render pass via a rasterization pipeline, the cmd recorder type is changed to daxa::RenderCommandRecorder.
+            // Only the RenderCommandRecorder can record raster commands.
+            // The RenderCommandRecorder can only record commands that are valid within a render pass.
+            // This way daxa ensures type safety for command recording.
+            daxa::RenderCommandRecorder render_recorder = std::move(recorder).begin_renderpass({
+                .color_attachments = std::array{
+                    daxa::RenderAttachmentInfo{
+                        .image_view = swapchain_image.default_view(),
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
+                    },
+                },
+                .render_area = {.width = swapchain_image_info.size.x, .height = swapchain_image_info.size.y},
+            });
+            // Here, we'll bind the pipeline to be used in the draw call below
+            render_recorder.set_pipeline(*pipeline);
+
+            // The only way to send data to a shader in daxa is via push constants.
+            // In this case, we need to send the buffer pointer to the vertices to the gpu via a push constant:            
+            render_recorder.push_constant(MyPushConstant{ .vertices = device.device_address(vertex_buffer).value() });
+            
+            render_recorder.draw({.vertex_count = 3});
+
+            // VERY IMPORTANT! A renderpass must be ended after finishing!
+            // The ending of a render pass returns back the original command recorder.
+            // Assign it back to the task interfaces command recorder.
+            recorder = std::move(render_recorder).end_renderpass();
+
+            recorder.pipeline_image_barrier({
+                .src_access = daxa::AccessConsts::COLOR_ATTACHMENT_OUTPUT_READ_WRITE,
+                .image_id = swapchain_image,
+                .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
+            });
+
+            daxa::ExecutableCommandList cmd_list = recorder.complete_current_commands();
+
+            // For convenience, the swapchain maintains:
+            // * frames in flight
+            // * a set of acquire semaphores (one for each frame in flight)
+            // * a set of present semaphores (one for each swapchain image)
+            
+            // There are a few usage rules around the swapchain images in vulkan and daxa:
+            // * all submitted commands that access a acquired swapchain image, MUST wait on the current acquire semaphore
+            // * the last submitted commands accessing the swapchain image to be presented MUST signal the current present semaphore
+            // * the last submitted commands accessing the swapchain image MUST signal the current timeline pair
+            // * the present MUST wait in the current present semaphore
+
+            device.submit_commands({
+                .command_lists = std::array{ cmd_list },
+                .wait_binary_semaphores = std::array{ swapchain.current_acquire_semaphore() },
+                .signal_binary_semaphores = std::array{ swapchain.current_present_semaphore() },
+                .signal_timeline_semaphores = std::array{ swapchain.current_timeline_pair() },
+            });
+
+            device.present_frame({
+                .swapchain = swapchain,
+                .wait_binary_semaphores = std::array{ swapchain.current_present_semaphore() },
+            });
+        }
 
         // The device performs all memory reclaiming in the collect_garbage call.
         // Usually its the best to call it once at the end of each frame.
         device.collect_garbage();
     }
 
-    device.destroy_buffer(buffer_id);
+    device.destroy_buffer(vertex_buffer);
     // No need to call wait idle or collect garbage here,
     // as the device will automatically call these when its lifetime ends.
     // device.wait_idle();
