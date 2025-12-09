@@ -81,7 +81,7 @@ auto main() -> int
             default: return daxa::default_format_score(format, colorspace);
             }
         },
-        .present_mode = daxa::PresentMode::MAILBOX,
+        .present_mode = daxa::PresentMode::FIFO,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "my swapchain",
     });
@@ -162,7 +162,7 @@ auto main() -> int
         {
             daxa::CommandRecorder recorder = device.create_command_recorder({.name = "Main Loop Cmd Recorder"});
 
-            // Daxa stores and maintains meta information about all created resources such as images: 
+            // Daxa stores and maintains meta information about all created resources such as images:
             // The result of most image/buffer device functions return an optional that will be nullopt in the case that the given id is invalid.
             daxa::ImageInfo swapchain_image_info = device.image_info(swapchain_image).value();
 
@@ -198,9 +198,9 @@ auto main() -> int
             render_recorder.set_pipeline(*pipeline);
 
             // The only way to send data to a shader in daxa is via push constants.
-            // In this case, we need to send the buffer pointer to the vertices to the gpu via a push constant:            
-            render_recorder.push_constant(MyPushConstant{ .vertices = device.device_address(vertex_buffer).value() });
-            
+            // In this case, we need to send the buffer pointer to the vertices to the gpu via a push constant:
+            render_recorder.push_constant(MyPushConstant{.vertices = device.device_address(vertex_buffer).value()});
+
             render_recorder.draw({.vertex_count = 3});
 
             // VERY IMPORTANT! A renderpass must be ended after finishing!
@@ -220,7 +220,7 @@ auto main() -> int
             // * frames in flight
             // * a set of acquire semaphores (one for each frame in flight)
             // * a set of present semaphores (one for each swapchain image)
-            
+
             // There are a few usage rules around the swapchain images in vulkan and daxa:
             // * all submitted commands that access a acquired swapchain image, MUST wait on the current acquire semaphore
             // * the last submitted commands accessing the swapchain image to be presented MUST signal the current present semaphore
@@ -228,15 +228,15 @@ auto main() -> int
             // * the present MUST wait in the current present semaphore
 
             device.submit_commands({
-                .command_lists = std::array{ cmd_list },
-                .wait_binary_semaphores = std::array{ swapchain.current_acquire_semaphore() },
-                .signal_binary_semaphores = std::array{ swapchain.current_present_semaphore() },
-                .signal_timeline_semaphores = std::array{ swapchain.current_timeline_pair() },
+                .command_lists = std::array{cmd_list},
+                .wait_binary_semaphores = std::array{swapchain.current_acquire_semaphore()},
+                .signal_binary_semaphores = std::array{swapchain.current_present_semaphore()},
+                .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
             });
 
             device.present_frame({
+                .wait_binary_semaphores = std::array{swapchain.current_present_semaphore()},
                 .swapchain = swapchain,
-                .wait_binary_semaphores = std::array{ swapchain.current_present_semaphore() },
             });
         }
 

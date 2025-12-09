@@ -278,7 +278,7 @@ namespace tests
                     default: return daxa::default_format_score(format, colorspace);
                     }
                 },
-                .present_mode = daxa::PresentMode::MAILBOX,
+                .present_mode = daxa::PresentMode::FIFO,
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .name = "my swapchain",
             });

@@ -41,7 +41,7 @@ struct BaseApp : AppWindow<T>
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = AppWindow<T>::get_native_handle(),
         .native_window_platform = AppWindow<T>::get_native_platform(),
-        .present_mode = daxa::PresentMode::IMMEDIATE,
+        .present_mode = daxa::PresentMode::FIFO,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "swapchain",
     });
