@@ -314,7 +314,7 @@ namespace daxa
 
     // Linearly allocated growable vector with up to 8192 elements
     template <TrivialType T>
-    struct DynamicArenaArray8k
+    struct ArenaDynamicArray8k
     {
         static inline constexpr u32 BLOCK_BASE_ELEMENT_COUNT = 4u; // MAKE SURE ITS POWER OF TWO
         static inline constexpr u32 BLOCK_COUNT = 12u;
@@ -389,17 +389,17 @@ namespace daxa
             }
         };
 
-        DynamicArenaArray8k() = default;
-        DynamicArenaArray8k(MemoryArena * a_allocator) : allocator{a_allocator} {}
+        ArenaDynamicArray8k() = default;
+        ArenaDynamicArray8k(MemoryArena * a_allocator) : allocator{a_allocator} {}
 
         void initialize(MemoryArena * a_allocator)
         {
             this->allocator = a_allocator;
         }
 
-        auto clone(MemoryArena * a_allocator) const -> DynamicArenaArray8k<T>
+        auto clone(MemoryArena * a_allocator) const -> ArenaDynamicArray8k<T>
         {
-            DynamicArenaArray8k<T> ret = { a_allocator };
+            ArenaDynamicArray8k<T> ret = { a_allocator };
             ret.reserve(this->element_count);
             ret.element_count = this->element_count;
             for (u32 e = 0; e < this->element_count; ++e)
@@ -439,7 +439,7 @@ namespace daxa
 
         void push_back(T const & v)
         {
-            DAXA_DBG_ASSERT_TRUE_M(element_count < CAPACITY, "ERROR: exceeded DynamicArenaArray8k capacity");
+            DAXA_DBG_ASSERT_TRUE_M(element_count < CAPACITY, "ERROR: exceeded ArenaDynamicArray8k capacity");
             u32 index = element_count++;
             auto bi = BlockIndex::element_index_to_block(index);
 
@@ -458,7 +458,7 @@ namespace daxa
 
         void reserve(u32 new_size)
         {
-            DAXA_DBG_ASSERT_TRUE_M(new_size <= CAPACITY, "ERROR: exceeded DynamicArenaArray8k capacity");
+            DAXA_DBG_ASSERT_TRUE_M(new_size <= CAPACITY, "ERROR: exceeded ArenaDynamicArray8k capacity");
 
             auto bi = BlockIndex::element_index_to_block(std::max(new_size, 1u) - 1u);
             auto max_block = bi.block;
@@ -488,13 +488,13 @@ namespace daxa
 
         auto back() -> T &
         {
-            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty DynamicArenaArray8k");
+            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty ArenaDynamicArray8k");
             return at(element_count - 1);
         }
 
         auto back() const -> T const &
         {
-            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty DynamicArenaArray8k");
+            DAXA_DBG_ASSERT_TRUE_M(element_count > 0, "ERROR: called back on empty ArenaDynamicArray8k");
             return at(element_count - 1);
         }
 
@@ -562,8 +562,8 @@ namespace daxa
             }
         };
 
-        using Iterator = ForwardIterator<T, false, DynamicArenaArray8k<T> *>;
-        using ConstIterator = ForwardIterator<T, true, DynamicArenaArray8k<T> const*>;
+        using Iterator = ForwardIterator<T, false, ArenaDynamicArray8k<T> *>;
+        using ConstIterator = ForwardIterator<T, true, ArenaDynamicArray8k<T> const*>;
 
         auto begin() -> Iterator { return Iterator{this, 0}; }
         auto begin() const -> ConstIterator { return ConstIterator{this, 0}; }

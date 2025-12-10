@@ -101,6 +101,39 @@ namespace daxa
         daxa::MemoryRequirements memory_requirements = {};
     };
 
+    enum struct ImplTaskBufferKind
+    {
+        BUFFER,
+        TLAS,
+        BLAS
+    };
+
+    static constexpr inline u32 INVALID_EXTERNAL_ARRAY_INDEX = ~0u;
+
+    struct ImplTaskBuffer
+    {
+        ImplTaskBufferKind kind = ImplTaskBufferKind::BUFFER;
+        u32 external_array_index = INVALID_EXTERNAL_ARRAY_INDEX;    // points to external_buffer_array.
+
+        GPUResourceId id = {};                                      // buffer, blas or tlas id
+        usize size = {};
+        std::string_view name = {};
+    };
+
+    struct ImplTaskImage
+    {
+        u32 external_array_index = INVALID_EXTERNAL_ARRAY_INDEX;    // points to external_image_array.
+
+        ImageId id = {};
+        u32 dimensions = {};
+        Format format = {};
+        Extent3D size = {0, 0, 0};
+        u32 mip_level_count = {};
+        u32 array_layer_count = {};
+        u32 sample_count = {};
+        std::string_view name = {};
+    };
+
     struct ExtendedImageSliceState
     {
         ImageSliceState state = {};
@@ -129,8 +162,8 @@ namespace daxa
         /// This boolean is used to check this.
         bool valid = {};
         bool swapchain_semaphore_waited_upon = {};
-        DynamicArenaArray8k<ExtendedImageSliceState> last_slice_states = {};
-        DynamicArenaArray8k<ExtendedImageSliceState> first_slice_states = {};
+        ArenaDynamicArray8k<ExtendedImageSliceState> last_slice_states = {};
+        ArenaDynamicArray8k<ExtendedImageSliceState> first_slice_states = {};
         // only for transient images
         ResourceLifetime lifetime = {};
         ImageCreateFlags create_flags = ImageCreateFlagBits::NONE;
@@ -158,6 +191,9 @@ namespace daxa
         Event split_barrier_state;
     };
 
+    // TODO:
+    // Remove support for external images image view generation
+    // Create all image views for persistent and transient images when allocating and creating them with the taskgraph.
     struct ImplTask
     {
         void (*task_callback)(daxa::TaskInterface, void*) = {};
@@ -169,8 +205,7 @@ namespace daxa
         std::string_view name = {};
         Queue queue = {};
         std::span<std::span<ImageViewId>> image_view_cache = {};
-        // Used to verify image view cache:
-        std::span<DynamicArenaArray8k<ImageId>> runtime_images_last_execution = {};
+        std::span<ImageId> runtime_images_last_execution = {};      // Used to verify image view cache
     };
 
     struct ImplPresentInfo
@@ -181,18 +216,18 @@ namespace daxa
 
     struct TaskBatch
     {
-        DynamicArenaArray8k<usize> pipeline_barrier_indices = {};
-        DynamicArenaArray8k<usize> wait_split_barrier_indices = {};
-        DynamicArenaArray8k<TaskId> tasks = {};
-        DynamicArenaArray8k<usize> signal_split_barrier_indices = {};
+        ArenaDynamicArray8k<usize> pipeline_barrier_indices = {};
+        ArenaDynamicArray8k<usize> wait_split_barrier_indices = {};
+        ArenaDynamicArray8k<TaskId> tasks = {};
+        ArenaDynamicArray8k<usize> signal_split_barrier_indices = {};
     };
 
     struct QueueSubmitScope
     {
         // These barriers are inserted after all batches and their sync.
-        DynamicArenaArray8k<usize> last_minute_barrier_indices = {};
-        DynamicArenaArray8k<TaskBatch> task_batches = {};
-        DynamicArenaArray8k<u64> used_swapchain_task_images = {};
+        ArenaDynamicArray8k<usize> last_minute_barrier_indices = {};
+        ArenaDynamicArray8k<TaskBatch> task_batches = {};
+        ArenaDynamicArray8k<u64> used_swapchain_task_images = {};
         std::optional<ImplPresentInfo> present_info = {};
     };
 
@@ -366,13 +401,25 @@ namespace daxa
 
         MemoryArena task_memory = {};
 
+        ArenaDynamicArray8k<ImplTask> tasks = {};
+        ArenaDynamicArray8k<ImplTaskBuffer> buffers = {};
+        ArenaDynamicArray8k<ImplTaskImage> images = {};
+        std::unordered_map<std::string_view, u32> buffer_name_to_index = {};    // unique buffer name -> local id into buffers.
+        std::unordered_map<std::string_view, u32> image_name_to_index = {};     // unique image name -> local id into images;
+        std::unordered_map<u32, u32> external_buffer_translation_table = {};    // global unique external id -> local id into buffers.
+        std::unordered_map<u32, u32> external_image_translation_table = {};     // global unique external id -> local id into images.
+        std::vector<TaskBuffer> external_buffer_array = {};                     // holds list of all external buffers
+        std::vector<TaskImage> external_image_array = {};                       // holds list of all external images
+
+
+
         // persistent information:
         TaskImageView swapchain_image = {};
-        DynamicArenaArray8k<PerPermTaskBuffer> buffer_infos = {};
-        DynamicArenaArray8k<PerPermTaskImage> image_infos = {};
+        ArenaDynamicArray8k<PerPermTaskBuffer> buffer_infos = {};
+        ArenaDynamicArray8k<PerPermTaskImage> image_infos = {};
         std::vector<TaskSplitBarrier> split_barriers = {};
-        DynamicArenaArray8k<TaskBarrier> barriers = {};
-        DynamicArenaArray8k<usize> initial_barriers = {};
+        ArenaDynamicArray8k<TaskBarrier> barriers = {};
+        ArenaDynamicArray8k<usize> initial_barriers = {};
         // TODO(msakmary, pahrens) - Instead of storing batch submit scopes which contain batches
         // we should make a vector of batches which and a second vector of submit scopes which are
         // just offsets into the batches vector
@@ -386,7 +433,6 @@ namespace daxa
 
         std::vector<PermIndepTaskBufferInfo> global_buffer_infos = {};
         std::vector<PermIndepTaskImageInfo> global_image_infos = {};
-        DynamicArenaArray8k<ImplTask> tasks = {};
         // TODO: replace with faster hash map.
         std::unordered_map<u32, u32> persistent_buffer_index_to_local_index;
         std::unordered_map<u32, u32> persistent_image_index_to_local_index;
@@ -400,7 +446,7 @@ namespace daxa
         std::unordered_map<std::string_view, TaskImageView> image_name_to_id = {};
 
         // Are executed in a pre-submission, before any actual task recording/submission.
-        DynamicArenaArray8k<TaskBarrier> setup_task_barriers = {};
+        ArenaDynamicArray8k<TaskBarrier> setup_task_barriers = {};
 
         usize memory_block_size = {};
         u32 memory_type_bits = 0xFFFFFFFFu;
@@ -499,7 +545,9 @@ namespace daxa
         auto buffer_blas_tlas_id_to_local_id(TaskIdT id) const -> TaskIdT
         {
             if (id.is_null())
+            {
                 return id;
+            }
             DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task buffer id. Please make sure to only use initialized task buffer ids.");
             if (id.is_external())
             {

@@ -2058,9 +2058,9 @@ namespace daxa
 
         queue = queue == QUEUE_NONE ? impl.info.default_queue : queue;
 
-        auto runtime_images_last_execution_array = impl.task_memory.allocate_trivial_span_fill<DynamicArenaArray8k<ImageId>>(
+        auto runtime_images_last_execution_array = impl.task_memory.allocate_trivial_span_fill<ArenaDynamicArray8k<ImageId>>(
             attachments.size(),
-            DynamicArenaArray8k<ImageId>{&impl.task_memory});
+            ArenaDynamicArray8k<ImageId>{&impl.task_memory});
         auto impl_task = ImplTask{
             .task_callback = task_callback,
             .task_callback_memory = task_callback_memory,
@@ -2232,8 +2232,8 @@ namespace daxa
         std::array<u8, 2u << 11u> scrach_mem = {};
         MemoryArena scratch_allocator = {"add_task_scratch_allocator", scrach_mem};
 
-        DynamicArenaArray8k<ExtendedImageSliceState> tl_tracked_slice_rests = {&scratch_allocator};
-        DynamicArenaArray8k<ImageMipArraySlice> tl_new_use_slices = {&scratch_allocator};
+        ArenaDynamicArray8k<ExtendedImageSliceState> tl_tracked_slice_rests = {&scratch_allocator};
+        ArenaDynamicArray8k<ImageMipArraySlice> tl_new_use_slices = {&scratch_allocator};
 
         // Set persistent task resources to be valid for the permutation.
         for_each(
@@ -3528,7 +3528,7 @@ namespace daxa
         }
         // If parts of the first use slices to not intersect with any previous use,
         // we must synchronize on undefined layout!
-        DynamicArenaArray8k<ExtendedImageSliceState> remaining_first_accesses = {&scratch_allocator};
+        ArenaDynamicArray8k<ExtendedImageSliceState> remaining_first_accesses = {&scratch_allocator};
         for (u32 task_image_index = 0; task_image_index < permutation.image_infos.size(); ++task_image_index)
         {
             auto & task_image = permutation.image_infos[task_image_index];
@@ -4065,7 +4065,7 @@ namespace daxa
           task_memory{"TaskGraph task memory pool", info.task_memory_pool_size}
     {
         info.name = task_memory.allocate_copy_string(info.name);
-        tasks = DynamicArenaArray8k<ImplTask>(&task_memory);
+        tasks = ArenaDynamicArray8k<ImplTask>(&task_memory);
 
         gpu_submit_timeline_semaphores = std::array{
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline MAIN"}),

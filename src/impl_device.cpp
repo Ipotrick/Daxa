@@ -1423,14 +1423,14 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
         executable_cmd_list_execute_deferred_destructions(self, commands->data);
     }
 
-    DynamicArenaArray8k<VkCommandBuffer> submit_vk_command_buffers = {&m_arena};
+    ArenaDynamicArray8k<VkCommandBuffer> submit_vk_command_buffers = {&m_arena};
     for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
         submit_vk_command_buffers.push_back(commands->data.vk_cmd_buffer);
     }
 
-    DynamicArenaArray8k<VkSemaphore> submit_semaphore_signals = {&m_arena}; // All timeline semaphores come first, then binary semaphores follow.
-    DynamicArenaArray8k<u64> submit_semaphore_signal_values = {&m_arena};   // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+    ArenaDynamicArray8k<VkSemaphore> submit_semaphore_signals = {&m_arena}; // All timeline semaphores come first, then binary semaphores follow.
+    ArenaDynamicArray8k<u64> submit_semaphore_signal_values = {&m_arena};   // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
     // Add main queue timeline signaling as first timeline semaphore signaling:
     submit_semaphore_signals.push_back(queue.gpu_queue_local_timeline);
@@ -1449,9 +1449,9 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     }
 
     // used to synchronize with previous submits:
-    DynamicArenaArray8k<VkSemaphore> submit_semaphore_waits = {&m_arena}; // All timeline semaphores come first, then binary semaphores follow.
-    DynamicArenaArray8k<VkPipelineStageFlags> submit_semaphore_wait_stage_masks = {&m_arena};
-    DynamicArenaArray8k<u64> submit_semaphore_wait_values = {&m_arena}; // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
+    ArenaDynamicArray8k<VkSemaphore> submit_semaphore_waits = {&m_arena}; // All timeline semaphores come first, then binary semaphores follow.
+    ArenaDynamicArray8k<VkPipelineStageFlags> submit_semaphore_wait_stage_masks = {&m_arena};
+    ArenaDynamicArray8k<u64> submit_semaphore_wait_values = {&m_arena}; // Used for timeline semaphores. Ignored (push dummy value) for binary semaphores.
 
     for (auto const & pair : std::span{info->wait_timeline_semaphores, info->wait_timeline_semaphore_count})
     {
