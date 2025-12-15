@@ -439,20 +439,20 @@ daxa_cmd_clear_image(daxa_CommandRecorder cmd_enc, daxa_ImageClearInfo const * i
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_pipeline_barrier(daxa_CommandRecorder cmd_enc, daxa_BarrierInfo const * info);
 /// @brief  Successive pipeline barrier calls are combined.
 ///         As soon as a non-pipeline barrier command is recorded, the currently recorded barriers are flushed with a vkCmdPipelineBarrier2 call.
 /// @param info parameters.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder cmd_enc, daxa_ImageBarrierInfo const * info);
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_signal_event(daxa_CommandRecorder cmd_enc, daxa_EventSignalInfo const * info);
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_wait_events(daxa_CommandRecorder cmd_enc, daxa_EventWaitInfo const * infos, size_t info_count);
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_wait_event(daxa_CommandRecorder cmd_enc, daxa_EventWaitInfo const * info);
-DAXA_EXPORT void
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_reset_event(daxa_CommandRecorder cmd_enc, daxa_ResetEventInfo const * info);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

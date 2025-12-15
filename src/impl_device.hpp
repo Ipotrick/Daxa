@@ -86,7 +86,7 @@ struct daxa_ImplDevice final : public ImplHandle
 
     // Command Buffer/Pool recycling:
     // Index with daxa_QueueFamily.
-    std::array<CommandPoolPool, 3> command_pool_pools = {};
+    ImplTransientCommandArenas commands = {};
 
     // Gpu Shader Resource Object table:
     GPUShaderResourceTable gpu_sro_table = {};
@@ -98,7 +98,7 @@ struct daxa_ImplDevice final : public ImplHandle
     // If the zombies global submit index is smaller then global index of all submits currently in flight (on all queues), we can safely clean the resource up.
     std::atomic_uint64_t global_submit_timeline = {};
     std::recursive_mutex zombies_mtx = {};
-    std::deque<std::pair<u64, CommandRecorderZombie>> command_list_zombies = {};
+    std::deque<std::pair<u64, ImplTransientCommandArena*>> command_zombies = {};
     std::deque<std::pair<u64, BufferId>> buffer_zombies = {};
     std::deque<std::pair<u64, ImageId>> image_zombies = {};
     std::deque<std::pair<u64, ImageViewId>> image_view_zombies = {};
@@ -142,6 +142,7 @@ struct daxa_ImplDevice final : public ImplHandle
 
     struct ImplQueueFamily
     {
+        u32 vk_queue_family_index = {};
         u32 queue_count = {};
         u32 vk_index = ~0u;
     };

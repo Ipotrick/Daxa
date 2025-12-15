@@ -140,6 +140,8 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
         case DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER: return "ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER";
         case DAXA_RESULT_ERROR_ZERO_REQUIRED_MEMORY_TYPE_BITS: return "ERROR_ZERO_REQUIRED_MEMORY_TYPE_BITS";
         case DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION: return "ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION";
+        case DAXA_RESULT_ERROR_EXCEEDED_MAX_COMMAND_POOLS: return "ERROR_EXCEEDED_MAX_COMMAND_POOLS";
+        case DAXA_RESULT_ERROR_CMD_LIST_ALREADY_COMPLETED: return "ERROR_CMD_LIST_ALREADY_COMPLETED";
         case DAXA_RESULT_MAX_ENUM: return "ERROR";
     default: return "ERROR";
     }
@@ -1157,7 +1159,7 @@ namespace daxa
             r_cast<daxa_BuildAccelerationStucturesInfo const *>(&info));
         check_result(result, "failed to build acceleration structures");
     }
-    DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, pipeline_barrier, BarrierInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_barrier, BarrierInfo)
     DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_image_barrier, ImageBarrierInfo)
 
     [[deprecated]] void CommandRecorder::pipeline_barrier_image_transition(ImageMemoryBarrierInfo const & info)
@@ -1179,7 +1181,7 @@ namespace daxa
         this->pipeline_image_barrier(new_info);
     }
 
-    DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, signal_event, EventSignalInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, signal_event, EventSignalInfo)
 
     void CommandRecorder::wait_events(daxa::Span<EventWaitInfo const> const & infos)
     {
@@ -1187,8 +1189,8 @@ namespace daxa
             this->internal, r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
     }
 
-    DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, wait_event, EventWaitInfo)
-    DAXA_DECL_COMMAND_LIST_WRAPPER(CommandRecorder, reset_event, ResetEventInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, wait_event, EventWaitInfo)
+    DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, reset_event, ResetEventInfo)
 
 #define DAXA_DECL_COMMAND_LIST_DESTROY_DEFERRED_FN(name, Name)           \
     void CommandRecorder::destroy_##name##_deferred(Name##Id id) \

@@ -1380,32 +1380,32 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     for (daxa_ExecutableCommandList commands : std::span{info->command_lists, info->command_list_count})
     {
-        if (commands->cmd_recorder->info.queue_family != info->queue.family)
+        if (commands->info.queue_family != info->queue.family)
         {
             _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH, DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH);
         }
-        for (BufferId id : commands->data.used_buffers)
+        for (BufferId id : commands->command_arena->used_buffers)
         {
             if (!daxa_dvc_is_buffer_valid(self, id))
             {
                 _DAXA_RETURN_IF_ERROR(DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID, DAXA_RESULT_COMMAND_REFERENCES_INVALID_BUFFER_ID);
             }
         }
-        for (ImageId id : commands->data.used_images)
+        for (ImageId id : commands->command_arena->used_images)
         {
             if (!daxa_dvc_is_image_valid(self, id))
             {
                 _DAXA_RETURN_IF_ERROR(DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID, DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_ID);
             }
         }
-        for (ImageViewId id : commands->data.used_image_views)
+        for (ImageViewId id : commands->command_arena->used_image_views)
         {
             if (!daxa_dvc_is_image_view_valid(self, id))
             {
                 _DAXA_RETURN_IF_ERROR(DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID, DAXA_RESULT_COMMAND_REFERENCES_INVALID_IMAGE_VIEW_ID);
             }
         }
-        for (SamplerId id : commands->data.used_samplers)
+        for (SamplerId id : commands->command_arena->used_samplers)
         {
             if (!daxa_dvc_is_sampler_valid(self, id))
             {
@@ -1420,13 +1420,24 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
-        executable_cmd_list_execute_deferred_destructions(self, commands->data);
+        for (auto [id, index] : commands->command_arena->deferred_destructions)
+        {
+            [[maybe_unused]] daxa_Result _ignore = {};
+            switch (index)
+            {
+            case DEFERRED_DESTRUCTION_BUFFER_INDEX: _ignore = daxa_dvc_destroy_buffer(self, std::bit_cast<daxa_BufferId>(id)); break;
+            case DEFERRED_DESTRUCTION_IMAGE_INDEX: _ignore = daxa_dvc_destroy_image(self, std::bit_cast<daxa_ImageId>(id)); break;
+            case DEFERRED_DESTRUCTION_IMAGE_VIEW_INDEX: _ignore = daxa_dvc_destroy_image_view(self, std::bit_cast<daxa_ImageViewId>(id)); break;
+            case DEFERRED_DESTRUCTION_SAMPLER_INDEX: _ignore = daxa_dvc_destroy_sampler(self, std::bit_cast<daxa_SamplerId>(id)); break;
+            }
+        }
+        commands->command_arena->deferred_destructions.clear();
     }
 
     ArenaDynamicArray8k<VkCommandBuffer> submit_vk_command_buffers = {&m_arena};
     for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
-        submit_vk_command_buffers.push_back(commands->data.vk_cmd_buffer);
+        submit_vk_command_buffers.push_back(commands->command_arena->vk_command_buffer);
     }
 
     ArenaDynamicArray8k<VkSemaphore> submit_semaphore_signals = {&m_arena}; // All timeline semaphores come first, then binary semaphores follow.
@@ -1531,6 +1542,7 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
 {
     std::unique_lock lifetime_lock{self->gpu_sro_table.lifetime_lock};
     std::unique_lock lock{self->zombies_mtx};
+    std::unique_lock command_pools_lock{self->commands.mtx};
 
     u64 min_pending_device_timeline_value_of_all_queues = 0;
     auto result = daxa_dvc_oldest_pending_submit_index(self, &min_pending_device_timeline_value_of_all_queues);
@@ -1617,28 +1629,14 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
         {
             vmaFreeMemory(self->vma_allocator, memory_block_zombie.allocation);
         });
-    {
-        std::unique_lock const main_queue_lock{self->command_pool_pools[DAXA_QUEUE_FAMILY_MAIN].mtx};
-        std::unique_lock const compute_queue_lock{self->command_pool_pools[DAXA_QUEUE_FAMILY_COMPUTE].mtx};
-        std::unique_lock const transfer_queue_lock{self->command_pool_pools[DAXA_QUEUE_FAMILY_TRANSFER].mtx};
-        while (!self->command_list_zombies.empty())
+    check_and_cleanup_gpu_resources(
+        self->command_zombies,
+        [&](auto & cmd_arena)
         {
-            auto & [timeline_value, zombie] = self->command_list_zombies.back();
-
-            // Zombies are sorted. When we see a single zombie that is too young, we can dismiss the rest as they are the same age or even younger.
-            if (timeline_value >= min_pending_device_timeline_value_of_all_queues)
-            {
-                break;
-            }
-
-            vkFreeCommandBuffers(self->vk_device, zombie.vk_cmd_pool, static_cast<u32>(zombie.allocated_command_buffers.size()), zombie.allocated_command_buffers.data());
-            result = static_cast<daxa_Result>(vkResetCommandPool(self->vk_device, zombie.vk_cmd_pool, {}));
-            _DAXA_RETURN_IF_ERROR(result, result)
-
-            self->command_pool_pools[zombie.queue_family].put_back(zombie.vk_cmd_pool);
-            self->command_list_zombies.pop_back();
-        }
-    }
+            // Will error when pool reset failed. That is a unrecoverable error, we do not need to return it.
+            // In the future it would still be nice to return this if we refactor the callback hell here.
+            [[maybe_unused]] auto result = self->commands.retire_arena(self->vk_device, cmd_arena, &command_pools_lock);
+        });
     return DAXA_RESULT_SUCCESS;
 }
 
@@ -1734,7 +1732,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             {
                 self->queue_families[DAXA_QUEUE_FAMILY_MAIN].vk_index = i;
                 self->queue_families[DAXA_QUEUE_FAMILY_MAIN].queue_count = 1;
-                self->command_pool_pools[DAXA_QUEUE_FAMILY_MAIN].queue_family_index = i;
+                self->queue_families[DAXA_QUEUE_FAMILY_MAIN].vk_queue_family_index = i;
                 self->valid_vk_queue_families[self->valid_vk_queue_family_count++] = i;
                 vk_queue_requests[vk_queue_request_count++] = QueueRequest{i, 1};
             }
@@ -1742,7 +1740,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             {
                 self->queue_families[DAXA_QUEUE_FAMILY_COMPUTE].vk_index = i;
                 self->queue_families[DAXA_QUEUE_FAMILY_COMPUTE].queue_count = std::min(queue_props[i].queueCount, DAXA_MAX_COMPUTE_QUEUE_COUNT);
-                self->command_pool_pools[DAXA_QUEUE_FAMILY_COMPUTE].queue_family_index = i;
+                self->queue_families[DAXA_QUEUE_FAMILY_COMPUTE].vk_queue_family_index = i;
                 self->valid_vk_queue_families[self->valid_vk_queue_family_count++] = i;
                 vk_queue_requests[vk_queue_request_count++] = QueueRequest{i, self->queue_families[DAXA_QUEUE_FAMILY_COMPUTE].queue_count};
             }
@@ -1750,7 +1748,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             {
                 self->queue_families[DAXA_QUEUE_FAMILY_TRANSFER].vk_index = i;
                 self->queue_families[DAXA_QUEUE_FAMILY_TRANSFER].queue_count = std::min(queue_props[i].queueCount, DAXA_MAX_TRANSFER_QUEUE_COUNT);
-                self->command_pool_pools[DAXA_QUEUE_FAMILY_TRANSFER].queue_family_index = i;
+                self->queue_families[DAXA_QUEUE_FAMILY_TRANSFER].vk_queue_family_index = i;
                 self->valid_vk_queue_families[self->valid_vk_queue_family_count++] = i;
                 vk_queue_requests[vk_queue_request_count++] = QueueRequest{i, self->queue_families[DAXA_QUEUE_FAMILY_TRANSFER].queue_count};
             }
@@ -2617,10 +2615,7 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
     DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to wait idle");
     result = daxa_dvc_collect_garbage(self);
     DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to wait idle");
-    for (auto & pool_pool : self->command_pool_pools)
-    {
-        pool_pool.cleanup(self);
-    }
+    self->commands.cleanup(self->vk_device);
     vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);
     self->gpu_sro_table.cleanup(self->vk_device);
     vmaDestroyImage(self->vma_allocator, self->vk_null_image, self->vk_null_image_vma_allocation);
