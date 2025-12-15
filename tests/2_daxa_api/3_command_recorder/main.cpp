@@ -470,6 +470,7 @@ namespace tests
             .size = 4,
         });
         daxa::ExecutableCommandList exc_commands_0 = cmdr.complete_current_commands();
+        cmdr = app.device.create_command_recorder({});
 
         // create a second executable command list
         cmdr.copy_buffer_to_buffer({
@@ -478,6 +479,7 @@ namespace tests
             .size = 4,
         });
         daxa::ExecutableCommandList exc_commands_1 = cmdr.complete_current_commands();
+        cmdr = app.device.create_command_recorder({});
 
         daxa::BinarySemaphore sema = app.device.create_binary_semaphore({});
 
@@ -517,11 +519,12 @@ namespace tests
                 std::cout << "Test skipped. No present device supports raytracing!" << std::endl;
                 return;
             }
+
             /// Prepare mesh data:
             auto vertices = std::array{
-                std::array{0.25, 0.75, 0.5},
-                std::array{0.5, 0.25, 0.5},
-                std::array{0.75, 0.75, 0.5},
+                std::array{0.25f, 0.75f, 0.5f},
+                std::array{0.5f, 0.25f, 0.5f},
+                std::array{0.75f, 0.75f, 0.5f},
             };
             auto vertex_buffer = device.create_buffer({
                 .size = sizeof(decltype(vertices)),
@@ -530,6 +533,7 @@ namespace tests
             });
             defer { device.destroy_buffer(vertex_buffer); };
             std::memcpy(device.buffer_host_address(vertex_buffer).value(), &vertices, sizeof(decltype(vertices)));
+
             auto indices = std::array{0, 1, 2};
             auto index_buffer = device.create_buffer({
                 .size = sizeof(decltype(indices)),
@@ -538,6 +542,7 @@ namespace tests
             });
             defer { device.destroy_buffer(index_buffer); };
             std::memcpy(device.buffer_host_address(index_buffer).value(), &indices, sizeof(decltype(indices)));
+
             auto transform = daxa_f32mat3x4{
                 {1, 0, 0, 0},
                 {0, 1, 0, 0},
@@ -550,27 +555,30 @@ namespace tests
             });
             defer { device.destroy_buffer(transform_buffer); };
             std::memcpy(device.buffer_host_address(transform_buffer).value(), &transform, sizeof(daxa_f32mat3x4));
-            /// Write As description data:
+
+            // Now the geometry for the BLAS is described as a series of geometries and instances of geometries:
             auto geometries = std::array{
                 daxa::BlasTriangleGeometryInfo{
                     .vertex_format = daxa::Format::R32G32B32_SFLOAT,
-                    .vertex_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                    .vertex_data = device.device_address(vertex_buffer).value(),
                     .vertex_stride = sizeof(daxa_f32vec3),
                     .max_vertex = static_cast<u32>(vertices.size() - 1),
                     .index_type = daxa::IndexType::uint32,
-                    .index_data = {},     // Ignored in get_acceleration_structure_build_sizes.
-                    .transform_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                    .index_data = device.device_address(index_buffer).value(),
+                    .transform_data = device.device_address(transform_buffer).value(),
                     .count = 1,
                     .flags = {},
                 }};
             auto build_info = daxa::BlasBuildInfo{
-                .dst_blas = {}, // Ignored in get_acceleration_structure_build_sizes.
+                .dst_blas = {},             // Ignored in get_acceleration_structure_build_sizes, fill out later.
                 .geometries = geometries,
-                .scratch_data = {}, // Ignored in get_acceleration_structure_build_sizes.
+                .scratch_data = {},         // Ignored in get_acceleration_structure_build_sizes, fill out later.
             };
-            /// Query As sizes:
+
+            // Query actually needed scratch and blas buffer sizes:
             daxa::AccelerationStructureBuildSizesInfo build_size_info = device.blas_build_sizes(build_info);
-            /// Create Scratch buffer and As:
+
+            // Create scratch and blas:
             auto scratch_buffer = device.create_buffer({
                 .size = build_size_info.build_scratch_size,
                 .name = "scratch buffer",
@@ -581,23 +589,18 @@ namespace tests
                 .name = "test blas",
             });
             defer { device.destroy_blas(blas); };
+
             /// Fill the remaining fields of the build info:
-            auto & tri_geom = geometries[0];
-            tri_geom.vertex_data = device.device_address(vertex_buffer).value();
-            tri_geom.index_data = device.device_address(index_buffer).value();
-            tri_geom.transform_data = device.device_address(transform_buffer).value();
             build_info.dst_blas = blas;
             build_info.scratch_data = device.device_address(scratch_buffer).value();
             /// Record build commands:
-            auto exec_cmds = [&]()
-            {
-                auto recorder = device.create_command_recorder({});
-                recorder.build_acceleration_structures({
-                    .blas_build_infos = std::array{build_info},
-                });
-                return recorder.complete_current_commands();
-            }();
-            device.submit_commands({.command_lists = std::array{exec_cmds}});
+            
+            auto recorder = device.create_command_recorder({});
+            recorder.build_acceleration_structures({
+                .blas_build_infos = std::array{build_info},
+            });
+            auto exec_cmd_list = recorder.complete_current_commands();
+            device.submit_commands({.command_lists = std::array{exec_cmd_list}});
             device.wait_idle();
         }
         catch (std::runtime_error error)
