@@ -195,7 +195,7 @@ auto main() -> int
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .image_id = swapchain_image,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
+            .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
         });
 
         // Here we create executable commands from the currently recorded commands from the command recorder.
