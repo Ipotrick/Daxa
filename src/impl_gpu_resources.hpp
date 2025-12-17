@@ -226,7 +226,7 @@ namespace daxa
 
         auto try_zombify(GPUResourceId id) -> bool
         {
-            if (id.index >= this->max_resources)
+            if (!is_id_valid(id))
             {
                 return false;
             }
