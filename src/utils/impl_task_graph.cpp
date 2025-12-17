@@ -250,7 +250,6 @@ namespace daxa
         {
         case TaskAccessType::NONE: ret = AccessTypeFlagBits::NONE; break;
         case TaskAccessType::READ: ret = AccessTypeFlagBits::READ; break;
-        case TaskAccessType::SAMPLED: ret = AccessTypeFlagBits::READ; break;
         case TaskAccessType::WRITE: ret = AccessTypeFlagBits::WRITE; break;
         case TaskAccessType::READ_WRITE: ret = AccessTypeFlagBits::READ_WRITE; break;
         case TaskAccessType::WRITE_CONCURRENT: ret = AccessTypeFlagBits::WRITE; break;
@@ -437,7 +436,6 @@ namespace daxa
     case TaskAccessType::NONE: ret = std::string_view{#STAGE "_NONE"}; break;                                   \
     case TaskAccessType::READ: ret = std::string_view{#STAGE "_READ"}; break;                                   \
     case TaskAccessType::WRITE: ret = std::string_view{#STAGE "_WRITE"}; break;                                 \
-    case TaskAccessType::SAMPLED: ret = std::string_view{#STAGE "_SAMPLED"}; break;                             \
     case TaskAccessType::READ_WRITE: ret = std::string_view{#STAGE "_READ_WRITE"}; break;                       \
     case TaskAccessType::WRITE_CONCURRENT: ret = std::string_view{#STAGE "_WRITE_CONCURRENT"}; break;           \
     case TaskAccessType::READ_WRITE_CONCURRENT: ret = std::string_view{#STAGE "_READ_WRITE_CONCURRENT"}; break; \
