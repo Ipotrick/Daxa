@@ -57,16 +57,16 @@ namespace daxa
     {
         // Concurrent bit: 0
         // Read bit: 1
-        // Sampled bit: 2
-        // Write bit: 3
+        // Write bit: 2
         NONE = 0,
-        CONCURRENT_BIT = 1,
-        READ = (1 << 1) | CONCURRENT_BIT,
-        SAMPLED = 1 << 2 | CONCURRENT_BIT,
-        WRITE = 1 << 3,
-        READ_WRITE = (1 << 1) | (1 << 3),
+        CONCURRENT_BIT = (1 << 0),
+        NON_CONCURRENT_READ = (1 << 1),
+        READ = NON_CONCURRENT_READ | CONCURRENT_BIT,
+        WRITE = (1 << 2),
+        READ_WRITE = NON_CONCURRENT_READ | WRITE,
         WRITE_CONCURRENT = WRITE | CONCURRENT_BIT,
         READ_WRITE_CONCURRENT = READ_WRITE | CONCURRENT_BIT,
+        SAMPLED = READ, /* deprecated */
     };
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
@@ -643,6 +643,8 @@ namespace daxa
         char const * name = {};
         TaskAccess task_access = {};
         Access access = {};
+        u8 shader_array_size = {};
+        bool shader_as_address = {};
 
         TaskBlasView view = {};
         TaskBlasView translated_view = {};
@@ -658,6 +660,7 @@ namespace daxa
         char const * name = {};
         TaskAccess task_access = {};
         Access access = {};
+        u8 shader_array_size = {};
         bool shader_as_address = {};
 
         TaskTlasView view = {};

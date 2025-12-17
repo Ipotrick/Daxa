@@ -101,6 +101,14 @@ namespace daxa
         daxa::MemoryRequirements memory_requirements = {};
     };
 
+    struct ImplTask;
+
+    struct AccessState
+    {
+        TaskAccessType type = {};
+        ArenaDynamicArray8k<ImplTask*> tasks = {};
+    };
+
     enum struct ImplTaskBufferKind
     {
         BUFFER,
@@ -108,14 +116,14 @@ namespace daxa
         BLAS
     };
 
-    static constexpr inline u32 INVALID_EXTERNAL_ARRAY_INDEX = ~0u;
-
     struct ImplTaskBuffer
     {
         ImplTaskBufferKind kind = ImplTaskBufferKind::BUFFER;
         ImplPersistentTaskBufferBlasTlas const* external = {};
 
-        GPUResourceId id = {};                                      // buffer, blas or tlas id
+        ArenaDynamicArray8k<AccessState> access_timeline = {};
+
+        GPUResourceId id = {};  // buffer, blas or tlas id
         usize size = {};
         std::string_view name = {};
     };
@@ -123,6 +131,8 @@ namespace daxa
     struct ImplTaskImage
     {
         ImplPersistentTaskImage const* external = {};
+        
+        ArenaDynamicArray8k<AccessState> access_timeline = {};
 
         ImageId id = {};
         u32 dimensions = {};

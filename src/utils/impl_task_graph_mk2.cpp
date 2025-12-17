@@ -304,7 +304,6 @@ namespace daxa
         {
         case TaskAccessType::NONE: ret = AccessTypeFlagBits::NONE; break;
         case TaskAccessType::READ: ret = AccessTypeFlagBits::READ; break;
-        case TaskAccessType::SAMPLED: ret = AccessTypeFlagBits::READ; break;
         case TaskAccessType::WRITE: ret = AccessTypeFlagBits::WRITE; break;
         case TaskAccessType::READ_WRITE: ret = AccessTypeFlagBits::READ_WRITE; break;
         case TaskAccessType::WRITE_CONCURRENT: ret = AccessTypeFlagBits::WRITE; break;
@@ -491,7 +490,6 @@ namespace daxa
     case TaskAccessType::NONE: ret = std::string_view{#STAGE "_NONE"}; break;                                   \
     case TaskAccessType::READ: ret = std::string_view{#STAGE "_READ"}; break;                                   \
     case TaskAccessType::WRITE: ret = std::string_view{#STAGE "_WRITE"}; break;                                 \
-    case TaskAccessType::SAMPLED: ret = std::string_view{#STAGE "_SAMPLED"}; break;                             \
     case TaskAccessType::READ_WRITE: ret = std::string_view{#STAGE "_READ_WRITE"}; break;                       \
     case TaskAccessType::WRITE_CONCURRENT: ret = std::string_view{#STAGE "_WRITE_CONCURRENT"}; break;           \
     case TaskAccessType::READ_WRITE_CONCURRENT: ret = std::string_view{#STAGE "_READ_WRITE_CONCURRENT"}; break; \
@@ -1148,6 +1146,7 @@ namespace daxa
 
     DAXA_EXPORT_CXX void TaskGraph::clear_buffer(TaskBufferClearInfo const & info)
     {
+        return;
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
 
         auto const view = impl.buffer_blas_tlas_id_to_local_id(info.buffer);
@@ -1173,6 +1172,7 @@ namespace daxa
 
     DAXA_EXPORT_CXX void TaskGraph::clear_image(TaskImageClearInfo const & info)
     {
+        return;
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
 
         auto const view = impl.id_to_local_id(info.view);
@@ -1200,6 +1200,7 @@ namespace daxa
 
     DAXA_EXPORT_CXX void TaskGraph::copy_buffer_to_buffer(TaskBufferCopyInfo const & info)
     {
+        return;
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         auto src = impl.buffer_blas_tlas_id_to_local_id(info.src);
         auto dst = impl.buffer_blas_tlas_id_to_local_id(info.dst);
@@ -1232,6 +1233,7 @@ namespace daxa
 
     DAXA_EXPORT_CXX void TaskGraph::copy_image_to_image(TaskImageCopyInfo const & info)
     {
+        return;
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         auto src = impl.id_to_local_id(info.src);
         auto dst = impl.id_to_local_id(info.dst);
@@ -2093,7 +2095,55 @@ namespace daxa
 
     void TaskGraph::complete(TaskCompleteInfo const & /*unused*/)
     {
-        auto & impl = *r_cast<ImplTaskGraph *>(this->object);
+        ImplTaskGraph & impl = *r_cast<ImplTaskGraph *>(this->object);
+
+        // Initialize Resource Arena Arrays
+        for (u32 buffer_i = 0; buffer_i < impl.buffers.size(); ++buffer_i)
+        {
+            impl.buffers.at(buffer_i).access_timeline = ArenaDynamicArray8k<AccessState>(&impl.task_memory);
+        }        
+        for (u32 image_i = 0; image_i < impl.images.size(); ++image_i)
+        {
+            impl.images.at(image_i).access_timeline = ArenaDynamicArray8k<AccessState>(&impl.task_memory);
+        }
+
+        // Build access timelines
+        for (u32 task_i = 0; task_i < impl.tasks.size(); ++task_i)
+        {
+            ImplTask& task = impl.tasks.at(task_i);
+            for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
+            {
+                TaskAttachmentInfo const& attachment = task.attachments[attach_i];
+
+                TaskAccessType access_type = {};
+                ArenaDynamicArray8k<AccessState>* access_timeline = {};
+                if (attachment.type != TaskAttachmentType::IMAGE)
+                {
+                    // buffer, blas, tlas attach infos are identical memory layout :)
+                    access_type = attachment.value.buffer.task_access.type;
+                    access_timeline = &impl.buffers.at(attachment.value.buffer.translated_view.index).access_timeline;
+                }
+                else
+                {
+                    access_type = attachment.value.image.task_access.type;
+                    access_timeline = &impl.images.at(attachment.value.image.translated_view.index).access_timeline;
+                }
+                
+                bool const append_new_group = 
+                    access_timeline->size() == 0 || 
+                    access_timeline->back().type != access_type ||
+                    (static_cast<u8>(access_type) & static_cast<u8>(TaskAccessType::CONCURRENT_BIT)) == 0;
+                if (append_new_group)
+                {
+                    access_timeline->push_back(AccessState{
+                        .type = access_type,
+                        .tasks = ArenaDynamicArray8k<ImplTask*>(&impl.task_memory),
+                    });
+                } 
+                access_timeline->back().tasks.push_back(&task);
+            }
+        }
+
         impl.compiled = true;
     }
 
