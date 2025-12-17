@@ -159,9 +159,8 @@ void check_result(daxa_Result result, char const * message, std::array<daxa_Resu
     {
 #if DAXA_VALIDATION
         std::cout << std::format(
-                         "[[DAXA ASSERT FAILURE]]: error code: {}({}), {}.\n\n",
+                         "[[DAXA ASSERT FAILURE]]: error code: {}, {}.\n\n",
                          daxa_result_to_string(result),
-                         std::bit_cast<i32>(result),
                          message)
                   << std::flush;
 #endif

@@ -127,7 +127,7 @@ namespace tests
             .name = "test image pipeline",
         };
 
-        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value();
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value().get();
 
         {
             f32 const IMAGE_A_VALUE = 1.0f;
@@ -238,7 +238,7 @@ namespace tests
             .name = "test image pipeline",
         };
 
-        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value();
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value().get();
 
         {
             f32 const IMAGE_A_VALUE = 1.0f;
@@ -361,13 +361,13 @@ namespace tests
             .defines = std::vector{daxa::ShaderDefine{"TEST_IMAGE", "1"}},
             .name = "test image",
         };
-        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value();
+        auto test_image_pipeline = pipeline_manager.add_compute_pipeline2(test_image_pipeline_info).value().get();
 
         daxa::ComputePipelineCompileInfo2 const test_buffer_pipeline_info = {
             .source = daxa::ShaderFile{"transient.glsl"},
             .name = "test buffer",
         };
-        auto test_buffer_pipeline = pipeline_manager.add_compute_pipeline2(test_buffer_pipeline_info).value();
+        auto test_buffer_pipeline = pipeline_manager.add_compute_pipeline2(test_buffer_pipeline_info).value().get();
 
         {
             auto task_graph = daxa::TaskGraph({

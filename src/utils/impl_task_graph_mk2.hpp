@@ -113,7 +113,7 @@ namespace daxa
     struct ImplTaskBuffer
     {
         ImplTaskBufferKind kind = ImplTaskBufferKind::BUFFER;
-        u32 external_array_index = INVALID_EXTERNAL_ARRAY_INDEX;    // points to external_buffer_array.
+        ImplPersistentTaskBufferBlasTlas const* external = {};
 
         GPUResourceId id = {};                                      // buffer, blas or tlas id
         usize size = {};
@@ -122,7 +122,7 @@ namespace daxa
 
     struct ImplTaskImage
     {
-        u32 external_array_index = INVALID_EXTERNAL_ARRAY_INDEX;    // points to external_image_array.
+        ImplPersistentTaskImage const* external = {};
 
         ImageId id = {};
         u32 dimensions = {};
@@ -396,20 +396,16 @@ namespace daxa
 
         static inline std::atomic_uint32_t exec_unique_next_index = 1;
         u32 unique_index = {};
-
         TaskGraphInfo info;
-
         MemoryArena task_memory = {};
 
         ArenaDynamicArray8k<ImplTask> tasks = {};
         ArenaDynamicArray8k<ImplTaskBuffer> buffers = {};
         ArenaDynamicArray8k<ImplTaskImage> images = {};
-        std::unordered_map<std::string_view, u32> buffer_name_to_index = {};    // unique buffer name -> local id into buffers.
-        std::unordered_map<std::string_view, u32> image_name_to_index = {};     // unique image name -> local id into images;
-        std::unordered_map<u32, u32> external_buffer_translation_table = {};    // global unique external id -> local id into buffers.
-        std::unordered_map<u32, u32> external_image_translation_table = {};     // global unique external id -> local id into images.
-        std::vector<TaskBuffer> external_buffer_array = {};                     // holds list of all external buffers
-        std::vector<TaskImage> external_image_array = {};                       // holds list of all external images
+        std::unordered_map<std::string_view, u32> buffer_name_to_index = {}; // unique buffer name -> local id into buffers.
+        std::unordered_map<std::string_view, u32> image_name_to_index = {};  // unique image  name -> local id into images;
+        std::unordered_map<u32, u32> external_buffer_translation_table = {}; // global unique external id -> local id into buffers.
+        std::unordered_map<u32, u32> external_image_translation_table = {};  // global unique external id -> local id into images.
 
 
 
