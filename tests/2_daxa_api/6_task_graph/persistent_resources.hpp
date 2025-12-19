@@ -132,7 +132,7 @@ namespace tests
         task_graph_B.use_persistent_image(persistent_task_image);
         
         task_graph_B.add_task(daxa::InlineTask::Raster("sample persistent image")
-            .raster_shader.samples(persistent_task_image)
+            .raster_shader.reads(persistent_task_image)
             .executes([](daxa::TaskInterface){}));
 
         task_graph_B.submit({});

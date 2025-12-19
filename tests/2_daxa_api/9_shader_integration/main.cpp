@@ -237,7 +237,7 @@ namespace tests
             }));
         task_graph.add_task(daxa::InlineTask::Compute("bindless reads access 2")
             .reads(handles_buffer, f32_buffer)
-            .samples(f32_image)
+            .reads(f32_image)
             .executes([=](daxa::TaskInterface ti)
             {
                 ti.recorder.set_pipeline(*bindless_access_followup);
