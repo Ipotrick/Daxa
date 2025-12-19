@@ -66,7 +66,7 @@ namespace daxa
         READ_WRITE = NON_CONCURRENT_READ | WRITE,
         WRITE_CONCURRENT = WRITE | CONCURRENT_BIT,
         READ_WRITE_CONCURRENT = READ_WRITE | CONCURRENT_BIT,
-        SAMPLED = READ, /* deprecated */
+        SAMPLED [[deprecated("Use READ instead, API:3.4")]] = READ,
     };
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
@@ -121,13 +121,13 @@ namespace daxa
         static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE = TaskAccess{STAGE, TaskAccessType::READ_WRITE, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::READ_WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
-        static constexpr TaskAccess SAMPLED = TaskAccess{STAGE, TaskAccessType::SAMPLED, TaskAttachmentType::IMAGE};
+        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess SAMPLED = READ;
         static constexpr TaskAccess R = READ;
         static constexpr TaskAccess W = WRITE;
         static constexpr TaskAccess WC = WRITE_CONCURRENT;
         static constexpr TaskAccess RW = READ_WRITE_CONCURRENT;
         static constexpr TaskAccess RWC = READ_WRITE_CONCURRENT;
-        static constexpr TaskAccess S = SAMPLED;
+        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess S = SAMPLED;
     };
 
     struct TaskAccessConsts
@@ -173,15 +173,15 @@ namespace daxa
         static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::WRITE_CONCURRENT};
         static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE};
         static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE_CONCURRENT};
-        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStage::NONE, TaskAccessType::SAMPLED, TaskAttachmentType::IMAGE};
+        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess SAMPLED = READ;
 
         static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;
 
         static constexpr TaskAccess DEPTH_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
         static constexpr TaskAccess STENCIL_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
-        static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
-        static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
+        static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
+        static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
 
         static constexpr TaskAccess PRESENT = TaskAccess{TaskStage::PRESENT, TaskAccessType::READ, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStage::INDIRECT_COMMAND, TaskAccessType::READ, TaskAttachmentType::BUFFER};

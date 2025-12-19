@@ -165,7 +165,7 @@ struct App : BaseApp<App>
         new_task_graph.use_persistent_image(task_render_image);
         new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
 
-        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskAccessConsts::FRAGMENT_SHADER::SAMPLED, task_render_image));
+        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskAccessConsts::FRAGMENT_SHADER::READ, task_render_image));
 
         new_task_graph.add_task(daxa::InlineTask::Transfer("Upload Input")
             .host.writes(task_gpu_input_buffer)
