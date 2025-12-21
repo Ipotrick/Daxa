@@ -213,14 +213,14 @@ namespace daxa
     // Create all image views for persistent and transient images when allocating and creating them with the taskgraph.
     struct ImplTask
     {
+        std::string_view name = {};                                 
         void (*task_callback)(daxa::TaskInterface, void*) = {};     
         u64* task_callback_memory = {};                             // holds callback captured variables
         std::span<TaskAttachmentInfo> attachments = {};             
-        std::span<AccessGroup*> attachment_access_states = {};      // set when compiling
+        std::span<AccessGroup*> attachment_access_groups = {};      // set when compiling
         u32 attachment_shader_blob_size = {};                       
         u32 attachment_shader_blob_alignment = {};                  
         TaskType task_type = {};                                    
-        std::string_view name = {};                                 
         Queue queue = {};        
         u32 submit_index = {};                                   
         std::span<std::span<ImageViewId>> image_view_cache = {};    // set when executing
@@ -428,10 +428,10 @@ namespace daxa
         ArenaDynamicArray8k<ImplTask> tasks = {};
         ArenaDynamicArray8k<ImplTaskBuffer> buffers = {};
         ArenaDynamicArray8k<ImplTaskImage> images = {};
-        std::unordered_map<std::string_view, std::pair<ImplTaskBuffer*, u32>> buffer_name_to_index = {}; // unique buffer name -> local id into buffers.
-        std::unordered_map<std::string_view, std::pair<ImplTaskImage*, u32>> image_name_to_index = {};   // unique image  name -> local id into images;
-        std::unordered_map<u32, std::pair<ImplTaskBuffer*, u32>> external_buffer_translation_table = {}; // global unique external id -> local id into buffers.
-        std::unordered_map<u32, std::pair<ImplTaskImage*, u32>> external_image_translation_table = {};   // global unique external id -> local id into images.
+        std::unordered_map<std::string_view, std::pair<ImplTaskBuffer*, u32>> name_to_buffer_table = {}; // unique buffer name -> local id into buffers.
+        std::unordered_map<std::string_view, std::pair<ImplTaskImage*, u32>> name_to_image_table = {};   // unique image  name -> local id into images;
+        std::unordered_map<u32, std::pair<ImplTaskBuffer*, u32>> external_idx_to_buffer_table = {};      // global unique external id -> local id into buffers.
+        std::unordered_map<u32, std::pair<ImplTaskImage*, u32>> external_idx_to_image_table = {};        // global unique external id -> local id into images.
 
         ArenaDynamicArray8k<TasksSubmit> submits = {};
 

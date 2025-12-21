@@ -306,9 +306,10 @@ namespace daxa
 
         auto allocate_copy_string(std::string_view sv) -> std::string_view
         {
-            auto alloc = allocate_trivial_span<char>(sv.size());
+            auto alloc = allocate_trivial_span<char>(sv.size() + 1u);
             std::memcpy(alloc.data(), sv.data(), sv.size());
-            return std::string_view{alloc.data(), alloc.size()};
+            alloc.data()[sv.size()] = 0u; // makes debugger happy, it does not understand string view.
+            return std::string_view{alloc.data(), alloc.size() - 1u};
         }
     };
 
@@ -640,9 +641,10 @@ namespace daxa
 
         auto empty() const -> bool { return element_count == 0u; }
 
-        auto clone_to_contiguous() const -> std::span<T>
+        auto clone_to_contiguous(MemoryArena* arena = nullptr) const -> std::span<T>
         {
-            std::span<T> ret = this->allocator->allocate_trivial_span<T>(this->element_count);
+            MemoryArena* cloning_arena = arena ? arena : this->allocator;
+            std::span<T> ret = cloning_arena->allocate_trivial_span<T>(this->element_count);
             u32 i = 0;
             for (u32 block = 0; block < BLOCK_COUNT; ++block)
             {
