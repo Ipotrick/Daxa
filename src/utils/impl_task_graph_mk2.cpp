@@ -993,9 +993,9 @@ namespace daxa
         impl.buffers.push_back(buffer);
         u32 const index = static_cast<u32>(impl.buffers.size()) - 1u;
 
-        impl.buffer_name_to_index[name] = index;
+        impl.buffer_name_to_index[name] = std::pair{&impl.buffers.back(), index};
 
-        impl.external_buffer_translation_table[global_unique_external_index] = index;
+        impl.external_buffer_translation_table[global_unique_external_index] = std::pair{&impl.buffers.back(), index};
     }
 
     void TaskGraph::use_persistent_buffer(TaskBuffer const & buffer)
@@ -1043,9 +1043,9 @@ namespace daxa
         impl.images.push_back(image);
         u32 const index = static_cast<u32>(impl.images.size()) - 1u;
 
-        impl.image_name_to_index[name] = index;
+        impl.image_name_to_index[name] = std::pair{&impl.images.back(), index};
 
-        impl.external_image_translation_table[global_unique_external_index] = index;
+        impl.external_image_translation_table[global_unique_external_index] = std::pair{&impl.images.back(), index};
     }
 
     auto create_buffer_helper(ImplTaskGraph & impl, ImplTaskBufferKind kind, usize size, std::string_view name)
@@ -1063,7 +1063,7 @@ namespace daxa
         impl.buffers.push_back(buffer);
         u32 const index = static_cast<u32>(impl.buffers.size()) - 1u;
 
-        impl.buffer_name_to_index[buffer.name] = index;
+        impl.buffer_name_to_index[buffer.name] = std::pair{&impl.buffers.back(), index};
 
         return index;
     }
@@ -1100,11 +1100,11 @@ namespace daxa
         impl.images.push_back(image);
         u32 const index = static_cast<u32>(impl.images.size()) - 1u;
 
-        impl.image_name_to_index[image.name] = index;
+        impl.image_name_to_index[image.name] = std::pair{&impl.images.back(), index};
 
         TaskImageView task_image_view = {
             .task_graph_index = impl.unique_index,
-            .index = static_cast<u32>(impl.global_image_infos.size()),
+            .index = index,
             .slice = {
                 info.mip_level_count,
                 info.array_layer_count,
@@ -1988,7 +1988,7 @@ namespace daxa
                             id.index, impl.info.name));
             TaskResourceIdT translated_id = id;
             translated_id.task_graph_index = impl.unique_index;
-            translated_id.index = translation_table.at(id.index);
+            translated_id.index = translation_table.at(id.index).second;
             return translated_id;
         }
 
@@ -2034,11 +2034,13 @@ namespace daxa
             .task_callback = task_callback,
             .task_callback_memory = task_callback_memory,
             .attachments = attachments,
+            .attachment_access_states = impl.task_memory.allocate_trivial_span<AccessGroup *>(attachments.size()),
             .attachment_shader_blob_size = attachment_shader_blob_size,
             .attachment_shader_blob_alignment = attachment_shader_blob_alignment,
             .task_type = task_type,
             .name = impl.task_memory.allocate_copy_string(name),
             .queue = queue,
+            .submit_index = static_cast<u32>(impl.submits.size()),
             .image_view_cache = allocate_view_cache(impl, attachments),
             .runtime_images_last_execution = impl.task_memory.allocate_trivial_span_fill<ImageId>(attachments.size(), daxa::ImageId{}),
         };
@@ -2073,8 +2075,19 @@ namespace daxa
         impl.tasks.push_back(impl_task);
     }
 
-    void TaskGraph::submit(TaskSubmitInfo const & info)
+    void TaskGraph::submit([[maybe_unused]] TaskSubmitInfo const & info)
     {
+        auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
+        validate_not_compiled(impl);
+
+        u32 const tasks_since_last_submit = static_cast<u32>(
+            impl.submits.size() == 0 ? impl.tasks.size() : impl.tasks.size() - (impl.submits.back().first_task + impl.submits.back().task_count));
+
+        impl.submits.push_back(TasksSubmit{
+            .first_task = static_cast<u32>(impl.tasks.size()),
+            .task_count = tasks_since_last_submit,
+            .used_queues_bitfield = 0u,
+        });
     }
 
     void TaskGraph::present(TaskPresentInfo const & info)
@@ -2097,50 +2110,157 @@ namespace daxa
     {
         ImplTaskGraph & impl = *r_cast<ImplTaskGraph *>(this->object);
 
-        // Initialize Resource Arena Arrays
-        for (u32 buffer_i = 0; buffer_i < impl.buffers.size(); ++buffer_i)
+        // Basic validation:
+        DAXA_DBG_ASSERT_TRUE_M(impl.submits.size() > 0, "ERROR: All task graphs must have at least one submission!");
+
+        u32 required_tmp_size = 1u << 23u; /* 8MB */
+        MemoryArena tmp_memory = MemoryArena{"TaskGraph::complete tmp memory", required_tmp_size};
+
+        struct TmpAccessGroup
         {
-            impl.buffers.at(buffer_i).access_timeline = ArenaDynamicArray8k<AccessState>(&impl.task_memory);
-        }        
-        for (u32 image_i = 0; image_i < impl.images.size(); ++image_i)
-        {
-            impl.images.at(image_i).access_timeline = ArenaDynamicArray8k<AccessState>(&impl.task_memory);
-        }
+            TaskAccessType type = {};
+            u32 used_queues_bitfield = {};
+            ArenaDynamicArray8k<TaskAttachmentAccess> tasks = {};
+        };
+
+        auto tmp_buffer_access_timelines = tmp_memory.allocate_trivial_span_fill<ArenaDynamicArray8k<TmpAccessGroup>>(impl.buffers.size(), ArenaDynamicArray8k<TmpAccessGroup>(&tmp_memory));
+        auto tmp_image_access_timelines = tmp_memory.allocate_trivial_span_fill<ArenaDynamicArray8k<TmpAccessGroup>>(impl.images.size(), ArenaDynamicArray8k<TmpAccessGroup>(&tmp_memory));
+
+        auto tmp_buffers_latest_submit_access = tmp_memory.allocate_trivial_span_fill(impl.buffers.size(), 0u);
+        auto tmp_images_latest_submit_access = tmp_memory.allocate_trivial_span_fill(impl.images.size(), 0u);
 
         // Build access timelines
         for (u32 task_i = 0; task_i < impl.tasks.size(); ++task_i)
         {
-            ImplTask& task = impl.tasks.at(task_i);
+            ImplTask & task = impl.tasks.at(task_i);
             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
             {
-                TaskAttachmentInfo const& attachment = task.attachments[attach_i];
+                TaskAttachmentInfo const & attachment = task.attachments[attach_i];
 
                 TaskAccessType access_type = {};
-                ArenaDynamicArray8k<AccessState>* access_timeline = {};
+                ArenaDynamicArray8k<TmpAccessGroup> * access_timeline = nullptr;
+                u32 * latest_access_submit_index = nullptr;
                 if (attachment.type != TaskAttachmentType::IMAGE)
                 {
                     // buffer, blas, tlas attach infos are identical memory layout :)
                     access_type = attachment.value.buffer.task_access.type;
-                    access_timeline = &impl.buffers.at(attachment.value.buffer.translated_view.index).access_timeline;
+                    if (!attachment.value.buffer.translated_view.is_null())
+                    {
+                        access_timeline = &tmp_buffer_access_timelines[attachment.value.buffer.translated_view.index];
+                        latest_access_submit_index = &tmp_buffers_latest_submit_access[attachment.value.buffer.translated_view.index];
+                    }
                 }
                 else
                 {
                     access_type = attachment.value.image.task_access.type;
-                    access_timeline = &impl.images.at(attachment.value.image.translated_view.index).access_timeline;
+                    if (!attachment.value.image.translated_view.is_null())
+                    {
+                        access_timeline = &tmp_image_access_timelines[attachment.value.image.translated_view.index];
+                        latest_access_submit_index = &tmp_images_latest_submit_access[attachment.value.image.translated_view.index];
+                    }
                 }
-                
-                bool const append_new_group = 
-                    access_timeline->size() == 0 || 
-                    access_timeline->back().type != access_type ||
-                    (static_cast<u8>(access_type) & static_cast<u8>(TaskAccessType::CONCURRENT_BIT)) == 0;
-                if (append_new_group)
+
+                if (access_timeline != nullptr && latest_access_submit_index != nullptr)
                 {
-                    access_timeline->push_back(AccessState{
-                        .type = access_type,
-                        .tasks = ArenaDynamicArray8k<ImplTask*>(&impl.task_memory),
-                    });
-                } 
-                access_timeline->back().tasks.push_back(&task);
+                    bool const append_new_group =
+                        access_timeline->size() == 0 ||
+                        access_timeline->back().type != access_type ||
+                        (static_cast<u8>(access_type) & static_cast<u8>(TaskAccessType::CONCURRENT_BIT)) == 0 ||
+                        *latest_access_submit_index != task.submit_index;
+                    if (append_new_group)
+                    {
+                        access_timeline->push_back(TmpAccessGroup{
+                            .type = access_type,
+                            .used_queues_bitfield = 0u,
+                            .tasks = ArenaDynamicArray8k<TaskAttachmentAccess>(&tmp_memory),
+                        });
+                    }
+                    access_timeline->back().tasks.push_back(TaskAttachmentAccess{&task, attach_i});
+                    access_timeline->back().used_queues_bitfield |= (1u << flat_queue_index(task.queue));
+                    *latest_access_submit_index = task.submit_index;
+                }
+            }
+        }
+
+        // Reallocate access timelines into task memory
+        for (u32 i = 0; i < (tmp_buffer_access_timelines.size() + tmp_image_access_timelines.size()); ++i)
+        {
+            // Loop goes over buffers and images, fetches the right pointers here:
+            u32 ei = i < tmp_buffer_access_timelines.size() ? i : static_cast<u32>((i - tmp_buffer_access_timelines.size()));
+            ArenaDynamicArray8k<TmpAccessGroup> * src_access_timeline = i < tmp_buffer_access_timelines.size() ? &tmp_buffer_access_timelines[ei] : &tmp_image_access_timelines[ei];
+            std::span<AccessGroup> * dst_access_timeline = i < tmp_buffer_access_timelines.size() ? &impl.buffers[ei].access_timeline : &impl.images[ei].access_timeline;
+
+            *dst_access_timeline = impl.task_memory.allocate_trivial_span<AccessGroup>(src_access_timeline->size());
+            for (u32 ati = 0; ati < src_access_timeline->size(); ++ati)
+            {
+                (*dst_access_timeline)[ati].type = src_access_timeline->at(ati).type;
+                (*dst_access_timeline)[ati].used_queues_bitfield = src_access_timeline->at(ati).used_queues_bitfield;
+                (*dst_access_timeline)[ati].tasks = impl.task_memory.allocate_trivial_span<TaskAttachmentAccess>(src_access_timeline->at(ati).tasks.size());
+                for (u32 t = 0; t < src_access_timeline->at(ati).tasks.size(); ++t)
+                {
+                    (*dst_access_timeline)[ati].tasks[t] = src_access_timeline->at(ati).tasks.at(t);
+                    TaskAttachmentAccess & taa = (*dst_access_timeline)[ati].tasks[t];
+                    taa.task->attachment_access_states[taa.attachment_index] = &(*dst_access_timeline)[ati];
+                }
+            }
+        }
+
+        // Validate multi-queue resource access
+        for (u32 i = 0; i < (impl.buffers.size() + impl.images.size()); ++i)
+        {
+            // Loop goes over buffers and images, fetches the right pointers here:
+            u32 ei = i < impl.buffers.size() ? i : static_cast<u32>((i - impl.buffers.size()));
+            std::span<AccessGroup> * access_timeline = i < impl.buffers.size() ? &impl.buffers[ei].access_timeline : &impl.images[ei].access_timeline;
+
+            u32 current_submit_index = ~0u;
+            u32 current_submit_queue_bitfield = {};
+            bool current_submit_multi_queue_allowed = {};
+            TaskAccessType current_submit_first_access_type = {};
+
+            for (u32 ati = 0; ati < access_timeline->size(); ++ati)
+            {
+                AccessGroup const & access_group = (*access_timeline)[ati];
+
+                DAXA_DBG_ASSERT_TRUE_M(access_group.tasks.size() > 0, "Should be impossible, check logic in Build access timelines loop when adding groups");
+                if (current_submit_index != access_group.tasks[0].task->submit_index)
+                {
+                    current_submit_index = access_group.tasks[0].task->submit_index;
+                    current_submit_queue_bitfield = 0u;
+                    current_submit_multi_queue_allowed = true;
+                    current_submit_first_access_type = access_timeline->back().type;
+                }
+
+                current_submit_queue_bitfield |= access_group.used_queues_bitfield;
+                current_submit_multi_queue_allowed =
+                    current_submit_multi_queue_allowed &&
+                    current_submit_first_access_type == access_group.type &&
+                    (static_cast<u8>(access_group.type) & static_cast<u8>(TaskAccessType::CONCURRENT_BIT)) != 0;
+
+                if (!current_submit_multi_queue_allowed && std::popcount(current_submit_queue_bitfield) > 1)
+                {
+                    std::string queue_string = {};
+
+                    u32 queue_iter = current_submit_queue_bitfield;
+                    while (queue_iter != 0)
+                    {
+                        u32 const first_significant_bit_idx = 31u - static_cast<u32>(std::countl_zero(queue_iter));
+                        queue_iter &= ~(1u << first_significant_bit_idx);
+
+                        queue_string += std::string(daxa::to_string(flat_index_to_queue(first_significant_bit_idx)));
+                        if (queue_iter != 0)
+                        {
+                            queue_string += ", ";
+                        }
+                    }
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        false,
+                        std::format("Illegal multi-queue resource access! Resource {} is accessed in multiple queues {} with multiple access types. "
+                                    "All access to a resource used on multiple queues (within one submit) must be identical and concurrent.",
+                                    i < impl.buffers.size() ? impl.buffers.at(ei).name : impl.images.at(ei).name,
+                                    queue_string
+                                    )
+                            .c_str());
+                }
             }
         }
 
@@ -2169,6 +2289,8 @@ namespace daxa
         buffers = ArenaDynamicArray8k<ImplTaskBuffer>(&task_memory);
         images = ArenaDynamicArray8k<ImplTaskImage>(&task_memory);
 
+        submits = ArenaDynamicArray8k<TasksSubmit>(&task_memory);
+
         gpu_submit_timeline_semaphores = std::array{
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline MAIN"}),
             info.device.create_timeline_semaphore({.name = "Task Graph Timeline COMPUTE_0"}),
@@ -2182,7 +2304,6 @@ namespace daxa
         {
             this->staging_memory = TransferMemoryPool{TransferMemoryPoolInfo{.device = info.device, .capacity = info.staging_memory_pool_size, .name = "Transfer Memory Pool"}};
         }
-
     }
 
     ImplTaskGraph::~ImplTaskGraph()
@@ -2212,7 +2333,7 @@ namespace daxa
             ImplTaskBuffer & buffer = this->buffers[i];
             if (buffer.external != nullptr)
             {
-                reinterpret_cast<TaskBuffer const*>(&buffer.external)->~TaskBuffer();
+                reinterpret_cast<TaskBuffer const *>(&buffer.external)->~TaskBuffer();
                 continue;
             }
             switch (buffer.kind)
@@ -2235,7 +2356,7 @@ namespace daxa
             ImplTaskImage & image = this->images[i];
             if (image.external != nullptr)
             {
-                reinterpret_cast<TaskImage const*>(&image.external)->~TaskImage();
+                reinterpret_cast<TaskImage const *>(&image.external)->~TaskImage();
                 continue;
             }
             this->info.device.destroy_image(image.id);

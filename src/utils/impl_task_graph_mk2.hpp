@@ -103,10 +103,17 @@ namespace daxa
 
     struct ImplTask;
 
-    struct AccessState
+    struct TaskAttachmentAccess
+    {
+        ImplTask* task = {};
+        u32 attachment_index = {};
+    };
+
+    struct AccessGroup
     {
         TaskAccessType type = {};
-        ArenaDynamicArray8k<ImplTask*> tasks = {};
+        u32 used_queues_bitfield = {};
+        std::span<TaskAttachmentAccess> tasks = {};
     };
 
     enum struct ImplTaskBufferKind
@@ -121,7 +128,7 @@ namespace daxa
         ImplTaskBufferKind kind = ImplTaskBufferKind::BUFFER;
         ImplPersistentTaskBufferBlasTlas const* external = {};
 
-        ArenaDynamicArray8k<AccessState> access_timeline = {};
+        std::span<AccessGroup> access_timeline = {};
 
         GPUResourceId id = {};  // buffer, blas or tlas id
         usize size = {};
@@ -132,7 +139,7 @@ namespace daxa
     {
         ImplPersistentTaskImage const* external = {};
         
-        ArenaDynamicArray8k<AccessState> access_timeline = {};
+        std::span<AccessGroup> access_timeline = {};
 
         ImageId id = {};
         u32 dimensions = {};
@@ -206,16 +213,18 @@ namespace daxa
     // Create all image views for persistent and transient images when allocating and creating them with the taskgraph.
     struct ImplTask
     {
-        void (*task_callback)(daxa::TaskInterface, void*) = {};
-        u64* task_callback_memory = {};                             // holds captured variables
-        std::span<TaskAttachmentInfo> attachments = {};
-        u32 attachment_shader_blob_size = {};
-        u32 attachment_shader_blob_alignment = {};
-        TaskType task_type = {};
-        std::string_view name = {};
-        Queue queue = {};
-        std::span<std::span<ImageViewId>> image_view_cache = {};
-        std::span<ImageId> runtime_images_last_execution = {};      // Used to verify image view cache
+        void (*task_callback)(daxa::TaskInterface, void*) = {};     
+        u64* task_callback_memory = {};                             // holds callback captured variables
+        std::span<TaskAttachmentInfo> attachments = {};             
+        std::span<AccessGroup*> attachment_access_states = {};      // set when compiling
+        u32 attachment_shader_blob_size = {};                       
+        u32 attachment_shader_blob_alignment = {};                  
+        TaskType task_type = {};                                    
+        std::string_view name = {};                                 
+        Queue queue = {};        
+        u32 submit_index = {};                                   
+        std::span<std::span<ImageViewId>> image_view_cache = {};    // set when executing
+        std::span<ImageId> runtime_images_last_execution = {};      // set when executing // Used to verify image view cache
     };
 
     struct ImplPresentInfo
@@ -399,9 +408,16 @@ namespace daxa
         std::optional<BinarySemaphore> last_submit_semaphore = {};
     };
 
+    struct TasksSubmit
+    {
+        u32 first_task = {};
+        u32 task_count = {};
+        u32 used_queues_bitfield = {};  // set when compiling
+    };
+
     struct ImplTaskGraph final : ImplHandle
     {
-        ImplTaskGraph(TaskGraphInfo a_info);
+        ImplTaskGraph(TaskGraphInfo a_info); 
         ~ImplTaskGraph();
 
         static inline std::atomic_uint32_t exec_unique_next_index = 1;
@@ -412,11 +428,12 @@ namespace daxa
         ArenaDynamicArray8k<ImplTask> tasks = {};
         ArenaDynamicArray8k<ImplTaskBuffer> buffers = {};
         ArenaDynamicArray8k<ImplTaskImage> images = {};
-        std::unordered_map<std::string_view, u32> buffer_name_to_index = {}; // unique buffer name -> local id into buffers.
-        std::unordered_map<std::string_view, u32> image_name_to_index = {};  // unique image  name -> local id into images;
-        std::unordered_map<u32, u32> external_buffer_translation_table = {}; // global unique external id -> local id into buffers.
-        std::unordered_map<u32, u32> external_image_translation_table = {};  // global unique external id -> local id into images.
+        std::unordered_map<std::string_view, std::pair<ImplTaskBuffer*, u32>> buffer_name_to_index = {}; // unique buffer name -> local id into buffers.
+        std::unordered_map<std::string_view, std::pair<ImplTaskImage*, u32>> image_name_to_index = {};   // unique image  name -> local id into images;
+        std::unordered_map<u32, std::pair<ImplTaskBuffer*, u32>> external_buffer_translation_table = {}; // global unique external id -> local id into buffers.
+        std::unordered_map<u32, std::pair<ImplTaskImage*, u32>> external_image_translation_table = {};   // global unique external id -> local id into images.
 
+        ArenaDynamicArray8k<TasksSubmit> submits = {};
 
 
         // persistent information:
