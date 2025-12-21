@@ -33,23 +33,9 @@
             throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
         }                                                                         \
     } while (false)
-#define DAXA_DBG_ASSERT_TRUE_MS(x, STREAM)                                        \
-    do                                                                            \
-    {                                                                             \
-        if (std::is_constant_evaluated())                                         \
-        {                                                                         \
-            /* how do we check this??? static_assert(x); */                       \
-        }                                                                         \
-        else if (!(x))                                                            \
-        {                                                                         \
-            std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " STREAM << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
-        }                                                                         \
-    } while (false)
 #else
 
 #define DAXA_DBG_ASSERT_TRUE_M(x, m)
-#define DAXA_DBG_ASSERT_TRUE_MS(x, m)
 
 #endif
 
