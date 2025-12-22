@@ -29,6 +29,7 @@ namespace daxa
     {
         bool temporal = false;
         u32 dimensions = 2;
+        // TODO: Add option to pass span with all mutable formats here!
         Format format = Format::R8G8B8A8_UNORM;
         Extent3D size = {0, 0, 0};
         u32 mip_level_count = 1;
