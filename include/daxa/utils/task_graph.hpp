@@ -19,7 +19,7 @@ namespace daxa
 
     struct TaskTransientBufferInfo
     {
-        u32 size = {};
+        u64 size = {};
         std::string_view name = {};
     };
 
@@ -927,9 +927,9 @@ namespace daxa
         DAXA_EXPORT_CXX auto create_transient_tlas(TaskTransientTlasInfo info) -> TaskTlasView;
         DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo info) -> TaskImageView;
 
-        DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo const &;
-        DAXA_EXPORT_CXX auto transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo const &;
-        DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo const &;
+        DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo;
+        DAXA_EXPORT_CXX auto transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo;
+        DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo;
 
         DAXA_EXPORT_CXX void clear_buffer(TaskBufferClearInfo const & info);
         DAXA_EXPORT_CXX void clear_image(TaskImageClearInfo const & info);
