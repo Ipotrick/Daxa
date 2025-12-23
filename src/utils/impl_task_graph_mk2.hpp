@@ -112,8 +112,8 @@ namespace daxa
 
     struct AccessGroup
     {
-        PipelineStageFlags used_stages = {}; 
-        TaskAccessType type = {};
+        PipelineStageFlags used_stages = {};    // TODO: put this into a field with type Access
+        TaskAccessType type = {};               // TODO: put this into a field with type Access
         u32 used_queues_bitfield = {};
         std::span<TaskAttachmentAccess> tasks = {};
         u32 final_schedule_first_batch = ~0u;
@@ -132,10 +132,13 @@ namespace daxa
     {
         std::string_view name = {};
         TaskResourceKind kind = {};
-        ImplHandle const* external = {};
+        void * external = {};
         std::span<AccessGroup> access_timeline = {};
         u32 final_schedule_first_batch = {};
         u32 final_schedule_last_batch = {};
+        u32 final_schedule_first_submit = {};
+        u32 final_schedule_last_submit = {};
+        u32 used_queues_bitfield = {};
 
         union {
             BufferId buffer;
@@ -296,7 +299,8 @@ namespace daxa
             std::vector<TlasId>>
             actual_ids = {};
 
-        Access latest_access = {};
+        Access pre_graph_access = {};
+        u32 pre_graph_used_queues_bitfield = {};
 
         std::variant<
             TaskBufferInfo,
@@ -322,11 +326,10 @@ namespace daxa
         TaskImageInfo info = {};
         // One task buffer can back multiple buffers.
         std::vector<ImageId> actual_images = {};
-        // We store runtime information about the previous executions final resource states.
-        // This is important, as with conditional execution and temporal resources we need to store this infomation to form correct state transitions.
-        std::vector<ImageSliceState> latest_slice_states = {};
-        // Only for swapchain images. Runtime data.
-        bool waited_on_acquire = {};
+        
+        Access pre_graph_access = {};
+        u32 pre_graph_used_queues_bitfield = ~0u;
+        bool pre_graph_is_undefined_layout = true;
 
         u32 unique_index = std::numeric_limits<u32>::max();
 
@@ -444,6 +447,7 @@ namespace daxa
 
         ArenaDynamicArray8k<ImplTask> tasks = {};
         ArenaDynamicArray8k<ImplTaskResource> resources = {};
+        std::span<std::pair<ImplTaskResource*, u32>> external_resources = {};
         std::unordered_map<std::string_view, std::pair<ImplTaskResource*, u32>> name_to_resource_table = {}; // unique buffer name -> local id into buffers.
         std::unordered_map<u32, std::pair<ImplTaskResource*, u32>> external_idx_to_resource_table = {};      // global unique external id -> local id into buffers.
         daxa::MemoryBlock transient_memory_block = {};
