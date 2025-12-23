@@ -112,9 +112,12 @@ namespace daxa
 
     struct AccessGroup
     {
+        PipelineStageFlags used_stages = {}; 
         TaskAccessType type = {};
         u32 used_queues_bitfield = {};
         std::span<TaskAttachmentAccess> tasks = {};
+        u32 final_schedule_first_batch = ~0u;
+        u32 final_schedule_last_batch = {};
     };
 
     enum struct TaskResourceKind
@@ -232,7 +235,10 @@ namespace daxa
         std::span<TaskAttachmentInfo> attachments = {};             
         std::span<AccessGroup*> attachment_access_groups = {};      // set when compiling
         u32 attachment_shader_blob_size = {};                       
-        u32 attachment_shader_blob_alignment = {};                  
+        u32 attachment_shader_blob_alignment = {};            
+        std::span<u8> attachment_shader_blob = {};      
+        std::span<u32> attachment_in_blob_offsets = {};
+        std::span<ImageViewId> attachment_image_views = {};
         TaskType task_type = {};                                    
         Queue queue = {};        
         u32 submit_index = {};                                   

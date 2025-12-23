@@ -70,6 +70,9 @@ namespace daxa
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
         /// @brief  Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
         bool record_debug_information = {};
+        /// @brief  AMD gpus of the generations RDNA3 and RDNA4 have hardware bugs that make image barriers still useful for cache flushes.
+        ///         This boolean makes task graph insert image barriers for image sync instead of global barriers to help the drivers out.
+        bool amd_rdna3_4_image_barrier_fix = true;
         /// @brief  Sets the size of the linear allocator of device local, host visible memory used by the linear staging allocator.
         ///         This memory is used internally as well as by tasks via the TaskInterface::get_allocator().
         ///         Setting the size to 0, disables a few task list features but also eliminates the memory allocation.

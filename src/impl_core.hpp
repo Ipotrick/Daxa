@@ -271,6 +271,10 @@ namespace daxa
 
         auto allocate(u64 a_size, u64 a_align, u64 a_count = 1u) -> u8 *
         {
+            if (a_count == 0)
+            {
+                return nullptr;
+            }
             u64 const new_used_size = align_up(this->current_memory_used_size, a_align) + a_size * a_count;
 
             if (new_used_size > this->current_memory_size)
@@ -346,9 +350,9 @@ namespace daxa
         }
 
         template <TrivialType T>
-        auto allocate_trivial_span(u64 count) -> std::span<T>
+        auto allocate_trivial_span(u64 count, u64 alignment = alignof(T)) -> std::span<T>
         {
-            auto alloc = allocate(sizeof(T), alignof(T), count);
+            auto alloc = allocate(sizeof(T), alignment, count);
             return std::span<T>{reinterpret_cast<T *>(alloc), count};
         }
 

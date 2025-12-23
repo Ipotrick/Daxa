@@ -469,6 +469,13 @@ namespace daxa
         usize offset = {};
     };
 
+    struct MemoryBlockTlasInfo
+    {
+        TlasInfo tlas_info = {};
+        MemoryBlock & memory_block;
+        usize offset = {};
+    };
+
     struct MemoryBlockImageInfo
     {
         ImageInfo image_info = {};
@@ -597,6 +604,7 @@ namespace daxa
         [[nodiscard]] auto create_buffer(BufferInfo const & info) -> BufferId;
         [[nodiscard]] auto create_image(ImageInfo const & info) -> ImageId;
         [[nodiscard]] auto create_buffer_from_memory_block(MemoryBlockBufferInfo const & info) -> BufferId;
+        [[nodiscard]] auto create_tlas_from_memory_block(MemoryBlockTlasInfo const & info) -> TlasId;
         [[nodiscard]] auto create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId;
         [[nodiscard]] auto create_image_view(ImageViewInfo const & info) -> ImageViewId;
         [[nodiscard]] auto create_sampler(SamplerInfo const & info) -> SamplerId;
