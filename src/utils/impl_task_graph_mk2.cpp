@@ -2437,7 +2437,7 @@ namespace daxa
         }
 
         /// ========================================
-        /// ==== Create Resource Batch Barriers ====
+        /// ==== CREATE RESOURCE BATCH BARRIERS ====
         /// ========================================
 
         // Within each AccessGroup, all tasks MUST have the same (concurrent) access to the resource.
@@ -2515,7 +2515,7 @@ namespace daxa
         }
 
         /// =============================
-        /// ==== Fill Execution Data ====
+        /// ==== FILL EXECUTION DATA ====
         /// =============================
 
         u32 external_resource_count = static_cast<u32>(impl.resources.size()) - transient_resource_count;
@@ -2530,7 +2530,7 @@ namespace daxa
         }
 
         /// =========================================
-        /// ==== Initialize Task Attachment Data ====
+        /// ==== INITIALIZE TASK ATTACHMENT DATA ====
         /// =========================================
 
         // TaskAttachmentInfo ids and view are initialized here.
@@ -2563,7 +2563,18 @@ namespace daxa
         u32 required_tmp_size = 1u << 23u; /* 8MB */
         MemoryArena tmp_memory = MemoryArena{"TaskGraph::execute tmp memory", required_tmp_size};
 
-        // We build a list of sync needs of the external resources based on their prior use and their first access inside the graph.
+        /// =============================================================================
+        /// ==== VALIDATE, PATCH AND GENERATE CONNECTING SYNC FOR EXTERNAL RESOURCES ====
+        /// =============================================================================
+
+        // External resources can be changed outside of the taskgraph.
+        // Calculate required sync from the pre graph access to the first access of external resources here.
+        // Validate all external resources: Are the ids valid? Do the resources match the access requirements?
+        // Update ids and data of the external resource inside taskgraph.
+        // If the id changed, patch attachment blobs and recreate image views for tasks accessing the resource.
+        // All image views and attachment blobs are pre-created and keept over executions.
+        // Only patch the outdated parts of attachment blobs and image view arrays when a external resource changed. 
+
         struct ExternalResourceSyncNeeds
         {
             u32 src_queues = {};
@@ -2740,10 +2751,15 @@ namespace daxa
                 external->pre_graph_used_queues_bitfield = last_access_group.used_queues_bitfield;
                 external->pre_graph_is_undefined_layout = false;
             }
-
         }
 
-        printf("hurray\n");
+        /// ================================
+        /// ==== PREPARE TASK EXECUTION ====
+        /// ================================
+
+        /// ====================================
+        /// ==== RECORD AND SUBMIT COMMANDS ====
+        /// ====================================
     }
 
     ImplTaskGraph::ImplTaskGraph(TaskGraphInfo a_info)
