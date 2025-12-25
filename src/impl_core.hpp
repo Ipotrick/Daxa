@@ -213,68 +213,132 @@ namespace daxa
 
     struct MemoryArena
     {
-        std::unique_ptr<u8[]> owned_allocation = {};
-        std::unique_ptr<std::vector<std::unique_ptr<u8[], std::function<void(u8*)>>>> spill_allocations = {}; // vector behind unique ptr as compilers gen slow code for destructor otherwise
+        u8* owned_memory = {};
+        u64 owned_memory_count = {};
         u8* memory = {};
-        u32 size = {};
-        u32 used_size = {};
-        u32 allocations_made = {};
-        bool allow_spill_allocations = true;
+        u64 previous_memory_size = {};
+        u64 total_size = {};
+        u64 total_used_size = {};
+        u64 current_memory_size = {};
+        u64 current_memory_used_size = {};
+        u64 allocations_made = {};
         std::string_view name = {};
 
         MemoryArena() = default;
-        MemoryArena(std::string_view name, u32 size)
+        MemoryArena(std::string_view name, u64 a_size)
         {
-            this->owned_allocation = std::make_unique<u8[]>(size);
-            this->memory = this->owned_allocation.get();
-            this->size = size;
-            this->used_size = 0;
+            a_size = std::max(sizeof(u8) * name.size() + 1ull, a_size);
+            this->owned_memory = static_cast<u8*>(::operator new[](a_size, std::align_val_t(alignof(void*))));
+            this->owned_memory_count += 1ull;
+            this->memory = this->owned_memory;
+            this->current_memory_size = a_size;
+            this->total_size = this->current_memory_size;
+            this->current_memory_used_size = sizeof(void*);
+            this->total_used_size = this->current_memory_used_size;
+            *reinterpret_cast<void**>(this->owned_memory) = nullptr;
             this->name = allocate_copy_string(name);
         }
         MemoryArena(std::string_view name, std::span<u8> external_memory)
         {
-            this->owned_allocation = {};
+            this->owned_memory = {};
             this->memory = external_memory.data();
-            this->size = static_cast<u32>(external_memory.size());
-            this->used_size = 0;
+            this->current_memory_size = external_memory.size();
+            this->total_size = this->current_memory_size;
+            this->current_memory_used_size = 0ull;
+            this->total_size = 0ull;
             this->name = allocate_copy_string(name);
         }
-
-        auto allocate(usize a_size, usize a_align, usize a_count = 1u) -> u8 *
+        ~MemoryArena()
         {
-            u32 const new_used_size = align_up(used_size, static_cast<u32>(a_align)) + static_cast<u32>(a_size) * static_cast<u32>(a_count);
-            if (new_used_size <= size)
+            void* previous_owned_memory = reinterpret_cast<void*>(this->owned_memory);
+            while (previous_owned_memory != nullptr)
             {
-                allocations_made += 1;
-                auto new_allocation = memory + used_size;
-                used_size = new_used_size;
-                return new_allocation;
+                void* owned_memory_before_previous = *reinterpret_cast<void**>(previous_owned_memory);
+                ::operator delete[] (static_cast<u8*>(previous_owned_memory), std::align_val_t(alignof(void*)));
+                previous_owned_memory = owned_memory_before_previous;
             }
-            else
+            this->owned_memory = {};
+            this->owned_memory_count = {};
+            this->memory = {};
+            this->previous_memory_size = {};
+            this->total_size = {};
+            this->total_used_size = {};
+            this->current_memory_size = {};
+            this->current_memory_used_size = {};
+            this->allocations_made = {};
+            this->name = {};
+        }
+
+        auto allocate(u64 a_size, u64 a_align, u64 a_count = 1u) -> u8 *
+        {
+            if (a_count == 0)
             {
-                DAXA_DBG_ASSERT_TRUE_M(
-                    allow_spill_allocations,
-                    std::format(
-                        "MemoryArena \"{}\" ran out of memory (missing_size: {}, total_size: {}, used_size: {}) while trying to allocate: {} (align: {})!",
-                        name, new_used_size - used_size, size, used_size, a_size * a_count, a_align));
-                if (!this->spill_allocations)
+                return nullptr;
+            }
+            u64 const new_used_size = align_up(this->current_memory_used_size, a_align) + a_size * a_count;
+
+            if (new_used_size > this->current_memory_size)
+            {
+                auto allow_growing = this->owned_memory != nullptr;
+                if (!allow_growing)
                 {
-                    this->spill_allocations = std::make_unique<std::vector<std::unique_ptr<u8[], std::function<void(u8*)>>>>();
-                }
-                if (allow_spill_allocations)
-                {
-                    u8* ptr = static_cast<u8*>(operator new[](a_size * a_count, std::align_val_t{a_align}));
-                    auto deleter = [a_align](u8* p) {
-                        operator delete[](p, std::align_val_t{a_align});
-                    };
-                    auto alloc = std::unique_ptr<u8[], std::function<void(u8*)>>(ptr, deleter);
-                    spill_allocations->push_back(std::move(alloc));
-                    return spill_allocations->back().get();
+                    DAXA_DBG_ASSERT_TRUE_M(
+                        false,
+                        std::format(
+                            "MemoryArena \"{}\" ran out of memory (missing_size: {}, total_size: {}, used_size: {}) while trying to allocate: {} (align: {})!",
+                            this->name, new_used_size - this->current_memory_used_size, this->current_memory_size, this->current_memory_used_size, a_size * a_count, a_align));
+                    return nullptr;
                 }
                 else
                 {
-                    return nullptr;
+                    auto previous_memory = this->owned_memory;
+                    auto new_memory_size = std::max(this->current_memory_size * 4ull, a_size * a_count * 2ull + sizeof(void*));
+                    auto new_memory = static_cast<u8*>(::operator new[](new_memory_size, std::align_val_t(alignof(void*))));
+
+                    this->previous_memory_size += this->current_memory_size;
+                    this->current_memory_size = new_memory_size;
+                    this->current_memory_used_size = sizeof(void*);
+                    this->owned_memory_count += 1ull;
+                    this->owned_memory = new_memory;
+                    this->memory = new_memory;
+                    this->total_size = this->previous_memory_size + new_memory_size;
+
+                    *reinterpret_cast<void**>(new_memory) = reinterpret_cast<void*>(previous_memory);
                 }
+            }
+
+            auto new_allocation = this->memory + this->current_memory_used_size;
+            this->current_memory_used_size = new_used_size;
+            this->total_used_size = this->previous_memory_size + this->current_memory_used_size;
+            this->allocations_made += 1;
+            return new_allocation;
+        }
+
+        void clear()
+        {
+            this->previous_memory_size = 0ull;
+            this->total_size = this->current_memory_size;
+
+            void* previous_owned_memory = nullptr;
+            this->owned_memory_count = 0ull;
+            this->current_memory_used_size = 0ull;
+            if (this->owned_memory != nullptr)
+            {
+                previous_owned_memory = *reinterpret_cast<void**>(owned_memory);
+                *reinterpret_cast<void**>(this->owned_memory) = nullptr;
+                this->owned_memory_count = 1ull;
+                this->current_memory_used_size = sizeof(void*);
+            }
+            this->total_used_size = this->current_memory_used_size;
+            this->allocations_made = 0ull;
+            this->name = this->allocate_copy_string(this->name);
+            
+            // Deallocation must happen after we copy the name string!
+            while (previous_owned_memory != nullptr)
+            {
+                void* owned_memory_before_previous = *reinterpret_cast<void**>(previous_owned_memory);
+                ::operator delete[] (static_cast<u8*>(previous_owned_memory), std::align_val_t(alignof(void*)));
+                previous_owned_memory = owned_memory_before_previous;
             }
         }
 
@@ -286,14 +350,14 @@ namespace daxa
         }
 
         template <TrivialType T>
-        auto allocate_trivial_span(usize count) -> std::span<T>
+        auto allocate_trivial_span(u64 count, u64 alignment = alignof(T)) -> std::span<T>
         {
-            auto alloc = allocate(sizeof(T), alignof(T), count);
+            auto alloc = allocate(sizeof(T), alignment, count);
             return std::span<T>{reinterpret_cast<T *>(alloc), count};
         }
 
         template <TrivialType T>
-        auto allocate_trivial_span_fill(usize count, T const & fill_v) -> std::span<T>
+        auto allocate_trivial_span_fill(u64 count, T const & fill_v) -> std::span<T>
         {
             auto alloc = allocate(sizeof(T), alignof(T), count);
             auto span = std::span<T>{reinterpret_cast<T *>(alloc), count};
@@ -306,9 +370,10 @@ namespace daxa
 
         auto allocate_copy_string(std::string_view sv) -> std::string_view
         {
-            auto alloc = allocate_trivial_span<char>(sv.size());
+            auto alloc = allocate_trivial_span<char>(sv.size() + 1u);
             std::memcpy(alloc.data(), sv.data(), sv.size());
-            return std::string_view{alloc.data(), alloc.size()};
+            alloc.data()[sv.size()] = 0u; // makes debugger happy, it does not understand string view.
+            return std::string_view{alloc.data(), alloc.size() - 1u};
         }
     };
 
@@ -640,9 +705,10 @@ namespace daxa
 
         auto empty() const -> bool { return element_count == 0u; }
 
-        auto clone_to_contiguous() const -> std::span<T>
+        auto clone_to_contiguous(MemoryArena* arena = nullptr) const -> std::span<T>
         {
-            std::span<T> ret = this->allocator->allocate_trivial_span<T>(this->element_count);
+            MemoryArena* cloning_arena = arena ? arena : this->allocator;
+            std::span<T> ret = cloning_arena->allocate_trivial_span<T>(this->element_count);
             u32 i = 0;
             for (u32 block = 0; block < BLOCK_COUNT; ++block)
             {

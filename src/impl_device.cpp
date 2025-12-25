@@ -472,7 +472,8 @@ auto create_acceleration_structure_helper(
     auto const & info,
     daxa_BufferId const * buffer,
     u64 const * offset,
-    auto * out_id) -> daxa_Result
+    auto * out_id,
+    bool owns_buffer_external = false) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
     // --- Begin Parameter Validation ---
@@ -511,7 +512,7 @@ auto create_acceleration_structure_helper(
     {
         ret.buffer_id = std::bit_cast<daxa::BufferId>(*buffer);
         ret.offset = *offset;
-        ret.owns_buffer = false;
+        ret.owns_buffer = owns_buffer_external;
     }
     else
     {
@@ -942,6 +943,34 @@ auto daxa_dvc_create_image(daxa_Device self, daxa_ImageInfo const * info, daxa_I
 auto daxa_dvc_create_buffer_from_memory_block(daxa_Device self, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id) -> daxa_Result
 {
     return create_buffer_helper(self, &info->buffer_info, out_id, *info->memory_block, info->offset);
+}
+
+auto daxa_dvc_create_tlas_from_memory_block(daxa_Device self, daxa_MemoryBlockTlasInfo const * info, daxa_TlasId * out_id) -> daxa_Result
+{
+    auto buffer_info = daxa_BufferInfo{
+        .size = info->tlas_info.size,
+        .name = info->tlas_info.name,
+    };
+    daxa_BufferId buffer = {};
+    daxa_Result result = create_buffer_helper(self, &buffer_info, &buffer, *info->memory_block, info->offset);
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    auto buffer_tlas_info = daxa_BufferTlasInfo{
+        .tlas_info = info->tlas_info,
+        .buffer_id = buffer,
+        .offset = {},
+    };
+    u64 const buffer_offset = 0u; // the offset is used for sub allocating the memory block, the tlas is the whole buffer
+    return create_acceleration_structure_helper(
+        self,
+        self->gpu_sro_table.tlas_slots,
+        VK_ACCELERATION_STRUCTURE_TYPE_TOP_LEVEL_KHR,
+        info->tlas_info,
+        &buffer,
+        &buffer_offset, 
+        out_id,
+        true
+    );
 }
 
 auto daxa_dvc_create_image_from_block(daxa_Device self, daxa_MemoryBlockImageInfo const * info, daxa_ImageId * out_id) -> daxa_Result

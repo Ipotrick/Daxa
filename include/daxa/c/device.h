@@ -431,6 +431,15 @@ static daxa_MemoryBlockBufferInfo const DAXA_DEFAULT_MEMORY_BLOCK_BUFFER_INFO = 
 
 typedef struct
 {
+    daxa_TlasInfo tlas_info;
+    daxa_MemoryBlock * memory_block;
+    size_t offset;
+} daxa_MemoryBlockTlasInfo;
+
+static daxa_MemoryBlockTlasInfo const DAXA_DEFAULT_MEMORY_BLOCK_TLAS_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
     daxa_ImageInfo image_info;
     daxa_MemoryBlock * memory_block;
     size_t offset;
@@ -592,6 +601,8 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_image(daxa_Device device, daxa_ImageInfo const * info, daxa_ImageId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_buffer_from_memory_block(daxa_Device device, daxa_MemoryBlockBufferInfo const * info, daxa_BufferId * out_id);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_create_tlas_from_memory_block(daxa_Device device, daxa_MemoryBlockTlasInfo const * info, daxa_TlasId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_image_from_block(daxa_Device device, daxa_MemoryBlockImageInfo const * info, daxa_ImageId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

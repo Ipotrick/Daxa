@@ -388,6 +388,19 @@ namespace daxa
             "failed to create buffer from memory block");
         return id;
     }
+
+    auto Device::create_tlas_from_memory_block(MemoryBlockTlasInfo const & info) -> TlasId
+    {
+        TlasId id = {};
+        check_result(
+            daxa_dvc_create_tlas_from_memory_block(
+                r_cast<daxa_Device>(this->object),
+                r_cast<daxa_MemoryBlockTlasInfo const *>(&info),
+                r_cast<daxa_TlasId *>(&id)),
+            "failed to create tlas from memory block");
+        return id;
+    }
+    
     auto Device::create_image_from_memory_block(MemoryBlockImageInfo const & info) -> ImageId
     {
         ImageId id = {};

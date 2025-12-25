@@ -1124,7 +1124,7 @@ namespace daxa
         return task_image_view;
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo const &
+    DAXA_EXPORT_CXX auto TaskGraph::transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!transient.is_external(), "given view must be transient");
@@ -1134,7 +1134,7 @@ namespace daxa
         return daxa::get<PermIndepTaskBufferInfo::Owned>(impl.global_buffer_infos.at(transient.index).task_buffer_data).info;
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo const &
+    DAXA_EXPORT_CXX auto TaskGraph::transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!transient.is_external(), "given view must be transient");
@@ -1144,7 +1144,7 @@ namespace daxa
         return daxa::get<PermIndepTaskBufferInfo::Owned>(impl.global_buffer_infos.at(transient.index).task_buffer_data).info;
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo const &
+    DAXA_EXPORT_CXX auto TaskGraph::transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!transient.is_external(), "given view must be transient");
@@ -1310,24 +1310,20 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task image id. Please make sure to only use initialized task image ids.");
         if (id.is_external())
         {
-            DAXA_DBG_ASSERT_TRUE_MS(
+            DAXA_DBG_ASSERT_TRUE_M(
                 persistent_image_index_to_local_index.contains(id.index),
-                << "Detected invalid access of persistent task image id "
-                << id.index
-                << " in task graph \""
-                << info.name
-                << "\". Please make sure to declare persistent resource use to each task graph that uses this image with the function use_persistent_image!");
+                std::format("Detected invalid access of persistent task image id {} in task graph \"{}\". "
+                            "Please make sure to declare persistent resource use to each task graph that uses this image with the function use_persistent_image!",
+                            id.index, info.name));
             return TaskImageView{.task_graph_index = this->unique_index, .index = persistent_image_index_to_local_index.at(id.index), .slice = id.slice};
         }
         else
         {
-            DAXA_DBG_ASSERT_TRUE_MS(
+            DAXA_DBG_ASSERT_TRUE_M(
                 id.task_graph_index == this->unique_index,
-                << "Detected invalid access of transient task image id "
-                << (id.index)
-                << " in task graph \""
-                << info.name
-                << "\". Please make sure that you only use transient image within the list they are created in!");
+                std::format("Detected invalid access of transient task image id {} in task graph \"{}\". "
+                            "Please make sure that you only use transient image within the list they are created in!",
+                            id.index, info.name));
             return TaskImageView{.task_graph_index = this->unique_index, .index = id.index, .slice = id.slice};
         }
     }
