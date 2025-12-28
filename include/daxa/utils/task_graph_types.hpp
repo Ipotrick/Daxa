@@ -57,16 +57,19 @@ namespace daxa
     {
         // Concurrent bit: 0
         // Read bit: 1
-        // Write bit: 2
+        // Sampled bit: 2
+        // Write bit: 3
         NONE = 0,
         CONCURRENT_BIT = (1 << 0),
         NON_CONCURRENT_READ = (1 << 1),
+        NON_CONCURRENT_SAMPLED = (1 << 2),
+        NON_CONCURRENT_WRITE = (1 << 3),
         READ = NON_CONCURRENT_READ | CONCURRENT_BIT,
-        WRITE = (1 << 2),
-        READ_WRITE = NON_CONCURRENT_READ | WRITE,
-        WRITE_CONCURRENT = WRITE | CONCURRENT_BIT,
+        SAMPLED = NON_CONCURRENT_SAMPLED | CONCURRENT_BIT,
+        WRITE = NON_CONCURRENT_WRITE,
+        READ_WRITE = NON_CONCURRENT_READ | NON_CONCURRENT_WRITE,
+        WRITE_CONCURRENT = NON_CONCURRENT_WRITE | CONCURRENT_BIT,
         READ_WRITE_CONCURRENT = READ_WRITE | CONCURRENT_BIT,
-        SAMPLED [[deprecated("Use READ instead, API:3.4")]] = READ,
     };
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
@@ -121,13 +124,13 @@ namespace daxa
         static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE = TaskAccess{STAGE, TaskAccessType::READ_WRITE, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::READ_WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
-        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess SAMPLED = READ;
+        static constexpr TaskAccess SAMPLED = TaskAccess{STAGE, TaskAccessType::SAMPLED, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess R = READ;
         static constexpr TaskAccess W = WRITE;
         static constexpr TaskAccess WC = WRITE_CONCURRENT;
         static constexpr TaskAccess RW = READ_WRITE_CONCURRENT;
         static constexpr TaskAccess RWC = READ_WRITE_CONCURRENT;
-        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess S = SAMPLED;
+        static constexpr TaskAccess S = SAMPLED;
     };
 
     struct TaskAccessConsts
@@ -173,7 +176,7 @@ namespace daxa
         static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::WRITE_CONCURRENT};
         static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE};
         static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE_CONCURRENT};
-        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess SAMPLED = READ;
+        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStage::NONE, TaskAccessType::SAMPLED};
 
         static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;

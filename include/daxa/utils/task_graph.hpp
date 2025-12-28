@@ -491,7 +491,7 @@ namespace daxa
             }
 
             template <TaskImageViewOrTaskImageOrImageViewType... TParams>
-            [[deprecated("Use reads instead, API:3.4")]] auto samples(TParams... v) -> TInlineTask &
+            auto samples(TParams... v) -> TInlineTask &
                 requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0)
             {
                 return _process_parameters(TaskAccessType::SAMPLED, STAGE, v...);
@@ -595,7 +595,7 @@ namespace daxa
                 return _process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, STAGE);
             }
 
-            [[deprecated("Use reads instead, API:3.4")]] auto samples(TaskHeadT::Views const & views) -> TInlineTask &
+            auto samples(TaskHeadT::Views const & views) -> TInlineTask &
                 requires(HAS_HEAD)
             {
                 return _process_th_views(views, TaskAccessType::SAMPLED, STAGE);
@@ -663,7 +663,7 @@ namespace daxa
         auto reads_writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        [[deprecated("Use reads instead, API:3.4")]] auto samples(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, value._internal._default_stage, v...); }
+        auto samples(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, value._internal._default_stage, v...); }
         
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
@@ -682,7 +682,7 @@ namespace daxa
         auto reads_writes_concurrent(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        [[deprecated("Use reads instead, API:3.4")]] auto samples(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, stage, v...); }
+        auto samples(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, stage, v...); }
 
 
         template <TaskResourceViewOrResource... TParams>
@@ -749,7 +749,7 @@ namespace daxa
             return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage);
         }
 
-        [[deprecated("Use reads instead, API:3.4")]] auto samples(TaskHeadT::Views const & views) -> TInlineTask &
+        auto samples(TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::SAMPLED, value._internal._default_stage);
@@ -793,7 +793,7 @@ namespace daxa
             return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, stage);
         }
 
-        [[deprecated("Use reads instead, API:3.4")]] auto samples(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto samples(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::SAMPLED, stage);
