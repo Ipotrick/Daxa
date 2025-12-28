@@ -149,7 +149,7 @@ namespace daxa
     {
         switch (task_type)
         {
-        case TaskType::GENERAL: return TaskStage::ANY_COMMAND;
+        case TaskType::GENERAL: return TaskStage::NONE;
         case TaskType::RASTER: return TaskStage::RASTER_SHADER;
         case TaskType::COMPUTE: return TaskStage::COMPUTE_SHADER;
         case TaskType::RAY_TRACING: return TaskStage::RAY_TRACING_SHADER;
@@ -2504,6 +2504,7 @@ namespace daxa
                     }
                 }
                 task_image.usage |= access_to_usage(used_image_t_access);
+                
                 task_image.create_flags |= view_type_to_create_flags(image_attach.view_type);
                 auto [current_image_layout, current_image_access, current_access_concurrency] = task_image_access_to_layout_access(used_image_t_access);
                 image_attach.layout = current_image_layout;
