@@ -709,9 +709,11 @@ namespace daxa
                 value._internal._name = NewTaskHeadInfo::NAME;
             }
             TInlineTask<NewTaskHeadInfo> ret = {};
+
+            TaskStage default_stage = value._internal._default_stage != TaskStage::NONE ? value._internal._default_stage : head_default_stage;
             for (u32 i = 0; i < NewTaskHeadInfo::ATTACHMENT_COUNT; ++i)
             {
-                ret.value._internal._attachments.push_back(detail::convert_to_task_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, head_default_stage));
+                ret.value._internal._attachments.push_back(detail::convert_to_task_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, default_stage));
             }
             ret.value._internal._callback = this->value._internal._callback;
             ret.value._internal._name = this->value._internal._name;
