@@ -1023,6 +1023,8 @@ namespace daxa
 
         DAXA_EXPORT_CXX auto get_debug_string() -> std::string;
         DAXA_EXPORT_CXX auto get_transient_memory_size() -> usize;
+        
+        DAXA_EXPORT_CXX void imgui_ui();
 
       protected:
         template <typename T, typename H_T>

@@ -529,7 +529,7 @@ namespace daxa
     ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(Device & device, BufferInfo const & a_info)
         : actual_ids{std::vector<BufferId>{device.create_buffer(a_info)}},
           latest_access{},
-          info{TaskBufferInfo{.name = a_info.name.c_str().data()}},
+          info{TaskBufferInfo{.name = a_info.name.c_str()}},
           owned_buffer_device{device},
           owned_buffer_info{a_info},
           unique_index{ImplPersistentTaskBufferBlasTlas::exec_unique_next_index++}

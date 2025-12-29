@@ -93,7 +93,7 @@ namespace daxa
         union {
             struct
             {
-                usize size;
+                usize size = {};
             } buffer;
             struct
             {
@@ -110,9 +110,16 @@ namespace daxa
         } info;
     };
 
-    // TODO:
-    // Remove support for external images image view generation
-    // Create all image views for persistent and transient images when allocating and creating them with the taskgraph.
+    union AttachmentShaderBlobAttachmentSection
+    {
+        BufferId* buffer_id;
+        DeviceAddress* buffer_address;
+        TlasId* tlas_id; 
+        DeviceAddress* tlas_address;
+        std::span<ImageViewId> image_view_ids;
+        std::span<ImageViewIndex> image_view_indices;
+    };
+
     struct ImplTask
     {
         std::string_view name = {};                                 
@@ -124,7 +131,7 @@ namespace daxa
         u32 attachment_shader_blob_size = {};                       
         u32 attachment_shader_blob_alignment = {};            
         std::span<std::byte> attachment_shader_blob = {};      
-        std::span<u32> attachment_in_blob_offsets = {};
+        std::span<AttachmentShaderBlobAttachmentSection> attachment_in_blob_sections = {};
         std::span<std::span<ImageViewId>> attachment_image_views = {};
         TaskType task_type = {};                                    
         Queue queue = {};        
@@ -170,6 +177,8 @@ namespace daxa
         
         u32 pre_graph_queue_bits = 0u;
         bool pre_graph_is_general_layout = false;
+        bool was_presented = false;
+        bool is_swapchain_image = false;
         bool owns_resource = false;
         std::optional<Device> device = {};
 
@@ -216,9 +225,16 @@ namespace daxa
         u32 first_task = {};
         u32 task_count = {};
         u32 first_batch = {};
+        u32 batch_count = {};
         u32 queue_bits = {};                                                                // set when compiling
         std::array<std::span<TasksBatch>, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_batches = {};   // set when compiling
         std::span<u32> queue_indices = {};                                                  // set when compiling
+    };
+
+    struct TaskGraphPresent
+    {
+        u32 submit_index = ~0u;
+        Queue queue = QUEUE_MAIN;
     };
 
     struct ImplTaskGraph final : ImplHandle
@@ -241,6 +257,8 @@ namespace daxa
         u32 queue_bits = {};
         daxa::MemoryBlock transient_memory_block = {};
         std::optional<daxa::TransferMemoryPool> staging_memory = {};
+        std::optional<TaskGraphPresent> present = {};
+        ImplTaskResource* swapchain_image = nullptr;
 
         static void zero_ref_callback(ImplHandle const * handle);
     };
