@@ -587,7 +587,7 @@ namespace daxa
         return view();
     }
 
-    auto TaskBuffer::info() const -> TaskBufferInfo const &
+    auto TaskBuffer::info() const -> TaskBufferInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
         return std::get<TaskBufferInfo>(impl.info);
@@ -659,7 +659,7 @@ namespace daxa
         return view();
     }
 
-    auto TaskBlas::info() const -> TaskBlasInfo const &
+    auto TaskBlas::info() const -> TaskBlasInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
         return std::get<TaskBlasInfo>(impl.info);
@@ -725,7 +725,7 @@ namespace daxa
         return view();
     }
 
-    auto TaskTlas::info() const -> TaskTlasInfo const &
+    auto TaskTlas::info() const -> TaskTlasInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
         return std::get<TaskTlasInfo>(impl.info);
@@ -805,7 +805,7 @@ namespace daxa
         return TaskImageView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
-    auto TaskImage::info() const -> TaskImageInfo const &
+    auto TaskImage::info() const -> TaskImageInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskImage *>(this->object);
         return impl.info;

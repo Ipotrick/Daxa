@@ -20,6 +20,8 @@
 #include <daxa/device.hpp>
 #include <daxa/utils/mem.hpp>
 
+#define ENABLE_TASK_GRAPH_MK2 0
+
 namespace daxa
 {
     static inline constexpr usize MAX_TASK_ATTACHMENTS = 48;
@@ -865,7 +867,13 @@ namespace daxa
         std::string name = {};
     };
 
-    struct ImplPersistentTaskBufferBlasTlas;
+    #if ENABLE_TASK_GRAPH_MK2
+        struct ImplExternalResource;
+        using ImplPersistentTaskBufferBlasTlas = ImplExternalResource;
+    #else
+        struct ImplPersistentTaskBufferBlasTlas;
+    #endif
+
     struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBufferBlasTlas *>
     {
         TaskBuffer() = default;
@@ -878,7 +886,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskBufferInfo const &;
+        auto info() const -> TaskBufferInfo;
         auto get_state() const -> TrackedBuffers;
         auto is_owning() const -> bool;
 
@@ -915,7 +923,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskBlasInfo const &;
+        auto info() const -> TaskBlasInfo;
         auto get_state() const -> TrackedBlas;
 
         void set_blas(TrackedBlas const & blas);
@@ -951,7 +959,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskTlasInfo const &;
+        auto info() const -> TaskTlasInfo;
         auto get_state() const -> TrackedTlas;
 
         void set_tlas(TrackedTlas const & tlas);
@@ -978,7 +986,13 @@ namespace daxa
         std::string name = {};
     };
 
-    struct ImplPersistentTaskImage;
+    #if ENABLE_TASK_GRAPH_MK2
+        struct ImplExternalResource;
+        using ImplPersistentTaskImage = ImplExternalResource;
+    #else
+        struct ImplPersistentTaskImage;
+    #endif
+
     struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {
         TaskImage() = default;
@@ -991,7 +1005,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskImageInfo const &;
+        auto info() const -> TaskImageInfo;
         auto get_state() const -> TrackedImages;
 
         void set_images(TrackedImages const & images);
