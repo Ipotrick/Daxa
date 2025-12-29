@@ -601,6 +601,8 @@ namespace daxa
             .wait_timeline_semaphore_count = submit_info.wait_timeline_semaphores.size(),
             .signal_timeline_semaphores = reinterpret_cast<daxa_TimelinePair const *>(submit_info.signal_timeline_semaphores.data()),
             .signal_timeline_semaphore_count = submit_info.signal_timeline_semaphores.size(),
+            .wait_queue_submit_indices = reinterpret_cast<daxa_QueueSubmitIndexPair const *>(submit_info.wait_queue_submit_indices.data()),
+            .wait_queue_submit_indices_count = submit_info.wait_queue_submit_indices.size(),
         };
         check_result(
             daxa_dvc_submit(r_cast<daxa_Device>(this->object), &c_submit_info),
