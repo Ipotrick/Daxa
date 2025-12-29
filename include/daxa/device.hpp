@@ -460,7 +460,7 @@ namespace daxa
     struct PresentInfo
     {
         daxa::Span<BinarySemaphore const> wait_binary_semaphores = {};
-        Swapchain swapchain;
+        Swapchain swapchain = {};
         Queue queue = QUEUE_MAIN;
     };
 

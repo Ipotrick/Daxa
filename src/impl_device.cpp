@@ -265,13 +265,12 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE &&
         info->name.size != 0)
     {
-        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const buffer_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_BUFFER,
             .objectHandle = std::bit_cast<uint64_t>(hot_data.vk_buffer),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = info->name.data,
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &buffer_name_info);
     }
@@ -431,13 +430,12 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_image),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = info->name.data,
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
 
@@ -446,7 +444,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = std::bit_cast<uint64_t>(ret.view_slot.vk_image_view),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = info->name.data,
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_view_name_info);
     }
@@ -561,13 +559,12 @@ auto create_acceleration_structure_helper(
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && ret.info.name.size != 0)
     {
-        auto c_str_arr = r_cast<SmallString const *>(&ret.info.name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_ACCELERATION_STRUCTURE_KHR,
             .objectHandle = std::bit_cast<uint64_t>(hot_data.vk_acceleration_structure),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = ret.info.name.data,
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &swapchain_image_name_info);
     }
@@ -1092,13 +1089,12 @@ auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * inf
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_IMAGE_VIEW);
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_image_view),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = info->name.data,
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &name_info);
     }
@@ -1180,13 +1176,12 @@ auto daxa_dvc_create_sampler(daxa_Device self, daxa_SamplerInfo const * info, da
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
     {
-        auto c_str_arr = r_cast<SmallString const *>(&info->name)->c_str();
         VkDebugUtilsObjectNameInfoEXT const sampler_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SAMPLER,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_sampler),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = info->name.data,
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &sampler_name_info);
     }
@@ -2305,23 +2300,21 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     // Set debug names:
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !self->info.name.view().empty())
     {
-        auto const device_name = self->info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const device_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_DEVICE,
             .objectHandle = std::bit_cast<uint64_t>(self->vk_device),
-            .pObjectName = device_name.data(),
+            .pObjectName = self->info.name.c_str(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_name_info);
 
-        auto const buffer_name = self->info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const device_buffer_device_address_buffer_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_BUFFER,
             .objectHandle = std::bit_cast<uint64_t>(self->buffer_device_address_buffer),
-            .pObjectName = buffer_name.data(),
+            .pObjectName = self->info.name.c_str(),
         };
         self->vkSetDebugUtilsObjectNameEXT(self->vk_device, &device_buffer_device_address_buffer_name_info);
 
@@ -2502,13 +2495,12 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
 
     if ((this->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !image_info.name.empty())
     {
-        auto c_str_arr = image_info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const swapchain_image_name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_image),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = image_info.name.c_str(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_name_info);
 
@@ -2517,7 +2509,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_IMAGE_VIEW,
             .objectHandle = std::bit_cast<uint64_t>(ret.view_slot.vk_image_view),
-            .pObjectName = c_str_arr.data(),
+            .pObjectName = image_info.name.c_str(),
         };
         this->vkSetDebugUtilsObjectNameEXT(this->vk_device, &swapchain_image_view_name_info);
     }
