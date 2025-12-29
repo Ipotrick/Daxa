@@ -1347,10 +1347,6 @@ auto daxa_dvc_queue_wait_idle(daxa_Device self, daxa_Queue queue) -> daxa_Result
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
-    if (queue.index >= self->queue_families[queue.family].queue_count)
-    {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
-    }
     auto result = std::bit_cast<daxa_Result>(vkQueueWaitIdle(self->get_queue(queue).vk_queue));
     _DAXA_RETURN_IF_ERROR(result, result)
     return result;
@@ -1390,6 +1386,49 @@ auto daxa_dvc_oldest_pending_submit_index(daxa_Device self, daxa_u64 * submit_in
     return DAXA_RESULT_SUCCESS;
 }
 
+auto queue_to_queue_index(daxa_Queue queue) -> u32
+{
+    u32 offsets[3] = {
+        0,
+        1,
+        1 + DAXA_MAX_COMPUTE_QUEUE_COUNT,
+    };
+    return offsets[static_cast<u32>(queue.family)] + queue.index;
+}
+
+auto daxa_dvc_latest_queue_submit_index(daxa_Device self, daxa_Queue queue, daxa_u64 * submit_index) -> daxa_Result
+{
+    if (!self->valid_queue(queue))
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
+    }
+    u32 queue_index = queue_to_queue_index(queue);
+    auto& impl_queue = self->queues[queue_index];
+    *submit_index = impl_queue.latest_pending_submit_timeline_value.load();
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_wait_on_submit(daxa_Device self, daxa_WaitOnSubmitInfo const * info) -> daxa_Result
+{
+    if (!self->valid_queue(info->queue))
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
+    }
+    u32 queue_index = queue_to_queue_index(info->queue);
+    auto& impl_queue = self->queues[queue_index];
+
+    VkSemaphoreWaitInfo const vk_semaphore_wait_info{
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO,
+        .pNext = nullptr,
+        .flags = {},
+        .semaphoreCount = 1,
+        .pSemaphores = &impl_queue.gpu_queue_local_timeline,
+        .pValues = &info->queue_submit_index,
+    };
+
+    return static_cast<daxa_Result>(vkWaitSemaphores(self->vk_device, &vk_semaphore_wait_info, info->timeout));
+}
+
 auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
 {
     std::array<u8, 1u << 13u /*8kib*/> stack_memory;
@@ -1401,11 +1440,6 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     }
 
     std::shared_lock lifetime_lock{self->gpu_sro_table.lifetime_lock};
-
-    if (static_cast<u32>(info->queue.index) >= self->queue_families[info->queue.family].queue_count)
-    {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
-    }
 
     for (daxa_ExecutableCommandList commands : std::span{info->command_lists, info->command_list_count})
     {
@@ -1505,6 +1539,14 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
         submit_semaphore_waits.push_back(binary_semaphore->vk_semaphore);
         submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
         submit_semaphore_wait_values.push_back(0);
+    }
+
+    for (auto const & queue_submit_index : std::span{info->wait_queue_submit_indices, info->wait_queue_submit_indices_count})
+    {
+        daxa_ImplDevice::ImplQueue & wait_queue = self->get_queue(queue_submit_index.queue);
+        submit_semaphore_waits.push_back(wait_queue.gpu_queue_local_timeline);
+        submit_semaphore_wait_stage_masks.push_back(VK_PIPELINE_STAGE_ALL_COMMANDS_BIT);
+        submit_semaphore_wait_values.push_back(queue_submit_index.index);
     }
 
     VkTimelineSemaphoreSubmitInfo timeline_info{
@@ -2362,7 +2404,13 @@ auto daxa_ImplDevice::get_queue(daxa_Queue queue) -> daxa_ImplDevice::ImplQueue 
 
 auto daxa_ImplDevice::valid_queue(daxa_Queue queue) -> bool
 {
-    return queue.family < DAXA_QUEUE_FAMILY_MAX_ENUM && queue.index < this->queue_families[queue.family].queue_count;
+    bool const in_range = queue.family < DAXA_QUEUE_FAMILY_MAX_ENUM && queue.index < this->queue_families[queue.family].queue_count;
+    if (in_range)
+    {
+        u32 const queue_index = queue_to_queue_index(queue);
+        return this->queues[queue_index].vk_queue != VK_NULL_HANDLE;
+    }
+    return false; 
 }
 
 auto daxa_ImplDevice::validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice

@@ -204,6 +204,116 @@ namespace tests
         device.destroy_buffer(buffer);
     }
 
+    void submit_index_chain()
+    {
+        daxa::Instance instance = daxa::create_instance({});
+        daxa::Device device = instance.create_device_2(instance.choose_device({}, {}));
+
+        {
+            daxa::ExecutableCommandList commands = {};
+            auto rec = device.create_command_recorder({});
+            commands = rec.complete_current_commands();
+        }
+
+
+        constexpr daxa::u32 initial_value = 42u;
+        // Make buffer for a u32[4] array and write some data into the first element
+        auto buffer = device.create_buffer(daxa::BufferInfo{.size = sizeof(daxa::u32) * 4, .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buffer"});
+        *device.buffer_host_address_as<daxa::u32>(buffer).value() = initial_value;    
+
+        // Instead of semaphores, this test is using submit indices to synchronize queues
+        std::pair<daxa::Queue, daxa::u64> transfer_submit_index = {};
+        {
+            // Copy from index 0 to index 1
+            // Command recorders queue family MUST match the queue it is submitted to.
+            // Commands for a transfer queue MUST ONLY be recorded by a transfer command recorder!
+            // A generic or compute command recorder can not record commands for a transfer queue!
+            // Tho transfer command recorders CAN record commands for any queue.
+            auto rec = device.create_command_recorder({daxa::QueueFamily::TRANSFER});
+            rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
+            rec.copy_buffer_to_buffer({
+                .src_buffer = buffer,
+                .dst_buffer = buffer,
+                .src_offset = sizeof(daxa::u32) * 0,
+                .dst_offset = sizeof(daxa::u32) * 1,
+                .size = sizeof(daxa::u32),
+            });
+            rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
+            auto commands = rec.complete_current_commands();
+            device.submit_commands({
+                .queue = daxa::QUEUE_TRANSFER_0,
+                .command_lists = std::array{commands},
+            });
+            transfer_submit_index = { daxa::QUEUE_TRANSFER_0, device.latest_queue_submit_index(daxa::QUEUE_TRANSFER_0) };
+        }  
+
+        // Instead of semaphores, this test is using submit indices to synchronize queues
+        std::pair<daxa::Queue, daxa::u64> comp1_submit_index = {};
+        {
+            // Copy from index 1 to index 2
+            // Command recorders queue family MUST match the queue it is submitted to.
+            // Commands for a compute queue can only be recorded by a compute or a transfer command recorder!
+            // A generic command recorder is not allowed to record commands for a compute queue!
+            auto rec = device.create_command_recorder({daxa::QueueFamily::COMPUTE});
+            rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_READ_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
+            rec.copy_buffer_to_buffer({
+                .src_buffer = buffer,
+                .dst_buffer = buffer,
+                .src_offset = sizeof(daxa::u32) * 1,
+                .dst_offset = sizeof(daxa::u32) * 2,
+                .size = sizeof(daxa::u32),
+            });
+            rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
+            auto commands = rec.complete_current_commands();
+            device.submit_commands({
+                .queue = daxa::QUEUE_COMPUTE_1,
+                .command_lists = std::array{commands},
+                .wait_queue_submit_indices = std::array{transfer_submit_index},
+            });
+            comp1_submit_index = { daxa::QUEUE_COMPUTE_1, device.latest_queue_submit_index(daxa::QUEUE_COMPUTE_1) };
+        }  
+        
+        // Instead of semaphores, this test is using submit indices to synchronize queues
+        std::pair<daxa::Queue, daxa::u64> mainq_submit_index = {};
+        {
+            // Copy from index 2 to index 3
+            // Any command recorder type can be used to submit commands to the main queue.
+            auto rec = device.create_command_recorder({
+                // daxa::QueueFamily::MAIN // The default is the main queue family
+                // The Queue MUST be main here as its a generic command recorder
+            });
+            rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_READ_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
+            rec.copy_buffer_to_buffer({
+                .src_buffer = buffer,
+                .dst_buffer = buffer,
+                .src_offset = sizeof(daxa::u32) * 2,
+                .dst_offset = sizeof(daxa::u32) * 3,
+                .size = sizeof(daxa::u32),
+            });
+            rec.pipeline_barrier({daxa::AccessConsts::TRANSFER_READ_WRITE, daxa::AccessConsts::TRANSFER_READ_WRITE});
+            auto commands = rec.complete_current_commands();
+            device.submit_commands({
+                // .queue = daxa::QUEUE_MAIN, // The default is the main queue.
+                .command_lists = std::array{commands},
+                .wait_queue_submit_indices = std::array{comp1_submit_index},
+            });
+            mainq_submit_index = { daxa::QUEUE_MAIN, device.latest_queue_submit_index(daxa::QUEUE_MAIN) };
+        }   
+
+        // The submit index waits make sure that the queues submissions are processed in the correct order (transfer0 -> comp0 -> main).
+
+        // Instead of wait idle we can perform a finer grained wait on the specific submit index of a queue:
+        device.wait_on_submit({
+            .queue = mainq_submit_index.first,
+            .queue_submit_index = mainq_submit_index.second,
+        });
+
+        daxa::u32 result = device.buffer_host_address_as<daxa::u32>(buffer).value()[3];
+        DAXA_DBG_ASSERT_TRUE_M(result == initial_value, "operations resulted in incorrect final result!");
+
+        device.destroy_buffer(buffer);
+    }
+
     namespace mesh_shader_test
     {
 
@@ -399,6 +509,7 @@ auto main() -> int
 {
     tests::basics();
     tests::simple_submit_chain();
+    tests::submit_index_chain();
     tests::mesh_shader_test::mesh_shader_tri();
     return 0;
 }

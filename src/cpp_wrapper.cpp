@@ -625,6 +625,22 @@ namespace daxa
         return out_value;
     }
 
+    auto Device::latest_queue_submit_index(daxa::Queue queue) const -> u64
+    {
+        daxa_Result result = DAXA_RESULT_SUCCESS;
+        u64 out_value = {};
+        result = daxa_dvc_latest_queue_submit_index(r_cast<daxa_Device>(this->object), std::bit_cast<daxa_Queue>(queue), &out_value);
+        check_result(result, "failed to get latest queue submit index");
+        return out_value;
+    }
+
+    void Device::wait_on_submit(WaitOnSubmitInfo const & info) const
+    {
+        daxa_Result result = DAXA_RESULT_SUCCESS;
+        result = daxa_dvc_wait_on_submit(r_cast<daxa_Device>(this->object), r_cast<daxa_WaitOnSubmitInfo const *>(&info));
+        check_result(result, "failed to get latest queue submit index");
+    }
+
     void Device::present_frame(PresentInfo const & info)
     {
         daxa_PresentInfo const c_present_info = {

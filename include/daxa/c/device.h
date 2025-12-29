@@ -395,6 +395,12 @@ static daxa_Queue const DAXA_QUEUE_TRANSFER_1 = {DAXA_QUEUE_FAMILY_TRANSFER, 1};
 typedef struct
 {
     daxa_Queue queue;
+    uint64_t index;
+} daxa_QueueSubmitIndexPair;
+
+typedef struct
+{
+    daxa_Queue queue;
     VkPipelineStageFlags wait_stages;
     daxa_ExecutableCommandList const * command_lists;
     uint64_t command_list_count;
@@ -406,6 +412,8 @@ typedef struct
     uint64_t wait_timeline_semaphore_count;
     daxa_TimelinePair const * signal_timeline_semaphores;
     uint64_t signal_timeline_semaphore_count;
+    daxa_QueueSubmitIndexPair const * wait_queue_submit_indices;
+    uint64_t wait_queue_submit_indices_count;
 } daxa_CommandSubmitInfo;
 
 static daxa_CommandSubmitInfo const DAXA_DEFAULT_COMMAND_SUBMIT_INFO = DAXA_ZERO_INIT;
@@ -419,6 +427,19 @@ typedef struct
 } daxa_PresentInfo;
 
 static daxa_PresentInfo const DAXA_DEFAULT_PRESENT_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
+    daxa_Queue queue;
+    uint64_t queue_submit_index;
+    uint64_t timeout;
+} daxa_WaitOnSubmitInfo;
+
+static daxa_WaitOnSubmitInfo const DAXA_DEFAULT_WAIT_ON_SUBMIT_INFO = {
+    .queue = DAXA_ZERO_INIT,
+    .queue_submit_index = DAXA_ZERO_INIT,
+    .timeout = ~0ull,
+};
 
 typedef struct
 {
@@ -734,6 +755,10 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_latest_submit_index(daxa_Device device, daxa_u64 * submit_index);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_oldest_pending_submit_index(daxa_Device device, daxa_u64 * submit_index);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_latest_queue_submit_index(daxa_Device device, daxa_Queue queue, daxa_u64 * submit_index);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_wait_on_submit(daxa_Device device, daxa_WaitOnSubmitInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
