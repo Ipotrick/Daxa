@@ -190,7 +190,7 @@ namespace daxa
     
     void validate_attachment_stages([[maybe_unused]] ImplTaskGraph const & impl, [[maybe_unused]] ImplTask & task)
     {
-#if DAXA_VALIDATION
+#if DAXA_VALIDATION && false
         for_each(
             task.attachments,
             [&](u32, auto & attach)

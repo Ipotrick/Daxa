@@ -170,43 +170,6 @@ namespace daxa
         }
     }
 
-    auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool
-    {
-        switch (task_type)
-        {
-        case TaskType::GENERAL:
-            return true;
-        case TaskType::RASTER:
-            return stage == TaskStage::VERTEX_SHADER ||
-                   stage == TaskStage::TESSELLATION_CONTROL_SHADER ||
-                   stage == TaskStage::TESSELLATION_EVALUATION_SHADER ||
-                   stage == TaskStage::GEOMETRY_SHADER ||
-                   stage == TaskStage::FRAGMENT_SHADER ||
-                   stage == TaskStage::TASK_SHADER ||
-                   stage == TaskStage::MESH_SHADER ||
-                   stage == TaskStage::PRE_RASTERIZATION_SHADERS ||
-                   stage == TaskStage::RASTER_SHADER ||
-                   stage == TaskStage::COLOR_ATTACHMENT ||
-                   stage == TaskStage::DEPTH_STENCIL_ATTACHMENT ||
-                   stage == TaskStage::RESOLVE ||
-                   stage == TaskStage::INDIRECT_COMMAND ||
-                   stage == TaskStage::INDEX_INPUT;
-        case TaskType::COMPUTE:
-            return stage == TaskStage::COMPUTE_SHADER ||
-                   stage == TaskStage::INDIRECT_COMMAND;
-        case TaskType::RAY_TRACING:
-            return stage == TaskStage::RAY_TRACING_SHADER ||
-                   stage == TaskStage::INDIRECT_COMMAND ||
-                   stage == TaskStage::AS_BUILD;
-        case TaskType::TRANSFER:
-            return stage == TaskStage::TRANSFER ||
-                   stage == TaskStage::HOST ||
-                   stage == TaskStage::AS_BUILD;
-        default:
-            return false;
-        }
-    }
-
     auto task_type_default_stage(TaskType task_type) -> TaskStage
     {
         switch (task_type)
@@ -1722,6 +1685,111 @@ namespace daxa
         return task_memory;
     }
 
+    void validate_attachment_stages(ImplTask& task, TaskStage stage, u32 attach_i, std::string_view attach_name)
+    {
+        // Validate stages based on task type:
+        PipelineStageFlags allowed_pipeline_stages = static_cast<PipelineStageFlags>(~0ull);
+        switch (task.task_type)
+        {
+        case TaskType::GENERAL:
+            break;
+        case TaskType::RASTER:
+        {
+            static constexpr TaskStage allowed_stages = TaskStage::VERTEX_SHADER |
+                TaskStage::TESSELLATION_CONTROL_SHADER |
+                TaskStage::TESSELLATION_EVALUATION_SHADER |
+                TaskStage::GEOMETRY_SHADER |
+                TaskStage::FRAGMENT_SHADER |
+                TaskStage::TASK_SHADER |
+                TaskStage::MESH_SHADER |
+                TaskStage::PRE_RASTERIZATION_SHADERS |
+                TaskStage::RASTER_SHADER |
+                TaskStage::COLOR_ATTACHMENT |
+                TaskStage::DEPTH_STENCIL_ATTACHMENT |
+                TaskStage::RESOLVE |
+                TaskStage::INDIRECT_COMMAND |
+                TaskStage::INDEX_INPUT;
+            allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
+            break;
+        }
+        case TaskType::COMPUTE:
+        {
+            static constexpr TaskStage allowed_stages = TaskStage::COMPUTE_SHADER |
+                TaskStage::INDIRECT_COMMAND;
+            allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
+            break;
+        }
+        case TaskType::RAY_TRACING:
+        {
+            static constexpr TaskStage allowed_stages = TaskStage::RAY_TRACING_SHADER |
+                TaskStage::INDIRECT_COMMAND |
+                TaskStage::AS_BUILD;
+            allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
+            break;
+        }
+        case TaskType::TRANSFER:
+        {
+            static constexpr TaskStage allowed_stages = TaskStage::TRANSFER |
+                TaskStage::HOST |
+                TaskStage::AS_BUILD;
+            allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
+            break;
+        }
+        default:
+            break;
+        }
+        PipelineStageFlags present_disallowed_stages = std::bit_cast<PipelineStageFlags>(stage) & ~allowed_pipeline_stages;
+        DAXA_DBG_ASSERT_TRUE_M(
+            present_disallowed_stages == PipelineStageFlagBits::NONE,
+            std::format(
+                "ERROR: The stage (\"{}\") of attachment \"{}\" (index: {}) of task \"{}\" is not allowed for the tasks type \"{}\"! "
+                "The task type \"{}\" allows for the stages \"{}\".",
+                to_string(present_disallowed_stages), attach_name, attach_i, task.name, to_string(task.task_type),
+                to_string(task.task_type), to_string(allowed_pipeline_stages)
+            ).c_str()
+        );
+
+        // Validate stages based on queue:
+        switch (task.queue.family)
+        {
+        case QueueFamily::MAIN:
+        {
+            allowed_pipeline_stages = static_cast<PipelineStageFlags>(~0ull);
+            break;
+        }
+        case QueueFamily::COMPUTE:
+        {
+            static constexpr TaskStage allowed_stages = 
+                TaskStage::INDIRECT_COMMAND |
+                TaskStage::COMPUTE_SHADER |
+                TaskStage::RAY_TRACING_SHADER |
+                TaskStage::TRANSFER |
+                TaskStage::HOST |
+                TaskStage::AS_BUILD;
+            allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
+            break;
+        }
+        case QueueFamily::TRANSFER:
+        {
+            static constexpr TaskStage allowed_stages = TaskStage::TRANSFER |
+                TaskStage::HOST |
+                TaskStage::AS_BUILD;
+            allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
+            break;
+        }
+        }
+        present_disallowed_stages = std::bit_cast<PipelineStageFlags>(stage) & ~allowed_pipeline_stages;
+        DAXA_DBG_ASSERT_TRUE_M(
+            present_disallowed_stages == PipelineStageFlagBits::NONE,
+            std::format(
+                "ERROR: The stage (\"{}\") of attachment \"{}\" (index: {}) in task \"{}\" is not allowed in the tasks queue \"{}\"! "
+                "Queue family \"{}\" allows the following stages: \"{}\".",
+                to_string(present_disallowed_stages), attach_name, attach_i, task.name, to_string(task.queue),
+                to_string(task.queue.family), to_string(allowed_pipeline_stages)
+            ).c_str()
+        );
+    }
+
     void TaskGraph::add_task(
         void (*task_callback)(daxa::TaskInterface, void *),
         u64 * task_callback_memory,
@@ -1734,6 +1802,10 @@ namespace daxa
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_not_compiled(impl);
+
+        /// ==========================================
+        /// ==== CONSTRUCT AND ALLOCATE TASK DATA ====
+        /// ==========================================
 
         queue = queue == QUEUE_NONE ? impl.info.default_queue : queue;
 
@@ -1768,23 +1840,33 @@ namespace daxa
             .submit_index = static_cast<u32>(impl.submits.size()),
         };
 
-        // Translate external to native ids
+        /// ===============================
+        /// ==== EARLY TASK VALIDATION ====
+        /// ===============================
+
+        // Translate external to native ids.
+        // Validate attachment stages.
         {
-            for (TaskAttachmentInfo & attachment : impl_task.attachments)
+            for (u32 attach_i = 0; attach_i < impl_task.attachments.size(); ++attach_i)
             {
+                TaskAttachmentInfo & attachment = impl_task.attachments[attach_i];
                 switch (attachment.type)
                 {
                 case TaskAttachmentType::BUFFER:
                     attachment.value.buffer.translated_view = validate_and_translate_view(impl, attachment.value.buffer.view);
+                    validate_attachment_stages(impl_task, attachment.value.buffer.task_access.stage, attach_i, attachment.value.buffer.name);
                     break;
                 case TaskAttachmentType::BLAS:
                     attachment.value.blas.translated_view = validate_and_translate_view(impl, attachment.value.blas.view);
+                    validate_attachment_stages(impl_task, attachment.value.blas.task_access.stage, attach_i, attachment.value.blas.name);
                     break;
                 case TaskAttachmentType::TLAS:
                     attachment.value.tlas.translated_view = validate_and_translate_view(impl, attachment.value.tlas.view);
+                    validate_attachment_stages(impl_task, attachment.value.tlas.task_access.stage, attach_i, attachment.value.tlas.name);
                     break;
                 case TaskAttachmentType::IMAGE:
                     attachment.value.image.translated_view = validate_and_translate_view(impl, attachment.value.image.view);
+                    validate_attachment_stages(impl_task, attachment.value.image.task_access.stage, attach_i, attachment.value.image.name);
                     break;
                 default:
                     DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE, STRONG LIKELYHOOD OF UNINITIALIZED DATA OR CORRUPTION!");

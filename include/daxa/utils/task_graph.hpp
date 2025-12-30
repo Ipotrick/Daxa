@@ -503,16 +503,15 @@ namespace daxa
 
             static inline constexpr bool HAS_HEAD = !std::is_same_v<TaskHeadT, NoTaskHeadStruct>;
 
-            auto _process_th_views(TaskHeadT::Views const & views, TaskAccessType access = TaskAccessType::NONE, TaskStage stage = TaskStage::NONE, bool keep_access = false) -> TInlineTask &
+            auto _process_th_views(TaskHeadT::Views const & views, TaskAccessType access = TaskAccessType::NONE, TaskStage override_stage = TaskStage::NONE, bool keep_access = false) -> TInlineTask &
             {
                 constexpr bool IS_GENERIC_CALL = STAGE == TaskStage::NONE;
                 if constexpr (!IS_GENERIC_CALL)
                 {
-                    stage = STAGE;
+                    override_stage = STAGE;
                 }
 
                 TaskStage default_stage = task_type_default_stage(_internal._task_type);
-                stage = replace_joker_stage(stage, default_stage);
 
                 auto av = views.convert_to_array(); // converts views to flat array
                 for (u32 i = 0; i < TaskHeadT::ATTACHMENT_COUNT; ++i)
@@ -526,9 +525,10 @@ namespace daxa
                         DAXA_DBG_ASSERT_TRUE_M(!buffer_ptr->is_empty(), error_message_unassigned_buffer_view(attach.value.buffer.name, _internal._name));
                         if (!keep_access)
                         {
-                            attach.value.buffer.task_access.stage = stage;
+                            attach.value.buffer.task_access.stage = override_stage;
                             attach.value.buffer.task_access.type = access;
                         }
+                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
                         attach.value.buffer.view = *buffer_ptr;
                     }
                     else if (TaskImageView * image_ptr = daxa::get_if<TaskImageView>(&av[i]); image_ptr != nullptr)
@@ -536,9 +536,10 @@ namespace daxa
                         DAXA_DBG_ASSERT_TRUE_M(!image_ptr->is_empty(), error_message_unassigned_image_view(attach.value.image.name, _internal._name));
                         if (!keep_access)
                         {
-                            attach.value.image.task_access.stage = stage;
+                            attach.value.image.task_access.stage = override_stage;
                             attach.value.image.task_access.type = access;
                         }
+                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
                         attach.value.image.view = *image_ptr;
                     }
                     else if (TaskBlasView * blas_ptr = daxa::get_if<TaskBlasView>(&av[i]); blas_ptr != nullptr)
@@ -546,9 +547,10 @@ namespace daxa
                         DAXA_DBG_ASSERT_TRUE_M(!blas_ptr->is_empty(), error_message_unassigned_tlas_view(attach.value.blas.name, _internal._name));
                         if (!keep_access)
                         {
-                            attach.value.blas.task_access.stage = stage;
+                            attach.value.blas.task_access.stage = override_stage;
                             attach.value.blas.task_access.type = access;
                         }
+                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
                         attach.value.blas.view = *blas_ptr;
                     }
                     else if (TaskTlasView * tlas_ptr = daxa::get_if<TaskTlasView>(&av[i]); tlas_ptr != nullptr)
@@ -556,9 +558,10 @@ namespace daxa
                         DAXA_DBG_ASSERT_TRUE_M(!tlas_ptr->is_empty(), error_message_unassigned_blas_view(attach.value.tlas.name, _internal._name));
                         if (!keep_access)
                         {
-                            attach.value.tlas.task_access.stage = stage;
+                            attach.value.tlas.task_access.stage = override_stage;
                             attach.value.tlas.task_access.type = access;
                         }
+                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
                         attach.value.tlas.view = *tlas_ptr;
                     }
                 }

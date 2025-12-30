@@ -106,43 +106,6 @@ namespace daxa
         }
     }
 
-    auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool
-    {
-        switch (task_type)
-        {
-        case TaskType::GENERAL:
-            return true;
-        case TaskType::RASTER:
-            return stage == TaskStage::VERTEX_SHADER ||
-                   stage == TaskStage::TESSELLATION_CONTROL_SHADER ||
-                   stage == TaskStage::TESSELLATION_EVALUATION_SHADER ||
-                   stage == TaskStage::GEOMETRY_SHADER ||
-                   stage == TaskStage::FRAGMENT_SHADER ||
-                   stage == TaskStage::TASK_SHADER ||
-                   stage == TaskStage::MESH_SHADER ||
-                   stage == TaskStage::PRE_RASTERIZATION_SHADERS ||
-                   stage == TaskStage::RASTER_SHADER ||
-                   stage == TaskStage::COLOR_ATTACHMENT ||
-                   stage == TaskStage::DEPTH_STENCIL_ATTACHMENT ||
-                   stage == TaskStage::RESOLVE ||
-                   stage == TaskStage::INDIRECT_COMMAND ||
-                   stage == TaskStage::INDEX_INPUT;
-        case TaskType::COMPUTE:
-            return stage == TaskStage::COMPUTE_SHADER ||
-                   stage == TaskStage::INDIRECT_COMMAND;
-        case TaskType::RAY_TRACING:
-            return stage == TaskStage::RAY_TRACING_SHADER ||
-                   stage == TaskStage::INDIRECT_COMMAND ||
-                   stage == TaskStage::AS_BUILD;
-        case TaskType::TRANSFER:
-            return stage == TaskStage::TRANSFER ||
-                   stage == TaskStage::HOST ||
-                   stage == TaskStage::AS_BUILD;
-        default:
-            return false;
-        }
-    }
-
     auto task_type_default_stage(TaskType task_type) -> TaskStage
     {
         switch (task_type)
