@@ -94,14 +94,7 @@ namespace daxa
                                      PipelineStageFlagBits::PipelineStageFlagBits::TASK_SHADER |
                                      PipelineStageFlagBits::PipelineStageFlagBits::MESH_SHADER)
                                         .data,
-        RASTER_SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::VERTEX_SHADER |
-                         PipelineStageFlagBits::PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER |
-                         PipelineStageFlagBits::PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER |
-                         PipelineStageFlagBits::PipelineStageFlagBits::GEOMETRY_SHADER |
-                         PipelineStageFlagBits::PipelineStageFlagBits::FRAGMENT_SHADER |
-                         PipelineStageFlagBits::PipelineStageFlagBits::TASK_SHADER |
-                         PipelineStageFlagBits::PipelineStageFlagBits::MESH_SHADER)
-                            .data,
+        RASTER_SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS).data,
         COMPUTE_SHADER = (PipelineStageFlagBits::COMPUTE_SHADER).data,
         RAY_TRACING_SHADER = (PipelineStageFlagBits::RAY_TRACING_SHADER).data,
         SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::VERTEX_SHADER |
@@ -540,6 +533,7 @@ namespace daxa
         char const * name = {};
         TaskAccess task_access = {};
         Access access = {};
+        u8 shader_array_size = {};
         bool shader_as_address = {};
     };
 
@@ -1426,8 +1420,8 @@ namespace daxa
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
 #define DAXA_TH_BLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)
 #define DAXA_TH_TLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 0)
-#define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_as_address = true)
-#define DAXA_TH_TLAS_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_as_address = false)
+#define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
+#define DAXA_TH_TLAS_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)
 
     template <typename BufFn, typename ImgFn>
     constexpr void for_each(std::span<TaskAttachmentInfo> attachments, BufFn && buf_fn, ImgFn && img_fn)

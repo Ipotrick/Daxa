@@ -1530,18 +1530,12 @@ namespace daxa
                 {
                     current_offset = align_up(current_offset, sizeof(ImageViewIndex));
                     additional_size = sizeof(ImageViewIndex) * attachment_info.value.image.shader_array_size;
+                    task.attachment_shader_blob_sections[attach_i].image_view_indices = { reinterpret_cast<ImageViewIndex *>(task.attachment_shader_blob.data() + current_offset), attachment_info.value.image.shader_array_size };
                 }
                 else
                 {
                     current_offset = align_up(current_offset, sizeof(ImageViewId));
                     additional_size = sizeof(ImageViewId) * attachment_info.value.image.shader_array_size;
-                }
-                if (attachment_info.value.image.shader_as_index)
-                {
-                    task.attachment_shader_blob_sections[attach_i].image_view_indices = { reinterpret_cast<ImageViewIndex *>(task.attachment_shader_blob.data() + current_offset), attachment_info.value.image.shader_array_size };
-                }
-                else
-                {
                     task.attachment_shader_blob_sections[attach_i].image_view_ids = { reinterpret_cast<ImageViewId *>(task.attachment_shader_blob.data() + current_offset), attachment_info.value.image.shader_array_size };
                 }
                 for (u32 i = 0; i < attachment_info.value.image.shader_array_size; ++i)
@@ -1772,7 +1766,6 @@ namespace daxa
             .task_type = task_type,
             .queue = queue,
             .submit_index = static_cast<u32>(impl.submits.size()),
-            .runtime_images_last_execution = impl.task_memory.allocate_trivial_span_fill<ImageId>(attachments.size(), daxa::ImageId{}),
         };
 
         // Translate external to native ids
@@ -2813,6 +2806,10 @@ namespace daxa
 
         for (u32 task_i = 0; task_i < impl.tasks.size(); ++task_i)
         {
+            if (task_i == 58)
+            {
+                // __debugbreak();
+            }
             ImplTask & task = impl.tasks[task_i];
             initialize_attachment_ids(impl, task);
             initialize_attachment_image_views(impl, task);
@@ -2866,12 +2863,12 @@ namespace daxa
         // Memory and exeuction dependencies are done via semaphores.
         // Only image initializations require additional pipeline barriers.
         // Image initialization is inserted in the first submit for the queue that uses the image, before all other commands.
-        auto image_initializations = tmp_memory.allocate_trivial_span<std::array<ArenaDynamicArray8k<ImageBarrierInfo>, DAXA_MAX_TOTAL_QUEUE_COUNT>>(impl.submits.size());
+        auto image_initializations = tmp_memory.allocate_trivial_span<std::array<ArenaDynamicArray8k<TaskImageBarrier>, DAXA_MAX_TOTAL_QUEUE_COUNT>>(impl.submits.size());
         for (u32 s = 0; s < impl.submits.size(); ++s)
         {
             for (u32 q = 0; q < DAXA_MAX_TOTAL_QUEUE_COUNT; ++q)
             {
-                image_initializations[s][q] = ArenaDynamicArray8k<ImageBarrierInfo>(&tmp_memory);
+                image_initializations[s][q] = ArenaDynamicArray8k<TaskImageBarrier>(&tmp_memory);
             }
         }
 
@@ -3003,9 +3000,12 @@ namespace daxa
                         AccessGroup const & first_access_group = resource->access_timeline[0];
                         u32 const first_access_submit = first_access_group.tasks[0].task->submit_index;
                         u32 const first_access_queue_index = queue_bits_to_first_queue_index(first_access_group.queue_bits);
-                        image_initializations[first_access_submit][first_access_queue_index].push_back(ImageBarrierInfo{
+                        image_initializations[first_access_submit][first_access_queue_index].push_back(TaskImageBarrier{
+                            .src_access_group = nullptr,
+                            .dst_access_group = &first_access_group,
+                            .src_access = {},
                             .dst_access = Access{first_access_group.stages, to_access_type(first_access_group.type)},
-                            .image_id = external->id.image,
+                            .resource = resource,
                             .layout_operation = ImageLayoutOperation::TO_GENERAL,
                         });
                     }
@@ -3082,7 +3082,13 @@ namespace daxa
                 auto const & initialization_barriers = image_initializations[submit_index][queue_index];
                 for (u32 ib = 0; ib < initialization_barriers.size(); ++ib)
                 {
-                    cr.pipeline_image_barrier(initialization_barriers[ib]);
+                    TaskImageBarrier const & task_image_barrier = initialization_barriers[ib];
+                    cr.pipeline_image_barrier(ImageBarrierInfo{
+                        .src_access = task_image_barrier.src_access,
+                        .dst_access = task_image_barrier.dst_access,
+                        .image_id = task_image_barrier.resource->id.image,
+                        .layout_operation = task_image_barrier.layout_operation,
+                    });
                 }
 
                 // Record task batches and inter batch barriers:
@@ -3114,10 +3120,10 @@ namespace daxa
                     }
 
                     // DEBUG FULL BARRIER
-                    cr.pipeline_barrier(BarrierInfo{
-                        .src_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
-                        .dst_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
-                    });
+                    // cr.pipeline_barrier(BarrierInfo{
+                    //     .src_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
+                    //     .dst_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
+                    // });
 
                     // Record Tasks
                     for (u32 batch_task_i = 0; batch_task_i < batch.tasks.size(); ++batch_task_i)
@@ -3137,7 +3143,7 @@ namespace daxa
                             {
                                 bool const is_null_attachment = task.attachment_resources[attach_i] == nullptr;
                                 AttachmentShaderBlobSection asb_section = task.attachment_shader_blob_sections[attach_i];
-                                if (task.attachments[attach_i].type == TaskAttachmentType::BUFFER && !task.attachments[attach_i].value.buffer.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
+                                if (task.attachments[attach_i].type == TaskAttachmentType::BUFFER && task.attachments[attach_i].value.buffer.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
                                 {
                                     DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i]->id.buffer).value();
                                     DeviceAddress const test_address = *asb_section.buffer_address;
@@ -3149,13 +3155,13 @@ namespace daxa
                                     BufferId const test_id = *asb_section.buffer_id;
                                     DAXA_DBG_ASSERT_TRUE_M(real_id == test_id && device.is_id_valid(test_id), "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
                                 }
-                                if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && !task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.tlas.shader_array_size > 0)
+                                if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.tlas.shader_array_size > 0)
                                 {
                                     DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i]->id.tlas).value();
                                     DeviceAddress const test_address = *asb_section.tlas_address;
                                     DAXA_DBG_ASSERT_TRUE_M(real_address == test_address, "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
                                 }
-                                if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && !task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
+                                if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && !task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.tlas.shader_array_size > 0)
                                 {
                                     TlasId const real_id = is_null_attachment ? TlasId{} : task.attachment_resources[attach_i]->id.tlas;
                                     TlasId const test_id = *asb_section.tlas_id;

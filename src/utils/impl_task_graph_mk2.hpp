@@ -136,7 +136,6 @@ namespace daxa
         TaskType task_type = {};                                    
         Queue queue = {};        
         u32 submit_index = {};                                   
-        std::span<ImageId> runtime_images_last_execution = {};      // set when executing // Used to verify image view cache
         u32 final_schedule_batch = {};
     };
 

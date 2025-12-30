@@ -247,6 +247,7 @@ namespace daxa
                 info.name = attachment_decl.value.tlas.name;
                 info.task_access = attachment_decl.value.tlas.task_access;
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
+                info.shader_array_size = attachment_decl.value.tlas.shader_array_size;
                 info.shader_as_address = attachment_decl.value.tlas.shader_as_address;
                 if (auto * ptr = get_if<TaskTlasView>(&view))
                 {
