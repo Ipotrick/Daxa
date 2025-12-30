@@ -110,7 +110,7 @@ namespace daxa
         } info;
     };
 
-    union AttachmentShaderBlobAttachmentSection
+    union AttachmentShaderBlobSection
     {
         BufferId* buffer_id;
         DeviceAddress* buffer_address;
@@ -131,7 +131,7 @@ namespace daxa
         u32 attachment_shader_blob_size = {};                       
         u32 attachment_shader_blob_alignment = {};            
         std::span<std::byte> attachment_shader_blob = {};      
-        std::span<AttachmentShaderBlobAttachmentSection> attachment_in_blob_sections = {};
+        std::span<AttachmentShaderBlobSection> attachment_shader_blob_sections = {};
         std::span<std::span<ImageViewId>> attachment_image_views = {};
         TaskType task_type = {};                                    
         Queue queue = {};        

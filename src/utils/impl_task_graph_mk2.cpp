@@ -1399,18 +1399,22 @@ namespace daxa
         for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
         {
             TaskAttachmentInfo & attachment_info = task.attachments[attach_i];
-            if (attachment_info.type == TaskAttachmentType::IMAGE && !attachment_info.value.image.translated_view.is_null())
+            if (attachment_info.type == TaskAttachmentType::IMAGE)
             {
-                ImplTaskResource const & resource = impl.resources[attachment_info.value.image.translated_view.index];
+                ImplTaskResource const * resource = nullptr;
+                if (!attachment_info.value.image.translated_view.is_null())
+                {
+                    resource = &impl.resources[attachment_info.value.image.translated_view.index];
+                }
 
                 if (attachment_info.value.image.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS)
                 {
                     for (u32 mip = 0; mip < attachment_info.value.image.shader_array_size; ++mip)
                     {
                         ImageViewId view = {};
-                        if (resource.external == nullptr && mip < attachment_info.value.image.translated_view.slice.level_count)
+                        if (resource != nullptr && resource->external == nullptr && mip < attachment_info.value.image.translated_view.slice.level_count)
                         {
-                            ImageId id = resource.id.image;
+                            ImageId id = resource->id.image;
                             view = id.default_view();
                             ImageMipArraySlice mip_slice = attachment_info.value.image.translated_view.slice;
                             mip_slice.base_mip_level = mip + attachment_info.value.image.translated_view.slice.base_mip_level;
@@ -1433,9 +1437,9 @@ namespace daxa
                 else
                 {
                     ImageViewId view = {};
-                    if (resource.external == nullptr)
+                    if (resource != nullptr && resource->external == nullptr)
                     {
-                        ImageId id = resource.id.image;
+                        ImageId id = resource->id.image;
                         view = id.default_view();
                         auto default_view_info = impl.info.device.image_view_info(id.default_view()).value();
                         auto attachment_view_type = attachment_info.value.image.view_type != ImageViewType::MAX_ENUM ? attachment_info.value.image.view_type : default_view_info.type;
@@ -1463,8 +1467,7 @@ namespace daxa
         for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
         {
             TaskAttachmentInfo const & attachment_info = task.attachments[attach_i];
-            u64 blob_offset = {};
-            u64 blob_size = {};
+            u64 additional_size = {};
             switch (attachment_info.type)
             {
             case TaskAttachmentType::UNDEFINED:
@@ -1472,124 +1475,130 @@ namespace daxa
                 break;
             case TaskAttachmentType::BUFFER:
             {
-                if (attachment_info.value.buffer.shader_array_size == 0 ||
-                    attachment_info.value.buffer.translated_view.is_null())
+                if (attachment_info.value.buffer.shader_array_size == 0)
                 {
-                    task.attachment_in_blob_sections[attach_i].buffer_address = {};
+                    task.attachment_shader_blob_sections[attach_i].buffer_address = {};
                     break;
                 }
-                ImplTaskResource const & resource = impl.resources[attachment_info.value.buffer.translated_view.index];
+                ImplTaskResource const * resource = nullptr;
+                if (!attachment_info.value.buffer.translated_view.is_null())
+                {
+                    resource = &impl.resources[attachment_info.value.buffer.translated_view.index];
+                }
                 if (attachment_info.value.buffer.shader_as_address)
                 {
-                    blob_offset = align_up(current_offset, sizeof(DeviceAddress));
-                    blob_size = sizeof(DeviceAddress);
+                    current_offset = align_up(current_offset, sizeof(DeviceAddress));
+                    additional_size = sizeof(DeviceAddress);
 
                     DeviceAddress address = {};
-                    if (resource.external == nullptr)
+                    if (resource != nullptr && resource->external == nullptr)
                     {
-                        address = impl.info.device.device_address(resource.id.buffer).value();
+                        address = impl.info.device.device_address(resource->id.buffer).value();
                     }
-                    *reinterpret_cast<DeviceAddress *>(task.attachment_shader_blob.data() + blob_offset) = address;
-                    task.attachment_in_blob_sections[attach_i].buffer_address = reinterpret_cast<DeviceAddress *>(task.attachment_shader_blob.data() + blob_offset);
+                    task.attachment_shader_blob_sections[attach_i].buffer_address = reinterpret_cast<DeviceAddress *>(task.attachment_shader_blob.data() + current_offset);
+                    *task.attachment_shader_blob_sections[attach_i].buffer_address = address;
                 }
                 else
                 {
-                    blob_offset = align_up(current_offset, sizeof(BufferId));
-                    blob_size = sizeof(BufferId);
+                    current_offset = align_up(current_offset, sizeof(BufferId));
+                    additional_size = sizeof(BufferId);
 
                     BufferId id = {};
-                    if (resource.external == nullptr)
+                    if (resource != nullptr && resource->external == nullptr)
                     {
-                        id = resource.id.buffer;
+                        id = resource->id.buffer;
                     }
-                    *reinterpret_cast<BufferId *>(task.attachment_shader_blob.data() + blob_offset) = id;
-                    task.attachment_in_blob_sections[attach_i].buffer_id = reinterpret_cast<BufferId *>(task.attachment_shader_blob.data() + blob_offset);
+                    *reinterpret_cast<BufferId *>(task.attachment_shader_blob.data() + current_offset) = id;
+                    task.attachment_shader_blob_sections[attach_i].buffer_id = reinterpret_cast<BufferId *>(task.attachment_shader_blob.data() + current_offset);
+                    *task.attachment_shader_blob_sections[attach_i].buffer_id = id;
                 }
             }
             break;
             case TaskAttachmentType::TLAS:
             {
-                if (attachment_info.value.tlas.shader_array_size == 0 ||
-                    attachment_info.value.tlas.translated_view.is_null())
+                if (attachment_info.value.tlas.shader_array_size == 0)
                 {
-                    task.attachment_in_blob_sections[attach_i].tlas_id = {};
+                    task.attachment_shader_blob_sections[attach_i].tlas_id = {};
                     break;
                 }
-                ImplTaskResource const & resource = impl.resources[attachment_info.value.buffer.translated_view.index];
+                ImplTaskResource const * resource = nullptr;
+                if (!attachment_info.value.tlas.translated_view.is_null())
+                {
+                    resource = &impl.resources[attachment_info.value.tlas.translated_view.index];
+                }
                 if (attachment_info.value.tlas.shader_as_address)
                 {
-                    blob_offset = align_up(current_offset, sizeof(DeviceAddress));
-                    blob_size = sizeof(DeviceAddress);
+                    current_offset = align_up(current_offset, sizeof(DeviceAddress));
+                    additional_size = sizeof(DeviceAddress);
 
                     DeviceAddress address = {};
-                    if (resource.external == nullptr)
+                    if (resource != nullptr && resource->external == nullptr)
                     {
-                        address = impl.info.device.device_address(resource.id.tlas).value();
+                        address = impl.info.device.device_address(resource->id.tlas).value();
                     }
-                    *reinterpret_cast<DeviceAddress *>(task.attachment_shader_blob.data() + blob_offset) = address;
-                    task.attachment_in_blob_sections[attach_i].tlas_address = reinterpret_cast<DeviceAddress *>(task.attachment_shader_blob.data() + blob_offset);
+                    task.attachment_shader_blob_sections[attach_i].tlas_address = reinterpret_cast<DeviceAddress *>(task.attachment_shader_blob.data() + current_offset);
+                    *task.attachment_shader_blob_sections[attach_i].tlas_address = address;
                 }
                 else
                 {
-                    blob_offset = align_up(current_offset, sizeof(TlasId));
-                    blob_size = sizeof(TlasId);
+                    current_offset = align_up(current_offset, sizeof(TlasId));
+                    additional_size = sizeof(TlasId);
 
                     TlasId id = {};
-                    if (resource.external == nullptr)
+                    if (resource != nullptr && resource->external == nullptr)
                     {
-                        id = resource.id.tlas;
+                        id = resource->id.tlas;
                     }
-                    *reinterpret_cast<TlasId *>(task.attachment_shader_blob.data() + blob_offset) = id;
-                    task.attachment_in_blob_sections[attach_i].tlas_id = reinterpret_cast<TlasId *>(task.attachment_shader_blob.data() + blob_offset);
+                    task.attachment_shader_blob_sections[attach_i].tlas_id = reinterpret_cast<TlasId *>(task.attachment_shader_blob.data() + current_offset);
+                    *task.attachment_shader_blob_sections[attach_i].tlas_id = id;
                 }
             }
             break;
             case TaskAttachmentType::BLAS:
-                // BLAS can not be in the attachment blob
+                DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE! THIS STRONGLY INDICATES A DATA CORRUPTION OR UNINITIALIZED DATA!");
                 break;
             case TaskAttachmentType::IMAGE:
             {
-                if (attachment_info.value.image.shader_array_size == 0 ||
-                    attachment_info.value.image.translated_view.is_null())
+                if (attachment_info.value.image.shader_array_size == 0)
                 {
-                    task.attachment_in_blob_sections[attach_i].image_view_ids = {};
+                    task.attachment_shader_blob_sections[attach_i].image_view_ids = {};
                     break;
                 }
                 if (attachment_info.value.image.shader_as_index)
                 {
-                    blob_offset = align_up(current_offset, sizeof(ImageViewIndex));
-                    blob_size = sizeof(ImageViewIndex) * attachment_info.value.image.shader_array_size;
+                    current_offset = align_up(current_offset, sizeof(ImageViewIndex));
+                    additional_size = sizeof(ImageViewIndex) * attachment_info.value.image.shader_array_size;
                 }
                 else
                 {
-                    blob_offset = align_up(current_offset, sizeof(ImageViewId));
-                    blob_size = sizeof(ImageViewId) * attachment_info.value.image.shader_array_size;
+                    current_offset = align_up(current_offset, sizeof(ImageViewId));
+                    additional_size = sizeof(ImageViewId) * attachment_info.value.image.shader_array_size;
                 }
                 if (attachment_info.value.image.shader_as_index)
                 {
-                    task.attachment_in_blob_sections[attach_i].image_view_indices = { reinterpret_cast<ImageViewIndex *>(task.attachment_shader_blob.data() + blob_offset), attachment_info.value.image.shader_array_size };
+                    task.attachment_shader_blob_sections[attach_i].image_view_indices = { reinterpret_cast<ImageViewIndex *>(task.attachment_shader_blob.data() + current_offset), attachment_info.value.image.shader_array_size };
                 }
                 else
                 {
-                    task.attachment_in_blob_sections[attach_i].image_view_ids = { reinterpret_cast<ImageViewId *>(task.attachment_shader_blob.data() + blob_offset), attachment_info.value.image.shader_array_size };
+                    task.attachment_shader_blob_sections[attach_i].image_view_ids = { reinterpret_cast<ImageViewId *>(task.attachment_shader_blob.data() + current_offset), attachment_info.value.image.shader_array_size };
                 }
                 for (u32 i = 0; i < attachment_info.value.image.shader_array_size; ++i)
                 {
                     ImageViewId id = task.attachment_image_views[attach_i][i];
                     if (attachment_info.value.image.shader_as_index)
                     {
-                        *reinterpret_cast<ImageViewIndex *>(task.attachment_shader_blob.data() + blob_offset + sizeof(ImageViewIndex) * i) = static_cast<ImageViewIndex>(id.index);
+                        task.attachment_shader_blob_sections[attach_i].image_view_indices[i] = static_cast<ImageViewIndex>(id.index);
                     }
                     else
                     {
-                        *reinterpret_cast<ImageViewId *>(task.attachment_shader_blob.data() + blob_offset + sizeof(ImageViewId) * i) = id;
+                        task.attachment_shader_blob_sections[attach_i].image_view_ids[i] = id;
                     }
                 }
             }
             break;
             }
 
-            current_offset = blob_offset + blob_size;
+            current_offset += additional_size;
         }
     }
 
@@ -1684,7 +1693,8 @@ namespace daxa
     {
         DAXA_DBG_ASSERT_TRUE_M(resource.external != nullptr, "IMPOSSIBLE CASE, PATCHING IS ONLY POSSIBLE FOR EXTERNAL RESOURCES!");
         TaskAttachmentInfo const & attachment_info = task.attachments[attach_i];
-        auto asb_section = task.attachment_in_blob_sections[attach_i];
+        auto asb_section = task.attachment_shader_blob_sections[attach_i];
+
         switch (attachment_info.type)
         {
         case TaskAttachmentType::UNDEFINED:
@@ -1795,7 +1805,7 @@ namespace daxa
             .attachment_shader_blob_size = attachment_shader_blob_size,
             .attachment_shader_blob_alignment = attachment_shader_blob_alignment,
             .attachment_shader_blob = impl.task_memory.allocate_trivial_span<std::byte>(attachment_shader_blob_size, attachment_shader_blob_alignment),
-            .attachment_in_blob_sections = impl.task_memory.allocate_trivial_span<AttachmentShaderBlobAttachmentSection>(attachments.size()),
+            .attachment_shader_blob_sections = impl.task_memory.allocate_trivial_span<AttachmentShaderBlobSection>(attachments.size()),
             .attachment_image_views = attachment_image_views,
             .task_type = task_type,
             .queue = queue,
@@ -2839,9 +2849,9 @@ namespace daxa
         // External resource values are left empty here.
         // The external resource ids, views and attachment shader blob entries are patched when external resources change once before execution.
 
-        for (u32 t = 0; t < impl.tasks.size(); ++t)
+        for (u32 task_i = 0; task_i < impl.tasks.size(); ++task_i)
         {
-            ImplTask & task = impl.tasks.at(t);
+            ImplTask & task = impl.tasks[task_i];
             initialize_attachment_ids(impl, task);
             initialize_attachment_image_views(impl, task);
             initialize_attachment_shader_blob(impl, task);
@@ -3141,6 +3151,12 @@ namespace daxa
                         });
                     }
 
+                    // DEBUG FULL BARRIER
+                    cr.pipeline_barrier(BarrierInfo{
+                        .src_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
+                        .dst_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
+                    });
+
                     // Record Tasks
                     for (u32 batch_task_i = 0; batch_task_i < batch.tasks.size(); ++batch_task_i)
                     {
@@ -3152,6 +3168,61 @@ namespace daxa
                         ImplTask & task = impl.tasks[task_i];
 
                         DAXA_DBG_ASSERT_TRUE_M(&task == batch.tasks[batch_task_i].first, "IMPOSSIBLE CASE! THIS INDICATES UNINITIALIZED MEMORY OR DATA CORRUPTION!");
+
+                        // Validate Shader Attachment Blob
+                        {
+                            for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
+                            {
+                                bool const is_null_attachment = task.attachment_resources[attach_i] == nullptr;
+                                AttachmentShaderBlobSection asb_section = task.attachment_shader_blob_sections[attach_i];
+                                if (task.attachments[attach_i].type == TaskAttachmentType::BUFFER && !task.attachments[attach_i].value.buffer.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
+                                {
+                                    DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i]->id.buffer).value();
+                                    DeviceAddress const test_address = *asb_section.buffer_address;
+                                    DAXA_DBG_ASSERT_TRUE_M(real_address == test_address, "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
+                                }
+                                if (task.attachments[attach_i].type == TaskAttachmentType::BUFFER && !task.attachments[attach_i].value.buffer.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
+                                {
+                                    BufferId const real_id = is_null_attachment ? BufferId{} : task.attachment_resources[attach_i]->id.buffer;
+                                    BufferId const test_id = *asb_section.buffer_id;
+                                    DAXA_DBG_ASSERT_TRUE_M(real_id == test_id && device.is_id_valid(test_id), "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
+                                }
+                                if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && !task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.tlas.shader_array_size > 0)
+                                {
+                                    DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i]->id.tlas).value();
+                                    DeviceAddress const test_address = *asb_section.tlas_address;
+                                    DAXA_DBG_ASSERT_TRUE_M(real_address == test_address, "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
+                                }
+                                if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && !task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
+                                {
+                                    TlasId const real_id = is_null_attachment ? TlasId{} : task.attachment_resources[attach_i]->id.tlas;
+                                    TlasId const test_id = *asb_section.tlas_id;
+                                    DAXA_DBG_ASSERT_TRUE_M(real_id == test_id && device.is_id_valid(test_id), "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
+                                }
+                                if (task.attachments[attach_i].type == TaskAttachmentType::IMAGE && !task.attachments[attach_i].value.image.translated_view.is_null())
+                                {
+                                    if (task.attachments[attach_i].value.image.shader_as_index)
+                                    {
+                                        for (u32 i = 0; i < asb_section.image_view_indices.size(); ++i)
+                                        {
+                                            ImageViewId const real_id = is_null_attachment ? ImageViewId{} : task.attachment_image_views[attach_i][i];
+                                            u32 const real_index = real_id.index;
+                                            u32 const test_index = asb_section.image_view_indices[i].value;
+                                            DAXA_DBG_ASSERT_TRUE_M(real_index == test_index, "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
+                                        }
+                                    }
+                                    else
+                                    {
+                                        for (u32 i = 0; i < asb_section.image_view_ids.size(); ++i)
+                                        {
+                                            ImageViewId const real_id = is_null_attachment ? ImageViewId{} : task.attachment_image_views[attach_i][i];
+                                            ImageViewId const test_id = asb_section.image_view_ids[i];
+                                            DAXA_DBG_ASSERT_TRUE_M(real_id == test_id, "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
+                                        }
+                                    }
+                                }
+                            }
+                        }
 
                         if (impl.info.enable_command_labels)
                         {
