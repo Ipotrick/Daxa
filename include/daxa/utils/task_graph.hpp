@@ -203,6 +203,19 @@ namespace daxa
 
     inline namespace detail
     {
+        constexpr inline auto replace_joker_stage(TaskStage stage, TaskStage default_stage) -> TaskStage
+        {
+            if ((stage & TaskStage::JOKER) != TaskStage::NONE)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    default_stage != TaskStage::NONE, 
+                    "ERROR: A non staged task access was used in a GENERIIC type task! "
+                    "All attachment accesses in a generic task must have a stage OR the generic task must have a default stage set!");
+                return (stage & ~TaskStage::JOKER) | default_stage;
+            }
+            return stage;
+        }
+
         template <typename TaskHeadAttachmentDeclT>
         auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage = TaskStage::NONE) -> TaskAttachmentInfo
         {
@@ -214,10 +227,7 @@ namespace daxa
                 TaskBufferAttachmentInfo info;
                 info.name = attachment_decl.value.buffer.name;
                 info.task_access = attachment_decl.value.buffer.task_access;
-                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
-                {
-                    info.task_access.stage = default_stage;
-                }
+                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.shader_array_size = attachment_decl.value.buffer.shader_array_size;
                 info.shader_as_address = attachment_decl.value.buffer.shader_as_address;
                 if (auto * ptr = get_if<TaskBufferView>(&view))
@@ -236,10 +246,7 @@ namespace daxa
                 TaskTlasAttachmentInfo info;
                 info.name = attachment_decl.value.tlas.name;
                 info.task_access = attachment_decl.value.tlas.task_access;
-                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
-                {
-                    info.task_access.stage = default_stage;
-                }
+                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.shader_as_address = attachment_decl.value.tlas.shader_as_address;
                 if (auto * ptr = get_if<TaskTlasView>(&view))
                 {
@@ -257,10 +264,7 @@ namespace daxa
                 TaskBlasAttachmentInfo info;
                 info.name = attachment_decl.value.blas.name;
                 info.task_access = attachment_decl.value.blas.task_access;
-                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
-                {
-                    info.task_access.stage = default_stage;
-                }
+                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 if (auto * ptr = get_if<TaskBlasView>(&view))
                 {
                     info.view = *ptr;
@@ -277,10 +281,7 @@ namespace daxa
                 TaskImageAttachmentInfo info;
                 info.name = attachment_decl.value.image.name;
                 info.task_access = attachment_decl.value.image.task_access;
-                if (info.task_access.stage == TaskStage::NONE && default_stage != TaskStage::NONE)
-                {
-                    info.task_access.stage = default_stage;
-                }
+                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.view_type = attachment_decl.value.image.view_type;
                 info.shader_array_size = attachment_decl.value.image.shader_array_size;
                 info.shader_array_type = attachment_decl.value.image.shader_array_type;
@@ -509,10 +510,8 @@ namespace daxa
                     stage = STAGE;
                 }
 
-                if (stage == TaskStage::NONE)
-                {
-                    stage = task_type_default_stage(_internal._task_type);
-                }
+                TaskStage default_stage = task_type_default_stage(_internal._task_type);
+                stage = replace_joker_stage(stage, default_stage);
 
                 auto av = views.convert_to_array(); // converts views to flat array
                 for (u32 i = 0; i < TaskHeadT::ATTACHMENT_COUNT; ++i)
@@ -623,7 +622,6 @@ namespace daxa
             InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> color_attachment;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::RESOLVE> resolve;
-            InternalValue<Allow::READ, TaskStage::PRESENT> present;
             InternalValue<Allow::READ, TaskStage::INDIRECT_COMMAND> indirect_cmd;
             InternalValue<Allow::READ, TaskStage::INDEX_INPUT> index_input;
             InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::TRANSFER> transfer;
