@@ -86,6 +86,7 @@ add_library(daxa
     "src/impl_dependencies.cpp"
     "src/impl_timeline_query.cpp"
 
+    "src/utils/impl_task_graph_ui.cpp"
     "src/utils/impl_task_graph.cpp"
     "src/utils/impl_imgui.cpp"
     "src/utils/impl_fsr2.cpp"

@@ -20,13 +20,12 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
     _DAXA_RETURN_IF_ERROR(result, result);
     if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.view().empty()))
     {
-        auto c_str = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
             .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
-            .pObjectName = c_str.data(),
+            .pObjectName = ret.info.name.c_str(),
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
@@ -79,13 +78,12 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
     _DAXA_RETURN_IF_ERROR(result, result);
     if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.span().empty()))
     {
-        auto c_str = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_SEMAPHORE,
             .objectHandle = std::bit_cast<u64>(ret.vk_semaphore),
-            .pObjectName = c_str.data(),
+            .pObjectName = ret.info.name.c_str(),
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
@@ -165,13 +163,12 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
     ret.vk_event = event;
     if ((device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && (!ret.info.name.view().empty()))
     {
-        auto c_str = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_EVENT,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_event),
-            .pObjectName = c_str.data(),
+            .pObjectName = ret.info.name.c_str(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }

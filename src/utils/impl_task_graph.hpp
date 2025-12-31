@@ -1,6 +1,6 @@
 #pragma once
 
-#define ENABLE_TASK_GRAPH_MK2 0
+#include <daxa/utils/task_graph_types.hpp>
 
 #if ENABLE_TASK_GRAPH_MK2
 #include "impl_task_graph_mk2.hpp"

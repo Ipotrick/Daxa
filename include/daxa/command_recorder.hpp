@@ -339,13 +339,6 @@ namespace daxa
      * * must be externally synchronized
      * * can be passed between different threads
      * * may only be accessed by one thread at a time
-     * WARNING:
-     * * creating a command list, it will LOCK resource lifetimes
-     * * calling collect_garbage will BLOCK until all resource lifetime locks have been unlocked
-     * * completing a command list will remove its lock on the resource lifetimes
-     * * most record commands can throw exceptions on invalid inputs such as invalid ids
-     * * using deferred destructions will make the completed command list not reusable,
-     *   as resources can only be destroyed once
      */
     struct DAXA_EXPORT_CXX CommandRecorder
     {

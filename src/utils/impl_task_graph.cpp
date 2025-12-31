@@ -68,6 +68,7 @@ namespace daxa
         switch (stage)
         {
         case TaskStage::NONE: return "NONE";
+        case TaskStage::INDIRECT_COMMAND: return "INDIRECT_COMMAND";
         case TaskStage::VERTEX_SHADER: return "VERTEX_SHADER";
         case TaskStage::TESSELLATION_CONTROL_SHADER: return "TESSELLATION_CONTROL_SHADER";
         case TaskStage::TESSELLATION_EVALUATION_SHADER: return "TESSELLATION_EVALUATION_SHADER";
@@ -83,8 +84,6 @@ namespace daxa
         case TaskStage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
         case TaskStage::DEPTH_STENCIL_ATTACHMENT: return "DEPTH_STENCIL_ATTACHMENT";
         case TaskStage::RESOLVE: return "RESOLVE";
-        case TaskStage::PRESENT: return "PRESENT";
-        case TaskStage::INDIRECT_COMMAND: return "INDIRECT_COMMAND";
         case TaskStage::INDEX_INPUT: return "INDEX_INPUT";
         case TaskStage::TRANSFER: return "TRANSFER";
         case TaskStage::HOST: return "HOST";
@@ -107,49 +106,11 @@ namespace daxa
         }
     }
 
-    auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool
-    {
-        switch (task_type)
-        {
-        case TaskType::GENERAL:
-            return true;
-        case TaskType::RASTER:
-            return stage == TaskStage::VERTEX_SHADER ||
-                   stage == TaskStage::TESSELLATION_CONTROL_SHADER ||
-                   stage == TaskStage::TESSELLATION_EVALUATION_SHADER ||
-                   stage == TaskStage::GEOMETRY_SHADER ||
-                   stage == TaskStage::FRAGMENT_SHADER ||
-                   stage == TaskStage::TASK_SHADER ||
-                   stage == TaskStage::MESH_SHADER ||
-                   stage == TaskStage::PRE_RASTERIZATION_SHADERS ||
-                   stage == TaskStage::RASTER_SHADER ||
-                   stage == TaskStage::COLOR_ATTACHMENT ||
-                   stage == TaskStage::DEPTH_STENCIL_ATTACHMENT ||
-                   stage == TaskStage::RESOLVE ||
-                   stage == TaskStage::PRESENT ||
-                   stage == TaskStage::INDIRECT_COMMAND ||
-                   stage == TaskStage::INDEX_INPUT;
-        case TaskType::COMPUTE:
-            return stage == TaskStage::COMPUTE_SHADER ||
-                   stage == TaskStage::INDIRECT_COMMAND;
-        case TaskType::RAY_TRACING:
-            return stage == TaskStage::RAY_TRACING_SHADER ||
-                   stage == TaskStage::INDIRECT_COMMAND ||
-                   stage == TaskStage::AS_BUILD;
-        case TaskType::TRANSFER:
-            return stage == TaskStage::TRANSFER ||
-                   stage == TaskStage::HOST ||
-                   stage == TaskStage::AS_BUILD;
-        default:
-            return false;
-        }
-    }
-
     auto task_type_default_stage(TaskType task_type) -> TaskStage
     {
         switch (task_type)
         {
-        case TaskType::GENERAL: return TaskStage::ANY_COMMAND;
+        case TaskType::GENERAL: return TaskStage::NONE;
         case TaskType::RASTER: return TaskStage::RASTER_SHADER;
         case TaskType::COMPUTE: return TaskStage::COMPUTE_SHADER;
         case TaskType::RAY_TRACING: return TaskStage::RAY_TRACING_SHADER;
@@ -250,6 +211,7 @@ namespace daxa
         {
         case TaskAccessType::NONE: ret = AccessTypeFlagBits::NONE; break;
         case TaskAccessType::READ: ret = AccessTypeFlagBits::READ; break;
+        case TaskAccessType::SAMPLED: ret = AccessTypeFlagBits::READ; break;
         case TaskAccessType::WRITE: ret = AccessTypeFlagBits::WRITE; break;
         case TaskAccessType::READ_WRITE: ret = AccessTypeFlagBits::READ_WRITE; break;
         case TaskAccessType::WRITE_CONCURRENT: ret = AccessTypeFlagBits::WRITE; break;
@@ -261,34 +223,7 @@ namespace daxa
 
     auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags
     {
-        PipelineStageFlags ret = {};
-        switch (stage)
-        {
-        case TaskStage::NONE: ret = (daxa::PipelineStageFlagBits::NONE); break;
-        case TaskStage::VERTEX_SHADER: ret = (daxa::PipelineStageFlagBits::VERTEX_SHADER); break;
-        case TaskStage::TESSELLATION_CONTROL_SHADER: ret = (daxa::PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER); break;
-        case TaskStage::TESSELLATION_EVALUATION_SHADER: ret = (daxa::PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER); break;
-        case TaskStage::GEOMETRY_SHADER: ret = (daxa::PipelineStageFlagBits::GEOMETRY_SHADER); break;
-        case TaskStage::FRAGMENT_SHADER: ret = (daxa::PipelineStageFlagBits::FRAGMENT_SHADER); break;
-        case TaskStage::COMPUTE_SHADER: ret = (daxa::PipelineStageFlagBits::COMPUTE_SHADER); break;
-        case TaskStage::RAY_TRACING_SHADER: ret = (daxa::PipelineStageFlagBits::RAY_TRACING_SHADER); break;
-        case TaskStage::TASK_SHADER: ret = (daxa::PipelineStageFlagBits::TASK_SHADER); break;
-        case TaskStage::MESH_SHADER: ret = (daxa::PipelineStageFlagBits::MESH_SHADER); break;
-        case TaskStage::PRE_RASTERIZATION_SHADERS: ret = (daxa::PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS); break;
-        case TaskStage::RASTER_SHADER: ret = (daxa::PipelineStageFlagBits::ALL_GRAPHICS); break;
-        case TaskStage::SHADER: ret = (daxa::PipelineStageFlagBits::ALL_GRAPHICS | daxa::PipelineStageFlagBits::RAY_TRACING_SHADER | daxa::PipelineStageFlagBits::COMPUTE_SHADER); break;
-        case TaskStage::COLOR_ATTACHMENT: ret = (daxa::PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT); break;
-        case TaskStage::DEPTH_STENCIL_ATTACHMENT: ret = (daxa::PipelineStageFlagBits::LATE_FRAGMENT_TESTS) | (daxa::PipelineStageFlagBits::EARLY_FRAGMENT_TESTS) | (daxa::PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT); break;
-        case TaskStage::RESOLVE: ret = (daxa::PipelineStageFlagBits::RESOLVE); break;
-        case TaskStage::PRESENT: ret = (daxa::PipelineStageFlagBits::ALL_COMMANDS); break;
-        case TaskStage::INDIRECT_COMMAND: ret = (daxa::PipelineStageFlagBits::DRAW_INDIRECT); break;
-        case TaskStage::INDEX_INPUT: ret = (daxa::PipelineStageFlagBits::INDEX_INPUT); break;
-        case TaskStage::TRANSFER: ret = (daxa::PipelineStageFlagBits::TRANSFER); break;
-        case TaskStage::HOST: ret = (daxa::PipelineStageFlagBits::HOST); break;
-        case TaskStage::AS_BUILD: ret = (daxa::PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD); break;
-        case TaskStage::ANY_COMMAND: ret = (daxa::PipelineStageFlagBits::ALL_COMMANDS); break;
-        }
-        return ret;
+        return static_cast<daxa::PipelineStageFlags>(static_cast<u64>(stage) & ~static_cast<u64>(TaskStage::JOKER));
     }
 
     auto is_task_stage_shader_access(TaskStage stage) -> bool
@@ -312,7 +247,6 @@ namespace daxa
         case TaskStage::COLOR_ATTACHMENT: used_in_shader = false; break;
         case TaskStage::DEPTH_STENCIL_ATTACHMENT: used_in_shader = false; break;
         case TaskStage::RESOLVE: used_in_shader = false; break;
-        case TaskStage::PRESENT: used_in_shader = false; break;
         case TaskStage::INDIRECT_COMMAND: used_in_shader = false; break;
         case TaskStage::INDEX_INPUT: used_in_shader = false; break;
         case TaskStage::TRANSFER: used_in_shader = false; break;
@@ -397,10 +331,6 @@ namespace daxa
 
         ImageLayout layout = ImageLayout::GENERAL;
         
-        if (taccess.stage == TaskStage::PRESENT)
-        {
-            layout = ImageLayout::PRESENT_SRC;
-        }
         return {layout, access, concurrency};
     }
 
@@ -492,9 +422,6 @@ namespace daxa
         case TaskStage::RESOLVE:
             _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(RESOLVE)
             break;
-        case TaskStage::PRESENT:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(PRESENT)
-            break;
         case TaskStage::INDIRECT_COMMAND:
             _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(INDIRECT_COMMAND)
             break;
@@ -528,7 +455,7 @@ namespace daxa
     ImplPersistentTaskBufferBlasTlas::ImplPersistentTaskBufferBlasTlas(Device & device, BufferInfo const & a_info)
         : actual_ids{std::vector<BufferId>{device.create_buffer(a_info)}},
           latest_access{},
-          info{TaskBufferInfo{.name = a_info.name.c_str().data()}},
+          info{TaskBufferInfo{.name = a_info.name.c_str()}},
           owned_buffer_device{device},
           owned_buffer_info{a_info},
           unique_index{ImplPersistentTaskBufferBlasTlas::exec_unique_next_index++}
@@ -586,7 +513,7 @@ namespace daxa
         return view();
     }
 
-    auto TaskBuffer::info() const -> TaskBufferInfo const &
+    auto TaskBuffer::info() const -> TaskBufferInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
         return std::get<TaskBufferInfo>(impl.info);
@@ -658,7 +585,7 @@ namespace daxa
         return view();
     }
 
-    auto TaskBlas::info() const -> TaskBlasInfo const &
+    auto TaskBlas::info() const -> TaskBlasInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
         return std::get<TaskBlasInfo>(impl.info);
@@ -724,7 +651,7 @@ namespace daxa
         return view();
     }
 
-    auto TaskTlas::info() const -> TaskTlasInfo const &
+    auto TaskTlas::info() const -> TaskTlasInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskBufferBlasTlas *>(this->object);
         return std::get<TaskTlasInfo>(impl.info);
@@ -804,7 +731,7 @@ namespace daxa
         return TaskImageView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
-    auto TaskImage::info() const -> TaskImageInfo const &
+    auto TaskImage::info() const -> TaskImageInfo
     {
         auto & impl = *r_cast<ImplPersistentTaskImage *>(this->object);
         return impl.info;
@@ -2503,6 +2430,7 @@ namespace daxa
                     }
                 }
                 task_image.usage |= access_to_usage(used_image_t_access);
+                
                 task_image.create_flags |= view_type_to_create_flags(image_attach.view_type);
                 auto [current_image_layout, current_image_access, current_access_concurrency] = task_image_access_to_layout_access(used_image_t_access);
                 image_attach.layout = current_image_layout;

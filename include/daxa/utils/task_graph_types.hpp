@@ -20,6 +20,8 @@
 #include <daxa/device.hpp>
 #include <daxa/utils/mem.hpp>
 
+#define ENABLE_TASK_GRAPH_MK2 0
+
 namespace daxa
 {
     static inline constexpr usize MAX_TASK_ATTACHMENTS = 48;
@@ -57,58 +59,102 @@ namespace daxa
     {
         // Concurrent bit: 0
         // Read bit: 1
-        // Write bit: 2
+        // Sampled bit: 2
+        // Write bit: 3
         NONE = 0,
         CONCURRENT_BIT = (1 << 0),
         NON_CONCURRENT_READ = (1 << 1),
+        NON_CONCURRENT_SAMPLED = (1 << 2),
+        NON_CONCURRENT_WRITE = (1 << 3),
         READ = NON_CONCURRENT_READ | CONCURRENT_BIT,
-        WRITE = (1 << 2),
-        READ_WRITE = NON_CONCURRENT_READ | WRITE,
-        WRITE_CONCURRENT = WRITE | CONCURRENT_BIT,
+        SAMPLED = NON_CONCURRENT_SAMPLED | CONCURRENT_BIT,
+        WRITE = NON_CONCURRENT_WRITE,
+        READ_WRITE = NON_CONCURRENT_READ | NON_CONCURRENT_WRITE,
+        WRITE_CONCURRENT = NON_CONCURRENT_WRITE | CONCURRENT_BIT,
         READ_WRITE_CONCURRENT = READ_WRITE | CONCURRENT_BIT,
-        SAMPLED [[deprecated("Use READ instead, API:3.4")]] = READ,
     };
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
 
-    enum struct TaskStage : u16
+    enum struct TaskStage : u64
     {
-        NONE,
-        VERTEX_SHADER,
-        TESSELLATION_CONTROL_SHADER,
-        TESSELLATION_EVALUATION_SHADER,
-        GEOMETRY_SHADER,
-        FRAGMENT_SHADER,
-        TASK_SHADER,
-        MESH_SHADER,
-        PRE_RASTERIZATION_SHADERS,
-        RASTER_SHADER,
-        COMPUTE_SHADER,
-        RAY_TRACING_SHADER,
-        SHADER,
-        COLOR_ATTACHMENT,
-        DEPTH_STENCIL_ATTACHMENT,
-        RESOLVE,
-        PRESENT,
-        INDIRECT_COMMAND,
-        INDEX_INPUT,
-        TRANSFER,
-        HOST,
-        AS_BUILD,
-        ANY_COMMAND,
+        NONE = (PipelineStageFlagBits::NONE).data,
+        INDIRECT_COMMAND = (PipelineStageFlagBits::DRAW_INDIRECT).data,
+        VERTEX_SHADER = (PipelineStageFlagBits::VERTEX_SHADER).data,
+        TESSELLATION_CONTROL_SHADER = (PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER).data,
+        TESSELLATION_EVALUATION_SHADER = (PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER).data,
+        GEOMETRY_SHADER = (PipelineStageFlagBits::GEOMETRY_SHADER).data,
+        FRAGMENT_SHADER = (PipelineStageFlagBits::FRAGMENT_SHADER).data,
+        TASK_SHADER = (PipelineStageFlagBits::TASK_SHADER).data,
+        MESH_SHADER = (PipelineStageFlagBits::MESH_SHADER).data,
+        PRE_RASTERIZATION_SHADERS = (PipelineStageFlagBits::PipelineStageFlagBits::VERTEX_SHADER |
+                                     PipelineStageFlagBits::PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER |
+                                     PipelineStageFlagBits::PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER |
+                                     PipelineStageFlagBits::PipelineStageFlagBits::GEOMETRY_SHADER |
+                                     PipelineStageFlagBits::PipelineStageFlagBits::TASK_SHADER |
+                                     PipelineStageFlagBits::PipelineStageFlagBits::MESH_SHADER)
+                                        .data,
+        RASTER_SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS).data,
+        COMPUTE_SHADER = (PipelineStageFlagBits::COMPUTE_SHADER).data,
+        RAY_TRACING_SHADER = (PipelineStageFlagBits::RAY_TRACING_SHADER).data,
+        SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::VERTEX_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::GEOMETRY_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::FRAGMENT_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::TASK_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::MESH_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::COMPUTE_SHADER |
+                  PipelineStageFlagBits::PipelineStageFlagBits::RAY_TRACING_SHADER)
+                     .data,
+        COLOR_ATTACHMENT = (PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT).data,
+        DEPTH_STENCIL_ATTACHMENT = (daxa::PipelineStageFlagBits::LATE_FRAGMENT_TESTS |
+                                    daxa::PipelineStageFlagBits::EARLY_FRAGMENT_TESTS |
+                                    daxa::PipelineStageFlagBits::COLOR_ATTACHMENT_OUTPUT)
+                                       .data,
+        RESOLVE = (PipelineStageFlagBits::RESOLVE).data,
+        INDEX_INPUT = (PipelineStageFlagBits::INDEX_INPUT).data,
+        TRANSFER = (PipelineStageFlagBits::TRANSFER).data,
+        HOST = (PipelineStageFlagBits::HOST).data,
+        AS_BUILD = (PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD).data,
+        ANY_COMMAND = (PipelineStageFlagBits::ALL_COMMANDS).data,
+        JOKER = 1ull << 63ull,
     };
+
+    constexpr inline TaskStage operator|(TaskStage a, TaskStage b)
+    {
+        return static_cast<TaskStage>(static_cast<u64>(a) | static_cast<u64>(b));
+    }
+
+    constexpr inline TaskStage operator&(TaskStage a, TaskStage b)
+    {
+        return static_cast<TaskStage>(static_cast<u64>(a) & static_cast<u64>(b));
+    }
+
+    constexpr inline TaskStage operator~(TaskStage a)
+    {
+        return static_cast<TaskStage>(~static_cast<u64>(a));
+    }
 
     auto to_string(TaskStage stage) -> std::string_view;
 
     auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags;
 
-    struct alignas(u32) TaskAccess
+    struct TaskAccess
     {
         TaskStage stage = {};
         TaskAccessType type = {};
         TaskAttachmentType restriction = {};
     };
-    static_assert(sizeof(TaskAccess) == sizeof(u32));
+
+    constexpr inline TaskAccess operator|(TaskAccess a, TaskAccess b)
+    {
+        TaskAccess ret = {};
+        ret.stage = a.stage | b.stage;
+        ret.type = static_cast<TaskAccessType>(static_cast<u64>(a.type) | static_cast<u64>(b.type));
+        ret.restriction = a.restriction;
+        return ret;
+    }
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskAccess const & access) -> std::string_view;
 
@@ -121,16 +167,16 @@ namespace daxa
         static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE = TaskAccess{STAGE, TaskAccessType::READ_WRITE, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::READ_WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
-        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess SAMPLED = READ;
+        static constexpr TaskAccess SAMPLED = TaskAccess{STAGE, TaskAccessType::SAMPLED, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess R = READ;
         static constexpr TaskAccess W = WRITE;
         static constexpr TaskAccess WC = WRITE_CONCURRENT;
         static constexpr TaskAccess RW = READ_WRITE_CONCURRENT;
         static constexpr TaskAccess RWC = READ_WRITE_CONCURRENT;
-        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess S = SAMPLED;
+        static constexpr TaskAccess S = SAMPLED;
     };
 
-    struct TaskAccessConsts
+    namespace TaskAccessConsts
     {
         using VERTEX_SHADER = TaskAccessConstsPartial<TaskStage::VERTEX_SHADER>;
         using VS = VERTEX_SHADER;
@@ -168,12 +214,12 @@ namespace daxa
         using ANY_COMMAND = TaskAccessConstsPartial<TaskStage::ANY_COMMAND>;
         using ANY = ANY_COMMAND;
         static constexpr TaskAccess NONE = TaskAccess{TaskStage::NONE, TaskAccessType::NONE};
-        static constexpr TaskAccess READ = TaskAccess{TaskStage::NONE, TaskAccessType::READ};
-        static constexpr TaskAccess WRITE = TaskAccess{TaskStage::NONE, TaskAccessType::WRITE};
-        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::WRITE_CONCURRENT};
-        static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE};
-        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::NONE, TaskAccessType::READ_WRITE_CONCURRENT};
-        [[deprecated("Use READ instead, API:3.4")]] static constexpr TaskAccess SAMPLED = READ;
+        static constexpr TaskAccess READ = TaskAccess{TaskStage::JOKER, TaskAccessType::READ};
+        static constexpr TaskAccess WRITE = TaskAccess{TaskStage::JOKER, TaskAccessType::WRITE};
+        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::JOKER, TaskAccessType::WRITE_CONCURRENT};
+        static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::JOKER, TaskAccessType::READ_WRITE};
+        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::JOKER, TaskAccessType::READ_WRITE_CONCURRENT};
+        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStage::JOKER, TaskAccessType::SAMPLED};
 
         static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;
@@ -183,7 +229,6 @@ namespace daxa
         static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
         static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
 
-        static constexpr TaskAccess PRESENT = TaskAccess{TaskStage::PRESENT, TaskAccessType::READ, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStage::INDIRECT_COMMAND, TaskAccessType::READ, TaskAttachmentType::BUFFER};
         static constexpr TaskAccess ICR = INDIRECT_COMMAND_READ;
         static constexpr TaskAccess INDEX_INPUT_READ = TaskAccess{TaskStage::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
@@ -300,7 +345,7 @@ namespace daxa
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess DEPTH_STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RESOLVE_WRITE = TaskAccessConsts::RESOLVE::READ_WRITE;
 #endif // #if !DAXA_REMOVE_DEPRECATED
-    };
+    }; // namespace TaskAccessConsts
 
     enum struct TaskType : u16
     {
@@ -313,8 +358,6 @@ namespace daxa
     };
 
     auto to_string(TaskType task_type) -> std::string_view;
-
-    auto task_type_allowed_stages(TaskType task_type, TaskStage stage) -> bool;
 
     DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
 
@@ -488,6 +531,7 @@ namespace daxa
         char const * name = {};
         TaskAccess task_access = {};
         Access access = {};
+        u8 shader_array_size = {};
         bool shader_as_address = {};
     };
 
@@ -802,7 +846,7 @@ namespace daxa
         auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
-        [[deprecated("Layout is guaranteed to always be general, stop using this function; API:3.2")]] 
+        [[deprecated("Layout is guaranteed to always be general, stop using this function; API:3.2")]]
         auto layout(TaskImageIndexOrView auto) const -> ImageLayout
         {
             return daxa::ImageLayout::GENERAL;
@@ -839,13 +883,12 @@ namespace daxa
         {
             auto const v = this->get(timg).view_ids[index];
             DAXA_DBG_ASSERT_TRUE_M(
-                !v.is_empty(), 
+                !v.is_empty(),
                 "Failed to return cached image view for image attachment!\n"
                 "A likely cause for this error is that no daxa::ImageViewType was specified for the attachment.\n"
                 "To specify an image view type for a task attachment you can either:\n"
                 "1. add the view type to the attachment within a task head as the second parameter: DAXA_TG_IMAGE(COLOR_ATTACHMENT, REGULAR_2D, image_name), OR\n"
-                "2. add the view type when adding the attachment to the task: task.color_attachment.reads_writes(daxa::ImageViewType::REGULAR_2D, image)"
-            );
+                "2. add the view type when adding the attachment to the task: task.color_attachment.reads_writes(daxa::ImageViewType::REGULAR_2D, image)");
             return v;
         }
     };
@@ -862,7 +905,13 @@ namespace daxa
         std::string name = {};
     };
 
+#if ENABLE_TASK_GRAPH_MK2
+    struct ImplExternalResource;
+    using ImplPersistentTaskBufferBlasTlas = ImplExternalResource;
+#else
     struct ImplPersistentTaskBufferBlasTlas;
+#endif
+
     struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBufferBlasTlas *>
     {
         TaskBuffer() = default;
@@ -875,7 +924,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskBufferInfo const &;
+        auto info() const -> TaskBufferInfo;
         auto get_state() const -> TrackedBuffers;
         auto is_owning() const -> bool;
 
@@ -912,7 +961,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskBlasInfo const &;
+        auto info() const -> TaskBlasInfo;
         auto get_state() const -> TrackedBlas;
 
         void set_blas(TrackedBlas const & blas);
@@ -948,7 +997,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskTlasInfo const &;
+        auto info() const -> TaskTlasInfo;
         auto get_state() const -> TrackedTlas;
 
         void set_tlas(TrackedTlas const & tlas);
@@ -975,7 +1024,13 @@ namespace daxa
         std::string name = {};
     };
 
+#if ENABLE_TASK_GRAPH_MK2
+    struct ImplExternalResource;
+    using ImplPersistentTaskImage = ImplExternalResource;
+#else
     struct ImplPersistentTaskImage;
+#endif
+
     struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {
         TaskImage() = default;
@@ -988,7 +1043,7 @@ namespace daxa
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the object is destroyed.
         /// @return reference to info of object.
-        auto info() const -> TaskImageInfo const &;
+        auto info() const -> TaskImageInfo;
         auto get_state() const -> TrackedImages;
 
         void set_images(TrackedImages const & images);
@@ -1265,7 +1320,7 @@ namespace daxa
             _internal,                                                         \
             daxa::TaskBufferAttachment{                                        \
                 .name = #NAME,                                                 \
-                .task_access = daxa::TaskAccessConsts::TASK_ACCESS,            \
+                .task_access = []() { using namespace daxa::TaskAccessConsts; return TASK_ACCESS; }(),                                     \
                 __VA_ARGS__})};
 
 #define _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)                              \
@@ -1274,7 +1329,7 @@ namespace daxa
             _internal,                                                       \
             daxa::TaskBlasAttachment{                                        \
                 .name = #NAME,                                               \
-                .task_access = daxa::TaskAccessConsts::TASK_ACCESS,          \
+                .task_access = []() { using namespace daxa::TaskAccessConsts; return TASK_ACCESS; }(),                                   \
             })};
 
 #define _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, ...)                         \
@@ -1283,7 +1338,7 @@ namespace daxa
             _internal,                                                       \
             daxa::TaskTlasAttachment{                                        \
                 .name = #NAME,                                               \
-                .task_access = daxa::TaskAccessConsts::TASK_ACCESS,          \
+                .task_access = []() { using namespace daxa::TaskAccessConsts; return TASK_ACCESS; }(),                                   \
                 __VA_ARGS__})};
 
 #define _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, ...)                         \
@@ -1292,7 +1347,7 @@ namespace daxa
             _internal,                                                        \
             daxa::TaskImageAttachment{                                        \
                 .name = #NAME,                                                \
-                .task_access = daxa::TaskAccessConsts::TASK_ACCESS,           \
+                .task_access = []() { using namespace daxa::TaskAccessConsts; return TASK_ACCESS; }(),                                    \
                 __VA_ARGS__})};
 #endif
 
@@ -1363,8 +1418,8 @@ namespace daxa
 #define DAXA_TH_BUFFER_PTR(TASK_ACCESS, PTR_TYPE, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
 #define DAXA_TH_BLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BLAS(NAME, TASK_ACCESS)
 #define DAXA_TH_TLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 0)
-#define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_as_address = true)
-#define DAXA_TH_TLAS_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_as_address = false)
+#define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
+#define DAXA_TH_TLAS_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)
 
     template <typename BufFn, typename ImgFn>
     constexpr void for_each(std::span<TaskAttachmentInfo> attachments, BufFn && buf_fn, ImgFn && img_fn)

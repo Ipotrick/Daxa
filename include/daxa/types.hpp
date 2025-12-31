@@ -336,30 +336,32 @@ namespace daxa
         using FixedList::FixedList;
         constexpr SmallString(char const * c_str)
         {
-            while (c_str != nullptr && *c_str != 0)
+            while (c_str != nullptr && *c_str != 0 && ((this->m_size + 1) < (this->capacity() - 1)))
             {
-                if (this->m_size >= this->capacity())
-                {
-                    break;
-                }
                 this->m_data[this->m_size++] = *(c_str++);
             }
+            this->m_data[this->m_size] = '\0';
+            this->m_size += 1;
         }
         constexpr SmallString(std::string_view sw)
         {
-            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(sw.size()), this->capacity()));
+            this->m_size = std::min(static_cast<FixedListSizeT>(sw.size()), static_cast<FixedListSizeT>(this->capacity() - 1ull));
             for (FixedListSizeT i = 0; i < this->m_size; ++i)
             {
                 this->m_data[i] = sw[i];
             }
+            this->m_data[this->m_size] = '\0';
+            this->m_size += 1;
         }
         constexpr SmallString(std::string const & stl_str)
         {
-            this->m_size = static_cast<FixedListSizeT>(std::min(static_cast<FixedListSizeT>(stl_str.size()), this->capacity()));
+            this->m_size = std::min(static_cast<FixedListSizeT>(stl_str.size()), static_cast<FixedListSizeT>(this->capacity() - 1ull));
             for (FixedListSizeT i = 0; i < this->m_size; ++i)
             {
                 this->m_data[i] = stl_str[i];
             }
+            this->m_data[this->m_size] = '\0';
+            this->m_size += 1;
         }
         SmallString(SmallString const & other) = default;
         auto operator=(SmallString const & other) -> SmallString & = default;
@@ -367,18 +369,9 @@ namespace daxa
         {
             return {this->m_data.data(), static_cast<usize>(this->m_size)};
         }
-        [[nodiscard]] auto c_str() const -> std::array<char, DAXA_SMALL_STRING_CAPACITY + 1>
+        [[nodiscard]] auto c_str() const -> char const *
         {
-            std::array<char, DAXA_SMALL_STRING_CAPACITY + 1> ret;
-            for (u8 i = 0; i < this->m_size; ++i)
-            {
-                ret[i] = this->m_data[i];
-            }
-            for (u8 i = this->m_size; i < DAXA_SMALL_STRING_CAPACITY + 1; ++i)
-            {
-                ret[i] = 0;
-            }
-            return ret;
+            return data();
         }
     };
     static_assert(sizeof(SmallString) == 64);

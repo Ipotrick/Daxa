@@ -309,7 +309,8 @@ namespace daxa
         static inline constexpr ImplicitFeatureFlags SWAPCHAIN = {0x1 << 12};
         static inline constexpr ImplicitFeatureFlags SHADER_INT16 = {0x1 << 13};
         static inline constexpr ImplicitFeatureFlags SHADER_CLOCK = {0x1 << 14};
-        static inline constexpr ImplicitFeatureFlags LINE_RASTERIZATION = {0x1 << 15};
+        static inline constexpr ImplicitFeatureFlags HOST_IMAGE_COPY = {0x1 << 15};
+        static inline constexpr ImplicitFeatureFlags LINE_RASTERIZATION = {0x1 << 16};
     };
 
     struct DeviceProperties
@@ -453,13 +454,21 @@ namespace daxa
         daxa::Span<BinarySemaphore const> signal_binary_semaphores = {};
         daxa::Span<std::pair<TimelineSemaphore, u64> const> wait_timeline_semaphores = {};
         daxa::Span<std::pair<TimelineSemaphore, u64> const> signal_timeline_semaphores = {};
+        daxa::Span<std::pair<Queue, u64> const> wait_queue_submit_indices = {};
     };
 
     struct PresentInfo
     {
         daxa::Span<BinarySemaphore const> wait_binary_semaphores = {};
-        Swapchain swapchain;
+        Swapchain swapchain = {};
         Queue queue = QUEUE_MAIN;
+    };
+
+    struct WaitOnSubmitInfo
+    {
+        Queue queue = {};
+        u64 queue_submit_index = {};
+        u64 timeout = ~0ull;
     };
 
     struct MemoryBlockBufferInfo
@@ -724,20 +733,25 @@ namespace daxa
 
         /// @brief  Returns the latest submit index, which is incremented every time a submit is made.
         auto latest_submit_index() const -> u64;
+
         /// @brief Returns the oldest pending submits index. Multiple queues may have different pending submits.
         ///        This can be used to know when the gpu has caught up to a certain point in time ON ALL QUEUES.
         ///        Useful for synchronizing the destruction of resources.
         auto oldest_pending_submit_index() const -> u64;
 
+        /// @brief  Returns the latest queue specific submit index. 
+        ///         This is the same index returned in latest_submit_index but specific for this queue only.
+        ///         Internally, each queue has its own timeline semaphore,
+        ///         that is signalled to the latest device signal index after its incremented on a submission.
+        ///         queue submit index can be passed into following submission to wait on that queues submit to complete.
+        auto latest_queue_submit_index(daxa::Queue queue) const -> u64;
+
+        /// @brief  Waits on a specific queues submit to complete on the cpu. 
+        void wait_on_submit(WaitOnSubmitInfo const & info) const;
+
         /// @brief  Actually destroys all resources that are ready to be destroyed.
         ///         When calling destroy, or removing all references to an object, it is zombified not really destroyed.
         ///         A zombie lives until the gpu catches up to the point of zombification.
-        /// NOTE:
-        /// * this function will block until it gains an exclusive resource lock
-        /// * command lists may hold shared lifetime locks, those must all unlock before an exclusive lock can be made
-        /// * look at CommandRecorder for more info on this
-        /// * SoftwareCommandRecorder is exempt from this limitation,
-        ///   you can freely record those in parallel with collect_garbage
         void collect_garbage();
 
         /// THREADSAFETY:

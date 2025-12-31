@@ -601,6 +601,8 @@ namespace daxa
             .wait_timeline_semaphore_count = submit_info.wait_timeline_semaphores.size(),
             .signal_timeline_semaphores = reinterpret_cast<daxa_TimelinePair const *>(submit_info.signal_timeline_semaphores.data()),
             .signal_timeline_semaphore_count = submit_info.signal_timeline_semaphores.size(),
+            .wait_queue_submit_indices = reinterpret_cast<daxa_QueueSubmitIndexPair const *>(submit_info.wait_queue_submit_indices.data()),
+            .wait_queue_submit_indices_count = submit_info.wait_queue_submit_indices.size(),
         };
         check_result(
             daxa_dvc_submit(r_cast<daxa_Device>(this->object), &c_submit_info),
@@ -623,6 +625,22 @@ namespace daxa
         result = daxa_dvc_oldest_pending_submit_index(r_cast<daxa_Device>(this->object), &out_value);
         check_result(result, "failed to get oldest pending submit index");
         return out_value;
+    }
+
+    auto Device::latest_queue_submit_index(daxa::Queue queue) const -> u64
+    {
+        daxa_Result result = DAXA_RESULT_SUCCESS;
+        u64 out_value = {};
+        result = daxa_dvc_latest_queue_submit_index(r_cast<daxa_Device>(this->object), std::bit_cast<daxa_Queue>(queue), &out_value);
+        check_result(result, "failed to get latest queue submit index");
+        return out_value;
+    }
+
+    void Device::wait_on_submit(WaitOnSubmitInfo const & info) const
+    {
+        daxa_Result result = DAXA_RESULT_SUCCESS;
+        result = daxa_dvc_wait_on_submit(r_cast<daxa_Device>(this->object), r_cast<daxa_WaitOnSubmitInfo const *>(&info));
+        check_result(result, "failed to get latest queue submit index");
     }
 
     void Device::present_frame(PresentInfo const & info)
@@ -745,7 +763,7 @@ namespace daxa
     auto TimelineSemaphore::wait_for_value(u64 value, u64 timeout_nanos) -> bool
     {
         auto result = daxa_timeline_semaphore_wait_for_value(r_cast<daxa_TimelineSemaphore>(this->object), value, timeout_nanos);
-        DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS || result == DAXA_RESULT_TIMEOUT, "failed to wait on timeline");
+        DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS || result == DAXA_RESULT_TIMEOUT, "failed to wait on timeline semaphore");
         return result == DAXA_RESULT_SUCCESS;
     }
 

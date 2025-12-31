@@ -328,13 +328,12 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.empty())
     {
-        auto name_cstr = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_PIPELINE,
             .objectHandle = std::bit_cast<u64>(ret.vk_pipeline),
-            .pObjectName = name_cstr.data(),
+            .pObjectName = ret.info.name.c_str(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
@@ -430,13 +429,12 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     }
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
     {
-        auto name_cstr = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_PIPELINE,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_pipeline),
-            .pObjectName = name_cstr.data(),
+            .pObjectName = ret.info.name.c_str(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
@@ -676,13 +674,12 @@ auto daxa_dvc_create_ray_tracing_pipeline_or_library(daxa_Device device, daxa_Ra
 
     if ((ret.device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !ret.info.name.view().empty())
     {
-        auto name_cstr = ret.info.name.c_str();
         VkDebugUtilsObjectNameInfoEXT const name_info{
             .sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_OBJECT_NAME_INFO_EXT,
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_PIPELINE,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_pipeline),
-            .pObjectName = name_cstr.data(),
+            .pObjectName = ret.info.name.c_str(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }

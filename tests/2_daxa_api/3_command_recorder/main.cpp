@@ -18,16 +18,12 @@ namespace tests
         auto recorder = app.device.create_command_recorder({});
 
         // CommandRecorder can create ExecutableCommandList from the currently recorded commands.
-        // After calling complete_current_commands, the current commands are cleared.
-        // After calling complete_current_commands, you may record more commands and make new ExecutableCommandList with the recorder.
+        // A ExecutableCommandList can only be submitted once! 
         auto executable_commands = recorder.complete_current_commands();
 
         app.device.submit_commands({
             .command_lists = std::array{executable_commands},
         });
-
-        /// WARNING:    ALL CommandRecorders from a device MUST be destroyed prior to calling collect_garbage or destroying the device!
-        ///             This is because The device can only do the internal cleanup when no commands get recorded in parallel!
     }
 
     template <usize SX, usize SY, usize SZ>
