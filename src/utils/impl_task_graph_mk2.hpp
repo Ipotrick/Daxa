@@ -55,7 +55,7 @@ namespace daxa
 
     struct AccessGroup
     {
-        PipelineStageFlags stages = {};
+        TaskStage stages = {};
         TaskAccessType type = {};
         u32 queue_bits = {};
         std::span<TaskAttachmentAccess> tasks = {};

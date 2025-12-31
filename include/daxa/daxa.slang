@@ -239,10 +239,10 @@ namespace daxa {\
 #define _DAXA_DECL_TEX_EXTENSION(TYPE, TABLE)\
 __generic<T : ITexelElement> extension TYPE<T>\
 {\
-    static TYPE<T> get(daxa::ImageViewId i) { return TABLE[i.index()]; }\
-    static TYPE<T> get(daxa::ImageViewIndex i) { return TABLE[i.index()]; }\
-    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE ## _coherent[i.index()]; }\
-    static TYPE<T> get_coherent(daxa::ImageViewIndex i) { return TABLE ## _coherent[i.index()]; }\
+    static TYPE<T> get(daxa::ImageViewId i) { return TABLE[NonUniformResourceIndex(i.index())]; }\
+    static TYPE<T> get(daxa::ImageViewIndex i) { return TABLE[NonUniformResourceIndex(i.index())]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewId i) { return TABLE ## _coherent[NonUniformResourceIndex(i.index())]; }\
+    static TYPE<T> get_coherent(daxa::ImageViewIndex i) { return TABLE ## _coherent[NonUniformResourceIndex(i.index())]; }\
 }\
 namespace daxa\
 {\

@@ -354,9 +354,9 @@ namespace daxa
 
     auto access_to_image_usage(TaskAccess const & taccess) -> ImageUsageFlags
     {
-        bool const used_as_read = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::READ)) != 0;
-        bool const used_as_write = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::WRITE)) != 0;
-        bool const used_as_sampled = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::SAMPLED)) != 0;
+        bool const used_as_read = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::READ)) == static_cast<u32>(TaskAccessType::READ);
+        bool const used_as_write = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::WRITE)) == static_cast<u32>(TaskAccessType::WRITE);
+        bool const used_as_sampled = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::SAMPLED)) == static_cast<u32>(TaskAccessType::SAMPLED);
         bool const used_in_shader = is_task_stage_shader_access(taccess.stage);
         bool const used_as_sampled_image = used_in_shader && used_as_sampled;
         bool const used_as_storage_image = used_in_shader && (used_as_read || used_as_write);
@@ -1979,7 +1979,7 @@ namespace daxa
 
         struct TmpAccessGroup
         {
-            PipelineStageFlags stages = {};
+            TaskStage stages = {};
             TaskAccessType type = {};
             u32 queue_bits = {};
             ArenaDynamicArray8k<TaskAttachmentAccess> tasks = {};
@@ -2001,7 +2001,7 @@ namespace daxa
                 TaskAccessType access_type = {};
                 ArenaDynamicArray8k<TmpAccessGroup> * access_timeline = nullptr;
                 u32 * latest_access_submit_index = nullptr;
-                PipelineStageFlags attachment_stages = {};
+                TaskStage attachment_stages = {};
                 ImplTaskResource * resource = nullptr;
                 if (attachment.type != TaskAttachmentType::IMAGE)
                 {
@@ -2012,7 +2012,7 @@ namespace daxa
                         u32 const resource_index = attachment.value.buffer.translated_view.index;
                         access_timeline = &tmp_resource_access_timelines[resource_index];
                         latest_access_submit_index = &tmp_resource_latest_submit_access[resource_index];
-                        attachment_stages = task_stage_to_pipeline_stage(attachment.value.buffer.task_access.stage);
+                        attachment_stages = attachment.value.buffer.task_access.stage;
                         resource = &impl.resources[resource_index];
                     }
                 }
@@ -2024,21 +2024,21 @@ namespace daxa
                         u32 const resource_index = attachment.value.image.translated_view.index;
                         access_timeline = &tmp_resource_access_timelines[resource_index];
                         latest_access_submit_index = &tmp_resource_latest_submit_access[resource_index];
-                        impl.resources[resource_index].info.image.usage |= access_to_image_usage(attachment.value.image.task_access);
+                        resource = &impl.resources[resource_index];
+                        resource->info.image.usage |= access_to_image_usage(attachment.value.image.task_access);
                         if (task.queue != daxa::QUEUE_MAIN)
                         {
-                            impl.resources[resource_index].info.image.sharing_mode = SharingMode::CONCURRENT;
+                            resource->info.image.sharing_mode = SharingMode::CONCURRENT;
                         }
                         if (attachment.value.image.view_type == ImageViewType::CUBE)
                         {
-                            impl.resources[resource_index].info.image.flags |= ImageCreateFlagBits::COMPATIBLE_CUBE;
+                            resource->info.image.flags |= ImageCreateFlagBits::COMPATIBLE_CUBE;
                         }
-                        if (attachment.value.image.view_type == ImageViewType::REGULAR_2D_ARRAY && impl.resources[resource_index].info.image.dimensions == 3u)
+                        if (attachment.value.image.view_type == ImageViewType::REGULAR_2D_ARRAY && resource->info.image.dimensions == 3u)
                         {
-                            impl.resources[resource_index].info.image.flags |= ImageCreateFlagBits::COMPATIBLE_2D_ARRAY;
+                            resource->info.image.flags |= ImageCreateFlagBits::COMPATIBLE_2D_ARRAY;
                         }
-                        attachment_stages = task_stage_to_pipeline_stage(attachment.value.image.task_access.stage);
-                        resource = &impl.resources[resource_index];
+                        attachment_stages = attachment.value.image.task_access.stage;
                     }
                 }
                 task.attachment_resources[attach_i] = resource;
@@ -2062,7 +2062,7 @@ namespace daxa
 
                     *latest_access_submit_index = task.submit_index;
                     access_timeline->back().tasks.push_back(TaskAttachmentAccess{&task, task_i, attach_i});
-                    access_timeline->back().stages |= attachment_stages;
+                    access_timeline->back().stages = access_timeline->back().stages | attachment_stages;
 
                     u32 queue_bit = (1u << queue_to_queue_index(task.queue)); // set queue bit to every relevant field:
                     // AccessGroup:
@@ -2611,7 +2611,7 @@ namespace daxa
                     .mip_level_count = allocation.resource->info.image.mip_level_count,
                     .array_layer_count = allocation.resource->info.image.array_layer_count,
                     .sample_count = allocation.resource->info.image.sample_count,
-                    .usage = allocation.resource->info.image.usage,
+                    .usage = allocation.resource->info.image.usage | impl.info.additional_transient_image_usage_flags,
                     .sharing_mode = allocation.resource->info.image.sharing_mode,
                     .name = allocation.resource->name,
                 };
@@ -2633,9 +2633,14 @@ namespace daxa
         for (u32 s = 0; s < impl.submits.size(); ++s)
         {
             TasksSubmit & submit = impl.submits[s];
+            bool const is_last_submit = s == impl.submits.size() - 1;
 
             u32 const submit_first_batch = impl.tasks[submit.first_task].final_schedule_batch;
-            u32 const submit_last_batch = impl.tasks[submit.first_task + submit.task_count - 1].final_schedule_batch;
+            u32 const submit_last_batch = static_cast<u32>(
+                is_last_submit ? 
+                final_batches.size() - 1 :
+                impl.tasks[impl.submits[s+1].first_task].final_schedule_batch - 1
+            );
             u32 const submit_batch_count = submit_last_batch - submit_first_batch + 1;
             impl.submits[s].first_batch = submit_first_batch;
             impl.submits[s].batch_count = submit_batch_count;
@@ -2650,7 +2655,6 @@ namespace daxa
                 for (u32 q = 0; q < DAXA_MAX_TOTAL_QUEUE_COUNT; ++q)
                 {
                     bool const queue_used = (tmp_batch.queue_bits & queue_index_to_queue_bit(q)) != 0;
-
                     if (queue_used)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(
@@ -2762,7 +2766,7 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(std::popcount(first_access_group.queue_bits) == 1, "IMPOSSIBLE CASE! First image access can never be concurrent on two queues");
             auto const submit_index = first_access_group.tasks[0].task->submit_index;
             auto const queue_index = queue_bits_to_first_queue_index(first_access_group.queue_bits);
-            auto const stages = first_access_group.stages;
+            auto const stages = task_stage_to_pipeline_stage(first_access_group.stages);
             auto const access_type_flags = task_access_type_to_access_type(first_access_group.type);
             auto const first_use_batch = resource.final_schedule_first_batch;
             DAXA_DBG_ASSERT_TRUE_M(impl.submits[submit_index].first_batch <= first_access_group.final_schedule_first_batch, "IMPOSSIBLE CASE! COULD INDICATE ERROR IN SUBMIT CONSTRUCTION PHASE!");
@@ -2786,8 +2790,8 @@ namespace daxa
             {
                 AccessGroup & first_ag = resource.access_timeline[ag - 1];
                 AccessGroup & second_ag = resource.access_timeline[ag];
-                auto const first_ag_access = Access{first_ag.stages, task_access_type_to_access_type(first_ag.type)};
-                auto const second_ag_access = Access{second_ag.stages, task_access_type_to_access_type(second_ag.type)};
+                auto const first_ag_access = Access{task_stage_to_pipeline_stage(first_ag.stages), task_access_type_to_access_type(first_ag.type)};
+                auto const second_ag_access = Access{task_stage_to_pipeline_stage(second_ag.stages), task_access_type_to_access_type(second_ag.type)};
 
                 // If access 0 and access 1 are between two different queues, memory and execution dependencies are done via semaphores.
                 // In this case, we generate no barrier at all.
@@ -3086,7 +3090,7 @@ namespace daxa
                             .src_access_group = nullptr,
                             .dst_access_group = &first_access_group,
                             .src_access = {},
-                            .dst_access = Access{first_access_group.stages, to_access_type(first_access_group.type)},
+                            .dst_access = Access{task_stage_to_pipeline_stage(first_access_group.stages), to_access_type(first_access_group.type)},
                             .resource = resource,
                             .layout_operation = ImageLayoutOperation::TO_GENERAL,
                         });
@@ -3348,7 +3352,7 @@ namespace daxa
                         signal_semaphores[signal_semaphore_count++] = impl.info.swapchain->current_present_semaphore();
                         signal_timeline_semaphores[signal_timeline_semaphore_count++] = impl.info.swapchain->current_timeline_pair();
                         cr.pipeline_image_barrier(ImageBarrierInfo{
-                            .src_access = Access{last_access.stages, to_access_type(last_access.type)},
+                            .src_access = Access{task_stage_to_pipeline_stage(last_access.stages), to_access_type(last_access.type)},
                             .image_id = impl.swapchain_image->id.image,
                             .layout_operation = ImageLayoutOperation::TO_PRESENT_SRC,
                         });
