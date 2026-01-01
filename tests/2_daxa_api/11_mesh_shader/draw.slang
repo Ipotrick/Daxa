@@ -47,9 +47,9 @@ struct FragmentOut
 };
 
 [shader("fragment")]
-FragmentOut entry_fragment(in Vertex vertex, in Primitive prim)
+FragmentOut entry_fragment(in Vertex vertex, in Primitive daxa_prim_in)
 {
     FragmentOut frag_out;
-    frag_out.color = prim.tint;
+    frag_out.color = daxa_prim_in.tint;
     return frag_out;
 }
