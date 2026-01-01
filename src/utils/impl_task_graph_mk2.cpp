@@ -1532,11 +1532,6 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(!attachment_info.value.image.translated_view.is_null(), "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NULL ATTACHMENTS!");
         DAXA_DBG_ASSERT_TRUE_M(resource.external != nullptr, "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NON EXTERNAL RESOURCE ATTACHMENTS!");
 
-        if (attachment_info.value.image.shader_array_size == 0)
-        {
-            return;
-        }
-
         if (attachment_info.value.image.shader_array_type == TaskHeadImageArrayType::MIP_LEVELS)
         {
             for (u32 mip = 0; mip < attachment_info.value.image.shader_array_size; ++mip)
