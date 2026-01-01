@@ -122,6 +122,7 @@ struct daxa_ImplDevice final : public ImplHandle
         VkSemaphore gpu_queue_local_timeline = {};
         // atomically synchronized:
         std::atomic_uint64_t latest_pending_submit_timeline_value = {};
+        std::mutex mtx = {};
 
         auto initialize(VkDevice vk_device) -> daxa_Result;
         void cleanup(VkDevice device);

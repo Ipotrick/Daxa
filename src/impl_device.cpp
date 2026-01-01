@@ -1331,7 +1331,25 @@ auto daxa_dvc_get_vk_queue(daxa_Device self, daxa_Queue queue, VkQueue* vk_queue
 
 auto daxa_dvc_wait_idle(daxa_Device self) -> daxa_Result
 {
+    for (u32 queue_i = 0; queue_i < static_cast<u32>(self->queues.size()); ++queue_i)
+    {
+        if (self->queues[queue_i].vk_queue != VK_NULL_HANDLE)
+        {
+            self->queues[queue_i].mtx.lock();
+        }
+    }
+
     auto result = std::bit_cast<daxa_Result>(vkDeviceWaitIdle(self->vk_device));
+
+    for (u32 reverse_i = static_cast<u32>(self->queues.size()); reverse_i > 0; --reverse_i)
+    {
+        u32 const queue_i = reverse_i - 1;
+        if (self->queues[queue_i].vk_queue != VK_NULL_HANDLE)
+        {
+            self->queues[queue_i].mtx.unlock();
+        }
+    }
+
     _DAXA_RETURN_IF_ERROR(result, result)
     return result;
 }
@@ -1342,7 +1360,10 @@ auto daxa_dvc_queue_wait_idle(daxa_Device self, daxa_Queue queue) -> daxa_Result
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
     }
-    auto result = std::bit_cast<daxa_Result>(vkQueueWaitIdle(self->get_queue(queue).vk_queue));
+    daxa_ImplDevice::ImplQueue & impl_queue = self->get_queue(queue);
+    std::unique_lock queue_lock{impl_queue.mtx};
+
+    daxa_Result result = std::bit_cast<daxa_Result>(vkQueueWaitIdle(impl_queue.vk_queue));
     _DAXA_RETURN_IF_ERROR(result, result)
     return result;
 }
@@ -1473,6 +1494,8 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
     }
 
     daxa_ImplDevice::ImplQueue & queue = self->get_queue(info->queue);
+    std::unique_lock queue_lock{queue.mtx}; // lock MUST BE before timeline fetch and until after vkQueueSubmit. Otherwise the timeline order can be broken.
+
     u64 const current_timeline_value = self->global_submit_timeline.fetch_add(1) + 1;
     queue.latest_pending_submit_timeline_value.store(current_timeline_value);
 
@@ -1564,10 +1587,11 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
         .signalSemaphoreCount = static_cast<u32>(submit_semaphore_signals.size()),
         .pSignalSemaphores = submit_semaphore_signals.clone_to_contiguous().data(),
     };
-    auto result = static_cast<daxa_Result>(vkQueueSubmit(queue.vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE));
+
+    daxa_Result result = static_cast<daxa_Result>(vkQueueSubmit(queue.vk_queue, 1, &vk_submit_info, VK_NULL_HANDLE));
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    return DAXA_RESULT_SUCCESS;
+    return result;
 }
 
 auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_Result
@@ -1599,7 +1623,10 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
         .pResults = {},
     };
 
-    auto result = static_cast<daxa_Result>(vkQueuePresentKHR(self->get_queue(info->queue).vk_queue, &present_info));
+    daxa_ImplDevice::ImplQueue & impl_queue = self->get_queue(info->queue);
+        std::unique_lock queue_lock{impl_queue.mtx};
+
+    daxa_Result result = static_cast<daxa_Result>(vkQueuePresentKHR(impl_queue.vk_queue, &present_info));
     _DAXA_RETURN_IF_ERROR(result, result)
     return result;
 }
