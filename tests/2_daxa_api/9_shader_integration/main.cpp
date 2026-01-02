@@ -184,13 +184,13 @@ namespace tests
             .enable_debug_info = true,
             .name = "bindless_access",
         });
-        auto bindless_access = compile_result0.value();
+        auto bindless_access = compile_result0.value().get();
         auto compile_result1 = pipeline_manager.add_compute_pipeline2({
             .source = daxa::ShaderFile{"bindless_access_followup.glsl"},
             .enable_debug_info = true,
             .name = "bindless_access_followup",
         });
-        auto bindless_access_followup = compile_result1.value();
+        auto bindless_access_followup = compile_result1.value().get();
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
