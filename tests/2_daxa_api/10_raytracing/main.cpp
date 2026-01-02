@@ -1,6 +1,7 @@
 #include <iostream>
 #include <thread>
 #include <string>
+#include <format>
 
 #include <daxa/daxa.hpp>
 #include <daxa/utils/pipeline_manager.hpp>
@@ -38,6 +39,7 @@ namespace tests
             daxa::PipelineManager pipeline_manager = {};
             // std::shared_ptr<daxa::ComputePipeline> comp_pipeline = {};
             std::shared_ptr<daxa::RayTracingPipeline> rt_pipeline = {};
+            daxa::RayTracingPipeline::SbtPair sbt = {};
             daxa::TlasId tlas = {};
             daxa::BlasId blas = {};
             daxa::BlasId proc_blas = {};
@@ -89,13 +91,14 @@ namespace tests
             {
                 daxa_ctx = daxa::create_instance({});
 #if ACTIVATE_ATOMIC_FLOAT
-                atomic_float = true;
+                atomic_float = false;
 #endif            
                 device = [&]()
                 {
                     daxa::DeviceInfo2 info = {};
                     daxa::ImplicitFeatureFlags required_implicit_features = daxa::ImplicitFeatureFlagBits::BASIC_RAY_TRACING | (atomic_float ? daxa::ImplicitFeatureFlagBits::SHADER_ATOMIC_FLOAT : daxa::ImplicitFeatureFlagBits::NONE);
                     info = daxa_ctx.choose_device(required_implicit_features, info);
+
                     return daxa_ctx.create_device_2(info);
                 }();
 
@@ -528,6 +531,7 @@ namespace tests
                 ray_tracing_pipe_info.max_ray_recursion_depth = 2;
                 ray_tracing_pipe_info.name = "basic ray tracing pipeline";
                 rt_pipeline = pipeline_manager.add_ray_tracing_pipeline2(ray_tracing_pipe_info).value();
+                sbt = rt_pipeline->create_default_sbt();
             }
 
             auto update() -> bool
@@ -649,6 +653,7 @@ namespace tests
                     .width = width,
                     .height = height,
                     .depth = 1,
+                    .shader_binding_table = sbt.table,
                     .raygen_shader_binding_table_offset = raygen_shader_binding_table_offset,
                 });
 
