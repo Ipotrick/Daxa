@@ -1576,7 +1576,7 @@ namespace daxa
         {
             ImageViewId & view = task.attachment_image_views[attach_i][0];
 
-            if (!view.is_empty())
+            if (!view.is_empty() && impl.info.device.is_id_valid(view))
             {
                 ImageId parent_image = impl.info.device.image_view_info(view).value().image;
                 ImageViewId default_view = parent_image.default_view();
@@ -3137,11 +3137,13 @@ namespace daxa
                 }
             }
 
-            for (u32 qi = 0; qi < submit.queue_indices.size(); ++qi)
+            for (u32 qir = 0; qir < submit.queue_indices.size(); ++qir)
             {
                 /// =========================================
                 /// ==== PREPARE QUEUE COMMAND RECORDING ====
                 /// =========================================
+
+                u32 qi = submit.queue_indices.size() - 1 - qir;
 
                 u32 queue_index = submit.queue_indices[qi];
                 Queue queue = queue_index_to_queue(queue_index);
