@@ -281,7 +281,14 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
     info.present_mode = PresentMode::IMMEDIATE;
 #endif
 
-    auto * old_swapchain = this->vk_swapchain;
+    // WORKAROUND
+    // Some AMD RDNA4 drivers can not handle passing the old swapchain to swapchain resizing.
+    // We must destroy the old swapchain and then create the new one fresh.
+    if (this->vk_swapchain)
+    {
+        vkDestroySwapchainKHR(this->device->vk_device, this->vk_swapchain, nullptr);
+        this->vk_swapchain = VK_NULL_HANDLE;
+    }
 
     // NOTE: this is a hack that allows us to ignore issues caused
     // by things that are just underspecified in the Vulkan spec.
@@ -310,7 +317,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),
         .clipped = VK_TRUE,
-        .oldSwapchain = old_swapchain,
+        .oldSwapchain = VK_NULL_HANDLE,
     };
 
     result = static_cast<daxa_Result>(vkCreateSwapchainKHR(
@@ -373,11 +380,6 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
             .pObjectName = this->info_name.c_str(),
         };
         this->device->vkSetDebugUtilsObjectNameEXT(this->device->vk_device, &swapchain_name_info);
-    }
-
-    if (old_swapchain != VK_NULL_HANDLE)
-    {
-        vkDestroySwapchainKHR(this->device->vk_device, old_swapchain, nullptr);
     }
 
     return DAXA_RESULT_SUCCESS;

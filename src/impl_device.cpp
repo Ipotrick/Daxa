@@ -118,6 +118,13 @@ auto daxa_ImplDevice::ImplQueue::get_oldest_pending_submit(VkDevice a_vk_device,
         auto result = static_cast<daxa_Result>(vkGetSemaphoreCounterValue(a_vk_device, this->gpu_queue_local_timeline, &latest_gpu));
         _DAXA_RETURN_IF_ERROR(result, result);
 
+        // WORKAROUND
+        // AMD RDNA4 drivers sometimes return 0xFF.. instead of returning device lost.
+        if (latest_gpu == 0xFFFFFFFFFFFFFFFF) 
+        {
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_DEVICE_LOST, DAXA_RESULT_ERROR_DEVICE_LOST);
+        }
+
         u64 latest_cpu = this->latest_pending_submit_timeline_value.load(std::memory_order::acquire);
 
         bool const cpu_ahead_of_gpu = latest_cpu > latest_gpu;
