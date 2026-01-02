@@ -1476,7 +1476,7 @@ namespace daxa
                     inst[2] = SpvDecorationPerPrimitiveEXT;
 
                     // Insert after header (word index 5)
-                    spirv.insert(spirv.begin() + 5, inst, inst + 3);
+                    spirv.insert(spirv.end(), inst, inst + 3);
                 }
             }
 #endif
