@@ -157,7 +157,12 @@ namespace daxa
     [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]] RaytracingAccelerationStructure RayTracingAccelerationStructureTable[];
     extension RaytracingAccelerationStructure
     {
-        static RaytracingAccelerationStructure get(daxa::TlasId i) { return RayTracingAccelerationStructureTable[i.index()]; }
+        static RaytracingAccelerationStructure get(daxa::u64 address) 
+        {
+            return spirv_asm {
+                result:$$RaytracingAccelerationStructure = OpConvertUToAccelerationStructureKHR $address
+            };
+        }
     }
 
     struct TlasId
@@ -174,10 +179,6 @@ namespace daxa
         daxa_b32 is_empty()
         {
             return value == 0;
-        }
-        RaytracingAccelerationStructure get()
-        {
-            return RayTracingAccelerationStructureTable[index()];
         }
     };
 #endif // DAXA_RAY_TRACING
