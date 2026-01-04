@@ -675,6 +675,7 @@ namespace daxa
 #endif
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
                 auto ret = slang::createGlobalSession(slang_backend.global_session.writeRef());
+                // std::cout << "using slang " << slang_backend.global_session->getBuildTagString() << "\n";
                 DAXA_DBG_ASSERT_TRUE_M(SLANG_SUCCEEDED(ret), "slang::createGlobalSession failed");
 #endif
             }

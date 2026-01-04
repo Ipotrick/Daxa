@@ -104,6 +104,12 @@ if (DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG AND NOT TARGET slang::slang)
             NO_DEFAULT_PATH
             DOC "Slang shared library (.dll)"
         )
+        find_file(Slang_Glslang_DLL
+            NAMES slang-glslang.dll
+            HINTS ${slang_SOURCE_DIR}/bin
+            NO_DEFAULT_PATH
+            DOC "Slang Glslang shared library (.dll)"
+        )
     else() # Unix; uses .so
         set(Slang_DLL ${Slang_LIBRARY} CACHE PATH "Slang shared library (.so)")
     endif()

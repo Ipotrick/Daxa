@@ -131,22 +131,7 @@ if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG)
         PUBLIC
         DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG=true
     )
-
     target_link_libraries(daxa PRIVATE slang::slang slang::glslang)
-    if(CMAKE_SYSTEM_NAME STREQUAL "Windows")
-        # NOTE(grundlett): Really hacky. It appears there's no way to create plugin dll dependencies...
-        # see https://gitlab.kitware.com/cmake/cmake/-/issues/22993
-        # find_program(SLANG_DLL slang.dll)
-        # find_program(SLANG_GLSLANG_DLL slang-glslang.dll)
-        # add_custom_command(TARGET daxa POST_BUILD
-        #     COMMAND ${CMAKE_COMMAND} -E copy ${SLANG_DLL} $<TARGET_FILE_DIR:daxa>
-        #     COMMAND ${CMAKE_COMMAND} -E copy ${SLANG_GLSLANG_DLL} $<TARGET_FILE_DIR:daxa>
-        # )
-    else()
-        # TODO(grundlett) ...
-        # find_file(SLANG_DLL libslang.so)
-        # find_file(SLANG_GLSLANG_DLL libslang-glslang.so)
-    endif()
 endif()
 if(DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SPIRV_VALIDATION)
     target_compile_definitions(daxa
