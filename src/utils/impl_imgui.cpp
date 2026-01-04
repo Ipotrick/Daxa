@@ -1,5 +1,3 @@
-#include "../impl_core.hpp"
-
 #include <daxa/daxa.inl>
 
 struct ImGuiVertex

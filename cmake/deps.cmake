@@ -54,16 +54,19 @@ if (DAXA_ENABLE_UTILS_IMGUI AND NOT TARGET imgui::imgui)
             ${imgui_SOURCE_DIR}/imgui_demo.cpp
             ${imgui_SOURCE_DIR}/imgui_draw.cpp
             ${imgui_SOURCE_DIR}/imgui_widgets.cpp
-            ${imgui_SOURCE_DIR}/imgui_tables.cpp
-            ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp)
+            ${imgui_SOURCE_DIR}/imgui_tables.cpp)
 
         target_include_directories(lib_imgui PUBLIC
             ${imgui_SOURCE_DIR}
             ${imgui_SOURCE_DIR}/backends
-            ${Vulkan_INCLUDE_DIRS}
-            ${glfw_SOURCE_DIR}/include)
+            ${Vulkan_INCLUDE_DIRS})
 
-        target_link_libraries(lib_imgui PRIVATE glfw)
+        if(TARGET glfw)
+            target_sources(lib_imgui PRIVATE ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp)
+            target_link_libraries(lib_imgui PRIVATE glfw)
+            target_include_directories(lib_imgui PUBLIC ${glfw_SOURCE_DIR}/include)
+        endif()
+
         add_library(imgui::imgui ALIAS lib_imgui)
     endif()
 endif()
@@ -152,7 +155,7 @@ if (DAXA_ENABLE_UTILS_PIPELINE_MANAGER_SLANG AND NOT TARGET slang::slang)
     set_property(TARGET Slang PROPERTY INTERFACE_INCLUDE_DIRECTORIES ${Slang_INCLUDE_DIR})
 endif()
 
-if (DAXA_ENABLE_UTILS_FSR3)
+if (DAXA_ENABLE_UTILS_FSR3) # TODO: Add FSR3 support
     FetchContent_Declare(
         ffx_sdk
         URL https://github.com/GPUOpen-LibrariesAndSDKs/FidelityFX-SDK/releases/download/v1.1.4/FidelityFX-SDK-v1.1.4.zip

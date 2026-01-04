@@ -6,7 +6,7 @@
 #endif
 
 #if !DAXA_BUILT_WITH_UTILS_TASK_GRAPH
-#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled, or request the utils-task-graph feature in vcpkg"
+#error "[build error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled"
 #endif
 
 #include <array>

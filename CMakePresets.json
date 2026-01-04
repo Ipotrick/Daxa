@@ -10,11 +10,9 @@
             "name": "defaults",
             "hidden": true,
             "binaryDir": "${sourceDir}/build/${presetName}",
-            "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
             "generator": "Ninja Multi-Config",
             "cacheVariables": {
                 "CMAKE_MODULE_PATH": "${sourceDir}/cmake/modules",
-                "DAXA_USE_VCPKG": true,
                 "DAXA_ENABLE_UTILS_FSR2": false,
                 "DAXA_ENABLE_UTILS_IMGUI": true,
                 "DAXA_ENABLE_UTILS_MEM": false,

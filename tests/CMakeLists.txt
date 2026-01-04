@@ -30,10 +30,10 @@ function(DAXA_CREATE_TEST)
         endif()
     endif()
 
-    add_custom_command(TARGET daxa_test_${FOLDER_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:daxa_test_${FOLDER_NAME}> $<TARGET_FILE_DIR:daxa_test_${FOLDER_NAME}>
-        COMMAND_EXPAND_LISTS
-    )
+    # add_custom_command(TARGET daxa_test_${FOLDER_NAME} POST_BUILD
+    #     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:daxa_test_${FOLDER_NAME}> $<TARGET_FILE_DIR:daxa_test_${FOLDER_NAME}>
+    #     COMMAND_EXPAND_LISTS
+    # )
 endfunction()
 
 function(DAXA_CREATE_TEST_C)
@@ -64,16 +64,11 @@ function(DAXA_CREATE_TEST_C)
     target_include_directories(daxa_test_c_${FOLDER_NAME} PRIVATE "${CMAKE_CURRENT_LIST_DIR}" "${CMAKE_CURRENT_LIST_DIR}/0_common/shared")
     target_compile_definitions(daxa_test_c_${FOLDER_NAME} PRIVATE DAXA_SAMPLE_PATH="${CMAKE_CURRENT_LIST_DIR}/${FOLDER_PATH}")
 
-    add_custom_command(TARGET daxa_test_c_${FOLDER_NAME} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:daxa_test_c_${FOLDER_NAME}> $<TARGET_FILE_DIR:daxa_test_c_${FOLDER_NAME}>
-        COMMAND_EXPAND_LISTS
-    )
+    # add_custom_command(TARGET daxa_test_c_${FOLDER_NAME} POST_BUILD
+    #     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_RUNTIME_DLLS:daxa_test_c_${FOLDER_NAME}> $<TARGET_FILE_DIR:daxa_test_c_${FOLDER_NAME}>
+    #     COMMAND_EXPAND_LISTS
+    # )
 endfunction()
-
-if(DAXA_USE_VCPKG)
-    find_package(glfw3 CONFIG REQUIRED)
-endif()
-# find_package(glfw3 CONFIG REQUIRED)
 
 DAXA_CREATE_TEST(
     FOLDER 1_setup 1_window
@@ -159,7 +154,7 @@ DAXA_CREATE_TEST(
     FEATURES
         UTILS_TASK_GRAPH
         UTILS_IMGUI
-        UTILS_PIPELINE_MANAGER_GLSLANG
+        # UTILS_PIPELINE_MANAGER_GLSLANG # NOTE: Dependent on what is set in mandelbrot_main.cpp
         UTILS_PIPELINE_MANAGER_SLANG
 )
 # DAXA_CREATE_TEST(

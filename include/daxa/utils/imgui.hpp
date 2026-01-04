@@ -1,7 +1,7 @@
 #pragma once
 
 #if !DAXA_BUILT_WITH_UTILS_IMGUI
-#error "[package management error] You must build Daxa with the DAXA_ENABLE_UTILS_IMGUI CMake option enabled, or request the utils-imgui feature in vcpkg"
+#error "[build error] You must build Daxa with the DAXA_ENABLE_UTILS_IMGUI CMake option enabled"
 #endif
 
 #include <daxa/core.hpp>
