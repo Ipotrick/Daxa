@@ -130,6 +130,17 @@ auto daxa_timeline_semaphore_wait_for_value(daxa_TimelineSemaphore self, uint64_
     return static_cast<daxa_Result>(vkWaitSemaphores(self->device->vk_device, &vk_semaphore_wait_info, timeout));
 }
 
+auto daxa_timeline_semaphore_signal_value(daxa_TimelineSemaphore self, uint64_t value) -> daxa_Result
+{
+    VkSemaphoreSignalInfo const vk_semaphore_signal_info = {
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
+        .semaphore = self->vk_semaphore,
+        .value = value
+    };
+
+    return static_cast<daxa_Result>(vkSignalSemaphore(self->device->vk_device, &vk_semaphore_signal_info));
+}
+
 auto daxa_timeline_semaphore_get_vk_semaphore(daxa_TimelineSemaphore self) -> VkSemaphore
 {
     return self->vk_semaphore;

@@ -728,7 +728,7 @@ namespace daxa
         /// @brief  Submits a command list to the device.
         /// @return a unique id for each submit, can be used to wait for it to finish.
         ///         The id is guaranteed to be unique for every call to this function.
-        void submit_commands(CommandSubmitInfo const & submit_info);
+        auto submit_commands(CommandSubmitInfo const & submit_info) -> u64;
         void present_frame(PresentInfo const & info);
 
         /// @brief  Returns the latest submit index, which is incremented every time a submit is made.

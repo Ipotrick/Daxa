@@ -586,7 +586,7 @@ namespace daxa
         return out_value;
     }
 
-    void Device::submit_commands(CommandSubmitInfo const & submit_info)
+    auto Device::submit_commands(CommandSubmitInfo const & submit_info) -> u64
     {
         daxa_CommandSubmitInfo const c_submit_info = {
             .queue = std::bit_cast<daxa_Queue>(submit_info.queue),
@@ -604,9 +604,11 @@ namespace daxa
             .wait_queue_submit_indices = reinterpret_cast<daxa_QueueSubmitIndexPair const *>(submit_info.wait_queue_submit_indices.data()),
             .wait_queue_submit_indices_count = submit_info.wait_queue_submit_indices.size(),
         };
+        u64 submit_index = {};
         check_result(
-            daxa_dvc_submit(r_cast<daxa_Device>(this->object), &c_submit_info),
+            daxa_dvc_submit(r_cast<daxa_Device>(this->object), &c_submit_info, &submit_index),
             "failed to submit commands");
+        return submit_index;
     }
     
     auto Device::latest_submit_index() const -> u64
@@ -765,6 +767,12 @@ namespace daxa
         auto result = daxa_timeline_semaphore_wait_for_value(r_cast<daxa_TimelineSemaphore>(this->object), value, timeout_nanos);
         DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS || result == DAXA_RESULT_TIMEOUT, "failed to wait on timeline semaphore");
         return result == DAXA_RESULT_SUCCESS;
+    }
+
+    void TimelineSemaphore::signal_value(u64 value)
+    {
+        auto result = daxa_timeline_semaphore_signal_value(r_cast<daxa_TimelineSemaphore>(this->object), value);
+        DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to signal timeline semaphore");
     }
 
     auto TimelineSemaphore::inc_refcnt(ImplHandle const * object) -> u64

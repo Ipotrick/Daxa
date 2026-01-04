@@ -89,6 +89,7 @@ namespace daxa
         [[nodiscard]] auto value() const -> u64;
         void set_value(u64 value);
         [[nodiscard]] auto wait_for_value(u64 value, u64 timeout_nanos = ~0ull) -> bool;
+        void signal_value(u64 value);
 
       protected:
         template <typename T, typename H_T>

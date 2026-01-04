@@ -1452,7 +1452,7 @@ auto daxa_dvc_wait_on_submit(daxa_Device self, daxa_WaitOnSubmitInfo const * inf
     return static_cast<daxa_Result>(vkWaitSemaphores(self->vk_device, &vk_semaphore_wait_info, info->timeout));
 }
 
-auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> daxa_Result
+auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info, daxa_u64 * out_submit_index) -> daxa_Result
 {
     std::array<u8, 1u << 13u /*8kib*/> stack_memory;
     MemoryArena m_arena = MemoryArena{"daxa_dvc_submit dyn stack memory", stack_memory};
@@ -1505,6 +1505,10 @@ auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info) -> d
 
     u64 const current_timeline_value = self->global_submit_timeline.fetch_add(1) + 1;
     queue.latest_pending_submit_timeline_value.store(current_timeline_value);
+    if (out_submit_index != nullptr)
+    {
+        *out_submit_index = current_timeline_value;
+    }
 
     for (auto const & commands : std::span{info->command_lists, info->command_list_count})
     {
@@ -2754,7 +2758,8 @@ void zombiefy(daxa_Device self, T id, auto & slots, auto & zombies)
     {
         if (slot.owns_buffer)
         {
-            self->zombify_buffer(slot.buffer_id);
+            auto result = daxa_dvc_destroy_buffer(self, slot.buffer_id);
+            DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "Tlas owned buffer could not be destroyed.");
         }
     }
     u64 const submit_timeline_value = self->global_submit_timeline.load(std::memory_order::relaxed);

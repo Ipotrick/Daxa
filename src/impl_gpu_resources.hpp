@@ -196,6 +196,9 @@ namespace daxa
                 {
                     index = this->free_index_stack.back();
                     this->free_index_stack.pop_back();
+
+                    u64 test = this->hot_data.at(index).second.load(std::memory_order_relaxed);
+                    DAXA_DBG_ASSERT_TRUE_M((test & VERSION_ZOMBIE_BIT) == VERSION_ZOMBIE_BIT, "All reused resources must be zombies! Possibly called zombify instead of destroy within device!");
                 }
             }
 
@@ -252,7 +255,7 @@ namespace daxa
                 return false;
             }
             u64 const slot_version = this->hot_data.at(id.index).second.load(std::memory_order_relaxed);
-            return slot_version == id.version;
+            return slot_version == id.version && ((slot_version & VERSION_ZOMBIE_BIT) != VERSION_ZOMBIE_BIT);
         }
 
         /**
