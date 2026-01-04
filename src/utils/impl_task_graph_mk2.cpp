@@ -3137,22 +3137,34 @@ namespace daxa
                 }
             }
 
-            for (u32 qir = 0; qir < submit.queue_indices.size(); ++qir)
+            /// =========================
+            /// ==== RECORD COMMANDS ====
+            /// =========================
+
+            // We record all commands for all queues for a submit,
+            // then submit all of them at once.
+            // This helps with ensure more consistent async compute overlap.
+
+            // RAII types can not be allocated into tmp_memory as they are not trivially destructable.
+            // For these types we make these arrays to hold their data until submission.
+            std::array<BinarySemaphore, 512> wait_semaphores = {};
+            u64 wait_semaphore_count = {};
+            std::array<BinarySemaphore, 512> signal_semaphores = {};
+            u64 signal_semaphore_count = {};
+            std::array<std::pair<TimelineSemaphore, u64>, 512> signal_timeline_semaphores = {};
+            u64 signal_timeline_semaphore_count = {};
+            std::array<ExecutableCommandList, DAXA_MAX_TOTAL_QUEUE_COUNT> executable_command_lists = {};
+
+            auto submit_infos = tmp_memory.allocate_trivial_span<CommandSubmitInfo>(submit.queue_indices.size());
+
+            for (u32 qi = 0; qi < submit.queue_indices.size(); ++qi)
             {
                 /// =========================================
                 /// ==== PREPARE QUEUE COMMAND RECORDING ====
                 /// =========================================
 
-                u32 qi = submit.queue_indices.size() - 1 - qir;
-
                 u32 queue_index = submit.queue_indices[qi];
                 Queue queue = queue_index_to_queue(queue_index);
-                std::array<BinarySemaphore, 256> wait_semaphores = {};
-                u64 wait_semaphore_count = {};
-                std::array<BinarySemaphore, 256> signal_semaphores = {};
-                u64 signal_semaphore_count = {};
-                std::array<std::pair<TimelineSemaphore, u64>, 256> signal_timeline_semaphores = {};
-                u64 signal_timeline_semaphore_count = {};
 
                 auto cr = device.create_command_recorder({
                     .queue_family = queue.family,
@@ -3160,6 +3172,12 @@ namespace daxa
                 });
 
                 ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .recorder = cr};
+
+                // All queues allocate their spans of semaphores into the same stack array.
+                // Safe offset into the queue shared arrays for later use.
+                u64 const queue_wait_semaphores_first = wait_semaphore_count;
+                u64 const queue_signal_semaphores_first = signal_semaphore_count;
+                u64 const queue_signal_timeline_semaphores_first = signal_timeline_semaphore_count;
 
                 // Add image initialization barriers.
                 auto const & initialization_barriers = image_initializations[submit_index][queue_index];
@@ -3356,19 +3374,27 @@ namespace daxa
                     }
                 }
 
-                /// ================
-                /// ==== SUBMIT ====
-                /// ================
+                /// ===========================
+                /// ==== WRITE SUBMIT INFO ====
+                /// ===========================
 
-                auto submit_info = CommandSubmitInfo{};
-                auto exec_commands = std::array{cr.complete_current_commands()};
-                submit_info.command_lists = exec_commands,
-                submit_info.queue = queue;
-                submit_info.signal_binary_semaphores = {signal_semaphores.data(), signal_semaphore_count};
-                submit_info.signal_timeline_semaphores = {signal_timeline_semaphores.data(), signal_timeline_semaphore_count};
-                submit_info.wait_binary_semaphores = {wait_semaphores.data(), wait_semaphore_count};
-                submit_info.wait_queue_submit_indices = wait_queue_submit_indices;
-                device.submit_commands(submit_info);
+                executable_command_lists[qi] = cr.complete_current_commands();
+                submit_infos[qi] = {};
+                submit_infos[qi].command_lists = std::span{&executable_command_lists[qi], 1};    // THIS IS KINDA DANGEROUS CODE. MAKE SURE THAT THIS POINTER STAYS VALID IN THE FUTURE!
+                submit_infos[qi].queue = queue;
+                submit_infos[qi].signal_binary_semaphores = {signal_semaphores.data() + queue_signal_semaphores_first, signal_semaphore_count - queue_signal_semaphores_first};
+                submit_infos[qi].signal_timeline_semaphores = {signal_timeline_semaphores.data() + queue_signal_timeline_semaphores_first, signal_timeline_semaphore_count - queue_signal_timeline_semaphores_first};
+                submit_infos[qi].wait_binary_semaphores = {wait_semaphores.data() + queue_wait_semaphores_first, wait_semaphore_count - queue_wait_semaphores_first};
+                submit_infos[qi].wait_queue_submit_indices = wait_queue_submit_indices;
+            }
+
+            /// =====================================
+            /// ==== SUBMIT ON EACH SUBMIT QUEUE ====
+            /// =====================================
+
+            for (u32 qi = 0; qi < submit.queue_indices.size(); ++qi)
+            {
+                impl.info.device.submit_commands(submit_infos[qi]);
             }
 
             /// =================
