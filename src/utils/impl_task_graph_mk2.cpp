@@ -316,6 +316,24 @@ namespace daxa
         return ret;
     }
 
+    auto to_string(TaskAccessType taccess) -> std::string_view
+    {
+        switch(taccess)
+        {
+            case TaskAccessType::NONE: return "NONE";
+            case TaskAccessType::CONCURRENT_BIT: return "CONCURRENT_BIT";
+            case TaskAccessType::NON_CONCURRENT_READ: return "NON_CONCURRENT_READ";
+            case TaskAccessType::NON_CONCURRENT_SAMPLED: return "NON_CONCURRENT_SAMPLED";
+            case TaskAccessType::READ: return "READ";
+            case TaskAccessType::SAMPLED: return "SAMPLED";
+            case TaskAccessType::WRITE: return "WRITE";
+            case TaskAccessType::READ_WRITE: return "READ_WRITE";
+            case TaskAccessType::WRITE_CONCURRENT: return "WRITE_CONCURRENT";
+            case TaskAccessType::READ_WRITE_CONCURRENT: return "READ_WRITE_CONCURRENT";
+            default: return "UNKNOWN";
+        }
+    }
+
     auto task_stage_to_pipeline_stage(TaskStage stage) -> PipelineStageFlags
     {
         return static_cast<daxa::PipelineStageFlags>(static_cast<u64>(stage) & ~static_cast<u64>(TaskStage::JOKER));
@@ -2163,12 +2181,35 @@ namespace daxa
                             queue_string += ", ";
                         }
                     }
+                    std::array<std::string, DAXA_QUEUE_COUNT> submit_per_queue_task_names = {};
+                    for (u32 d_ati = 0; d_ati < access_timeline.size(); ++d_ati)
+                    {
+                        AccessGroup const & access_group = access_timeline[d_ati];
+                        if (access_group.tasks[0].task->submit_index != current_submit_index)
+                        {
+                            continue;
+                        }
+
+                        for (u32 d_task = 0; d_task < access_group.tasks.size(); ++d_task)
+                        {
+                            ImplTask const * task = access_group.tasks[d_task].task;
+
+                            submit_per_queue_task_names[queue_to_queue_index(task->queue)].append(std::format("  - \"{}\" access: {}\n", task->name, to_string(access_group.type)));
+                        }
+                    }
+
+                    std::string merged_queue_task_string = {};
+                    for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
+                    {
+                        merged_queue_task_string += std::format("\"{}\" was accessed by tasks: \n{}", to_string(queue_index_to_queue(q)), submit_per_queue_task_names[q]);
+                    }
+
                     DAXA_DBG_ASSERT_TRUE_M(
                         false,
-                        std::format("Illegal multi-queue resource access! Resource {} is accessed in multiple queues {} with multiple access types. "
-                                    "All access to a resource used on multiple queues (within one submit) must be identical and concurrent.",
-                                    impl.resources[i].name,
-                                    queue_string)
+                        std::format("Illegal multi-queue resource access! Resource \"{}\" is accessed in multiple queues {} with multiple access types in submit {}. "
+                                    "All access to a resource used on multiple queues (within one submit) must be identical and concurrent. "
+                                    "Tasks using the resource that submit sorted by queues:\n{}",
+                                    impl.resources[i].name, queue_string, current_submit_index, merged_queue_task_string)
                             .c_str());
                 }
             }
@@ -2641,13 +2682,13 @@ namespace daxa
             impl.submits[s].batch_count = submit_batch_count;
 
             // Calculate batch count per queue.
-            std::array<u32, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_batch_counts = {};
+            std::array<u32, DAXA_QUEUE_COUNT> queue_batch_counts = {};
             for (u32 batch_i = 0; batch_i < submit_batch_count; ++batch_i)
             {
                 u32 const global_batch_i = batch_i + submit_first_batch;
                 auto const & tmp_batch = final_batches[global_batch_i];
 
-                for (u32 q = 0; q < DAXA_MAX_TOTAL_QUEUE_COUNT; ++q)
+                for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
                 {
                     bool const queue_used = (tmp_batch.queue_bits & queue_index_to_queue_bit(q)) != 0;
                     if (queue_used)
@@ -2663,8 +2704,8 @@ namespace daxa
             }
 
             // Create tmp queue batch task arrays.
-            auto tmp_queue_batch_tasks = std::array<std::span<ArenaDynamicArray8k<std::pair<ImplTask *, u32>>>, DAXA_MAX_TOTAL_QUEUE_COUNT>{};
-            for (u32 q = 0; q < DAXA_MAX_TOTAL_QUEUE_COUNT; ++q)
+            auto tmp_queue_batch_tasks = std::array<std::span<ArenaDynamicArray8k<std::pair<ImplTask *, u32>>>, DAXA_QUEUE_COUNT>{};
+            for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
             {
                 tmp_queue_batch_tasks[q] = tmp_memory.allocate_trivial_span<ArenaDynamicArray8k<std::pair<ImplTask *, u32>>>(queue_batch_counts[q]);
                 for (u32 queue_batch_i = 0; queue_batch_i < queue_batch_counts[q]; ++queue_batch_i)
@@ -2689,7 +2730,7 @@ namespace daxa
             }
 
             // Store created queue batches in submits:
-            for (u32 q = 0; q < DAXA_MAX_TOTAL_QUEUE_COUNT; ++q)
+            for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
             {
                 submit.queue_batches[q] = impl.task_memory.allocate_trivial_span<TasksBatch>(queue_batch_counts[q]);
 
@@ -2729,13 +2770,13 @@ namespace daxa
         };
         struct TmpSubmitBarriers
         {
-            std::array<std::span<TmpBatchBarriers>, DAXA_MAX_TOTAL_QUEUE_COUNT> per_queue_batch_barriers = {};
+            std::array<std::span<TmpBatchBarriers>, DAXA_QUEUE_COUNT> per_queue_batch_barriers = {};
         };
         auto tmp_submit_queue_batch_barriers = tmp_memory.allocate_trivial_span<TmpSubmitBarriers>(impl.submits.size());
         for (u32 submit_index = 0; submit_index < impl.submits.size(); ++submit_index)
         {
             TasksSubmit const & submit = impl.submits[submit_index];
-            for (u32 queue_index = 0; queue_index < DAXA_MAX_TOTAL_QUEUE_COUNT; ++queue_index)
+            for (u32 queue_index = 0; queue_index < DAXA_QUEUE_COUNT; ++queue_index)
             {
                 std::span<TasksBatch> batches = submit.queue_batches[queue_index];
                 tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index] = tmp_memory.allocate_trivial_span<TmpBatchBarriers>(batches.size());
@@ -2839,7 +2880,7 @@ namespace daxa
         for (u32 submit_index = 0; submit_index < impl.submits.size(); ++submit_index)
         {
             TasksSubmit & submit = impl.submits[submit_index];
-            for (u32 queue_index = 0; queue_index < DAXA_MAX_TOTAL_QUEUE_COUNT; ++queue_index)
+            for (u32 queue_index = 0; queue_index < DAXA_QUEUE_COUNT; ++queue_index)
             {
                 for (u32 queue_batch_i = 0; queue_batch_i < submit.queue_batches[queue_index].size(); ++queue_batch_i)
                 {
@@ -2944,10 +2985,10 @@ namespace daxa
         // Memory and exeuction dependencies are done via semaphores.
         // Only image initializations require additional pipeline barriers.
         // Image initialization is inserted in the first submit for the queue that uses the image, before all other commands.
-        auto image_initializations = tmp_memory.allocate_trivial_span<std::array<ArenaDynamicArray8k<TaskImageBarrier>, DAXA_MAX_TOTAL_QUEUE_COUNT>>(impl.submits.size());
+        auto image_initializations = tmp_memory.allocate_trivial_span<std::array<ArenaDynamicArray8k<TaskImageBarrier>, DAXA_QUEUE_COUNT>>(impl.submits.size());
         for (u32 s = 0; s < impl.submits.size(); ++s)
         {
-            for (u32 q = 0; q < DAXA_MAX_TOTAL_QUEUE_COUNT; ++q)
+            for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
             {
                 image_initializations[s][q] = ArenaDynamicArray8k<TaskImageBarrier>(&tmp_memory);
             }
@@ -3153,7 +3194,7 @@ namespace daxa
             u64 signal_semaphore_count = {};
             std::array<std::pair<TimelineSemaphore, u64>, 512> signal_timeline_semaphores = {};
             u64 signal_timeline_semaphore_count = {};
-            std::array<ExecutableCommandList, DAXA_MAX_TOTAL_QUEUE_COUNT> executable_command_lists = {};
+            std::array<ExecutableCommandList, DAXA_QUEUE_COUNT> executable_command_lists = {};
 
             auto submit_infos = tmp_memory.allocate_trivial_span<CommandSubmitInfo>(submit.queue_indices.size());
 

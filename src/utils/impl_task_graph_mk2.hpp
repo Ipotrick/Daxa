@@ -225,9 +225,9 @@ namespace daxa
         u32 task_count = {};
         u32 first_batch = {};
         u32 batch_count = {};
-        u32 queue_bits = {};                                                                // set when compiling
-        std::array<std::span<TasksBatch>, DAXA_MAX_TOTAL_QUEUE_COUNT> queue_batches = {};   // set when compiling
-        std::span<u32> queue_indices = {};                                                  // set when compiling
+        u32 queue_bits = {};                                                      // set when compiling
+        std::array<std::span<TasksBatch>, DAXA_QUEUE_COUNT> queue_batches = {};   // set when compiling
+        std::span<u32> queue_indices = {};                                        // set when compiling
     };
 
     struct TaskGraphPresent

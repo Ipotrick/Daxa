@@ -204,6 +204,11 @@ namespace daxa
         return std::format("tg idx: {}, index: {}", id.task_graph_index, id.index);
     }
 
+    auto to_string(TaskAccessType taccess) -> std::string_view
+    {
+        return "";
+    }
+
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags
     {
         AccessTypeFlags ret;
@@ -3617,7 +3622,7 @@ namespace daxa
         for (auto & submit_scope : permutation.batch_submit_scopes)
         {
             u32 count = 0;
-            std::array<std::pair<daxa::TimelineSemaphore, u64>, DAXA_MAX_TOTAL_QUEUE_COUNT> wait_sema_mem = {};
+            std::array<std::pair<daxa::TimelineSemaphore, u64>, DAXA_QUEUE_COUNT> wait_sema_mem = {};
             for (u32 q = 0; q < impl.queue_used.size(); ++q)
             {
                 if (impl.queue_used[q])
