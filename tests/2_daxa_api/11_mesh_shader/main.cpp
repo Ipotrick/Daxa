@@ -38,6 +38,8 @@ struct WindowInfo
 
 #include "shared.inl"
 
+daxa::BufferId indirect_dispatch_buffer = {};
+
 struct DrawTask : DrawTri::Task
 {
     AttachmentViews views = {};
@@ -62,7 +64,8 @@ struct DrawTask : DrawTri::Task
         });
         render_recorder.set_rasterization_samples(daxa::RasterizationSamples::E4);
         render_recorder.set_pipeline(*pipeline);
-        render_recorder.draw_mesh_tasks(1, 1, 1);
+
+        render_recorder.draw_mesh_tasks_indirect({.indirect_buffer = indirect_dispatch_buffer, .draw_count = 1});
         ti.recorder = std::move(render_recorder).end_renderpass();
     }
 };
@@ -92,6 +95,16 @@ auto main() -> int
     daxa::Instance instance = daxa::create_instance({});
 
     daxa::Device device = instance.create_device_2(instance.choose_device(daxa::ImplicitFeatureFlagBits::MESH_SHADER, {}));
+
+    indirect_dispatch_buffer = device.create_buffer({
+        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+        .size = sizeof(daxa_u32vec3),
+    });
+    *device.get_host_address_as<daxa_u32vec3>(indirect_dispatch_buffer).value() = {
+        1,
+        1,
+        1,
+    };
 
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window = native_window_handle,

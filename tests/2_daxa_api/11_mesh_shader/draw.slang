@@ -18,10 +18,15 @@ struct Primitive
 const static uint MAX_VERTS = 3;
 const static uint MAX_PRIMS = 1;
 
+struct Payload {
+    float3 color;
+};
+
 [outputtopology("triangle")]
 [numthreads(3, 1, 1)]
 [shader("mesh")]
 void entry_mesh(
+    payload Payload payload,
     in uint tig : SV_GroupIndex,
     OutputIndices<uint3, MAX_PRIMS> triangles,
     OutputVertices<Vertex, MAX_VERTS> verts,
@@ -36,9 +41,17 @@ void entry_mesh(
 
     if(tig < MAX_PRIMS) {
         triangles[tig] = uint3(0,1,2);
-        primitives[tig].tint = float3(1,0.5,0);
+        primitives[tig].tint = float3(1,0.5,0) * payload.color;
         primitives[tig].cull = false;
     }
+}
+
+[shader("amplification")]
+void entry_task()
+{
+    Payload payload;
+    payload.color = float3(0,1,1);
+    DispatchMesh(1, 1, 1, payload);
 }
 
 struct FragmentOut
