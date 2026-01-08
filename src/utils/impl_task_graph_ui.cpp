@@ -239,16 +239,14 @@ namespace daxa
 
     void task_timeline_ui(ImplTaskGraph & impl)
     {
-        static ImGuiTableFlags table_flags = 
-            ImGuiTableFlags_ScrollX | 
-            ImGuiTableFlags_BordersOuter | 
-            ImGuiTableFlags_BordersInnerH | 
-            ImGuiTableFlags_Hideable | 
-            ImGuiTableFlags_Resizable | 
-            ImGuiTableFlags_Reorderable | 
-            ImGuiTableFlags_BordersV  | 
-            ImGuiTableFlags_NoHostExtendY |
-            ImGuiTableFlags_HighlightHoveredColumn;
+        static ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
+            // ImGuiTableFlags_ScrollX | 
+            // ImGuiTableFlags_BordersOuter | 
+            // ImGuiTableFlags_BordersInnerH | 
+            // ImGuiTableFlags_Hideable | 
+            // ImGuiTableFlags_BordersV  |  
+            // ImGuiTableFlags_NoHostExtendY |
+            // ImGuiTableFlags_HighlightHoveredColumn;
         static ImGuiTableColumnFlags column_flags = 
             ImGuiTableColumnFlags_AngledHeader | 
             ImGuiTableColumnFlags_WidthFixed;
@@ -266,54 +264,75 @@ namespace daxa
                 
                 std::vector<ImplTask*> tasks = {};
                 std::vector<char const*> task_names = {};
-
-                for (auto const & batch : queue_batches)
+                struct FlatTaskData
                 {
-                    for (auto const & task : batch.tasks)
+                    u32 batch_i = {};
+                    u32 task_i = {};
+                };
+                std::vector<FlatTaskData> flat_task_ui_data = {};
+                struct BatchUiData
+                {
+                    u32 color = {};
+                };
+                std::vector<BatchUiData> batch_ui_data = {};
+
+                for (u32 batch_i = 0; batch_i < queue_batches.size(); ++batch_i)
+                {
+                    for (u32 task_i = 0; task_i < queue_batches[batch_i].tasks.size(); ++task_i)
                     {
-                        tasks.push_back(task.first);
-                        task_names.push_back(task.first->name.data());
+                        auto task_pair = queue_batches[batch_i].tasks[task_i];
+                        tasks.push_back(task_pair.first);
+                        task_names.push_back(task_pair.first->name.data());
+                        flat_task_ui_data.push_back({batch_i, task_i});
                     }
+                    batch_ui_data.push_back({});
                 }
-                
+
                 u32 const col_count = task_names.size() + 1;
-                ImVec2 outer_size = ImVec2(0.0f, 0.0f);
+                u32 const row_count = impl.resources.size();
+                ImVec2 outer_size = ImVec2(0, 600);
                 if (ImGui::BeginTable(std::format("task_timeline_ui_table {} {}", submit_index, queue_index).c_str(), col_count, table_flags, outer_size))
                 {
-                    ImGui::TableSetupColumn("RESOURCE", ImGuiTableColumnFlags_NoHide | ImGuiTableColumnFlags_NoReorder);
-                    for (int n = 0; n < task_names.size(); n++)
-                        ImGui::TableSetupColumn(task_names[n], column_flags);
-                    ImGui::TableSetupScrollFreeze(1, 1);
+                    ImGui::TableSetupScrollFreeze(1, 2);
+                    ImGui::TableSetupColumn("Resource", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("a").x * 24);
+                    for (int n = 1; n < col_count; n++)
+                        ImGui::TableSetupColumn(task_names[n-1], column_flags);
 
                     ImGui::TableAngledHeadersRow(); // Draw angled headers for all columns with the ImGuiTableColumnFlags_AngledHeader flag.
                     ImGui::TableHeadersRow();       // Draw remaining headers and allow access to context-menu and other functions.
-                    for (int row = 0; row < 1; row++)
+                    for (int row = 0; row < row_count; row++)
                     {
-                        ImGui::PushID(row);
+                        ImplTaskResource const& resource = impl.resources[row];
+
+                        ImGui::PushID(&resource);
                         ImGui::TableNextRow();
-                        ImGui::TableSetColumnIndex(0);
                         ImGui::AlignTextToFramePadding();
-                        ImGui::Text("SOME RESOURCE");
-                        for (int column = 1; column < task_names.size(); column++)
-                        if (ImGui::TableSetColumnIndex(column))
+                        ImGui::TableSetColumnIndex(0);
+                        ImGui::Text(resource.name.data());
+                        ImGui::SetItemTooltip(resource.name.data());
+                        for (int column = 1; column < col_count; column++)
                         {
-                            ImGui::PushID(column);
-                            ImGui::Text("test");
-                            ImGui::PopID();
+                            if (ImGui::TableSetColumnIndex(column))
+                            {
+                                ImGui::PushID(column);
+                                ImGui::Text("test");
+                                // ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, bui.color);
+                                ImGui::PopID();
+                            }
                         }
                         ImGui::PopID();
                     }
                     ImGui::EndTable();
                 }
-                ImGui::SameLine();
             }
+            ImGui::SameLine();
         }
     }
 
     void TaskGraph::imgui_ui()
     {
         auto & impl = *r_cast<ImplTaskGraph *>(this->object);
-        if (ImGui::Begin("Taskgraph debug UI", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoScrollbar))
+        if (ImGui::Begin("Taskgraph debug UI", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_HorizontalScrollbar))
         {
             ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
             if (ImGui::BeginTabBar("TgDebugUiTabBar", tab_bar_flags))
