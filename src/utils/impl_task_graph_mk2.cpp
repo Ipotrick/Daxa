@@ -2454,6 +2454,7 @@ namespace daxa
         struct TransientResourceAllocation
         {
             ImplTaskResource * resource = {};
+            u32 resource_index = {};
             u64 offset = {};
             u64 size = {};
         };
@@ -2486,6 +2487,7 @@ namespace daxa
 
             auto new_allocation = TransientResourceAllocation{
                 .resource = &resource,
+                .resource_index = tr,
                 .offset = 0u,
                 .size = new_allocation_memory_requirements.size,
             };
@@ -2552,26 +2554,41 @@ namespace daxa
                 // We can already skip all allocations before the last colliding allocation,
                 // as they are guaranteed to have a smaller offset than the new allocation.
                 // Search in relevant present allocations for a spot to insert the new allocation.
+                bool inserted = false;
                 for (u32 alloc_i = last_colliding_allocation; alloc_i < allocation_count; ++alloc_i)
                 {
-                    bool const insert = new_allocation.offset >= transient_resource_allocations[alloc_i].offset;
+                    bool const insert = new_allocation.offset < transient_resource_allocations[alloc_i].offset;
                     if (insert)
                     {
-                        // Insert new allocation after alloc_i
-                        // Move back all other allocations after alloc_i
+                        // Insert new allocation at alloc_i
+                        // Move back all other allocations at and after alloc_i
                         // last_new_allocation_index is correct, as we are adding a new element here.
                         u32 const last_new_allocation_index = allocation_count;
-                        for (u32 i = last_new_allocation_index; i > (alloc_i + 1); --i)
+                        for (u32 i = last_new_allocation_index; i >= (alloc_i + 1); --i)
                         {
                             transient_resource_allocations[i] = transient_resource_allocations[i - 1];
                         }
-                        transient_resource_allocations[alloc_i + 1] = new_allocation;
+                        transient_resource_allocations[alloc_i] = new_allocation;
+                        inserted = true;
                         break;
                     }
+                }
+                if (!inserted)
+                {
+                    // append to end
+                    transient_resource_allocations[allocation_count] = new_allocation;
                 }
                 if (tr == 0)
                 {
                     transient_resource_allocations[0] = new_allocation;
+                }
+
+                // SANITY CHECK, CAN BE REMOVED
+                for (u32 a = 1; a < allocation_count + 1; ++a)
+                {
+                    TransientResourceAllocation & allocation_a = transient_resource_allocations[a - 1];
+                    TransientResourceAllocation & allocation_b = transient_resource_allocations[a];
+                    DAXA_DBG_ASSERT_TRUE_M(allocation_a.offset <= allocation_b.offset, "IMPOSSIBLE CASE!");
                 }
             }
             else
@@ -2583,6 +2600,29 @@ namespace daxa
             transient_heap_size = std::max(transient_heap_size, new_allocation.offset + new_allocation.size);
             transient_heap_alignment = std::max(transient_heap_alignment, new_allocation_memory_requirements.alignment);
             transient_heap_memory_bits &= new_allocation_memory_requirements.memory_type_bits;
+        }
+
+        // SANITY CHECK, CAN BE REMOVED
+        for (u32 a = 0; a < transient_resource_count; ++a)
+        {
+            for (u32 b = 0; b < transient_resource_count; ++b)
+            {
+                if (a == b) { continue; }
+
+                TransientResourceAllocation & allocation_a = transient_resource_allocations[a];
+                TransientResourceAllocation & allocation_b = transient_resource_allocations[b];
+
+                auto a_first_batch = transient_resources_sorted_by_lifetime[allocation_a.resource_index]->final_schedule_first_batch;
+                auto a_last_batch = transient_resources_sorted_by_lifetime[allocation_a.resource_index]->final_schedule_last_batch;
+
+                auto b_first_batch = transient_resources_sorted_by_lifetime[allocation_b.resource_index]->final_schedule_first_batch;
+                auto b_last_batch = transient_resources_sorted_by_lifetime[allocation_b.resource_index]->final_schedule_last_batch;
+
+                const bool lifetime_exclusive = a_first_batch > b_last_batch || a_last_batch < b_first_batch;
+                const bool memory_exclusive = allocation_a.offset >= (allocation_b.offset + allocation_b.size) || (allocation_a.offset + allocation_a.size) <= allocation_b.offset;
+                const bool exclusive = lifetime_exclusive || memory_exclusive;
+                DAXA_DBG_ASSERT_TRUE_M(exclusive, "IMPOSSIBLE CASE!");
+            }
         }
 
         // Allocate transient resource heap
@@ -2928,10 +2968,6 @@ namespace daxa
 
         for (u32 task_i = 0; task_i < impl.tasks.size(); ++task_i)
         {
-            if (task_i == 58)
-            {
-                // __debugbreak();
-            }
             ImplTask & task = impl.tasks[task_i];
             initialize_attachment_ids(impl, task);
             initialize_attachment_image_views(impl, task);
