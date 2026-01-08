@@ -43,6 +43,39 @@ namespace daxa
         EXCLUSIVE
     };
 
+    auto queue_to_queue_index(daxa::Queue queue) -> u32
+    {
+        u32 offsets[3] = {
+            0,
+            1,
+            1 + DAXA_MAX_COMPUTE_QUEUE_COUNT,
+        };
+        return offsets[static_cast<u32>(queue.family)] + queue.index;
+    }
+
+    auto queue_index_to_queue(u32 flat_index) -> daxa::Queue
+    {
+        daxa::Queue queues[] = {
+            daxa::QUEUE_MAIN,
+            daxa::QUEUE_COMPUTE_0,
+            daxa::QUEUE_COMPUTE_1,
+            daxa::QUEUE_COMPUTE_2,
+            daxa::QUEUE_COMPUTE_3,
+            daxa::QUEUE_TRANSFER_0,
+            daxa::QUEUE_TRANSFER_1,
+        };
+        return queues[flat_index];
+    }
+
+    auto queue_bits_to_first_queue_index(u32 queue_bits) -> u32
+    {
+        return 31u - static_cast<u32>(std::countl_zero(queue_bits));
+    }
+
+    auto queue_index_to_queue_bit(u32 queue_index) -> u32
+    {
+        return 1u << queue_index;
+    }
 
     struct ImplTask;
 
