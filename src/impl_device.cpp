@@ -1637,9 +1637,7 @@ auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_R
     daxa_ImplDevice::ImplQueue & impl_queue = self->get_queue(info->queue);
         std::unique_lock queue_lock{impl_queue.mtx};
 
-    daxa_Result result = static_cast<daxa_Result>(vkQueuePresentKHR(impl_queue.vk_queue, &present_info));
-    _DAXA_RETURN_IF_ERROR(result, result)
-    return result;
+    return static_cast<daxa_Result>(vkQueuePresentKHR(impl_queue.vk_queue, &present_info));
 }
 
 auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
