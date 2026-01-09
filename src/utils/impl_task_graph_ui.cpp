@@ -1,3 +1,4 @@
+#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
 #include <daxa/utils/task_graph_types.hpp>
 
 #if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
@@ -551,3 +552,4 @@ namespace daxa
 } // namespace daxa
 
 #endif // #else // #if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
+#endif
