@@ -1,4 +1,4 @@
-#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
+#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH || defined(__INTELLISENSE__)
 
 #include "../impl_core.hpp"
 
@@ -2772,7 +2772,7 @@ namespace daxa
         struct TmpBatchBarriers
         {
             ArenaDynamicArray8k<TaskBarrier> barriers = {};
-            ArenaDynamicArray8k<TaskImageBarrier> image_barriers = {};
+            ArenaDynamicArray8k<TaskBarrier> image_barriers = {};
         };
         struct TmpSubmitBarriers
         {
@@ -2789,7 +2789,7 @@ namespace daxa
                 for (u32 queue_batch_i = 0; queue_batch_i < batches.size(); ++queue_batch_i)
                 {
                     tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][queue_batch_i].barriers = ArenaDynamicArray8k<TaskBarrier>(&tmp_memory);
-                    tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][queue_batch_i].image_barriers = ArenaDynamicArray8k<TaskImageBarrier>(&tmp_memory);
+                    tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][queue_batch_i].image_barriers = ArenaDynamicArray8k<TaskBarrier>(&tmp_memory);
                 }
             }
         }
@@ -2804,7 +2804,7 @@ namespace daxa
                 continue;
             }
 
-            auto const & first_access_group = resource.access_timeline[0];
+            auto & first_access_group = resource.access_timeline[0];
             DAXA_DBG_ASSERT_TRUE_M(std::popcount(first_access_group.queue_bits) == 1, "IMPOSSIBLE CASE! First image access can never be concurrent on two queues");
             auto const submit_index = first_access_group.tasks[0].task->submit_index;
             auto const queue_index = queue_bits_to_first_queue_index(first_access_group.queue_bits);
@@ -2813,7 +2813,7 @@ namespace daxa
             auto const first_use_batch = resource.final_schedule_first_batch;
             DAXA_DBG_ASSERT_TRUE_M(impl.submits[submit_index].first_batch <= first_access_group.final_schedule_first_batch, "IMPOSSIBLE CASE! COULD INDICATE ERROR IN SUBMIT CONSTRUCTION PHASE!");
             auto const submit_local_batch_index = first_access_group.final_schedule_first_batch - impl.submits[submit_index].first_batch;
-            tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][submit_local_batch_index].image_barriers.push_back(TaskImageBarrier{
+            tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][submit_local_batch_index].image_barriers.push_back(TaskBarrier{
                 .src_access_group = nullptr,
                 .dst_access_group = &first_access_group,
                 .src_access = AccessConsts::NONE,
@@ -2858,7 +2858,7 @@ namespace daxa
 
                 if (impl.info.amd_rdna3_4_image_barrier_fix && resource.kind == TaskResourceKind::IMAGE)
                 {
-                    tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][submit_local_barrier_insertion_index].image_barriers.push_back(TaskImageBarrier{
+                    tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][submit_local_barrier_insertion_index].image_barriers.push_back(TaskBarrier{
                         .src_access_group = &first_ag,
                         .dst_access_group = &second_ag,
                         .src_access = first_ag_access,
@@ -2883,6 +2883,8 @@ namespace daxa
         /// ==== STORE SUBMIT BATCH TASKS AND BARRIERS ====
         /// ===============================================
 
+        // This also initializes the access groups pointers to their respective barriers.
+
         for (u32 submit_index = 0; submit_index < impl.submits.size(); ++submit_index)
         {
             TasksSubmit & submit = impl.submits[submit_index];
@@ -2890,10 +2892,19 @@ namespace daxa
             {
                 for (u32 queue_batch_i = 0; queue_batch_i < submit.queue_batches[queue_index].size(); ++queue_batch_i)
                 {
-                    submit.queue_batches[queue_index][queue_batch_i].pre_batch_barriers =
-                        tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][queue_batch_i].barriers.clone_to_contiguous(&impl.task_memory);
-                    submit.queue_batches[queue_index][queue_batch_i].pre_batch_image_barriers =
-                        tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][queue_batch_i].image_barriers.clone_to_contiguous(&impl.task_memory);
+                    auto & pre_batch_barriers = submit.queue_batches[queue_index][queue_batch_i].pre_batch_barriers;
+                    auto & pre_batch_image_barriers = submit.queue_batches[queue_index][queue_batch_i].pre_batch_image_barriers;
+                    pre_batch_barriers = tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][queue_batch_i].barriers.clone_to_contiguous(&impl.task_memory);
+                    pre_batch_image_barriers = tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][queue_batch_i].image_barriers.clone_to_contiguous(&impl.task_memory);
+
+                    for (u32 b = 0; b < pre_batch_barriers.size(); ++b)
+                    {
+                        pre_batch_barriers[b].dst_access_group->final_schedule_pre_barrier = &pre_batch_barriers[b];
+                    }
+                    for (u32 b = 0; b < pre_batch_image_barriers.size(); ++b)
+                    {
+                        pre_batch_image_barriers[b].dst_access_group->final_schedule_pre_barrier = &pre_batch_image_barriers[b];
+                    }
                 }
             }
         }
@@ -2987,12 +2998,12 @@ namespace daxa
         // Memory and exeuction dependencies are done via semaphores.
         // Only image initializations require additional pipeline barriers.
         // Image initialization is inserted in the first submit for the queue that uses the image, before all other commands.
-        auto image_initializations = tmp_memory.allocate_trivial_span<std::array<ArenaDynamicArray8k<TaskImageBarrier>, DAXA_QUEUE_COUNT>>(impl.submits.size());
+        auto image_initializations = tmp_memory.allocate_trivial_span<std::array<ArenaDynamicArray8k<TaskBarrier>, DAXA_QUEUE_COUNT>>(impl.submits.size());
         for (u32 s = 0; s < impl.submits.size(); ++s)
         {
             for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
             {
-                image_initializations[s][q] = ArenaDynamicArray8k<TaskImageBarrier>(&tmp_memory);
+                image_initializations[s][q] = ArenaDynamicArray8k<TaskBarrier>(&tmp_memory);
             }
         }
 
@@ -3121,10 +3132,10 @@ namespace daxa
 
                     if (transform_to_general)
                     {
-                        AccessGroup const & first_access_group = resource->access_timeline[0];
+                        AccessGroup & first_access_group = resource->access_timeline[0];
                         u32 const first_access_submit = first_access_group.tasks[0].task->submit_index;
                         u32 const first_access_queue_index = queue_bits_to_first_queue_index(first_access_group.queue_bits);
-                        image_initializations[first_access_submit][first_access_queue_index].push_back(TaskImageBarrier{
+                        image_initializations[first_access_submit][first_access_queue_index].push_back(TaskBarrier{
                             .src_access_group = nullptr,
                             .dst_access_group = &first_access_group,
                             .src_access = {},
@@ -3226,7 +3237,7 @@ namespace daxa
                 auto const & initialization_barriers = image_initializations[submit_index][queue_index];
                 for (u32 ib = 0; ib < initialization_barriers.size(); ++ib)
                 {
-                    TaskImageBarrier const & task_image_barrier = initialization_barriers[ib];
+                    TaskBarrier const & task_image_barrier = initialization_barriers[ib];
                     cr.pipeline_image_barrier(ImageBarrierInfo{
                         .src_access = task_image_barrier.src_access,
                         .dst_access = task_image_barrier.dst_access,
@@ -3254,7 +3265,7 @@ namespace daxa
                     }
                     for (u32 b = 0; b < batch.pre_batch_image_barriers.size(); ++b)
                     {
-                        TaskImageBarrier const & task_image_barrier = batch.pre_batch_image_barriers[b];
+                        TaskBarrier const & task_image_barrier = batch.pre_batch_image_barriers[b];
                         cr.pipeline_image_barrier(ImageBarrierInfo{
                             .src_access = task_image_barrier.src_access,
                             .dst_access = task_image_barrier.dst_access,

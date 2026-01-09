@@ -86,6 +86,8 @@ namespace daxa
         u32 attachment_index = {};
     };
 
+    struct TaskBarrier;
+
     struct AccessGroup
     {
         TaskStage stages = {};
@@ -94,6 +96,7 @@ namespace daxa
         std::span<TaskAttachmentAccess> tasks = {};
         u32 final_schedule_first_batch = ~0u;
         u32 final_schedule_last_batch = {};
+        TaskBarrier const * final_schedule_pre_barrier = {};
     };
 
     enum struct TaskResourceKind
@@ -228,17 +231,8 @@ namespace daxa
 
     struct TaskBarrier
     {
-        AccessGroup const * src_access_group = {};
-        AccessGroup const * dst_access_group = {};
-        Access src_access = AccessConsts::NONE;
-        Access dst_access = AccessConsts::NONE;
-        ImplTaskResource* resource = {};
-    };
-
-    struct TaskImageBarrier
-    {
-        AccessGroup const * src_access_group = {};
-        AccessGroup const * dst_access_group = {};
+        AccessGroup * src_access_group = {};
+        AccessGroup * dst_access_group = {};
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
         ImplTaskResource* resource = {};
@@ -249,7 +243,7 @@ namespace daxa
     {
         std::span<std::pair<ImplTask*, u32>> tasks = {};
         std::span<TaskBarrier> pre_batch_barriers = {};
-        std::span<TaskImageBarrier> pre_batch_image_barriers = {};
+        std::span<TaskBarrier> pre_batch_image_barriers = {};
     };
 
     struct TasksSubmit

@@ -257,7 +257,8 @@ namespace daxa
         return ret;
     }
 
-    static constexpr ImVec4 LayoutInitializationColor = ImVec4(0.5, 1.0f, 0.5f, 1.0f);
+    static constexpr ImVec4 LAYOUT_INITIALIZATION_COLOR = ImVec4(0.6f, 1.0f, 0.6f, 1.0f);
+    static constexpr ImVec4 BARRIER_COLOR = ImVec4(0.95f, 0.05f, 0.05f, 1.0f); // ImVec4(0.15f, 0.7f, 0.15f, 1.0f);
 
     auto task_type_to_color(TaskType type) -> ImVec4
     {        
@@ -285,7 +286,8 @@ namespace daxa
         ImGui::ColorButton("READ_WRITE", access_type_to_color(TaskAccessType::READ_WRITE)); ImGui::SameLine(); ImGui::Text("READ_WRITE"); 
         ImGui::ColorButton("WRITE_CONCURRENT", access_type_to_color(TaskAccessType::WRITE_CONCURRENT)); ImGui::SameLine(); ImGui::Text("WRITE_CONCURRENT"); 
         ImGui::ColorButton("READ_WRITE_CONCURRENT", access_type_to_color(TaskAccessType::READ_WRITE_CONCURRENT)); ImGui::SameLine(); ImGui::Text("READ_WRITE_CONCURRENT"); 
-        ImGui::ColorButton("IMAGE LAYOUT INIT", LayoutInitializationColor); ImGui::SameLine(); ImGui::Text("IMAGE LAYOUT INIT"); 
+        ImGui::ColorButton("IMAGE LAYOUT INIT", LAYOUT_INITIALIZATION_COLOR); ImGui::SameLine(); ImGui::Text("IMAGE LAYOUT INIT"); 
+        ImGui::ColorButton("BARRIER", BARRIER_COLOR); ImGui::SameLine(); ImGui::Text("BARRIER"); 
     }
 
     void task_timeline_ui(ImplTaskGraph & impl)
@@ -318,8 +320,7 @@ namespace daxa
 
                 struct BatchUiData
                 {
-                    TaskAccessType access_type = {};
-                    TaskStage stages = {};
+                    AccessGroup const * access_group = {};
                 };
                 std::vector<BatchUiData> batch_ui_data = {};
 
@@ -423,8 +424,7 @@ namespace daxa
                             u32 const local_last_batch_idx = std::min(ag.final_schedule_last_batch - submit.first_batch, static_cast<u32>(batch_ui_data.size() - 1));
                             for (u32 b = local_first_batch_idx; b <= local_last_batch_idx; ++b)
                             {
-                                batch_ui_data[b].access_type = ag.type;
-                                batch_ui_data[b].stages = ag.stages;
+                                batch_ui_data[b].access_group = &ag;
                             }
                         }
 
@@ -443,12 +443,12 @@ namespace daxa
                                 const bool is_batch_border_cell = col_ui.task == nullptr;
                                 const bool is_last_cell = column == col_count - 1;
 
-                                ImVec4 cell_color = ImVec4(0,0,0,1);
+                                ImVec4 cell_color = ImVec4(0.1f, 0.1f, 0.1f, 1.0f);
                                 if ((col_ui.local_batch_index + submit.first_batch) >= resource.final_schedule_first_batch &&
                                     (col_ui.local_batch_index + submit.first_batch) <= resource.final_schedule_last_batch && 
                                     resource.access_timeline.size() > 0)
                                 {
-                                    cell_color = ImVec4(0.15,0.15,0.15,1);
+                                    cell_color = ImVec4(0.2f, 0.2f, 0.2f, 1.0f);
                                 }
                                 
                                 if (is_batch_border_cell)
@@ -460,29 +460,83 @@ namespace daxa
                                     {
                                         BatchUiData const & a = batch_ui_data[col_ui.local_batch_index - 1];
                                         BatchUiData const & b = batch_ui_data[col_ui.local_batch_index];
-                                        if (a.access_type == b.access_type && is_access_concurrent(a.access_type))
+                                        if (a.access_group != nullptr &&
+                                            a.access_group == b.access_group)
                                         {
-                                            cell_color = access_type_to_color(a.access_type);
+                                            cell_color = access_type_to_color(a.access_group->type);
                                             cell_color.x *= 0.9f;
                                             cell_color.y *= 0.9f;
                                             cell_color.z *= 0.9f;
                                         }
                                     }
-                                    const bool first_transient_use = resource.external == nullptr && col_ui.local_batch_index + submit.first_batch == resource.final_schedule_first_batch;
-                                    const bool is_to_general_batch = first_transient_use;
-                                    if (is_to_general_batch)
+
+                                    BatchUiData const & batch_ui = batch_ui_data[col_ui.local_batch_index];
+
+                                    if (batch_ui.access_group != nullptr && 
+                                        batch_ui.access_group->final_schedule_first_batch == col_ui.local_batch_index + submit.first_batch &&
+                                        batch_ui.access_group->final_schedule_pre_barrier != nullptr)
                                     {
-                                        cell_color = LayoutInitializationColor;
-                                        ImGui::SetItemTooltip("Image Layout Undefined -> General Initialization");
+                                        bool const to_general = batch_ui.access_group->final_schedule_pre_barrier->layout_operation == daxa::ImageLayoutOperation::TO_GENERAL;
+                                        if (to_general)
+                                        {
+                                            cell_color = LAYOUT_INITIALIZATION_COLOR;
+                                        }
+                                        else
+                                        {
+                                            cell_color = BARRIER_COLOR;
+                                        }
+                                        ImGui::Selectable("");
+                                        if (ImGui::BeginItemTooltip())
+                                        {
+                                            ImGui::Text("Barrier:");
+                                            if (batch_ui.access_group->final_schedule_pre_barrier->src_access.stages != PipelineStageFlagBits::NONE)
+                                            {
+                                                ImGui::Text("Src:"); 
+                                                ImGui::Text(std::format("  Access: {}", to_string(batch_ui.access_group->final_schedule_pre_barrier->src_access)).c_str());
+                                                ImGui::Text("  Tasks:"); 
+                                                ImGui::SameLine();
+                                                auto const & src_tasks = batch_ui.access_group->final_schedule_pre_barrier->src_access_group->tasks;
+                                                for (u32 t = 0; t < src_tasks.size(); ++t)
+                                                {
+                                                    ImGui::Text(src_tasks[t].task->name.data());
+                                                    if (t < src_tasks.size() - 1)
+                                                    {
+                                                        ImGui::SameLine();
+                                                        ImGui::Text(", ");
+                                                        ImGui::SameLine();
+                                                    }
+                                                }
+                                            }
+                                            ImGui::Text("Dst:"); 
+                                            ImGui::Text(std::format("  Access: {}", to_string(batch_ui.access_group->final_schedule_pre_barrier->dst_access)).c_str());
+                                            ImGui::Text("  Tasks:"); 
+                                            ImGui::SameLine();
+                                            auto const & dst_tasks = batch_ui.access_group->tasks;
+                                            for (u32 t = 0; t < dst_tasks.size(); ++t)
+                                            {
+                                                ImGui::Text(dst_tasks[t].task->name.data());
+                                                if (t < dst_tasks.size() - 1)
+                                                {
+                                                    ImGui::SameLine();
+                                                    ImGui::Text(", ");
+                                                    ImGui::SameLine();
+                                                }
+                                            }
+                                            if (to_general)
+                                            {
+                                                ImGui::Text("Layout Transition: Undefined -> General");
+                                            }
+                                            ImGui::EndTooltip();
+                                        }
                                     }
+
                                 }
                                 else
                                 {
                                     BatchUiData const & batch_ui = batch_ui_data[col_ui.local_batch_index];
-                                    const bool is_cell_part_of_access_group = batch_ui.access_type != TaskAccessType::NONE;
-                                    if (is_cell_part_of_access_group)
+                                    if (batch_ui.access_group != nullptr)
                                     {
-                                        cell_color = access_type_to_color(batch_ui.access_type);
+                                        cell_color = access_type_to_color(batch_ui.access_group->type);
                                     }
                                 }
 
