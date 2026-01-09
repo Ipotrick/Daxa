@@ -237,21 +237,63 @@ namespace daxa
         draw_list->PopClipRect();
     }
 
+    auto access_type_to_color(TaskAccessType access) -> ImVec4
+    {
+        ImVec4 ret = {};
+        switch (access)
+        {
+            case TaskAccessType::NONE: ret = ImVec4(0.35638f, 0.37626f, 0.40198f, 1.0f); break; //                     #9aa0a6ff
+            case TaskAccessType::WRITE: ret = ImVec4(0.70110f, 0.21223f, 0.13287f, 1.0f); break; //                    #e07a5fff
+            case TaskAccessType::READ: ret = ImVec4(0.07036f, 0.23799f, 1.00000f, 1.0f); break; //                     #3A86FF
+            case TaskAccessType::SAMPLED: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break; //                  #F9C74F
+            case TaskAccessType::READ_WRITE: ret = ImVec4(0.33482f, 0.10115f, 0.78354f, 1.0f); break; //               #9B5DE5
+            case TaskAccessType::WRITE_CONCURRENT: ret = ImVec4(0.78354f, 0.06301f, 0.07324f, 1.0f); break; //         #E63946
+            case TaskAccessType::READ_WRITE_CONCURRENT: ret = ImVec4(0.87056f, 0.10520f, 0.48453f, 1.0f); break; //    #F15BB5
+        }
+        ret.x = std::sqrt(ret.x);
+        ret.y = std::sqrt(ret.y);
+        ret.z = std::sqrt(ret.z);
+        return ret;
+    }
+
+    static constexpr ImVec4 LayoutInitializationColor = ImVec4(0.5, 1.0f, 0.5f, 1.0f);
+
+    auto task_type_to_color(TaskType type) -> ImVec4
+    {        
+        ImVec4 ret = {};
+        switch(type)
+        {
+            case TaskType::GENERAL: ret = ImVec4(0.47060f, 0.52941f, 0.61960f, 1.0f); break; //        #8D99AE 
+            case TaskType::RASTER: ret = ImVec4(0.70110f, 0.21223f, 0.13287f, 1.0f); break; //         #e07a5fff
+            case TaskType::COMPUTE: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break; //        #F9C74F
+            case TaskType::RAY_TRACING: ret = ImVec4(0.70110f, 0.02113f, 0.04362f, 1.0f); break; //    #EF233C 
+            case TaskType::TRANSFER: ret = ImVec4(0.03112f, 0.78413f, 0.60552f, 1.0f); break; //       #06D6A0 
+        }
+        ret.x = std::sqrt(ret.x);
+        ret.y = std::sqrt(ret.y);
+        ret.z = std::sqrt(ret.z);
+        return ret;
+    }
+
+    void access_type_color_legend()
+    {
+        ImGui::ColorButton("NONE", access_type_to_color(TaskAccessType::NONE)); ImGui::SameLine(); ImGui::Text("NONE"); 
+        ImGui::ColorButton("WRITE", access_type_to_color(TaskAccessType::WRITE)); ImGui::SameLine(); ImGui::Text("WRITE"); 
+        ImGui::ColorButton("READ", access_type_to_color(TaskAccessType::READ)); ImGui::SameLine(); ImGui::Text("READ"); 
+        ImGui::ColorButton("SAMPLED", access_type_to_color(TaskAccessType::SAMPLED)); ImGui::SameLine(); ImGui::Text("SAMPLED"); 
+        ImGui::ColorButton("READ_WRITE", access_type_to_color(TaskAccessType::READ_WRITE)); ImGui::SameLine(); ImGui::Text("READ_WRITE"); 
+        ImGui::ColorButton("WRITE_CONCURRENT", access_type_to_color(TaskAccessType::WRITE_CONCURRENT)); ImGui::SameLine(); ImGui::Text("WRITE_CONCURRENT"); 
+        ImGui::ColorButton("READ_WRITE_CONCURRENT", access_type_to_color(TaskAccessType::READ_WRITE_CONCURRENT)); ImGui::SameLine(); ImGui::Text("READ_WRITE_CONCURRENT"); 
+        ImGui::ColorButton("IMAGE LAYOUT INIT", LayoutInitializationColor); ImGui::SameLine(); ImGui::Text("IMAGE LAYOUT INIT"); 
+    }
+
     void task_timeline_ui(ImplTaskGraph & impl)
     {
         static ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
-            // ImGuiTableFlags_ScrollX | 
-            // ImGuiTableFlags_BordersOuter | 
-            // ImGuiTableFlags_BordersInnerH | 
-            // ImGuiTableFlags_Hideable | 
-            // ImGuiTableFlags_BordersV  |  
-            // ImGuiTableFlags_NoHostExtendY |
-            // ImGuiTableFlags_HighlightHoveredColumn;
-        static ImGuiTableColumnFlags column_flags = 
-            ImGuiTableColumnFlags_AngledHeader | 
-            ImGuiTableColumnFlags_WidthFixed;
+        static ImGuiTableColumnFlags column_flags = ImGuiTableColumnFlags_AngledHeader | ImGuiTableColumnFlags_WidthFixed;
 
         const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
+
 
         for (u32 submit_index = 0; submit_index < impl.submits.size(); ++submit_index)
         {
@@ -260,63 +302,194 @@ namespace daxa
             for (u32 q = 0; q < submit.queue_indices.size(); ++q)
             {
                 u32 queue_index = submit.queue_indices[q];
+                Queue queue = queue_index_to_queue(queue_index);
                 std::span<TasksBatch> queue_batches = submit.queue_batches[queue_index];
                 
-                std::vector<ImplTask*> tasks = {};
-                std::vector<char const*> task_names = {};
-                struct FlatTaskData
+                std::vector<char const*> col_names = {};
+                struct ColUiData
                 {
-                    u32 batch_i = {};
-                    u32 task_i = {};
+                    u32 local_batch_index = {};
+                    u32 batch_local_task_index = {};
+                    u32 global_task_index = {};
+                    ImplTask* task = {};
                 };
-                std::vector<FlatTaskData> flat_task_ui_data = {};
+                std::vector<ColUiData> col_ui_data = {};
+
                 struct BatchUiData
                 {
-                    u32 color = {};
+                    TaskAccessType access_type = {};
+                    TaskStage stages = {};
                 };
                 std::vector<BatchUiData> batch_ui_data = {};
 
                 for (u32 batch_i = 0; batch_i < queue_batches.size(); ++batch_i)
                 {
+                    col_ui_data.push_back({
+                        .local_batch_index = batch_i,
+                    });
+                    batch_ui_data.push_back({});
+                    col_names.push_back("");
                     for (u32 task_i = 0; task_i < queue_batches[batch_i].tasks.size(); ++task_i)
                     {
                         auto task_pair = queue_batches[batch_i].tasks[task_i];
-                        tasks.push_back(task_pair.first);
-                        task_names.push_back(task_pair.first->name.data());
-                        flat_task_ui_data.push_back({batch_i, task_i});
+                        col_ui_data.push_back({
+                            .local_batch_index = batch_i,
+                            .batch_local_task_index = task_i,
+                            .global_task_index = task_pair.second,
+                            .task = task_pair.first,
+                        });
+                        col_names.push_back(task_pair.first->name.data());
                     }
-                    batch_ui_data.push_back({});
                 }
 
-                u32 const col_count = task_names.size() + 1;
-                u32 const row_count = impl.resources.size();
-                ImVec2 outer_size = ImVec2(0, 600);
+                u32 const col_count = static_cast<u32>(col_ui_data.size() + 1);
+                u32 const row_count = static_cast<u32>(impl.resources.size());
+                ImVec2 outer_size = ImVec2(0, 1000);
+                float const batch_border_cell_size = 1.0f;
+
+                // Before every table we draw the legend in the top left
+                ImVec2 cursor_before_table = ImGui::GetCursorPos();
+                                
+                const float y_padding = ImGui::GetStyle().CellPadding.y;
+                ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(batch_border_cell_size, y_padding));
                 if (ImGui::BeginTable(std::format("task_timeline_ui_table {} {}", submit_index, queue_index).c_str(), col_count, table_flags, outer_size))
                 {
                     ImGui::TableSetupScrollFreeze(1, 2);
                     ImGui::TableSetupColumn("Resource", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("a").x * 24);
-                    for (int n = 1; n < col_count; n++)
-                        ImGui::TableSetupColumn(task_names[n-1], column_flags);
+                    for (i32 n = 1; n < static_cast<i32>(col_count); n++) 
+                    {
+                        bool const batch_border_cell = col_ui_data[n - 1].task == nullptr;
+                        ImGui::TableSetupColumn(
+                            col_names[n-1],
+                            batch_border_cell ? (column_flags | ImGuiTableColumnFlags_WidthFixed) : column_flags,
+                            batch_border_cell ? batch_border_cell_size : TEXT_BASE_HEIGHT * 1.3f
+                        );
+                    }
 
                     ImGui::TableAngledHeadersRow(); // Draw angled headers for all columns with the ImGuiTableColumnFlags_AngledHeader flag.
-                    ImGui::TableHeadersRow();       // Draw remaining headers and allow access to context-menu and other functions.
-                    for (int row = 0; row < row_count; row++)
+                    ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::Text("Task Type");
+                    for (int column = 1; column < col_count; column++)
+                    {
+                        ImGui::TableSetColumnIndex(column);
+                        ColUiData const & col_ui = col_ui_data[column - 1]; // -1 as the first column is for the name.
+                        const bool is_batch_border_cell = col_ui.task == nullptr;
+                        if (!is_batch_border_cell)
+                        {
+                            ImGui::PushID(column);
+                            ImGui::PushStyleColor(ImGuiCol_Text, task_type_to_color(col_ui.task->task_type));
+                            const float text_width = ImGui::CalcTextSize("XX").x;
+                            const float column_width = ImGui::GetColumnWidth();
+                            const float text_offset = (column_width - text_width) / 2;
+                            ImGui::Dummy(ImVec2(0.0f, 0.0f));
+                            ImGui::SameLine(text_offset);
+                            switch(col_ui.task->task_type)
+                            {
+                                case TaskType::GENERAL: ImGui::Text("GN"); break;
+                                case TaskType::RASTER: ImGui::Text("RS"); break;
+                                case TaskType::COMPUTE: ImGui::Text("CT"); break;
+                                case TaskType::RAY_TRACING: ImGui::Text("RT"); break;
+                                case TaskType::TRANSFER: ImGui::Text("TF"); break;
+                            }
+                            ImGui::PopStyleColor();
+                            //ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(task_type_to_color(col_ui.task->task_type)));
+                            ImGui::PopID();
+                        }
+                    }
+                    //ImGui::TableHeadersRow();       // Draw remaining headers and allow access to context-menu and other functions.
+                    for (i32 row = 0; row < static_cast<i32>(row_count); row++)
                     {
                         ImplTaskResource const& resource = impl.resources[row];
 
+                        // Clear Batch Ui Data:
+                        for (auto& b : batch_ui_data)
+                        {
+                            b = {};
+                        }
+                        
+                        // Fill this resources batch data:
+                        for (u32 agi = 0; agi < resource.access_timeline.size(); ++agi)
+                        {
+                            AccessGroup const & ag = resource.access_timeline[agi];
+
+                            if (ag.tasks[0].task->submit_index != submit_index) { continue; }
+                            if ((ag.queue_bits & queue_index_to_queue_bit(queue_to_queue_index(queue))) == 0) { continue; }
+                            
+                            u32 const local_first_batch_idx = ag.final_schedule_first_batch - submit.first_batch;
+                            // Need to min here as some queues have fewer batches than the access group.
+                            // The access group can have more batches as it can be on different queues with more batches.
+                            u32 const local_last_batch_idx = std::min(ag.final_schedule_last_batch - submit.first_batch, static_cast<u32>(batch_ui_data.size() - 1));
+                            for (u32 b = local_first_batch_idx; b <= local_last_batch_idx; ++b)
+                            {
+                                batch_ui_data[b].access_type = ag.type;
+                                batch_ui_data[b].stages = ag.stages;
+                            }
+                        }
+
+                        
                         ImGui::PushID(&resource);
                         ImGui::TableNextRow();
                         ImGui::AlignTextToFramePadding();
                         ImGui::TableSetColumnIndex(0);
                         ImGui::Text(resource.name.data());
                         ImGui::SetItemTooltip(resource.name.data());
-                        for (int column = 1; column < col_count; column++)
+                        for (i32 column = 1; column < static_cast<i32>(col_count); column++)
                         {
                             if (ImGui::TableSetColumnIndex(column))
                             {
+                                ColUiData const & col_ui = col_ui_data[column - 1]; // -1 as the first column is for the name.
+                                const bool is_batch_border_cell = col_ui.task == nullptr;
+                                const bool is_last_cell = column == col_count - 1;
+
+                                ImVec4 cell_color = ImVec4(0,0,0,1);
+                                if ((col_ui.local_batch_index + submit.first_batch) >= resource.final_schedule_first_batch &&
+                                    (col_ui.local_batch_index + submit.first_batch) <= resource.final_schedule_last_batch && 
+                                    resource.access_timeline.size() > 0)
+                                {
+                                    cell_color = ImVec4(0.15,0.15,0.15,1);
+                                }
+                                
+                                if (is_batch_border_cell)
+                                {
+                                    const bool is_not_border = col_ui.local_batch_index > 0 && col_ui.local_batch_index < static_cast<i32>(col_count) - 1;
+
+                                    // Connect successive concurrent access batches
+                                    if (is_not_border)
+                                    {
+                                        BatchUiData const & a = batch_ui_data[col_ui.local_batch_index - 1];
+                                        BatchUiData const & b = batch_ui_data[col_ui.local_batch_index];
+                                        if (a.access_type == b.access_type && is_access_concurrent(a.access_type))
+                                        {
+                                            cell_color = access_type_to_color(a.access_type);
+                                            cell_color.x *= 0.9f;
+                                            cell_color.y *= 0.9f;
+                                            cell_color.z *= 0.9f;
+                                        }
+                                    }
+                                    const bool first_transient_use = resource.external == nullptr && col_ui.local_batch_index + submit.first_batch == resource.final_schedule_first_batch;
+                                    const bool is_to_general_batch = first_transient_use;
+                                    if (is_to_general_batch)
+                                    {
+                                        cell_color = LayoutInitializationColor;
+                                        ImGui::SetItemTooltip("Image Layout Undefined -> General Initialization");
+                                    }
+                                }
+                                else
+                                {
+                                    BatchUiData const & batch_ui = batch_ui_data[col_ui.local_batch_index];
+                                    const bool is_cell_part_of_access_group = batch_ui.access_type != TaskAccessType::NONE;
+                                    if (is_cell_part_of_access_group)
+                                    {
+                                        cell_color = access_type_to_color(batch_ui.access_type);
+                                    }
+                                }
+
+
+                                u32 const color = ImGui::ColorConvertFloat4ToU32(cell_color);
+
                                 ImGui::PushID(column);
-                                ImGui::Text("test");
-                                // ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, bui.color);
+                                ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, color);
                                 ImGui::PopID();
                             }
                         }
@@ -324,6 +497,13 @@ namespace daxa
                     }
                     ImGui::EndTable();
                 }
+                ImGui::PopStyleVar();
+
+                ImVec2 cursor_after_table = ImGui::GetCursorPos();
+
+                ImGui::SetCursorPos(cursor_before_table);
+                access_type_color_legend();
+                ImGui::SetCursorPos(cursor_after_table);
             }
             ImGui::SameLine();
         }
