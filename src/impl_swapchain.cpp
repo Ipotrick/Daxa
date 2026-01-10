@@ -219,7 +219,11 @@ auto daxa_swp_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaph
 
 auto daxa_swp_current_cpu_timeline_value(daxa_Swapchain self) -> u64
 {
+#ifdef _WIN32
     return static_cast<u64>(std::max(0ll, self->cpu_frame_timeline));
+#else
+    return static_cast<u64>(std::max(0z, self->cpu_frame_timeline));
+#endif
 }
 
 auto daxa_swp_info(daxa_Swapchain self) -> daxa_SwapchainInfo const *
