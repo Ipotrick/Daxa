@@ -54,7 +54,7 @@ namespace daxa
         }
     }
 
-    auto RingBuffer::allocate(u32 allocation_size, u32 alignment_requirement) -> std::optional<RingBuffer::Allocation>
+    auto RingBuffer::allocate_internal(u32 allocation_size, u32 alignment_requirement, bool try_again_on_fail) -> std::optional<Allocation>
     {
         u32 const tail_alloc_offset = (this->claimed_start + this->claimed_size) % this->m_info.capacity;
         auto up_align_offset = [](auto value, auto alignment)
@@ -84,10 +84,12 @@ namespace daxa
         bool zero_offset_allocation_possible = calc_zero_offset_allocation_possible();
         if (!tail_allocation_possible && !zero_offset_allocation_possible)
         {
-            this->reclaim_memory();
-            tail_allocation_possible = calc_tail_allocation_possible();
-            zero_offset_allocation_possible = calc_zero_offset_allocation_possible();
-            if (!tail_allocation_possible && !zero_offset_allocation_possible)
+            if (try_again_on_fail)
+            {
+                this->reclaim_memory();
+                return this->allocate_internal(allocation_size, alignment_requirement, false);
+            }
+            else
             {
                 return std::nullopt;
             }
@@ -122,6 +124,11 @@ namespace daxa
             .size = allocation_size,
             .submit_index = current_timeline_value,
         };
+    }
+
+    auto RingBuffer::allocate(u32 allocation_size, u32 alignment_requirement) -> std::optional<RingBuffer::Allocation>
+    {
+        return allocate_internal(allocation_size, alignment_requirement, true);
     }
 
     void RingBuffer::reclaim_memory()
