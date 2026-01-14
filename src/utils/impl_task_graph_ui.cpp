@@ -893,7 +893,11 @@ namespace daxa
 
                             if (is_batch_border_cell) // Give Barrier Info in borders
                             {
-                                if (batch_ui.access_group != nullptr && batch_ui.access_group->final_schedule_pre_barrier != nullptr)
+                                if (
+                                    batch_ui.access_group != nullptr && 
+                                    batch_ui.access_group->final_schedule_pre_barrier != nullptr &&
+                                    batch_ui.access_group->final_schedule_first_batch == global_batch_index
+                                )
                                 {
                                     bool const to_general = batch_ui.access_group->final_schedule_pre_barrier->layout_operation == daxa::ImageLayoutOperation::TO_GENERAL;
                                     if (to_general)
