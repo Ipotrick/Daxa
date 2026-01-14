@@ -63,16 +63,30 @@ namespace daxa
         // Write bit: 3
         NONE = 0,
         CONCURRENT_BIT = (1 << 0),
-        NON_CONCURRENT_READ = (1 << 1),
-        NON_CONCURRENT_SAMPLED = (1 << 2),
-        NON_CONCURRENT_WRITE = (1 << 3),
-        READ = NON_CONCURRENT_READ | CONCURRENT_BIT,
-        SAMPLED = NON_CONCURRENT_SAMPLED | CONCURRENT_BIT,
-        WRITE = NON_CONCURRENT_WRITE,
-        READ_WRITE = NON_CONCURRENT_READ | NON_CONCURRENT_WRITE,
-        WRITE_CONCURRENT = NON_CONCURRENT_WRITE | CONCURRENT_BIT,
-        READ_WRITE_CONCURRENT = READ_WRITE | CONCURRENT_BIT,
+        SAMPLED_BIT = (1 << 1),
+        READ_BIT = (1 << 2),
+        WRITE_BIT = (1 << 3),
+        READ = READ_BIT | CONCURRENT_BIT,
+        SAMPLED = READ_BIT | CONCURRENT_BIT | SAMPLED_BIT,
+        WRITE = WRITE_BIT,
+        READ_WRITE = READ_BIT | WRITE_BIT,
+        WRITE_CONCURRENT = WRITE_BIT | CONCURRENT_BIT,
+        READ_WRITE_CONCURRENT = READ_BIT | WRITE_BIT | CONCURRENT_BIT,
     };
+
+    inline auto is_access_concurrent(TaskAccessType type) -> bool
+    {
+        return (static_cast<u8>(type) & static_cast<u8>(TaskAccessType::CONCURRENT_BIT)) != 0;
+    } 
+
+    inline auto are_accesses_compatible(TaskAccessType a, TaskAccessType b) -> bool
+    {
+        u8 const a_sampled_ignored = static_cast<u8>(a) & ~(static_cast<u8>(TaskAccessType::SAMPLED_BIT));
+        u8 const b_sampled_ignored = static_cast<u8>(b) & ~(static_cast<u8>(TaskAccessType::SAMPLED_BIT));
+        return (a_sampled_ignored == b_sampled_ignored) && is_access_concurrent(a) && is_access_concurrent(b);
+    }
+
+    auto to_string(TaskAccessType taccess) -> std::string_view;
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
 

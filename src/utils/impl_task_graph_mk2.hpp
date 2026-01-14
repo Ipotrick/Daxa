@@ -162,7 +162,7 @@ namespace daxa
         void (*task_callback)(daxa::TaskInterface, void*) = {};     
         u64* task_callback_memory = {};                             // holds callback captured variables
         std::span<TaskAttachmentInfo> attachments = {};             
-        std::span<ImplTaskResource*> attachment_resources = {};
+        std::span<std::pair<ImplTaskResource*, u32>> attachment_resources = {};
         std::span<AccessGroup*> attachment_access_groups = {};      // set when compiling
         u32 attachment_shader_blob_size = {};                       
         u32 attachment_shader_blob_alignment = {};            

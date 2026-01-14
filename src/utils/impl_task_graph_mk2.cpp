@@ -288,8 +288,7 @@ namespace daxa
         {
             case TaskAccessType::NONE: return "NONE";
             case TaskAccessType::CONCURRENT_BIT: return "CONCURRENT_BIT";
-            case TaskAccessType::NON_CONCURRENT_READ: return "NON_CONCURRENT_READ";
-            case TaskAccessType::NON_CONCURRENT_SAMPLED: return "NON_CONCURRENT_SAMPLED";
+            case TaskAccessType::SAMPLED_BIT: return "SAMPLED_BIT";
             case TaskAccessType::READ: return "READ";
             case TaskAccessType::SAMPLED: return "SAMPLED";
             case TaskAccessType::WRITE: return "WRITE";
@@ -1807,7 +1806,7 @@ namespace daxa
             .task_callback = task_callback,
             .task_callback_memory = task_callback_memory,
             .attachments = attachments,
-            .attachment_resources = impl.task_memory.allocate_trivial_span<ImplTaskResource *>(attachments.size()),
+            .attachment_resources = impl.task_memory.allocate_trivial_span<std::pair<ImplTaskResource *, u32>>(attachments.size()),
             .attachment_access_groups = impl.task_memory.allocate_trivial_span<AccessGroup *>(attachments.size()),
             .attachment_shader_blob_size = attachment_shader_blob_size,
             .attachment_shader_blob_alignment = attachment_shader_blob_alignment,
@@ -1975,20 +1974,21 @@ namespace daxa
                 TaskAttachmentInfo const & attachment = task.attachments[attach_i];
 
                 task.attachment_access_groups[attach_i] = nullptr; // Zero init attachment_access_groups. Only non-null attachments are assigned access groups later.
-                task.attachment_resources[attach_i] = nullptr;
+                task.attachment_resources[attach_i] = { nullptr, 0u };
 
                 TaskAccessType access_type = {};
                 ArenaDynamicArray8k<TmpAccessGroup> * access_timeline = nullptr;
                 u32 * latest_access_submit_index = nullptr;
                 TaskStage attachment_stages = {};
                 ImplTaskResource * resource = nullptr;
+                u32 resource_index = ~0u;
                 if (attachment.type != TaskAttachmentType::IMAGE)
                 {
                     // buffer, blas, tlas attach infos are identical memory layout :)
                     access_type = attachment.value.buffer.task_access.type;
                     if (!attachment.value.buffer.translated_view.is_null())
                     {
-                        u32 const resource_index = attachment.value.buffer.translated_view.index;
+                        resource_index = attachment.value.buffer.translated_view.index;
                         access_timeline = &tmp_resource_access_timelines[resource_index];
                         latest_access_submit_index = &tmp_resource_latest_submit_access[resource_index];
                         attachment_stages = attachment.value.buffer.task_access.stage;
@@ -2000,7 +2000,7 @@ namespace daxa
                     access_type = attachment.value.image.task_access.type;
                     if (!attachment.value.image.translated_view.is_null())
                     {
-                        u32 const resource_index = attachment.value.image.translated_view.index;
+                        resource_index = attachment.value.image.translated_view.index;
                         access_timeline = &tmp_resource_access_timelines[resource_index];
                         latest_access_submit_index = &tmp_resource_latest_submit_access[resource_index];
                         resource = &impl.resources[resource_index];
@@ -2020,14 +2020,13 @@ namespace daxa
                         attachment_stages = attachment.value.image.task_access.stage;
                     }
                 }
-                task.attachment_resources[attach_i] = resource;
+                task.attachment_resources[attach_i] = { resource, resource_index };
 
                 if (access_timeline != nullptr && latest_access_submit_index != nullptr)
                 {
                     bool const append_new_group =
                         access_timeline->size() == 0 ||
-                        access_timeline->back().type != access_type ||
-                        (static_cast<u8>(access_type) & static_cast<u8>(TaskAccessType::CONCURRENT_BIT)) == 0 ||
+                        !are_accesses_compatible(access_timeline->back().type, access_type) || 
                         *latest_access_submit_index != task.submit_index;
                     if (append_new_group)
                     {
@@ -3296,29 +3295,29 @@ namespace daxa
                         {
                             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
                             {
-                                bool const is_null_attachment = task.attachment_resources[attach_i] == nullptr;
+                                bool const is_null_attachment = task.attachment_resources[attach_i].first == nullptr;
                                 AttachmentShaderBlobSection asb_section = task.attachment_shader_blob_sections[attach_i];
                                 if (task.attachments[attach_i].type == TaskAttachmentType::BUFFER && task.attachments[attach_i].value.buffer.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
                                 {
-                                    DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i]->id.buffer).value();
+                                    DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i].first->id.buffer).value();
                                     DeviceAddress const test_address = *asb_section.buffer_address;
                                     DAXA_DBG_ASSERT_TRUE_M(real_address == test_address, "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
                                 }
                                 if (task.attachments[attach_i].type == TaskAttachmentType::BUFFER && !task.attachments[attach_i].value.buffer.shader_as_address && task.attachments[attach_i].value.buffer.shader_array_size > 0)
                                 {
-                                    BufferId const real_id = is_null_attachment ? BufferId{} : task.attachment_resources[attach_i]->id.buffer;
+                                    BufferId const real_id = is_null_attachment ? BufferId{} : task.attachment_resources[attach_i].first->id.buffer;
                                     BufferId const test_id = *asb_section.buffer_id;
                                     DAXA_DBG_ASSERT_TRUE_M(real_id == test_id && device.is_id_valid(test_id), "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
                                 }
                                 if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.tlas.shader_array_size > 0)
                                 {
-                                    DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i]->id.tlas).value();
+                                    DeviceAddress const real_address = is_null_attachment ? DeviceAddress{} : device.device_address(task.attachment_resources[attach_i].first->id.tlas).value();
                                     DeviceAddress const test_address = *asb_section.tlas_address;
                                     DAXA_DBG_ASSERT_TRUE_M(real_address == test_address, "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
                                 }
                                 if (task.attachments[attach_i].type == TaskAttachmentType::TLAS && !task.attachments[attach_i].value.tlas.shader_as_address && task.attachments[attach_i].value.tlas.shader_array_size > 0)
                                 {
-                                    TlasId const real_id = is_null_attachment ? TlasId{} : task.attachment_resources[attach_i]->id.tlas;
+                                    TlasId const real_id = is_null_attachment ? TlasId{} : task.attachment_resources[attach_i].first->id.tlas;
                                     TlasId const test_id = *asb_section.tlas_id;
                                     DAXA_DBG_ASSERT_TRUE_M(real_id == test_id && device.is_id_valid(test_id), "IMPOSSIBLE CASE! INVALID ATTACHMENT SHADER BLOB DATA DETECTED!");
                                 }
