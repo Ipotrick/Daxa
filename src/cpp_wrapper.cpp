@@ -2066,7 +2066,7 @@ namespace daxa
 
     auto to_string(Access access) -> std::string
     {
-        return std::format("stages: {}, type: {}", to_string(access.stages), to_string(access.type));
+        return std::format("{} {}", to_string(access.stages), to_string(access.type));
     }
 
     /// --- End to_string ---

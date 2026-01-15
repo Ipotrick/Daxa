@@ -6,6 +6,7 @@
 #include "impl_task_graph_mk2.hpp"
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>
+#include <set>
 
 static inline ImVec2 operator+(ImVec2 const & lhs, ImVec2 const & rhs) { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
 static inline ImVec2 operator-(ImVec2 const & lhs, ImVec2 const & rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
@@ -52,6 +53,23 @@ namespace ImGui
 
 namespace daxa
 {
+    struct TaskGraphDebugContext
+    {
+        u32 last_exec_tg_unique_index = ~0u;
+        ImplTaskGraph* impl = {};
+        std::array<char, 256> resource_name_search = {};
+        std::array<char, 256> task_name_search = {};
+        std::unordered_map<std::string, u32> pinned_resources = {};
+        std::vector<std::vector<u32>> task_resource_to_attachment_lookup = {};
+        std::set<std::string> open_task_detail_windows = {};
+        std::set<std::string> open_resource_detail_windows = {};
+        std::unordered_map<std::string_view, u32> name_to_task_index = {};
+        bool show_batch_barriers = true;
+        u32 hovered_task = ~0u;
+        u32 hovered_resource = ~0u;
+        u32 hovered_attachment_index = ~0u;
+    };
+
     void task_dependencies_ui(ImplTaskGraph & impl)
     {
         static float world_canvas_scale = 1.0f;
@@ -301,16 +319,12 @@ namespace daxa
         bool is_submit_border = {};
         bool is_queue_submit_border = {};
         ImplTask* task = {};
+        u32 task_index = ~0u;
     };
     struct BatchUiData
     {
         AccessGroup const * access_group = {};
     };
-    struct CellToAttachment
-    {
-        u32 attachment_index = ~0u;
-    };
-
     auto task_type_to_str(TaskType task_type) -> char const *
     {
         switch(task_type)
@@ -361,9 +375,6 @@ namespace daxa
     static constexpr ImVec4 QUEUE_SUBMIT_COLOR = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
     static constexpr ImVec4 RESOURCE_ALIVE_COLOR = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 
-
-
-
     auto task_type_to_color(TaskType type) -> ImVec4
     {        
         ImVec4 ret = {};
@@ -394,6 +405,317 @@ namespace daxa
         // ret.y = std::sqrt(ret.y);
         // ret.z = std::sqrt(ret.z);
         return ret;
+    }
+    
+    auto task_popup_context_ui(
+        TaskGraphDebugContext & context,
+        u32 task_index)
+    {
+        ImplTask const & task = context.impl->tasks[task_index];
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+        {
+            context.open_task_detail_windows.insert(std::string(task.name));
+        }
+        if (ImGui::BeginPopupContextItem(task.name.data()))
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
+
+            bool const task_forbidden = (context.name_to_task_index[task.name] == ~0u);
+            ImGui::BeginDisabled(task_forbidden);
+            if (ImGui::Button("Open Detail Ui (Double Click)"))
+            {
+                context.open_task_detail_windows.insert(std::string(task.name));
+            }
+            if (task_forbidden)
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 0.0f, 0.0f, 1.0f)));
+                ImGui::SetItemTooltip("Task has duplicate name with other task! Detail ui requires unique task names!");
+                ImGui::PopStyleColor();
+            }
+            ImGui::EndDisabled();
+
+            if (ImGui::Button("Pin All Attachment Resources"))
+            {
+                for (u32 attach_i = 0; attach_i < task.attachment_resources.size(); ++attach_i)
+                {
+                    auto const & resource_pair = task.attachment_resources[attach_i];
+                    if (resource_pair.first != nullptr)
+                    {
+                        context.pinned_resources[std::string(context.impl->resources[resource_pair.second].name)] = resource_pair.second;
+                    }
+                }
+            }
+
+            if (ImGui::Button("Filter For Resource In Timeline"))
+            {
+                for (u32 i = 0; i < std::min(255ull, task.name.size()); ++i)
+                {
+                    context.task_name_search[i] = task.name[i];
+                }
+                context.task_name_search[std::min(255ull, task.name.size())] = 0;
+            }
+            ImGui::PopStyleVar();
+            ImGui::EndPopup();
+        }
+    }
+
+    auto resource_popup_context_ui(
+        TaskGraphDebugContext & context,
+        u32 resource_index)
+    {
+        if (resource_index == ~0u)
+        {
+            return;
+        }
+        ImplTaskResource const & resource = context.impl->resources[resource_index];
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0))
+        {
+            context.open_resource_detail_windows.insert(std::string(resource.name));
+        }
+        if (ImGui::BeginPopupContextItem(resource.name.data()))
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
+            if (ImGui::Button("Open Detail Ui (Double Click)"))
+            {
+                context.open_resource_detail_windows.insert(std::string(resource.name));
+            }
+            if (ImGui::Button("Filter For Resource In Timeline"))
+            {
+                for (u32 i = 0; i < std::min(255ull, resource.name.size()); ++i)
+                {
+                    context.resource_name_search[i] = resource.name[i];
+                }
+                context.resource_name_search[std::min(255ull, resource.name.size())] = 0;
+            }
+            if (ImGui::Button("Pin Resource In Timeline"))
+            {
+                context.pinned_resources[std::string(resource.name)] = resource_index;
+            }
+            ImGui::PopStyleVar();
+            ImGui::EndPopup();
+        }
+    }
+
+    // struct ImplTask
+    // {
+    //     void (*task_callback)(daxa::TaskInterface, void*) = {};
+    //     u64* task_callback_memory = {};                             // holds captured variables
+    //     std::span<TaskAttachmentInfo> attachments = {};
+    //     u32 attachment_shader_blob_size = {};
+    //     u32 attachment_shader_blob_alignment = {};
+    //     TaskType task_type = {};
+    //     std::string_view name = {};
+    //     Queue queue = {};
+    //     std::span<std::span<ImageViewId>> image_view_cache = {};
+    //     // Used to verify image view cache:
+    //     std::span<ArenaDynamicArray8k<ImageId>> runtime_images_last_execution = {};
+    // };
+    auto task_details_ui(TaskGraphDebugContext & context, ImplTask const & task) -> bool
+    {
+        ImGui::PushID(&task);
+        bool open = true;
+        ImGui::SetNextWindowSize(ImVec2(400, 300), ImGuiCond_FirstUseEver);
+        u32 flags = ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+        if (ImGui::Begin(std::format("{} detail debug UI", task.name.data()).c_str(), &open, 0u))
+        {
+            ImVec4 default_color = ImGui::GetStyle().Colors[ImGuiCol_Text];
+            static const std::array columns = {"Name", "Type", "Access Stage", "Access", "Resource"};
+            if(ImGui::CollapsingHeader("Attachments"))
+            {
+                if(ImGui::BeginTable("", static_cast<int>(columns.size()), flags))
+                {
+                    for(auto const & column : columns)
+                    {
+                        ImGui::TableSetupColumn(column);
+                    }
+                    ImGui::TableHeadersRow();
+                    for (u32 attach_i = 0u; attach_i < static_cast<u32>(task.attachments.size()); ++attach_i)
+                    {
+                        auto const & attachment_info = task.attachments[attach_i];
+
+                        struct RowInfo
+                        {
+                            std::array<std::string, columns.size()> cell_text; 
+                            u32 resource_index = {};
+                            ImVec4 color;
+                        };
+
+                        RowInfo row_info;
+
+                        switch(attachment_info.type)
+                        {
+                            case TaskAttachmentType::BUFFER:
+                            case TaskAttachmentType::TLAS:
+                            case TaskAttachmentType::BLAS:
+                            {
+                                auto const & buffer_attach_info = attachment_info.value.buffer;
+                                row_info.cell_text = { std::string(buffer_attach_info.name), std::string("Buffer"), std::string(to_string(buffer_attach_info.task_access.stage)), std::string(to_string(buffer_attach_info.task_access.type))};
+                                row_info.color = access_type_to_color(buffer_attach_info.task_access.type);
+                                row_info.resource_index = buffer_attach_info.translated_view.index;
+                                break;
+                            }
+                            case TaskAttachmentType::IMAGE:
+                            {
+                                auto const & image_attach_info = attachment_info.value.image;
+                                row_info.cell_text = { std::string(image_attach_info.name), std::string("Image"), std::string(to_string(image_attach_info.task_access.stage)), std::string(to_string(image_attach_info.task_access.type))};
+                                row_info.color = access_type_to_color(image_attach_info.task_access.type);
+                                row_info.resource_index = image_attach_info.translated_view.index;
+                                break;
+                            }
+                        }
+
+                        for (u32 cell_idx = 0; cell_idx < static_cast<u32>(row_info.cell_text.size()); ++cell_idx)
+                        {
+                            ImGui::TableNextColumn();
+                            if(cell_idx == 0)
+                            {
+                                bool idk = false;
+                                ImGui::Selectable(row_info.cell_text.at(cell_idx).c_str(), &idk, ImGuiSelectableFlags_SpanAllColumns);
+                                resource_popup_context_ui(context, row_info.resource_index);
+                            }
+                            else if(cell_idx == 3)
+                            {
+                                float const text_height = ImGui::CalcTextSize("X").y;
+                                
+                                ImDrawList * draw_list = ImGui::GetWindowDrawList();
+                                draw_list->ChannelsSplit(2);
+
+                                auto const pre_text_pos = ImGui::GetCursorPos();
+                                {
+                                    draw_list->ChannelsSetCurrent(1);
+                                    draw_list->AddCircleFilled(ImVec2(ImGui::GetCursorScreenPos().x + 10.0f, ImGui::GetCursorScreenPos().y + text_height / 2.0f), 6.0f, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 0.0f, 0.0f, 1.0f)));
+                                    ImGui::SameLine(10, 10);
+                                    ImGui::Text(row_info.cell_text.at(cell_idx).c_str());
+                                    ImGui::SameLine();
+                                }
+                                auto const post_text_pos = ImGui::GetCursorPos();
+                                {
+                                    draw_list->ChannelsSetCurrent(0);
+                                    ImGui::SetCursorPos(pre_text_pos);
+                                    draw_list->AddRectFilled(ImGui::GetCursorScreenPos(), ImVec2((ImGui::GetCursorScreenPos().x + post_text_pos.x - pre_text_pos.x), ImGui::GetCursorScreenPos().y + text_height), ImGui::ColorConvertFloat4ToU32(row_info.color), 5.0f);
+                                    draw_list->ChannelsMerge();
+                                }
+                                //ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(row_info.color));
+                            }
+                            else if (cell_idx == 4)
+                            {
+                                if (row_info.resource_index == ~0u)
+                                {
+                                    ImGui::Text("NullResource");
+                                }
+                                else
+                                {
+                                    ImGui::Text(context.impl->resources[row_info.resource_index].name.data());
+                                }
+                            }
+                            else
+                            {
+                                ImGui::Text(row_info.cell_text.at(cell_idx).c_str());
+                            }
+                        }
+                        ImGui::TableNextRow();
+                    }
+                    ImGui::EndTable();
+                }
+            }
+        }
+        ImGui::End();
+        ImGui::PopID();
+        return open;
+    }
+    
+    auto resource_detail_ui(
+        TaskGraphDebugContext & context,
+        u32 resource_index) -> bool
+    {
+        ImplTaskResource const & resource = context.impl->resources[resource_index];
+        bool open = true;
+        ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(std::format("Resource Detail Ui \"{}\"", resource.name.data()).c_str(), &open, {}))
+        {
+            ImGui::Separator();
+            if (ImGui::Button("Filter For Resource In Timeline"))
+            {
+                for (u32 i = 0; i < std::min(255ull, resource.name.size()); ++i)
+                {
+                    context.resource_name_search[i] = resource.name[i];
+                }
+                context.resource_name_search[std::min(255ull, resource.name.size())] = 0;
+            }
+            ImGui::SameLine();
+            if (ImGui::Button("Pin Resource In Timeline"))
+            {
+                context.pinned_resources[std::string(resource.name)] = resource_index;
+            }
+            ImGui::Text("Resource kind: %s", to_string(resource.kind).data());
+            ImGui::Text(
+                "used in batches %u to %u, used in submits %u-%u, used in queues: %s",
+                resource.final_schedule_first_batch, resource.final_schedule_last_batch,
+                resource.final_schedule_first_submit, resource.final_schedule_last_submit,
+                queue_bits_to_string(resource.queue_bits).c_str()
+            );
+            if (resource.external)
+            {
+                ImGui::Text("External Resource Reference %s", resource.external->name.data());
+            }
+            static constexpr u32 ACCESS_GROUP_TABLE_FLAGS = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_SizingFixedFit;
+            static constexpr u32 BARRIER_TABLE_FLAGS = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable;
+            for (u32 agi = 0; agi < resource.access_timeline.size(); ++agi)
+            {
+                AccessGroup const & ag = resource.access_timeline[agi];
+                if (agi == 0)
+                {
+                    if (ImGui::BeginTable("Access Group Table", 4, ACCESS_GROUP_TABLE_FLAGS))
+                    {
+                        ImGui::TableSetupColumn("Task          ");
+                        ImGui::TableSetupColumn("Batch");
+                        ImGui::TableSetupColumn("Access        ");
+                        ImGui::TableSetupColumn("Attachment    ");
+                        ImGui::TableHeadersRow();
+                        ImGui::EndTable();
+                    }
+                }
+                if (ag.final_schedule_pre_barrier)
+                {
+                    if (ImGui::BeginTable("Barrier Table", 1, BARRIER_TABLE_FLAGS))
+                    {
+                        ImGui::TableNextColumn();
+                        // ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(BARRIER_COLOR));
+                        // ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0,0,0,1));
+                        ImGui::Text(std::format("Barrier. Src: {} Dst: {}", to_string(ag.final_schedule_pre_barrier->src_access), to_string(ag.final_schedule_pre_barrier->dst_access)).c_str());
+                        // ImGui::PopStyleColor();
+                        ImGui::EndTable();
+                    }
+                }
+                if (ImGui::BeginTable("Access Group Table", 4, ACCESS_GROUP_TABLE_FLAGS))
+                {
+                    for (u32 t = 0; t < ag.tasks.size(); ++t)
+                    {
+                        u32 task_index = ag.tasks[t].task_index;
+                        ImplTask* task = ag.tasks[t].task;
+                        u32 attach_i = context.task_resource_to_attachment_lookup[resource_index][task_index];
+                        ImGui::TableNextColumn();
+                        {
+                            ImGui::PushStyleColor(ImGuiCol_Header, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 1.0f, 1.0f, 0.2f)));
+                            bool selected = context.hovered_task == task_index;
+                            ImGui::Selectable(task->name.data(), &selected, ImGuiSelectableFlags_SpanAllColumns);
+                            task_popup_context_ui(context, task_index);
+                            ImGui::PopStyleColor();
+                        }
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%i", task->final_schedule_batch);
+                        ImGui::TableNextColumn();
+                        ImGui::Text(to_string(task->attachments[attach_i].value.buffer.access).data());
+                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(access_type_to_color(resource.access_timeline[agi].type)));
+                        ImGui::TableNextColumn();
+                        ImGui::Text(task->attachments[attach_i].value.buffer.name);
+                    }
+                    ImGui::EndTable();
+                }
+            }
+        }
+        ImGui::End();
+        return open;
     }
 
     void timeline_legend()
@@ -464,32 +786,42 @@ namespace daxa
 
     void task_timeline_ui(ImplTaskGraph & impl)
     {
+        static TaskGraphDebugContext context = {};
+        const bool tg_changed = context.last_exec_tg_unique_index != impl.unique_index;
+        context.last_exec_tg_unique_index = impl.unique_index;
+        context.impl = &impl;
+
         /// =========================
         /// ======= HEADER UI =======
         /// =========================
 
-        static std::array<char, 256> resource_name_search = {};
-        ImGui::SetNextItemWidth(128);
-        ImGui::InputText("Filter Resource", resource_name_search.data(), resource_name_search.size());
+        if (ImGui::Button("X"))
+        {
+            context.resource_name_search = {};
+        }
         ImGui::SameLine();
-        static std::array<char, 256> task_name_search = {};
         ImGui::SetNextItemWidth(128);
-        ImGui::InputText("Filter Task", task_name_search.data(), task_name_search.size());
+        ImGui::InputText("Filter Resource", context.resource_name_search.data(), context.resource_name_search.size());
+        ImGui::SameLine();
+        if (ImGui::Button("X##1"))
+        {
+            context.task_name_search = {};
+        }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(128);
+        ImGui::InputText("Filter Task", context.task_name_search.data(), context.task_name_search.size());
+        ImGui::SameLine();
+        ImGui::Checkbox("Show Batch Barriers", &context.show_batch_barriers);
 
         static ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
         static ImGuiTableColumnFlags column_flags = ImGuiTableColumnFlags_AngledHeader | ImGuiTableColumnFlags_WidthFixed;
 
         const float TEXT_BASE_HEIGHT = ImGui::GetTextLineHeightWithSpacing();
 
-        static u32 last_exec_tg_unique_index = {};
-        const bool tg_changed = last_exec_tg_unique_index != impl.unique_index;
-        last_exec_tg_unique_index = impl.unique_index;
-
-        static std::unordered_map<std::string, u32> pinned_resources = {};
         if(tg_changed)
         {
             // find the resource indices based on names
-            for (auto pr = pinned_resources.begin(); pr != pinned_resources.end(); ++pr)
+            for (auto pr = context.pinned_resources.begin(); pr != context.pinned_resources.end(); ++pr)
             {
                 if (impl.name_to_resource_table.contains(pr->first.c_str()))
                 {
@@ -497,7 +829,7 @@ namespace daxa
                 }
                 else
                 {
-                    pr = pinned_resources.erase(pr);
+                    pr = context.pinned_resources.erase(pr);
                 }
             }
         }
@@ -505,7 +837,7 @@ namespace daxa
         // Construct Row Ui Data
         std::vector<RowUiData> row_ui_data = {};
         std::vector<u32> resource_to_row_lookup = std::vector<u32>(impl.resources.size(), ~0u);
-        for (auto const &[name, resource_index] : pinned_resources)
+        for (auto const &[name, resource_index] : context.pinned_resources)
         {
             row_ui_data.push_back({
                 .global_resource_index = resource_index,
@@ -519,8 +851,8 @@ namespace daxa
 
             std::string resource_name = std::string(resource.name);
             bool const search_substring_match = 
-                strstr(to_lower(std::string(resource.name)).c_str(), to_lower(std::string(resource_name_search.data())).c_str()) != nullptr;
-            if (!pinned_resources.contains(std::string(resource.name)) && search_substring_match)
+                strstr(to_lower(std::string(resource.name)).c_str(), to_lower(std::string(context.resource_name_search.data())).c_str()) != nullptr;
+            if (!context.pinned_resources.contains(std::string(resource.name)) && search_substring_match)
             {
                 row_ui_data.push_back({
                     .global_resource_index = r,
@@ -583,19 +915,23 @@ namespace daxa
                     u32 const global_batch_index = submit.first_batch + batch_i;
                     batch_count = std::max(batch_count, global_batch_index + 1);
                     
-                    col_ui_data.push_back({
-                        .submit_index = submit_index,
-                        .queue_index = queue_index,
-                        .local_batch_index = batch_i,
-                    });
-                    col_names.push_back("");
+                    if (context.show_batch_barriers)
+                    {
+                        col_ui_data.push_back({
+                            .submit_index = submit_index,
+                            .queue_index = queue_index,
+                            .local_batch_index = batch_i,
+                        });
+                        col_names.push_back("");
+                    }
                     batch_ui_data.push_back({});
+
                     for (u32 task_i = 0; task_i < queue_batches[batch_i].tasks.size(); ++task_i)
                     {
                         auto task_pair = queue_batches[batch_i].tasks[task_i];
 
                         bool const search_substring_match = 
-                            strstr(to_lower(std::string(task_pair.first->name)).c_str(), to_lower(std::string(task_name_search.data())).c_str()) != nullptr;
+                            strstr(to_lower(std::string(task_pair.first->name)).c_str(), to_lower(std::string(context.task_name_search.data())).c_str()) != nullptr;
 
                         if (search_substring_match)
                         {
@@ -606,6 +942,7 @@ namespace daxa
                                 .batch_local_task_index = task_i,
                                 .global_task_index = task_pair.second,
                                 .task = task_pair.first,
+                                .task_index = task_pair.second,
                             });
                             col_names.push_back(task_pair.first->name.data());
                         }
@@ -621,31 +958,88 @@ namespace daxa
         /// ======= BUILD CELL TO ATTACHMENT MATRIX =======
         /// ===============================================
 
-        std::vector<std::vector<CellToAttachment>> cell_to_attachment_lookup = {};
-        cell_to_attachment_lookup.resize(row_count, std::vector<CellToAttachment>(col_count, CellToAttachment{})); // first row index, second column index
-        
-        // go over all columns (tasks) and write conversion attachment indices when applicable
-        for (u32 col = 0; col < col_count; ++col)
+        if (tg_changed)
         {
-            if (col_ui_data[col].task != nullptr)
+            context.task_resource_to_attachment_lookup.clear();
+            context.task_resource_to_attachment_lookup.resize(impl.resources.size(), std::vector<u32>(impl.tasks.size(), ~0u)); // first row index, second column index
+            
+            // go over all columns (tasks) and write conversion attachment indices when applicable
+            for (u32 t = 0; t < impl.tasks.size(); ++t)
             {
-                ImplTask* task = col_ui_data[col].task;
-                for (u32 attach_i = 0; attach_i < task->attachments.size(); ++attach_i)
+                ImplTask const & task = impl.tasks[t];
+                for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
                 {
-                    bool const null_attachment = task->attachment_resources[attach_i].first == nullptr;
+                    bool const null_attachment = task.attachment_resources[attach_i].first == nullptr;
                     if (null_attachment)
                     {
                         continue;
                     }
-                    u32 const global_resource_index = task->attachment_resources[attach_i].second;
-                    u32 const row = resource_to_row_lookup[global_resource_index];
-                    bool const resource_present = row != ~0u;
-                    if (resource_present)
-                    {
-                        cell_to_attachment_lookup[row][col] = {.attachment_index = attach_i };
-                    }
+                    u32 const global_resource_index = task.attachment_resources[attach_i].second;
+                    context.task_resource_to_attachment_lookup[global_resource_index][t] = attach_i;
                 }
             }
+        }
+
+        /// ==============================================
+        /// ======= DETAIL RESOURCE DETAIL TASK UI =======
+        /// ==============================================
+
+        if (tg_changed)
+        {
+            context.name_to_task_index.clear();
+            for (u32 t = 0; t < impl.tasks.size(); ++t)
+            {
+                if (context.name_to_task_index.contains(impl.tasks[t].name))
+                {
+                    // we do not allow colliding task names for ui
+                    context.name_to_task_index[impl.tasks[t].name] = ~0u;
+                }
+                else
+                {
+                    context.name_to_task_index[impl.tasks[t].name] = t;
+                }
+            }
+        }
+
+        for (auto res_detail_iter = context.open_resource_detail_windows.begin(); res_detail_iter != context.open_resource_detail_windows.end(); )
+        {
+            if (!impl.name_to_resource_table.contains(*res_detail_iter))
+            {
+                res_detail_iter = context.open_resource_detail_windows.erase(res_detail_iter);
+                continue;
+            }
+
+            if (!resource_detail_ui(context, impl.name_to_resource_table[*res_detail_iter].second))
+            {
+                res_detail_iter = context.open_resource_detail_windows.erase(res_detail_iter);
+                continue;
+            }
+            
+            ++res_detail_iter;
+        }
+
+        for (auto task_detail_iter = context.open_task_detail_windows.begin(); task_detail_iter != context.open_task_detail_windows.end(); )
+        {
+            if (!context.name_to_task_index.contains(*task_detail_iter))
+            {
+                task_detail_iter = context.open_task_detail_windows.erase(task_detail_iter);
+                continue;
+            }
+            
+            bool const task_forbidden = (context.name_to_task_index[std::string_view{*task_detail_iter}] == ~0u);
+            if (task_forbidden)
+            {
+                task_detail_iter = context.open_task_detail_windows.erase(task_detail_iter);
+                continue;
+            }
+
+            if (!task_details_ui(context, impl.tasks.at(context.name_to_task_index[std::string_view{*task_detail_iter}])))
+            {
+                task_detail_iter = context.open_task_detail_windows.erase(task_detail_iter);
+                continue;
+            }
+
+            ++task_detail_iter;
         }
 
         /// ========================
@@ -667,7 +1061,7 @@ namespace daxa
             /// ======= SETUP COLUMNS =======
             /// =============================
 
-            ImGui::TableSetupScrollFreeze(1, static_cast<u32>(2 + pinned_resources.size()));
+            ImGui::TableSetupScrollFreeze(1, static_cast<u32>(2 + context.pinned_resources.size()));
             ImGui::TableSetupColumn("Resource", ImGuiTableColumnFlags_WidthFixed, ImGui::CalcTextSize("a").x * 24);
             std::vector<ImU32> colors = {};
             std::vector<ImU32> text_colors = {};
@@ -753,24 +1147,10 @@ namespace daxa
                     ImGui::SameLine(text_offset);
                     ImGui::Text(name);
                     ImGui::PopStyleColor();
-                    if (ImGui::BeginPopupContextItem(name))
+                    if (!col_ui.is_queue_submit_border && !col_ui.is_submit_border)
                     {
-                        ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
-                        if (!col_ui.is_queue_submit_border && ImGui::Button("Pin All Attachment Resources"))
-                        {
-                            for (u32 attach_i = 0; attach_i < col_ui.task->attachment_resources.size(); ++attach_i)
-                            {
-                                auto const & resource_pair = col_ui.task->attachment_resources[attach_i];
-                                if (resource_pair.first != nullptr)
-                                {
-                                    pinned_resources[std::string(impl.resources[resource_pair.second].name)] = resource_pair.second;
-                                }
-                            }
-                        }
-                        ImGui::PopStyleVar();
-                        ImGui::EndPopup();
+                        task_popup_context_ui(context, col_ui.global_task_index);
                     }
-                    //ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(task_type_to_color(col_ui.task->task_type)));
                     ImGui::PopID();
                 }
             }
@@ -815,7 +1195,7 @@ namespace daxa
                 /// ======= FIRST COLUMN IS FOR RESOURCE NAMES =======
                 /// ==================================================
 
-                bool const is_pinned = pinned_resources.contains(std::string(resource.name));
+                bool const is_pinned = context.pinned_resources.contains(std::string(resource.name));
                 ImGui::PushID(&resource);
                 ImGui::TableNextRow();
                 ImGui::AlignTextToFramePadding();
@@ -826,22 +1206,23 @@ namespace daxa
                     {
                         if (ImGui::IsKeyDown(ImGuiKey_LeftShift))
                         {
-                            pinned_resources.clear();
+                            context.pinned_resources.clear();
                         }
                         else
                         {
-                            pinned_resources.erase(std::string(resource.name));
+                            context.pinned_resources.erase(std::string(resource.name));
                         }
                     }
                     else
                     {
-                        pinned_resources[std::string(resource.name)] = resource_index;
+                        context.pinned_resources[std::string(resource.name)] = resource_index;
                     }
                 }
                 ImGui::SameLine();
                 if (is_pinned) { ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(ImVec4(0.5,0.5,0.5,1))); }
                 ImGui::Text(resource.name.data());
                 ImGui::SetItemTooltip(resource.name.data());
+                resource_popup_context_ui(context, resource_index);
 
                 /// =========================================
                 /// ======= COLUMN BY COLUMN TABLE UI =======
@@ -916,11 +1297,30 @@ namespace daxa
                             }
                             else // Give attachment info in Cells
                             {
-                                u32 attachment_index = cell_to_attachment_lookup[row][column].attachment_index;
+                                u32 attachment_index = context.task_resource_to_attachment_lookup[resource_index][col_ui.task_index];
                                 bool const resource_accessed_by_task = attachment_index != ~0u;
                                 if (resource_accessed_by_task)
                                 {
+                                    ImGui::PushID(column + row * 60000);
                                     ImGui::Selectable("");
+                                    if (ImGui::IsItemHovered())
+                                    {
+                                        context.hovered_task = col_ui.task_index;
+                                        context.hovered_attachment_index = attachment_index;
+                                        context.hovered_resource = resource_index;
+                                    }
+                                    if (ImGui::BeginPopupContextItem(resource.name.data()))
+                                    {
+                                        if (ImGui::Button("Show Task Detail Ui"))
+                                        {
+                                            context.open_task_detail_windows.insert(std::string(col_ui.task->name));
+                                        }
+                                        if (ImGui::Button("Show Resource Detail Ui"))
+                                        {
+                                            context.open_resource_detail_windows.insert(std::string(resource.name));
+                                        }
+                                        ImGui::EndPopup();
+                                    }
                                     if (ImGui::BeginItemTooltip())
                                     {
                                         TaskAttachmentInfo const & attach_info = col_ui.task->attachments[attachment_index];
@@ -928,6 +1328,7 @@ namespace daxa
                                         ImGui::EndTooltip();
                                     }
                                     make_cell_darker = false;
+                                    ImGui::PopID();
                                 }
                             }
                         }
@@ -941,10 +1342,12 @@ namespace daxa
 
                         if (is_pinned)
                         {
-                            cell_color.x *= 1.5f;
-                            cell_color.y *= 1.5f;
-                            cell_color.z *= 1.5f;
+                            cell_color.x *= 1.2f + 0.2f;
+                            cell_color.y *= 1.2f + 0.2f;
+                            cell_color.z *= 1.2f + 0.2f;
                         }
+
+
 
 
                         u32 const color = ImGui::ColorConvertFloat4ToU32(cell_color);

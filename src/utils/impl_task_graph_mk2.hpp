@@ -77,6 +77,26 @@ namespace daxa
         return 1u << queue_index;
     }
 
+    inline auto queue_bits_to_string(u32 queue_bits) -> std::string
+    {
+        std::string ret = {};
+        u32 iter = queue_bits;
+        while(iter)
+        {
+            u32 queue_index = queue_bits_to_first_queue_index(iter);
+            iter &= ~(1u << queue_index);
+
+            Queue queue = queue_index_to_queue(queue_index);
+
+            ret += to_string(queue);
+            if (iter)
+            {
+                ret += ", ";
+            }
+        }
+        return ret;
+    }
+
     struct ImplTask;
 
     struct TaskAttachmentAccess
@@ -106,6 +126,18 @@ namespace daxa
         BLAS,
         IMAGE
     };
+
+    inline auto to_string(TaskResourceKind kind) -> std::string_view
+    {
+        switch(kind)
+        {
+        case TaskResourceKind::BUFFER: return "BUFFER";
+        case TaskResourceKind::TLAS: return "TLAS";
+        case TaskResourceKind::BLAS: return "BLAS";
+        case TaskResourceKind::IMAGE: return "IMAGE";
+        default: return "UNKNOWN";
+        }
+    }
 
     struct ImplTaskResource
     {
