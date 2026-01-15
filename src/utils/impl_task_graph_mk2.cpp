@@ -1781,6 +1781,27 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_not_compiled(impl);
 
+        /// ============================
+        /// ==== CREATE UNIQUE NAME ====
+        /// ============================
+
+        static constexpr u64 DUP_TEXT_CHARS = 3;
+        static constexpr u64 DUP_NUMBER_CHARS = 4;
+        static constexpr u64 NAME_BUFFER_SIZE = 256;
+        DAXA_DBG_ASSERT_TRUE_M(name.size() < (NAME_BUFFER_SIZE - (DUP_TEXT_CHARS + DUP_NUMBER_CHARS)), "IMPOSSIBLE CASE, Bump Buffer Size!");
+        std::array<char, NAME_BUFFER_SIZE> name_buffer = {};
+        u64 name_buffer_used_size = name.size();
+        std::memcpy(name_buffer.data(), name.data(), name.size());
+        if (impl.name_to_task_table.contains(name))
+        {
+            u32& occurances = std::get<2>(impl.name_to_task_table[name]);
+            occurances += 1; // Increment collision counter
+
+            DAXA_DBG_ASSERT_TRUE_M(occurances < ((1 << DUP_NUMBER_CHARS)-1), "IMPOSSIBLE CASE, Bump Buffer Size!");
+            name_buffer_used_size = name_buffer_used_size + std::format_to_n(name_buffer.data() + name_buffer_used_size, (DUP_TEXT_CHARS + DUP_NUMBER_CHARS), " ({})", occurances).size;
+        }
+        name = impl.task_memory.allocate_copy_string(std::string_view{ name_buffer.data(), name_buffer_used_size });
+
         /// ==========================================
         /// ==== CONSTRUCT AND ALLOCATE TASK DATA ====
         /// ==========================================
@@ -1802,7 +1823,7 @@ namespace daxa
         }
 
         ImplTask impl_task = ImplTask{
-            .name = impl.task_memory.allocate_copy_string(name),
+            .name = name,
             .task_callback = task_callback,
             .task_callback_memory = task_callback_memory,
             .attachments = attachments,
@@ -1853,6 +1874,10 @@ namespace daxa
         }
 
         impl.tasks.push_back(impl_task);
+
+        // Store task name loopup value:
+        u64 const task_index = impl.tasks.size() - 1;
+        impl.name_to_task_table[name] = { &impl.tasks[task_index], task_index, 1 };
     }
 
     void TaskGraph::submit([[maybe_unused]] TaskSubmitInfo const & info)

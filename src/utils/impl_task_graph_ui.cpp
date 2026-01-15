@@ -375,6 +375,10 @@ namespace daxa
     static constexpr ImVec4 QUEUE_SUBMIT_COLOR = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
     static constexpr ImVec4 RESOURCE_ALIVE_COLOR = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
 
+    // Formats the header names to always be exactly 36 chars wide
+    static constexpr char const * TIMELINE_SUBMIT_OR_QUEUE_SUBMIT_HEADER_STR_FORMAT = "{:^36.36}";
+    static constexpr char const * TIMELINE_TASK_HEADER_STR_FORMAT = "{:<36.36}";
+
     auto task_type_to_color(TaskType type) -> ImVec4
     {        
         ImVec4 ret = {};
@@ -1057,6 +1061,40 @@ namespace daxa
         ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(batch_border_cell_size * scale.x, scale.y));
         if (ImGui::BeginTable(std::format("task_timeline_ui_table").c_str(), col_count, table_flags, outer_size))
         {
+            /// =================================
+            /// ======= MOUSE DRAG SCROLL =======
+            /// =================================
+
+            static bool is_dragging = false;
+            static ImVec2 drag_start_pos;
+            static ImVec2 scroll_start;
+            
+            // Check if middle mouse button is pressed while hovering the table
+            if (ImGui::IsWindowHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle))
+            {
+                is_dragging = true;
+                drag_start_pos = ImGui::GetMousePos();
+                scroll_start = ImVec2(ImGui::GetScrollX(), ImGui::GetScrollY());
+            }
+            
+            // Handle dragging
+            if (is_dragging)
+            {
+                if (ImGui::IsMouseDown(ImGuiMouseButton_Middle))
+                {
+                    ImVec2 current_pos = ImGui::GetMousePos();
+                    ImVec2 delta = ImVec2(drag_start_pos.x - current_pos.x, 
+                                        drag_start_pos.y - current_pos.y);
+                    
+                    ImGui::SetScrollX(scroll_start.x + delta.x);
+                    ImGui::SetScrollY(scroll_start.y + delta.y);
+                }
+                else
+                {
+                    is_dragging = false;
+                }
+            }
+
             /// =============================
             /// ======= SETUP COLUMNS =======
             /// =============================
@@ -1075,19 +1113,19 @@ namespace daxa
                 ImVec4 text_color = ImGui::GetStyle().Colors[ImGuiCol_Text];
                 if (col_ui_data[n].task != nullptr)
                 {
-                    name = col_ui_data[n].task->name;
+                    name = std::format(TIMELINE_TASK_HEADER_STR_FORMAT, col_ui_data[n].task->name);
                 }
                 else if (col_ui_data[n].is_submit_border)
                 {
                     background_color = SUBMIT_COLOR;
                     text_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                    name = std::format("Submit {}", col_ui_data[n].submit_index);
+                    name = std::format(TIMELINE_SUBMIT_OR_QUEUE_SUBMIT_HEADER_STR_FORMAT, std::format("Submit {}", col_ui_data[n].submit_index));
                 }
                 else if (col_ui_data[n].is_queue_submit_border)
                 {
                     background_color = QUEUE_SUBMIT_COLOR;
                     text_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
-                    name = to_string(queue_index_to_queue(col_ui_data[n].queue_index));
+                    name = std::format(TIMELINE_SUBMIT_OR_QUEUE_SUBMIT_HEADER_STR_FORMAT, to_string(queue_index_to_queue(col_ui_data[n].queue_index)));
                 }
                 else
                 {
