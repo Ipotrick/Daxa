@@ -53,6 +53,12 @@ namespace ImGui
 
 namespace daxa
 {
+    auto to_lower(std::string str) -> std::string
+    {
+        for(auto & c : str) { c = std::tolower(c); }
+        return str;
+    } 
+
     struct TaskGraphDebugContext
     {
         u32 last_exec_tg_unique_index = ~0u;
@@ -634,34 +640,169 @@ namespace daxa
     {
         ImplTaskResource const & resource = context.impl->resources[resource_index];
         bool open = true;
-        ImGui::SetNextWindowSize(ImVec2(500, 600), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(std::format("Resource Detail Ui \"{}\"", resource.name.data()).c_str(), &open, {}))
         {
             ImGui::Separator();
-            if (ImGui::Button("Filter For Resource In Timeline"))
+
+            /// ==============================================
+            /// ======= RESOURCE TIMELLINE INTERACTION =======
+            /// ==============================================
+
+            bool const search_contains_resource_name = 
+                strstr(to_lower(std::string(context.resource_name_search.data())).c_str(), to_lower(std::string(resource.name)).c_str()) != nullptr;
+            bool gui_contains_name = search_contains_resource_name;
+            if (ImGui::Checkbox("Filter", &gui_contains_name))
             {
-                for (u32 i = 0; i < std::min(255ull, resource.name.size()); ++i)
+                if (search_contains_resource_name)
                 {
-                    context.resource_name_search[i] = resource.name[i];
+                    context.resource_name_search = {};
                 }
-                context.resource_name_search[std::min(255ull, resource.name.size())] = 0;
+                else
+                {
+                    for (u32 i = 0; i < std::min(255ull, resource.name.size()); ++i)
+                    {
+                        context.resource_name_search[i] = resource.name[i];
+                    }
+                    context.resource_name_search[std::min(255ull, resource.name.size())] = 0;
+                }
             }
             ImGui::SameLine();
-            if (ImGui::Button("Pin Resource In Timeline"))
+            bool const pinned = context.pinned_resources.contains(std::string(resource.name));
+            bool gui_pinned = pinned;
+            if (ImGui::Checkbox("Pin", &gui_pinned))
             {
-                context.pinned_resources[std::string(resource.name)] = resource_index;
+                if (pinned)
+                {
+                    context.pinned_resources.erase(std::string(resource.name));
+                }
+                else
+                {
+                    context.pinned_resources[std::string(resource.name)] = resource_index;
+                }
             }
-            ImGui::Text("Resource kind: %s", to_string(resource.kind).data());
-            ImGui::Text(
-                "used in batches %u to %u, used in submits %u-%u, used in queues: %s",
-                resource.final_schedule_first_batch, resource.final_schedule_last_batch,
-                resource.final_schedule_first_submit, resource.final_schedule_last_submit,
-                queue_bits_to_string(resource.queue_bits).c_str()
-            );
+
+            /// ===========================================
+            /// ======= GENERAL RESOURCE ATTRIBUTES =======
+            /// ===========================================
+            ImGui::SeparatorText("Attributes");
+            static constexpr char const * ATTRIBUTE_FORMATTING = "- {:<28.28} ";
+            ImGui::Text("%s %s", std::format(ATTRIBUTE_FORMATTING, "Resource Kind:").c_str(), to_string(resource.kind).data());
             if (resource.external)
             {
-                ImGui::Text("External Resource Reference %s", resource.external->name.data());
+                ImGui::Text("%s %s", std::format(ATTRIBUTE_FORMATTING, "External Resource Name:").c_str(), resource.external->name.data());
             }
+            switch(resource.kind)
+            {
+                case TaskResourceKind::BUFFER:
+                case TaskResourceKind::BLAS:
+                case TaskResourceKind::TLAS:
+                {
+                    u64 size = {};
+                    MemoryFlags memory_flags = {};
+                    u64 device_address = {};
+                    u64 host_address = {};
+                    SmallString external_resource_name = {};
+                    if (resource.external)
+                    {
+                        switch(resource.kind)
+                        {
+                            case TaskResourceKind::BUFFER:
+                            {
+                                BufferId id = resource.external->id.buffer;
+                                size = context.impl->info.device.buffer_info(id).value().size;
+                                device_address = context.impl->info.device.buffer_device_address(id).value_or(0);
+                                host_address = std::bit_cast<u64>(context.impl->info.device.buffer_host_address(id).value_or(0));
+                                external_resource_name = context.impl->info.device.buffer_info(id).value().name;
+                                memory_flags = context.impl->info.device.buffer_info(id).value().allocate_info;
+                                break;
+                            }
+                            case TaskResourceKind::BLAS:
+                            {
+                                BlasId id = resource.external->id.blas;
+                                size = context.impl->info.device.blas_info(id).value().size;
+                                device_address = context.impl->info.device.blas_device_address(id).value_or(0);
+                                external_resource_name = context.impl->info.device.blas_info(id).value().name;
+                                memory_flags = MemoryFlagBits::NONE;
+                                host_address = 0;
+                                break;
+                            }
+                            case TaskResourceKind::TLAS:
+                            {
+                                TlasId id = resource.external->id.tlas;
+                                size = context.impl->info.device.tlas_info(id).value().size;
+                                device_address = context.impl->info.device.tlas_device_address(id).value_or(0);
+                                external_resource_name = context.impl->info.device.tlas_info(id).value().name;
+                                memory_flags = MemoryFlagBits::NONE;
+                                host_address = 0;
+                                break;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        size = resource.info.buffer.size;
+                    }
+
+                    ImGui::Text("%s %s", std::format(ATTRIBUTE_FORMATTING, "Size:").c_str(), std::to_string(size).c_str());
+                    ImGui::Text("%s %s", std::format(ATTRIBUTE_FORMATTING, "MemoryFlags:").c_str(), to_string(memory_flags).data());
+                    ImGui::Text("%s %s", std::format(ATTRIBUTE_FORMATTING, "Device Address:").c_str(), std::to_string(device_address).c_str());
+                    ImGui::Text("%s %s", std::format(ATTRIBUTE_FORMATTING, "Host Address:").c_str(), std::to_string(host_address).c_str());
+
+                    break;
+                }
+                case TaskResourceKind::IMAGE:
+                {
+                    break;
+                }
+            }
+
+            /// ==============================
+            /// ======= USED IN STAGES =======
+            /// ==============================
+            {
+                u64 pipeline_stage_bits = 0ull;
+                for (u32 agi = 0; agi < resource.access_timeline.size(); ++agi)
+                {
+                    pipeline_stage_bits = pipeline_stage_bits | std::bit_cast<u64>(resource.access_timeline[agi].stages);
+                }
+                ImGui::Text("%s", std::format(ATTRIBUTE_FORMATTING, "Used in Pipeline Stages:").c_str());
+                u64 stage_iter = pipeline_stage_bits;
+                while(stage_iter)
+                {
+                    u64 index = 63ull - static_cast<u64>(std::countl_zero(stage_iter));
+                    stage_iter &= ~(1ull << index);
+
+                    PipelineStageFlags stage = std::bit_cast<PipelineStageFlags>(1ull << index);
+                    auto str = to_string(stage);
+                    if (str.size() > 0)
+                    {
+                        ImGui::Text("  - %s", str.c_str());
+                    }
+                }
+            }
+
+            /// ==============================
+            /// ======= USED IN QUEUES =======
+            /// ==============================
+            {
+                ImGui::Text("%s", std::format(ATTRIBUTE_FORMATTING, "Used in Queues:").c_str());
+                u32 iter = resource.queue_bits;
+                while(iter)
+                {
+                    u32 index = queue_bits_to_first_queue_index(iter);
+                    iter &= ~(1ull << index);
+
+                    Queue queue = queue_index_to_queue(index);
+                    ImGui::Text("  - %s", to_string(queue).data());
+                }
+            }
+
+
+            /// ===============================
+            /// ======= ACCESS TIMELINE =======
+            /// ===============================
+            ImGui::SeparatorText("Access Timeline");
             static constexpr u32 ACCESS_GROUP_TABLE_FLAGS = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_SizingFixedFit;
             static constexpr u32 BARRIER_TABLE_FLAGS = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable;
             for (u32 agi = 0; agi < resource.access_timeline.size(); ++agi)
@@ -709,7 +850,7 @@ namespace daxa
                         ImGui::TableNextColumn();
                         ImGui::Text("%i", task->final_schedule_batch);
                         ImGui::TableNextColumn();
-                        ImGui::Text(to_string(task->attachments[attach_i].value.buffer.access).data());
+                        ImGui::Text(to_string(task->attachments[attach_i].value.buffer.task_access).data());
                         ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(access_type_to_color(resource.access_timeline[agi].type)));
                         ImGui::TableNextColumn();
                         ImGui::Text(task->attachments[attach_i].value.buffer.name);
@@ -781,12 +922,6 @@ namespace daxa
             ImGui::EndTooltip();
         }
     }
-
-    auto to_lower(std::string str) -> std::string
-    {
-        for(auto & c : str) { c = std::tolower(c); }
-        return str;
-    } 
 
     void task_timeline_ui(ImplTaskGraph & impl)
     {
@@ -1341,12 +1476,34 @@ namespace daxa
                                 {
                                     ImGui::PushID(column + row * 60000);
                                     ImGui::Selectable("");
-                                    if (ImGui::IsItemHovered())
+
+                                    /// ===========================
+                                    /// ======= HOVER LOGIC =======
+                                    /// ===========================
+
+                                    bool const hovered_previously = 
+                                        context.hovered_task == col_ui.task_index && 
+                                        context.hovered_attachment_index == attachment_index &&
+                                        context.hovered_resource == resource_index;
+
+                                    bool const hovered_now = ImGui::IsItemHovered();
+                                    if (hovered_now)
                                     {
                                         context.hovered_task = col_ui.task_index;
                                         context.hovered_attachment_index = attachment_index;
                                         context.hovered_resource = resource_index;
                                     }
+                                    if (!hovered_now && hovered_previously)
+                                    {
+                                        context.hovered_task = {};
+                                        context.hovered_attachment_index = {};
+                                        context.hovered_resource = {};
+                                    }
+
+                                    /// ===============================
+                                    /// ======= CELL POPUP MENU =======
+                                    /// ===============================
+
                                     if (ImGui::BeginPopupContextItem(resource.name.data()))
                                     {
                                         if (ImGui::Button("Show Task Detail Ui"))

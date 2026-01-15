@@ -452,7 +452,6 @@ namespace daxa
         {
             return {ret};
         }
-        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BUFFER_ID});
         return {};
     }
 
@@ -467,7 +466,6 @@ namespace daxa
         {
             return {ret};
         }
-        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_TLAS_ID});
         return {};
     }
 
@@ -482,7 +480,6 @@ namespace daxa
         {
             return {ret};
         }
-        check_result(result, "failed to get device address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BLAS_ID});
         return {};
     }
 
@@ -497,7 +494,6 @@ namespace daxa
         {
             return {ret};
         }
-        check_result(result, "failed to get host address", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_INVALID_BUFFER_ID});
         return {};
     }
 
@@ -1340,6 +1336,19 @@ namespace daxa
     /// --- End CommandRecorder ---
 
     /// --- Begin to_string ---
+
+    [[nodiscard]] auto to_string(MemoryFlags flags) -> std::string_view
+    {
+        if (flags == MemoryFlagBits::HOST_ACCESS_RANDOM)
+        {
+            return "HOST_ACCESS_RANDOM";
+        }
+        if (flags == MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE)
+        {
+            return "HOST_ACCESS_SEQUENTIAL_WRITE";
+        }
+        return "NONE";
+    }
     
     auto to_string(QueueFamily queue_family) -> std::string_view
     {
@@ -2061,6 +2070,23 @@ namespace daxa
             }
             ret += "PRE_RASTERIZATION_SHADERS";
         }
+        if ((flags & PipelineStageFlagBits::PRE_RASTERIZATION_SHADERS) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "PRE_RASTERIZATION_SHADERS";
+        }
+        if ((flags & PipelineStageFlagBits::ACCELERATION_STRUCTURE_BUILD) != PipelineStageFlagBits::NONE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "ACCELERATION_STRUCTURE_BUILD";
+        }
+
         return ret;
     }
 

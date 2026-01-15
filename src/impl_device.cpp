@@ -1264,7 +1264,7 @@ auto daxa_dvc_buffer_device_address(daxa_Device self, daxa_BufferId id, daxa_Dev
     auto const * hot_data = self->gpu_sro_table.buffer_slots.safe_get_hot(std::bit_cast<BufferId>(id));
     if (!hot_data)
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_BUFFER_ID, DAXA_RESULT_INVALID_BUFFER_ID);
+        return DAXA_RESULT_INVALID_BUFFER_ID;
     }
     *out_addr = static_cast<daxa_DeviceAddress>(hot_data->device_address);
     return DAXA_RESULT_SUCCESS;
@@ -1275,11 +1275,11 @@ auto daxa_dvc_buffer_host_address(daxa_Device self, daxa_BufferId id, void ** ou
     auto const * hot_data = self->gpu_sro_table.buffer_slots.safe_get_hot(std::bit_cast<BufferId>(id));
     if (!hot_data)
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_BUFFER_ID, DAXA_RESULT_INVALID_BUFFER_ID);
+        return DAXA_RESULT_INVALID_BUFFER_ID;
     }
     if (hot_data->host_address == 0)
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE, DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE);
+        return DAXA_RESULT_BUFFER_NOT_HOST_VISIBLE;
     }
     *out_addr = hot_data->host_address;
     return DAXA_RESULT_SUCCESS;
@@ -1290,7 +1290,7 @@ auto daxa_dvc_tlas_device_address(daxa_Device self, daxa_TlasId id, daxa_DeviceA
     auto const * hot_data = self->gpu_sro_table.tlas_slots.safe_get_hot(std::bit_cast<BufferId>(id));
     if (!hot_data)
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_TLAS_ID, DAXA_RESULT_INVALID_TLAS_ID);
+        return DAXA_RESULT_INVALID_TLAS_ID;
     }
     *out_addr = static_cast<daxa_DeviceAddress>(hot_data->device_address);
     return DAXA_RESULT_SUCCESS;
@@ -1301,7 +1301,7 @@ auto daxa_dvc_blas_device_address(daxa_Device self, daxa_BlasId id, daxa_DeviceA
     auto const * hot_data = self->gpu_sro_table.blas_slots.safe_get_hot(std::bit_cast<BufferId>(id));
     if (!hot_data)
     {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_BLAS_ID, DAXA_RESULT_INVALID_BLAS_ID);
+        return DAXA_RESULT_INVALID_BLAS_ID;
     }
     *out_addr = static_cast<daxa_DeviceAddress>(hot_data->device_address);
     return DAXA_RESULT_SUCCESS;

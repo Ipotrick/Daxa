@@ -150,7 +150,7 @@ namespace daxa
         return static_cast<TaskStage>(~static_cast<u64>(a));
     }
 
-    auto to_string(TaskStage stage) -> std::string_view;
+    auto to_string(TaskStage stage) -> std::string;
 
     auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags;
 
@@ -170,7 +170,7 @@ namespace daxa
         return ret;
     }
 
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskAccess const & access) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskAccess const & access) -> std::string;
 
     template <TaskStage STAGE, TaskAttachmentType ATTACHMENT_TYPE_RESTRICTION = TaskAttachmentType::UNDEFINED>
     struct TaskAccessConstsPartial

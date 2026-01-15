@@ -1316,6 +1316,8 @@ namespace daxa
         [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
     };
 
+    [[nodiscard]] auto to_string(MemoryFlags flags) -> std::string_view;
+
     enum struct ColorSpace
     {
         SRGB_NONLINEAR = 0,

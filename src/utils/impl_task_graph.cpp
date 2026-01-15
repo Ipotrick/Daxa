@@ -63,34 +63,27 @@ namespace daxa
         return queues[flat_index];
     }
 
-    auto to_string(TaskStage stage) -> std::string_view
+    auto to_string(TaskStage tstage) -> std::string
     {
-        switch (stage)
+        std::string ret = {};
+
+        u64 stage_iter = std::bit_cast<u64>(tstage);
+        while(stage_iter)
         {
-        case TaskStage::NONE: return "NONE";
-        case TaskStage::INDIRECT_COMMAND: return "INDIRECT_COMMAND";
-        case TaskStage::VERTEX_SHADER: return "VERTEX_SHADER";
-        case TaskStage::TESSELLATION_CONTROL_SHADER: return "TESSELLATION_CONTROL_SHADER";
-        case TaskStage::TESSELLATION_EVALUATION_SHADER: return "TESSELLATION_EVALUATION_SHADER";
-        case TaskStage::GEOMETRY_SHADER: return "GEOMETRY_SHADER";
-        case TaskStage::FRAGMENT_SHADER: return "FRAGMENT_SHADER";
-        case TaskStage::TASK_SHADER: return "TASK_SHADER";
-        case TaskStage::MESH_SHADER: return "MESH_SHADER";
-        case TaskStage::PRE_RASTERIZATION_SHADERS: return "PRE_RASTERIZATION_SHADERS";
-        case TaskStage::RASTER_SHADER: return "RASTER_SHADER";
-        case TaskStage::COMPUTE_SHADER: return "COMPUTE_SHADER";
-        case TaskStage::RAY_TRACING_SHADER: return "RAY_TRACING_SHADER";
-        case TaskStage::SHADER: return "SHADER";
-        case TaskStage::COLOR_ATTACHMENT: return "COLOR_ATTACHMENT";
-        case TaskStage::DEPTH_STENCIL_ATTACHMENT: return "DEPTH_STENCIL_ATTACHMENT";
-        case TaskStage::RESOLVE: return "RESOLVE";
-        case TaskStage::INDEX_INPUT: return "INDEX_INPUT";
-        case TaskStage::TRANSFER: return "TRANSFER";
-        case TaskStage::HOST: return "HOST";
-        case TaskStage::AS_BUILD: return "AS_BUILD";
-        case TaskStage::ANY_COMMAND: return "ANY_COMMAND";
+            u64 index = 63ull - static_cast<u64>(std::countl_zero(stage_iter));
+            stage_iter &= ~(1ull << index);
+
+            PipelineStageFlags stage = std::bit_cast<PipelineStageFlags>(1ull << index);
+            auto str = to_string(stage);
+            
+            ret += str;
+            if (stage_iter)
+            {
+                ret += "_";
+            }
         }
-        return "UNKNOWN";
+
+        return ret;
     }
 
     auto to_string(TaskType task_type) -> std::string_view
@@ -362,91 +355,42 @@ namespace daxa
                index == std::numeric_limits<u32>::max();
     }
 
-    auto to_string(TaskAccess const & taccess) -> std::string_view
-    {
-        std::string_view ret = {};
-#define _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(STAGE)                                                          \
-    switch (taccess.type)                                                                                       \
-    {                                                                                                           \
-    case TaskAccessType::NONE: ret = std::string_view{#STAGE "_NONE"}; break;                                   \
-    case TaskAccessType::READ: ret = std::string_view{#STAGE "_READ"}; break;                                   \
-    case TaskAccessType::SAMPLED: ret = std::string_view{#STAGE "_SAMPLED"}; break;                             \
-    case TaskAccessType::WRITE: ret = std::string_view{#STAGE "_WRITE"}; break;                                 \
-    case TaskAccessType::READ_WRITE: ret = std::string_view{#STAGE "_READ_WRITE"}; break;                       \
-    case TaskAccessType::WRITE_CONCURRENT: ret = std::string_view{#STAGE "_WRITE_CONCURRENT"}; break;           \
-    case TaskAccessType::READ_WRITE_CONCURRENT: ret = std::string_view{#STAGE "_READ_WRITE_CONCURRENT"}; break; \
-    default: DAXA_DBG_ASSERT_TRUE_M(false, "INVALID ACCESS TYPE"); break;                                       \
-    }
+    
 
-        switch (taccess.stage)
+    auto to_string(TaskAccess const & taccess) -> std::string
+    {
+        std::string ret = {};
+
+        u64 stage_iter = std::bit_cast<u64>(taccess.stage);
+        while(stage_iter)
         {
-        case TaskStage::NONE:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(NONE)
-            break;
-        case TaskStage::VERTEX_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(VERTEX_SHADER)
-            break;
-        case TaskStage::TESSELLATION_CONTROL_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(TESSELLATION_CONTROL_SHADER)
-            break;
-        case TaskStage::TESSELLATION_EVALUATION_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(TESSELLATION_EVALUATION_SHADER)
-            break;
-        case TaskStage::GEOMETRY_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(GEOMETRY_SHADER)
-            break;
-        case TaskStage::FRAGMENT_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(FRAGMENT_SHADER)
-            break;
-        case TaskStage::COMPUTE_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(COMPUTE_SHADER)
-            break;
-        case TaskStage::RAY_TRACING_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(RAY_TRACING_SHADER)
-            break;
-        case TaskStage::TASK_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(TASK_SHADER)
-            break;
-        case TaskStage::MESH_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(MESH_SHADER)
-            break;
-        case TaskStage::PRE_RASTERIZATION_SHADERS:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(PRE_RASTERIZATION_SHADERS)
-            break;
-        case TaskStage::RASTER_SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(RASTER_SHADER)
-            break;
-        case TaskStage::SHADER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(SHADER)
-            break;
-        case TaskStage::COLOR_ATTACHMENT:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(COLOR_ATTACHMENT)
-            break;
-        case TaskStage::DEPTH_STENCIL_ATTACHMENT:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(DEPTH_STENCIL_ATTACHMENT)
-            break;
-        case TaskStage::RESOLVE:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(RESOLVE)
-            break;
-        case TaskStage::INDIRECT_COMMAND:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(INDIRECT_COMMAND)
-            break;
-        case TaskStage::INDEX_INPUT:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(INDEX_INPUT)
-            break;
-        case TaskStage::TRANSFER:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(TRANSFER)
-            break;
-        case TaskStage::HOST:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(HOST)
-            break;
-        case TaskStage::AS_BUILD:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(AS_BUILD)
-            break;
-        case TaskStage::ANY_COMMAND:
-            _DAXA_GENERATE_STRING_CASE_TACCESS_TYPE(ANY_COMMAND)
-            break;
+            u64 index = 63ull - static_cast<u64>(std::countl_zero(stage_iter));
+            stage_iter &= ~(1ull << index);
+
+            PipelineStageFlags stage = std::bit_cast<PipelineStageFlags>(1ull << index);
+            auto str = to_string(stage);
+            
+            ret += str;
+            if (stage_iter)
+            {
+                ret += "_";
+            }
         }
+
+        ret += "_";
+
+        switch (taccess.type)                                                                                       
+        {                                                                                                           
+        case TaskAccessType::NONE: ret += "NONE";
+        case TaskAccessType::READ: ret += "READ";
+        case TaskAccessType::SAMPLED: ret += "SAMPLED";
+        case TaskAccessType::WRITE: ret += "WRITE";
+        case TaskAccessType::READ_WRITE: ret += "READ_WRITE";
+        case TaskAccessType::WRITE_CONCURRENT: ret += "WRITE_CONCURRENT";
+        case TaskAccessType::READ_WRITE_CONCURRENT: ret += "READ_WRITE_CONCURRENT";
+        default: DAXA_DBG_ASSERT_TRUE_M(false, "INVALID ACCESS TYPE"); return "";                                       
+        }
+
         return ret;
     }
 
