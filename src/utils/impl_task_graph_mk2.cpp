@@ -2577,6 +2577,8 @@ namespace daxa
         for (u32 alloc_i = 0; alloc_i < transient_resource_allocations.size(); ++alloc_i)
         {
             TransientResourceAllocation & allocation = transient_resource_allocations[alloc_i];
+            allocation.resource->allocation_offset = allocation.offset;
+            allocation.resource->allocation_size = allocation.size;
 
             switch (allocation.resource->kind)
             {

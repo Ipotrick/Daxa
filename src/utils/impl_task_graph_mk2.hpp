@@ -150,6 +150,8 @@ namespace daxa
         u32 final_schedule_first_submit = {};
         u32 final_schedule_last_submit = {};
         u32 queue_bits = {};
+        u64 allocation_offset = {};
+        u64 allocation_size = {};
 
         union {
             BufferId buffer;
