@@ -112,6 +112,8 @@ namespace daxa
         static inline constexpr ImageCreateFlags ALLOW_ALIAS = {0x00000400};
     };
 
+    DAXA_EXPORT_CXX auto to_string(ImageCreateFlags flags) -> std::string;
+
     enum struct SharingMode
     {
         EXCLUSIVE,

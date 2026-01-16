@@ -1337,7 +1337,7 @@ namespace daxa
 
     /// --- Begin to_string ---
 
-    [[nodiscard]] auto to_string(MemoryFlags flags) -> std::string_view
+    auto to_string(MemoryFlags flags) -> std::string_view
     {
         if (flags == MemoryFlagBits::HOST_ACCESS_RANDOM)
         {
@@ -1348,6 +1348,47 @@ namespace daxa
             return "HOST_ACCESS_SEQUENTIAL_WRITE";
         }
         return "NONE";
+    }
+    
+
+    auto to_string(ImageCreateFlags flags) -> std::string
+    {
+        std::string ret = {};
+
+        if ((flags & ImageCreateFlagBits::ALLOW_MUTABLE_FORMAT) == ImageCreateFlagBits::ALLOW_MUTABLE_FORMAT)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "ALLOW_MUTABLE_FORMAT";
+        }
+        if ((flags & ImageCreateFlagBits::COMPATIBLE_CUBE) == ImageCreateFlagBits::COMPATIBLE_CUBE)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "COMPATIBLE_CUBE";
+        }
+        if ((flags & ImageCreateFlagBits::COMPATIBLE_2D_ARRAY) == ImageCreateFlagBits::COMPATIBLE_2D_ARRAY)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "COMPATIBLE_2D_ARRAY";
+        }
+        if ((flags & ImageCreateFlagBits::ALLOW_ALIAS) == ImageCreateFlagBits::ALLOW_ALIAS)
+        {
+            if (!ret.empty())
+            {
+                ret += " | ";
+            }
+            ret += "ALLOW_ALIAS";
+        }
+
+        return ret;
     }
     
     auto to_string(QueueFamily queue_family) -> std::string_view
