@@ -66,12 +66,22 @@ namespace ImGui
             ImGui::PopID();
         }
         ImGuiWindow * test = ImGui::FindWindowByName(new_window_name);
-        if (main_window && main_window->DockNode && visible)
+
+        bool const window_already_in_dock_node = main_window->DockNode != nullptr;
+
+        if (main_window && visible)
         {
             ImGuiContext * g = ImGui::GetCurrentContext();
-            bool const has_parent = main_window->DockNode->ParentNode != nullptr;
-            bool const has_right_docked = has_parent && main_window->DockNode->ParentNode->ChildNodes[1]->Windows.Size > 0;
-            ImGui::DockContextQueueDock(g, main_window, has_right_docked ? main_window->DockNode->ParentNode->ChildNodes[1] : main_window->DockNode, test, has_right_docked ? ImGuiDir_None : split_dir, split, false);
+            if (window_already_in_dock_node)
+            {
+                bool const has_parent = main_window->DockNode->ParentNode != nullptr;
+                bool const has_right_docked = has_parent && main_window->DockNode->ParentNode->ChildNodes[1]->Windows.Size > 0;
+                ImGui::DockContextQueueDock(g, main_window, has_right_docked ? main_window->DockNode->ParentNode->ChildNodes[1] : main_window->DockNode, test, has_right_docked ? ImGuiDir_None : split_dir, split, false);
+            }
+            else
+            {
+                ImGui::DockContextQueueDock(g, main_window, nullptr, test, split_dir, split, false);
+            }
         }
     }
 } // namespace ImGui
@@ -99,7 +109,6 @@ namespace daxa
         std::set<std::string> open_task_detail_windows = {};
         std::set<std::string> open_resource_detail_windows = {};
         //std::set<std::string> open_resource_detail_windows = {};
-        std::unordered_map<std::string_view, u32> name_to_task_index = {};
         bool show_batch_borders = true;
         bool show_transfer_tasks = true;
         bool recreated = true;
@@ -107,6 +116,132 @@ namespace daxa
         u32 hovered_resource = ~0u;
         u32 hovered_attachment_index = ~0u;
     };
+
+    
+    auto task_type_to_str(TaskType task_type) -> char const *
+    {
+        switch (task_type)
+        {
+        case TaskType::GENERAL: return "GN";
+        case TaskType::RASTER: return "RS";
+        case TaskType::COMPUTE: return "CT";
+        case TaskType::RAY_TRACING: return "RT";
+        case TaskType::TRANSFER: return "TF";
+        default: return "UNKNOWN";
+        }
+    }
+
+    auto queue_family_to_str(QueueFamily queue_family) -> char const *
+    {
+        switch (queue_family)
+        {
+        case QueueFamily::MAIN: return "GN";
+        case QueueFamily::COMPUTE: return "CT";
+        case QueueFamily::TRANSFER: return "TF";
+        default: return "UNKNOWN";
+        }
+    }
+
+    auto access_type_to_color(TaskAccessType access) -> ImVec4
+    {
+        // yellow = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break; //                  #F9C74F
+        ImVec4 ret = {};
+        switch (access)
+        {
+        case TaskAccessType::NONE: ret = ImVec4(0.35638f, 0.37626f, 0.40198f, 1.0f); break;                  // #9aa0a6ff
+        case TaskAccessType::WRITE: ret = ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f); break;                 // #E74C3C
+        case TaskAccessType::READ: ret = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f); break;                  // #2ECC71
+        case TaskAccessType::SAMPLED: ret = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f); break;               // #2ECC71
+        case TaskAccessType::READ_WRITE: ret = ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f); break;            // #3498DB
+        case TaskAccessType::WRITE_CONCURRENT: ret = ImVec4(0.53600f, 0.03700f, 0.02000f, 1.0f); break;      // #E63946
+        case TaskAccessType::READ_WRITE_CONCURRENT: ret = ImVec4(0.05490f, 0.32941f, 0.96470f, 1.0f); break; // #0e54f6
+        }
+        // ret.x = std::sqrt(ret.x);
+        // ret.y = std::sqrt(ret.y);
+        // ret.z = std::sqrt(ret.z);
+        return ret;
+    }
+
+    static constexpr ImVec4 LAYOUT_INITIALIZATION_COLOR = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f);
+    static constexpr ImVec4 BARRIER_COLOR = ImVec4(0.95500f, 0.700f, 0.2f, 1.0f);
+    static constexpr ImVec4 SUBMIT_COLOR = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
+    static constexpr ImVec4 QUEUE_SUBMIT_COLOR = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
+    static constexpr ImVec4 RESOURCE_ALIVE_COLOR = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
+
+    // Formats the header names to always be exactly 36 chars wide
+    static constexpr char const * TIMELINE_SUBMIT_OR_QUEUE_SUBMIT_HEADER_STR_FORMAT = "{:^36.36}";
+    static constexpr char const * TIMELINE_TASK_HEADER_STR_FORMAT = "{:<36.36}";
+
+    auto task_type_to_color(TaskType type) -> ImVec4
+    {
+        ImVec4 ret = {};
+        switch (type)
+        {
+        case TaskType::GENERAL: ret = ImVec4(0.47060f, 0.52941f, 0.61960f, 1.0f); break;     //        #8D99AE
+        case TaskType::RASTER: ret = ImVec4(0.70110f, 0.21223f, 0.13287f, 1.0f); break;      //         #e07a5fff
+        case TaskType::COMPUTE: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break;     //        #F9C74F
+        case TaskType::RAY_TRACING: ret = ImVec4(0.70110f, 0.02113f, 0.04362f, 1.0f); break; //    #EF233C
+        case TaskType::TRANSFER: ret = ImVec4(0.03112f, 0.78413f, 0.60552f, 1.0f); break;    //       #06D6A0
+        }
+        return ret;
+    }
+
+    auto resource_kind_to_color(TaskResourceKind const kind)
+    {
+        ImVec4 ret = {};
+
+        switch (kind)
+        {
+        case TaskResourceKind::BUFFER: ret = ImVec4(0.1804f, 0.8000f, 0.4431f, 1.0f); break;
+        case TaskResourceKind::IMAGE: ret = ImVec4(0.2039f, 0.5961f, 0.8588f, 1.0f); break;
+        case TaskResourceKind::BLAS: ret = ImVec4(0.6078f, 0.3490f, 0.7137f, 1.0f); break;
+        case TaskResourceKind::TLAS: ret = ImVec4(0.9451f, 0.7686f, 0.0588f, 1.0f); break;
+        }
+        return ret;
+    }
+
+    auto queue_family_to_color(QueueFamily type) -> ImVec4
+    {
+        ImVec4 ret = {};
+        switch (type)
+        {
+        case QueueFamily::MAIN: ret = ImVec4(0.47060f, 0.52941f, 0.61960f, 1.0f); break;     //           #8D99AE
+        case QueueFamily::COMPUTE: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break;  //        #F9C74F
+        case QueueFamily::TRANSFER: ret = ImVec4(0.03112f, 0.78413f, 0.60552f, 1.0f); break; //       #06D6A0
+        }
+        // ret.x = std::sqrt(ret.x);
+        // ret.y = std::sqrt(ret.y);
+        // ret.z = std::sqrt(ret.z);
+        return ret;
+    }
+
+    void colored_banner_text(std::string text, bool draw_circle, ImVec4 banner_color, ImVec4 circle_color)
+    {
+        float const text_height = ImGui::CalcTextSize("X").y;
+
+        ImDrawList * draw_list = ImGui::GetWindowDrawList();
+        draw_list->ChannelsSplit(2);
+
+        auto const pre_text_pos = ImGui::GetCursorPos();
+        {
+            draw_list->ChannelsSetCurrent(1);
+            if(draw_circle)
+            {
+                draw_list->AddCircleFilled(ImVec2(ImGui::GetCursorScreenPos().x + 10.0f, ImGui::GetCursorScreenPos().y + text_height / 2.0f), 6.0f, ImGui::ColorConvertFloat4ToU32(ImVec4(circle_color)));
+                ImGui::SameLine(15, 15);
+            }
+            ImGui::Text(text.c_str());
+            ImGui::SameLine();
+        }
+        auto const post_text_pos = ImGui::GetCursorPos();
+        {
+            ImGui::Dummy({0, text_height});
+            draw_list->ChannelsSetCurrent(0);
+            ImGui::SetCursorPos(pre_text_pos);
+            draw_list->AddRectFilled(ImGui::GetCursorScreenPos(), ImVec2((ImGui::GetCursorScreenPos().x + post_text_pos.x - pre_text_pos.x), ImGui::GetCursorScreenPos().y + text_height), ImGui::ColorConvertFloat4ToU32(banner_color), 5.0f);
+            draw_list->ChannelsMerge();
+        }
+    }
 
     void pin_resource_checkbox(TaskGraphDebugContext & context, u32 resource_index)
     {
@@ -226,7 +361,126 @@ namespace daxa
         }
     }
 
-    void task_dependencies_ui(ImplTaskGraph & impl)
+    void highlight_all_tasks_checkbox(TaskGraphDebugContext & context, u32 resource_index)
+    {
+        ImplTaskResource const & resource = context.impl->resources[resource_index];
+        bool highlighted = true;
+        for (u32 agi = 0; agi < resource.access_timeline.size(); ++agi)
+        {
+            AccessGroup const & ag = resource.access_timeline[agi];
+            for (u32 t = 0; t < ag.tasks.size(); ++t)
+            {
+                highlighted &= context.extra_highlighted_tasks.contains(std::string(ag.tasks[t].task->name));
+                if(!highlighted) { break; }
+            }
+        }
+        bool gui_highlighted = highlighted;
+        if (ImGui::Checkbox("Highlight all tasks", &gui_highlighted))
+        {
+            if (highlighted)
+            {
+                for (u32 agi = 0; agi < resource.access_timeline.size(); ++agi)
+                {
+                    AccessGroup const & ag = resource.access_timeline[agi];
+                    for (u32 t = 0; t < ag.tasks.size(); ++t)
+                    {
+                        if (context.extra_highlighted_tasks.contains(std::string(ag.tasks[t].task->name)))
+                        {
+                            context.extra_highlighted_tasks.erase(std::string(ag.tasks[t].task->name));
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (u32 agi = 0; agi < resource.access_timeline.size(); ++agi)
+                {
+                    AccessGroup const & ag = resource.access_timeline[agi];
+                    for (u32 t = 0; t < ag.tasks.size(); ++t)
+                    {
+                        if (context.extra_highlighted_tasks.contains(std::string(ag.tasks[t].task->name)))
+                        {
+                            context.extra_highlighted_tasks.insert(std::string(ag.tasks[t].task->name));
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    auto task_popup_context_ui(
+        TaskGraphDebugContext & context,
+        u32 task_index)
+    {
+        ImplTask const & task = context.impl->tasks[task_index];
+        bool const detail_window_open = context.open_task_detail_windows.contains(std::string(task.name).c_str());
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && !detail_window_open)
+        {
+            context.open_task_detail_windows.insert(std::string(task.name));
+            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
+        }
+        if (ImGui::BeginPopupContextItem(task.name.data()))
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
+            ImGui::Text(task.name.data());
+            ImGui::BeginDisabled(detail_window_open);
+            if (ImGui::Button("Open Detail Ui (Double Click)"))
+            {
+                context.open_task_detail_windows.insert(std::string(task.name));
+                ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
+            }
+            else if(detail_window_open)
+            {
+                ImGui::SetItemTooltip("Detail window is already open");
+            }
+            ImGui::EndDisabled();
+            pin_task_attachments_checkbox(context, task_index);
+            filter_task_checkbox(context, task_index);
+            highlight_task_checkbox(context, task_index);
+            ImGui::PopStyleVar();
+            ImGui::EndPopup();
+        }
+    }
+
+    auto resource_popup_context_ui(
+        TaskGraphDebugContext & context,
+        u32 resource_index)
+    {
+        if (resource_index == ~0u)
+        {
+            return;
+        }
+        ImplTaskResource const & resource = context.impl->resources[resource_index];
+        bool const detail_window_open = context.open_resource_detail_windows.contains(std::string(resource.name).c_str());
+        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && !detail_window_open)
+        {
+            context.open_resource_detail_windows.insert(std::string(resource.name));
+            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
+        }
+        if (ImGui::BeginPopupContextItem(resource.name.data()))
+        {
+            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
+            ImGui::Text(resource.name.data());
+            ImGui::BeginDisabled(detail_window_open);
+            if (ImGui::Button("Open Detail Ui (Double Click)"))
+            {
+                context.open_resource_detail_windows.insert(std::string(resource.name));
+                ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
+            }
+            if(detail_window_open)
+            {
+                ImGui::SetItemTooltip("Detail window is already open");
+            }
+            ImGui::EndDisabled();
+            filter_resource_checkbox(context, resource_index);
+            pin_resource_checkbox(context, resource_index);
+            highlight_all_tasks_checkbox(context, resource_index);
+            ImGui::PopStyleVar();
+            ImGui::EndPopup();
+        }
+    }
+
+    void memory_ui(TaskGraphDebugContext & context)
     {
         static float world_canvas_scale = 1.0f;
         static ImVec2 world_canvas_offset(500.0f, 500.0f);
@@ -287,15 +541,14 @@ namespace daxa
         // Draw border and background color
         ImGuiIO & io = ImGui::GetIO();
         ImDrawList * draw_list = ImGui::GetWindowDrawList();
+
         draw_list->AddRectFilled(screen_canvas_top_left_corner, screen_canvas_bottom_right_corner, IM_COL32(50, 50, 50, 255));
         draw_list->AddRect(screen_canvas_top_left_corner, screen_canvas_bottom_right_corner, IM_COL32(255, 255, 255, 255));
 
-        // This will catch our interactions
-        ImGui::InvisibleButton("canvas", screen_canvas_size, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight | ImGuiButtonFlags_MouseButtonMiddle);
-        bool const is_active = ImGui::IsItemActive();
-        bool const is_hovered = ImGui::IsItemHovered();
-
-        if (is_hovered)
+        ImVec2 const mouse_pos = io.MousePos;
+        bool hovered = mouse_pos.x > screen_canvas_top_left_corner.x && mouse_pos.x < screen_canvas_bottom_right_corner.x &&
+                       mouse_pos.y > screen_canvas_top_left_corner.y && mouse_pos.y < screen_canvas_bottom_right_corner.y;
+        if (hovered)
         {
             ImVec2 const world_mouse_pos = screen_to_world(io.MousePos);
             ImVec2 const world_canvas_top_left_corner = screen_to_world(screen_canvas_top_left_corner);
@@ -313,7 +566,7 @@ namespace daxa
         // Pan (we use a zero mouse threshold when there's no context menu)
         // You may decide to make that threshold dynamic based on whether the mouse is hovering something etc.
         float const mouse_threshold_for_pan = 0.0f;
-        if (is_active && ImGui::IsMouseDragging(ImGuiMouseButton_Right, mouse_threshold_for_pan))
+        if (/*is_active &&*/ ImGui::IsMouseDragging(ImGuiMouseButton_Right, mouse_threshold_for_pan))
         {
             world_canvas_offset.x -= io.MouseDelta.x / world_canvas_scale;
             world_canvas_offset.y -= io.MouseDelta.y / world_canvas_scale;
@@ -322,6 +575,7 @@ namespace daxa
         // Context menu (under default mouse threshold)
         ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
 
+        float const GRID_STEP = 50.0f;
         // Draw grid + all lines in the canvas
         draw_list->PushClipRect(screen_canvas_top_left_corner, screen_canvas_bottom_right_corner, true);
         {
@@ -331,7 +585,6 @@ namespace daxa
             /// ==============================
             {
                 draw_list->ChannelsSetCurrent(0); // Foreground
-                float const GRID_STEP = 64.0f;
                 ImVec2 canvas_world_p0 = screen_to_world(screen_canvas_top_left_corner);
                 ImVec2 canvas_world_p1 = screen_to_world(screen_canvas_bottom_right_corner);
                 float first_world_x = static_cast<f32>(align_up(static_cast<i32>(canvas_world_p0.x - GRID_STEP), static_cast<i32>(GRID_STEP)));
@@ -353,18 +606,72 @@ namespace daxa
                 }
             }
 
+            /// ===================================
+            /// ==== DRAW RESOURCE MEMORY HEAP ====
+            /// ===================================
+
+            ImVec2 const max_extent = ImVec2(context.impl->flat_batch_count, context.impl->transient_memory_block.info().requirements.size);
+            ImVec2 const world_extent = ImVec2((max_extent.x) * GRID_STEP, (max_extent.y / (8192.0f * 1024)) * GRID_STEP);
+
+            float const width_scale = 1.0f / max_extent.x * world_extent.x;
+
+            draw_list->ChannelsSetCurrent(0); // Background
+            draw_list->AddRectFilled(world_to_screen(ImVec2(0, 0)), world_to_screen(ImVec2(world_extent.x - GRID_STEP, world_extent.y)), IM_COL32(80, 80, 100, 127), 0.0f);
+            draw_list->ChannelsMerge();
+            for (u32 resource_index = 0; resource_index < context.impl->resources.size(); ++resource_index)
+            {
+                ImplTaskResource const& resource = context.impl->resources[resource_index];
+
+                if (resource.external) { continue; }
+
+                ImVec2 start = ImVec2(
+                    resource.final_schedule_first_batch * width_scale, 
+                    (resource.allocation_offset / max_extent.y) * world_extent.y); 
+
+                ImVec2 end = ImVec2(
+                    resource.final_schedule_last_batch * width_scale + width_scale, 
+                    ((resource.allocation_offset + resource.allocation_size) / max_extent.y) * world_extent.y);
+
+                {
+                    auto clip = [&](ImVec2 in) -> ImVec2
+                    {
+                        return ImVec2(
+                            std::clamp(in.x, screen_canvas_top_left_corner.x, screen_canvas_bottom_right_corner.x),
+                            std::clamp(in.y, screen_canvas_top_left_corner.y, screen_canvas_bottom_right_corner.y));
+                    };
+
+                    auto const clipped_start = clip(world_to_screen(start));
+                    auto const clipped_end = clip(world_to_screen(end));
+                    bool const fully_clipped = clipped_start.x == clipped_end.x || clipped_start.y == clipped_end.y;
+                    if(! fully_clipped)
+                    {
+                        ImGui::SetCursorScreenPos(clipped_start);
+                        auto const size = ImVec2(clipped_end.x - clipped_start.x, clipped_end.y - clipped_start.y);
+                        ImGui::InvisibleButton(std::format("##LALA{}", resource.name.data()).c_str(), size);
+                        ImGui::SetItemTooltip(resource.name.data());
+                        resource_popup_context_ui(context, resource_index);
+                        ImVec4 const fill_color = resource_kind_to_color(resource.kind);
+                        ImVec4 const fill_color_final = ImGui::IsItemHovered() ? ImVec4(fill_color.x * 1.3f, fill_color.y * 1.3f, fill_color.z * 1.3f, 1.0f) : fill_color;
+                        ImVec4 const border_color = ImVec4(fill_color_final.x * 0.4f, fill_color_final.y * 0.4f, fill_color_final.z * 0.4f, 1.0f);
+                        draw_list->AddRectFilled(world_to_screen(start), world_to_screen(end), ImGui::ColorConvertFloat4ToU32(fill_color_final), 0.0f);
+                        draw_list->AddRect(world_to_screen(start), world_to_screen(end), ImGui::ColorConvertFloat4ToU32(border_color), 0.0f, 0, 2 * world_canvas_scale);
+                    }
+                }
+            }
+
             /// ====================
             /// ==== DRAW TASKS ====
             /// ====================
+            if(false)
             {
                 float const WS_BATCH_HORIZONTAL_DISTANCE = 256.0f;
                 float const WS_TASK_VERTICAL_DISTANCE = 256.0f;
                 ImVec2 const NODE_WINDOW_PADDING(8.0f, 8.0f);
 
                 float acc_submit_hor_offset = 0.0f;
-                for (u32 submit_index = 0; submit_index < impl.submits.size(); ++submit_index)
+                for (u32 submit_index = 0; submit_index < context.impl->submits.size(); ++submit_index)
                 {
-                    TasksSubmit const & submit = impl.submits[submit_index];
+                    TasksSubmit const & submit = context.impl->submits[submit_index];
 
                     float acc_queues_vert_offset = 0.0f;
                     for (u32 q = 0; q < submit.queue_indices.size(); ++q)
@@ -481,196 +788,6 @@ namespace daxa
     {
         AccessGroup const * access_group = {};
     };
-    auto task_type_to_str(TaskType task_type) -> char const *
-    {
-        switch (task_type)
-        {
-        case TaskType::GENERAL: return "GN";
-        case TaskType::RASTER: return "RS";
-        case TaskType::COMPUTE: return "CT";
-        case TaskType::RAY_TRACING: return "RT";
-        case TaskType::TRANSFER: return "TF";
-        default: return "UNKNOWN";
-        }
-    }
-
-    auto queue_family_to_str(QueueFamily queue_family) -> char const *
-    {
-        switch (queue_family)
-        {
-        case QueueFamily::MAIN: return "GN";
-        case QueueFamily::COMPUTE: return "CT";
-        case QueueFamily::TRANSFER: return "TF";
-        default: return "UNKNOWN";
-        }
-    }
-
-    auto access_type_to_color(TaskAccessType access) -> ImVec4
-    {
-        // yellow = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break; //                  #F9C74F
-        ImVec4 ret = {};
-        switch (access)
-        {
-        case TaskAccessType::NONE: ret = ImVec4(0.35638f, 0.37626f, 0.40198f, 1.0f); break;                  // #9aa0a6ff
-        case TaskAccessType::WRITE: ret = ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f); break;                 // #E74C3C
-        case TaskAccessType::READ: ret = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f); break;                  // #2ECC71
-        case TaskAccessType::SAMPLED: ret = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f); break;               // #2ECC71
-        case TaskAccessType::READ_WRITE: ret = ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f); break;            // #3498DB
-        case TaskAccessType::WRITE_CONCURRENT: ret = ImVec4(0.53600f, 0.03700f, 0.02000f, 1.0f); break;      // #E63946
-        case TaskAccessType::READ_WRITE_CONCURRENT: ret = ImVec4(0.05490f, 0.32941f, 0.96470f, 1.0f); break; // #0e54f6
-        }
-        // ret.x = std::sqrt(ret.x);
-        // ret.y = std::sqrt(ret.y);
-        // ret.z = std::sqrt(ret.z);
-        return ret;
-    }
-
-    static constexpr ImVec4 LAYOUT_INITIALIZATION_COLOR = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f);
-    static constexpr ImVec4 BARRIER_COLOR = ImVec4(0.95500f, 0.700f, 0.2f, 1.0f);
-    static constexpr ImVec4 SUBMIT_COLOR = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
-    static constexpr ImVec4 QUEUE_SUBMIT_COLOR = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
-    static constexpr ImVec4 RESOURCE_ALIVE_COLOR = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
-
-    // Formats the header names to always be exactly 36 chars wide
-    static constexpr char const * TIMELINE_SUBMIT_OR_QUEUE_SUBMIT_HEADER_STR_FORMAT = "{:^36.36}";
-    static constexpr char const * TIMELINE_TASK_HEADER_STR_FORMAT = "{:<36.36}";
-
-    auto task_type_to_color(TaskType type) -> ImVec4
-    {
-        ImVec4 ret = {};
-        switch (type)
-        {
-        case TaskType::GENERAL: ret = ImVec4(0.47060f, 0.52941f, 0.61960f, 1.0f); break;     //        #8D99AE
-        case TaskType::RASTER: ret = ImVec4(0.70110f, 0.21223f, 0.13287f, 1.0f); break;      //         #e07a5fff
-        case TaskType::COMPUTE: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break;     //        #F9C74F
-        case TaskType::RAY_TRACING: ret = ImVec4(0.70110f, 0.02113f, 0.04362f, 1.0f); break; //    #EF233C
-        case TaskType::TRANSFER: ret = ImVec4(0.03112f, 0.78413f, 0.60552f, 1.0f); break;    //       #06D6A0
-        }
-        // ret.x = std::sqrt(ret.x);
-        // ret.y = std::sqrt(ret.y);
-        // ret.z = std::sqrt(ret.z);
-        return ret;
-    }
-
-    auto queue_family_to_color(QueueFamily type) -> ImVec4
-    {
-        ImVec4 ret = {};
-        switch (type)
-        {
-        case QueueFamily::MAIN: ret = ImVec4(0.47060f, 0.52941f, 0.61960f, 1.0f); break;     //           #8D99AE
-        case QueueFamily::COMPUTE: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break;  //        #F9C74F
-        case QueueFamily::TRANSFER: ret = ImVec4(0.03112f, 0.78413f, 0.60552f, 1.0f); break; //       #06D6A0
-        }
-        // ret.x = std::sqrt(ret.x);
-        // ret.y = std::sqrt(ret.y);
-        // ret.z = std::sqrt(ret.z);
-        return ret;
-    }
-
-    auto task_popup_context_ui(
-        TaskGraphDebugContext & context,
-        u32 task_index)
-    {
-        ImplTask const & task = context.impl->tasks[task_index];
-        bool const detail_window_open = (ImGui::FindWindowByName(std::string(task.name).c_str()) != nullptr);
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && !detail_window_open)
-        {
-            context.open_task_detail_windows.insert(std::string(task.name));
-            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
-        }
-        if (ImGui::BeginPopupContextItem(task.name.data()))
-        {
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
-
-            bool const task_forbidden = (context.name_to_task_index[task.name] == ~0u);
-            ImGui::BeginDisabled(task_forbidden || detail_window_open);
-            if (ImGui::Button("Open Detail Ui (Double Click)"))
-            {
-                context.open_task_detail_windows.insert(std::string(task.name));
-                ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
-            }
-            if (task_forbidden)
-            {
-                ImGui::PushStyleColor(ImGuiCol_Text, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 0.0f, 0.0f, 1.0f)));
-                ImGui::SetItemTooltip("Task has duplicate name with other task! Detail ui requires unique task names!");
-                ImGui::PopStyleColor();
-            }
-            else if(detail_window_open)
-            {
-                ImGui::SetItemTooltip("Detail window is already open");
-            }
-            ImGui::EndDisabled();
-            pin_task_attachments_checkbox(context, task_index);
-            filter_task_checkbox(context, task_index);
-            highlight_task_checkbox(context, task_index);
-            ImGui::PopStyleVar();
-            ImGui::EndPopup();
-        }
-    }
-
-    auto resource_popup_context_ui(
-        TaskGraphDebugContext & context,
-        u32 resource_index)
-    {
-        if (resource_index == ~0u)
-        {
-            return;
-        }
-        ImplTaskResource const & resource = context.impl->resources[resource_index];
-        bool const detail_window_open = (ImGui::FindWindowByName(resource.name.data()) != nullptr);
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && !detail_window_open)
-        {
-            context.open_resource_detail_windows.insert(std::string(resource.name));
-            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
-        }
-        if (ImGui::BeginPopupContextItem(resource.name.data()))
-        {
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
-            ImGui::BeginDisabled(detail_window_open);
-            if (ImGui::Button("Open Detail Ui (Double Click)"))
-            {
-                context.open_resource_detail_windows.insert(std::string(resource.name));
-                ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
-            }
-            if(detail_window_open)
-            {
-                ImGui::SetItemTooltip("Detail window is already open");
-            }
-            ImGui::EndDisabled();
-            filter_resource_checkbox(context, resource_index);
-            pin_resource_checkbox(context, resource_index);
-            ImGui::PopStyleVar();
-            ImGui::EndPopup();
-        }
-    }
-
-    void colored_banner_text(std::string text, bool draw_circle, ImVec4 banner_color, ImVec4 circle_color)
-    {
-        float const text_height = ImGui::CalcTextSize("X").y;
-
-        ImDrawList * draw_list = ImGui::GetWindowDrawList();
-        draw_list->ChannelsSplit(2);
-
-        auto const pre_text_pos = ImGui::GetCursorPos();
-        {
-            draw_list->ChannelsSetCurrent(1);
-            if(draw_circle)
-            {
-                draw_list->AddCircleFilled(ImVec2(ImGui::GetCursorScreenPos().x + 10.0f, ImGui::GetCursorScreenPos().y + text_height / 2.0f), 6.0f, ImGui::ColorConvertFloat4ToU32(ImVec4(circle_color)));
-                ImGui::SameLine(15, 15);
-            }
-            ImGui::Text(text.c_str());
-            ImGui::SameLine();
-        }
-        auto const post_text_pos = ImGui::GetCursorPos();
-        {
-            ImGui::Dummy({0, text_height});
-            draw_list->ChannelsSetCurrent(0);
-            ImGui::SetCursorPos(pre_text_pos);
-            draw_list->AddRectFilled(ImGui::GetCursorScreenPos(), ImVec2((ImGui::GetCursorScreenPos().x + post_text_pos.x - pre_text_pos.x), ImGui::GetCursorScreenPos().y + text_height), ImGui::ColorConvertFloat4ToU32(banner_color), 5.0f);
-            draw_list->ChannelsMerge();
-        }
-    }
 
     auto task_details_ui(TaskGraphDebugContext & context, u32 task_idx) -> bool
     {
@@ -848,6 +965,8 @@ namespace daxa
             filter_resource_checkbox(context, resource_index);
             ImGui::SameLine();
             pin_resource_checkbox(context, resource_index);
+            ImGui::SameLine();
+            highlight_all_tasks_checkbox(context, resource_index);
             
             /// ===========================================
             /// ======= GENERAL RESOURCE ATTRIBUTES =======
@@ -868,7 +987,7 @@ namespace daxa
                     ImGui::Text(resource.external->name.data());
                 }
                 
-                if (resource.allocation_offset != 0)
+                if (resource.allocation_size != 0)
                 {
                     ImGui::TableNextColumn();
                     ImGui::Text("Transient Memory Range");
@@ -1376,68 +1495,6 @@ namespace daxa
             }
         }
 
-        /// ==============================================
-        /// ======= DETAIL RESOURCE DETAIL TASK UI =======
-        /// ==============================================
-
-        if (context.recreated)
-        {
-            context.name_to_task_index.clear();
-            for (u32 t = 0; t < context.impl->tasks.size(); ++t)
-            {
-                if (context.name_to_task_index.contains(context.impl->tasks[t].name))
-                {
-                    // we do not allow colliding task names for ui
-                    context.name_to_task_index[context.impl->tasks[t].name] = ~0u;
-                }
-                else
-                {
-                    context.name_to_task_index[context.impl->tasks[t].name] = t;
-                }
-            }
-        }
-
-        for (auto res_detail_iter = context.open_resource_detail_windows.begin(); res_detail_iter != context.open_resource_detail_windows.end();)
-        {
-            if (!context.impl->name_to_resource_table.contains(*res_detail_iter))
-            {
-                res_detail_iter = context.open_resource_detail_windows.erase(res_detail_iter);
-                continue;
-            }
-
-            if (!resource_detail_ui(context, context.impl->name_to_resource_table[*res_detail_iter].second))
-            {
-                res_detail_iter = context.open_resource_detail_windows.erase(res_detail_iter);
-                continue;
-            }
-
-            ++res_detail_iter;
-        }
-
-        for (auto task_detail_iter = context.open_task_detail_windows.begin(); task_detail_iter != context.open_task_detail_windows.end();)
-        {
-            if (!context.name_to_task_index.contains(*task_detail_iter))
-            {
-                task_detail_iter = context.open_task_detail_windows.erase(task_detail_iter);
-                continue;
-            }
-
-            bool const task_forbidden = (context.name_to_task_index[std::string_view{*task_detail_iter}] == ~0u);
-            if (task_forbidden)
-            {
-                task_detail_iter = context.open_task_detail_windows.erase(task_detail_iter);
-                continue;
-            }
-
-            if (!task_details_ui(context, context.name_to_task_index[std::string_view{*task_detail_iter}]))
-            {
-                task_detail_iter = context.open_task_detail_windows.erase(task_detail_iter);
-                continue;
-            }
-
-            ++task_detail_iter;
-        }
-
         /// ========================
         /// ======= UI TABLE =======
         /// ========================
@@ -1844,7 +1901,7 @@ namespace daxa
                 }
                 ImGui::PopID();
             }
-            ImGui::EndTable();
+            ImGui::EndTable(); 
         }
         ImGui::PopStyleVar();
 
@@ -1858,10 +1915,15 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplTaskGraph *>(this->object);
 
-        static TaskGraphDebugContext context = {};
+        static std::unordered_map<std::string, TaskGraphDebugContext> contexts = {};
+        TaskGraphDebugContext & context = contexts[std::string(impl.info.name.data())];
         context.recreated = context.last_exec_tg_unique_index != impl.unique_index;
         context.last_exec_tg_unique_index = impl.unique_index;
         context.impl = &impl;
+        
+        /// =======================================
+        /// ======= TASK GRAPH MAIN UI TABS =======
+        /// =======================================
 
         if (ImGui::Begin("Task Graph Debug UI", nullptr, ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoScrollWithMouse))
         {
@@ -1873,20 +1935,47 @@ namespace daxa
                     task_timeline_ui(context);
                     ImGui::EndTabItem();
                 }
-                if (ImGui::BeginTabItem("Task Graph Dependencies"))
+                if (ImGui::BeginTabItem("Memory"))
                 {
-                    // task_dependencies_ui(context);
-                    ImGui::EndTabItem();
-                }
-                if (ImGui::BeginTabItem("Resource Allocations"))
-                {
-                    ImGui::Text("This is the Cucumber tab!\nblah blah blah blah blah");
+                    memory_ui(context);
                     ImGui::EndTabItem();
                 }
                 ImGui::EndTabBar();
             }
         }
         ImGui::End();
+
+        /// ==============================================
+        /// ======= DETAIL RESOURCE DETAIL TASK UI =======
+        /// ==============================================
+
+        for (auto res_detail_iter = context.open_resource_detail_windows.begin(); res_detail_iter != context.open_resource_detail_windows.end();)
+        {
+            if (!context.impl->name_to_resource_table.contains(*res_detail_iter))
+            {
+                res_detail_iter = context.open_resource_detail_windows.erase(res_detail_iter);
+                continue;
+            }
+
+            if (!resource_detail_ui(context, context.impl->name_to_resource_table[*res_detail_iter].second))
+            {
+                res_detail_iter = context.open_resource_detail_windows.erase(res_detail_iter);
+                continue;
+            }
+
+            ++res_detail_iter;
+        }
+
+        for (auto task_detail_iter = context.open_task_detail_windows.begin(); task_detail_iter != context.open_task_detail_windows.end();)
+        {
+            if (!task_details_ui(context, std::get<1>(context.impl->name_to_task_table[std::string_view{*task_detail_iter}])))
+            {
+                task_detail_iter = context.open_task_detail_windows.erase(task_detail_iter);
+                continue;
+            }
+
+            ++task_detail_iter;
+        }
     }
 } // namespace daxa
 

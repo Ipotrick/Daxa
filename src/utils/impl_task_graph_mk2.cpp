@@ -2283,6 +2283,7 @@ namespace daxa
         /// ================================================================
 
         auto & final_batches = tmp_minsh_task_batches;
+        impl.flat_batch_count = static_cast<u32>(final_batches.size());
 
         for (u32 b = 0; b < final_batches.size(); ++b)
         {

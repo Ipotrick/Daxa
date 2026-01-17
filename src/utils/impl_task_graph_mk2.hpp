@@ -310,11 +310,12 @@ namespace daxa
 
         ArenaDynamicArray8k<ImplTask> tasks = {};
         ArenaDynamicArray8k<ImplTaskResource> resources = {};
-        std::unordered_map<std::string_view, std::tuple<ImplTask*, u32, u32>> name_to_task_table = {};    // unique task name -> local id into task. Duplicate Task names are modified to be unique
+        std::unordered_map<std::string_view, std::tuple<ImplTask*, u32, u32>> name_to_task_table = {};          // unique task name -> local id into task. Duplicate Task names are modified to be unique
         std::span<std::pair<ImplTaskResource*, u32>> external_resources = {};
-        std::unordered_map<std::string_view, std::pair<ImplTaskResource*, u32>> name_to_resource_table = {}; // unique buffer name -> local id into buffers.
-        std::unordered_map<u32, std::pair<ImplTaskResource*, u32>> external_idx_to_resource_table = {};      // global unique external id -> local id into buffers.
+        std::unordered_map<std::string_view, std::pair<ImplTaskResource*, u32>> name_to_resource_table = {};    // unique buffer name -> local id into buffers.
+        std::unordered_map<u32, std::pair<ImplTaskResource*, u32>> external_idx_to_resource_table = {};         // global unique external id -> local id into buffers.
         ArenaDynamicArray8k<TasksSubmit> submits = {};
+        u32 flat_batch_count = {};                                                                              // total batch count ignoring async compute;
         u32 queue_bits = {};
         daxa::MemoryBlock transient_memory_block = {};
         std::optional<daxa::TransferMemoryPool> staging_memory = {};
