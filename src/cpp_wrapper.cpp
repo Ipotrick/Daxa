@@ -676,6 +676,9 @@ namespace daxa
             std::bit_cast<daxa_NativeWindowPlatform>(native_platform),
             &surface);
         check_result(result, "could not create surface");
+        defer{
+            vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
+        };
 
         u32 present_mode_count = {};
         auto vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -685,9 +688,9 @@ namespace daxa
             nullptr);
         if (vk_result != VK_SUCCESS)
         {
-            vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
             check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
         }
+        
         std::vector<PresentMode> ret = {};
         ret.resize(static_cast<usize>(present_mode_count));
         vk_result = vkGetPhysicalDeviceSurfacePresentModesKHR(
@@ -697,10 +700,26 @@ namespace daxa
             r_cast<VkPresentModeKHR *>(ret.data()));
         if (vk_result != VK_SUCCESS)
         {
-            vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
             check_result(std::bit_cast<daxa_Result>(vk_result), "failed to query present modes");
         }
-        vkDestroySurfaceKHR(c_device->instance->vk_instance, surface, nullptr);
+        
+        // WORKAROUND
+        // Nvidia drivers report present modes from extensions that were not enabled :/.
+        for (auto iter = ret.begin(); iter != ret.end(); )
+        {
+            if (*iter != PresentMode::IMMEDIATE &&
+                *iter != PresentMode::MAILBOX &&
+                *iter != PresentMode::FIFO &&
+                *iter != PresentMode::FIFO_RELAXED)
+            {
+                iter = ret.erase(iter);
+            }
+            else
+            {
+                ++iter;
+            }
+        }
+
         return ret;
     }
 
