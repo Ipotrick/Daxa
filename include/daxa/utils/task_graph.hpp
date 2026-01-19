@@ -48,6 +48,10 @@ namespace daxa
         /// @brief  Task reordering can drastically improve performance,
         ///         yet is it also nice to have sequential callback execution.
         bool reorder_tasks = true;
+        /// @brief  Reorder tasks to reduce total transient resource usage and improve memory aliasing.
+        ///         Generally moves tasks touching similar resources closer together.
+        ///         Typically moves all clears into batches close to the first use.
+        bool optimize_transient_lifetimes = true;
         /// @brief  Allows task graph to alias transient resources memory (ofc only when that wont break the program)
         bool alias_transients = {};
         /// @brief  Some drivers have bad implementations for split barriers.

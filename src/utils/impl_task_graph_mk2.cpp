@@ -1210,6 +1210,7 @@ namespace daxa
     {
         for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
         {
+            if (task.attachment_resources[attach_i].first == nullptr) { continue; }
             TaskAttachmentInfo & attachment_info = task.attachments[attach_i];
             switch (attachment_info.type)
             {
@@ -1770,7 +1771,7 @@ namespace daxa
             .task_callback_memory = task_callback_memory,
             .attachments = attachments,
             .attachment_resources = impl.task_memory.allocate_trivial_span<std::pair<ImplTaskResource *, u32>>(attachments.size()),
-            .attachment_access_groups = impl.task_memory.allocate_trivial_span<AccessGroup *>(attachments.size()),
+            .attachment_access_groups = impl.task_memory.allocate_trivial_span<std::pair<AccessGroup *, u32>>(attachments.size()),
             .attachment_shader_blob_size = attachment_shader_blob_size,
             .attachment_shader_blob_alignment = attachment_shader_blob_alignment,
             .attachment_shader_blob = impl.task_memory.allocate_trivial_span<std::byte>(attachment_shader_blob_size, attachment_shader_blob_alignment),
@@ -1827,12 +1828,7 @@ namespace daxa
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_not_compiled(impl);
 
-        u32 const tasks_since_last_submit = static_cast<u32>(
-            impl.submits.size() == 0 ? impl.tasks.size() : impl.tasks.size() - (impl.submits.back().first_task + impl.submits.back().task_count));
-
         impl.submits.push_back(TasksSubmit{
-            .first_task = static_cast<u32>(impl.tasks.size()) - tasks_since_last_submit,
-            .task_count = tasks_since_last_submit,
             .queue_bits = 0u,
         });
     }
@@ -1940,7 +1936,7 @@ namespace daxa
             {
                 TaskAttachmentInfo const & attachment = task.attachments[attach_i];
 
-                task.attachment_access_groups[attach_i] = nullptr; // Zero init attachment_access_groups. Only non-null attachments are assigned access groups later.
+                task.attachment_access_groups[attach_i] = {nullptr, ~0u}; // Zero init attachment_access_groups. Only non-null attachments are assigned access groups later.
                 task.attachment_resources[attach_i] = { nullptr, 0u };
 
                 TaskAccessType access_type = {};
@@ -2041,7 +2037,7 @@ namespace daxa
                 {
                     dst_access_group.tasks[t] = src_access_timelines.at(ati).tasks.at(t);
                     TaskAttachmentAccess & taa = dst_access_group.tasks[t];
-                    taa.task->attachment_access_groups[taa.attachment_index] = &dst_access_group;
+                    taa.task->attachment_access_groups[taa.attachment_index] = {&dst_access_group, ati};
                 }
             }
         }
@@ -2166,9 +2162,11 @@ namespace daxa
         struct TmpLatestAccessGroup
         {
             AccessGroup const * access_group = nullptr;
-            u32 batch_index = {};
+            u32 min_batch_index = {};
+            u32 max_batch_index = {};
         };
         auto tmp_minsh_resource_latest_access_groups = tmp_memory.allocate_trivial_span_fill(impl.resources.size(), TmpLatestAccessGroup{});
+
 
         u32 latest_submit_index = 0u;
         u32 first_batch_after_latest_submit = 0u;
@@ -2191,7 +2189,7 @@ namespace daxa
             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
             {
                 TaskAttachmentInfo const & attachment = task.attachments[attach_i];
-                AccessGroup const * access_group = task.attachment_access_groups[attach_i];
+                AccessGroup const * access_group = task.attachment_access_groups[attach_i].first;
 
                 TmpLatestAccessGroup * tmp_latest_access_group = nullptr;
                 if (attachment.type != TaskAttachmentType::IMAGE)
@@ -2214,11 +2212,11 @@ namespace daxa
                 {
                     if (tmp_latest_access_group->access_group == access_group)
                     {
-                        min_batch_index = std::max(min_batch_index, tmp_latest_access_group->batch_index);
+                        min_batch_index = std::max(min_batch_index, tmp_latest_access_group->min_batch_index);
                     }
                     else
                     {
-                        min_batch_index = std::max(min_batch_index, tmp_latest_access_group->batch_index + 1);
+                        min_batch_index = std::max(min_batch_index, tmp_latest_access_group->max_batch_index + 1);
                     }
                 }
             }
@@ -2227,7 +2225,7 @@ namespace daxa
             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
             {
                 TaskAttachmentInfo const & attachment = task.attachments[attach_i];
-                AccessGroup const * access_group = task.attachment_access_groups[attach_i];
+                AccessGroup const * access_group = task.attachment_access_groups[attach_i].first;
 
                 TmpLatestAccessGroup * tmp_latest_access_group = nullptr;
                 if (attachment.type != TaskAttachmentType::IMAGE)
@@ -2248,8 +2246,13 @@ namespace daxa
 
                 if (tmp_latest_access_group != nullptr)
                 {
+                    // Remember the first possible batch we can go in when the access group changed.
+                    if (tmp_latest_access_group->access_group != access_group)
+                    {
+                        tmp_latest_access_group->min_batch_index = tmp_latest_access_group->max_batch_index + 1;
+                    }
+                    tmp_latest_access_group->max_batch_index = std::max(tmp_latest_access_group->max_batch_index, min_batch_index);
                     tmp_latest_access_group->access_group = access_group;
-                    tmp_latest_access_group->batch_index = min_batch_index;
                 }
             }
 
@@ -2258,8 +2261,102 @@ namespace daxa
             {
                 tmp_minsh_task_batches.push_back(TmpBatch{.tasks = ArenaDynamicArray8k<std::pair<ImplTask *, u32>>(&tmp_memory), .queue_bits = {}});
             }
+            
+            DAXA_DBG_ASSERT_TRUE_M(
+                tmp_minsh_task_batches.at(min_batch_index).tasks.size() == 0 ||
+                tmp_minsh_task_batches.at(min_batch_index).tasks[0].first->submit_index == task.submit_index,
+                "IMPOSSIBLE CASE! All tasks within a batch must have the same submit index");
+
             tmp_minsh_task_batches.at(min_batch_index).tasks.push_back(std::pair{&task, task_i});
             tmp_minsh_task_batches.at(min_batch_index).queue_bits |= queue_index_to_queue_bit(queue_to_queue_index(task.queue));
+        }
+
+        auto tmp_minsh_task_batches_contiguous = tmp_minsh_task_batches.clone_to_contiguous();;
+        auto* tmp_batches = &tmp_minsh_task_batches_contiguous;
+
+        /// =================================================
+        /// ==== DETERMINE MIN AND MAX BATCH FOR SUBMITS ====
+        /// =================================================
+
+        // After min scheduling the number of batches and the number of batches per submit are final.
+        // Further optimizations will only reorder tasks between batches, the batch count remains unchanged.
+        // The reordering needs to respect submit batch boundaries - ie it cannot reorder task A from submit 1 to submit 2.
+        // AttachmentGroup dependencies do not express this well enough and so we need to store the submit batches explicitly.
+
+        u32 current_submit_index = ~0u;
+        for (u32 batch_i = 0; batch_i < (*tmp_batches).size(); ++batch_i)
+        {
+            TmpBatch const & batch = (*tmp_batches)[batch_i];
+            ImplTask const & first_task = *batch.tasks[0].first;
+
+            if(first_task.submit_index != current_submit_index)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(
+                    (current_submit_index == ~0 && first_task.submit_index == 0) ||
+                    first_task.submit_index == current_submit_index + 1,
+                    "IMPOSSIBLE CASE! Batches must start at submit 0 and consecutive batches must differ by at most one submit index");
+                current_submit_index = first_task.submit_index;
+                impl.submits[current_submit_index].final_schedule_first_batch = batch_i;
+            }
+            TasksSubmit& submit = impl.submits[current_submit_index];
+            submit.final_schedule_last_batch = batch_i;
+
+            u32 const submit_relative_batch_index = batch_i - submit.final_schedule_first_batch;
+            
+            // Fill tight list of signalled semaphores.
+            u32 queue_iter = batch.queue_bits;
+            while (queue_iter)
+            {
+                u32 const queue_index = queue_bits_to_first_queue_index(queue_iter);
+                queue_iter &= ~queue_index_to_queue_bit(queue_index);
+
+                u32 const prev_queue_batch_cnt = submit.queue_batch_counts[queue_index];
+                DAXA_DBG_ASSERT_TRUE_M(
+                    prev_queue_batch_cnt == submit_relative_batch_index,
+                    "IMPOSSIBLE CASE! Batches must start at submit 0 and consecutive batches must differ by at most one submit index");
+
+                submit.queue_batch_counts[queue_index] += 1;
+            }
+        }
+
+        /// =======================================================
+        /// ==== DETERMINE TRANSIENT RESOURCE ALLOCATION SIZES ====
+        /// =======================================================
+
+        // We need the memory allocation requirements for optimizing the task shedule heuristically.
+        
+        for (u32 r = 0; r < impl.resources.size(); ++r)
+        {
+            ImplTaskResource & resource = impl.resources[r];
+            if (resource.external)
+            {
+                continue;
+            }
+
+            MemoryRequirements new_allocation_memory_requirements = {};
+            if (resource.kind != TaskResourceKind::IMAGE)
+            {
+                new_allocation_memory_requirements = impl.info.device.buffer_memory_requirements(BufferInfo{
+                    .size = resource.info.buffer.size,
+                });
+            }
+            else
+            {
+                new_allocation_memory_requirements = impl.info.device.image_memory_requirements(ImageInfo{
+                    .flags = resource.info.image.flags,
+                    .dimensions = resource.info.image.dimensions,
+                    .format = resource.info.image.format,
+                    .size = resource.info.image.size,
+                    .mip_level_count = resource.info.image.mip_level_count,
+                    .array_layer_count = resource.info.image.array_layer_count,
+                    .sample_count = resource.info.image.sample_count,
+                    .usage = resource.info.image.usage,
+                    .sharing_mode = resource.info.image.sharing_mode,
+                });
+            }
+            impl.resources[r].allocation_size = new_allocation_memory_requirements.size;
+            impl.resources[r].allocation_alignment = new_allocation_memory_requirements.alignment;
+            impl.resources[r].allocation_allowed_memory_type_bits = new_allocation_memory_requirements.memory_type_bits;
         }
 
         /// ===============================
@@ -2270,6 +2367,120 @@ namespace daxa
         // This causes transient resources to have unnecessarily long lifetimes, as all their clears are happening earlier than they have to.
         // In this pass, we move all tasks as much forward as possible WITHOUT adding new batches or increasing the critical path.
         // After this pass, transient resource lifetimes are minimized.
+
+        if (impl.info.optimize_transient_lifetimes)
+        {
+            auto tmp_transient_optimized_task_batches = tmp_memory.allocate_trivial_span_fill<TmpBatch>(tmp_batches->size(), TmpBatch{ArenaDynamicArray8k<std::pair<ImplTask *, u32>>(&tmp_memory)});
+            auto tmp_transient_optimized_task_to_batch = tmp_memory.allocate_trivial_span_fill<u32>(impl.tasks.size(), ~0u);
+            u32 const max_batch_index = static_cast<u32>(tmp_transient_optimized_task_batches.size()) - 1;
+
+            for (u32 ii = {}; ii < tmp_batches->size(); ++ii)
+            {
+                u32 const batch_i = static_cast<u32>(tmp_batches->size()) - 1 - ii; // Reverse iterate over batches from right to left.
+                TmpBatch & initial_batch = (*tmp_batches)[batch_i];
+
+                for (u32 t = 0; t < initial_batch.tasks.size(); ++t)
+                {
+                    ImplTask& task = *initial_batch.tasks[t].first;
+                    u32 const task_index = initial_batch.tasks[t].second;
+
+                    /// =============================================================
+                    /// ==== DETERMINE THE FURTHEST POSSIBLE BATCH FOR EACH TASK ====
+                    /// =============================================================
+                        
+                    // We need to clamp the possible batch index to the tasks queue submit.
+                    // We need to keep the critical path in each queue intact.
+                    // If a queue has 5 batches in submit X, these 5 batches HAVE TO ALWAYS start at 0 and end at 4.
+                    // Clamp all tasks batches to submit.first_batch + queue_submit.batch_cnt!
+                    u32 const queue_index = queue_to_queue_index(task.queue);
+                    u32 const latest_batch_in_queue_submit = 
+                        impl.submits[task.submit_index].final_schedule_first_batch + 
+                        impl.submits[task.submit_index].queue_batch_counts[queue_index];
+            
+                    u32 closest_dependency_batch = std::min(max_batch_index, latest_batch_in_queue_submit);
+                    for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
+                    {
+                        bool const is_null_attachment = task.attachment_resources[attach_i].first == nullptr;
+                        if (is_null_attachment) { continue; }
+
+                        u32 const access_timeline_index = task.attachment_access_groups[attach_i].second;
+                        u32 const next_access_timeline_index = access_timeline_index + 1;
+                        bool const has_next_access = next_access_timeline_index < task.attachment_resources[attach_i].first->access_timeline.size();
+                        
+                        if (has_next_access)
+                        {
+                            AccessGroup const & next_access_group = task.attachment_resources[attach_i].first->access_timeline[next_access_timeline_index];
+                            for (u32 t_dep = 0; t_dep < next_access_group.tasks.size(); ++t_dep)
+                            {
+                                u32 const task_index_dep = next_access_group.tasks[t_dep].task_index;
+                                
+                                u32 const current_batch_of_dep_task = tmp_transient_optimized_task_to_batch[task_index_dep];
+                                DAXA_DBG_ASSERT_TRUE_M(current_batch_of_dep_task != ~0u, "IMPOSSIBLE CASE");
+                                
+                                closest_dependency_batch = std::min(closest_dependency_batch, current_batch_of_dep_task);
+                            }
+                        }
+                    }
+
+                    /// ============================================
+                    /// ==== HEURISTICALLY DETERMINE BEST BATCH ====
+                    /// ============================================
+
+                    // Iterate over all possible batches we can move the task forward to.
+                    // Calcualate a heuristic of how much memory we would safe from moving.
+
+                    u32 choosen_batch = batch_i;
+                    for (u32 test_batch_i = batch_i + 1; test_batch_i < closest_dependency_batch; ++test_batch_i)
+                    {
+                        f32 heuristic_net_memory_change = {};
+                        for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
+                        {
+                            ImplTaskResource const * resource = task.attachment_resources[attach_i].first;
+                            if (resource == nullptr) { continue; }
+                            if (resource->external != nullptr) { continue; }
+                            
+                            u32 const access_timeline_index = task.attachment_access_groups[attach_i].second;
+                            i32 const prior_access_timeline_index = static_cast<i32>(access_timeline_index) - 1;
+                            i32 const next_access_timeline_index = static_cast<i32>(access_timeline_index) + 1;
+                            bool const has_prior_access_group = prior_access_timeline_index >= 0;
+                            bool const has_next_access_group = next_access_timeline_index < resource->access_timeline.size();
+
+                            bool const reduces_lifetime = !has_prior_access_group && has_next_access_group;
+                            bool const increases_lifetime = has_prior_access_group && !has_next_access_group;
+                            if (reduces_lifetime)
+                            {
+                                heuristic_net_memory_change -= resource->allocation_size;
+                            }
+                            if (increases_lifetime)
+                            {
+                                heuristic_net_memory_change += resource->allocation_size;
+                            }
+                        }
+
+                        // Once we find a potential memory increase, we stop.
+                        // Equal zero we also want to move to the right because we can make room for other tasks to move forward to reduce lifetime.
+                        if (heuristic_net_memory_change > 0.0f)
+                        {
+                            break;
+                        }
+                        
+                        choosen_batch = test_batch_i;
+                    }
+
+                    // We need to clamp the possible batch index to the tasks queue submit.
+                    // We need to keep the critical path in each queue intact.
+                    // If a queue has 5 batches in submit X, these 5 batches HAVE TO ALWAYS start at 0 and end at 4.
+                    // Clamp all tasks batches to submit.first_batch + queue_submit.batch_cnt!
+                    DAXA_DBG_ASSERT_TRUE_M(choosen_batch <= latest_batch_in_queue_submit, "IMPOSSIBLE CASE! All tasks must be reordered within the bounds of each queue submit!");
+
+                    tmp_transient_optimized_task_batches[choosen_batch].tasks.push_back({&task, task_index});
+                    tmp_transient_optimized_task_batches[choosen_batch].queue_bits |= queue_index_to_queue_bit(queue_to_queue_index(task.queue));
+                    tmp_transient_optimized_task_to_batch[task_index] = choosen_batch;
+                }
+            }
+            
+            tmp_batches = &tmp_transient_optimized_task_batches;
+        }
 
         /// ======================================
         /// ==== COMPACT TASKS WITHIN BATCHES ====
@@ -2282,7 +2493,7 @@ namespace daxa
         /// ==== ASSIGN FINAL BATCH INDICES FOR TASKS AND ACCESS GROUPS ====
         /// ================================================================
 
-        auto & final_batches = tmp_minsh_task_batches;
+        auto & final_batches = *tmp_batches;
         impl.flat_batch_count = static_cast<u32>(final_batches.size());
 
         for (u32 b = 0; b < final_batches.size(); ++b)
@@ -2297,11 +2508,11 @@ namespace daxa
 
                 for (u32 attach_i = 0u; attach_i < task.attachments.size(); ++attach_i)
                 {
-                    bool const null_resource_in_attachment = task.attachment_access_groups[attach_i] == nullptr;
+                    bool const null_resource_in_attachment = task.attachment_access_groups[attach_i].first == nullptr;
                     if (!null_resource_in_attachment)
                     {
-                        task.attachment_access_groups[attach_i]->final_schedule_first_batch = std::min(task.attachment_access_groups[attach_i]->final_schedule_first_batch, b);
-                        task.attachment_access_groups[attach_i]->final_schedule_last_batch = std::max(task.attachment_access_groups[attach_i]->final_schedule_last_batch, b);
+                        task.attachment_access_groups[attach_i].first->final_schedule_first_batch = std::min(task.attachment_access_groups[attach_i].first->final_schedule_first_batch, b);
+                        task.attachment_access_groups[attach_i].first->final_schedule_last_batch = std::max(task.attachment_access_groups[attach_i].first->final_schedule_last_batch, b);
                     }
                 }
             }
@@ -2396,27 +2607,11 @@ namespace daxa
         {
             u32 const allocation_count = tr;
             ImplTaskResource & resource = *transient_resources_sorted_by_lifetime[tr];
-            MemoryRequirements new_allocation_memory_requirements = {};
-            if (resource.kind != TaskResourceKind::IMAGE)
-            {
-                new_allocation_memory_requirements = impl.info.device.buffer_memory_requirements(BufferInfo{
-                    .size = resource.info.buffer.size,
-                });
-            }
-            else
-            {
-                new_allocation_memory_requirements = impl.info.device.image_memory_requirements(ImageInfo{
-                    .flags = resource.info.image.flags,
-                    .dimensions = resource.info.image.dimensions,
-                    .format = resource.info.image.format,
-                    .size = resource.info.image.size,
-                    .mip_level_count = resource.info.image.mip_level_count,
-                    .array_layer_count = resource.info.image.array_layer_count,
-                    .sample_count = resource.info.image.sample_count,
-                    .usage = resource.info.image.usage,
-                    .sharing_mode = resource.info.image.sharing_mode,
-                });
-            }
+            MemoryRequirements new_allocation_memory_requirements = {
+                .size = resource.allocation_size,
+                .alignment = resource.allocation_alignment,
+                .memory_type_bits = resource.allocation_allowed_memory_type_bits,
+            };
 
             auto new_allocation = TransientResourceAllocation{
                 .resource = &resource,
@@ -2644,23 +2839,13 @@ namespace daxa
         for (u32 s = 0; s < impl.submits.size(); ++s)
         {
             TasksSubmit & submit = impl.submits[s];
-            bool const is_last_submit = s == impl.submits.size() - 1;
-
-            u32 const submit_first_batch = impl.tasks[submit.first_task].final_schedule_batch;
-            u32 const submit_last_batch = static_cast<u32>(
-                is_last_submit ? 
-                final_batches.size() - 1 :
-                impl.tasks[impl.submits[s+1].first_task].final_schedule_batch - 1
-            );
-            u32 const submit_batch_count = submit_last_batch - submit_first_batch + 1;
-            impl.submits[s].first_batch = submit_first_batch;
-            impl.submits[s].batch_count = submit_batch_count;
+            u32 const submit_batch_count = submit.final_schedule_last_batch - submit.final_schedule_first_batch + 1;
 
             // Calculate batch count per queue.
             std::array<u32, DAXA_QUEUE_COUNT> queue_batch_counts = {};
             for (u32 batch_i = 0; batch_i < submit_batch_count; ++batch_i)
             {
-                u32 const global_batch_i = batch_i + submit_first_batch;
+                u32 const global_batch_i = batch_i + submit.final_schedule_first_batch;
                 auto const & tmp_batch = final_batches[global_batch_i];
 
                 for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
@@ -2672,7 +2857,7 @@ namespace daxa
                             queue_batch_counts[q] == batch_i,
                             "IMPOSSIBLE CASE! "
                             "A CORE ASSUMPTION OF THE TASKGRAPH IS THAT ALL TASKS AND BATCHES ARE COMPACT AND NEVER LEAVE HOLES WITHIN A SUBMIT! "
-                            "ALL BATCHES ON ALL QUEUES MUST START AT submit_first_batch AND END AT submit_first_batch AND END AT THE FINAL queue_batch_counts[q]!");
+                            "ALL BATCHES ON ALL QUEUES MUST START AT submit_first_batch AND END AT THE FINAL queue_batch_counts[q]!");
                         queue_batch_counts[q] += 1;
                     }
                 }
@@ -2692,7 +2877,7 @@ namespace daxa
             // Filter tasks from batches to corresponding queue batches.
             for (u32 batch_i = 0; batch_i < submit_batch_count; ++batch_i)
             {
-                u32 const global_batch_i = batch_i + submit_first_batch;
+                u32 const global_batch_i = batch_i + submit.final_schedule_first_batch;
                 TmpBatch const & tmp_batch = final_batches[global_batch_i];
 
                 for (u32 batch_task_i = 0; batch_task_i < tmp_batch.tasks.size(); ++batch_task_i)
@@ -2780,8 +2965,8 @@ namespace daxa
             auto const stages = task_stage_to_pipeline_stage(first_access_group.stages);
             auto const access_type_flags = task_access_type_to_access_type(first_access_group.type);
             auto const first_use_batch = resource.final_schedule_first_batch;
-            DAXA_DBG_ASSERT_TRUE_M(impl.submits[submit_index].first_batch <= first_access_group.final_schedule_first_batch, "IMPOSSIBLE CASE! COULD INDICATE ERROR IN SUBMIT CONSTRUCTION PHASE!");
-            auto const submit_local_batch_index = first_access_group.final_schedule_first_batch - impl.submits[submit_index].first_batch;
+            DAXA_DBG_ASSERT_TRUE_M(impl.submits[submit_index].final_schedule_first_batch <= first_access_group.final_schedule_first_batch, "IMPOSSIBLE CASE! COULD INDICATE ERROR IN SUBMIT CONSTRUCTION PHASE!");
+            auto const submit_local_batch_index = first_access_group.final_schedule_first_batch - impl.submits[submit_index].final_schedule_first_batch;
             tmp_submit_queue_batch_barriers[submit_index].per_queue_batch_barriers[queue_index][submit_local_batch_index].image_barriers.push_back(TaskBarrier{
                 .src_access_group = nullptr,
                 .dst_access_group = &first_access_group,
@@ -2818,8 +3003,8 @@ namespace daxa
                 u32 const submit_index = second_ag.tasks[0].task->submit_index;
                 u32 const queue_index = queue_bits_to_first_queue_index(second_ag.queue_bits);
 
-                DAXA_DBG_ASSERT_TRUE_M(impl.submits[submit_index].first_batch <= second_ag.final_schedule_first_batch, "IMPOSSIBLE CASE! COULD INDICATE ERROR IN SUBMIT CONSTRUCTION PHASE!");
-                auto const second_ag_submit_local_batch_index = second_ag.final_schedule_first_batch - impl.submits[submit_index].first_batch;
+                DAXA_DBG_ASSERT_TRUE_M(impl.submits[submit_index].final_schedule_first_batch <= second_ag.final_schedule_first_batch, "IMPOSSIBLE CASE! COULD INDICATE ERROR IN SUBMIT CONSTRUCTION PHASE!");
+                auto const second_ag_submit_local_batch_index = second_ag.final_schedule_first_batch - impl.submits[submit_index].final_schedule_first_batch;
 
                 // Add support for split barriers in the future.
                 // Investigate smarter barrier insertion tactics.
@@ -3492,7 +3677,7 @@ namespace daxa
             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
             {
                 // Null Attachments have to be skipped
-                if (task.attachment_access_groups[attach_i] == nullptr)
+                if (task.attachment_access_groups[attach_i].first == nullptr)
                 {
                     continue;
                 }

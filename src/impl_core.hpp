@@ -482,12 +482,14 @@ namespace daxa
 
         auto at(usize idx) -> T &
         {
+            DAXA_DBG_ASSERT_TRUE_M(idx < this->size(), "ERROR: OUT OF BOUNDS ACCESS");
             auto bi = BlockIndex::element_index_to_block(static_cast<u32>(idx));
             return this->block_allocations[bi.block][bi.in_block_index];
         }
 
         auto at(usize idx) const -> T const &
         {
+            DAXA_DBG_ASSERT_TRUE_M(idx < this->size(), "ERROR: OUT OF BOUNDS ACCESS");
             auto bi = BlockIndex::element_index_to_block(static_cast<u32>(idx));
             return this->block_allocations[bi.block][bi.in_block_index];
         }

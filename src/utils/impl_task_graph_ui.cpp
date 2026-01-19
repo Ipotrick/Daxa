@@ -111,6 +111,7 @@ namespace daxa
         //std::set<std::string> open_resource_detail_windows = {};
         bool show_batch_borders = true;
         bool show_transfer_tasks = true;
+        bool show_async_queues = true;
         bool recreated = true;
         u32 hovered_task = ~0u;
         u32 hovered_resource = ~0u;
@@ -398,7 +399,7 @@ namespace daxa
                     AccessGroup const & ag = resource.access_timeline[agi];
                     for (u32 t = 0; t < ag.tasks.size(); ++t)
                     {
-                        if (context.extra_highlighted_tasks.contains(std::string(ag.tasks[t].task->name)))
+                        if (!context.extra_highlighted_tasks.contains(std::string(ag.tasks[t].task->name)))
                         {
                             context.extra_highlighted_tasks.insert(std::string(ag.tasks[t].task->name));
                         }
@@ -611,7 +612,7 @@ namespace daxa
             /// ===================================
 
             ImVec2 const max_extent = ImVec2(context.impl->flat_batch_count, context.impl->transient_memory_block.info().requirements.size);
-            ImVec2 const world_extent = ImVec2((max_extent.x) * GRID_STEP, (max_extent.y / (8192.0f * 1024)) * GRID_STEP);
+            ImVec2 const world_extent = ImVec2((max_extent.x) * GRID_STEP, (max_extent.y / (8192.0f * 1024 * 4)) * GRID_STEP);
 
             float const width_scale = 1.0f / max_extent.x * world_extent.x;
 
@@ -751,7 +752,7 @@ namespace daxa
                         acc_queues_vert_offset += (max_tasks_in_batches + 1) * WS_TASK_VERTICAL_DISTANCE;
                     }
 
-                    acc_submit_hor_offset += (submit.batch_count + 1) * WS_BATCH_HORIZONTAL_DISTANCE;
+                    acc_submit_hor_offset += ((submit.final_schedule_last_batch - submit.final_schedule_first_batch + 1) + 1) * WS_BATCH_HORIZONTAL_DISTANCE;
                 }
 
                 draw_list->ChannelsMerge();
@@ -990,9 +991,13 @@ namespace daxa
                 if (resource.allocation_size != 0)
                 {
                     ImGui::TableNextColumn();
-                    ImGui::Text("Transient Memory Range");
+                    ImGui::Text("Transient Memory Offset");
                     ImGui::TableNextColumn();
-                    ImGui::Text(std::format("Start Offset {:12} Size {:12}", resource.allocation_offset, resource.allocation_size).c_str());
+                    ImGui::Text("%i", resource.allocation_offset);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("Transient Memory Size");
+                    ImGui::TableNextColumn();
+                    ImGui::Text("%i", resource.allocation_size);
                 }
                 
                 switch (resource.kind)
@@ -1319,9 +1324,25 @@ namespace daxa
         ImGui::SetNextItemWidth(128);
         ImGui::InputText("Filter Task", context.task_name_search.data(), context.task_name_search.size());
         ImGui::SameLine();
+        if (ImGui::Button(" ##Un-Highlight all Tasks"))
+        {
+            context.extra_highlighted_tasks.clear();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Un-Highlight all Tasks");
+        ImGui::SameLine();
+        if (ImGui::Button(" ##Un-Pin all Resources"))
+        {
+            context.pinned_resources.clear();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Un-Pin all Resources");
+        ImGui::SameLine();
         ImGui::Checkbox("Show Batch Borders", &context.show_batch_borders);
         ImGui::SameLine();
         ImGui::Checkbox("Show Transfer Tasks", &context.show_transfer_tasks);
+        ImGui::SameLine();
+        ImGui::Checkbox("Show Async Queues", &context.show_async_queues);
 
         static ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
         static ImGuiTableColumnFlags column_flags = ImGuiTableColumnFlags_AngledHeader | ImGuiTableColumnFlags_WidthFixed;
@@ -1410,19 +1431,28 @@ namespace daxa
                 Queue queue = queue_index_to_queue(queue_index);
                 std::span<TasksBatch> queue_batches = submit.queue_batches[queue_index];
 
-                col_ui_data.push_back({
-                    .submit_index = submit_index,
-                    .queue_index = queue_index,
-                    .local_batch_index = ~0u,
-                    .is_queue_submit_border = true,
-                });
-                col_names.push_back("");
+                if (!context.show_async_queues && queue_index != 0)
+                {
+                    continue;
+                }
+
+                // Only show queue border when showing multiple queues
+                if (context.show_async_queues)
+                {
+                    col_ui_data.push_back({
+                        .submit_index = submit_index,
+                        .queue_index = queue_index,
+                        .local_batch_index = ~0u,
+                        .is_queue_submit_border = true,
+                    });
+                    col_names.push_back("");
+                }
 
                 std::vector<BatchUiData> batch_ui_data = {};
 
                 for (u32 batch_i = 0; batch_i < queue_batches.size(); ++batch_i)
                 {
-                    u32 const global_batch_index = submit.first_batch + batch_i;
+                    u32 const global_batch_index = submit.final_schedule_first_batch + batch_i;
                     batch_count = std::max(batch_count, global_batch_index + 1);
 
                     if (context.show_batch_borders)
@@ -1562,7 +1592,16 @@ namespace daxa
                 ImVec4 text_color = ImGui::GetStyle().Colors[ImGuiCol_Text];
                 if (col_ui_data[n].task != nullptr)
                 {
+                    bool highlighted = context.extra_highlighted_tasks.contains(std::string(col_ui_data[n].task->name));
+                    if (highlighted)
+                    {
+                        background_color.x = 0.9f;
+                        background_color.y = 0.9f;
+                        background_color.z = 0.9f;
+                        text_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                    }
                     name = std::format(TIMELINE_TASK_HEADER_STR_FORMAT, col_ui_data[n].task->name);
+                    task_popup_context_ui(context, col_ui_data[n].global_task_index);
                 }
                 else if (col_ui_data[n].is_submit_border)
                 {
@@ -1596,7 +1635,6 @@ namespace daxa
             /// ======================================
 
             ImGui::TableSetColumnIndex(0);
-            ImGui::Text("Task Type");
             for (int column = 1; column < static_cast<i32>(col_count); column++)
             {
                 ImGui::TableSetColumnIndex(column);
@@ -1622,6 +1660,13 @@ namespace daxa
                     {
                         name = task_type_to_str(col_ui.task->task_type);
                         color = task_type_to_color(col_ui.task->task_type);
+                        
+                        bool highlighted = context.extra_highlighted_tasks.contains(std::string(col_ui_data[column].task->name));
+                        if (highlighted)
+                        {
+                            ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(ImVec4(0.9f, 0.9f, 0.9f, 1.0f)));
+                            color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+                        }
                     }
 
                     ImGui::PushID(column);
@@ -1729,7 +1774,7 @@ namespace daxa
                         ColUiData const & col_ui = col_ui_data[column]; // -1 as the first column is for the name.
                         bool const is_batch_border_cell = col_ui.task == nullptr;
 
-                        u32 const global_batch_index = context.impl->submits[col_ui.submit_index].first_batch + col_ui.local_batch_index;
+                        u32 const global_batch_index = context.impl->submits[col_ui.submit_index].final_schedule_first_batch + col_ui.local_batch_index;
 
                         bool make_cell_darker = true;
                         ImVec4 cell_color = ImVec4(0.05f, 0.05f, 0.05f, 1.0f);

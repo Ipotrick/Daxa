@@ -150,8 +150,10 @@ namespace daxa
         u32 final_schedule_first_submit = {};
         u32 final_schedule_last_submit = {};
         u32 queue_bits = {};
-        u64 allocation_offset = {};
         u64 allocation_size = {};
+        u64 allocation_alignment = {};
+        u32 allocation_allowed_memory_type_bits = {};
+        u64 allocation_offset = {};
 
         union {
             BufferId buffer;
@@ -197,7 +199,7 @@ namespace daxa
         u64* task_callback_memory = {};                             // holds callback captured variables
         std::span<TaskAttachmentInfo> attachments = {};             
         std::span<std::pair<ImplTaskResource*, u32>> attachment_resources = {};
-        std::span<AccessGroup*> attachment_access_groups = {};      // set when compiling
+        std::span<std::pair<AccessGroup*, u32>> attachment_access_groups = {};      // set when compiling
         u32 attachment_shader_blob_size = {};                       
         u32 attachment_shader_blob_alignment = {};            
         std::span<std::byte> attachment_shader_blob = {};      
@@ -282,13 +284,12 @@ namespace daxa
 
     struct TasksSubmit
     {
-        u32 first_task = {};
-        u32 task_count = {};
-        u32 first_batch = {};
-        u32 batch_count = {};
-        u32 queue_bits = {};                                                      // set when compiling
-        std::array<std::span<TasksBatch>, DAXA_QUEUE_COUNT> queue_batches = {};   // set when compiling
-        std::span<u32> queue_indices = {};                                        // set when compiling
+        u32 final_schedule_first_batch = {};
+        u32 final_schedule_last_batch = {};
+        u32 queue_bits = {};
+        std::array<u32, DAXA_QUEUE_COUNT> queue_batch_counts = {};
+        std::array<std::span<TasksBatch>, DAXA_QUEUE_COUNT> queue_batches = {};
+        std::span<u32> queue_indices = {};
     };
 
     struct TaskGraphPresent
