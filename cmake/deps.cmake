@@ -38,7 +38,7 @@ if (DAXA_ENABLE_TESTS AND NOT TARGET glfw)
     FetchContent_MakeAvailable(glfw)
 endif()
 
-if (DAXA_ENABLE_UTILS_IMGUI AND NOT TARGET imgui::imgui)
+if (DAXA_ENABLE_UTILS_IMGUI AND NOT TARGET imgui::imgui AND NOT TARGET implot::implot)
     FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui
@@ -68,6 +68,28 @@ if (DAXA_ENABLE_UTILS_IMGUI AND NOT TARGET imgui::imgui)
         endif()
 
         add_library(imgui::imgui ALIAS lib_imgui)
+    endif()
+
+    FetchContent_Declare(
+        implot
+        GIT_REPOSITORY https://github.com/epezent/implot
+        GIT_TAG        v0.17
+        EXCLUDE_FROM_ALL
+    )
+
+    FetchContent_GetProperties(implot)
+    if(NOT implot_POPULATED)
+        FetchContent_MakeAvailable(implot)
+
+        add_library(lib_implot
+            ${implot_SOURCE_DIR}/implot.cpp
+            ${implot_SOURCE_DIR}/implot_items.cpp
+            ${implot_SOURCE_DIR}/implot_demo.cpp)
+
+        target_include_directories(lib_implot PUBLIC ${implot_SOURCE_DIR})
+        target_link_libraries(lib_implot PRIVATE imgui::imgui)
+
+        add_library(implot::implot ALIAS lib_implot)
     endif()
 endif()
 

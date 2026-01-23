@@ -546,11 +546,12 @@ namespace daxa
                 return;
             }
             this->reserve(new_size);
-            for (u32 i = element_count; i < new_size; ++i)
+            u32 const old_size = element_count;
+            element_count = new_size;
+            for (u32 i = old_size; i < new_size; ++i)
             {
                 this->at(i) = value;
             }
-            element_count = new_size;
         }
 
         auto back() -> T &

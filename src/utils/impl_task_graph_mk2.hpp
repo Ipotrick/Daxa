@@ -298,6 +298,8 @@ namespace daxa
         Queue queue = QUEUE_MAIN;
     };
 
+    struct TaskGraphDebugContext;
+
     struct ImplTaskGraph final : ImplHandle
     {
         ImplTaskGraph(TaskGraphInfo a_info); 
@@ -322,7 +324,7 @@ namespace daxa
         std::optional<daxa::TransferMemoryPool> staging_memory = {};
         std::optional<TaskGraphPresent> present = {};
         ImplTaskResource* swapchain_image = nullptr;
-
+        
         static void zero_ref_callback(ImplHandle const * handle);
     };
 

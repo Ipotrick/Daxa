@@ -55,6 +55,7 @@ add_library(daxa
     "src/impl_timeline_query.cpp"
 
     "src/utils/impl_task_graph_ui.cpp"
+    "src/utils/impl_resource_viewer.cpp"
     "src/utils/impl_task_graph.cpp"
     "src/utils/impl_imgui.cpp"
     "src/utils/impl_fsr2.cpp"
@@ -107,6 +108,10 @@ if(DAXA_ENABLE_UTILS_IMGUI)
     target_link_libraries(daxa
         PUBLIC
         imgui::imgui
+    )
+    target_link_libraries(daxa
+        PUBLIC
+        implot::implot
     )
 endif()
 if(DAXA_ENABLE_UTILS_MEM)

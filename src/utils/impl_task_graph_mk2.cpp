@@ -10,6 +10,8 @@
 
 #include "impl_task_graph.hpp"
 #include "impl_task_graph_debug.hpp"
+#include "impl_task_graph_ui.hpp"
+#include "impl_resource_viewer.hpp"
 
 namespace daxa
 {
@@ -3302,6 +3304,15 @@ namespace daxa
             }
         }
 
+        /// =======================
+        /// ==== DEBUG UI HOOK ====
+        /// =======================
+        TaskGraphDebugContext* debug_ui_context = get_debug_ui_context(impl);
+        if (debug_ui_context && debug_ui_context->resource_viewer_states.size() == 0)
+        {
+            debug_ui_context = nullptr; // We only care about the debug ui when there are active attachment viewers.
+        }
+
         /// ====================================
         /// ==== RECORD AND SUBMIT COMMANDS ====
         /// ====================================
@@ -3428,12 +3439,6 @@ namespace daxa
                         });
                     }
 
-                    // DEBUG FULL BARRIER
-                    // cr.pipeline_barrier(BarrierInfo{
-                    //     .src_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
-                    //     .dst_access = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE},
-                    // });
-
                     // Record Tasks
                     for (u32 batch_task_i = 0; batch_task_i < batch.tasks.size(); ++batch_task_i)
                     {
@@ -3501,6 +3506,16 @@ namespace daxa
                             }
                         }
 
+                        auto interface = TaskInterface{
+                            .device = impl.info.device,
+                            .recorder = impl_runtime.recorder,
+                            .attachment_infos = task.attachments,
+                            .allocator = impl.staging_memory.has_value() ? &impl.staging_memory.value() : nullptr,
+                            .attachment_shader_blob = task.attachment_shader_blob,
+                            .task_name = task.name,
+                            .task_index = task_i,
+                            .queue = queue,
+                        };
                         if (impl.info.enable_command_labels)
                         {
                             static std::string tag = {};
@@ -3512,16 +3527,10 @@ namespace daxa
                                 .name = stag,
                             });
                         }
-                        auto interface = TaskInterface{
-                            .device = impl.info.device,
-                            .recorder = impl_runtime.recorder,
-                            .attachment_infos = task.attachments,
-                            .allocator = impl.staging_memory.has_value() ? &impl.staging_memory.value() : nullptr,
-                            .attachment_shader_blob = task.attachment_shader_blob,
-                            .task_name = task.name,
-                            .task_index = task_i,
-                            .queue = queue,
-                        };
+                        if (debug_ui_context)
+                        {
+                            task_resource_viewer_debug_ui_hook(*debug_ui_context, task_i, interface, true);
+                        }
                         if (impl.info.pre_task_callback)
                         {
                             impl.info.pre_task_callback(interface);
@@ -3530,6 +3539,10 @@ namespace daxa
                         if (impl.info.post_task_callback)
                         {
                             impl.info.post_task_callback(interface);
+                        }
+                        if (debug_ui_context)
+                        {
+                            task_resource_viewer_debug_ui_hook(*debug_ui_context, task_i, interface, false);
                         }
                         if (impl.info.enable_command_labels)
                         {

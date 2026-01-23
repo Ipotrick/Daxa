@@ -1,18 +1,32 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
 #include <daxa/utils/task_graph_types.hpp>
 
+#define TASK_GRAPH_resource_viewer_ONLINE_COMPILE_SHADERS 1
+
 #if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
 
-#include "impl_task_graph_mk2.hpp"
+#include "impl_task_graph_ui.hpp"
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>
-#include <set>
+#include <implot.h>
+#include "impl_task_graph_mk2.hpp"
+
+#if TASK_GRAPH_resource_viewer_ONLINE_COMPILE_SHADERS
+#include <daxa/utils/pipeline_manager.hpp>
+#endif
 
 static inline ImVec2 operator+(ImVec2 const & lhs, ImVec2 const & rhs) { return ImVec2(lhs.x + rhs.x, lhs.y + rhs.y); }
 static inline ImVec2 operator-(ImVec2 const & lhs, ImVec2 const & rhs) { return ImVec2(lhs.x - rhs.x, lhs.y - rhs.y); }
+static inline ImVec2 operator*(ImVec2 const & lhs, ImVec2 const & rhs) { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
+static inline ImVec2 operator/(ImVec2 const & lhs, ImVec2 const & rhs) { return ImVec2(lhs.x / rhs.x, lhs.y / rhs.y); }
 
 namespace ImGui
 {
+    auto IsItemDoubleClicked(int button) -> bool
+    {
+        return IsItemHovered() && GetIO().MouseClickedLastCount[button] == 2 && IsMouseReleased(button);
+    }
+
     // Unlike TableHeadersRow() it is not expected that you can reimplement or customize this with custom widgets.
     // FIXME: No hit-testing/button on the angled header.
     void TableAngledHeadersRow2(ImU32 * colors, ImU32 * text_color)
@@ -49,7 +63,7 @@ namespace ImGui
         TableAngledHeadersRowEx(row_id, g.Style.TableAngledHeadersAngle, 0.0f, temp_data->AngledHeadersRequests.Data, temp_data->AngledHeadersRequests.Size);
     }
 
-    void OpenAndDockWindowRightSide(ImGuiDir split_dir, float split, char const * target_window, char const * new_window_name, void const * new_window_id = nullptr)
+    void OpenAndDockWindowSide(ImGuiDir split_dir, float split, char const * target_window, char const * new_window_name, void const * new_window_id = nullptr)
     {
         ImGuiWindow * main_window = ImGui::FindWindowByName(target_window);
 
@@ -65,22 +79,28 @@ namespace ImGui
         {
             ImGui::PopID();
         }
-        ImGuiWindow * test = ImGui::FindWindowByName(new_window_name);
+        ImGuiWindow * window_to_dock = ImGui::FindWindowByName(new_window_name);
 
         bool const window_already_in_dock_node = main_window->DockNode != nullptr;
 
         if (main_window && visible)
         {
             ImGuiContext * g = ImGui::GetCurrentContext();
+
             if (window_already_in_dock_node)
             {
                 bool const has_parent = main_window->DockNode->ParentNode != nullptr;
                 bool const has_right_docked = has_parent && main_window->DockNode->ParentNode->ChildNodes[1]->Windows.Size > 0;
-                ImGui::DockContextQueueDock(g, main_window, has_right_docked ? main_window->DockNode->ParentNode->ChildNodes[1] : main_window->DockNode, test, has_right_docked ? ImGuiDir_None : split_dir, split, false);
+                auto target_node = has_right_docked ? main_window->DockNode->ParentNode->ChildNodes[1] : main_window->DockNode;
+                bool const already_docked = target_node == window_to_dock->DockNode;
+                if (!already_docked)
+                {
+                    ImGui::DockContextQueueDock(g, main_window, target_node, window_to_dock, has_right_docked ? ImGuiDir_None : split_dir, split, false);
+                }
             }
             else
             {
-                ImGui::DockContextQueueDock(g, main_window, nullptr, test, split_dir, split, false);
+                ImGui::DockContextQueueDock(g, main_window, nullptr, window_to_dock, split_dir, split, false);
             }
         }
     }
@@ -88,6 +108,102 @@ namespace ImGui
 
 namespace daxa
 {
+    static std::unordered_map<std::string, TaskGraphDebugContext> contexts = {};
+
+    auto get_debug_ui_context(ImplTaskGraph & impl) -> TaskGraphDebugContext*
+    {
+        if (contexts.size() != 0 && contexts.contains(std::string(impl.info.name)))
+        {
+            return &contexts.at(std::string(impl.info.name));
+        }
+        return nullptr;
+    }
+
+    auto destroy_resource_viewer(TaskGraphDebugContext & context, std::string const & resource_name) -> decltype(context.resource_viewer_states.begin())
+    {
+        auto viewer_iter = context.resource_viewer_states.find(resource_name);
+        if (!viewer_iter->second.destroy_clone_image.is_empty())
+        {
+            context.impl->info.device.destroy_image(viewer_iter->second.destroy_clone_image);
+            viewer_iter->second.destroy_clone_image = {};
+        }
+        if (!viewer_iter->second.destroy_display_image.is_empty())
+        {
+            context.impl->info.device.destroy_image(viewer_iter->second.destroy_display_image);
+            viewer_iter->second.destroy_display_image = {};
+        }
+        if (!viewer_iter->second.clone_image.is_empty())
+        {
+            context.impl->info.device.destroy_image(viewer_iter->second.clone_image);
+            viewer_iter->second.clone_image = {};
+        }
+        if (!viewer_iter->second.display_image.is_empty())
+        {
+            context.impl->info.device.destroy_image(viewer_iter->second.display_image);
+            viewer_iter->second.display_image = {};
+        }
+        if (!viewer_iter->second.readback_buffer.is_empty())
+        {
+            context.impl->info.device.destroy_buffer(viewer_iter->second.readback_buffer);
+            viewer_iter->second.readback_buffer = {};
+        }
+        return context.resource_viewer_states.erase(viewer_iter);
+    }
+
+    void open_or_focus_resource_detail_ui(TaskGraphDebugContext & context, u32 resource_index)
+    {
+        ImplTaskResource const & resource = context.impl->resources[resource_index];
+        bool const detail_window_open = context.open_resource_detail_windows.contains(std::string(resource.name).c_str());
+        if (detail_window_open)
+        {
+            ImGui::SetWindowFocus(resource.name.data());
+        }
+        else
+        {
+            context.open_resource_detail_windows.insert(std::string(resource.name));
+            ImGui::OpenAndDockWindowSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
+        }
+    }
+
+    void open_or_focus_resource_viewer(TaskGraphDebugContext & context, u32 resource_index)
+    {
+        ImplTaskResource const & resource = context.impl->resources[resource_index];
+
+        bool const viewer_exists = context.resource_viewer_states.contains(std::string(resource.name));
+        auto const viewer_name = std::format("{}::Viewer", resource.name);
+
+        if (viewer_exists)
+        {
+            ResourceViewerState & state = context.resource_viewer_states.at(std::string(resource.name));
+            if (state.free_window)
+            {
+                ImGui::SetWindowFocus(viewer_name.c_str());
+            }
+            else
+            {
+                open_or_focus_resource_detail_ui(context, resource_index);
+            }
+        }
+        else
+        {
+            open_or_focus_resource_detail_ui(context, resource_index);
+
+            if (resource.access_timeline.size() == 0)
+            {
+                return;
+            }
+            
+            DAXA_DBG_ASSERT_TRUE_M(!context.resource_viewer_states.contains(std::string(resource.name)), "IMPOSSIBLE CASE! Internal logic error in resource viewer ui!");
+            context.resource_viewer_states[std::string(resource.name)] = { };
+            context.resource_viewer_states[std::string(resource.name)].readback_buffer = context.impl->info.device.create_buffer({
+                .size = sizeof(TaskGraphDebugUiReadbackStruct) * READBACK_CIRCULAR_BUFFER_SIZE,
+                // We perform atomics on the readback buffer so we want the memory to be on the GPU even though it is still read by the CPU.
+                .allocate_info = MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+                .name = std::format("{} readback buffer", resource.name),
+            });
+        }
+    }
+
     auto to_lower(std::string str) -> std::string
     {
         for (auto & c : str)
@@ -96,28 +212,6 @@ namespace daxa
         }
         return str;
     }
-
-    struct TaskGraphDebugContext
-    {
-        u32 last_exec_tg_unique_index = ~0u;
-        ImplTaskGraph * impl = {};
-        std::array<char, 256> resource_name_search = {};
-        std::array<char, 256> task_name_search = {};
-        std::unordered_map<std::string, u32> pinned_resources = {};
-        std::set<std::string> extra_highlighted_tasks = {};
-        std::vector<std::vector<u32>> task_resource_to_attachment_lookup = {};
-        std::set<std::string> open_task_detail_windows = {};
-        std::set<std::string> open_resource_detail_windows = {};
-        //std::set<std::string> open_resource_detail_windows = {};
-        bool show_batch_borders = true;
-        bool show_transfer_tasks = true;
-        bool show_async_queues = true;
-        bool recreated = true;
-        u32 hovered_task = ~0u;
-        u32 hovered_resource = ~0u;
-        u32 hovered_attachment_index = ~0u;
-    };
-
     
     auto task_type_to_str(TaskType task_type) -> char const *
     {
@@ -409,35 +503,71 @@ namespace daxa
         }
     }
 
+    void resource_viewer_checkbox(
+        TaskGraphDebugContext & context,
+        u32 resource_index)
+    {
+        ImplTaskResource const & resource = context.impl->resources[resource_index];
+
+        bool const viewer_exists = context.resource_viewer_states.contains(std::string(resource.name));
+
+        bool gui_viewer_exists = viewer_exists;
+        if (ImGui::Checkbox("Resource Viewer", &gui_viewer_exists))
+        {
+            if (viewer_exists)
+            {
+                destroy_resource_viewer(context, std::string(resource.name));
+            }
+            else
+            {
+                open_or_focus_resource_viewer(context, resource_index);
+            }
+        }
+    }
+
     auto task_popup_context_ui(
         TaskGraphDebugContext & context,
-        u32 task_index)
+        u32 task_index,
+        u32 attachment_index = ~0u)
     {
         ImplTask const & task = context.impl->tasks[task_index];
         bool const detail_window_open = context.open_task_detail_windows.contains(std::string(task.name).c_str());
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && !detail_window_open)
+        if (ImGui::IsItemDoubleClicked(0))
         {
-            context.open_task_detail_windows.insert(std::string(task.name));
-            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
+            if (detail_window_open)
+            {
+                ImGui::SetWindowFocus(task.name.data());
+            }
+            else
+            {
+                context.open_task_detail_windows.insert(std::string(task.name));
+                ImGui::OpenAndDockWindowSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
+            }
         }
         if (ImGui::BeginPopupContextItem(task.name.data()))
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
             ImGui::Text(task.name.data());
-            ImGui::BeginDisabled(detail_window_open);
             if (ImGui::Button("Open Detail Ui (Double Click)"))
             {
-                context.open_task_detail_windows.insert(std::string(task.name));
-                ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
+                if (detail_window_open)
+                {
+                    ImGui::SetWindowFocus(task.name.data());
+                }
+                else
+                {
+                    context.open_task_detail_windows.insert(std::string(task.name));
+                    ImGui::OpenAndDockWindowSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", task.name.data());
+                }
             }
-            else if(detail_window_open)
-            {
-                ImGui::SetItemTooltip("Detail window is already open");
-            }
-            ImGui::EndDisabled();
             pin_task_attachments_checkbox(context, task_index);
             filter_task_checkbox(context, task_index);
             highlight_task_checkbox(context, task_index);
+            if (attachment_index != ~0u)
+            {
+                u32 resource_index = task.attachment_resources[attachment_index].second;
+                resource_viewer_checkbox(context, resource_index);
+            }
             ImGui::PopStyleVar();
             ImGui::EndPopup();
         }
@@ -445,7 +575,8 @@ namespace daxa
 
     auto resource_popup_context_ui(
         TaskGraphDebugContext & context,
-        u32 resource_index)
+        u32 resource_index,
+        bool show_resource_viewer_checkbox = false)
     {
         if (resource_index == ~0u)
         {
@@ -453,29 +584,29 @@ namespace daxa
         }
         ImplTaskResource const & resource = context.impl->resources[resource_index];
         bool const detail_window_open = context.open_resource_detail_windows.contains(std::string(resource.name).c_str());
-        if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && !detail_window_open)
-        {
-            context.open_resource_detail_windows.insert(std::string(resource.name));
-            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
+        static bool double_clicked_in_previous_frame = {};
+        if (ImGui::IsItemDoubleClicked(0))
+        {            
+            open_or_focus_resource_detail_ui(context, resource_index);
+            open_or_focus_resource_viewer(context, resource_index);
         }
+        double_clicked_in_previous_frame = ImGui::IsMouseDoubleClicked(0);
         if (ImGui::BeginPopupContextItem(resource.name.data()))
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
             ImGui::Text(resource.name.data());
-            ImGui::BeginDisabled(detail_window_open);
             if (ImGui::Button("Open Detail Ui (Double Click)"))
             {
-                context.open_resource_detail_windows.insert(std::string(resource.name));
-                ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
+                open_or_focus_resource_detail_ui(context, resource_index);
+                open_or_focus_resource_viewer(context, resource_index);
             }
-            if(detail_window_open)
-            {
-                ImGui::SetItemTooltip("Detail window is already open");
-            }
-            ImGui::EndDisabled();
             filter_resource_checkbox(context, resource_index);
             pin_resource_checkbox(context, resource_index);
             highlight_all_tasks_checkbox(context, resource_index);
+            if (show_resource_viewer_checkbox)
+            {
+                resource_viewer_checkbox(context, resource_index);
+            }
             ImGui::PopStyleVar();
             ImGui::EndPopup();
         }
@@ -650,7 +781,7 @@ namespace daxa
                         auto const size = ImVec2(clipped_end.x - clipped_start.x, clipped_end.y - clipped_start.y);
                         ImGui::InvisibleButton(std::format("##LALA{}", resource.name.data()).c_str(), size);
                         ImGui::SetItemTooltip(resource.name.data());
-                        resource_popup_context_ui(context, resource_index);
+                        resource_popup_context_ui(context, resource_index, true);
                         ImVec4 const fill_color = resource_kind_to_color(resource.kind);
                         ImVec4 const fill_color_final = ImGui::IsItemHovered() ? ImVec4(fill_color.x * 1.3f, fill_color.y * 1.3f, fill_color.z * 1.3f, 1.0f) : fill_color;
                         ImVec4 const border_color = ImVec4(fill_color_final.x * 0.4f, fill_color_final.y * 0.4f, fill_color_final.z * 0.4f, 1.0f);
@@ -959,15 +1090,34 @@ namespace daxa
         {
             ImGui::Separator();
 
-            /// =============================================
-            /// ======= RESOURCE TIMELINE INTERACTION =======
-            /// =============================================
+            /// ======================
+            /// ======= HEADER =======
+            /// ======================
 
             filter_resource_checkbox(context, resource_index);
             ImGui::SameLine();
             pin_resource_checkbox(context, resource_index);
             ImGui::SameLine();
             highlight_all_tasks_checkbox(context, resource_index);
+            ImGui::SameLine();
+            resource_viewer_checkbox(context, resource_index);
+
+            /// ======================================
+            /// ======= DOCKED RESOURCE VIEWER =======
+            /// ======================================
+
+            auto const resource_name_string = std::string(resource.name);
+            bool const viewer_open = context.resource_viewer_states.contains(resource_name_string);
+            if (viewer_open)
+            {
+                ResourceViewerState & state = context.resource_viewer_states.at(resource_name_string);
+
+                if (!state.free_window)
+                {
+                    ImGui::SeparatorText("Viewer");
+                    resource_viewer_ui(context, resource_name_string, state);
+                }
+            }
             
             /// ===========================================
             /// ======= GENERAL RESOURCE ATTRIBUTES =======
@@ -1165,6 +1315,7 @@ namespace daxa
             /// ===============================
             /// ======= ACCESS TIMELINE =======
             /// ===============================
+
             ImGui::SeparatorText("Access Timeline");
             static constexpr u32 ACCESS_GROUP_TABLE_FLAGS = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_SizingFixedFit;
             static constexpr u32 BARRIER_TABLE_FLAGS = ImGuiTableFlags_Borders | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable;
@@ -1207,7 +1358,7 @@ namespace daxa
                             ImGui::PushStyleColor(ImGuiCol_Header, ImGui::ColorConvertFloat4ToU32(ImVec4(1.0f, 1.0f, 1.0f, 0.2f)));
                             bool selected = context.hovered_task == task_index;
                             ImGui::Selectable(task->name.data(), &selected, ImGuiSelectableFlags_SpanAllColumns);
-                            task_popup_context_ui(context, task_index);
+                            task_popup_context_ui(context, task_index, attach_i);
                             ImGui::PopStyleColor();
                         }
                         ImGui::TableNextColumn();
@@ -1337,6 +1488,20 @@ namespace daxa
         }
         ImGui::SameLine();
         ImGui::Text("Un-Pin all Resources");
+        ImGui::SameLine();
+        if (ImGui::Button(" ##UClose all Task Uis"))
+        {
+            context.open_task_detail_windows.clear();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Close all Task Uis");
+        ImGui::SameLine();
+        if (ImGui::Button(" ##UClose all Resource Uis"))
+        {
+            context.open_resource_detail_windows.clear();
+        }
+        ImGui::SameLine();
+        ImGui::Text("Close all Resource Uis");
         ImGui::SameLine();
         ImGui::Checkbox("Show Batch Borders", &context.show_batch_borders);
         ImGui::SameLine();
@@ -1761,7 +1926,7 @@ namespace daxa
                     ImGui::PopStyleColor();
                 }
                 ImGui::SetItemTooltip(resource.name.data());
-                resource_popup_context_ui(context, resource_index);
+                resource_popup_context_ui(context, resource_index, true);
 
                 /// =========================================
                 /// ======= COLUMN BY COLUMN TABLE UI =======
@@ -1831,6 +1996,12 @@ namespace daxa
                                     ImGui::Selectable("");
                                     barrier_tooltip_ui(batch_ui);
                                 }
+                                else
+                                {
+                                    cell_color.x *= 0.4f + 0.8f;
+                                    cell_color.y *= 0.4f + 0.8f;
+                                    cell_color.z *= 0.4f + 0.8f;
+                                }
                             }
                             else // Give attachment info in Cells
                             {
@@ -1846,7 +2017,7 @@ namespace daxa
                                     if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(0) && !detail_window_open)
                                     {
                                         context.open_resource_detail_windows.insert(std::string(resource.name));
-                                        ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
+                                        ImGui::OpenAndDockWindowSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
                                     }
 
                                     /// ===========================
@@ -1883,7 +2054,7 @@ namespace daxa
                                         if (ImGui::Button("Open Task Detail Ui"))
                                         {
                                             context.open_task_detail_windows.insert(std::string(col_ui.task->name));
-                                            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", col_ui.task->name.data());
+                                            ImGui::OpenAndDockWindowSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", col_ui.task->name.data());
                                         }
                                         if(task_detail_window_open)
                                         {
@@ -1896,7 +2067,7 @@ namespace daxa
                                         if (ImGui::Button("Open Resource Detail Ui"))
                                         {
                                             context.open_resource_detail_windows.insert(std::string(resource.name));
-                                            ImGui::OpenAndDockWindowRightSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
+                                            ImGui::OpenAndDockWindowSide(ImGuiDir_Right, 0.7f, "Task Graph Debug UI", resource.name.data());
                                         }
                                         if(resource_detail_window_open)
                                         {
@@ -1956,15 +2127,105 @@ namespace daxa
         ImGui::SetCursorPos(cursor_after_table);
     }
 
-    void TaskGraph::imgui_ui()
+    void TaskGraph::imgui_ui(ImGuiRenderer * imgui_renderer)
     {
         auto & impl = *r_cast<ImplTaskGraph *>(this->object);
 
-        static std::unordered_map<std::string, TaskGraphDebugContext> contexts = {};
         TaskGraphDebugContext & context = contexts[std::string(impl.info.name.data())];
         context.recreated = context.last_exec_tg_unique_index != impl.unique_index;
         context.last_exec_tg_unique_index = impl.unique_index;
         context.impl = &impl;
+        context.imgui_renderer = imgui_renderer;
+
+        if (context.resource_viewer_sampler_id.is_empty())
+        {
+            context.resource_viewer_sampler_id = impl.info.device.create_sampler({
+                .magnification_filter = Filter::NEAREST,
+                .minification_filter = Filter::NEAREST,
+            });
+        }
+
+        /// ==============================================
+        /// ======= PRE UPDATE RESOURCE VIEW STATE =======
+        /// ==============================================
+        
+        for (auto av_iter = context.resource_viewer_states.begin(); av_iter != context.resource_viewer_states.end(); )
+        {
+            ResourceViewerState & state = av_iter->second;
+            state.imgui_image_id = {};
+            state.free_window = av_iter->second.free_window_next_frame;
+
+            state.open_frame_count += 1;
+            u32 const readback_index = (state.open_frame_count) % READBACK_CIRCULAR_BUFFER_SIZE;
+            auto * readback_struct = impl.info.device.buffer_host_address_as<TaskGraphDebugUiReadbackStruct>(state.readback_buffer).value();
+            state.latest_readback = readback_struct[readback_index];
+            readback_struct[readback_index] = {
+                .pos_min_value = ~0u,
+                .neg_min_value = ~0u,
+            };
+
+            if (!state.destroy_display_image.is_empty())
+            {
+                context.impl->info.device.destroy_image(state.destroy_display_image);
+                state.destroy_display_image = {};
+            }
+            if (!state.destroy_clone_image.is_empty())
+            {
+                context.impl->info.device.destroy_image(state.destroy_clone_image);
+                state.destroy_clone_image = {};
+            }
+            ++av_iter;
+        }
+
+        #if TASK_GRAPH_resource_viewer_ONLINE_COMPILE_SHADERS
+        
+        /// ====================================================
+        /// ======= DEV LIVE RESOURCE VIEWER COMPILATION =======
+        /// ====================================================
+
+        if (!context.pipeline_manager.is_valid())
+        {
+            context.pipeline_manager = daxa::PipelineManager(daxa::PipelineManagerInfo2{
+                .device = impl.info.device,
+                .root_paths = { 
+                    DAXA_SHADER_INCLUDE_DIR,
+                },
+                .write_out_spirv = std::nullopt,
+                .default_language = daxa::ShaderLanguage::SLANG,
+                .default_enable_debug_info = false,
+                .name = "tg_attach_viewer_pipeline_manager",
+            });
+
+            auto compilation_result = context.pipeline_manager.add_compute_pipeline2({
+                .source = daxa::ShaderFile{"../src/utils/task_graph_debug_ui.slang"},
+                .entry_point = "entry_main",
+                .push_constant_size = sizeof(TaskGraphDebugUiPush),
+                .name = "task_graph_debug_ui.slang",
+            });
+            if (compilation_result.value()->is_valid())
+            {
+                std::cout << "[TaskGraphDebugUi] SUCCESSFULLY compiled image resource viewer pipeline" << std::endl;
+            }
+            else
+            {
+                std::cout << std::format("[TaskGraphDebugUi] FAILED to compile image resource viewer pipeline with message \n {}", compilation_result.message()) << std::endl;
+            }
+            context.resource_viewer_pipeline = compilation_result.value();
+        }
+
+        {
+            auto reloaded_result = context.pipeline_manager.reload_all();
+            if (auto reload_err = daxa::get_if<daxa::PipelineReloadError>(&reloaded_result))
+            {
+                std::cout << "Failed to reload " << reload_err->message << '\n';
+            }
+            if (auto _ = daxa::get_if<daxa::PipelineReloadSuccess>(&reloaded_result))
+            {
+                std::cout << "Successfully reloaded!\n";
+            }
+        }
+
+        #endif
         
         /// =======================================
         /// ======= TASK GRAPH MAIN UI TABS =======
@@ -1989,6 +2250,24 @@ namespace daxa
             }
         }
         ImGui::End();
+
+        /// ==================================
+        /// ======= RESOURCE VIEWER UI =======
+        /// ==================================
+
+        for (auto av_iter = context.resource_viewer_states.begin(); av_iter != context.resource_viewer_states.end(); )
+        {
+            if (av_iter->second.free_window)
+            {
+                if (!resource_viewer_ui(context, av_iter->first, av_iter->second))
+                {
+                    av_iter = destroy_resource_viewer(context, av_iter->first);
+                    continue;
+                }
+            }
+
+            ++av_iter;
+        }
 
         /// ==============================================
         /// ======= DETAIL RESOURCE DETAIL TASK UI =======
@@ -2030,7 +2309,7 @@ namespace daxa
 
 namespace daxa
 {
-    void TaskGraph::imgui_ui()
+    void TaskGraph::imgui_ui(ImGuiRenderer *)
     {
     }
 } // namespace daxa

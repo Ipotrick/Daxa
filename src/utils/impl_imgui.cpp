@@ -29,6 +29,7 @@ struct Push
 #include <utility>
 #include <algorithm>
 #include <iostream>
+#include <implot.h>
 
 void set_imgui_style()
 {
@@ -135,12 +136,6 @@ namespace daxa
         impl.image_sampler_pairs.push_back(context);
         return std::bit_cast<ImTextureID>(impl.image_sampler_pairs.size() - 1);
     }
-
-#if DAXA_BUILT_WITH_UTILS_TASK_GRAPH
-    void ImGuiRenderer::record_task(ImDrawData * /* draw_data */, TaskGraph & /* task_graph */, TaskImageView /* task_swapchain_image */, u32 /* size_x */, u32 /* size_y */)
-    {
-    }
-#endif
 
     void ImplImGuiRenderer::recreate_vbuffer(usize vbuffer_new_size)
     {
@@ -339,10 +334,19 @@ namespace daxa
                   return this->info.device.create_raster_pipeline(create_info);
               }()}
     {
-        if (this->info.context != nullptr)
+        if (this->info.imgui_context != nullptr)
         {
-            ImGui::SetCurrentContext(info.context);
+            ImGui::SetCurrentContext(info.imgui_context);
         }
+        if (this->info.implot_context != nullptr)
+        {
+            ImPlot::SetCurrentContext(info.implot_context);
+        }
+        else
+        {
+            ImPlot::CreateContext();
+        }
+
         if (this->info.use_custom_config)
         {
             set_imgui_style();
@@ -528,6 +532,9 @@ auto main() -> int
         .name = "pipeline_manager",
     });
 
+    // =================================================================
+    // ================== IMGUI RASTER PIPELINES =======================
+    // =================================================================
     daxa::RasterPipelineCompileInfo2 compile_info{
         .vertex_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
         .fragment_shader_info = daxa::ShaderCompileInfo2{.source = daxa::ShaderFile{"src/utils/impl_imgui.cpp"}},
@@ -567,6 +574,10 @@ auto main() -> int
     gamma_frag_file.read(reinterpret_cast<char *>(gamma_frag_bytes.data()), static_cast<std::streamsize>(gamma_frag_size));
     gamma_frag_file.close();
     std::filesystem::remove("./imgui_pipeline.frag.main.spv");
+
+    // =================================================================
+    // ================== IMGUI RASTER PIPELINES =======================
+    // =================================================================
 
     auto out_file = std::ofstream{"./src/utils/impl_imgui_spv.hpp", std::ofstream::trunc};
     out_file << "#pragma once\n#include <array>\n\n";

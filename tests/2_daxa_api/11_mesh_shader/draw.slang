@@ -41,7 +41,7 @@ void entry_mesh(
 
     if(tig < MAX_PRIMS) {
         triangles[tig] = uint3(0,1,2);
-        primitives[tig].tint = float3(1,0.5,0) * payload.color;
+        primitives[tig].tint = float3(1,0.5,1);
         primitives[tig].cull = false;
     }
 }
@@ -50,7 +50,7 @@ void entry_mesh(
 void entry_task()
 {
     Payload payload;
-    payload.color = float3(0,1,1);
+    payload.color = float3(1,1,1);
     DispatchMesh(1, 1, 1, payload);
 }
 
