@@ -20,6 +20,20 @@ namespace daxa
     struct ImplTaskGraph;
     struct ImGuiRenderer;
 
+    namespace ColorPalette
+    {
+        static constexpr ImVec4 GREY = ImVec4(0.35638f, 0.37626f, 0.40198f, 1.0f);
+
+        static constexpr ImVec4 RED = ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f);
+        static constexpr ImVec4 GREEN = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f);
+        static constexpr ImVec4 BLUE = ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f);
+        static constexpr ImVec4 YELLOW = ImVec4(0.98500f, 0.98500f, 0.0000f, 1.0f);
+        static constexpr ImVec4 ORANGE = ImVec4(0.98500f, 0.58500f, 0.0000f, 1.0f);
+
+        static constexpr ImVec4 DARK_RED = ImVec4(0.53600f, 0.03700f, 0.02000f, 1.0f);
+        static constexpr ImVec4 DARK_BLUE = ImVec4(0.05490f, 0.32941f, 0.96470f, 1.0f);
+    };
+
     struct ImplTaskGraphDebugUi final : ImplHandle
     {
         ImplTaskGraphDebugUi() = default;

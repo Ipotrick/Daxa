@@ -573,7 +573,7 @@ namespace daxa
                 }
 
                 // Fill tail after the clipped readback with zeros
-                std::byte* readback_host_ptr = context.device.buffer_host_address(state.buffer.readback_buffer).value();
+                std::byte * readback_host_ptr = context.device.buffer_host_address(state.buffer.readback_buffer).value();
                 for (u64 b = clamped_readback_size; b < BUFFER_RESOURCE_VIEWER_READBACK_SIZE; ++b)
                 {
                     readback_host_ptr[b] = {};
@@ -759,6 +759,20 @@ namespace daxa
         ImplTaskResource const & resource = *impl->name_to_resource_table.at(resource_name).first;
         bool open = true;
 
+        auto viewer_shared_header = [&]()
+        {
+            ImGui::Checkbox("PopOut", &state.free_window_next_frame);
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(80);
+            ImGui::SliderInt("Access", &state.timeline_index, 0, static_cast<i32>(resource.access_timeline.size() - 1));
+            ImGui::SameLine();
+            ImGui::Checkbox("Before", reinterpret_cast<bool *>(&state.pre_task));
+            ImGui::SameLine();
+            ImGui::Checkbox("Freeze", reinterpret_cast<bool *>(&state.freeze_resource));
+            ImGui::SameLine();
+            ImGui::Checkbox("PreClear", reinterpret_cast<bool *>(&state.clear_before_task));
+        };
+
         bool begin_return = true;
         if (resource.kind == TaskResourceKind::IMAGE)
         {
@@ -804,27 +818,18 @@ namespace daxa
                         state.image.enabled_channels.y = 0;
                     }
 
-                    ImGui::Checkbox("PopOut", &state.free_window_next_frame);
-                    ImGui::SameLine();
-                    ImGui::SetNextItemWidth(80);
-                    ImGui::SliderInt("Access", &state.timeline_index, 0, static_cast<i32>(resource.access_timeline.size() - 1));
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Before", reinterpret_cast<bool *>(&state.pre_task));
-                    ImGui::SameLine();
-                    ImGui::Checkbox("Freeze", reinterpret_cast<bool *>(&state.freeze_resource));
-                    ImGui::SameLine();
-                    ImGui::Checkbox("PreClear", reinterpret_cast<bool *>(&state.clear_before_task));
+                    viewer_shared_header();
                     ImGui::SetNextItemWidth(80);
                     ImGui::InputInt("Mip", &state.image.mip);
                     ImGui::SameLine();
                     ImGui::SetNextItemWidth(80);
                     ImGui::InputInt("Layer", &state.image.layer);
 
-                    auto draw_color_checkbox = [&](const char * id, ImVec4 color, i32 & checked, bool enabled)
+                    auto draw_color_checkbox = [&](char const * id, ImVec4 color, i32 & checked, bool enabled)
                     {
-                        const float hovered_extra = 0.3f;
-                        const float active_extra = 0.2f;
-                        const float normal_downscale = 0.8f;
+                        float const hovered_extra = 0.3f;
+                        float const active_extra = 0.2f;
+                        float const normal_downscale = 0.8f;
                         ImVec4 bg_color = color;
                         bg_color.x *= normal_downscale;
                         bg_color.y *= normal_downscale;
@@ -840,7 +845,7 @@ namespace daxa
                         ImGui::PushStyleColor(ImGuiCol_FrameBg, bg_color);
                         ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, hovered_color);
                         ImGui::PushStyleColor(ImGuiCol_FrameBgActive, active_color);
-                        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0,0,0,1));
+                        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0, 0, 0, 1));
                         ImGui::BeginDisabled(!enabled);
                         ImGui::Checkbox(id, reinterpret_cast<bool *>(&checked));
                         ImGui::EndDisabled();
@@ -848,13 +853,13 @@ namespace daxa
                     };
 
                     ImGui::SameLine();
-                    draw_color_checkbox("##R", ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f), state.image.enabled_channels.x, channel_count > 0);
+                    draw_color_checkbox("##R", ColorPalette::RED, state.image.enabled_channels.x, channel_count > 0);
                     ImGui::SameLine();
-                    draw_color_checkbox("##G", ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f), state.image.enabled_channels.y, channel_count > 1);
+                    draw_color_checkbox("##G", ColorPalette::GREEN, state.image.enabled_channels.y, channel_count > 1);
                     ImGui::SameLine();
-                    draw_color_checkbox("##B", ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f), state.image.enabled_channels.z, channel_count > 2);
+                    draw_color_checkbox("##B", ColorPalette::BLUE, state.image.enabled_channels.z, channel_count > 2);
                     ImGui::SameLine();
-                    draw_color_checkbox("##A", ImVec4(0.7f, 0.7f, 0.7f, 1.0f), state.image.enabled_channels.w, channel_count > 2);
+                    draw_color_checkbox("##A", ColorPalette::GREY, state.image.enabled_channels.w, channel_count > 2);
 
                     ImGui::SameLine(0, 10);
                     ImGui::Text("|");
@@ -1186,60 +1191,8 @@ namespace daxa
             if (context.device.is_id_valid(state.buffer.readback_buffer) && state.open_frame_count > READBACK_CIRCULAR_BUFFER_SIZE)
             {
                 BufferInfo const & source_buffer_info = context.device.buffer_info(resource.id.buffer).value();
-                if (state.buffer.buffer_format_config_open)
-                {
-                    u64 display_struct_size = 0;
-                    ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_FirstUseEver);
-                    if (ImGui::Begin(std::format("{} debug format config", source_buffer_info.name.data()).c_str(), &state.buffer.buffer_format_config_open, ImGuiWindowFlags_NoSavedSettings))
-                    {
-                        if (ImGui::BeginTable(std::format("##{}", source_buffer_info.name.data()).c_str(), 4, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg))
-                        {
-                            ImGui::TableSetupColumn("Name");
-                            ImGui::TableSetupColumn("Type");
-                            ImGui::TableSetupColumn("Array Size");
-                            ImGui::TableSetupColumn("Offset");
-                            ImGui::TableHeadersRow();
-                            
-                            for(i32 buffer_structure_entry = 0; buffer_structure_entry < state.buffer.tg_debug_buffer_structure.size(); ++buffer_structure_entry)
-                            {
-                                ImGui::PushID(buffer_structure_entry);
-                                auto & entry = state.buffer.tg_debug_buffer_structure.at(buffer_structure_entry);
-                                // Name column
-                                ImGui::TableNextColumn();
-                                constexpr u32 name_buffer_size = 256;
-                                std::array<char, name_buffer_size> name_buffer = {};
-                                std::memcpy(name_buffer.data(), entry.name.data(), entry.name.size());
-                                ImGui::SetNextItemWidth(100);
-                                ImGui::InputText("##", name_buffer.data(), name_buffer_size);
-                                entry.name = std::string(name_buffer.data());
 
-                                ImGui::TableNextColumn();
-                                const char * data_type_labels = "F32\0U32\0I32\0"; 
-                                ImGui::SetNextItemWidth(100);
-                                ImGui::Combo("##data_type", reinterpret_cast<i32*>(&entry.data_type), data_type_labels, 3);
-
-                                ImGui::TableNextColumn();
-                                ImGui::SetNextItemWidth(100);
-                                ImGui::InputInt("##array_size", &entry.array_size);
-                                ImGui::PopID();
-
-                                display_struct_size += entry.array_size * tg_debug_buffer_entry_type_bytesize(entry.data_type);
-
-                                entry.offset = display_struct_size;
-
-                                ImGui::TableNextColumn();
-                                ImGui::Text("%d", entry.offset);
-                            }
-
-                            ImGui::EndTable();
-                        }
-                        if(ImGui::Button("Add Row"))
-                        {
-                            state.buffer.tg_debug_buffer_structure.push_back({});
-                        }
-                    }
-                    ImGui::End();
-                }
+                viewer_shared_header();
 
                 if (begin_return)
                 {
@@ -1249,23 +1202,215 @@ namespace daxa
                     }
                 }
 
-                
-                u64 ui_struct_size = 64;
-                u64 const array_entries = 1000;//source_buffer_info.size / ui_struct_size;
-                if (ImGui::BeginTable(std::format("##{}2", source_buffer_info.name.data()).c_str(), 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_ScrollY, ImVec2(0,300)))
+                // u64 ui_struct_size = 64;
+                // u64 const array_entries = 1000;//source_buffer_info.size / ui_struct_size;
+
+                // struct MeshletInstance
+                // {
+                //     daxa_u32 entity_index;
+                //     daxa_u32 meshlet_index;
+                //     daxa_u32 mesh_index;
+                //     daxa_u32 material_index;
+                //     daxa_u32 in_mesh_group_index;
+                //     daxa_u32 mesh_instance_index;
+                // };
+
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "root",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_STRUCT,
+                    .array_size = 1,
+                    .offset = {},
+                    .child_indices = {1u},
+                    .parent_index = ~0u,
+                });
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "data",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_STRUCT,
+                    .array_size = 1000,
+                    .offset = {0},
+                    .child_indices = {2u, 3u, 4u, 5u, 6u, 7u},
+                    .parent_index = 0u,
+                });
+
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "entity_index",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32,
+                    .array_size = 1,
+                    .offset = {0},
+                    .child_indices = {},
+                    .parent_index = 1u,
+                });
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "meshlet_index",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32,
+                    .array_size = 1,
+                    .offset = {4},
+                    .child_indices = {},
+                    .parent_index = 1u,
+                });
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "mesh_index",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32,
+                    .array_size = 1,
+                    .offset = {8},
+                    .child_indices = {},
+                    .parent_index = 1u,
+                });
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "material_index",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32,
+                    .array_size = 1,
+                    .offset = {12},
+                    .child_indices = {},
+                    .parent_index = 1u,
+                });
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "in_mesh_group_index",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32,
+                    .array_size = 1,
+                    .offset = {16},
+                    .child_indices = {},
+                    .parent_index = 1u,
+                });
+                state.buffer.tg_debug_buffer_structure.push_back({
+                    .name = "mesh_instance_index",
+                    .data_type = TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32,
+                    .array_size = 1,
+                    .offset = {20},
+                    .child_indices = {},
+                    .parent_index = 1u,
+                });
+
+                u64 display_struct_size = 0;
+                auto draw_node = [&](TgDebugBufferEntry & entry) -> void
+                {
+                    auto & entries = state.buffer.tg_debug_buffer_structure;
+
+                    auto draw_node_impl = [&](TgDebugBufferEntry & entry, auto & draw_node_impl_ref) -> void
+                    {
+                        u32 flags = ImGuiTreeNodeFlags_None;
+                        if (entry.child_indices.size() == 0)
+                        {
+                            flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen;
+                        }
+                        bool open = ImGui::TreeNodeEx(std::format("{}", entry.name).c_str(), flags);
+                        ImGui::TableNextColumn();
+                        ImGui::Text({"STRUCT"});
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%d", entry.array_size);
+                        ImGui::TableNextColumn();
+                        ImGui::Text("%d", entry.offset);
+                        ImGui::TableNextColumn();
+
+                        if (open)
+                        {
+                            if (entry.child_indices.size() > 0)
+                            {
+                                ImGui::TreePop();
+                            }
+                            if (entry.array_size > 1)
+                            {
+                                ImGui::EndTable();
+                                ImGui::Indent(20);
+                                ImGui::BeginTable(std::format("{}", entry.name).c_str(), 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_ScrollY, ImVec2(0, 300));
+                            }
+                            ImGuiListClipper clipper;
+                            clipper.Begin(entry.array_size);
+                            while (clipper.Step())
+                            {
+                                for (i32 row = clipper.DisplayStart; row < clipper.DisplayEnd; ++row)
+                                {
+                                    for (i32 child_index = 0; child_index < entry.child_indices.size(); ++child_index)
+                                    {
+                                        draw_node_impl_ref(entries.at(entry.child_indices.at(child_index)), draw_node_impl_ref);
+                                    }
+                                    ImGui::TableNextRow();
+                                    ImGui::TableNextColumn();
+                                    ImGui::TreeNodeEx(std::format("{}[{}]", entry.name, row).c_str(), ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen);
+                                    ImGui::TableNextColumn();
+                                    ImGui::Text("%d", state.buffer.latest_readback[entry.offset + row * 4]);
+                                }
+                            }
+
+                            if (entry.array_size > 1)
+                            {
+                                ImGui::EndTable();
+                                ImGui::Unindent(20);
+
+                                auto const curr_indent = ImGui::GetCurrentWindow()->DC.Indent;
+                                ImGui::Unindent(curr_indent.x);
+                                std::string parent_table_name = std::format("##{}", entry.parent_index == 0 ? source_buffer_info.name.data() : entries.at(entry.parent_index).name);
+                                ImGui::BeginTable(parent_table_name.c_str(), 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg);
+                                ImGui::Indent(curr_indent.x);
+                            }
+                            ImGui::TableNextRow();
+                            ImGui::TableNextColumn();
+                        }
+                    };
+
+                    draw_node_impl(entry, draw_node_impl);
+                };
+
+                if (ImGui::BeginTable(std::format("##{}", source_buffer_info.name.data()).c_str(), 4, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg))
                 {
                     ImGui::TableSetupColumn("Name");
-                    ImGui::TableSetupColumn("Value");
+                    ImGui::TableSetupColumn("Type");
+                    ImGui::TableSetupColumn("Array Size");
+                    ImGui::TableSetupColumn("Offset");
                     ImGui::TableHeadersRow();
-                    for (u32 i = 0; i < array_entries; ++i)
-                    {
-                        ImGui::TableNextColumn();
-                        ImGui::Text("test");
-                    }
+
+                    ImGui::TableNextColumn();
+                    draw_node(state.buffer.tg_debug_buffer_structure.at(0));
+
+                    // ImGui::PushID(buffer_structure_entry);
+                    //     auto & entry = state.buffer.tg_debug_buffer_structure.at(buffer_structure_entry);
+                    //     // Name column
+                    //     ImGui::TableNextColumn();
+                    //     constexpr u32 name_buffer_size = 256;
+                    //     std::array<char, name_buffer_size> name_buffer = {};
+                    //     std::memcpy(name_buffer.data(), entry.name.data(), entry.name.size());
+                    //     ImGui::SetNextItemWidth(100);
+                    //     ImGui::InputText("##", name_buffer.data(), name_buffer_size);
+                    //     entry.name = std::string(name_buffer.data());
+
+                    //     ImGui::TableNextColumn();
+                    //     const char * data_type_labels = "F32\0U32\0I32\0";
+                    //     ImGui::SetNextItemWidth(100);
+                    //     ImGui::Combo("##data_type", reinterpret_cast<i32*>(&entry.data_type), data_type_labels, 3);
+
+                    //     ImGui::TableNextColumn();
+                    //     ImGui::SetNextItemWidth(100);
+                    //     ImGui::InputInt("##array_size", &entry.array_size);
+                    //     ImGui::PopID();
+
+                    //     display_struct_size += entry.array_size * tg_debug_buffer_entry_type_bytesize(entry.data_type);
+
+                    //     entry.offset = display_struct_size;
+
+                    //     ImGui::TableNextColumn();
+                    //     ImGui::Text("%d", entry.offset);
+                    // }
+
                     ImGui::EndTable();
                 }
-            }
 
+                if (ImGui::Button("Add Row"))
+                {
+                    state.buffer.tg_debug_buffer_structure.push_back({});
+                }
+                // if (ImGui::BeginTable(std::format("##{}2", source_buffer_info.name.data()).c_str(), 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_ScrollY, ImVec2(0,300)))
+                // {
+                //     ImGui::TableSetupColumn("Name");
+                //     ImGui::TableSetupColumn("Value");
+                //     ImGui::TableHeadersRow();
+                //     for (u32 i = 0; i < array_entries; ++i)
+                //     {
+                //         ImGui::TableNextColumn();
+                //         ImGui::Text("test");
+                //     }
+                //     ImGui::EndTable();
+                // }
+            }
 
             if (state.free_window)
             {

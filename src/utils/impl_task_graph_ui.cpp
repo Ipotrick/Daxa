@@ -259,26 +259,22 @@ namespace daxa
 
     auto access_type_to_color(TaskAccessType access) -> ImVec4
     {
-        // yellow = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break; //                  #F9C74F
         ImVec4 ret = {};
         switch (access)
         {
-        case TaskAccessType::NONE: ret = ImVec4(0.35638f, 0.37626f, 0.40198f, 1.0f); break;                  // #9aa0a6ff
-        case TaskAccessType::WRITE: ret = ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f); break;                 // #E74C3C
-        case TaskAccessType::READ: ret = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f); break;                  // #2ECC71
-        case TaskAccessType::SAMPLED: ret = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f); break;               // #2ECC71
-        case TaskAccessType::READ_WRITE: ret = ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f); break;            // #3498DB
-        case TaskAccessType::WRITE_CONCURRENT: ret = ImVec4(0.53600f, 0.03700f, 0.02000f, 1.0f); break;      // #E63946
-        case TaskAccessType::READ_WRITE_CONCURRENT: ret = ImVec4(0.05490f, 0.32941f, 0.96470f, 1.0f); break; // #0e54f6
+        case TaskAccessType::NONE: ret = ColorPalette::GREY; break;
+        case TaskAccessType::WRITE: ret = ColorPalette::RED; break;
+        case TaskAccessType::READ: ret = ColorPalette::GREEN; break;
+        case TaskAccessType::SAMPLED: ret = ColorPalette::GREEN; break;
+        case TaskAccessType::READ_WRITE: ret = ColorPalette::BLUE; break;
+        case TaskAccessType::WRITE_CONCURRENT: ret = ColorPalette::DARK_RED; break;
+        case TaskAccessType::READ_WRITE_CONCURRENT: ret = ColorPalette::DARK_BLUE; break; 
         }
-        // ret.x = std::sqrt(ret.x);
-        // ret.y = std::sqrt(ret.y);
-        // ret.z = std::sqrt(ret.z);
         return ret;
     }
 
-    static constexpr ImVec4 LAYOUT_INITIALIZATION_COLOR = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f);
-    static constexpr ImVec4 BARRIER_COLOR = ImVec4(0.95500f, 0.700f, 0.2f, 1.0f);
+    static constexpr ImVec4 LAYOUT_INITIALIZATION_COLOR = ColorPalette::YELLOW;
+    static constexpr ImVec4 BARRIER_COLOR = ColorPalette::ORANGE;
     static constexpr ImVec4 SUBMIT_COLOR = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
     static constexpr ImVec4 QUEUE_SUBMIT_COLOR = ImVec4(0.3f, 0.3f, 0.3f, 1.0f);
     static constexpr ImVec4 RESOURCE_ALIVE_COLOR = ImVec4(0.4f, 0.4f, 0.4f, 1.0f);
@@ -572,7 +568,7 @@ namespace daxa
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
             ImGui::Text(task.name.data());
-            if (ImGui::Button("Open Detail Ui (Double Click)"))
+            if (ImGui::Button("Open Task Detail Ui (Double Click)"))
             {
                 if (detail_window_open)
                 {
@@ -591,6 +587,16 @@ namespace daxa
             {
                 u32 resource_index = task.attachment_resources[attachment_index].second;
                 resource_viewer_checkbox(ui_context, impl_tg, resource_index);
+
+                ImplTaskResource & resource = impl_tg->resources[resource_index];
+                bool const viewer_exists = ui_context.resource_viewer_states.contains(std::string(resource.name));
+                if (viewer_exists)
+                {
+                    if (ImGui::Button("Set Viewer access to task"))
+                    {
+                        ui_context.resource_viewer_states[std::string(resource.name)].timeline_index = task.attachment_access_groups[attachment_index].second;
+                    }
+                }
             }
             ImGui::PopStyleVar();
             ImGui::EndPopup();
@@ -621,7 +627,7 @@ namespace daxa
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
             ImGui::Text(resource.name.data());
-            if (ImGui::Button("Open Detail Ui (Double Click)"))
+            if (ImGui::Button("Open Resource Detail Ui (Double Click)"))
             {
                 open_or_focus_resource_detail_ui(ui_context, impl_tg, resource_index);
                 open_or_focus_resource_viewer(ui_context, impl_tg, resource_index, access_timeline_index);
@@ -632,6 +638,18 @@ namespace daxa
             if (show_resource_viewer_checkbox)
             {
                 resource_viewer_checkbox(ui_context, impl_tg, resource_index);
+            }
+            if (access_timeline_index != ~0u)
+            {
+                ImplTaskResource & resource = impl_tg->resources[resource_index];
+                bool const viewer_exists = ui_context.resource_viewer_states.contains(std::string(resource.name));
+                if (viewer_exists)
+                {
+                    if (ImGui::Button("Set Viewer access to task"))
+                    {
+                        ui_context.resource_viewer_states[std::string(resource.name)].timeline_index = access_timeline_index;
+                    }
+                }
             }
             ImGui::PopStyleVar();
             ImGui::EndPopup();
@@ -1507,40 +1525,51 @@ namespace daxa
         ImGui::SameLine();
         ImGui::SetNextItemWidth(128);
         ImGui::InputText("Filter Task", ui_context.task_name_search.data(), ui_context.task_name_search.size());
+
         ImGui::SameLine();
-        if (ImGui::Button(" ##Un-Highlight all Tasks"))
+        ImGui::Button("Filter Options");
+        if (ImGui::BeginPopupContextItem("Filter", ImGuiPopupFlags_MouseButtonLeft))
         {
-            ui_context.extra_highlighted_tasks.clear();
+            // Buttons:
+            {
+                ImGui::PushStyleColor(ImGuiCol_Button, ColorPalette::GREY);
+                
+                if (ImGui::Button(" ##Un-Highlight all Tasks"))
+                {
+                    ui_context.extra_highlighted_tasks.clear();
+                }
+                ImGui::SameLine();
+                ImGui::Text("Un-Highlight all Tasks");
+
+                if (ImGui::Button(" ##Un-Pin all Resources"))
+                {
+                    ui_context.pinned_resources.clear();
+                }
+                ImGui::SameLine();
+                ImGui::Text("Un-Pin all Resources");
+
+                if (ImGui::Button(" ##UClose all Task Uis"))
+                {
+                    ui_context.open_task_detail_windows.clear();
+                }
+                ImGui::SameLine();
+                ImGui::Text("Close all Task Uis");
+
+                if (ImGui::Button(" ##UClose all Resource Uis"))
+                {
+                    ui_context.open_resource_detail_windows.clear();
+                }
+                ImGui::SameLine();
+                ImGui::Text("Close all Resource Uis");
+
+                ImGui::PopStyleColor(1);
+            }
+
+            ImGui::Checkbox("Show Batch Borders", &ui_context.show_batch_borders);
+            ImGui::Checkbox("Show Transfer Tasks", &ui_context.show_transfer_tasks);
+            ImGui::Checkbox("Show Async Queues", &ui_context.show_async_queues);
+            ImGui::EndPopup();
         }
-        ImGui::SameLine();
-        ImGui::Text("Un-Highlight all Tasks");
-        ImGui::SameLine();
-        if (ImGui::Button(" ##Un-Pin all Resources"))
-        {
-            ui_context.pinned_resources.clear();
-        }
-        ImGui::SameLine();
-        ImGui::Text("Un-Pin all Resources");
-        ImGui::SameLine();
-        if (ImGui::Button(" ##UClose all Task Uis"))
-        {
-            ui_context.open_task_detail_windows.clear();
-        }
-        ImGui::SameLine();
-        ImGui::Text("Close all Task Uis");
-        ImGui::SameLine();
-        if (ImGui::Button(" ##UClose all Resource Uis"))
-        {
-            ui_context.open_resource_detail_windows.clear();
-        }
-        ImGui::SameLine();
-        ImGui::Text("Close all Resource Uis");
-        ImGui::SameLine();
-        ImGui::Checkbox("Show Batch Borders", &ui_context.show_batch_borders);
-        ImGui::SameLine();
-        ImGui::Checkbox("Show Transfer Tasks", &ui_context.show_transfer_tasks);
-        ImGui::SameLine();
-        ImGui::Checkbox("Show Async Queues", &ui_context.show_async_queues);
 
         static ImGuiTableFlags table_flags = ImGuiTableFlags_Borders | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY;
         static ImGuiTableColumnFlags column_flags = ImGuiTableColumnFlags_AngledHeader | ImGuiTableColumnFlags_WidthFixed;

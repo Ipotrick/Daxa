@@ -22,6 +22,7 @@ namespace daxa
         TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_F32 = 0,
         TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_I32 = 1,
         TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32 = 2,
+        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_STRUCT = 4,
     };
 
     struct TgDebugBufferEntry
@@ -30,6 +31,8 @@ namespace daxa
         TG_DEBUG_BUFFER_ENTRY_DATA_TYPE data_type = {};
         i32 array_size = 1;
         u64 offset = {};
+        std::vector<u32> child_indices;
+        u32 parent_index;
     };
 
     struct ResourceViewerState
