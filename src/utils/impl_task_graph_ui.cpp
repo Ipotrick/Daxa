@@ -2366,16 +2366,5 @@ namespace daxa
     }
 } // namespace daxa
 
-#else // #if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
-
-#include <daxa/utils/task_graph.hpp>
-
-namespace daxa
-{
-    void TaskGraph::imgui_ui(ImGuiRenderer *)
-    {
-    }
-} // namespace daxa
-
-#endif // #else // #if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
+#endif // #if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
 #endif
