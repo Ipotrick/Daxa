@@ -298,8 +298,6 @@ namespace daxa
         Queue queue = QUEUE_MAIN;
     };
 
-    struct TaskGraphDebugContext;
-
     struct ImplTaskGraph final : ImplHandle
     {
         ImplTaskGraph(TaskGraphInfo a_info); 

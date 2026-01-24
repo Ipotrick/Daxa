@@ -10,14 +10,12 @@
 #error "[build error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled"
 #endif
 
+#if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
+#include <daxa/utils/imgui.hpp>
+#endif
 
 namespace daxa
 {
-
-#if DAXA_BUILT_WITH_UTILS_IMGUI
-    struct ImGuiRenderer;
-#endif 
-
     struct TaskGraph;
     struct Device;
     struct CommandSubmitInfo;
@@ -131,9 +129,12 @@ namespace daxa
         std::function<void()> when_true = {};
         std::function<void()> when_false = {};
     };
+    
+    struct TaskGraphDebugUi;
 
     struct ExecutionInfo
     {
+        TaskGraphDebugUi * debug_ui = {};
         std::span<bool> permutation_condition_values = {};
         bool record_debug_string = {};
     };
@@ -1035,10 +1036,6 @@ namespace daxa
 
         DAXA_EXPORT_CXX auto get_debug_string() -> std::string;
         DAXA_EXPORT_CXX auto get_transient_memory_size() -> usize;
-        
-#if DAXA_BUILT_WITH_UTILS_IMGUI
-        DAXA_EXPORT_CXX void imgui_ui(ImGuiRenderer * imgui_renderer);
-#endif
 
       protected:
         template <typename T, typename H_T>
@@ -1059,4 +1056,28 @@ namespace daxa
 
         DAXA_EXPORT_CXX auto allocate_task_memory(usize size, usize align) -> void *;
     };
+        
+#if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
+    struct ImplTaskGraphDebugUi;
+
+    struct TaskGraphDebugUiInfo 
+    {
+        Device device = {};
+        ImGuiRenderer imgui_renderer = {};
+    };
+
+    struct TaskGraphDebugUi : ManagedPtr<TaskGraphDebugUi, ImplTaskGraphDebugUi *>
+    {
+        DAXA_EXPORT_CXX TaskGraphDebugUi() = default;
+        DAXA_EXPORT_CXX TaskGraphDebugUi(TaskGraphDebugUiInfo const & info);
+
+        DAXA_EXPORT_CXX auto update(TaskGraph & task_graph) -> bool;
+
+      protected:
+        template <typename T, typename H_T>
+        friend struct ManagedPtr;
+        DAXA_EXPORT_CXX static auto inc_refcnt(ImplHandle const * object) -> u64;
+        DAXA_EXPORT_CXX static auto dec_refcnt(ImplHandle const * object) -> u64;
+    };
+#endif
 } // namespace daxa

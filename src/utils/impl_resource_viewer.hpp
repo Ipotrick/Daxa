@@ -3,7 +3,9 @@
 #include <daxa/utils/task_graph_types.hpp>
 
 #if ENABLE_TASK_GRAPH_MK2
-#include "task_graph_debug_ui.slang"
+#include "impl_resource_viewer.slang"
+
+#define BUFFER_RESOURCE_VIEWER_READBACK_SIZE (1u << 12u)
 
 namespace daxa
 {
@@ -14,51 +16,68 @@ namespace daxa
         daxa_u32vec4 _uint;
     };
 
-    struct ResourceViewerState
+    // Blame imgui for this being i32
+    enum TG_DEBUG_BUFFER_ENTRY_DATA_TYPE : i32
     {
-        TaskGraphDebugUiReadbackStruct latest_readback = {};
-        ImageId display_image = {};
-        ImageId clone_image = {};
-        ImageId destroy_display_image = {}; // mini deletion queue
-        ImageId destroy_clone_image = {};   // mini deletion queue
-
-        BufferId readback_buffer = {};
-        u32 open_frame_count = {};
-
-        void * imgui_image_id = {};
-        bool free_window = {};
-        bool free_window_next_frame = {};
-
-        // Settings:
-        i32 mip = {};
-        i32 layer = {};
-        bool freeze_resource = {};
-        bool pre_task = {};
-        bool clear_before_task = {};
-
-        // Written by ui:
-        bool display_value_range_initialized = {};
-        union { f32 _f32; i32 _i32; u32 _u32; } min_display_value = { ._u32 = {} };
-        union { f32 _f32; i32 _i32; u32 _u32; } max_display_value = { ._u32 = {} };
-        i32 rainbow_ints = false;
-        i32 nearest_filtering = true;
-        daxa_i32vec4 enabled_channels = {true, true, true, false};
-        daxa_i32vec2 mouse_texel_index = {};
-        f32 inspector_image_draw_scale = -1.0f;
-        i32 timeline_index = {};
-        bool fixed_display_mip_sizes = true;
-        bool active = false;
-        bool display_image_hovered = false;
-        bool freeze_image_hover_index = false;
-        bool gamma_correct = false;
-        bool display_as_hexadecimal = false;
+        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_F32 = 0,
+        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_I32 = 1,
+        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32 = 2,
     };
 
-    struct TaskGraphDebugContext;
+    struct TgDebugBufferEntry
+    {
+        std::string name = {};
+        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE data_type = {};
+        i32 array_size = 1;
+        u64 offset = {};
+    };
 
-    void task_resource_viewer_debug_ui_hook(TaskGraphDebugContext & context, u32 task_index, daxa::TaskInterface & ti, bool is_pre_task);
+    struct ResourceViewerState
+    {
+        struct 
+        {
+            TaskGraphDebugUiImageReadbackStruct latest_readback = {};
+            ImageId display_image = {};
+            ImageId clone_image = {};
+            ImageId destroy_display_image = {}; // mini deletion queue
+            ImageId destroy_clone_image = {};   // mini deletion queue
+            void * imgui_image_id = {};
+            union { f32 _f32; i32 _i32; u32 _u32; } min_display_value = { ._u32 = {} };
+            union { f32 _f32; i32 _i32; u32 _u32; } max_display_value = { ._u32 = {} };
+            i32 rainbow_ints = false;
+            i32 mip = {};
+            i32 layer = {};
+            daxa_i32vec4 enabled_channels = {true, true, true, false};
+            daxa_i32vec2 mouse_texel_index = {};
+            bool gamma_correct = false;
+            bool display_value_range_initialized = {};
+            BufferId readback_buffer = {};
+        } image = {};
+        struct
+        {
+            std::array<std::byte, BUFFER_RESOURCE_VIEWER_READBACK_SIZE> latest_readback = {};
+            std::vector<TgDebugBufferEntry> tg_debug_buffer_structure = {};       
+            u64 readback_offset = {};
+            BufferId readback_buffer = {};   
+            bool buffer_format_config_open = {};
+        } buffer = {};
 
-    auto resource_viewer_ui(TaskGraphDebugContext & context, std::string const & resource_name, ResourceViewerState & state) -> bool;
+        u32 open_frame_count = {};
+        i32 timeline_index = {};
+        bool display_as_hexadecimal = false;
+        bool clear_before_task = {};
+        bool freeze_resource = {};
+        bool pre_task = {};
+        bool free_window = {};
+        bool free_window_next_frame = {};
+    };
+
+    struct ImplTaskGraphDebugUi;
+    struct ImplTaskGraph;
+
+    void task_resource_viewer_debug_ui_hook(ImplTaskGraphDebugUi & context, ImplTaskGraph * impl, u32 task_index, daxa::TaskInterface & ti, bool is_pre_task);
+
+    auto resource_viewer_ui(ImplTaskGraphDebugUi & context, ImplTaskGraph * impl, std::string const & resource_name, ResourceViewerState & state) -> bool;
 }
 
 #endif

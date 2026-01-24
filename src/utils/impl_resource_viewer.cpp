@@ -3,12 +3,12 @@
 
 #if ENABLE_TASK_GRAPH_MK2
 
-#include "impl_task_graph_ui.hpp"
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>
 #include <implot.h>
 #include "impl_task_graph_mk2.hpp"
 #include "impl_task_graph_ui.hpp"
+#include "impl_resource_viewer.slang"
 
 static inline ImVec2 operator+(ImVec2 const & lhs, ImVec2 const & rhs);
 static inline ImVec2 operator-(ImVec2 const & lhs, ImVec2 const & rhs);
@@ -455,17 +455,30 @@ namespace daxa
         return false;
     }
 
+    auto tg_debug_buffer_entry_type_bytesize(TG_DEBUG_BUFFER_ENTRY_DATA_TYPE type) -> u32
+    {
+        switch (type)
+        {
+        case TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_F32: return 4u;
+        case TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_I32: return 4u;
+        case TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32: return 4u;
+        default:
+            DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE! Data corruption or forgot to add new data type to this function");
+            return ~0;
+        }
+    };
+
     auto resource_live_viewer_name(std::string_view resource_name, u32 version) -> std::string
     {
         return std::format("{}()", resource_name, version + 1);
     }
 
-    void task_resource_viewer_debug_ui_hook(TaskGraphDebugContext & context, u32 task_index, daxa::TaskInterface & ti, bool is_pre_task)
+    void task_resource_viewer_debug_ui_hook(ImplTaskGraphDebugUi & context, ImplTaskGraph * impl, u32 task_index, daxa::TaskInterface & ti, bool is_pre_task)
     {
         DAXA_DBG_ASSERT_TRUE_M(context.resource_viewer_states.size() > 0, "IMPOSSIBLE CASE! Why are we calling this callback when attachment views are empty??");
         for (u32 attach_i = 0; attach_i < ti.attachment_infos.size(); ++attach_i)
         {
-            ImplTask const & task = context.impl->tasks[task_index];
+            ImplTask const & task = impl->tasks[task_index];
             ImplTaskResource const * resource = task.attachment_resources[attach_i].first;
             if (resource == nullptr)
             {
@@ -488,6 +501,21 @@ namespace daxa
             bool const is_first_access = task.attachment_access_groups[attach_i].first == &resource->access_timeline[0];
             if (is_pre_task && state.clear_before_task && is_first_access)
             {
+                if (attachment_info.type == TaskAttachmentType::BUFFER)
+                {
+                    BufferId buffer_id = ti.id(TaskBufferAttachmentIndex{attach_i});
+                    {
+                        ti.recorder.pipeline_barrier(daxa::BarrierInfo{
+                            .src_access = daxa::AccessConsts::READ_WRITE,
+                            .dst_access = daxa::AccessConsts::READ_WRITE,
+                        });
+                        ti.recorder.clear_buffer({.buffer = buffer_id});
+                        ti.recorder.pipeline_barrier(daxa::BarrierInfo{
+                            .src_access = daxa::AccessConsts::READ_WRITE,
+                            .dst_access = daxa::AccessConsts::READ_WRITE,
+                        });
+                    }
+                }
                 if (attachment_info.type == TaskAttachmentType::IMAGE)
                 {
                     ImageId image_id = ti.id(TaskImageAttachmentIndex{attach_i});
@@ -515,19 +543,56 @@ namespace daxa
                 continue;
             }
 
+            if (attachment_info.type == TaskAttachmentType::BUFFER)
+            {
+                BufferId buffer_id = ti.id(TaskBufferAttachmentIndex{attach_i});
+                BufferInfo buffer_info = ti.info(TaskBufferAttachmentIndex{attach_i}).value();
+
+                u64 const clamped_readback_end = std::min(buffer_info.size, state.buffer.readback_offset + BUFFER_RESOURCE_VIEWER_READBACK_SIZE);
+                u64 const clamped_readback_size = clamped_readback_end - state.buffer.readback_offset;
+                u64 const readback_index = (state.open_frame_count) % READBACK_CIRCULAR_BUFFER_SIZE;
+                u64 const readback_dst_offset = BUFFER_RESOURCE_VIEWER_READBACK_SIZE * readback_index;
+
+                if (clamped_readback_size > 0)
+                {
+                    ti.recorder.pipeline_barrier(daxa::BarrierInfo{
+                        .src_access = daxa::AccessConsts::READ_WRITE,
+                        .dst_access = daxa::AccessConsts::READ_WRITE,
+                    });
+                    ti.recorder.copy_buffer_to_buffer({
+                        .src_buffer = buffer_id,
+                        .dst_buffer = state.buffer.readback_buffer,
+                        .src_offset = state.buffer.readback_offset,
+                        .dst_offset = readback_dst_offset,
+                        .size = clamped_readback_size,
+                    });
+                    ti.recorder.pipeline_barrier(daxa::BarrierInfo{
+                        .src_access = daxa::AccessConsts::READ_WRITE,
+                        .dst_access = daxa::AccessConsts::READ_WRITE,
+                    });
+                }
+
+                // Fill tail after the clipped readback with zeros
+                std::byte* readback_host_ptr = context.device.buffer_host_address(state.buffer.readback_buffer).value();
+                for (u64 b = clamped_readback_size; b < BUFFER_RESOURCE_VIEWER_READBACK_SIZE; ++b)
+                {
+                    readback_host_ptr[b] = {};
+                }
+            }
+
             if (attachment_info.type == TaskAttachmentType::IMAGE)
             {
                 ImageId image_id = ti.id(TaskImageAttachmentIndex{attach_i});
                 ImageInfo image_info = ti.info(TaskImageAttachmentIndex{attach_i}).value();
-                u32 const display_image_x = std::max(1u, static_cast<u32>(image_info.size.x >> state.mip));
-                u32 const display_image_y = std::max(1u, static_cast<u32>(image_info.size.y >> state.mip));
+                u32 const display_image_x = std::max(1u, static_cast<u32>(image_info.size.x >> state.image.mip));
+                u32 const display_image_y = std::max(1u, static_cast<u32>(image_info.size.y >> state.image.mip));
 
                 /// ================================
                 /// ==== MAINTAIN DISPLAY IMAGE ====
                 /// ================================
 
                 bool create_display_image = true;
-                auto display_image_info_optional = ti.device.image_info(state.display_image);
+                auto display_image_info_optional = ti.device.image_info(state.image.display_image);
                 if (display_image_info_optional.has_value())
                 {
                     ImageInfo const & display_image_info = display_image_info_optional.value();
@@ -537,8 +602,8 @@ namespace daxa
                     create_display_image = !images_match;
                     if (create_display_image)
                     {
-                        state.destroy_display_image = state.display_image;
-                        state.display_image = {};
+                        state.image.destroy_display_image = state.image.display_image;
+                        state.image.display_image = {};
                     }
                 }
                 if (create_display_image)
@@ -555,7 +620,7 @@ namespace daxa
                     display_image_info.name = std::format("{}::viewer::display_image", resource->name);
                     display_image_info.usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_DST;
 
-                    state.display_image = ti.device.create_image(display_image_info);
+                    state.image.display_image = ti.device.create_image(display_image_info);
                 }
 
                 /// ==============================
@@ -563,7 +628,7 @@ namespace daxa
                 /// ==============================
 
                 bool create_clone_image = true;
-                auto clone_image_info_optional = ti.device.image_info(state.clone_image);
+                auto clone_image_info_optional = ti.device.image_info(state.image.clone_image);
                 if (clone_image_info_optional.has_value())
                 {
                     ImageInfo const & clone_image_info = clone_image_info_optional.value();
@@ -577,8 +642,8 @@ namespace daxa
                     create_clone_image = !images_match;
                     if (create_clone_image)
                     {
-                        state.destroy_clone_image = state.clone_image;
-                        state.clone_image = {};
+                        state.image.destroy_clone_image = state.image.clone_image;
+                        state.image.clone_image = {};
                     }
                 }
                 if (create_clone_image)
@@ -597,7 +662,7 @@ namespace daxa
                     clone_image_info.usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::SHADER_STORAGE;
                     clone_image_info.name = std::format("{}::viewer::clone_image", resource->name);
 
-                    state.clone_image = ti.device.create_image(clone_image_info);
+                    state.image.clone_image = ti.device.create_image(clone_image_info);
                 }
 
                 /// =========================
@@ -621,7 +686,7 @@ namespace daxa
                     {
                         ti.recorder.copy_image_to_image({
                             .src_image = image_id,
-                            .dst_image = state.clone_image,
+                            .dst_image = state.image.clone_image,
                             .src_slice = daxa::ImageArraySlice::slice(slice, mip),
                             .dst_slice = daxa::ImageArraySlice::slice(slice, mip),
                             .extent = {
@@ -645,31 +710,31 @@ namespace daxa
                     ti.recorder.set_pipeline(*context.resource_viewer_pipeline);
 
                     u32 const readback_index = (state.open_frame_count) % READBACK_CIRCULAR_BUFFER_SIZE;
-                    ImageInfo clone_image_info = ti.device.image_info(state.clone_image).value();
-                    ImageInfo display_image_info = ti.device.image_info(state.display_image).value();
-                    ImageViewInfo clone_image_view_info = ti.device.image_view_info(state.clone_image.default_view()).value();
+                    ImageInfo clone_image_info = ti.device.image_info(state.image.clone_image).value();
+                    ImageInfo display_image_info = ti.device.image_info(state.image.display_image).value();
+                    ImageViewInfo clone_image_view_info = ti.device.image_view_info(state.image.clone_image.default_view()).value();
                     clone_image_view_info.slice.level_count = 1;
                     clone_image_view_info.slice.layer_count = 1;
-                    clone_image_view_info.slice.base_mip_level = state.mip;
-                    clone_image_view_info.slice.base_array_layer = state.layer;
+                    clone_image_view_info.slice.base_mip_level = state.image.mip;
+                    clone_image_view_info.slice.base_array_layer = state.image.layer;
                     ImageViewId src_view = ti.device.create_image_view(clone_image_view_info);
                     ti.recorder.destroy_image_view_deferred(src_view);
                     ti.recorder.push_constant(TaskGraphDebugUiPush{
                         .src = src_view,
-                        .dst = state.display_image.default_view(),
+                        .dst = state.image.display_image.default_view(),
                         .display_image_size = {clone_image_info.size.x, clone_image_info.size.y},
                         .image_view_type = static_cast<u32>(clone_image_view_info.type),
                         .format = static_cast<i32>(scalar_kind_of_format(image_info.format)),
-                        .display_min = std::bit_cast<u32>(state.min_display_value),
-                        .display_max = std::bit_cast<u32>(state.max_display_value),
-                        .rainbow_ints = state.rainbow_ints,
-                        .gamma_correct = state.gamma_correct ? 1 : 0,
-                        .enabled_channels = state.enabled_channels,
+                        .display_min = std::bit_cast<u32>(state.image.min_display_value),
+                        .display_max = std::bit_cast<u32>(state.image.max_display_value),
+                        .rainbow_ints = state.image.rainbow_ints,
+                        .gamma_correct = state.image.gamma_correct ? 1 : 0,
+                        .enabled_channels = state.image.enabled_channels,
                         .mouse_over_index = {
-                            state.mouse_texel_index.x, // >> state.mip,
-                            state.mouse_texel_index.y, // >> state.mip,
+                            state.image.mouse_texel_index.x, // >> state.mip,
+                            state.image.mouse_texel_index.y, // >> state.mip,
                         },
-                        .readback_ptr = ti.device.device_address(state.readback_buffer).value() + readback_index * sizeof(TaskGraphDebugUiReadbackStruct),
+                        .readback_ptr = ti.device.device_address(state.image.readback_buffer).value() + readback_index * sizeof(TaskGraphDebugUiImageReadbackStruct),
                     });
                     ti.recorder.dispatch({
                         (display_image_info.size.x + TASK_GRAPH_DEBUG_UI_X - 1) / TASK_GRAPH_DEBUG_UI_X,
@@ -682,416 +747,535 @@ namespace daxa
     }
 
     auto resource_viewer_ui(
-        TaskGraphDebugContext & context,
+        ImplTaskGraphDebugUi & context,
+        ImplTaskGraph * impl,
         std::string const & resource_name,
         ResourceViewerState & state) -> bool
     {
-        if (!context.impl->name_to_resource_table.contains(resource_name))
+        if (!impl->name_to_resource_table.contains(resource_name))
         {
             return false;
         }
-        ImplTaskResource const & resource = *context.impl->name_to_resource_table.at(resource_name).first;
+        ImplTaskResource const & resource = *impl->name_to_resource_table.at(resource_name).first;
         bool open = true;
 
         bool begin_return = true;
-        if (state.free_window)
+        if (resource.kind == TaskResourceKind::IMAGE)
         {
-            ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_FirstUseEver);
-            ImGui::Begin(std::format("{}::Viewer", resource.name).c_str(), &open, ImGuiWindowFlags_NoSavedSettings);
-            begin_return = open;
-        }
-
-        if (begin_return)
-        {
-            if (context.impl->info.device.is_id_valid(state.clone_image) && state.open_frame_count > READBACK_CIRCULAR_BUFFER_SIZE)
+            if (state.free_window)
             {
-                ImageInfo clone_image_info = context.impl->info.device.image_info(state.clone_image).value();
-                u32 size_x = clone_image_info.size.x >> state.mip;
-                u32 size_y = clone_image_info.size.y >> state.mip;
+                constexpr u32 header_height = 100;
+                constexpr u32 popout_default_width = 500;
+                constexpr u32 default_popout_height = 380;
 
-                u32 const channel_count = channel_count_of_format(clone_image_info.format);
-
-                if (channel_count < 4)
+                f32 window_height = default_popout_height;
+                if (context.device.is_id_valid(state.image.clone_image) && state.open_frame_count > READBACK_CIRCULAR_BUFFER_SIZE)
                 {
-                    state.enabled_channels.w = 0;
+                    ImageInfo clone_image_info = context.device.image_info(state.image.clone_image).value();
+                    f32 const clone_image_aspect_ratio = static_cast<f32>(clone_image_info.size.x) / static_cast<f32>(clone_image_info.size.y);
+                    f32 const desired_image_height = popout_default_width * (1.0f / clone_image_aspect_ratio);
+                    window_height = desired_image_height + header_height;
                 }
-                if (channel_count < 3)
+                ImGui::SetNextWindowSize(ImVec2(popout_default_width, window_height), ImGuiCond_FirstUseEver);
+                ImGui::Begin(std::format("{}::Viewer", resource.name).c_str(), &open, ImGuiWindowFlags_NoSavedSettings);
+                begin_return = open;
+            }
+
+            if (begin_return)
+            {
+                if (context.device.is_id_valid(state.image.clone_image) && state.open_frame_count > READBACK_CIRCULAR_BUFFER_SIZE)
                 {
-                    state.enabled_channels.z = 0;
-                }
-                if (channel_count < 2)
-                {
-                    state.enabled_channels.y = 0;
-                }
+                    ImageInfo clone_image_info = context.device.image_info(state.image.clone_image).value();
+                    u32 size_x = clone_image_info.size.x >> state.image.mip;
+                    u32 size_y = clone_image_info.size.y >> state.image.mip;
 
-                ImGui::Checkbox("PopOut", &state.free_window_next_frame);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(80);
-                ImGui::SliderInt("Access", &state.timeline_index, 0, resource.access_timeline.size() - 1);
-                ImGui::SameLine();
-                ImGui::Checkbox("Before", reinterpret_cast<bool *>(&state.pre_task));
-                ImGui::SameLine();
-                ImGui::Checkbox("Freeze", reinterpret_cast<bool *>(&state.freeze_resource));
-                ImGui::SameLine();
-                ImGui::Checkbox("PreClear", reinterpret_cast<bool *>(&state.clear_before_task));
-                ImGui::SetNextItemWidth(80);
-                ImGui::InputInt("Mip", &state.mip);
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(80);
-                ImGui::InputInt("Layer", &state.layer);
+                    u32 const channel_count = channel_count_of_format(clone_image_info.format);
 
-                auto draw_color_checkbox = [&](const char * id, ImVec4 color, i32 & checked, bool enabled)
-                {
-                    const float hovered_extra = 0.3f;
-                    const float active_extra = 0.2f;
-                    const float normal_downscale = 0.8f;
-                    ImVec4 bg_color = color;
-                    bg_color.x *= normal_downscale;
-                    bg_color.y *= normal_downscale;
-                    bg_color.z *= normal_downscale;
-                    ImVec4 hovered_color = color;
-                    hovered_color.x = std::min(hovered_color.x, hovered_color.x + hovered_extra);
-                    hovered_color.y = std::min(hovered_color.y, hovered_color.y + hovered_extra);
-                    hovered_color.z = std::min(hovered_color.z, hovered_color.z + hovered_extra);
-                    ImVec4 active_color = color;
-                    active_color.x = std::min(active_color.x, active_color.x + active_extra);
-                    active_color.y = std::min(active_color.y, active_color.y + active_extra);
-                    active_color.z = std::min(active_color.z, active_color.z + active_extra);
-                    ImGui::PushStyleColor(ImGuiCol_FrameBg, bg_color);
-                    ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, hovered_color);
-                    ImGui::PushStyleColor(ImGuiCol_FrameBgActive, active_color);
-                    ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0,0,0,1));
-                    ImGui::BeginDisabled(!enabled);
-                    ImGui::Checkbox(id, reinterpret_cast<bool *>(&checked));
-                    ImGui::EndDisabled();
-                    ImGui::PopStyleColor(4);
-                };
+                    if (channel_count < 4)
+                    {
+                        state.image.enabled_channels.w = 0;
+                    }
+                    if (channel_count < 3)
+                    {
+                        state.image.enabled_channels.z = 0;
+                    }
+                    if (channel_count < 2)
+                    {
+                        state.image.enabled_channels.y = 0;
+                    }
 
-                ImGui::SameLine();
-                draw_color_checkbox("##R", ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f), state.enabled_channels.x, channel_count > 0);
-                ImGui::SameLine();
-                draw_color_checkbox("##G", ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f), state.enabled_channels.y, channel_count > 1);
-                ImGui::SameLine();
-                draw_color_checkbox("##B", ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f), state.enabled_channels.z, channel_count > 2);
-                ImGui::SameLine();
-                draw_color_checkbox("##A", ImVec4(0.7f, 0.7f, 0.7f, 1.0f), state.enabled_channels.w, channel_count > 2);
+                    ImGui::Checkbox("PopOut", &state.free_window_next_frame);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(80);
+                    ImGui::SliderInt("Access", &state.timeline_index, 0, static_cast<i32>(resource.access_timeline.size() - 1));
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Before", reinterpret_cast<bool *>(&state.pre_task));
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Freeze", reinterpret_cast<bool *>(&state.freeze_resource));
+                    ImGui::SameLine();
+                    ImGui::Checkbox("PreClear", reinterpret_cast<bool *>(&state.clear_before_task));
+                    ImGui::SetNextItemWidth(80);
+                    ImGui::InputInt("Mip", &state.image.mip);
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(80);
+                    ImGui::InputInt("Layer", &state.image.layer);
 
-                ImGui::SameLine(0, 10);
-                ImGui::Text("|");
-                ImGui::SameLine();
-                ImGui::Checkbox("Srgb", &state.gamma_correct);
-                ImGui::SameLine();
-                ImGui::Checkbox("Hex", &state.display_as_hexadecimal);
+                    auto draw_color_checkbox = [&](const char * id, ImVec4 color, i32 & checked, bool enabled)
+                    {
+                        const float hovered_extra = 0.3f;
+                        const float active_extra = 0.2f;
+                        const float normal_downscale = 0.8f;
+                        ImVec4 bg_color = color;
+                        bg_color.x *= normal_downscale;
+                        bg_color.y *= normal_downscale;
+                        bg_color.z *= normal_downscale;
+                        ImVec4 hovered_color = color;
+                        hovered_color.x = std::min(hovered_color.x, hovered_color.x + hovered_extra);
+                        hovered_color.y = std::min(hovered_color.y, hovered_color.y + hovered_extra);
+                        hovered_color.z = std::min(hovered_color.z, hovered_color.z + hovered_extra);
+                        ImVec4 active_color = color;
+                        active_color.x = std::min(active_color.x, active_color.x + active_extra);
+                        active_color.y = std::min(active_color.y, active_color.y + active_extra);
+                        active_color.z = std::min(active_color.z, active_color.z + active_extra);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBg, bg_color);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBgHovered, hovered_color);
+                        ImGui::PushStyleColor(ImGuiCol_FrameBgActive, active_color);
+                        ImGui::PushStyleColor(ImGuiCol_CheckMark, ImVec4(0,0,0,1));
+                        ImGui::BeginDisabled(!enabled);
+                        ImGui::Checkbox(id, reinterpret_cast<bool *>(&checked));
+                        ImGui::EndDisabled();
+                        ImGui::PopStyleColor(4);
+                    };
 
-                f64 min_value = {};
-                f64 max_value = {};
-                bool const neg_value_written = state.latest_readback.neg_min_value != ~0u;
-                bool const pos_value_written = state.latest_readback.pos_min_value != ~0u;
-                switch (scalar_kind_of_format(clone_image_info.format))
-                {
-                case ScalarKind::FLOAT:
-                    min_value = std::min(
-                        neg_value_written ? -std::bit_cast<f32>(state.latest_readback.neg_max_value) : std::numeric_limits<f32>::max(),
-                        pos_value_written ? +std::bit_cast<f32>(state.latest_readback.pos_min_value) : std::numeric_limits<f32>::max());
-                    max_value = std::max(
-                        neg_value_written ? -std::bit_cast<f32>(state.latest_readback.neg_min_value) : std::numeric_limits<f32>::lowest(),
-                        pos_value_written ? +std::bit_cast<f32>(state.latest_readback.pos_max_value) : std::numeric_limits<f32>::lowest());
-                    break;
-                case ScalarKind::INT:
-                    min_value = std::min(
-                        neg_value_written ? -std::bit_cast<i32>(state.latest_readback.neg_max_value) : std::numeric_limits<i32>::max(),
-                        pos_value_written ? +std::bit_cast<i32>(state.latest_readback.pos_min_value) : std::numeric_limits<i32>::max());
-                    max_value = std::max(
-                        neg_value_written ? -std::bit_cast<i32>(state.latest_readback.neg_min_value) : std::numeric_limits<i32>::lowest(),
-                        pos_value_written ? +std::bit_cast<i32>(state.latest_readback.pos_max_value) : std::numeric_limits<i32>::lowest());
-                    break;
-                case ScalarKind::UINT:
-                    DAXA_DBG_ASSERT_TRUE_M(!neg_value_written, "IMPOSSIBLE CASE! Negative values cannot be written for uints");
-                    min_value = state.latest_readback.pos_min_value;
-                    max_value = state.latest_readback.pos_max_value;
-                    break;
-                }
+                    ImGui::SameLine();
+                    draw_color_checkbox("##R", ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f), state.image.enabled_channels.x, channel_count > 0);
+                    ImGui::SameLine();
+                    draw_color_checkbox("##G", ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f), state.image.enabled_channels.y, channel_count > 1);
+                    ImGui::SameLine();
+                    draw_color_checkbox("##B", ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f), state.image.enabled_channels.z, channel_count > 2);
+                    ImGui::SameLine();
+                    draw_color_checkbox("##A", ImVec4(0.7f, 0.7f, 0.7f, 1.0f), state.image.enabled_channels.w, channel_count > 2);
 
-                if (state.display_as_hexadecimal)
-                {
-                    u32 hex_min = {};
-                    u32 hex_max = {};
+                    ImGui::SameLine(0, 10);
+                    ImGui::Text("|");
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Srgb", &state.image.gamma_correct);
+                    ImGui::SameLine();
+                    ImGui::Checkbox("Hex", &state.display_as_hexadecimal);
+
+                    f64 min_value = {};
+                    f64 max_value = {};
+                    bool const neg_value_written = state.image.latest_readback.neg_min_value != ~0u;
+                    bool const pos_value_written = state.image.latest_readback.pos_min_value != ~0u;
+                    switch (scalar_kind_of_format(clone_image_info.format))
+                    {
+                    case ScalarKind::FLOAT:
+                        min_value = std::min(
+                            neg_value_written ? -std::bit_cast<f32>(state.image.latest_readback.neg_max_value) : std::numeric_limits<f32>::max(),
+                            pos_value_written ? +std::bit_cast<f32>(state.image.latest_readback.pos_min_value) : std::numeric_limits<f32>::max());
+                        max_value = std::max(
+                            neg_value_written ? -std::bit_cast<f32>(state.image.latest_readback.neg_min_value) : std::numeric_limits<f32>::lowest(),
+                            pos_value_written ? +std::bit_cast<f32>(state.image.latest_readback.pos_max_value) : std::numeric_limits<f32>::lowest());
+                        break;
+                    case ScalarKind::INT:
+                        min_value = std::min(
+                            neg_value_written ? -std::bit_cast<i32>(state.image.latest_readback.neg_max_value) : std::numeric_limits<i32>::max(),
+                            pos_value_written ? +std::bit_cast<i32>(state.image.latest_readback.pos_min_value) : std::numeric_limits<i32>::max());
+                        max_value = std::max(
+                            neg_value_written ? -std::bit_cast<i32>(state.image.latest_readback.neg_min_value) : std::numeric_limits<i32>::lowest(),
+                            pos_value_written ? +std::bit_cast<i32>(state.image.latest_readback.pos_max_value) : std::numeric_limits<i32>::lowest());
+                        break;
+                    case ScalarKind::UINT:
+                        DAXA_DBG_ASSERT_TRUE_M(!neg_value_written, "IMPOSSIBLE CASE! Negative values cannot be written for uints");
+                        min_value = state.image.latest_readback.pos_min_value;
+                        max_value = state.image.latest_readback.pos_max_value;
+                        break;
+                    }
+
+                    if (state.display_as_hexadecimal)
+                    {
+                        u32 hex_min = {};
+                        u32 hex_max = {};
+                        switch (scalar_kind_of_format(clone_image_info.format))
+                        {
+                        case ScalarKind::FLOAT:
+                        {
+                            hex_min = std::bit_cast<u32>(static_cast<f32>(min_value));
+                            hex_max = std::bit_cast<u32>(static_cast<f32>(max_value));
+                            break;
+                        }
+                        case ScalarKind::INT:
+                        {
+                            hex_min = std::bit_cast<u32>(static_cast<i32>(min_value));
+                            hex_max = std::bit_cast<u32>(static_cast<i32>(max_value));
+                            break;
+                        }
+                        case ScalarKind::UINT:
+                        {
+                            hex_min = std::bit_cast<u32>(static_cast<u32>(min_value));
+                            hex_max = std::bit_cast<u32>(static_cast<u32>(max_value));
+                            break;
+                        }
+                        }
+                        ImGui::Text(std::format("Min {:#010x} Max {:#010x}", hex_min, hex_max).c_str());
+                    }
+                    else
+                    {
+                        switch (scalar_kind_of_format(clone_image_info.format))
+                        {
+                        case ScalarKind::FLOAT:
+                        {
+                            ImGui::Text(std::format("Min {:<10.3e} Max {:<10.3e}", min_value, max_value).c_str());
+                            break;
+                        }
+                        case ScalarKind::INT:
+                        {
+                            ImGui::Text(std::format("Min {:<10} Max {:<10}", static_cast<i32>(min_value), static_cast<i32>(max_value)).c_str());
+                            break;
+                        }
+                        case ScalarKind::UINT:
+                        {
+                            ImGui::Text(std::format("Min {:<10} Max {:<10}", static_cast<u32>(min_value), static_cast<u32>(max_value)).c_str());
+                            break;
+                        }
+                        }
+                    }
+                    ImGui::SameLine();
+                    ImGui::SetNextItemWidth(80);
                     switch (scalar_kind_of_format(clone_image_info.format))
                     {
                     case ScalarKind::FLOAT:
                     {
-                        hex_min = std::bit_cast<u32>(static_cast<f32>(min_value));
-                        hex_max = std::bit_cast<u32>(static_cast<f32>(max_value));
+                        f32 const min_f32 = static_cast<f32>(min_value);
+                        f32 const max_f32 = static_cast<f32>(max_value);
+                        if (!state.image.display_value_range_initialized)
+                        {
+                            if (max_value == 0.0 && min_value == 0.0)
+                            {
+                                max_value = 1.0;
+                            }
+                            state.image.min_display_value._f32 = static_cast<f32>(min_value);
+                            state.image.max_display_value._f32 = static_cast<f32>(max_value);
+                            state.image.display_value_range_initialized = true;
+                        }
+                        ImGui::SetNextItemWidth(160);
+                        f64 values[2] = {static_cast<f64>(state.image.min_display_value._f32), static_cast<f64>(state.image.max_display_value._f32)};
+                        f64 min_values[2] = {static_cast<f64>(min_f32), static_cast<f64>(min_f32)};
+                        f64 max_values[2] = {static_cast<f64>(max_f32), static_cast<f64>(max_f32)};
+                        ImGui::SliderScalarN("Display Range", ImGuiDataType_Double, values, 2, min_values, max_values);
+                        state.image.min_display_value._f32 = static_cast<f32>(values[0]);
+                        state.image.max_display_value._f32 = static_cast<f32>(values[1]);
                         break;
                     }
                     case ScalarKind::INT:
                     {
-                        hex_min = std::bit_cast<u32>(static_cast<i32>(min_value));
-                        hex_max = std::bit_cast<u32>(static_cast<i32>(max_value));
+                        i32 const min_int = static_cast<i32>(min_value);
+                        i32 const max_int = static_cast<i32>(max_value);
+                        if (!state.image.display_value_range_initialized)
+                        {
+                            if (max_value == 0.0 && min_value == 0.0)
+                            {
+                                max_value = 1.0;
+                            }
+                            state.image.min_display_value._i32 = static_cast<i32>(min_value);
+                            state.image.max_display_value._i32 = static_cast<i32>(max_value);
+                            state.image.display_value_range_initialized = true;
+                        }
+                        ImGui::SetNextItemWidth(160);
+                        i64 values[2] = {static_cast<i64>(state.image.min_display_value._i32), static_cast<i64>(state.image.max_display_value._i32)};
+                        i64 min_values[2] = {static_cast<i64>(min_int), static_cast<i64>(min_int)};
+                        i64 max_values[2] = {static_cast<i64>(max_int), static_cast<i64>(max_int)};
+                        ImGui::SliderScalarN("Display Range", ImGuiDataType_S64, values, 2, min_values, max_values);
+                        state.image.min_display_value._i32 = static_cast<i32>(values[0]);
+                        state.image.max_display_value._i32 = static_cast<i32>(values[1]);
                         break;
                     }
                     case ScalarKind::UINT:
                     {
-                        hex_min = std::bit_cast<u32>(static_cast<u32>(min_value));
-                        hex_max = std::bit_cast<u32>(static_cast<u32>(max_value));
+                        u32 const min_uint = static_cast<u32>(min_value);
+                        u32 const max_uint = static_cast<u32>(max_value);
+                        if (!state.image.display_value_range_initialized)
+                        {
+                            if (max_value == 0.0 && min_value == 0.0)
+                            {
+                                max_value = 1.0;
+                            }
+                            state.image.min_display_value._u32 = static_cast<u32>(min_value);
+                            state.image.max_display_value._u32 = static_cast<u32>(max_value);
+                            state.image.display_value_range_initialized = true;
+                        }
+                        ImGui::SetNextItemWidth(160);
+                        u64 values[2] = {static_cast<u64>(state.image.min_display_value._u32), static_cast<u64>(state.image.max_display_value._u32)};
+                        u64 min_values[2] = {static_cast<u64>(min_uint), static_cast<u64>(min_uint)};
+                        u64 max_values[2] = {static_cast<u64>(max_uint), static_cast<u64>(max_uint)};
+                        ImGui::SliderScalarN("Display Range", ImGuiDataType_U64, values, 2, min_values, max_values);
+                        state.image.min_display_value._u32 = static_cast<u32>(values[0]);
+                        state.image.max_display_value._u32 = static_cast<u32>(values[1]);
                         break;
                     }
                     }
-                    ImGui::Text(std::format("Min {:#010x} Max {:#010x}", hex_min, hex_max).c_str());
-                }
-                else
-                {
-                    switch (scalar_kind_of_format(clone_image_info.format))
-                    {
-                    case ScalarKind::FLOAT:
-                    {
-                        ImGui::Text(std::format("Min {:<10.3e} Max {:<10.3e}", min_value, max_value).c_str());
-                        break;
-                    }
-                    case ScalarKind::INT:
-                    {
-                        ImGui::Text(std::format("Min {:<10} Max {:<10}", static_cast<i32>(min_value), static_cast<i32>(max_value)).c_str());
-                        break;
-                    }
-                    case ScalarKind::UINT:
-                    {
-                        ImGui::Text(std::format("Min {:<10} Max {:<10}", static_cast<u32>(min_value), static_cast<u32>(max_value)).c_str());
-                        break;
-                    }
-                    }
-                }
-                ImGui::SameLine();
-                ImGui::SetNextItemWidth(80);
-                switch (scalar_kind_of_format(clone_image_info.format))
-                {
-                case ScalarKind::FLOAT:
-                {
-                    f32 const min_f32 = static_cast<f32>(min_value);
-                    f32 const max_f32 = static_cast<f32>(max_value);
-                    if (!state.display_value_range_initialized)
-                    {
-                        if (max_value == 0.0 && min_value == 0.0)
-                        {
-                            max_value = 1.0;
-                        }
-                        state.min_display_value._f32 = static_cast<f32>(min_value);
-                        state.max_display_value._f32 = static_cast<f32>(max_value);
-                        state.display_value_range_initialized = true;
-                    }
-                    ImGui::SetNextItemWidth(160);
-                    f64 values[2] = {static_cast<f64>(state.min_display_value._f32), static_cast<f64>(state.max_display_value._f32)};
-                    f64 min_values[2] = {static_cast<f64>(min_f32), static_cast<f64>(min_f32)};
-                    f64 max_values[2] = {static_cast<f64>(max_f32), static_cast<f64>(max_f32)};
-                    ImGui::SliderScalarN("Display Range", ImGuiDataType_Double, values, 2, min_values, max_values);
-                    state.min_display_value._f32 = static_cast<f32>(values[0]);
-                    state.max_display_value._f32 = static_cast<f32>(values[1]);
-                    break;
-                }
-                case ScalarKind::INT:
-                {
-                    i32 const min_int = static_cast<i32>(min_value);
-                    i32 const max_int = static_cast<i32>(max_value);
-                    if (!state.display_value_range_initialized)
-                    {
-                        if (max_value == 0.0 && min_value == 0.0)
-                        {
-                            max_value = 1.0;
-                        }
-                        state.min_display_value._i32 = static_cast<i32>(min_value);
-                        state.max_display_value._i32 = static_cast<i32>(max_value);
-                        state.display_value_range_initialized = true;
-                    }
-                    ImGui::SetNextItemWidth(160);
-                    i64 values[2] = {static_cast<i64>(state.min_display_value._i32), static_cast<i64>(state.max_display_value._i32)};
-                    i64 min_values[2] = {static_cast<i64>(min_int), static_cast<i64>(min_int)};
-                    i64 max_values[2] = {static_cast<i64>(max_int), static_cast<i64>(max_int)};
-                    ImGui::SliderScalarN("Display Range", ImGuiDataType_S64, values, 2, min_values, max_values);
-                    state.min_display_value._i32 = static_cast<i32>(values[0]);
-                    state.max_display_value._i32 = static_cast<i32>(values[1]);
-                    break;
-                }
-                case ScalarKind::UINT:
-                {
-                    u32 const min_uint = static_cast<u32>(min_value);
-                    u32 const max_uint = static_cast<u32>(max_value);
-                    if (!state.display_value_range_initialized)
-                    {
-                        if (max_value == 0.0 && min_value == 0.0)
-                        {
-                            max_value = 1.0;
-                        }
-                        state.min_display_value._u32 = static_cast<u32>(min_value);
-                        state.max_display_value._u32 = static_cast<u32>(max_value);
-                        state.display_value_range_initialized = true;
-                    }
-                    ImGui::SetNextItemWidth(160);
-                    u64 values[2] = {static_cast<u64>(state.min_display_value._u32), static_cast<u64>(state.max_display_value._u32)};
-                    u64 min_values[2] = {static_cast<u64>(min_uint), static_cast<u64>(min_uint)};
-                    u64 max_values[2] = {static_cast<u64>(max_uint), static_cast<u64>(max_uint)};
-                    ImGui::SliderScalarN("Display Range", ImGuiDataType_U64, values, 2, min_values, max_values);
-                    state.min_display_value._u32 = static_cast<u32>(values[0]);
-                    state.max_display_value._u32 = static_cast<u32>(values[1]);
-                    break;
-                }
-                }
 
-                state.mip = std::clamp(state.mip, 0, static_cast<i32>(clone_image_info.mip_level_count) - 1);
-                state.layer = std::clamp(state.layer, 0, static_cast<i32>(clone_image_info.array_layer_count) - 1);
+                    state.image.mip = std::clamp(state.image.mip, 0, static_cast<i32>(clone_image_info.mip_level_count) - 1);
+                    state.image.layer = std::clamp(state.image.layer, 0, static_cast<i32>(clone_image_info.array_layer_count) - 1);
 
-                if (!state.display_image.is_empty())
-                {
-                    state.imgui_image_id = context.imgui_renderer->create_texture_id({
-                        .image_view_id = state.display_image.default_view(),
-                        .sampler_id = context.resource_viewer_sampler_id,
-                    });
-                    ImPlot::PushStyleVar(ImPlotStyleVar_PlotBorderSize, 2);
-                    ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0.0f, 0.0f));
-                    ImPlot::PushStyleVar(ImPlotStyleVar_LabelPadding, ImVec2(0.0f, 0.0f));
-                    f32 const aspect_ratio = static_cast<f32>(size_x) / static_cast<f32>(size_y);
-                    ImVec2 const available_region = ImGui::GetContentRegionAvail();
-                    f32 const wanted_height = available_region.x * (1.0f / aspect_ratio);
-                    f32 const real_height = wanted_height > available_region.y ? available_region.y : wanted_height;
-                    f32 const real_width = real_height * aspect_ratio;
-                    ImPlotPoint mouse_pos = ImPlotPoint(std::numeric_limits<f64>::max(), std::numeric_limits<f64>::max());
-                    if (ImPlot::BeginPlot("##image", ImVec2(real_width, real_height), ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText))
+                    if (!state.image.display_image.is_empty())
                     {
-                        u32 const flags = ImPlotAxisFlags_NoDecorations & (~ImPlotAxisFlags_NoTickMarks);
-                        ImPlot::SetupAxes("", "", flags, flags);
-                        if (ImPlot::IsPlotHovered())
+                        state.image.imgui_image_id = context.imgui_renderer.create_texture_id({
+                            .image_view_id = state.image.display_image.default_view(),
+                            .sampler_id = context.resource_viewer_sampler_id,
+                        });
+                        ImPlot::PushStyleVar(ImPlotStyleVar_PlotBorderSize, 2);
+                        ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0.0f, 0.0f));
+                        ImPlot::PushStyleVar(ImPlotStyleVar_LabelPadding, ImVec2(0.0f, 0.0f));
+                        f32 const aspect_ratio = static_cast<f32>(size_x) / static_cast<f32>(size_y);
+                        ImVec2 const available_region = ImGui::GetContentRegionAvail();
+                        f32 const wanted_height = available_region.x * (1.0f / aspect_ratio);
+                        f32 const real_height = wanted_height > available_region.y ? available_region.y : wanted_height;
+                        f32 const real_width = real_height * aspect_ratio;
+                        ImPlotPoint mouse_pos = ImPlotPoint(std::numeric_limits<f64>::max(), std::numeric_limits<f64>::max());
+                        if (ImPlot::BeginPlot("##image", ImVec2(real_width, real_height), ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText))
                         {
-                            auto raw_mouse_pos = ImPlot::GetPlotMousePos(IMPLOT_AUTO, IMPLOT_AUTO);
-                            mouse_pos = ImPlotPoint(raw_mouse_pos.x, 1.0f - raw_mouse_pos.y) * ImPlotPoint(size_x, size_y);
-                        }
-
-                        ImPlot::PlotImage("##my image", state.imgui_image_id, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
-                        ImPlot::EndPlot();
-                    }
-                    state.mouse_texel_index = {
-                        std::clamp(static_cast<i32>(mouse_pos.x), 0, static_cast<i32>(size_x) - 1),
-                        std::clamp(static_cast<i32>(mouse_pos.y), 0, static_cast<i32>(size_y) - 1)};
-
-                    if (ImGui::IsItemHovered())
-                    {
-                        ImGui::BeginTooltip();
-                        ImGui::Text(std::format("{}, {}", static_cast<i32>(mouse_pos.x), static_cast<i32>(mouse_pos.y)).c_str());
-
-                        if (state.display_as_hexadecimal)
-                        {
-                            if (state.enabled_channels.x)
+                            u32 const flags = ImPlotAxisFlags_NoDecorations & (~ImPlotAxisFlags_NoTickMarks);
+                            ImPlot::SetupAxes("", "", flags, flags);
+                            if (ImPlot::IsPlotHovered())
                             {
-                                ImGui::Text(std::format("R {:#010x}", std::bit_cast<u32>(state.latest_readback.hovered_value.x)).c_str());
-                                ImGui::SameLine();
+                                auto raw_mouse_pos = ImPlot::GetPlotMousePos(IMPLOT_AUTO, IMPLOT_AUTO);
+                                mouse_pos = ImPlotPoint(raw_mouse_pos.x, 1.0f - raw_mouse_pos.y) * ImPlotPoint(size_x, size_y);
                             }
-                            if (state.enabled_channels.y)
-                            {
-                                ImGui::Text(std::format("G {:#010x}", std::bit_cast<u32>(state.latest_readback.hovered_value.y)).c_str());
-                                ImGui::SameLine();
-                            }
-                            if (state.enabled_channels.z)
-                            {
-                                ImGui::Text(std::format("B {:#010x}", std::bit_cast<u32>(state.latest_readback.hovered_value.z)).c_str());
-                                ImGui::SameLine();
-                            }
-                            if (state.enabled_channels.w)
-                            {
-                                ImGui::Text(std::format("A {:#010x}", std::bit_cast<u32>(state.latest_readback.hovered_value.w)).c_str());
-                                ImGui::SameLine();
-                            }
-                            ImGui::Dummy({});
+
+                            ImPlot::PlotImage("##my image", state.image.imgui_image_id, ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
+                            ImPlot::EndPlot();
                         }
-                        else
+                        state.image.mouse_texel_index = {
+                            std::clamp(static_cast<i32>(mouse_pos.x), 0, static_cast<i32>(size_x) - 1),
+                            std::clamp(static_cast<i32>(mouse_pos.y), 0, static_cast<i32>(size_y) - 1)};
+
+                        if (ImGui::IsItemHovered())
                         {
-                            switch (scalar_kind_of_format(clone_image_info.format))
+                            ImGui::BeginTooltip();
+                            ImGui::Text(std::format("{}, {}", static_cast<i32>(mouse_pos.x), static_cast<i32>(mouse_pos.y)).c_str());
+
+                            if (state.display_as_hexadecimal)
                             {
-                            case ScalarKind::FLOAT:
-                            {
-                                if (state.enabled_channels.x)
+                                if (state.image.enabled_channels.x)
                                 {
-                                    ImGui::Text(std::format("R {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.latest_readback.hovered_value.x))).c_str());
+                                    ImGui::Text(std::format("R {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.x)).c_str());
                                     ImGui::SameLine();
                                 }
-                                if (state.enabled_channels.y)
+                                if (state.image.enabled_channels.y)
                                 {
-                                    ImGui::Text(std::format("G {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.latest_readback.hovered_value.y))).c_str());
+                                    ImGui::Text(std::format("G {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.y)).c_str());
                                     ImGui::SameLine();
                                 }
-                                if (state.enabled_channels.z)
+                                if (state.image.enabled_channels.z)
                                 {
-                                    ImGui::Text(std::format("B {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.latest_readback.hovered_value.z))).c_str());
+                                    ImGui::Text(std::format("B {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.z)).c_str());
                                     ImGui::SameLine();
                                 }
-                                if (state.enabled_channels.w)
+                                if (state.image.enabled_channels.w)
                                 {
-                                    ImGui::Text(std::format("A {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.latest_readback.hovered_value.w))).c_str());
+                                    ImGui::Text(std::format("A {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.w)).c_str());
+                                    ImGui::SameLine();
                                 }
                                 ImGui::Dummy({});
-                                break;
                             }
-                            case ScalarKind::INT:
+                            else
                             {
+                                switch (scalar_kind_of_format(clone_image_info.format))
+                                {
+                                case ScalarKind::FLOAT:
+                                {
+                                    if (state.image.enabled_channels.x)
+                                    {
+                                        ImGui::Text(std::format("R {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.x))).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.y)
+                                    {
+                                        ImGui::Text(std::format("G {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.y))).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.z)
+                                    {
+                                        ImGui::Text(std::format("B {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.z))).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.w)
+                                    {
+                                        ImGui::Text(std::format("A {:<6.3e}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.w))).c_str());
+                                    }
+                                    ImGui::Dummy({});
+                                    break;
+                                }
+                                case ScalarKind::INT:
+                                {
 
-                                if (state.enabled_channels.x)
-                                {
-                                    ImGui::Text(std::format("R {:<10}", std::bit_cast<i32>(state.latest_readback.hovered_value.x)).c_str());
-                                    ImGui::SameLine();
+                                    if (state.image.enabled_channels.x)
+                                    {
+                                        ImGui::Text(std::format("R {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.x)).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.y)
+                                    {
+                                        ImGui::Text(std::format("G {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.y)).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.z)
+                                    {
+                                        ImGui::Text(std::format("B {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.z)).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.w)
+                                    {
+                                        ImGui::Text(std::format("A {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.w)).c_str());
+                                    }
+                                    ImGui::Dummy({});
+                                    break;
                                 }
-                                if (state.enabled_channels.y)
+                                case ScalarKind::UINT:
                                 {
-                                    ImGui::Text(std::format("G {:<10}", std::bit_cast<i32>(state.latest_readback.hovered_value.y)).c_str());
-                                    ImGui::SameLine();
+                                    if (state.image.enabled_channels.x)
+                                    {
+                                        ImGui::Text(std::format("R {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.x)).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.y)
+                                    {
+                                        ImGui::Text(std::format("G {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.y)).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.z)
+                                    {
+                                        ImGui::Text(std::format("B {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.z)).c_str());
+                                        ImGui::SameLine();
+                                    }
+                                    if (state.image.enabled_channels.w)
+                                    {
+                                        ImGui::Text(std::format("A {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.w)).c_str());
+                                    }
+                                    ImGui::Dummy({});
+                                    break;
                                 }
-                                if (state.enabled_channels.z)
-                                {
-                                    ImGui::Text(std::format("B {:<10}", std::bit_cast<i32>(state.latest_readback.hovered_value.z)).c_str());
-                                    ImGui::SameLine();
                                 }
-                                if (state.enabled_channels.w)
-                                {
-                                    ImGui::Text(std::format("A {:<10}", std::bit_cast<i32>(state.latest_readback.hovered_value.w)).c_str());
-                                }
-                                ImGui::Dummy({});
-                                break;
                             }
-                            case ScalarKind::UINT:
-                            {
-                                if (state.enabled_channels.x)
-                                {
-                                    ImGui::Text(std::format("R {:<10}", std::bit_cast<u32>(state.latest_readback.hovered_value.x)).c_str());
-                                    ImGui::SameLine();
-                                }
-                                if (state.enabled_channels.y)
-                                {
-                                    ImGui::Text(std::format("G {:<10}", std::bit_cast<u32>(state.latest_readback.hovered_value.y)).c_str());
-                                    ImGui::SameLine();
-                                }
-                                if (state.enabled_channels.z)
-                                {
-                                    ImGui::Text(std::format("B {:<10}", std::bit_cast<u32>(state.latest_readback.hovered_value.z)).c_str());
-                                    ImGui::SameLine();
-                                }
-                                if (state.enabled_channels.w)
-                                {
-                                    ImGui::Text(std::format("A {:<10}", std::bit_cast<u32>(state.latest_readback.hovered_value.w)).c_str());
-                                }
-                                ImGui::Dummy({});
-                                break;
-                            }
-                            }
+                            ImGui::EndTooltip();
                         }
-                        ImGui::EndTooltip();
-                    }
 
-                    ImPlot::PopStyleVar(3);
+                        ImPlot::PopStyleVar(3);
+                    }
                 }
             }
+            if (state.free_window)
+            {
+                ImGui::End();
+            }
         }
-        if (state.free_window)
+        else if (resource.kind == TaskResourceKind::BUFFER)
         {
-            ImGui::End();
+            if (state.free_window)
+            {
+                constexpr u32 header_height = 100;
+                constexpr u32 popout_default_width = 500;
+                constexpr u32 popout_default_height = 380;
+
+                ImGui::SetNextWindowSize(ImVec2(popout_default_width, popout_default_height), ImGuiCond_FirstUseEver);
+                ImGui::Begin(std::format("{}::Viewer", resource.name).c_str(), &open, ImGuiWindowFlags_NoSavedSettings);
+                begin_return = open;
+            }
+
+            if (context.device.is_id_valid(state.buffer.readback_buffer) && state.open_frame_count > READBACK_CIRCULAR_BUFFER_SIZE)
+            {
+                BufferInfo const & source_buffer_info = context.device.buffer_info(resource.id.buffer).value();
+                if (state.buffer.buffer_format_config_open)
+                {
+                    u64 display_struct_size = 0;
+                    ImGui::SetNextWindowSize(ImVec2(500, 300), ImGuiCond_FirstUseEver);
+                    if (ImGui::Begin(std::format("{} debug format config", source_buffer_info.name.data()).c_str(), &state.buffer.buffer_format_config_open, ImGuiWindowFlags_NoSavedSettings))
+                    {
+                        if (ImGui::BeginTable(std::format("##{}", source_buffer_info.name.data()).c_str(), 4, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg))
+                        {
+                            ImGui::TableSetupColumn("Name");
+                            ImGui::TableSetupColumn("Type");
+                            ImGui::TableSetupColumn("Array Size");
+                            ImGui::TableSetupColumn("Offset");
+                            ImGui::TableHeadersRow();
+                            
+                            for(i32 buffer_structure_entry = 0; buffer_structure_entry < state.buffer.tg_debug_buffer_structure.size(); ++buffer_structure_entry)
+                            {
+                                ImGui::PushID(buffer_structure_entry);
+                                auto & entry = state.buffer.tg_debug_buffer_structure.at(buffer_structure_entry);
+                                // Name column
+                                ImGui::TableNextColumn();
+                                constexpr u32 name_buffer_size = 256;
+                                std::array<char, name_buffer_size> name_buffer = {};
+                                std::memcpy(name_buffer.data(), entry.name.data(), entry.name.size());
+                                ImGui::SetNextItemWidth(100);
+                                ImGui::InputText("##", name_buffer.data(), name_buffer_size);
+                                entry.name = std::string(name_buffer.data());
+
+                                ImGui::TableNextColumn();
+                                const char * data_type_labels = "F32\0U32\0I32\0"; 
+                                ImGui::SetNextItemWidth(100);
+                                ImGui::Combo("##data_type", reinterpret_cast<i32*>(&entry.data_type), data_type_labels, 3);
+
+                                ImGui::TableNextColumn();
+                                ImGui::SetNextItemWidth(100);
+                                ImGui::InputInt("##array_size", &entry.array_size);
+                                ImGui::PopID();
+
+                                display_struct_size += entry.array_size * tg_debug_buffer_entry_type_bytesize(entry.data_type);
+
+                                entry.offset = display_struct_size;
+
+                                ImGui::TableNextColumn();
+                                ImGui::Text("%d", entry.offset);
+                            }
+
+                            ImGui::EndTable();
+                        }
+                        if(ImGui::Button("Add Row"))
+                        {
+                            state.buffer.tg_debug_buffer_structure.push_back({});
+                        }
+                    }
+                    ImGui::End();
+                }
+
+                if (begin_return)
+                {
+                    if (ImGui::Button("Open buffer layout config window", ImVec2({80, 20})))
+                    {
+                        state.buffer.buffer_format_config_open = true;
+                    }
+                }
+
+                
+                u64 ui_struct_size = 64;
+                u64 const array_entries = 1000;//source_buffer_info.size / ui_struct_size;
+                if (ImGui::BeginTable(std::format("##{}2", source_buffer_info.name.data()).c_str(), 2, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoHostExtendY | ImGuiTableFlags_ScrollY, ImVec2(0,300)))
+                {
+                    ImGui::TableSetupColumn("Name");
+                    ImGui::TableSetupColumn("Value");
+                    ImGui::TableHeadersRow();
+                    for (u32 i = 0; i < array_entries; ++i)
+                    {
+                        ImGui::TableNextColumn();
+                        ImGui::Text("test");
+                    }
+                    ImGui::EndTable();
+                }
+            }
+
+
+            if (state.free_window)
+            {
+                ImGui::End();
+            }
         }
 
         return begin_return;
     }
 } // namespace daxa
+
 #endif
 #endif

@@ -8,7 +8,7 @@
 
 #define READBACK_CIRCULAR_BUFFER_SIZE 4
 
-struct TaskGraphDebugUiReadbackStruct
+struct TaskGraphDebugUiImageReadbackStruct
 {
     daxa_f32vec4 hovered_color;
     daxa_u32vec4 hovered_value;
@@ -31,7 +31,7 @@ struct TaskGraphDebugUiPush
     daxa::i32 gamma_correct;
     daxa_i32vec4 enabled_channels;
     daxa_i32vec2 mouse_over_index;
-    daxa_BufferPtr(TaskGraphDebugUiReadbackStruct) readback_ptr;
+    daxa_BufferPtr(TaskGraphDebugUiImageReadbackStruct) readback_ptr;
 };
 
 #if !defined(__cplusplus)
@@ -65,7 +65,7 @@ float3 rainbow_maker(int i)
 
 [numthreads(TASK_GRAPH_DEBUG_UI_X, TASK_GRAPH_DEBUG_UI_Y, 1)]
 [shader("compute")]
-func entry_main(uint2 dtid : SV_DispatchThreadID)
+func main(uint2 dtid : SV_DispatchThreadID)
 {
     if (any(dtid >= push.display_image_size))
         return;

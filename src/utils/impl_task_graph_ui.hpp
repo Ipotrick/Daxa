@@ -1,18 +1,18 @@
 #pragma once
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH && DAXA_BUILT_WITH_UTILS_IMGUI
 #include <daxa/utils/task_graph_types.hpp>
+#include <daxa/utils/imgui.hpp>
 
 #if ENABLE_TASK_GRAPH_MK2
 
 #include "impl_resource_viewer.hpp"
-
 #include <set>
 
-#define TASK_GRAPH_resource_viewer_ONLINE_COMPILE_SHADERS 1
 
-#if TASK_GRAPH_resource_viewer_ONLINE_COMPILE_SHADERS
+#define TASK_GRAPH_RESOURCE_VIEWER_ONLINE_COMPILE_SHADERS 0 // FOR DEVELOPMENT ONLY
+
+#if TASK_GRAPH_RESOURCE_VIEWER_ONLINE_COMPILE_SHADERS
 #include <daxa/utils/pipeline_manager.hpp>
-#include "task_graph_debug_ui.slang"
 #endif
 
 namespace daxa
@@ -20,10 +20,14 @@ namespace daxa
     struct ImplTaskGraph;
     struct ImGuiRenderer;
 
-    struct TaskGraphDebugContext
+    struct ImplTaskGraphDebugUi final : ImplHandle
     {
+        ImplTaskGraphDebugUi() = default;
+        ~ImplTaskGraphDebugUi();
+
+        Device device = {};
+        ImGuiRenderer imgui_renderer = {};
         u32 last_exec_tg_unique_index = ~0u;
-        ImplTaskGraph * impl = {};
         std::array<char, 256> resource_name_search = {};
         std::array<char, 256> task_name_search = {};
         std::unordered_map<std::string, u32> pinned_resources = {};
@@ -39,17 +43,15 @@ namespace daxa
         u32 hovered_resource = ~0u;
         u32 hovered_attachment_index = ~0u;
 
-#if TASK_GRAPH_resource_viewer_ONLINE_COMPILE_SHADERS
+#if TASK_GRAPH_RESOURCE_VIEWER_ONLINE_COMPILE_SHADERS
         daxa::PipelineManager pipeline_manager = {};
 #endif
         std::unordered_map<std::string, ResourceViewerState> resource_viewer_states = {};
         std::shared_ptr<daxa::ComputePipeline> resource_viewer_pipeline = {};
         SamplerId resource_viewer_sampler_id = {};
-        // Needed to create image ids for imgui.
-        ImGuiRenderer * imgui_renderer = {};
+        
+        static void zero_ref_callback(ImplHandle const * handle);
     };
-
-    auto get_debug_ui_context(ImplTaskGraph & impl) -> TaskGraphDebugContext*;
 }
 
 #endif

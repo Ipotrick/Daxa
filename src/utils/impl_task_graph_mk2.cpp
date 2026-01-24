@@ -3307,7 +3307,8 @@ namespace daxa
         /// =======================
         /// ==== DEBUG UI HOOK ====
         /// =======================
-        TaskGraphDebugContext* debug_ui_context = get_debug_ui_context(impl);
+
+        ImplTaskGraphDebugUi* debug_ui_context = info.debug_ui ? info.debug_ui->get() : nullptr;
         if (debug_ui_context && debug_ui_context->resource_viewer_states.size() == 0)
         {
             debug_ui_context = nullptr; // We only care about the debug ui when there are active attachment viewers.
@@ -3529,7 +3530,7 @@ namespace daxa
                         }
                         if (debug_ui_context)
                         {
-                            task_resource_viewer_debug_ui_hook(*debug_ui_context, task_i, interface, true);
+                            task_resource_viewer_debug_ui_hook(*debug_ui_context, &impl, task_i, interface, true);
                         }
                         if (impl.info.pre_task_callback)
                         {
@@ -3542,7 +3543,7 @@ namespace daxa
                         }
                         if (debug_ui_context)
                         {
-                            task_resource_viewer_debug_ui_hook(*debug_ui_context, task_i, interface, false);
+                            task_resource_viewer_debug_ui_hook(*debug_ui_context, &impl, task_i, interface, false);
                         }
                         if (impl.info.enable_command_labels)
                         {
