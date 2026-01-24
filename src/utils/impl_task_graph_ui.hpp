@@ -3,7 +3,7 @@
 #include <daxa/utils/task_graph_types.hpp>
 #include <daxa/utils/imgui.hpp>
 
-#if ENABLE_TASK_GRAPH_MK2
+#if DAXA_ENABLE_TASK_GRAPH_MK2
 
 #include "impl_resource_viewer.hpp"
 #include <set>

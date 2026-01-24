@@ -659,8 +659,8 @@ namespace daxa
 
             u32 idx = iter.current_index;
 
-            this->push_back({});
             u32 const elements_to_move = this->element_count - idx;
+            this->push_back({});
             for (u32 i = 0; i < elements_to_move; ++i)
             {
                 u32 const src = this->element_count - 1 - i;

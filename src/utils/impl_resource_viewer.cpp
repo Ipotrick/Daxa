@@ -1,7 +1,7 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH && DAXA_BUILT_WITH_UTILS_IMGUI
 #include <daxa/utils/task_graph_types.hpp>
 
-#if ENABLE_TASK_GRAPH_MK2
+#if DAXA_ENABLE_TASK_GRAPH_MK2
 
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>

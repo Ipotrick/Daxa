@@ -11,7 +11,7 @@
 #include "impl_task_graph.hpp"
 #include "impl_task_graph_debug.hpp"
 
-#if ENABLE_TASK_GRAPH_MK2
+#if DAXA_ENABLE_TASK_GRAPH_MK2
 
 #include "impl_task_graph_mk2.cpp"
 

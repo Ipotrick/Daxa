@@ -90,7 +90,7 @@ namespace daxa
 
     void validate_overlapping_attachment_views(ImplTaskGraph const & impl, ImplTask const & task)
     {
-#if !ENABLE_TASK_GRAPH_MK2
+#if !DAXA_ENABLE_TASK_GRAPH_MK2
 #if DAXA_VALIDATION
         for_each(
             task.attachments,

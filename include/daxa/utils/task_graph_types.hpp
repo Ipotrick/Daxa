@@ -20,7 +20,7 @@
 #include <daxa/device.hpp>
 #include <daxa/utils/mem.hpp>
 
-#define ENABLE_TASK_GRAPH_MK2 0
+#define DAXA_ENABLE_TASK_GRAPH_MK2 0
 
 namespace daxa
 {
@@ -919,7 +919,7 @@ namespace daxa
         std::string name = {};
     };
 
-#if ENABLE_TASK_GRAPH_MK2
+#if DAXA_ENABLE_TASK_GRAPH_MK2
     struct ImplExternalResource;
     using ImplPersistentTaskBufferBlasTlas = ImplExternalResource;
 #else
@@ -1038,7 +1038,7 @@ namespace daxa
         std::string name = {};
     };
 
-#if ENABLE_TASK_GRAPH_MK2
+#if DAXA_ENABLE_TASK_GRAPH_MK2
     struct ImplExternalResource;
     using ImplPersistentTaskImage = ImplExternalResource;
 #else

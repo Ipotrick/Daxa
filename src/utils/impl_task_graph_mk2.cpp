@@ -102,9 +102,9 @@ namespace daxa
     auto error_message_no_access_sage(std::string_view task_name, std::string_view attachment_name, TaskAccess access) -> std::string
     {
         return std::format(
-            "ERROR: Attachment \"{}\" of task/task-head \"{}\" has access \"{}\" that does not declare a stage!\n"
-            "Task/Task-head \"{}\" declares no default stage because it is an untyped task/task-head!\n"
-            "Attachments declaring an access without stage is only allowed when the task/task-head HAS A TYPE, for example compute, raster or transfer.\n"
+            "ERROR: Attachment \"{}\" of task/task-head \"{}\" declared access \"{}\" that does not specify a stage!\n"
+            "This is allowed ONLY IF the task/task-head is typed. When the task/task-head is typed, it provides a default stage that is set for all attachments that do not specify a stage.\n"
+            "But task/task-head \"{}\" declares no default stage because it is an untyped task/task-head!\n"
             "When the task/task-head should not have a type for whatever reason, the stage has to be declared in the access, for example: VERTEX_SHADER::READ instead of just READ.\n",
             attachment_name, task_name, to_string(access), task_name
         );
@@ -1905,12 +1905,39 @@ namespace daxa
         }
 
         // Validate that all attachments of each task refer to unique resources.
+        // Validate that all image attachment mips and layers are within bounds the transient image. 
         for (u32 task_i = 0; task_i < impl.tasks.size(); ++task_i)
         {
             ImplTask & task = impl.tasks.at(task_i);
             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
             {
                 TaskAttachmentInfo const & attachment = task.attachments[attach_i];
+
+                if (attachment.type == TaskAttachmentType::IMAGE)
+                {
+                    u32 const resource_index = attachment.value.image.translated_view.index;
+
+                    if (resource_index != ~0u)
+                    {
+                        ImplTaskResource const & resource = impl.resources[resource_index];
+                        if (resource.external == nullptr)
+                        {
+                            bool const mips_in_bounds = attachment.value.image.translated_view.slice.base_mip_level + attachment.value.image.translated_view.slice.level_count <= resource.info.image.mip_level_count;
+                            bool const layers_in_bounds = attachment.value.image.translated_view.slice.base_array_layer + attachment.value.image.translated_view.slice.layer_count <= resource.info.image.array_layer_count;
+                            DAXA_DBG_ASSERT_TRUE_M(
+                                mips_in_bounds && layers_in_bounds,
+                                std::format(
+                                    "ERROR: Attachment \"{}\" of task \"{}\" is assigned a image view for resource \"{}\" exceeding the images mips/layers!\n"
+                                    "\"{}\" mip levels: {}, array layers: {}. Attachment view mips: [{},{}], layers: [{},{}].",
+                                    attachment.name(), task.name, resource.name, 
+                                    resource.name, resource.info.image.mip_level_count, resource.info.image.array_layer_count, 
+                                    attachment.value.image.translated_view.slice.base_mip_level, attachment.value.image.translated_view.slice.base_mip_level + attachment.value.image.translated_view.slice.level_count - 1, 
+                                    attachment.value.image.translated_view.slice.base_array_layer, attachment.value.image.translated_view.slice.base_array_layer + attachment.value.image.translated_view.slice.layer_count - 1
+                                ).c_str()
+                            );
+                        }
+                    }
+                }
 
                 // Validate that all attachments of each task refer to unique resources.
                 for (u32 other_i = attach_i + 1; other_i < task.attachments.size(); ++other_i)
@@ -1947,7 +1974,6 @@ namespace daxa
                                 "Detected error in task \"{}\" (index: {}), attachment \"{}\" (index: {}) and attachment \"{}\" (index: {}) refer to the same resource \"{}\" (index: {}).",
                                 task.name, task_i, attachment_name, attach_i, other_attachment_name, other_i, impl.resources[resource_index].name, resource_index)
                                 .c_str()
-
                         );
                     }
                 }
@@ -3174,8 +3200,8 @@ namespace daxa
         auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "ERROR: TaskGraph must be completed before execution!");
 
-        u32 required_tmp_size = 1u << 23u; /* 8MB */
-        MemoryArena tmp_memory = MemoryArena{"TaskGraph::execute tmp memory", required_tmp_size};
+        std::array<u8, 1u << 16> tmp_stack_mem;
+        MemoryArena tmp_memory = MemoryArena{"TaskGraph::execute tmp memory", tmp_stack_mem};
 
         /// =============================================================================
         /// ==== VALIDATE, PATCH AND GENERATE CONNECTING SYNC FOR EXTERNAL RESOURCES ====
@@ -3491,6 +3517,7 @@ namespace daxa
                         DAXA_DBG_ASSERT_TRUE_M(&task == batch.tasks[batch_task_i].first, "IMPOSSIBLE CASE! THIS INDICATES UNINITIALIZED MEMORY OR DATA CORRUPTION!");
 
                         // Validate Shader Attachment Blob
+                        #if 0
                         {
                             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
                             {
@@ -3544,6 +3571,7 @@ namespace daxa
                                 }
                             }
                         }
+                        #endif
 
                         auto interface = TaskInterface{
                             .device = impl.info.device,

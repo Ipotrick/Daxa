@@ -10,7 +10,7 @@
 #error "[build error] You must build Daxa with the DAXA_ENABLE_UTILS_TASK_GRAPH CMake option enabled"
 #endif
 
-#if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
+#if DAXA_BUILT_WITH_UTILS_IMGUI && DAXA_ENABLE_TASK_GRAPH_MK2
 #include <daxa/utils/imgui.hpp>
 #endif
 
@@ -1062,7 +1062,7 @@ namespace daxa
         DAXA_EXPORT_CXX auto allocate_task_memory(usize size, usize align) -> void *;
     };
         
-#if DAXA_BUILT_WITH_UTILS_IMGUI && ENABLE_TASK_GRAPH_MK2
+#if DAXA_BUILT_WITH_UTILS_IMGUI && DAXA_ENABLE_TASK_GRAPH_MK2
     struct ImplTaskGraphDebugUi;
 
     struct TaskGraphDebugUiInfo 
