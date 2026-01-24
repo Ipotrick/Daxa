@@ -219,6 +219,17 @@ namespace daxa
         return ret;
     }
 
+    auto error_message_no_access_sage(std::string_view task_name, std::string_view attachment_name, TaskAccess access) -> std::string
+    {
+        return std::format(
+            "ERROR: Attachment \"{}\" of task/task-head \"{}\" has access \"{}\" that does not declare a stage!\n"
+            "Task/Task-head \"{}\" declares no default stage because it is an untyped task/task-head!\n"
+            "Attachments declaring an access without stage is only allowed when the task/task-head HAS A TYPE, for example compute, raster or transfer.\n"
+            "When the task/task-head should not have a type for whatever reason, the stage has to be declared in the access, for example: VERTEX_SHADER::READ instead of just READ.\n",
+            attachment_name, task_name, to_string(access), task_name
+        );
+    }
+
     auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags
     {
         return static_cast<daxa::PipelineStageFlags>(static_cast<u64>(stage) & ~static_cast<u64>(TaskStage::JOKER));

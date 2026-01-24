@@ -75,6 +75,10 @@ namespace daxa
         printf("hurray!\n");
     }
 
+    /// ========================
+    /// ==== ERROR MESSAGES ====
+    /// ========================
+
     auto error_message_unassigned_buffer_view(std::string_view task_name, std::string_view attachment_name) -> std::string
     {
         return std::format("Detected empty TaskBufferView in attachment \"{}\" view assignment in task \"{}\"!", attachment_name, task_name);
@@ -94,6 +98,21 @@ namespace daxa
     {
         return std::format("Detected empty TaskBlasView in attachment \"{}\" view assignment in task \"{}\"!", attachment_name, task_name);
     }
+
+    auto error_message_no_access_sage(std::string_view task_name, std::string_view attachment_name, TaskAccess access) -> std::string
+    {
+        return std::format(
+            "ERROR: Attachment \"{}\" of task/task-head \"{}\" has access \"{}\" that does not declare a stage!\n"
+            "Task/Task-head \"{}\" declares no default stage because it is an untyped task/task-head!\n"
+            "Attachments declaring an access without stage is only allowed when the task/task-head HAS A TYPE, for example compute, raster or transfer.\n"
+            "When the task/task-head should not have a type for whatever reason, the stage has to be declared in the access, for example: VERTEX_SHADER::READ instead of just READ.\n",
+            attachment_name, task_name, to_string(access), task_name
+        );
+    }
+
+    /// ===========================
+    /// ==== STRING CONVERSION ====
+    /// ===========================
 
     auto to_string(TaskStage tstage) -> std::string
     {
@@ -130,6 +149,72 @@ namespace daxa
         default: return "UNKNOWN";
         }
     }
+
+    auto to_string(TaskGPUResourceView const & id) -> std::string
+    {
+        return std::format("tg idx: {}, index: {}", id.task_graph_index, id.index);
+    }
+
+    auto to_string(TaskAccessType taccess) -> std::string_view
+    {
+        switch(taccess)
+        {
+            case TaskAccessType::NONE: return "NONE";
+            case TaskAccessType::CONCURRENT_BIT: return "CONCURRENT_BIT";
+            case TaskAccessType::SAMPLED_BIT: return "SAMPLED_BIT";
+            case TaskAccessType::READ: return "READ";
+            case TaskAccessType::SAMPLED: return "SAMPLED";
+            case TaskAccessType::WRITE: return "WRITE";
+            case TaskAccessType::READ_WRITE: return "READ_WRITE";
+            case TaskAccessType::WRITE_CONCURRENT: return "WRITE_CONCURRENT";
+            case TaskAccessType::READ_WRITE_CONCURRENT: return "READ_WRITE_CONCURRENT";
+            default: return "UNKNOWN";
+        }
+    }
+
+    auto to_string(TaskAccess const & taccess) -> std::string
+    {
+        std::string ret = {};
+
+        u64 stage_iter = std::bit_cast<u64>(taccess.stage);
+        while(stage_iter)
+        {
+            u64 index = 63ull - static_cast<u64>(std::countl_zero(stage_iter));
+            stage_iter &= ~(1ull << index);
+
+            PipelineStageFlags stage = std::bit_cast<PipelineStageFlags>(1ull << index);
+            auto str = to_string(stage);
+            
+            ret += str;
+            if (stage_iter)
+            {
+                ret += "_";
+            }
+        }
+
+        if (ret.size() > 0)
+        {
+            ret += "_";
+        }
+
+        switch (taccess.type)                                                                                       
+        {                                                                                                           
+        case TaskAccessType::NONE: ret += "NONE"; break;
+        case TaskAccessType::READ: ret += "READ"; break;
+        case TaskAccessType::SAMPLED: ret += "SAMPLED"; break;
+        case TaskAccessType::WRITE: ret += "WRITE"; break;
+        case TaskAccessType::READ_WRITE: ret += "READ_WRITE"; break;
+        case TaskAccessType::WRITE_CONCURRENT: ret += "WRITE_CONCURRENT"; break;
+        case TaskAccessType::READ_WRITE_CONCURRENT: ret += "READ_WRITE_CONCURRENT"; break;
+        default: DAXA_DBG_ASSERT_TRUE_M(false, "INVALID ACCESS TYPE"); return "";                                       
+        }
+
+        return ret;
+    }
+
+    /// =================================
+    /// ==== GENERAL TYPE CONVERSION ====
+    /// =================================
 
     auto task_type_default_stage(TaskType task_type) -> TaskStage
     {
@@ -175,91 +260,6 @@ namespace daxa
         return id;
     }
 
-    auto TaskInterface::get(TaskBufferAttachmentIndex index) const -> TaskBufferAttachmentInfo const &
-    {
-        return attachment_infos[index.value].value.buffer;
-    }
-
-    auto TaskInterface::get(TaskBufferView view) const -> TaskBufferAttachmentInfo const &
-    {
-        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
-                                 { 
-            if (other.type == TaskAttachmentType::BUFFER)
-            {
-                return other.value.buffer.view == view || other.value.buffer.translated_view == view;
-            }
-            return false; });
-        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
-
-        return iter->value.buffer;
-    }
-
-    auto TaskInterface::get(TaskBlasAttachmentIndex index) const -> TaskBlasAttachmentInfo const &
-    {
-        return attachment_infos[index.value].value.blas;
-    }
-
-    auto TaskInterface::get(TaskBlasView view) const -> TaskBlasAttachmentInfo const &
-    {
-        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
-                                 { 
-            if (other.type == TaskAttachmentType::BLAS)
-            {
-                return other.value.blas.view == view || other.value.blas.translated_view == view;
-            }
-            return false; });
-        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task blas view as index for attachment!");
-
-        return iter->value.blas;
-    }
-
-    auto TaskInterface::get(TaskTlasAttachmentIndex index) const -> TaskTlasAttachmentInfo const &
-    {
-        return attachment_infos[index.value].value.tlas;
-    }
-
-    auto TaskInterface::get(TaskTlasView view) const -> TaskTlasAttachmentInfo const &
-    {
-        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
-                                 { 
-            if (other.type == TaskAttachmentType::TLAS)
-            {
-                return other.value.tlas.view == view || other.value.tlas.translated_view == view;
-            }
-            return false; });
-        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task tlas view as index for attachment!");
-
-        return iter->value.tlas;
-    }
-
-    auto TaskInterface::get(TaskImageAttachmentIndex index) const -> TaskImageAttachmentInfo const &
-    {
-        return attachment_infos[index.value].value.image;
-    }
-
-    auto TaskInterface::get(TaskImageView view) const -> TaskImageAttachmentInfo const &
-    {
-        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
-                                 { 
-            if (other.type == TaskAttachmentType::IMAGE)
-            {
-                return other.value.image.view == view || other.value.image.translated_view == view;
-            }
-            return false; });
-        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task image view as index for attachment!");
-        return iter->value.image;
-    }
-
-    auto TaskInterface::get(usize index) const -> TaskAttachmentInfo const &
-    {
-        return attachment_infos[index];
-    }
-
-    auto to_string(TaskGPUResourceView const & id) -> std::string
-    {
-        return std::format("tg idx: {}, index: {}", id.task_graph_index, id.index);
-    }
-
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags
     {
         AccessTypeFlags ret = {};
@@ -275,23 +275,6 @@ namespace daxa
         default: DAXA_DBG_ASSERT_TRUE_M(false, "INVALID ACCESS TYPE"); break;
         }
         return ret;
-    }
-
-    auto to_string(TaskAccessType taccess) -> std::string_view
-    {
-        switch(taccess)
-        {
-            case TaskAccessType::NONE: return "NONE";
-            case TaskAccessType::CONCURRENT_BIT: return "CONCURRENT_BIT";
-            case TaskAccessType::SAMPLED_BIT: return "SAMPLED_BIT";
-            case TaskAccessType::READ: return "READ";
-            case TaskAccessType::SAMPLED: return "SAMPLED";
-            case TaskAccessType::WRITE: return "WRITE";
-            case TaskAccessType::READ_WRITE: return "READ_WRITE";
-            case TaskAccessType::WRITE_CONCURRENT: return "WRITE_CONCURRENT";
-            case TaskAccessType::READ_WRITE_CONCURRENT: return "READ_WRITE_CONCURRENT";
-            default: return "UNKNOWN";
-        }
     }
 
     auto task_stage_to_pipeline_stage(TaskStage stage) -> PipelineStageFlags
@@ -427,6 +410,90 @@ namespace daxa
         return ret;
     }
 
+    /// =======================================
+    /// ==== TASK INTERFACE IMPLEMENTATION ====
+    /// =======================================
+
+    auto TaskInterface::get(TaskBufferAttachmentIndex index) const -> TaskBufferAttachmentInfo const &
+    {
+        return attachment_infos[index.value].value.buffer;
+    }
+
+    auto TaskInterface::get(TaskBufferView view) const -> TaskBufferAttachmentInfo const &
+    {
+        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
+                                 { 
+            if (other.type == TaskAttachmentType::BUFFER)
+            {
+                return other.value.buffer.view == view || other.value.buffer.translated_view == view;
+            }
+            return false; });
+        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task buffer view as index for attachment!");
+
+        return iter->value.buffer;
+    }
+
+    auto TaskInterface::get(TaskBlasAttachmentIndex index) const -> TaskBlasAttachmentInfo const &
+    {
+        return attachment_infos[index.value].value.blas;
+    }
+
+    auto TaskInterface::get(TaskBlasView view) const -> TaskBlasAttachmentInfo const &
+    {
+        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
+                                 { 
+            if (other.type == TaskAttachmentType::BLAS)
+            {
+                return other.value.blas.view == view || other.value.blas.translated_view == view;
+            }
+            return false; });
+        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task blas view as index for attachment!");
+
+        return iter->value.blas;
+    }
+
+    auto TaskInterface::get(TaskTlasAttachmentIndex index) const -> TaskTlasAttachmentInfo const &
+    {
+        return attachment_infos[index.value].value.tlas;
+    }
+
+    auto TaskInterface::get(TaskTlasView view) const -> TaskTlasAttachmentInfo const &
+    {
+        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
+                                 { 
+            if (other.type == TaskAttachmentType::TLAS)
+            {
+                return other.value.tlas.view == view || other.value.tlas.translated_view == view;
+            }
+            return false; });
+        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task tlas view as index for attachment!");
+
+        return iter->value.tlas;
+    }
+
+    auto TaskInterface::get(TaskImageAttachmentIndex index) const -> TaskImageAttachmentInfo const &
+    {
+        return attachment_infos[index.value].value.image;
+    }
+
+    auto TaskInterface::get(TaskImageView view) const -> TaskImageAttachmentInfo const &
+    {
+        auto iter = std::find_if(attachment_infos.begin(), attachment_infos.end(), [&](auto const & other)
+                                 { 
+            if (other.type == TaskAttachmentType::IMAGE)
+            {
+                return other.value.image.view == view || other.value.image.translated_view == view;
+            }
+            return false; });
+        DAXA_DBG_ASSERT_TRUE_M(iter != attachment_infos.end(), "Detected invalid task image view as index for attachment!");
+        return iter->value.image;
+    }
+
+    auto TaskInterface::get(usize index) const -> TaskAttachmentInfo const &
+    {
+        return attachment_infos[index];
+    }
+
     auto TaskGPUResourceView::is_empty() const -> bool
     {
         return index == 0 && task_graph_index == 0;
@@ -443,44 +510,9 @@ namespace daxa
                index == std::numeric_limits<u32>::max();
     }
 
-    auto to_string(TaskAccess const & taccess) -> std::string
-    {
-        std::string ret = {};
-
-        u64 stage_iter = std::bit_cast<u64>(taccess.stage);
-        while(stage_iter)
-        {
-            u64 index = 63ull - static_cast<u64>(std::countl_zero(stage_iter));
-            stage_iter &= ~(1ull << index);
-
-            PipelineStageFlags stage = std::bit_cast<PipelineStageFlags>(1ull << index);
-            auto str = to_string(stage);
-            
-            ret += str;
-            if (stage_iter)
-            {
-                ret += "_";
-            }
-        }
-
-        ret += "_";
-
-        switch (taccess.type)                                                                                       
-        {                                                                                                           
-        case TaskAccessType::NONE: ret += "NONE"; break;
-        case TaskAccessType::READ: ret += "READ"; break;
-        case TaskAccessType::SAMPLED: ret += "SAMPLED"; break;
-        case TaskAccessType::WRITE: ret += "WRITE"; break;
-        case TaskAccessType::READ_WRITE: ret += "READ_WRITE"; break;
-        case TaskAccessType::WRITE_CONCURRENT: ret += "WRITE_CONCURRENT"; break;
-        case TaskAccessType::READ_WRITE_CONCURRENT: ret += "READ_WRITE_CONCURRENT"; break;
-        default: DAXA_DBG_ASSERT_TRUE_M(false, "INVALID ACCESS TYPE"); return "";                                       
-        }
-
-        return ret;
-    }
-
-    /// --- ImplExternalResource Begin
+    /// ====================================================
+    /// ==== EXTERNAL RESOURCE INTERFACE IMPLEMENTATION ====
+    /// ====================================================
 
     ImplExternalResource::ImplExternalResource(TaskBufferInfo a_info)
     {
@@ -543,9 +575,9 @@ namespace daxa
         delete self;
     }
 
-    /// --- ImplExternalResource End
-
-    // --- TaskBuffer ---
+    /// =============================================
+    /// ==== EXTERNAL TASK BUFFER IMPLEMENTATION ====
+    /// =============================================
 
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
     {
@@ -630,9 +662,9 @@ namespace daxa
             nullptr);
     }
 
-    // --- TaskBuffer End ---
-
-    // --- TaskBlas ---
+    /// ===========================================
+    /// ==== EXTERNAL TASK BLAS IMPLEMENTATION ====
+    /// ===========================================
 
     TaskBlas::TaskBlas(TaskBlasInfo const & info)
     {
@@ -706,9 +738,9 @@ namespace daxa
             nullptr);
     }
 
-    // --- TaskBlas End ---
-
-    // --- TaskTlas ---
+    /// ===========================================
+    /// ==== EXTERNAL TASK TLAS IMPLEMENTATION ====
+    /// ===========================================
 
     TaskTlas::TaskTlas(TaskTlasInfo const & info)
     {
@@ -782,7 +814,9 @@ namespace daxa
             nullptr);
     }
 
-    // --- TaskTlas End ---
+    /// ============================================
+    /// ==== EXTERNAL TASK IMAGE IMPLEMENTATION ====
+    /// ============================================
 
     TaskImage::TaskImage(TaskImageInfo const & a_info)
     {
@@ -890,6 +924,10 @@ namespace daxa
 
         impl.external_idx_to_resource_table[global_unique_external_index] = std::pair{&impl.resources.back(), index};
     }
+
+    /// =============================================
+    /// ==== TASK GRAPH INTERFACE IMPLEMENTATION ====
+    /// =============================================
 
     void TaskGraph::use_persistent_buffer(TaskBuffer const & buffer)
     {

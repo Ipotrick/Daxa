@@ -21,6 +21,12 @@ namespace daxa
     struct CommandSubmitInfo;
     struct PresentInfo;
 
+    DAXA_EXPORT_CXX auto error_message_unassigned_buffer_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+    DAXA_EXPORT_CXX auto error_message_unassigned_image_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+    DAXA_EXPORT_CXX auto error_message_unassigned_tlas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+    DAXA_EXPORT_CXX auto error_message_unassigned_blas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
+    DAXA_EXPORT_CXX auto error_message_no_access_sage(std::string_view task_name, std::string_view attachment_name, TaskAccess task_access) -> std::string;
+
     struct TaskTransientBufferInfo
     {
         u64 size = {};
@@ -218,17 +224,13 @@ namespace daxa
         {
             if ((stage & TaskStage::JOKER) != TaskStage::NONE)
             {
-                DAXA_DBG_ASSERT_TRUE_M(
-                    default_stage != TaskStage::NONE, 
-                    "ERROR: A non staged task access was used in a GENERIIC type task! "
-                    "All attachment accesses in a generic task must have a stage OR the generic task must have a default stage set!");
                 return (stage & ~TaskStage::JOKER) | default_stage;
             }
             return stage;
         }
 
         template <typename TaskHeadAttachmentDeclT>
-        auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage = TaskStage::NONE) -> TaskAttachmentInfo
+        auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage, std::string_view task_name) -> TaskAttachmentInfo
         {
             TaskAttachmentInfo ret = {};
             switch (attachment_decl.type)
@@ -238,6 +240,7 @@ namespace daxa
                 TaskBufferAttachmentInfo info;
                 info.name = attachment_decl.value.buffer.name;
                 info.task_access = attachment_decl.value.buffer.task_access;
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.shader_array_size = attachment_decl.value.buffer.shader_array_size;
                 info.shader_as_address = attachment_decl.value.buffer.shader_as_address;
@@ -257,6 +260,7 @@ namespace daxa
                 TaskTlasAttachmentInfo info;
                 info.name = attachment_decl.value.tlas.name;
                 info.task_access = attachment_decl.value.tlas.task_access;
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.shader_array_size = attachment_decl.value.tlas.shader_array_size;
                 info.shader_as_address = attachment_decl.value.tlas.shader_as_address;
@@ -276,6 +280,7 @@ namespace daxa
                 TaskBlasAttachmentInfo info;
                 info.name = attachment_decl.value.blas.name;
                 info.task_access = attachment_decl.value.blas.task_access;
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 if (auto * ptr = get_if<TaskBlasView>(&view))
                 {
@@ -293,6 +298,7 @@ namespace daxa
                 TaskImageAttachmentInfo info;
                 info.name = attachment_decl.value.image.name;
                 info.task_access = attachment_decl.value.image.task_access;
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.view_type = attachment_decl.value.image.view_type;
                 info.shader_array_size = attachment_decl.value.image.shader_array_size;
@@ -327,11 +333,6 @@ namespace daxa
 
         static constexpr inline usize ATTACHMENT_COUNT = 0;
     };
-
-    DAXA_EXPORT_CXX auto error_message_unassigned_buffer_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
-    DAXA_EXPORT_CXX auto error_message_unassigned_image_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
-    DAXA_EXPORT_CXX auto error_message_unassigned_tlas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
-    DAXA_EXPORT_CXX auto error_message_unassigned_blas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
 
     template <typename TaskHeadT>
     struct TInlineTask
@@ -539,6 +540,7 @@ namespace daxa
                             attach.value.buffer.task_access.stage = override_stage;
                             attach.value.buffer.task_access.type = access;
                         }
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.buffer.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.buffer.name, attach.value.buffer.task_access));
                         attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
                         attach.value.buffer.view = *buffer_ptr;
                     }
@@ -550,7 +552,8 @@ namespace daxa
                             attach.value.image.task_access.stage = override_stage;
                             attach.value.image.task_access.type = access;
                         }
-                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.image.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.image.name, attach.value.image.task_access));
+                        attach.value.image.task_access.stage = replace_joker_stage(attach.value.image.task_access.stage, default_stage);
                         attach.value.image.view = *image_ptr;
                     }
                     else if (TaskBlasView * blas_ptr = daxa::get_if<TaskBlasView>(&av[i]); blas_ptr != nullptr)
@@ -561,7 +564,8 @@ namespace daxa
                             attach.value.blas.task_access.stage = override_stage;
                             attach.value.blas.task_access.type = access;
                         }
-                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.blas.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.blas.name, attach.value.blas.task_access));
+                        attach.value.blas.task_access.stage = replace_joker_stage(attach.value.blas.task_access.stage, default_stage);
                         attach.value.blas.view = *blas_ptr;
                     }
                     else if (TaskTlasView * tlas_ptr = daxa::get_if<TaskTlasView>(&av[i]); tlas_ptr != nullptr)
@@ -572,7 +576,8 @@ namespace daxa
                             attach.value.tlas.task_access.stage = override_stage;
                             attach.value.tlas.task_access.type = access;
                         }
-                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.tlas.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.tlas.name, attach.value.tlas.task_access));
+                        attach.value.tlas.task_access.stage = replace_joker_stage(attach.value.tlas.task_access.stage, default_stage);
                         attach.value.tlas.view = *tlas_ptr;
                     }
                 }
@@ -726,7 +731,7 @@ namespace daxa
             TaskStage default_stage = value._internal._default_stage != TaskStage::NONE ? value._internal._default_stage : head_default_stage;
             for (u32 i = 0; i < NewTaskHeadInfo::ATTACHMENT_COUNT; ++i)
             {
-                ret.value._internal._attachments.push_back(detail::convert_to_task_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, default_stage));
+                ret.value._internal._attachments.push_back(detail::convert_to_task_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, default_stage, value._internal._name));
             }
             ret.value._internal._callback = this->value._internal._callback;
             ret.value._internal._name = this->value._internal._name;
@@ -965,7 +970,7 @@ namespace daxa
             auto view_array = task.views.convert_to_array();
             for (u32 i = 0; i < NoRefTTask::Info::ATTACHMENT_COUNT; ++i)
             {
-                converted_attachments[i] = detail::convert_to_task_attachment_info(ATTACHMENTS[i], view_array[i], default_stage);
+                converted_attachments[i] = detail::convert_to_task_attachment_info(ATTACHMENTS[i], view_array[i], default_stage, TTask::Info::NAME);
             }
             auto attachment_memory = std::span{ 
                 reinterpret_cast<TaskAttachmentInfo *>(
