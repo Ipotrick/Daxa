@@ -45,6 +45,14 @@ struct daxa_ImplSwapchain final : ImplHandle
     VkSurfaceFormatKHR vk_surface_format = {};
     VkExtent2D surface_extent = {};
     std::vector<PresentMode> supported_present_modes = {};
+
+#if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
+    // Store Wayland info separately to avoid dangling pointer issues
+    WaylandWindowInfo wayland_info = {};
+    u32 window_width = 0;
+    u32 window_height = 0;
+#endif
+
     // Swapchain holds strong references to these objects as it owns them.
     std::vector<ImageId> images = {};
     std::vector<BinarySemaphore> acquire_semaphores = {};
