@@ -582,6 +582,12 @@ namespace daxa
         std::vector<MemoryBLockDeviceMemorySizePair> memory_block_list = {};
     };
 
+    struct BufferIdOffsetPair
+    {
+        BufferId buffer_id = {};
+        u64 offset = {};
+    };
+
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
      *          Device manages all general gpu operations that are not handled by other objects.
@@ -603,7 +609,9 @@ namespace daxa
         [[nodiscard]] auto as_build_sizes(TlasBuildInfo const & info) { return tlas_build_sizes(info); }
         [[nodiscard]] auto as_build_sizes(BlasBuildInfo const & info) { return blas_build_sizes(info); }
 
+        /// WARNING: THIS FUNCTION IS VERY SLOW, ONLY CALL IT FOR DEBUGGING PURPOSES!
         void device_memory_report(DeviceMemoryReport & out_report) const;
+        
         [[nodiscard]] auto device_memory_report_convenient() const -> DeviceMemoryReportConvenient;
         [[nodiscard]] auto buffer_memory_requirements(BufferInfo const & info) const -> MemoryRequirements;
         [[nodiscard]] auto image_memory_requirements(ImageInfo const & info) const -> MemoryRequirements;
@@ -631,6 +639,19 @@ namespace daxa
         [[nodiscard]] auto create(BlasInfo const & info) { return create_blas(info); }
         [[nodiscard]] auto create(BufferTlasInfo const & info) { return create_tlas_from_buffer(info); }
         [[nodiscard]] auto create(BufferBlasInfo const & info) { return create_blas_from_buffer(info); }
+
+        auto inc_refcnt_buffer(BufferId id) -> bool;
+        auto inc_refcnt_image(ImageId id) -> bool;
+        auto inc_refcnt_image_view(ImageViewId id) -> bool;
+        auto inc_refcnt_sampler(SamplerId id) -> bool;
+        auto inc_refcnt_tlas(TlasId id) -> bool;
+        auto inc_refcnt_blas(BlasId id) -> bool;
+        auto inc_refcnt(BufferId id) -> bool { return inc_refcnt_buffer(id); }
+        auto inc_refcnt(ImageId id) -> bool { return inc_refcnt_image(id); }
+        auto inc_refcnt(ImageViewId id) -> bool { return inc_refcnt_image_view(id); }
+        auto inc_refcnt(SamplerId id) -> bool { return inc_refcnt_sampler(id); }
+        auto inc_refcnt(TlasId id) -> bool { return inc_refcnt_tlas(id); }
+        auto inc_refcnt(BlasId id) -> bool { return inc_refcnt_blas(id); }
 
         void destroy_buffer(BufferId id);
         void destroy_image(ImageId id);
@@ -687,6 +708,9 @@ namespace daxa
         [[nodiscard]] auto device_address(BufferId id) const { return buffer_device_address(id); }
         [[nodiscard]] auto device_address(BlasId id) const { return blas_device_address(id); }
         [[nodiscard]] auto device_address(TlasId id) const { return tlas_device_address(id); }
+
+        /// WARNING: THIS FUNCTION IS VERY SLOW, ONLY CALL IT FOR DEBUGGING PURPOSES!
+        [[nodiscard]] auto buffer_device_address_to_buffer(DeviceAddress address) -> Optional<BufferIdOffsetPair>;
 
         [[nodiscard]] auto buffer_host_address(BufferId id) const -> Optional<std::byte *>;
         template <typename T>

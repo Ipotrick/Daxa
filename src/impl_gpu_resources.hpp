@@ -107,6 +107,13 @@ namespace daxa
         };
     };
 
+    enum struct TryDecRefcntResult
+    {
+        SUCCESS_RECOUNT_GREATER_ZERO,
+        SUCCESS_REFCOUNT_ZERO,
+        ERROR_INVALID_ID,
+    };
+
     /**
      * @brief GpuResourcePool is intended to be used akin to a specialized memory allocator, specific to gpu resource types (like image views).
      *
@@ -127,10 +134,28 @@ namespace daxa
         static constexpr inline usize PAGE_MASK = PAGE_SIZE - 1u;
         static constexpr inline usize PAGE_COUNT = MAX_RESOURCE_COUNT / PAGE_SIZE;
         using VersionAndRefcntT = std::atomic_uint64_t;
-        static constexpr inline u64 VERSION_ZOMBIE_BIT = 1ull << 63ull;
-        static constexpr inline u64 VERSION_COUNT_MASK = ~(VERSION_ZOMBIE_BIT);
+        static constexpr inline u64 VERSION_COUNT_MASK = ~(1u << DAXA_ID_VERSION_BITS);
+        static constexpr inline u64 REF_COUNT_BITS = (64u - DAXA_ID_VERSION_BITS);
+        static constexpr inline u64 REF_COUNT_MASK = ~(1u << REF_COUNT_BITS);
+        static constexpr inline u64 REF_COUNT_OFFSET = DAXA_ID_VERSION_BITS;
         // TODO: split up slots into hot and cold data.
         using PageT = std::array<ResourceT, PAGE_SIZE>;
+
+        static auto get_refcnt(u64 version_refcnt) -> u64
+        {
+            return (version_refcnt >> REF_COUNT_OFFSET) & REF_COUNT_MASK;
+        }
+
+        static auto get_version(u64 version_refcnt) -> u64
+        {
+            return version_refcnt & VERSION_COUNT_MASK;
+        }
+
+        static auto pack_version_refcnt(u64 version, u64 refcnt) -> u64
+        {
+            DAXA_DBG_ASSERT_TRUE_M(refcnt < (1u << REF_COUNT_BITS) - 1, "Exceeded max possible gpu resource object reference count!");
+            return (version & VERSION_COUNT_MASK) | ((refcnt & REF_COUNT_MASK) << REF_COUNT_OFFSET);
+        }
 
         // TODO: replace with lockless queue.
         std::vector<u32> free_index_stack = {};
@@ -158,7 +183,8 @@ namespace daxa
             auto const page = static_cast<usize>(id.index) >> PAGE_BITS;
             auto const offset = static_cast<usize>(id.index) & PAGE_MASK;
             // Remove Zombie Mark Bit.
-            auto const version = VERSION_COUNT_MASK & this->hot_data.at(id.index).second.load(std::memory_order_relaxed);
+            auto const version_refcnt = VERSION_COUNT_MASK & this->hot_data.at(id.index).second.load(std::memory_order_relaxed);
+            auto const version = get_version(version_refcnt);
             // Slots that reached max version CAN NOT be recycled.
             // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
             // Clear slot MUST HAPPEN before pushing into free list.
@@ -197,8 +223,8 @@ namespace daxa
                     index = this->free_index_stack.back();
                     this->free_index_stack.pop_back();
 
-                    u64 test = this->hot_data.at(index).second.load(std::memory_order_relaxed);
-                    DAXA_DBG_ASSERT_TRUE_M((test & VERSION_ZOMBIE_BIT) == VERSION_ZOMBIE_BIT, "All reused resources must be zombies! Possibly called zombify instead of destroy within device!");
+                    [[maybe_unused]] u64 version_refcnt = this->hot_data.at(index).second.load(std::memory_order_relaxed);
+                    DAXA_DBG_ASSERT_TRUE_M(get_refcnt(version_refcnt) == 0, "All reused resources must be zombies! Possibly called zombify instead of destroy within device!");
                 }
             }
 
@@ -213,33 +239,93 @@ namespace daxa
                     this->paged_data[page] = std::make_unique<PageT>();
                     for (u32 i = 0; i < PAGE_SIZE; ++i)
                     {
-                        this->hot_data.at(page * PAGE_SIZE + i).second.store(1ull, std::memory_order_relaxed);
+                        this->hot_data.at(page * PAGE_SIZE + i).second.store(pack_version_refcnt(1ull, 0ull), std::memory_order_relaxed);
                     }
                     // Needs to be sequential, so that the 0 writes to the versions are visible before the atomic op.
                     this->valid_page_count.fetch_add(1, std::memory_order_seq_cst);
                 }
             }
             
-            // Remove Zombie Mark Bit.
-            u64 version = this->hot_data.at(index).second.fetch_and(VERSION_COUNT_MASK, std::memory_order_relaxed);
+            // With the atomic or, the reference count gets initialized to 1.
+            u64 version_refcnt = this->hot_data.at(index).second.fetch_or(1ull << REF_COUNT_OFFSET, std::memory_order_relaxed);
+            u64 version = get_version(version_refcnt);
+            [[maybe_unused]] u64 prev_refcnt = get_refcnt(version_refcnt);
+            DAXA_DBG_ASSERT_TRUE_M(prev_refcnt == 0, "New slots must have a previous ref count of zero! Somehow an alive resource made it into the freelist!");
 
             auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = version};
             return std::optional{std::tuple<GPUResourceId, ResourceT &, typename ResourceT::HotData &>(id, this->paged_data[page]->at(offset), this->hot_data.at(index).first)};
         }
 
-        auto try_zombify(GPUResourceId id) -> bool
+        /**
+         * @brief   Attempts to decrement reference count of resource.
+         *
+         * Always threadsafe.
+         * @returns if successful. Returns false when the resource is invalid or already at 0 reference count.
+         */
+        auto try_dec_refcnt(GPUResourceId id, bool * zero_references = nullptr) -> TryDecRefcntResult
+        {
+            if (!is_id_valid(id))
+            {
+                return TryDecRefcntResult::ERROR_INVALID_ID;
+            }
+            u64 version = id.version;
+
+            u64 version_refcnt = {};
+            u64 new_version_refcnt = {};
+            u64 new_refcnt = {};
+            do
+            {
+                version_refcnt = this->hot_data.at(id.index).second.load();
+                u64 refcnt = get_refcnt(version_refcnt);
+                u64 version = version_refcnt & VERSION_COUNT_MASK;
+                if (refcnt == 0 || version != id.version)
+                {
+                    return TryDecRefcntResult::ERROR_INVALID_ID;
+                }
+                new_refcnt = refcnt - 1;
+                new_version_refcnt = pack_version_refcnt(version_refcnt, new_refcnt);
+            }
+            while (!this->hot_data.at(id.index).second.compare_exchange_strong(
+                version_refcnt, new_version_refcnt,
+                std::memory_order_relaxed,
+                std::memory_order_relaxed));
+            return new_refcnt == 0 ? TryDecRefcntResult::SUCCESS_REFCOUNT_ZERO : TryDecRefcntResult::SUCCESS_RECOUNT_GREATER_ZERO;
+        }
+
+        /**
+         * @brief   Attempts to increment reference count of resource.
+         *
+         * Always threadsafe.
+         * @returns if successful. Returns false when the resource is invalid.
+         */
+        auto try_inc_refcnt(GPUResourceId id) -> bool
         {
             if (!is_id_valid(id))
             {
                 return false;
             }
             u64 version = id.version;
-            // Explicitly mark as zombie
-            u64 const new_version = (version + 1) | VERSION_ZOMBIE_BIT;
-            return this->hot_data.at(id.index).second.compare_exchange_strong(
-                version, new_version,
+
+            u64 version_refcnt = {};
+            u64 new_version_refcnt = {};
+            do
+            {
+                version_refcnt = this->hot_data.at(id.index).second.load();
+                u64 refcnt = get_refcnt(version_refcnt);
+                u64 version = version_refcnt & VERSION_COUNT_MASK;
+                if (refcnt == 0 || version != id.version)
+                {
+                    return false;
+                }
+                u64 new_refcnt = refcnt + 1;
+                DAXA_DBG_ASSERT_TRUE_M(new_refcnt < ((1u << REF_COUNT_BITS) - 1), "Exceeded maximum gpu resource object reference count!");
+                new_version_refcnt = pack_version_refcnt(version_refcnt, new_refcnt);
+            }
+            while (!this->hot_data.at(id.index).second.compare_exchange_strong(
+                version_refcnt, new_version_refcnt,
                 std::memory_order_relaxed,
-                std::memory_order_relaxed);
+                std::memory_order_relaxed));
+            return true;
         }
 
         /**
@@ -254,8 +340,9 @@ namespace daxa
             {
                 return false;
             }
-            u64 const slot_version = this->hot_data.at(id.index).second.load(std::memory_order_relaxed);
-            return slot_version == id.version && ((slot_version & VERSION_ZOMBIE_BIT) != VERSION_ZOMBIE_BIT);
+            u64 const version_refcnt = this->hot_data.at(id.index).second.load(std::memory_order_relaxed);
+            bool const valid = get_version(version_refcnt) == id.version && (get_refcnt(version_refcnt) > 0);
+            return valid;
         }
 
         /**
@@ -263,13 +350,14 @@ namespace daxa
          * Always threadsafe.
          * @returns returns the current version of a slot.
          */
-        auto version_of_slot(u32 idx) const -> u64
+        auto version_refcnt_of_slot(u32 idx) const -> u64
         {
             if (idx >= this->max_resources)
             {
                 return false;
             }
-            return this->hot_data.at(std::min(idx, this->max_resources)).second;
+            u64 const version_refcnt = this->hot_data.at(std::min(idx, this->max_resources)).second;
+            return version_refcnt;
         }
 
         /**
@@ -304,8 +392,8 @@ namespace daxa
         auto safe_get_hot(GPUResourceId id) const -> ResourceT::HotData const *
         {
             auto & hot_slot = this->hot_data.data()[std::min(static_cast<u32>(id.index), this->max_resources)];
-            auto version = hot_slot.second.load();
-            return version == id.version ? &hot_slot.first : nullptr;
+            auto version_refcnt = hot_slot.second.load();
+            return get_version(version_refcnt) == id.version ? &hot_slot.first : nullptr;
         }
     };
 

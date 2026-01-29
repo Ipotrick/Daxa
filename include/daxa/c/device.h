@@ -603,6 +603,12 @@ typedef struct
 
 static daxa_HostImageLayoutOperationInfo const DAXA_DEFAULT_HOST_IMAGE_LAYOUT_OPERATION_INFO = DAXA_ZERO_INIT;
 
+typedef struct
+{
+    daxa_BufferId buffer_id;
+    daxa_u64 offset;
+} daxa_BufferIdOffsetPair;
+
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_device_memory_report(daxa_Device device, daxa_DeviceMemoryReport * report);
 DAXA_EXPORT DAXA_NO_DISCARD VkMemoryRequirements
@@ -638,6 +644,19 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_tlas_from_buffer(daxa_Device device, daxa_BufferTlasInfo const * info, daxa_TlasId * out_id);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_blas_from_buffer(daxa_Device device, daxa_BufferBlasInfo const * info, daxa_BlasId * out_id);
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_inc_refcnt_buffer(daxa_Device device, daxa_BufferId buffer);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_inc_refcnt_image(daxa_Device device, daxa_ImageId image);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_inc_refcnt_image_view(daxa_Device device, daxa_ImageViewId id);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_inc_refcnt_sampler(daxa_Device device, daxa_SamplerId sampler);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_inc_refcnt_tlas(daxa_Device device, daxa_TlasId tlas);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_inc_refcnt_blas(daxa_Device device, daxa_BlasId blas);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_destroy_buffer(daxa_Device device, daxa_BufferId buffer);
@@ -699,6 +718,9 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_tlas_device_address(daxa_Device device, daxa_TlasId tlas, daxa_DeviceAddress * out_addr);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_blas_device_address(daxa_Device device, daxa_BlasId blas, daxa_DeviceAddress * out_addr);
+
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_buffer_device_address_to_buffer(daxa_Device device, daxa_DeviceAddress address, daxa_BufferIdOffsetPair * out_buffer_id_offset_pair);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo const * info, daxa_RasterPipeline * out_pipeline);
