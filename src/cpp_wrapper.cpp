@@ -513,6 +513,7 @@ namespace daxa
         {
             return std::bit_cast<BufferIdOffsetPair>(id_offset_pair);
         }
+        return {};
     }
 
     void Device::copy_memory_to_image(MemoryToImageCopyInfo const & info)

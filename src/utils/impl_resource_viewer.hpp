@@ -5,7 +5,8 @@
 #if DAXA_ENABLE_TASK_GRAPH_MK2
 #include "impl_resource_viewer.slang"
 
-#define BUFFER_RESOURCE_VIEWER_READBACK_SIZE (1u << 12u)
+// 1mb
+#define BUFFER_RESOURCE_VIEWER_READBACK_SIZE (1u << 22u)
 
 namespace daxa
 {
@@ -16,23 +17,69 @@ namespace daxa
         daxa_u32vec4 _uint;
     };
 
-    // Blame imgui for this being i32
-    enum TG_DEBUG_BUFFER_ENTRY_DATA_TYPE : i32
-    {
-        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_F32 = 0,
-        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_I32 = 1,
-        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_U32 = 2,
-        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE_STRUCT = 4,
-    };
-
-    struct TgDebugBufferEntry
+    struct TgDebugStructFieldDefinition
     {
         std::string name = {};
-        TG_DEBUG_BUFFER_ENTRY_DATA_TYPE data_type = {};
+        u64 in_struct_memory_offset = {};
+        i32 type_index = {};            // negative indexes into primitives;
         i32 array_size = 1;
-        u64 offset = {};
-        std::vector<u32> child_indices;
-        u32 parent_index;
+        i32 pointer_depth = 0;          // number of pointer levels (e.g., int** = 2)
+    };
+
+    struct TgDebugTypeDefinition
+    {
+        std::string name = {};
+        u64 size = ~0ull;
+        u64 alignment = ~0ull;
+        std::vector<TgDebugStructFieldDefinition> fields = {};
+    };
+
+    enum TG_DEBUG_PRIMITIVE_TYPE_INDEX : i32
+    {
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_F16 = -1,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_F32 = -2,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_F64 = -3,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_I8 = -4,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_I16 = -5,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_I32 = -6,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_I64 = -7,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_U8 = -8,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_U16 = -9,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_U32 = -10,
+        TG_DEBUG_PRIMITIVE_TYPE_INDEX_U64 = -11,
+    };
+
+    static inline std::array TG_DEBUG_PRIMITIVE_DEFINITIONS = std::array{
+        TgDebugTypeDefinition{ "f16", 2, 2 },
+        TgDebugTypeDefinition{ "f32", sizeof(f32), alignof(f32) },
+        TgDebugTypeDefinition{ "f64", sizeof(f64), alignof(f64) },
+        TgDebugTypeDefinition{ "i8" , 1, 1 },
+        TgDebugTypeDefinition{ "i16", 2, 2 },
+        TgDebugTypeDefinition{ "i32", sizeof(i32), alignof(i32) },
+        TgDebugTypeDefinition{ "i64", sizeof(i64), alignof(i64) },
+        TgDebugTypeDefinition{ "u8" , 1, 1 },
+        TgDebugTypeDefinition{ "u16", 2, 2 },
+        TgDebugTypeDefinition{ "u32", sizeof(u32), alignof(u32) },
+        TgDebugTypeDefinition{ "u64", sizeof(u64), alignof(u64) },
+    };
+
+    struct ImGuiUiStorage
+    {
+        bool array_collapsed = {};
+        bool array_hidden = {};
+        f32 constrained_height = 500.0f;
+    };
+
+    struct ChildBufferResourceViewerState
+    {
+        TgDebugStructFieldDefinition field_def = {};
+
+        BufferId clone_buffer = {};
+        BufferId destroy_clone_buffer = {};
+
+        BufferId buffer = {};
+        u64 base_offset = {};
+        i32 display_array_size = 1;
     };
 
     struct ResourceViewerState
@@ -58,11 +105,15 @@ namespace daxa
         } image = {};
         struct
         {
-            std::array<std::byte, BUFFER_RESOURCE_VIEWER_READBACK_SIZE> latest_readback = {};
-            std::vector<TgDebugBufferEntry> tg_debug_buffer_structure = {};       
-            u64 readback_offset = {};
-            BufferId readback_buffer = {};   
+            BufferId clone_buffer = {};
+            BufferId destroy_clone_buffer = {};
+            std::string format_c_struct_code = {};
+            std::string format_c_struct_code_compile_error_message = {};
+            std::vector<std::string> custom_ui_id_stack = { "root" };
+            std::unordered_map<u64, ImGuiUiStorage> ui_storage = {};
+            std::vector<TgDebugTypeDefinition> tg_debug_struct_definitions = {};
             bool buffer_format_config_open = {};
+            std::unordered_map<DeviceAddress, ChildBufferResourceViewerState> child_buffer_inspectors = {};
         } buffer = {};
 
         u32 open_frame_count = {};

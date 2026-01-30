@@ -12,6 +12,8 @@
 
 #if DAXA_BUILT_WITH_UTILS_IMGUI && DAXA_ENABLE_TASK_GRAPH_MK2
 #include <daxa/utils/imgui.hpp>
+#include <filesystem>
+#include <optional>
 #endif
 
 namespace daxa
@@ -1069,6 +1071,7 @@ namespace daxa
     {
         Device device = {};
         ImGuiRenderer imgui_renderer = {};
+        std::optional<std::filesystem::path> buffer_layout_cache_folder = {};
     };
 
     struct TaskGraphDebugUi : ManagedPtr<TaskGraphDebugUi, ImplTaskGraphDebugUi *>

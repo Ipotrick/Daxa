@@ -7,6 +7,8 @@
 
 #include "impl_resource_viewer.hpp"
 #include <set>
+#include <optional>
+#include <filesystem>
 
 
 #define TASK_GRAPH_RESOURCE_VIEWER_ONLINE_COMPILE_SHADERS 0 // FOR DEVELOPMENT ONLY
@@ -27,8 +29,10 @@ namespace daxa
         static constexpr ImVec4 RED = ImVec4(0.90590f, 0.29800f, 0.23530f, 1.0f);
         static constexpr ImVec4 GREEN = ImVec4(0.18040f, 0.80000f, 0.44310f, 1.0f);
         static constexpr ImVec4 BLUE = ImVec4(0.20390f, 0.59610f, 0.85880f, 1.0f);
-        static constexpr ImVec4 YELLOW = ImVec4(0.98500f, 0.98500f, 0.0000f, 1.0f);
-        static constexpr ImVec4 ORANGE = ImVec4(0.98500f, 0.58500f, 0.0000f, 1.0f);
+        static constexpr ImVec4 YELLOW = ImVec4(0.94510f, 0.76860f, 0.05880f, 1.0f);
+        static constexpr ImVec4 ORANGE = ImVec4(0.90200f, 0.49410f, 0.13330f, 1.0f);
+        static constexpr ImVec4 PURPLE = ImVec4(0.61180f, 0.34900f, 0.71370f, 1.0f);
+        static constexpr ImVec4 CYAN = ImVec4(0.10200f, 0.73730f, 0.61180f, 1.0f);
 
         static constexpr ImVec4 DARK_RED = ImVec4(0.53600f, 0.03700f, 0.02000f, 1.0f);
         static constexpr ImVec4 DARK_BLUE = ImVec4(0.05490f, 0.32941f, 0.96470f, 1.0f);
@@ -49,6 +53,7 @@ namespace daxa
         std::vector<std::vector<u32>> task_resource_to_attachment_lookup = {};
         std::set<std::string> open_task_detail_windows = {};
         std::set<std::string> open_resource_detail_windows = {};
+        std::optional<std::filesystem::path> buffer_layout_cache_folder = {};
         bool show_batch_borders = true;
         bool show_transfer_tasks = true;
         bool show_async_queues = true;

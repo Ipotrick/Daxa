@@ -367,28 +367,28 @@ namespace daxa
                     {
                         auto & slot = (*page.get())[i];
                         u32 const resource_i = page_i * GpuResourcePool<>::PAGE_SIZE + i;
-                        bool handle_invalid = {};
+                        bool non_zero_refcount = {};
                         if constexpr (std::is_same_v<std::remove_cvref_t<decltype(slot)>, ImplBufferSlot>)
                         {
-                            handle_invalid = sro.unsafe_get_hot(resource_i).vk_buffer == VK_NULL_HANDLE;
+                            non_zero_refcount = GpuResourcePool<>::get_refcnt(sro.version_refcnt_of_slot(resource_i));
                         }
                         if constexpr (std::is_same_v<std::remove_cvref_t<decltype(slot)>, ImplBlasSlot>)
                         {
-                            handle_invalid = sro.unsafe_get_hot(resource_i).vk_blas == VK_NULL_HANDLE;
+                            non_zero_refcount = GpuResourcePool<>::get_refcnt(sro.version_refcnt_of_slot(resource_i));
                         }
                         if constexpr (std::is_same_v<std::remove_cvref_t<decltype(slot)>, ImplTlasSlot>)
                         {
-                            handle_invalid = sro.unsafe_get_hot(resource_i).vk_tlas == VK_NULL_HANDLE;
+                            non_zero_refcount = GpuResourcePool<>::get_refcnt(sro.version_refcnt_of_slot(resource_i));
                         }
                         if constexpr (std::is_same_v<std::remove_cvref_t<decltype(slot)>, ImplImageSlot>)
                         {
-                            handle_invalid = slot.vk_image == VK_NULL_HANDLE;
+                            non_zero_refcount = GpuResourcePool<>::get_refcnt(sro.version_refcnt_of_slot(resource_i));
                         }
                         if constexpr (std::is_same_v<std::remove_cvref_t<decltype(slot)>, ImplSamplerSlot>)
                         {
-                            handle_invalid = slot.vk_sampler == VK_NULL_HANDLE;
+                            non_zero_refcount = GpuResourcePool<>::get_refcnt(sro.version_refcnt_of_slot(resource_i));
                         }
-                        if (!handle_invalid)
+                        if (non_zero_refcount)
                         {
                             ret += std::format("debug name : \"{}\"", r_cast<SmallString const *>(&slot.info.name)->view());
                             ret += "\n";

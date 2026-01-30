@@ -2251,7 +2251,11 @@ namespace daxa
             latest_submit_index = task.submit_index;
 
             // Find min batch index
-            u32 min_batch_index = first_batch_after_latest_submit;
+            u32 min_batch_index = std::max(1ull, tmp_minsh_task_batches.size()) - 1ull;
+            if (impl.info.reorder_tasks)
+            {
+                min_batch_index = first_batch_after_latest_submit;
+            }
             for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
             {
                 TaskAttachmentInfo const & attachment = task.attachments[attach_i];
@@ -2434,7 +2438,7 @@ namespace daxa
         // In this pass, we move all tasks as much forward as possible WITHOUT adding new batches or increasing the critical path.
         // After this pass, transient resource lifetimes are minimized.
 
-        if (impl.info.optimize_transient_lifetimes)
+        if (impl.info.optimize_transient_lifetimes && impl.info.reorder_tasks)
         {
             auto tmp_transient_optimized_task_batches = tmp_memory.allocate_trivial_span_fill<TmpBatch>(tmp_batches->size(), TmpBatch{ArenaDynamicArray8k<std::pair<ImplTask *, u32>>(&tmp_memory)});
             auto tmp_transient_optimized_task_to_batch = tmp_memory.allocate_trivial_span_fill<u32>(impl.tasks.size(), ~0u);
@@ -2502,7 +2506,7 @@ namespace daxa
                         for (u32 attach_i = 0; attach_i < task.attachments.size(); ++attach_i)
                         {
                             ImplTaskResource const * resource = task.attachment_resources[attach_i].first;
-                            if (resource == nullptr) { continue; }
+                            if (resource == nullptr) { continue; } 
                             if (resource->external != nullptr) { continue; }
                             
                             u32 const access_timeline_index = task.attachment_access_groups[attach_i].second;
@@ -2871,7 +2875,7 @@ namespace daxa
             }
             break;
             case TaskResourceKind::BLAS:
-                DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE, THERE IS NO SUPPORT FOR TRANSIENT BLAS!");
+                DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE! THERE IS NO SUPPORT FOR TRANSIENT BLAS!");
                 break;
             case TaskResourceKind::IMAGE:
             {
@@ -2966,6 +2970,16 @@ namespace daxa
                     submit.queue_batches[q][queue_batch_i].pre_batch_barriers = {};
                     submit.queue_batches[q][queue_batch_i].pre_batch_image_barriers = {};
                 }
+            }
+
+            // Create and store cmd recorder labels
+            for (u32 q = 0; q < DAXA_QUEUE_COUNT; ++q)
+            {
+                if ((queue_index_to_queue_bit(q) & submit.queue_bits) == 0u) { continue; }
+
+                std::array<char, 256> char_buffer = {};
+                u64 const length = std::format_to_n(char_buffer.data(), char_buffer.size(), "Submit {} Queue {}", s, q).size;
+                submit.queue_batch_cmd_recorder_labels[q] = impl.task_memory.allocate_copy_string(std::string_view{char_buffer.data(), length});
             }
         }
 
@@ -3200,7 +3214,7 @@ namespace daxa
         auto & impl = *r_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "ERROR: TaskGraph must be completed before execution!");
 
-        std::array<u8, 1u << 16> tmp_stack_mem;
+        std::array<u8, 1u << 16u> tmp_stack_mem;
         MemoryArena tmp_memory = MemoryArena{"TaskGraph::execute tmp memory", tmp_stack_mem};
 
         /// =============================================================================
@@ -3431,11 +3445,20 @@ namespace daxa
 
             // RAII types can not be allocated into tmp_memory as they are not trivially destructable.
             // For these types we make these arrays to hold their data until submission.
-            std::array<BinarySemaphore, 512> wait_semaphores = {};
+
+            auto push_back_static = [](auto& array, auto& array_size, auto && value)
+            {
+                DAXA_DBG_ASSERT_TRUE_M(array_size < array.size(), "EXCEEDED INTERNAL LIMIT FOR SYNC PRIMITIVES! BUMP LIMIT!");
+                array[array_size++] = std::move(value);
+            };
+
+            static constexpr u64 MAX_SYNC_PRIMITIVES = 32;
+
+            std::array<BinarySemaphore, MAX_SYNC_PRIMITIVES> wait_semaphores = {};
             u64 wait_semaphore_count = {};
-            std::array<BinarySemaphore, 512> signal_semaphores = {};
+            std::array<BinarySemaphore, MAX_SYNC_PRIMITIVES> signal_semaphores = {};
             u64 signal_semaphore_count = {};
-            std::array<std::pair<TimelineSemaphore, u64>, 512> signal_timeline_semaphores = {};
+            std::array<std::pair<TimelineSemaphore, u64>, MAX_SYNC_PRIMITIVES> signal_timeline_semaphores = {};
             u64 signal_timeline_semaphore_count = {};
             std::array<ExecutableCommandList, DAXA_QUEUE_COUNT> executable_command_lists = {};
 
@@ -3452,7 +3475,7 @@ namespace daxa
 
                 auto cr = device.create_command_recorder({
                     .queue_family = queue.family,
-                    .name = std::format("\"{}\" submit {} queue \"{}\"", impl.info.name, submit_index, to_string(queue)),
+                    .name = submit.queue_batch_cmd_recorder_labels[queue_index],
                 });
 
                 ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .recorder = cr};
@@ -3585,13 +3608,9 @@ namespace daxa
                         };
                         if (impl.info.enable_command_labels)
                         {
-                            static std::string tag = {};
-                            tag.clear();
-                            std::format_to(std::back_inserter(tag), "batch {} task {} \"{}\"", batch_i, batch_task_i, task.name);
-                            SmallString stag = SmallString{tag};
                             impl_runtime.recorder.begin_label({
                                 .label_color = impl.info.task_label_color,
-                                .name = stag,
+                                .name = task.name.data(),
                             });
                         }
                         if (debug_ui_context)
@@ -3635,7 +3654,7 @@ namespace daxa
                     bool const wait_on_swapchain_acquire = first_swapchain_use_queue == queue && first_swapchain_use_submit == submit_index;
                     if (wait_on_swapchain_acquire)
                     {
-                        wait_semaphores[wait_semaphore_count++] = impl.info.swapchain->current_acquire_semaphore();
+                        push_back_static(wait_semaphores, wait_semaphore_count, impl.info.swapchain->current_acquire_semaphore());
                     }
                 }
 
@@ -3652,8 +3671,8 @@ namespace daxa
                     bool const is_last_access_queue_submit = last_swapchain_use_queue == queue && last_swapchain_use_submit == submit_index;
                     if (is_last_access_queue_submit)
                     {
-                        signal_semaphores[signal_semaphore_count++] = impl.info.swapchain->current_present_semaphore();
-                        signal_timeline_semaphores[signal_timeline_semaphore_count++] = impl.info.swapchain->current_timeline_pair();
+                        push_back_static(signal_semaphores, signal_semaphore_count, impl.info.swapchain->current_present_semaphore());
+                        push_back_static(signal_timeline_semaphores, signal_timeline_semaphore_count, impl.info.swapchain->current_timeline_pair());
                         cr.pipeline_image_barrier(ImageBarrierInfo{
                             .src_access = Access{task_stage_to_pipeline_stage(last_access.stages), to_access_type(last_access.type)},
                             .image_id = impl.swapchain_image->id.image,
