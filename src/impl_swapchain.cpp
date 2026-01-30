@@ -27,9 +27,44 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     auto ret = daxa_ImplSwapchain{};
     ret.device = device;
     ret.info = *reinterpret_cast<SwapchainInfo const *>(info);
+
+#if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
+    if (info->native_window_platform == daxa_NativeWindowPlatform::DAXA_NATIVE_WINDOW_PLATFORM_WAYLAND_API)
+    {
+        auto* wayland_info_ptr = static_cast<WaylandWindowInfo*>(info->native_window);
+        ret.wayland_info = *wayland_info_ptr;
+        ret.window_width = wayland_info_ptr->width;
+        ret.window_height = wayland_info_ptr->height;
+
+        if (ret.wayland_info.display == nullptr || ret.wayland_info.surface == nullptr) {
+            std::cerr << "ERROR: NULL Wayland display or surface in copy!" << std::endl;
+            device->dec_weak_refcnt(daxa_ImplDevice::zero_ref_callback, device->instance);
+            return DAXA_RESULT_ERROR_UNKNOWN;
+        }
+    }
+#endif
+
+    if (info->name.data != nullptr && info->name.size > 0) {
+        ret.info_name = std::string(info->name.data, info->name.size);
+    } else {
+        ret.info_name = "unnamed_swapchain";
+    }
+
     auto result = ret.recreate_surface();
     _DAXA_RETURN_IF_ERROR(result, result);
 
+    VkBool32 present_support = VK_FALSE;
+    vkGetPhysicalDeviceSurfaceSupportKHR(
+        device->vk_physical_device,
+        device->queue_families[info->queue_family].vk_queue_family_index,
+        ret.vk_surface,
+        &present_support);
+
+    if (present_support != VK_TRUE) {
+        std::cerr << "ERROR: Queue family does NOT support presenting to this Wayland surface!" << std::endl;
+        ret.full_cleanup();
+        exit(EXIT_FAILURE);
+    }
     defer
     {
         if (result != DAXA_RESULT_SUCCESS)
@@ -256,6 +291,7 @@ auto daxa_swp_dec_refcnt(daxa_Swapchain self) -> u64
 auto daxa_ImplSwapchain::recreate() -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
+
     // Check present mode:
     auto iter = std::find(this->supported_present_modes.begin(), this->supported_present_modes.end(), this->info.present_mode);
     if (iter == this->supported_present_modes.end())
@@ -271,8 +307,26 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         &surface_capabilities));
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    surface_extent.width = surface_capabilities.currentExtent.width;
-    surface_extent.height = surface_capabilities.currentExtent.height;
+    if (surface_capabilities.currentExtent.width == UINT32_MAX ||
+        surface_capabilities.currentExtent.height == UINT32_MAX)
+    {
+        // For Wayland, we must use the stored window dimensions
+        surface_extent.width = std::clamp(
+            this->window_width,
+            surface_capabilities.minImageExtent.width,
+            surface_capabilities.maxImageExtent.width
+        );
+        surface_extent.height = std::clamp(
+            this->window_height,
+            surface_capabilities.minImageExtent.height,
+            surface_capabilities.maxImageExtent.height
+        );
+    }
+    else
+    {
+        surface_extent.width = surface_capabilities.currentExtent.width;
+        surface_extent.height = surface_capabilities.currentExtent.height;
+    }
 
 #if __linux__
     // TODO(grundlett): I (grundlett) am too lazy to find out why the other present modes
@@ -426,6 +480,19 @@ auto daxa_ImplSwapchain::recreate_surface() -> daxa_Result
     {
         vkDestroySurfaceKHR(this->device->instance->vk_instance, this->vk_surface, nullptr);
     }
+
+#if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
+    if (this->info.native_window_platform == NativeWindowPlatform::WAYLAND_API)
+    {
+        return create_surface(
+            this->device->instance,
+            reinterpret_cast<daxa_NativeWindowHandle>(&this->wayland_info),
+            std::bit_cast<daxa_NativeWindowPlatform>(this->info.native_window_platform),
+            &this->vk_surface);
+    }
+#endif
+
+    // For other platforms, use the original pointer
     return create_surface(
         this->device->instance,
         std::bit_cast<daxa_NativeWindowHandle>(this->info.native_window),

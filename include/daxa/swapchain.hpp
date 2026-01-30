@@ -111,3 +111,11 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 } // namespace daxa
+
+// TODO maybe move to daxa namespace
+struct WaylandWindowInfo {
+    void* display;
+    void* surface;
+    daxa::u32 width;
+    daxa::u32 height;
+};
