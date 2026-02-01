@@ -2,6 +2,7 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH && DAXA_BUILT_WITH_UTILS_IMGUI
 #include <daxa/utils/task_graph_types.hpp>
 #include <daxa/utils/imgui.hpp>
+#include <daxa/utils/imgui.hpp>
 
 #if DAXA_ENABLE_TASK_GRAPH_MK2
 
@@ -38,6 +39,14 @@ namespace daxa
         static constexpr ImVec4 DARK_BLUE = ImVec4(0.05490f, 0.32941f, 0.96470f, 1.0f);
     };
 
+    struct ImageViewerLimits
+    {
+        f32 min_x = {};
+        f32 max_x = {};
+        f32 min_y = {};
+        f32 max_y = {};
+    };
+
     struct ImplTaskGraphDebugUi final : ImplHandle
     {
         ImplTaskGraphDebugUi() = default;
@@ -65,6 +74,10 @@ namespace daxa
 #if TASK_GRAPH_RESOURCE_VIEWER_ONLINE_COMPILE_SHADERS
         daxa::PipelineManager pipeline_manager = {};
 #endif
+
+        std::optional<bool> broadcast_resource_viewer_freeze = {};
+        std::optional<ImageViewerLimits> boardcast_image_viewer_limits_prev_frame = {};
+        std::optional<ImageViewerLimits> boardcast_image_viewer_limits = {};
         std::unordered_map<std::string, ResourceViewerState> resource_viewer_states = {};
         std::shared_ptr<daxa::ComputePipeline> resource_viewer_pipeline = {};
         SamplerId resource_viewer_sampler_id = {};

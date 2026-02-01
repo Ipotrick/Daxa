@@ -1174,6 +1174,10 @@ namespace daxa
             ImGui::Checkbox("Before", reinterpret_cast<bool *>(&state.pre_task));
             ImGui::SameLine();
             ImGui::Checkbox("Freeze", reinterpret_cast<bool *>(&state.freeze_resource));
+            if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && ImGui::IsItemHovered())
+            {
+                context.broadcast_resource_viewer_freeze = state.freeze_resource;
+            }
             ImGui::SameLine();
             ImGui::Checkbox("PreClear", reinterpret_cast<bool *>(&state.clear_before_task));
         };
@@ -1447,6 +1451,21 @@ namespace daxa
                         {
                             u32 const flags = ImPlotAxisFlags_NoDecorations & (~ImPlotAxisFlags_NoTickMarks);
                             ImPlot::SetupAxes("", "", flags, flags);
+                            if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && ImGui::IsWindowHovered())
+                            {
+                                // Sender
+                                context.boardcast_image_viewer_limits = {
+                                    .min_x = static_cast<f32>(ImPlot::GetPlotLimits().Min().x),
+                                    .max_x = static_cast<f32>(ImPlot::GetPlotLimits().Max().x),
+                                    .min_y = static_cast<f32>(ImPlot::GetPlotLimits().Min().y),
+                                    .max_y = static_cast<f32>(ImPlot::GetPlotLimits().Max().y),
+                                };
+                            }
+                            else if (context.boardcast_image_viewer_limits_prev_frame.has_value())
+                            {
+                                ImPlot::SetupAxisLimits(ImAxis_X1, context.boardcast_image_viewer_limits_prev_frame->min_x, context.boardcast_image_viewer_limits_prev_frame->max_x, ImPlotCond_Always);
+                                ImPlot::SetupAxisLimits(ImAxis_Y1, context.boardcast_image_viewer_limits_prev_frame->min_y, context.boardcast_image_viewer_limits_prev_frame->max_y, ImPlotCond_Always);
+                            }
                             if (ImPlot::IsPlotHovered())
                             {
                                 auto raw_mouse_pos = ImPlot::GetPlotMousePos(IMPLOT_AUTO, IMPLOT_AUTO);

@@ -2529,6 +2529,20 @@ namespace daxa
             ++av_iter;
         }
 
+        // broadcasting
+        for (auto av_iter = ui_context.resource_viewer_states.begin(); av_iter != ui_context.resource_viewer_states.end();)
+        {
+            if (ui_context.broadcast_resource_viewer_freeze.has_value())
+            {
+                av_iter->second.freeze_resource = ui_context.broadcast_resource_viewer_freeze.value();
+            }
+
+            ++av_iter;
+        }
+        ui_context.boardcast_image_viewer_limits_prev_frame = ui_context.boardcast_image_viewer_limits;
+        ui_context.boardcast_image_viewer_limits = {};
+        ui_context.broadcast_resource_viewer_freeze = {};
+
         /// ==============================================
         /// ======= DETAIL RESOURCE DETAIL TASK UI =======
         /// ==============================================
