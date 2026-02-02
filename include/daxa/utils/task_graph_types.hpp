@@ -20,7 +20,7 @@
 #include <daxa/device.hpp>
 #include <daxa/utils/mem.hpp>
 
-#define DAXA_ENABLE_TASK_GRAPH_MK2 0
+#define DAXA_ENABLE_TASK_GRAPH_MK2 1
 
 namespace daxa
 {
