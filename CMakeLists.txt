@@ -181,16 +181,37 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         )
     endif()
 
-    find_package(Wayland)
-    if(Wayland_FOUND)
-        target_compile_definitions(daxa
-            PUBLIC
-            DAXA_BUILT_WITH_WAYLAND=true
-        )
-        target_link_libraries(daxa
-            PRIVATE
-            ${Wayland_LIBRARIES}
-        )
+    find_package(PkgConfig)
+    if(PkgConfig_FOUND)
+        pkg_check_modules(WAYLAND_CLIENT wayland-client)
+        pkg_check_modules(WAYLAND_CURSOR wayland-cursor)
+        pkg_check_modules(WAYLAND_EGL wayland-egl)
+        pkg_check_modules(XKBCOMMON xkbcommon)
+
+        if(WAYLAND_CLIENT_FOUND AND WAYLAND_CURSOR_FOUND AND WAYLAND_EGL_FOUND AND XKBCOMMON_FOUND)
+            target_compile_definitions(daxa
+                    PUBLIC
+                    DAXA_BUILT_WITH_WAYLAND=true
+            )
+            target_include_directories(daxa
+                    PRIVATE
+                    ${WAYLAND_CLIENT_INCLUDE_DIRS}
+                    ${WAYLAND_CURSOR_INCLUDE_DIRS}
+                    ${WAYLAND_EGL_INCLUDE_DIRS}
+                    ${XKBCOMMON_INCLUDE_DIRS}
+            )
+            target_link_libraries(daxa
+                    PRIVATE
+                    ${WAYLAND_CLIENT_LIBRARIES}
+                    ${WAYLAND_CURSOR_LIBRARIES}
+                    ${WAYLAND_EGL_LIBRARIES}
+                    ${XKBCOMMON_LIBRARIES}
+            )
+            message(STATUS "Found wayland-client, version ${WAYLAND_CLIENT_VERSION}")
+            message(STATUS "Found wayland-cursor, version ${WAYLAND_CURSOR_VERSION}")
+            message(STATUS "Found wayland-egl, version ${WAYLAND_EGL_VERSION}")
+            message(STATUS "Found xkbcommon, version ${XKBCOMMON_VERSION}")
+        endif()
     endif()
 endif()
 
