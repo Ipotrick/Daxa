@@ -65,7 +65,11 @@ struct DrawTask : DrawTri::Task
         render_recorder.set_rasterization_samples(daxa::RasterizationSamples::E4);
         render_recorder.set_pipeline(*pipeline);
 
-        render_recorder.draw_mesh_tasks_indirect({.indirect_buffer = indirect_dispatch_buffer, .draw_count = 1});
+        render_recorder.draw_mesh_tasks_indirect({
+            .indirect_buffer = indirect_dispatch_buffer, 
+            .draw_count = 1u,
+            .stride = 12u,
+        });
         ti.recorder = std::move(render_recorder).end_renderpass();
     }
 };
@@ -155,6 +159,10 @@ auto main() -> int
             .mesh_shader_info = daxa::ShaderCompileInfo{
                 .source = daxa::ShaderFile{"draw.slang"},
                 .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_mesh"},
+            },
+            .task_shader_info = daxa::ShaderCompileInfo{
+                .source = daxa::ShaderFile{"draw.slang"},
+                .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_task"},
             },
             .fragment_shader_info = daxa::ShaderCompileInfo{
                 .source = daxa::ShaderFile{"draw.slang"},

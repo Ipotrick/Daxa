@@ -289,6 +289,7 @@ namespace daxa
         u32 queue_bits = {};
         std::array<u32, DAXA_QUEUE_COUNT> queue_batch_counts = {};
         std::array<std::span<TasksBatch>, DAXA_QUEUE_COUNT> queue_batches = {};
+        std::array<std::string_view, DAXA_QUEUE_COUNT> queue_batch_cmd_recorder_labels = {};
         std::span<u32> queue_indices = {};
     };
 

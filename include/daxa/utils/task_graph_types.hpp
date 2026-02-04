@@ -20,7 +20,7 @@
 #include <daxa/device.hpp>
 #include <daxa/utils/mem.hpp>
 
-#define DAXA_ENABLE_TASK_GRAPH_MK2 0
+#define DAXA_ENABLE_TASK_GRAPH_MK2 1
 
 namespace daxa
 {
@@ -58,8 +58,8 @@ namespace daxa
     enum struct TaskAccessType : u8
     {
         // Concurrent bit: 0
-        // Read bit: 1
-        // Sampled bit: 2
+        // Sampled bit: 1
+        // Read bit: 2
         // Write bit: 3
         NONE = 0,
         CONCURRENT_BIT = (1 << 0),
@@ -450,13 +450,6 @@ namespace daxa
         auto is_empty() const -> bool { return operator TaskGPUResourceView const &().is_empty(); }
         auto is_external() const -> bool { return operator TaskGPUResourceView const &().is_external(); }
         auto is_null() const -> bool { return operator TaskGPUResourceView const &().is_null(); }
-    };
-
-    struct Test
-    {
-        TaskResourceIndex task_graph_index = {};
-        TaskResourceIndex index = {};
-        ImageMipArraySlice slice = {};
     };
 
 #ifndef __clang__ // MSVC STL does not implement these for clang :/
