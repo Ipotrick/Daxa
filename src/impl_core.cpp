@@ -81,24 +81,38 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
     switch (std::bit_cast<daxa::NativeWindowPlatform>(platform))
     {
 #if DAXA_BUILT_WITH_WAYLAND
-    case NativeWindowPlatform::WAYLAND_API:
-    {
-        // TODO(grundlett): figure out how to link Wayland
-        VkWaylandSurfaceCreateInfoKHR surface_ci{
-            .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
-            .pNext = nullptr,
-            .flags = 0,
-            .display = wl_display_connect(nullptr),
-            .surface = static_cast<wl_surface *>(handle),
-        };
+        case NativeWindowPlatform::WAYLAND_API:
         {
-            auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
+            auto* wayland_info = static_cast<WaylandWindowInfo*>(handle);
+
+            if (wayland_info->display == nullptr) {
+                return DAXA_RESULT_ERROR_UNKNOWN;
+            }
+
+            if (wayland_info->surface == nullptr) {
+                return DAXA_RESULT_ERROR_UNKNOWN;
+            }
+
+            VkWaylandSurfaceCreateInfoKHR surface_ci{
+                .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
+                .pNext = nullptr,
+                .flags = 0,
+                .display = static_cast<wl_display*>(wayland_info->display),
+                .surface = static_cast<wl_surface*>(wayland_info->surface),
+            };
+
+            auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(
+                vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
+
+            if (func == nullptr) {
+                return DAXA_RESULT_ERROR_UNKNOWN;
+            }
+
             auto result = static_cast<daxa_Result>(func(instance->vk_instance, &surface_ci, nullptr, out_surface));
             _DAXA_RETURN_IF_ERROR(result, result);
             return result;
         }
-    }
-    break;
+            break;
 #endif
 #if DAXA_BUILT_WITH_X11
     case NativeWindowPlatform::XLIB_API:
