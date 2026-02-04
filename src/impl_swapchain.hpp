@@ -34,6 +34,15 @@
 ///
 /// WARNING: The swapchain only works on the main queue! It is directly tied to it.
 ///
+
+// TODO maybe move to daxa namespace
+struct WaylandWindowInfo {
+    void* display;
+    void* surface;
+    u32 width;
+    u32 height;
+};
+
 /// TODO: investigate if wsi is improved enough to use zombies for swapchain.
 struct daxa_ImplSwapchain final : ImplHandle
 {
