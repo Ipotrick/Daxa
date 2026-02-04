@@ -134,9 +134,9 @@ namespace daxa
         static constexpr inline usize PAGE_MASK = PAGE_SIZE - 1u;
         static constexpr inline usize PAGE_COUNT = MAX_RESOURCE_COUNT / PAGE_SIZE;
         using VersionAndRefcntT = std::atomic_uint64_t;
-        static constexpr inline u64 VERSION_COUNT_MASK = ~(1u << DAXA_ID_VERSION_BITS);
+        static constexpr inline u64 VERSION_COUNT_MASK = ~(1ull << DAXA_ID_VERSION_BITS);
         static constexpr inline u64 REF_COUNT_BITS = (64u - DAXA_ID_VERSION_BITS);
-        static constexpr inline u64 REF_COUNT_MASK = ~(1u << REF_COUNT_BITS);
+        static constexpr inline u64 REF_COUNT_MASK = ~(1ull << REF_COUNT_BITS);
         static constexpr inline u64 REF_COUNT_OFFSET = DAXA_ID_VERSION_BITS;
         // TODO: split up slots into hot and cold data.
         using PageT = std::array<ResourceT, PAGE_SIZE>;
@@ -268,7 +268,6 @@ namespace daxa
             {
                 return TryDecRefcntResult::ERROR_INVALID_ID;
             }
-            u64 version = id.version;
 
             u64 version_refcnt = {};
             u64 new_version_refcnt = {};
