@@ -307,6 +307,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         &surface_capabilities));
     _DAXA_RETURN_IF_ERROR(result, result)
 
+#if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
     if (surface_capabilities.currentExtent.width == UINT32_MAX ||
         surface_capabilities.currentExtent.height == UINT32_MAX)
     {
@@ -323,6 +324,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         );
     }
     else
+#endif // #if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
     {
         surface_extent.width = surface_capabilities.currentExtent.width;
         surface_extent.height = surface_capabilities.currentExtent.height;
