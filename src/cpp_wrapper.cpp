@@ -143,6 +143,10 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case DAXA_RESULT_ERROR_EXCEEDED_MAX_COMMAND_POOLS: return "ERROR_EXCEEDED_MAX_COMMAND_POOLS";
     case DAXA_RESULT_ERROR_CMD_LIST_ALREADY_COMPLETED: return "ERROR_CMD_LIST_ALREADY_COMPLETED";
     case DAXA_RESULT_ERROR_ADDRESS_BELONGS_TO_NO_BUFFER: return "DAXA_RESULT_ERROR_ADDRESS_BELONGS_TO_NO_BUFFER";
+    case DAXA_RESULT_ERROR_WAYLAND_DISPLAY_IS_NULL: return "DAXA_RESULT_ERROR_WAYLAND_DISPLAY_IS_NULL";
+    case DAXA_RESULT_ERROR_WAYLAND_SURFACE_IS_NULL: return "DAXA_RESULT_ERROR_WAYLAND_SURFACE_IS_NULL";
+    case DAXA_RESULT_ERROR_WAYLAND_FAILED_TO_CREATE_SURFACE: return "DAXA_RESULT_ERROR_WAYLAND_FAILED_TO_CREATE_SURFACE";
+    case DAXA_RESULT_ERROR_QUEUE_DOES_NOT_SUPPORT_SURFACE: return "DAXA_RESULT_ERROR_QUEUE_DOES_NOT_SUPPORT_SURFACE";
     case DAXA_RESULT_MAX_ENUM: return "ERROR";
     default: return "ERROR";
     }
@@ -685,14 +689,13 @@ namespace daxa
         return *r_cast<DeviceProperties const *>(daxa_dvc_properties(rc_cast<daxa_Device>(object)));
     }
 
-    auto Device::get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>
+    auto Device::get_supported_present_modes(NativeWindowInfo native_window_info) const -> std::vector<PresentMode>
     {
         auto * c_device = rc_cast<daxa_Device>(object);
         VkSurfaceKHR surface = {};
         auto result = create_surface(
             c_device->instance,
-            std::bit_cast<daxa_NativeWindowHandle>(native_handle),
-            std::bit_cast<daxa_NativeWindowPlatform>(native_platform),
+            std::bit_cast<daxa_NativeWindowInfo>(native_window_info),
             &surface);
         check_result(result, "could not create surface");
         defer

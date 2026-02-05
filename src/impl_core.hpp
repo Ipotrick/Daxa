@@ -107,7 +107,7 @@ inline auto make_subresource_layers(daxa_ImageArraySlice const & slice, VkImageA
     return make_subresource_layers(*r_cast<ImageArraySlice const *>(&slice), aspect);
 }
 
-auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result;
+auto create_surface(daxa_Instance instance, daxa_NativeWindowInfo native_window_info, VkSurfaceKHR * out_surface) -> daxa_Result;
 
 auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device) -> daxa_DeviceProperties;
 

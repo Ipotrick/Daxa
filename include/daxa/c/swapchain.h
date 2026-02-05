@@ -8,25 +8,44 @@
 DAXA_EXPORT int32_t
 daxa_default_format_selector(VkFormat format);
 
-/// @brief  A platform-dependent window resource.
-///         On Windows, this is an `HWND`
-///         On Linux X11, this is a `Window`
-///         On Linux Wayland, this is a `wl_surface *`
-typedef void * daxa_NativeWindowHandle;
-
-typedef enum
+typedef struct 
 {
-    DAXA_NATIVE_WINDOW_PLATFORM_UNKNOWN,
-    DAXA_NATIVE_WINDOW_PLATFORM_WIN32_API,
-    DAXA_NATIVE_WINDOW_PLATFORM_XLIB_API,
-    DAXA_NATIVE_WINDOW_PLATFORM_WAYLAND_API,
-    DAXA_NATIVE_WINDOW_PLATFORM_MAX_ENUM = 0x7fffffff,
-} daxa_NativeWindowPlatform;
+    void * hwnd;
+} daxa_NativeWindowInfoWin32;
 
 typedef struct
 {
-    daxa_NativeWindowHandle native_window;
-    daxa_NativeWindowPlatform native_window_platform;
+    void * window;
+} daxa_NativeWindowInfoXlib;
+
+typedef struct
+{
+    void* display;
+    void* surface;
+    daxa_u32 width;
+    daxa_u32 height;
+} daxa_NativeWindowInfoWayland;
+
+typedef union
+{
+    daxa_NativeWindowInfoWin32 win32;
+    daxa_NativeWindowInfoXlib xlib;
+    daxa_NativeWindowInfoWayland wayland;
+} daxa_NativeWindowInfoUnion;
+
+typedef enum
+{
+    DAXA_NATIVE_WINDOW_PLATFORM_INDEX_WIN32 = 0,
+    DAXA_NATIVE_WINDOW_PLATFORM_INDEX_XLIB = 1,
+    DAXA_NATIVE_WINDOW_PLATFORM_INDEX_WAYLAND = 2,
+    DAXA_NATIVE_WINDOW_PLATFORM_INDEX_MAX_ENUM = 0x7fffffff,
+} daxa_NativeWindowPlatformIndex;
+
+typedef daxa_Variant(daxa_NativeWindowInfoUnion) daxa_NativeWindowInfo;
+
+typedef struct
+{
+    daxa_NativeWindowInfo native_window_info;
     int32_t (*surface_format_selector)(VkFormat);
     VkPresentModeKHR present_mode;
     VkSurfaceTransformFlagBitsKHR present_operation;

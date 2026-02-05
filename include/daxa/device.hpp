@@ -786,7 +786,7 @@ namespace daxa
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to device properties
         [[nodiscard]] auto properties() const -> DeviceProperties const &;
-        [[nodiscard]] auto get_supported_present_modes(NativeWindowHandle native_handle, NativeWindowPlatform native_platform) const -> std::vector<PresentMode>;
+        [[nodiscard]] auto get_supported_present_modes(NativeWindowInfo native_window_info) const -> std::vector<PresentMode>;
 
 #if !DAXA_REMOVE_DEPRECATED
         /// DEPRECATED:

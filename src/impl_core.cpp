@@ -61,69 +61,36 @@ auto make_subresource_layers(ImageArraySlice const & slice, VkImageAspectFlags a
         .layerCount = slice.layer_count,
     };
 }
-auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[maybe_unused]] daxa_NativeWindowPlatform platform, VkSurfaceKHR * out_surface) -> daxa_Result
+auto create_surface(daxa_Instance instance, daxa_NativeWindowInfo native_window_info, VkSurfaceKHR * out_surface) -> daxa_Result
 {
+    NativeWindowInfo native_window_info_cpp = std::bit_cast<NativeWindowInfo>(native_window_info);
 #if defined(_WIN32)
-    VkWin32SurfaceCreateInfoKHR const surface_ci{
-        .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
-        .pNext = nullptr,
-        .flags = 0,
-        .hinstance = GetModuleHandleA(nullptr),
-        .hwnd = static_cast<HWND>(handle),
-    };
+    if (NativeWindowInfoWin32* win32_info = daxa::get_if<NativeWindowInfoWin32>(&native_window_info_cpp))
     {
-        auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWin32SurfaceKHR"));
-        auto result = static_cast<daxa_Result>(func(instance->vk_instance, &surface_ci, nullptr, out_surface));
-        _DAXA_RETURN_IF_ERROR(result, result);
-        return result;
-    }
-#elif defined(__linux__)
-    switch (std::bit_cast<daxa::NativeWindowPlatform>(platform))
-    {
-#if DAXA_BUILT_WITH_WAYLAND
-        case NativeWindowPlatform::WAYLAND_API:
+        VkWin32SurfaceCreateInfoKHR const surface_ci{
+            .sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .flags = 0,
+            .hinstance = GetModuleHandleA(nullptr),
+            .hwnd = static_cast<HWND>(win32_info->hwnd),
+        };
         {
-            auto* wayland_info = static_cast<WaylandWindowInfo*>(handle);
-
-            if (wayland_info->display == nullptr) {
-                return DAXA_RESULT_ERROR_UNKNOWN;
-            }
-
-            if (wayland_info->surface == nullptr) {
-                return DAXA_RESULT_ERROR_UNKNOWN;
-            }
-
-            VkWaylandSurfaceCreateInfoKHR surface_ci{
-                .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
-                .pNext = nullptr,
-                .flags = 0,
-                .display = static_cast<wl_display*>(wayland_info->display),
-                .surface = static_cast<wl_surface*>(wayland_info->surface),
-            };
-
-            auto func = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(
-                vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
-
-            if (func == nullptr) {
-                return DAXA_RESULT_ERROR_UNKNOWN;
-            }
-
+            auto func = reinterpret_cast<PFN_vkCreateWin32SurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWin32SurfaceKHR"));
             auto result = static_cast<daxa_Result>(func(instance->vk_instance, &surface_ci, nullptr, out_surface));
             _DAXA_RETURN_IF_ERROR(result, result);
             return result;
         }
-            break;
-#endif
+    }
+#elif defined(__linux__) // #if defined(_WIN32)
 #if DAXA_BUILT_WITH_X11
-    case NativeWindowPlatform::XLIB_API:
-    default:
+    if (NativeWindowInfoXlib* xlib_info = daxa::get_if<NativeWindowInfoXlib>(&native_window_info_cpp))
     {
         VkXlibSurfaceCreateInfoKHR surface_ci{
             .sType = VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR,
             .pNext = nullptr,
             .flags = 0,
             .dpy = XOpenDisplay(nullptr),
-            .window = reinterpret_cast<Window>(handle),
+            .window = reinterpret_cast<Window>(xlib_info->window),
         };
         {
             auto func = reinterpret_cast<PFN_vkCreateXlibSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateXlibSurfaceKHR"));
@@ -132,10 +99,32 @@ auto create_surface(daxa_Instance instance, daxa_NativeWindowHandle handle, [[ma
             return result;
         }
     }
-    break;
+#endif // #if DAXA_BUILT_WITH_X11
+#if DAXA_BUILT_WITH_WAYLAND
+    if (NativeWindowInfoWayland* wayland_info = daxa::get_if<NativeWindowInfoWayland>(&native_window_info_cpp))
+    {
+        VkWaylandSurfaceCreateInfoKHR surface_ci{
+            .sType = VK_STRUCTURE_TYPE_WAYLAND_SURFACE_CREATE_INFO_KHR,
+            .pNext = nullptr,
+            .flags = 0,
+            .display = static_cast<wl_display*>(wayland_info->display),
+            .surface = static_cast<wl_surface*>(wayland_info->surface),
+        };
+
+        PFN_vkCreateWaylandSurfaceKHR createSurfaceWaylandFunc = reinterpret_cast<PFN_vkCreateWaylandSurfaceKHR>(vkGetInstanceProcAddr(instance->vk_instance, "vkCreateWaylandSurfaceKHR"));
+
+        if (createSurfaceWaylandFunc == nullptr) 
+        {
+            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_WAYLAND_FAILED_TO_CREATE_SURFACE, DAXA_RESULT_ERROR_WAYLAND_FAILED_TO_CREATE_SURFACE);
+        }
+
+        auto result = static_cast<daxa_Result>(createSurfaceWaylandFunc(instance->vk_instance, &surface_ci, nullptr, out_surface));
+        _DAXA_RETURN_IF_ERROR(result, result);
+        return result;
     }
-#endif
-#endif
+#endif // #if DAXA_BUILT_WITH_WAYLAND
+#endif // #elif defined(__linux__) // #if defined(_WIN32)
+    return DAXA_RESULT_ERROR_UNKNOWN;
 }
 
 #define DAXA_ASSIGN_ARRAY_3(SRC) \

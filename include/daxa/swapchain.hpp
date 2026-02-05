@@ -18,11 +18,29 @@ namespace daxa
         default: return 0;
         }
     }
+    struct NativeWindowInfoWin32
+    {
+        void * hwnd = {};
+    };
+
+    struct NativeWindowInfoXlib
+    {
+        void * window = {};
+    };
+
+    struct NativeWindowInfoWayland
+    {
+        void* display = {};
+        void* surface = {};
+        u32 width = {};
+        u32 height = {};
+    };
+
+    using NativeWindowInfo = Variant<NativeWindowInfoWin32, NativeWindowInfoXlib, NativeWindowInfoWayland>;
 
     struct SwapchainInfo
     {
-        NativeWindowHandle native_window;
-        NativeWindowPlatform native_window_platform;
+        NativeWindowInfo native_window_info = NativeWindowInfoWin32{};
         i32 (*surface_format_selector)(Format, ColorSpace) = default_format_score;
         PresentMode present_mode = PresentMode::FIFO;
         PresentOp present_operation = PresentOp::IDENTITY;
