@@ -227,7 +227,7 @@ namespace daxa
         MemoryArena() = default;
         MemoryArena(std::string_view name, u64 a_size)
         {
-            a_size = std::max(sizeof(u8) * name.size() + 1ull, a_size);
+            a_size = std::max<uint64_t>(sizeof(u8) * name.size() + 1ull, a_size);            this->owned_memory = static_cast<u8*>(::operator new[](a_size, std::align_val_t(alignof(void*))));
             this->owned_memory = static_cast<u8*>(::operator new[](a_size, std::align_val_t(alignof(void*))));
             this->owned_memory_count += 1ull;
             this->memory = this->owned_memory;
