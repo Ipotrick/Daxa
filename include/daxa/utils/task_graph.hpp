@@ -536,7 +536,7 @@ namespace daxa
                     }
                     else if (TaskBufferView * buffer_ptr = daxa::get_if<TaskBufferView>(&av[i]); buffer_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!buffer_ptr->is_empty(), error_message_unassigned_buffer_view(attach.value.buffer.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!buffer_ptr->is_empty(), error_message_unassigned_buffer_view(_internal._name, attach.value.buffer.name));
                         if (!keep_access)
                         {
                             attach.value.buffer.task_access.stage = override_stage;
@@ -548,7 +548,7 @@ namespace daxa
                     }
                     else if (TaskImageView * image_ptr = daxa::get_if<TaskImageView>(&av[i]); image_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!image_ptr->is_empty(), error_message_unassigned_image_view(attach.value.image.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!image_ptr->is_empty(), error_message_unassigned_image_view(_internal._name, attach.value.image.name));
                         if (!keep_access)
                         {
                             attach.value.image.task_access.stage = override_stage;
@@ -560,7 +560,7 @@ namespace daxa
                     }
                     else if (TaskBlasView * blas_ptr = daxa::get_if<TaskBlasView>(&av[i]); blas_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!blas_ptr->is_empty(), error_message_unassigned_tlas_view(attach.value.blas.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!blas_ptr->is_empty(), error_message_unassigned_tlas_view(_internal._name, attach.value.blas.name));
                         if (!keep_access)
                         {
                             attach.value.blas.task_access.stage = override_stage;
@@ -572,7 +572,7 @@ namespace daxa
                     }
                     else if (TaskTlasView * tlas_ptr = daxa::get_if<TaskTlasView>(&av[i]); tlas_ptr != nullptr)
                     {
-                        DAXA_DBG_ASSERT_TRUE_M(!tlas_ptr->is_empty(), error_message_unassigned_blas_view(attach.value.tlas.name, _internal._name));
+                        DAXA_DBG_ASSERT_TRUE_M(!tlas_ptr->is_empty(), error_message_unassigned_blas_view(_internal._name, attach.value.tlas.name));
                         if (!keep_access)
                         {
                             attach.value.tlas.task_access.stage = override_stage;
