@@ -893,10 +893,10 @@ namespace daxa
 
     /// --- Begin Swapchain ---
 
-    void Swapchain::resize()
+    void Swapchain::resize(Extent2D new_size)
     {
         check_result(
-            daxa_swp_resize(r_cast<daxa_Swapchain>(this->object)),
+            daxa_swp_resize(r_cast<daxa_Swapchain>(this->object), std::bit_cast<VkExtent2D>(new_size)),
             "failed to resize swapchain", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_ERROR_OUT_OF_DATE_KHR});
     }
 
