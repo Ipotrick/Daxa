@@ -2348,7 +2348,7 @@ namespace daxa
         }
 
         auto tmp_minsh_task_batches_contiguous = tmp_minsh_task_batches.clone_to_contiguous();;
-        auto* tmp_batches = &tmp_minsh_task_batches_contiguous;
+        auto tmp_batches = tmp_minsh_task_batches_contiguous;
 
         /// =================================================
         /// ==== DETERMINE MIN AND MAX BATCH FOR SUBMITS ====
@@ -2360,9 +2360,9 @@ namespace daxa
         // AttachmentGroup dependencies do not express this well enough and so we need to store the submit batches explicitly.
 
         u32 current_submit_index = ~0u;
-        for (u32 batch_i = 0; batch_i < (*tmp_batches).size(); ++batch_i)
+        for (u32 batch_i = 0; batch_i < tmp_batches.size(); ++batch_i)
         {
-            TmpBatch const & batch = (*tmp_batches)[batch_i];
+            TmpBatch const & batch = tmp_batches[batch_i];
             ImplTask const & first_task = *batch.tasks[0].first;
 
             if(first_task.submit_index != current_submit_index)
@@ -2446,14 +2446,14 @@ namespace daxa
 
         if (impl.info.optimize_transient_lifetimes && impl.info.reorder_tasks)
         {
-            auto tmp_transient_optimized_task_batches = tmp_memory.allocate_trivial_span_fill<TmpBatch>(tmp_batches->size(), TmpBatch{ArenaDynamicArray8k<std::pair<ImplTask *, u32>>(&tmp_memory)});
+            auto tmp_transient_optimized_task_batches = tmp_memory.allocate_trivial_span_fill<TmpBatch>(tmp_batches.size(), TmpBatch{ArenaDynamicArray8k<std::pair<ImplTask *, u32>>(&tmp_memory)});
             auto tmp_transient_optimized_task_to_batch = tmp_memory.allocate_trivial_span_fill<u32>(impl.tasks.size(), ~0u);
             u32 const max_batch_index = static_cast<u32>(tmp_transient_optimized_task_batches.size()) - 1;
 
-            for (u32 ii = {}; ii < tmp_batches->size(); ++ii)
+            for (u32 ii = {}; ii < tmp_batches.size(); ++ii)
             {
-                u32 const batch_i = static_cast<u32>(tmp_batches->size()) - 1 - ii; // Reverse iterate over batches from right to left.
-                TmpBatch & initial_batch = (*tmp_batches)[batch_i];
+                u32 const batch_i = static_cast<u32>(tmp_batches.size()) - 1 - ii; // Reverse iterate over batches from right to left.
+                TmpBatch & initial_batch = tmp_batches[batch_i];
 
                 for (u32 t = 0; t < initial_batch.tasks.size(); ++t)
                 {
@@ -2555,7 +2555,7 @@ namespace daxa
                 }
             }
             
-            tmp_batches = &tmp_transient_optimized_task_batches;
+            tmp_batches = tmp_transient_optimized_task_batches;
         }
 
         /// ======================================
@@ -2569,7 +2569,7 @@ namespace daxa
         /// ==== ASSIGN FINAL BATCH INDICES FOR TASKS AND ACCESS GROUPS ====
         /// ================================================================
 
-        auto & final_batches = *tmp_batches;
+        auto & final_batches = tmp_batches;
         impl.flat_batch_count = static_cast<u32>(final_batches.size());
 
         for (u32 b = 0; b < final_batches.size(); ++b)
