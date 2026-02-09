@@ -62,7 +62,7 @@ daxa_swp_get_format(daxa_Swapchain swapchain);
 DAXA_EXPORT VkColorSpaceKHR
 daxa_swp_get_color_space(daxa_Swapchain swapchain);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_swp_resize(daxa_Swapchain swapchain);
+daxa_swp_resize(daxa_Swapchain swapchain, VkExtent2D new_size);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_swp_set_present_mode(daxa_Swapchain swapchain, VkPresentModeKHR present_mode);
 
