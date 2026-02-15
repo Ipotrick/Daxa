@@ -232,7 +232,7 @@ namespace daxa
     template <typename TaskResourceIdT>
     auto validate_and_translate_view(ImplTaskGraph & impl, TaskResourceIdT id) -> TaskResourceIdT
     {
-        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task buffer id. All ids must either be filled with a valid id or null.");
+        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task resource id. All ids must either be filled with a valid id or null.");
 
         if (id.is_null())
         {

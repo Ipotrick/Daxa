@@ -525,6 +525,12 @@ namespace daxa
                 continue;
             }
 
+            if (resource->access_timeline.size() == 0)
+            {
+                continue;
+            }
+            state.timeline_index = std::min(state.timeline_index, static_cast<i32>(resource->access_timeline.size()) - 1);
+
             if (task.attachment_access_groups[attach_i].first != &resource->access_timeline[state.timeline_index])
             {
                 continue;
@@ -600,14 +606,14 @@ namespace daxa
 
                         {
                             // Attempt to increment reference counter.
-                            bool success = context.device.inc_refcnt_buffer(child_viewer.second.buffer);
-                            if (!success)
-                            {
-                                continue;
-                            }
-
-                            // This will decrement the refcount once the command buffer finished on the gpu.
-                            ti.recorder.destroy_buffer_deferred(child_viewer.second.buffer);
+                            //bool success = context.device.inc_refcnt_buffer(child_viewer.second.buffer);
+                            //if (!success)
+                            //{
+                            //    continue;
+                            //}
+//
+                            //// This will decrement the refcount once the command buffer finished on the gpu.
+                            //ti.recorder.destroy_buffer_deferred(child_viewer.second.buffer);
                         }
 
                         BufferInfo child_buffer_info = context.device.buffer_info(child_viewer.second.buffer).value();
@@ -1373,9 +1379,18 @@ namespace daxa
                             state.image.display_value_range_initialized = true;
                         }
                         ImGui::SetNextItemWidth(160);
-                        f64 values[2] = {static_cast<f64>(state.image.min_display_value._f32), static_cast<f64>(state.image.max_display_value._f32)};
-                        f64 min_values[2] = {static_cast<f64>(min_f32), static_cast<f64>(min_f32)};
-                        f64 max_values[2] = {static_cast<f64>(max_f32), static_cast<f64>(max_f32)};
+                        f64 values[2] = { 
+                            std::clamp(static_cast<f64>(state.image.min_display_value._f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                            std::clamp(static_cast<f64>(state.image.max_display_value._f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                        };
+                        f64 min_values[2] = {
+                            std::clamp(static_cast<f64>(min_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                            std::clamp(static_cast<f64>(min_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                        };
+                        f64 max_values[2] = {
+                            std::clamp(static_cast<f64>(max_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                            std::clamp(static_cast<f64>(max_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                        };
                         ImGui::SliderScalarN("Display Range", ImGuiDataType_Double, values, 2, min_values, max_values);
                         state.image.min_display_value._f32 = static_cast<f32>(values[0]);
                         state.image.max_display_value._f32 = static_cast<f32>(values[1]);
