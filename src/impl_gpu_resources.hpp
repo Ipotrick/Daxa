@@ -246,11 +246,18 @@ namespace daxa
                 }
             }
             
-            // With the atomic or, the reference count gets initialized to 1.
-            u64 version_refcnt = this->hot_data.at(index).second.fetch_or(1ull << REF_COUNT_OFFSET, std::memory_order_relaxed);
+            // Under the current logic, it us guaranteed that this section of code is the only code that will ever write to this index, even in a multi threaded scenario!
+            u64 version_refcnt = this->hot_data.at(index).second.load();
             u64 version = get_version(version_refcnt);
-            [[maybe_unused]] u64 prev_refcnt = get_refcnt(version_refcnt);
-            DAXA_DBG_ASSERT_TRUE_M(prev_refcnt == 0, "New slots must have a previous ref count of zero! Somehow an alive resource made it into the freelist!");
+            u64 refcnt = get_refcnt(version_refcnt);
+            DAXA_DBG_ASSERT_TRUE_M(refcnt == 0, "New slots must have a previous ref count of zero! Somehow an alive resource made it into the freelist!");
+
+            version += 1;
+            refcnt += 1;
+            version_refcnt = pack_version_refcnt(version, refcnt);
+
+            // Under the current logic, it us guaranteed that this section of code is the only code that will ever write to this index, even in a multi threaded scenario!
+            this->hot_data.at(index).second.store(version_refcnt);
 
             auto const id = GPUResourceId{.index = static_cast<u64>(index), .version = version};
             return std::optional{std::tuple<GPUResourceId, ResourceT &, typename ResourceT::HotData &>(id, this->paged_data[page]->at(offset), this->hot_data.at(index).first)};
