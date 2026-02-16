@@ -475,7 +475,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
         {
             _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_CLEAR_VALUE, DAXA_RESULT_INVALID_CLEAR_VALUE);
         }
-        VkImageSubresourceRange const sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
+        VkImageSubresourceRange const sub_range = make_subresource_range(info->slice, img_slot.aspect_flags);
         vkCmdClearDepthStencilImage(
             self->command_arena->vk_command_buffer,
             img_slot.vk_image,
@@ -490,7 +490,7 @@ auto daxa_cmd_clear_image(daxa_CommandRecorder self, daxa_ImageClearInfo const *
         {
             _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_CLEAR_VALUE, DAXA_RESULT_INVALID_CLEAR_VALUE);
         }
-        VkImageSubresourceRange const sub_range = make_subresource_range(info->dst_slice, img_slot.aspect_flags);
+        VkImageSubresourceRange const sub_range = make_subresource_range(info->slice, img_slot.aspect_flags);
         vkCmdClearColorImage(
             self->command_arena->vk_command_buffer,
             img_slot.vk_image,

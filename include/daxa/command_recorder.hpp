@@ -84,8 +84,8 @@ namespace daxa
     {
         [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout dst_image_layout = daxa::ImageLayout::GENERAL;
         ClearValue clear_value = {};
-        ImageId dst_image = {};
-        ImageMipArraySlice dst_slice = {};
+        ImageId image = {};
+        ImageMipArraySlice slice = {};
     };
 
     struct BufferClearInfo

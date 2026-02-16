@@ -137,14 +137,14 @@ typedef struct
     // Make sure this stays abi compatible with daxa::ClearValue
     daxa_Variant(VkClearValue) clear_value;
     daxa_ImageId image;
-    daxa_ImageMipArraySlice dst_slice;
+    daxa_ImageMipArraySlice slice;
 } daxa_ImageClearInfo;
 
 static daxa_ImageClearInfo const DAXA_DEFAULT_IMAGE_CLEAR_INFO = {
     .image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .clear_value = DAXA_ZERO_INIT,
     .image = DAXA_ZERO_INIT,
-    .dst_slice = DAXA_ZERO_INIT,
+    .slice = DAXA_ZERO_INIT,
 };
 
 typedef struct

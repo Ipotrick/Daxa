@@ -511,7 +511,7 @@ namespace daxa
                             .src_access = daxa::AccessConsts::READ_WRITE,
                             .dst_access = daxa::AccessConsts::READ_WRITE,
                         });
-                        ti.recorder.clear_image({.dst_image = image});
+                        ti.recorder.clear_image({.image = image});
                         ti.recorder.pipeline_barrier(daxa::BarrierInfo{
                             .src_access = daxa::AccessConsts::READ_WRITE,
                             .dst_access = daxa::AccessConsts::READ_WRITE,

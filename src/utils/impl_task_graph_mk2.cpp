@@ -1164,8 +1164,8 @@ namespace daxa
                         {
                             ti.recorder.clear_image(ImageClearInfo{
                                 .clear_value = cinfo.clear_value,
-                                .dst_image = ti.get(TaskImageAttachmentIndex{0}).ids[runtime_img],
-                                .dst_slice = cinfo.view.slice,
+                                .image = ti.get(TaskImageAttachmentIndex{0}).ids[runtime_img],
+                                .slice = cinfo.view.slice,
                             });
                         }
                     }));
