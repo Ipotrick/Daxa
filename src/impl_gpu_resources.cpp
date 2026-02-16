@@ -26,6 +26,7 @@ namespace daxa
     {
         switch (type)
         {
+        case ImageViewType::NONE: return "NONE";
         case ImageViewType::REGULAR_1D: return "REGULAR_1D";
         case ImageViewType::REGULAR_2D: return "REGULAR_2D";
         case ImageViewType::REGULAR_3D: return "REGULAR_3D";
@@ -33,7 +34,7 @@ namespace daxa
         case ImageViewType::REGULAR_1D_ARRAY: return "REGULAR_1D_ARRAY";
         case ImageViewType::REGULAR_2D_ARRAY: return "REGULAR_2D_ARRAY";
         case ImageViewType::CUBE_ARRAY: return "CUBE_ARRAY";
-        default: return "NONE";
+        default: return "UNKNOWN";
         }
     }
 

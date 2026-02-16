@@ -637,7 +637,7 @@ namespace daxa
             case TaskAttachmentType::BLAS: return value.blas.name;
             case TaskAttachmentType::TLAS: return value.tlas.name;
             case TaskAttachmentType::IMAGE: return value.image.name;
-            default: return "undefined";
+            default: return "UNKNOWN";
             }
         }
 
@@ -784,7 +784,7 @@ namespace daxa
             case TaskAttachmentType::BLAS: return value.blas.name;
             case TaskAttachmentType::TLAS: return value.tlas.name;
             case TaskAttachmentType::IMAGE: return value.image.name;
-            default: return "undefined";
+            default: return "UNKNOWN";
             }
         }
 

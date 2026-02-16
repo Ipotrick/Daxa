@@ -147,8 +147,8 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case DAXA_RESULT_ERROR_WAYLAND_SURFACE_IS_NULL: return "DAXA_RESULT_ERROR_WAYLAND_SURFACE_IS_NULL";
     case DAXA_RESULT_ERROR_WAYLAND_FAILED_TO_CREATE_SURFACE: return "DAXA_RESULT_ERROR_WAYLAND_FAILED_TO_CREATE_SURFACE";
     case DAXA_RESULT_ERROR_QUEUE_DOES_NOT_SUPPORT_SURFACE: return "DAXA_RESULT_ERROR_QUEUE_DOES_NOT_SUPPORT_SURFACE";
-    case DAXA_RESULT_MAX_ENUM: return "ERROR";
-    default: return "ERROR";
+    case DAXA_RESULT_MAX_ENUM: return "UNKNOWN";
+    default: return "UNKNOWN";
     }
 };
 
@@ -1438,7 +1438,7 @@ namespace daxa
         case QueueType::MAIN: return "MAIN";
         case QueueType::COMPUTE: return "COMPUTE";
         case QueueType::TRANSFER: return "TRANSFER";
-        default: return "UNIMPLEMENTED CASE";
+        default: return "UNKNOWN";
         }
     }
 
@@ -1547,7 +1547,7 @@ namespace daxa
         case ImageLayout::UNDEFINED: return "UNDEFINED";
         case ImageLayout::GENERAL: return "GENERAL";
         case ImageLayout::PRESENT_SRC: return "PRESENT_SRC";
-        default: return "INVALID LAYOUT";
+        default: return "UNKNOWN";
         }
     }
 
@@ -1894,7 +1894,7 @@ namespace daxa
         case Format::PVRTC1_4BPP_SRGB_BLOCK_IMG: return "PVRTC1_4BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_2BPP_SRGB_BLOCK_IMG: return "PVRTC2_2BPP_SRGB_BLOCK_IMG";
         case Format::PVRTC2_4BPP_SRGB_BLOCK_IMG: return "PVRTC2_4BPP_SRGB_BLOCK_IMG";
-        default: return "UNIMPLEMENTED CASE";
+        default: return "UNKNOWN";
         }
     }
 
@@ -1918,7 +1918,7 @@ namespace daxa
         case ColorSpace::PASS_THROUGH: return "PASS_THROUGH";
         case ColorSpace::EXTENDED_SRGB_NONLINEAR: return "EXTENDED_SRGB_NONLINEAR";
         case ColorSpace::DISPLAY_NATIVE_AMD: return "DISPLAY_NATIVE_AMD";
-        default: return "unknown";
+        default: return "UNKNOWN";
         }
     }
 

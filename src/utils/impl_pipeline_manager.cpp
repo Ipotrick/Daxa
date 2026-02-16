@@ -344,7 +344,7 @@ namespace
         case daxa::ImplPipelineManager::ShaderStage::RAY_CLOSEST_HIT: return "rchit";
         case daxa::ImplPipelineManager::ShaderStage::RAY_MISS: return "rmiss";
         case daxa::ImplPipelineManager::ShaderStage::RAY_CALLABLE: return "rcall";
-        default: return "none";
+        default: return "UNKNOWN";
         }
     }
 } // namespace
