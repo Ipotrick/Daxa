@@ -110,7 +110,7 @@ namespace daxa
 
     struct AccessGroup
     {
-        TaskStage stages = {};
+        TaskStages stages = {};
         TaskAccessType type = {};
         u32 queue_bits = {};
         std::span<TaskAttachmentAccess> tasks = {};

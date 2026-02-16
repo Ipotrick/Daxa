@@ -114,7 +114,7 @@ namespace daxa
     /// ==== STRING CONVERSION ====
     /// ===========================
 
-    auto to_string(TaskStage tstage) -> std::string
+    auto to_string(TaskStages tstage) -> std::string
     {
         std::string ret = {};
 
@@ -216,16 +216,16 @@ namespace daxa
     /// ==== GENERAL TYPE CONVERSION ====
     /// =================================
 
-    auto task_type_default_stage(TaskType task_type) -> TaskStage
+    auto task_type_default_stage(TaskType task_type) -> TaskStages
     {
         switch (task_type)
         {
-        case TaskType::GENERAL: return TaskStage::NONE;
-        case TaskType::RASTER: return TaskStage::RASTER_SHADER;
-        case TaskType::COMPUTE: return TaskStage::COMPUTE_SHADER;
-        case TaskType::RAY_TRACING: return TaskStage::RAY_TRACING_SHADER;
-        case TaskType::TRANSFER: return TaskStage::TRANSFER;
-        default: return TaskStage::NONE;
+        case TaskType::GENERAL: return TaskStages::NONE;
+        case TaskType::RASTER: return TaskStages::RASTER_SHADER;
+        case TaskType::COMPUTE: return TaskStages::COMPUTE_SHADER;
+        case TaskType::RAY_TRACING: return TaskStages::RAY_TRACING_SHADER;
+        case TaskType::TRANSFER: return TaskStages::TRANSFER;
+        default: return TaskStages::NONE;
         }
     }
 
@@ -277,38 +277,38 @@ namespace daxa
         return ret;
     }
 
-    auto task_stage_to_pipeline_stage(TaskStage stage) -> PipelineStageFlags
+    auto task_stage_to_pipeline_stage(TaskStages stage) -> PipelineStageFlags
     {
-        return static_cast<daxa::PipelineStageFlags>(static_cast<u64>(stage) & ~static_cast<u64>(TaskStage::JOKER));
+        return static_cast<daxa::PipelineStageFlags>(static_cast<u64>(stage) & ~static_cast<u64>(TaskStages::JOKER));
     }
 
-    auto is_task_stage_shader_access(TaskStage stage) -> bool
+    auto is_task_stage_shader_access(TaskStages stage) -> bool
     {
         bool used_in_shader = false;
         switch (stage)
         {
-        case TaskStage::NONE: used_in_shader = false; break;
-        case TaskStage::VERTEX_SHADER: used_in_shader = true; break;
-        case TaskStage::TESSELLATION_CONTROL_SHADER: used_in_shader = true; break;
-        case TaskStage::TESSELLATION_EVALUATION_SHADER: used_in_shader = true; break;
-        case TaskStage::GEOMETRY_SHADER: used_in_shader = true; break;
-        case TaskStage::FRAGMENT_SHADER: used_in_shader = true; break;
-        case TaskStage::COMPUTE_SHADER: used_in_shader = true; break;
-        case TaskStage::RAY_TRACING_SHADER: used_in_shader = true; break;
-        case TaskStage::TASK_SHADER: used_in_shader = true; break;
-        case TaskStage::MESH_SHADER: used_in_shader = true; break;
-        case TaskStage::PRE_RASTERIZATION_SHADERS: used_in_shader = true; break;
-        case TaskStage::RASTER_SHADER: used_in_shader = true; break;
-        case TaskStage::SHADER: used_in_shader = true; break;
-        case TaskStage::COLOR_ATTACHMENT: used_in_shader = false; break;
-        case TaskStage::DEPTH_STENCIL_ATTACHMENT: used_in_shader = false; break;
-        case TaskStage::RESOLVE: used_in_shader = false; break;
-        case TaskStage::INDIRECT_COMMAND_READ: used_in_shader = false; break;
-        case TaskStage::INDEX_INPUT: used_in_shader = false; break;
-        case TaskStage::TRANSFER: used_in_shader = false; break;
-        case TaskStage::HOST: used_in_shader = false; break;
-        case TaskStage::AS_BUILD: used_in_shader = false; break;
-        case TaskStage::ANY_COMMAND: used_in_shader = true; break;
+        case TaskStages::NONE: used_in_shader = false; break;
+        case TaskStages::VERTEX_SHADER: used_in_shader = true; break;
+        case TaskStages::TESSELLATION_CONTROL_SHADER: used_in_shader = true; break;
+        case TaskStages::TESSELLATION_EVALUATION_SHADER: used_in_shader = true; break;
+        case TaskStages::GEOMETRY_SHADER: used_in_shader = true; break;
+        case TaskStages::FRAGMENT_SHADER: used_in_shader = true; break;
+        case TaskStages::COMPUTE_SHADER: used_in_shader = true; break;
+        case TaskStages::RAY_TRACING_SHADER: used_in_shader = true; break;
+        case TaskStages::TASK_SHADER: used_in_shader = true; break;
+        case TaskStages::MESH_SHADER: used_in_shader = true; break;
+        case TaskStages::PRE_RASTERIZATION_SHADERS: used_in_shader = true; break;
+        case TaskStages::RASTER_SHADER: used_in_shader = true; break;
+        case TaskStages::SHADER: used_in_shader = true; break;
+        case TaskStages::COLOR_ATTACHMENT: used_in_shader = false; break;
+        case TaskStages::DEPTH_STENCIL_ATTACHMENT: used_in_shader = false; break;
+        case TaskStages::RESOLVE: used_in_shader = false; break;
+        case TaskStages::INDIRECT_COMMAND_READ: used_in_shader = false; break;
+        case TaskStages::INDEX_INPUT: used_in_shader = false; break;
+        case TaskStages::TRANSFER: used_in_shader = false; break;
+        case TaskStages::HOST: used_in_shader = false; break;
+        case TaskStages::AS_BUILD: used_in_shader = false; break;
+        case TaskStages::ANY_COMMAND: used_in_shader = true; break;
         }
         return used_in_shader;
     }
@@ -321,9 +321,9 @@ namespace daxa
         bool const used_in_shader = is_task_stage_shader_access(taccess.stage);
         bool const used_as_sampled_image = used_in_shader && used_as_sampled;
         bool const used_as_storage_image = used_in_shader && (used_as_read || used_as_write);
-        bool const used_as_color_attachment = taccess.stage == TaskStage::COLOR_ATTACHMENT || taccess.stage == TaskStage::RESOLVE;
-        bool const used_as_ds_attachment = taccess.stage == TaskStage::DEPTH_STENCIL_ATTACHMENT;
-        bool const used_as_transfer = taccess.stage == TaskStage::TRANSFER;
+        bool const used_as_color_attachment = taccess.stage == TaskStages::COLOR_ATTACHMENT || taccess.stage == TaskStages::RESOLVE;
+        bool const used_as_ds_attachment = taccess.stage == TaskStages::DEPTH_STENCIL_ATTACHMENT;
+        bool const used_as_transfer = taccess.stage == TaskStages::TRANSFER;
 
         ImageUsageFlags usages = {};
         if (used_as_sampled_image)
@@ -350,7 +350,7 @@ namespace daxa
         {
             usages = usages | ImageUsageFlagBits::TRANSFER_DST;
         }
-        if (taccess.stage == TaskStage::ANY_COMMAND)
+        if (taccess.stage == TaskStages::ANY_COMMAND)
         {
             usages =
                 ImageUsageFlagBits::TRANSFER_SRC |
@@ -381,9 +381,9 @@ namespace daxa
         auto const [access, concurrency] = task_access_to_access(taccess);
         // Kept for future reference:
         [[maybe_unused]] bool const used_in_shader = is_task_stage_shader_access(taccess.stage);
-        [[maybe_unused]] bool const used_as_attachment = taccess.stage == TaskStage::COLOR_ATTACHMENT ||
-                                                         taccess.stage == TaskStage::DEPTH_STENCIL_ATTACHMENT ||
-                                                         taccess.stage == TaskStage::RESOLVE;
+        [[maybe_unused]] bool const used_as_attachment = taccess.stage == TaskStages::COLOR_ATTACHMENT ||
+                                                         taccess.stage == TaskStages::DEPTH_STENCIL_ATTACHMENT ||
+                                                         taccess.stage == TaskStages::RESOLVE;
 
         ImageLayout layout = ImageLayout::GENERAL;
         return {layout, access, concurrency};
@@ -1646,7 +1646,7 @@ namespace daxa
         return task_memory;
     }
 
-    void validate_attachment_stages(ImplTask& task, TaskStage stage, u32 attach_i, std::string_view attach_name)
+    void validate_attachment_stages(ImplTask& task, TaskStages stage, u32 attach_i, std::string_view attach_name)
     {
         // Validate stages based on task type:
         PipelineStageFlags allowed_pipeline_stages = static_cast<PipelineStageFlags>(~0ull);
@@ -1656,43 +1656,43 @@ namespace daxa
             break;
         case TaskType::RASTER:
         {
-            static constexpr TaskStage allowed_stages = TaskStage::VERTEX_SHADER |
-                TaskStage::TESSELLATION_CONTROL_SHADER |
-                TaskStage::TESSELLATION_EVALUATION_SHADER |
-                TaskStage::GEOMETRY_SHADER |
-                TaskStage::FRAGMENT_SHADER |
-                TaskStage::TASK_SHADER |
-                TaskStage::MESH_SHADER |
-                TaskStage::PRE_RASTERIZATION_SHADERS |
-                TaskStage::RASTER_SHADER |
-                TaskStage::COLOR_ATTACHMENT |
-                TaskStage::DEPTH_STENCIL_ATTACHMENT |
-                TaskStage::RESOLVE |
-                TaskStage::INDIRECT_COMMAND_READ |
-                TaskStage::INDEX_INPUT;
+            static constexpr TaskStages allowed_stages = TaskStages::VERTEX_SHADER |
+                TaskStages::TESSELLATION_CONTROL_SHADER |
+                TaskStages::TESSELLATION_EVALUATION_SHADER |
+                TaskStages::GEOMETRY_SHADER |
+                TaskStages::FRAGMENT_SHADER |
+                TaskStages::TASK_SHADER |
+                TaskStages::MESH_SHADER |
+                TaskStages::PRE_RASTERIZATION_SHADERS |
+                TaskStages::RASTER_SHADER |
+                TaskStages::COLOR_ATTACHMENT |
+                TaskStages::DEPTH_STENCIL_ATTACHMENT |
+                TaskStages::RESOLVE |
+                TaskStages::INDIRECT_COMMAND_READ |
+                TaskStages::INDEX_INPUT;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
         case TaskType::COMPUTE:
         {
-            static constexpr TaskStage allowed_stages = TaskStage::COMPUTE_SHADER |
-                TaskStage::INDIRECT_COMMAND_READ;
+            static constexpr TaskStages allowed_stages = TaskStages::COMPUTE_SHADER |
+                TaskStages::INDIRECT_COMMAND_READ;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
         case TaskType::RAY_TRACING:
         {
-            static constexpr TaskStage allowed_stages = TaskStage::RAY_TRACING_SHADER |
-                TaskStage::INDIRECT_COMMAND_READ |
-                TaskStage::AS_BUILD;
+            static constexpr TaskStages allowed_stages = TaskStages::RAY_TRACING_SHADER |
+                TaskStages::INDIRECT_COMMAND_READ |
+                TaskStages::AS_BUILD;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
         case TaskType::TRANSFER:
         {
-            static constexpr TaskStage allowed_stages = TaskStage::TRANSFER |
-                TaskStage::HOST |
-                TaskStage::AS_BUILD;
+            static constexpr TaskStages allowed_stages = TaskStages::TRANSFER |
+                TaskStages::HOST |
+                TaskStages::AS_BUILD;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
@@ -1720,21 +1720,21 @@ namespace daxa
         }
         case QueueType::COMPUTE:
         {
-            static constexpr TaskStage allowed_stages = 
-                TaskStage::INDIRECT_COMMAND_READ |
-                TaskStage::COMPUTE_SHADER |
-                TaskStage::RAY_TRACING_SHADER |
-                TaskStage::TRANSFER |
-                TaskStage::HOST |
-                TaskStage::AS_BUILD;
+            static constexpr TaskStages allowed_stages = 
+                TaskStages::INDIRECT_COMMAND_READ |
+                TaskStages::COMPUTE_SHADER |
+                TaskStages::RAY_TRACING_SHADER |
+                TaskStages::TRANSFER |
+                TaskStages::HOST |
+                TaskStages::AS_BUILD;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
         case QueueType::TRANSFER:
         {
-            static constexpr TaskStage allowed_stages = TaskStage::TRANSFER |
-                TaskStage::HOST |
-                TaskStage::AS_BUILD;
+            static constexpr TaskStages allowed_stages = TaskStages::TRANSFER |
+                TaskStages::HOST |
+                TaskStages::AS_BUILD;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
@@ -1986,7 +1986,7 @@ namespace daxa
 
         struct TmpAccessGroup
         {
-            TaskStage stages = {};
+            TaskStages stages = {};
             TaskAccessType type = {};
             u32 queue_bits = {};
             ArenaDynamicArray8k<TaskAttachmentAccess> tasks = {};
@@ -2008,7 +2008,7 @@ namespace daxa
                 TaskAccessType access_type = {};
                 ArenaDynamicArray8k<TmpAccessGroup> * access_timeline = nullptr;
                 u32 * latest_access_submit_index = nullptr;
-                TaskStage attachment_stages = {};
+                TaskStages attachment_stages = {};
                 ImplTaskResource * resource = nullptr;
                 u32 resource_index = ~0u;
                 if (attachment.type != TaskAttachmentType::IMAGE)

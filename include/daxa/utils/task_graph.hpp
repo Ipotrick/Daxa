@@ -222,17 +222,17 @@ namespace daxa
 
     inline namespace detail
     {
-        constexpr inline auto replace_joker_stage(TaskStage stage, TaskStage default_stage) -> TaskStage
+        constexpr inline auto replace_joker_stage(TaskStages stage, TaskStages default_stage) -> TaskStages
         {
-            if ((stage & TaskStage::JOKER) != TaskStage::NONE)
+            if ((stage & TaskStages::JOKER) != TaskStages::NONE)
             {
-                return (stage & ~TaskStage::JOKER) | default_stage;
+                return (stage & ~TaskStages::JOKER) | default_stage;
             }
             return stage;
         }
 
         template <typename TaskHeadAttachmentDeclT>
-        auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStage default_stage, std::string_view task_name) -> TaskAttachmentInfo
+        auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStages default_stage, std::string_view task_name) -> TaskAttachmentInfo
         {
             TaskAttachmentInfo ret = {};
             switch (attachment_decl.type)
@@ -242,7 +242,7 @@ namespace daxa
                 TaskBufferAttachmentInfo info;
                 info.name = attachment_decl.value.buffer.name;
                 info.task_access = attachment_decl.value.buffer.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.shader_array_size = attachment_decl.value.buffer.shader_array_size;
                 info.shader_as_address = attachment_decl.value.buffer.shader_as_address;
@@ -262,7 +262,7 @@ namespace daxa
                 TaskTlasAttachmentInfo info;
                 info.name = attachment_decl.value.tlas.name;
                 info.task_access = attachment_decl.value.tlas.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.shader_array_size = attachment_decl.value.tlas.shader_array_size;
                 info.shader_as_address = attachment_decl.value.tlas.shader_as_address;
@@ -282,7 +282,7 @@ namespace daxa
                 TaskBlasAttachmentInfo info;
                 info.name = attachment_decl.value.blas.name;
                 info.task_access = attachment_decl.value.blas.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 if (auto * ptr = get_if<TaskBlasView>(&view))
                 {
@@ -300,7 +300,7 @@ namespace daxa
                 TaskImageAttachmentInfo info;
                 info.name = attachment_decl.value.image.name;
                 info.task_access = attachment_decl.value.image.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
+                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.view_type = attachment_decl.value.image.view_type;
                 info.shader_array_size = attachment_decl.value.image.shader_array_size;
@@ -392,7 +392,7 @@ namespace daxa
 
         ~TInlineTask()
         {
-            value.~InternalValue<Allow::NONE, TaskStage::NONE>();
+            value.~InternalValue<Allow::NONE, TaskStages::NONE>();
         }
         TInlineTask(TInlineTask && other)
         {
@@ -439,24 +439,24 @@ namespace daxa
             TaskCallback _callback = {};
             std::string_view _name = {};
             TaskType _task_type = TaskType::GENERAL;
-            TaskStage _default_stage = TaskStage::ANY_COMMAND;
+            TaskStages _default_stage = TaskStages::ANY_COMMAND;
             Queue _queue = QUEUE_MAIN;
 
-            void _process_parameter(TaskStage, TaskAccessType, ImageViewType &, TaskStage) {}
-            void _process_parameter(TaskStage stage, TaskAccessType type, ImageViewType &, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
+            void _process_parameter(TaskStages, TaskAccessType, ImageViewType &, TaskStages) {}
+            void _process_parameter(TaskStages stage, TaskAccessType type, ImageViewType &, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
             {
                 _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param));
             }
-            void _process_parameter(TaskStage stage, TaskAccessType type, ImageViewType & view_override, TaskImageViewOrTaskImage auto param)
+            void _process_parameter(TaskStages stage, TaskAccessType type, ImageViewType & view_override, TaskImageViewOrTaskImage auto param)
             {
                 _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param, view_override));
             }
-            void _process_parameter(TaskStage, TaskAccessType, ImageViewType & view_override, ImageViewType param)
+            void _process_parameter(TaskStages, TaskAccessType, ImageViewType & view_override, ImageViewType param)
             {
                 view_override = param;
             }
         };
-        template <Allow ALLOWED_ACCESS, TaskStage STAGE = TaskStage::NONE>
+        template <Allow ALLOWED_ACCESS, TaskStages STAGE = TaskStages::NONE>
         struct InternalValue
         {
             Internal _internal = {};
@@ -464,7 +464,7 @@ namespace daxa
             // inline attachment interface:
 
             template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto _process_parameters(TaskAccessType access, TaskStage stage, TParams... v) -> TInlineTask &
+            auto _process_parameters(TaskAccessType access, TaskStages stage, TParams... v) -> TInlineTask &
             {
                 ImageViewType view_override = ImageViewType::MAX_ENUM;
                 (_internal._process_parameter(stage, access, view_override, v), ...);
@@ -517,15 +517,15 @@ namespace daxa
 
             static inline constexpr bool HAS_HEAD = !std::is_same_v<TaskHeadT, NoTaskHeadStruct>;
 
-            auto _process_th_views(TaskHeadT::Views const & views, TaskAccessType access = TaskAccessType::NONE, TaskStage override_stage = TaskStage::NONE, bool keep_access = false) -> TInlineTask &
+            auto _process_th_views(TaskHeadT::Views const & views, TaskAccessType access = TaskAccessType::NONE, TaskStages override_stage = TaskStages::NONE, bool keep_access = false) -> TInlineTask &
             {
-                constexpr bool IS_GENERIC_CALL = STAGE == TaskStage::NONE;
+                constexpr bool IS_GENERIC_CALL = STAGE == TaskStages::NONE;
                 if constexpr (!IS_GENERIC_CALL)
                 {
                     override_stage = STAGE;
                 }
 
-                TaskStage default_stage = task_type_default_stage(_internal._task_type);
+                TaskStages default_stage = task_type_default_stage(_internal._task_type);
 
                 auto av = views.convert_to_array(); // converts views to flat array
                 for (u32 i = 0; i < TaskHeadT::ATTACHMENT_COUNT; ++i)
@@ -542,7 +542,7 @@ namespace daxa
                             attach.value.buffer.task_access.stage = override_stage;
                             attach.value.buffer.task_access.type = access;
                         }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.buffer.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.buffer.name, attach.value.buffer.task_access));
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.buffer.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.buffer.name, attach.value.buffer.task_access));
                         attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
                         attach.value.buffer.view = *buffer_ptr;
                     }
@@ -554,7 +554,7 @@ namespace daxa
                             attach.value.image.task_access.stage = override_stage;
                             attach.value.image.task_access.type = access;
                         }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.image.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.image.name, attach.value.image.task_access));
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.image.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.image.name, attach.value.image.task_access));
                         attach.value.image.task_access.stage = replace_joker_stage(attach.value.image.task_access.stage, default_stage);
                         attach.value.image.view = *image_ptr;
                     }
@@ -566,7 +566,7 @@ namespace daxa
                             attach.value.blas.task_access.stage = override_stage;
                             attach.value.blas.task_access.type = access;
                         }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.blas.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.blas.name, attach.value.blas.task_access));
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.blas.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.blas.name, attach.value.blas.task_access));
                         attach.value.blas.task_access.stage = replace_joker_stage(attach.value.blas.task_access.stage, default_stage);
                         attach.value.blas.view = *blas_ptr;
                     }
@@ -578,7 +578,7 @@ namespace daxa
                             attach.value.tlas.task_access.stage = override_stage;
                             attach.value.tlas.task_access.type = access;
                         }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.tlas.task_access.stage & TaskStage::JOKER) == TaskStage::NONE) || (default_stage != TaskStage::NONE), error_message_no_access_sage(_internal._name, attach.value.tlas.name, attach.value.tlas.task_access));
+                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.tlas.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.tlas.name, attach.value.tlas.task_access));
                         attach.value.tlas.task_access.stage = replace_joker_stage(attach.value.tlas.task_access.stage, default_stage);
                         attach.value.tlas.view = *tlas_ptr;
                     }
@@ -628,27 +628,27 @@ namespace daxa
 
         union
         {
-            InternalValue<Allow::NONE, TaskStage::NONE> value = {};
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::VERTEX_SHADER> vertex_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_CONTROL_SHADER> tesselation_control_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TESSELLATION_EVALUATION_SHADER> tesselation_evaluation_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::GEOMETRY_SHADER> geometry_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::FRAGMENT_SHADER> fragment_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::COMPUTE_SHADER> compute_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RAY_TRACING_SHADER> ray_tracing_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::TASK_SHADER> task_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::MESH_SHADER> mesh_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::PRE_RASTERIZATION_SHADERS> pre_rasterization_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::RASTER_SHADER> raster_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::SHADER> shader;
-            InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> color_attachment;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::RESOLVE> resolve;
-            InternalValue<Allow::READ, TaskStage::INDIRECT_COMMAND_READ> indirect_cmd;
-            InternalValue<Allow::READ, TaskStage::INDEX_INPUT> index_input;
-            InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::TRANSFER> transfer;
-            InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::HOST> host;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::AS_BUILD> acceleration_structure_build;
+            InternalValue<Allow::NONE, TaskStages::NONE> value = {};
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::VERTEX_SHADER> vertex_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::TESSELLATION_CONTROL_SHADER> tesselation_control_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::TESSELLATION_EVALUATION_SHADER> tesselation_evaluation_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::GEOMETRY_SHADER> geometry_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::FRAGMENT_SHADER> fragment_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::COMPUTE_SHADER> compute_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::RAY_TRACING_SHADER> ray_tracing_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::TASK_SHADER> task_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::MESH_SHADER> mesh_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::PRE_RASTERIZATION_SHADERS> pre_rasterization_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::RASTER_SHADER> raster_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::SHADER> shader;
+            InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStages::COLOR_ATTACHMENT> color_attachment;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStages::RESOLVE> resolve;
+            InternalValue<Allow::READ, TaskStages::INDIRECT_COMMAND_READ> indirect_cmd;
+            InternalValue<Allow::READ, TaskStages::INDEX_INPUT> index_input;
+            InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStages::TRANSFER> transfer;
+            InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStages::HOST> host;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStages::AS_BUILD> acceleration_structure_build;
         };
 
       private:
@@ -657,8 +657,8 @@ namespace daxa
         // * all types in the union are standard layout
         // * all types in the union share a common initial sequence for all members accessed
         //   * or all types within the union are layout compatible
-        using TEST_TYPE_A = InternalValue<Allow::NONE, TaskStage::NONE>;
-        using TEST_TYPE_B = InternalValue<Allow::NONE, TaskStage::NONE>;
+        using TEST_TYPE_A = InternalValue<Allow::NONE, TaskStages::NONE>;
+        using TEST_TYPE_B = InternalValue<Allow::NONE, TaskStages::NONE>;
         static constexpr inline bool UNION_MEMBERS_ARE_STANDART_LAYOUT = std::is_standard_layout_v<TEST_TYPE_A> && std::is_standard_layout_v<TEST_TYPE_B>;
         static constexpr inline bool UNION_MEMBERS_ARE_LAYOUT_COMPATIBLE = std::is_layout_compatible_v<TEST_TYPE_A, TEST_TYPE_B>;
         static_assert(UNION_MEMBERS_ARE_STANDART_LAYOUT && UNION_MEMBERS_ARE_LAYOUT_COMPATIBLE);
@@ -687,22 +687,22 @@ namespace daxa
         
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ, stage, v...); }
+        auto reads(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ, stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto writes(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE, stage, v...); }
+        auto writes(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE, stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto writes_concurrent(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, stage, v...); }
+        auto writes_concurrent(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads_writes(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE, stage, v...); }
+        auto reads_writes(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE, stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads_writes_concurrent(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, stage, v...); }
+        auto reads_writes_concurrent(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, stage, v...); }
 
         template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto samples(TaskStage stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, stage, v...); }
+        auto samples(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, stage, v...); }
 
 
         template <TaskResourceViewOrResource... TParams>
@@ -730,7 +730,7 @@ namespace daxa
             }
             TInlineTask<NewTaskHeadInfo> ret = {};
 
-            TaskStage default_stage = value._internal._default_stage != TaskStage::NONE ? value._internal._default_stage : head_default_stage;
+            TaskStages default_stage = value._internal._default_stage != TaskStages::NONE ? value._internal._default_stage : head_default_stage;
             for (u32 i = 0; i < NewTaskHeadInfo::ATTACHMENT_COUNT; ++i)
             {
                 ret.value._internal._attachments.push_back(detail::convert_to_task_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, default_stage, value._internal._name));
@@ -780,48 +780,48 @@ namespace daxa
         auto head_views(TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
-            return value._process_th_views(views, TaskAccessType::NONE, TaskStage::NONE, true);
+            return value._process_th_views(views, TaskAccessType::NONE, TaskStages::NONE, true);
         }
 
         // overloads for stage:
 
-        auto reads(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto reads(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::READ, stage);
         }
 
-        auto writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto writes(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::WRITE, stage);
         }
 
-        auto writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto writes_concurrent(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::WRITE_CONCURRENT, stage);
         }
 
-        auto reads_writes(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto reads_writes(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::READ_WRITE, stage);
         }
 
-        auto reads_writes_concurrent(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto reads_writes_concurrent(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::READ_WRITE_CONCURRENT, stage);
         }
 
-        auto samples(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto samples(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
             return value._process_th_views(views, TaskAccessType::SAMPLED, stage);
         }
 
-        auto uses(TaskStage stage, TaskHeadT::Views const & views) -> TInlineTask &
+        auto uses(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(std::is_same_v<TaskHeadT, NoTaskHeadStruct>)
         {
             return value._process_th_views(views, TaskAccessType::NONE, stage);

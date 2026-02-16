@@ -139,9 +139,9 @@ namespace tests
             .uses_head<ExampleTaskHead::Info>()
             .head_views({ .image1 = img_view2 })                            // No overwrite of access or stage, uses the task head declared access
             .transfer.reads({ .buffer0 = buf_view })                        // Overrides the access type of head attachment, also overrides the stage to that of the task (in this case compute)
-            .writes(daxa::TaskStage::RASTER_SHADER, {.image0 = img_view })  // Overrides the access type of head attachment, also overrides the stage to RASTER_SHADER
+            .writes(daxa::TaskStages::RASTER_SHADER, {.image0 = img_view })  // Overrides the access type of head attachment, also overrides the stage to RASTER_SHADER
             .indirect_cmd.reads(cmd_view)                                   // regular old inline attachment that is not part of the head
-            .reads(daxa::TaskStage::COMPUTE_SHADER, buf_view2)              // regular old inline attachment that is not part of the head
+            .reads(daxa::TaskStages::COMPUTE_SHADER, buf_view2)              // regular old inline attachment that is not part of the head
             .executes(head_task_syntax_external_callback, f, i);
 
     }

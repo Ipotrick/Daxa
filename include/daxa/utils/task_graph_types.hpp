@@ -90,7 +90,7 @@ namespace daxa
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
 
-    enum struct TaskStage : u64
+    enum struct TaskStages : u64
     {
         NONE = (PipelineStageFlagBits::NONE).data,
         INDIRECT_COMMAND_READ = (PipelineStageFlagBits::INDIRECT_COMMAND_READ).data,
@@ -135,28 +135,28 @@ namespace daxa
         JOKER = 1ull << 63ull,
     };
 
-    constexpr inline TaskStage operator|(TaskStage a, TaskStage b)
+    constexpr inline TaskStages operator|(TaskStages a, TaskStages b)
     {
-        return static_cast<TaskStage>(static_cast<u64>(a) | static_cast<u64>(b));
+        return static_cast<TaskStages>(static_cast<u64>(a) | static_cast<u64>(b));
     }
 
-    constexpr inline TaskStage operator&(TaskStage a, TaskStage b)
+    constexpr inline TaskStages operator&(TaskStages a, TaskStages b)
     {
-        return static_cast<TaskStage>(static_cast<u64>(a) & static_cast<u64>(b));
+        return static_cast<TaskStages>(static_cast<u64>(a) & static_cast<u64>(b));
     }
 
-    constexpr inline TaskStage operator~(TaskStage a)
+    constexpr inline TaskStages operator~(TaskStages a)
     {
-        return static_cast<TaskStage>(~static_cast<u64>(a));
+        return static_cast<TaskStages>(~static_cast<u64>(a));
     }
 
-    auto to_string(TaskStage stage) -> std::string;
+    auto to_string(TaskStages stage) -> std::string;
 
-    auto to_pipeline_stage_flags(TaskStage stage) -> PipelineStageFlags;
+    auto to_pipeline_stage_flags(TaskStages stage) -> PipelineStageFlags;
 
     struct TaskAccess
     {
-        TaskStage stage = {};
+        TaskStages stage = {};
         TaskAccessType type = {};
         TaskAttachmentType restriction = {};
     };
@@ -172,7 +172,7 @@ namespace daxa
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskAccess const & access) -> std::string;
 
-    template <TaskStage STAGE, TaskAttachmentType ATTACHMENT_TYPE_RESTRICTION = TaskAttachmentType::UNDEFINED>
+    template <TaskStages STAGE, TaskAttachmentType ATTACHMENT_TYPE_RESTRICTION = TaskAttachmentType::UNDEFINED>
     struct TaskAccessConstsPartial
     {
         static constexpr TaskAccess NONE = TaskAccess{};
@@ -192,50 +192,50 @@ namespace daxa
 
     namespace TaskAccessConsts
     {
-        using VERTEX_SHADER = TaskAccessConstsPartial<TaskStage::VERTEX_SHADER>;
+        using VERTEX_SHADER = TaskAccessConstsPartial<TaskStages::VERTEX_SHADER>;
         using VS = VERTEX_SHADER;
-        using TESSELLATION_CONTROL_SHADER = TaskAccessConstsPartial<TaskStage::TESSELLATION_CONTROL_SHADER>;
+        using TESSELLATION_CONTROL_SHADER = TaskAccessConstsPartial<TaskStages::TESSELLATION_CONTROL_SHADER>;
         using TCS = TESSELLATION_CONTROL_SHADER;
-        using TESSELLATION_EVALUATION_SHADER = TaskAccessConstsPartial<TaskStage::TESSELLATION_EVALUATION_SHADER>;
+        using TESSELLATION_EVALUATION_SHADER = TaskAccessConstsPartial<TaskStages::TESSELLATION_EVALUATION_SHADER>;
         using TES = TESSELLATION_EVALUATION_SHADER;
-        using GEOMETRY_SHADER = TaskAccessConstsPartial<TaskStage::GEOMETRY_SHADER>;
+        using GEOMETRY_SHADER = TaskAccessConstsPartial<TaskStages::GEOMETRY_SHADER>;
         using GS = GEOMETRY_SHADER;
-        using FRAGMENT_SHADER = TaskAccessConstsPartial<TaskStage::FRAGMENT_SHADER>;
+        using FRAGMENT_SHADER = TaskAccessConstsPartial<TaskStages::FRAGMENT_SHADER>;
         using FS = FRAGMENT_SHADER;
-        using COMPUTE_SHADER = TaskAccessConstsPartial<TaskStage::COMPUTE_SHADER>;
+        using COMPUTE_SHADER = TaskAccessConstsPartial<TaskStages::COMPUTE_SHADER>;
         using CS = COMPUTE_SHADER;
-        using RAY_TRACING_SHADER = TaskAccessConstsPartial<TaskStage::RAY_TRACING_SHADER>;
+        using RAY_TRACING_SHADER = TaskAccessConstsPartial<TaskStages::RAY_TRACING_SHADER>;
         using RT = RAY_TRACING_SHADER;
-        using TASK_SHADER = TaskAccessConstsPartial<TaskStage::TASK_SHADER>;
+        using TASK_SHADER = TaskAccessConstsPartial<TaskStages::TASK_SHADER>;
         using TS = TASK_SHADER;
-        using MESH_SHADER = TaskAccessConstsPartial<TaskStage::MESH_SHADER>;
+        using MESH_SHADER = TaskAccessConstsPartial<TaskStages::MESH_SHADER>;
         using MS = MESH_SHADER;
-        using PRE_RASTERIZATION_SHADERS = TaskAccessConstsPartial<TaskStage::PRE_RASTERIZATION_SHADERS>;
+        using PRE_RASTERIZATION_SHADERS = TaskAccessConstsPartial<TaskStages::PRE_RASTERIZATION_SHADERS>;
         using PRS = PRE_RASTERIZATION_SHADERS;
-        using RASTER_SHADER = TaskAccessConstsPartial<TaskStage::RASTER_SHADER>;
+        using RASTER_SHADER = TaskAccessConstsPartial<TaskStages::RASTER_SHADER>;
         using RS = RASTER_SHADER;
-        using SHADER = TaskAccessConstsPartial<TaskStage::SHADER>;
+        using SHADER = TaskAccessConstsPartial<TaskStages::SHADER>;
         using S = SHADER;
-        using DEPTH_STENCIL_ATTACHMENT = TaskAccessConstsPartial<TaskStage::DEPTH_STENCIL_ATTACHMENT, TaskAttachmentType::IMAGE>;
+        using DEPTH_STENCIL_ATTACHMENT = TaskAccessConstsPartial<TaskStages::DEPTH_STENCIL_ATTACHMENT, TaskAttachmentType::IMAGE>;
         using DSA = DEPTH_STENCIL_ATTACHMENT;
-        using RESOLVE = TaskAccessConstsPartial<TaskStage::RESOLVE, TaskAttachmentType::IMAGE>;
-        using TRANSFER = TaskAccessConstsPartial<TaskStage::TRANSFER>;
+        using RESOLVE = TaskAccessConstsPartial<TaskStages::RESOLVE, TaskAttachmentType::IMAGE>;
+        using TRANSFER = TaskAccessConstsPartial<TaskStages::TRANSFER>;
         using TF = TRANSFER;
-        using HOST = TaskAccessConstsPartial<TaskStage::HOST>;
+        using HOST = TaskAccessConstsPartial<TaskStages::HOST>;
         using H = HOST;
-        using ACCELERATION_STRUCTURE_BUILD = TaskAccessConstsPartial<TaskStage::AS_BUILD>;
+        using ACCELERATION_STRUCTURE_BUILD = TaskAccessConstsPartial<TaskStages::AS_BUILD>;
         using ASB = ACCELERATION_STRUCTURE_BUILD;
-        using ANY_COMMAND = TaskAccessConstsPartial<TaskStage::ANY_COMMAND>;
+        using ANY_COMMAND = TaskAccessConstsPartial<TaskStages::ANY_COMMAND>;
         using ANY = ANY_COMMAND;
-        static constexpr TaskAccess NONE = TaskAccess{TaskStage::NONE, TaskAccessType::NONE};
-        static constexpr TaskAccess READ = TaskAccess{TaskStage::JOKER, TaskAccessType::READ};
-        static constexpr TaskAccess WRITE = TaskAccess{TaskStage::JOKER, TaskAccessType::WRITE};
-        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStage::JOKER, TaskAccessType::WRITE_CONCURRENT};
-        static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStage::JOKER, TaskAccessType::READ_WRITE};
-        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStage::JOKER, TaskAccessType::READ_WRITE_CONCURRENT};
-        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStage::JOKER, TaskAccessType::SAMPLED};
+        static constexpr TaskAccess NONE = TaskAccess{TaskStages::NONE, TaskAccessType::NONE};
+        static constexpr TaskAccess READ = TaskAccess{TaskStages::JOKER, TaskAccessType::READ};
+        static constexpr TaskAccess WRITE = TaskAccess{TaskStages::JOKER, TaskAccessType::WRITE};
+        static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStages::JOKER, TaskAccessType::WRITE_CONCURRENT};
+        static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStages::JOKER, TaskAccessType::READ_WRITE};
+        static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStages::JOKER, TaskAccessType::READ_WRITE_CONCURRENT};
+        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStages::JOKER, TaskAccessType::SAMPLED};
 
-        static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStage::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
+        static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStages::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;
 
         static constexpr TaskAccess DEPTH_ATTACHMENT = TaskAccessConsts::DSA::READ_WRITE;
@@ -243,9 +243,9 @@ namespace daxa
         static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
         static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
 
-        static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStage::INDIRECT_COMMAND_READ, TaskAccessType::READ, TaskAttachmentType::BUFFER};
+        static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStages::INDIRECT_COMMAND_READ, TaskAccessType::READ, TaskAttachmentType::BUFFER};
         static constexpr TaskAccess ICR = INDIRECT_COMMAND_READ;
-        static constexpr TaskAccess INDEX_INPUT_READ = TaskAccess{TaskStage::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
+        static constexpr TaskAccess INDEX_INPUT_READ = TaskAccess{TaskStages::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
         static constexpr TaskAccess IDXR = INDEX_INPUT_READ;
 
 #if !DAXA_REMOVE_DEPRECATED
@@ -373,7 +373,7 @@ namespace daxa
 
     auto to_string(TaskType task_type) -> std::string_view;
 
-    DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStage;
+    DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStages;
 
     using TaskResourceIndex = u32;
 
@@ -1095,16 +1095,16 @@ namespace daxa
 
     template <typename T>
     concept TaskResourceViewOrResourceOrImageViewTypeOrStage =
-        TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStage>;
+        TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStages>;
 
     template <typename T>
     concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
 
     template <typename T>
-    concept TaskResourceOrViewOrAccess = TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStage>;
+    concept TaskResourceOrViewOrAccess = TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStages>;
 
     template <typename T>
-    concept TaskImageOrViewOrAccess = TaskImageViewOrTaskImageOrImageViewType<T> || std::is_same_v<T, TaskStage>;
+    concept TaskImageOrViewOrAccess = TaskImageViewOrTaskImageOrImageViewType<T> || std::is_same_v<T, TaskStages>;
 
     inline namespace detail
     {
@@ -1418,7 +1418,7 @@ namespace daxa
 #define DAXA_TH_IMAGE_TYPED(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = 1, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
 #define DAXA_TH_IMAGE_TYPED_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
 
-#define DAXA_TH_STAGE_VAR(STAGE_VAR) daxa::TaskStage stage = {};
+#define DAXA_TH_STAGE_VAR(STAGE_VAR) daxa::TaskStages stage = {};
 
 #define DAXA_TH_BUFFER(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 0)
 #define DAXA_TH_BUFFER_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_BUFFER(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)

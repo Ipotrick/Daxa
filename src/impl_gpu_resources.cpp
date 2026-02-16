@@ -26,7 +26,6 @@ namespace daxa
     {
         switch (type)
         {
-        case ImageViewType::NONE: return "NONE";
         case ImageViewType::REGULAR_1D: return "REGULAR_1D";
         case ImageViewType::REGULAR_2D: return "REGULAR_2D";
         case ImageViewType::REGULAR_3D: return "REGULAR_3D";
