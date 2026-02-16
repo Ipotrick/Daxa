@@ -1481,7 +1481,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags NONE = {0x00000000ull};
 
         static inline constexpr PipelineStageFlags TOP_OF_PIPE = {0x00000001ull};
-        static inline constexpr PipelineStageFlags DRAW_INDIRECT = {0x00000002ull};
+        static inline constexpr PipelineStageFlags INDIRECT_COMMAND_READ = {0x00000002ull};
         static inline constexpr PipelineStageFlags VERTEX_SHADER = {0x00000008ull};
         static inline constexpr PipelineStageFlags TESSELLATION_CONTROL_SHADER = {0x00000010ull};
         static inline constexpr PipelineStageFlags TESSELLATION_EVALUATION_SHADER = {0x00000020ull};
@@ -1494,7 +1494,7 @@ namespace daxa
         static inline constexpr PipelineStageFlags TRANSFER = {0x00001000ull};
         static inline constexpr PipelineStageFlags BOTTOM_OF_PIPE = {0x00002000ull};
         static inline constexpr PipelineStageFlags HOST = {0x00004000ull};
-        static inline constexpr PipelineStageFlags ALL_GRAPHICS = {0x00008000ull};
+        static inline constexpr PipelineStageFlags ALL_RASTER = {0x00008000ull};
         static inline constexpr PipelineStageFlags ALL_COMMANDS = {0x00010000ull};
         static inline constexpr PipelineStageFlags COPY = {0x100000000ull};
         static inline constexpr PipelineStageFlags RESOLVE = {0x200000000ull};
@@ -1528,7 +1528,7 @@ namespace daxa
         static inline constexpr Access NONE = {.stages = PipelineStageFlagBits::NONE, .type = AccessTypeFlagBits::NONE};
 
         static inline constexpr Access TOP_OF_PIPE_READ = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ};
-        static inline constexpr Access DRAW_INDIRECT_READ = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access INDIRECT_COMMAND_READ = {.stages = PipelineStageFlagBits::INDIRECT_COMMAND_READ, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access VERTEX_SHADER_READ = {.stages = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access TESSELLATION_CONTROL_SHADER_READ = {.stages = PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access TESSELLATION_EVALUATION_SHADER_READ = {.stages = PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, .type = AccessTypeFlagBits::READ};
@@ -1541,7 +1541,7 @@ namespace daxa
         static inline constexpr Access TRANSFER_READ = {.stages = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access BOTTOM_OF_PIPE_READ = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access HOST_READ = {.stages = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::READ};
-        static inline constexpr Access ALL_GRAPHICS_READ = {.stages = PipelineStageFlagBits::ALL_GRAPHICS, .type = AccessTypeFlagBits::READ};
+        static inline constexpr Access ALL_RASTER_READ = {.stages = PipelineStageFlagBits::ALL_RASTER, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access READ = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access COPY_READ = {.stages = PipelineStageFlagBits::COPY, .type = AccessTypeFlagBits::READ};
         static inline constexpr Access RESOLVE_READ = {.stages = PipelineStageFlagBits::RESOLVE, .type = AccessTypeFlagBits::READ};
@@ -1555,7 +1555,6 @@ namespace daxa
         static inline constexpr Access RAY_TRACING_SHADER_READ = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::READ};
 
         static inline constexpr Access TOP_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
-        static inline constexpr Access DRAW_INDIRECT_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access VERTEX_SHADER_WRITE = {.stages = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access TESSELLATION_CONTROL_SHADER_WRITE = {.stages = PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access TESSELLATION_EVALUATION_SHADER_WRITE = {.stages = PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, .type = AccessTypeFlagBits::WRITE};
@@ -1568,7 +1567,7 @@ namespace daxa
         static inline constexpr Access TRANSFER_WRITE = {.stages = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access BOTTOM_OF_PIPE_WRITE = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access HOST_WRITE = {.stages = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::WRITE};
-        static inline constexpr Access ALL_GRAPHICS_WRITE = {.stages = PipelineStageFlagBits::ALL_GRAPHICS, .type = AccessTypeFlagBits::WRITE};
+        static inline constexpr Access ALL_RASTER_WRITE = {.stages = PipelineStageFlagBits::ALL_RASTER, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access WRITE = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access COPY_WRITE = {.stages = PipelineStageFlagBits::COPY, .type = AccessTypeFlagBits::WRITE};
         static inline constexpr Access RESOLVE_WRITE = {.stages = PipelineStageFlagBits::RESOLVE, .type = AccessTypeFlagBits::WRITE};
@@ -1582,7 +1581,6 @@ namespace daxa
         static inline constexpr Access RAY_TRACING_SHADER_WRITE = {.stages = PipelineStageFlagBits::RAY_TRACING_SHADER, .type = AccessTypeFlagBits::WRITE};
 
         static inline constexpr Access TOP_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::TOP_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
-        static inline constexpr Access DRAW_INDIRECT_READ_WRITE = {.stages = PipelineStageFlagBits::DRAW_INDIRECT, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access VERTEX_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::VERTEX_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access TESSELLATION_CONTROL_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access TESSELLATION_EVALUATION_SHADER_READ_WRITE = {.stages = PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER, .type = AccessTypeFlagBits::READ_WRITE};
@@ -1595,7 +1593,7 @@ namespace daxa
         static inline constexpr Access TRANSFER_READ_WRITE = {.stages = PipelineStageFlagBits::TRANSFER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access BOTTOM_OF_PIPE_READ_WRITE = {.stages = PipelineStageFlagBits::BOTTOM_OF_PIPE, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access HOST_READ_WRITE = {.stages = PipelineStageFlagBits::HOST, .type = AccessTypeFlagBits::READ_WRITE};
-        static inline constexpr Access ALL_GRAPHICS_READ_WRITE = {.stages = PipelineStageFlagBits::ALL_GRAPHICS, .type = AccessTypeFlagBits::READ_WRITE};
+        static inline constexpr Access ALL_RASTER_READ_WRITE = {.stages = PipelineStageFlagBits::ALL_RASTER, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access READ_WRITE = {.stages = PipelineStageFlagBits::ALL_COMMANDS, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access COPY_READ_WRITE = {.stages = PipelineStageFlagBits::COPY, .type = AccessTypeFlagBits::READ_WRITE};
         static inline constexpr Access RESOLVE_READ_WRITE = {.stages = PipelineStageFlagBits::RESOLVE, .type = AccessTypeFlagBits::READ_WRITE};

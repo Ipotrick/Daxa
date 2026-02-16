@@ -303,7 +303,7 @@ namespace daxa
         case TaskStage::COLOR_ATTACHMENT: used_in_shader = false; break;
         case TaskStage::DEPTH_STENCIL_ATTACHMENT: used_in_shader = false; break;
         case TaskStage::RESOLVE: used_in_shader = false; break;
-        case TaskStage::INDIRECT_COMMAND: used_in_shader = false; break;
+        case TaskStage::INDIRECT_COMMAND_READ: used_in_shader = false; break;
         case TaskStage::INDEX_INPUT: used_in_shader = false; break;
         case TaskStage::TRANSFER: used_in_shader = false; break;
         case TaskStage::HOST: used_in_shader = false; break;
@@ -1668,7 +1668,7 @@ namespace daxa
                 TaskStage::COLOR_ATTACHMENT |
                 TaskStage::DEPTH_STENCIL_ATTACHMENT |
                 TaskStage::RESOLVE |
-                TaskStage::INDIRECT_COMMAND |
+                TaskStage::INDIRECT_COMMAND_READ |
                 TaskStage::INDEX_INPUT;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
@@ -1676,14 +1676,14 @@ namespace daxa
         case TaskType::COMPUTE:
         {
             static constexpr TaskStage allowed_stages = TaskStage::COMPUTE_SHADER |
-                TaskStage::INDIRECT_COMMAND;
+                TaskStage::INDIRECT_COMMAND_READ;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
         case TaskType::RAY_TRACING:
         {
             static constexpr TaskStage allowed_stages = TaskStage::RAY_TRACING_SHADER |
-                TaskStage::INDIRECT_COMMAND |
+                TaskStage::INDIRECT_COMMAND_READ |
                 TaskStage::AS_BUILD;
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
@@ -1721,7 +1721,7 @@ namespace daxa
         case QueueFamily::COMPUTE:
         {
             static constexpr TaskStage allowed_stages = 
-                TaskStage::INDIRECT_COMMAND |
+                TaskStage::INDIRECT_COMMAND_READ |
                 TaskStage::COMPUTE_SHADER |
                 TaskStage::RAY_TRACING_SHADER |
                 TaskStage::TRANSFER |

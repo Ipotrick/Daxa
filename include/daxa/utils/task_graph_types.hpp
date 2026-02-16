@@ -93,7 +93,7 @@ namespace daxa
     enum struct TaskStage : u64
     {
         NONE = (PipelineStageFlagBits::NONE).data,
-        INDIRECT_COMMAND = (PipelineStageFlagBits::DRAW_INDIRECT).data,
+        INDIRECT_COMMAND_READ = (PipelineStageFlagBits::INDIRECT_COMMAND_READ).data,
         VERTEX_SHADER = (PipelineStageFlagBits::VERTEX_SHADER).data,
         TESSELLATION_CONTROL_SHADER = (PipelineStageFlagBits::TESSELLATION_CONTROL_SHADER).data,
         TESSELLATION_EVALUATION_SHADER = (PipelineStageFlagBits::TESSELLATION_EVALUATION_SHADER).data,
@@ -108,7 +108,7 @@ namespace daxa
                                      PipelineStageFlagBits::PipelineStageFlagBits::TASK_SHADER |
                                      PipelineStageFlagBits::PipelineStageFlagBits::MESH_SHADER)
                                         .data,
-        RASTER_SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::ALL_GRAPHICS).data,
+        RASTER_SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::ALL_RASTER).data,
         COMPUTE_SHADER = (PipelineStageFlagBits::COMPUTE_SHADER).data,
         RAY_TRACING_SHADER = (PipelineStageFlagBits::RAY_TRACING_SHADER).data,
         SHADER = (PipelineStageFlagBits::PipelineStageFlagBits::VERTEX_SHADER |
@@ -243,7 +243,7 @@ namespace daxa
         static constexpr TaskAccess DEPTH_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
         static constexpr TaskAccess STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::READ;
 
-        static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStage::INDIRECT_COMMAND, TaskAccessType::READ, TaskAttachmentType::BUFFER};
+        static constexpr TaskAccess INDIRECT_COMMAND_READ = TaskAccess{TaskStage::INDIRECT_COMMAND_READ, TaskAccessType::READ, TaskAttachmentType::BUFFER};
         static constexpr TaskAccess ICR = INDIRECT_COMMAND_READ;
         static constexpr TaskAccess INDEX_INPUT_READ = TaskAccess{TaskStage::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
         static constexpr TaskAccess IDXR = INDEX_INPUT_READ;
@@ -290,7 +290,7 @@ namespace daxa
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE_CONCURRENT;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess INDEX_READ = TaskAccessConsts::INDEX_INPUT_READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess DRAW_INDIRECT_INFO_READ = TaskAccessConsts::INDIRECT_COMMAND_READ;
+        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess INDIRECT_COMMAND_READ_READ = TaskAccessConsts::INDIRECT_COMMAND_READ;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TRANSFER_READ = TaskAccessConsts::TRANSFER::READ;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TRANSFER_WRITE = TaskAccessConsts::TRANSFER::WRITE;
         [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TRANSFER_READ_WRITE = TaskAccessConsts::TRANSFER::READ_WRITE;

@@ -282,7 +282,7 @@ struct App : AppWindow<App>
         imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, swapchain_image, size_x, size_y);
 
         recorder.pipeline_image_barrier({
-            .src_access = daxa::AccessConsts::ALL_GRAPHICS_READ_WRITE,
+            .src_access = daxa::AccessConsts::ALL_RASTER_READ_WRITE,
             .image = swapchain_image,
             .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
         });

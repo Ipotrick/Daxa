@@ -1959,13 +1959,13 @@ namespace daxa
         {
             ret += "TOP_OF_PIPE";
         }
-        if ((flags & PipelineStageFlagBits::DRAW_INDIRECT) != PipelineStageFlagBits::NONE)
+        if ((flags & PipelineStageFlagBits::INDIRECT_COMMAND_READ) != PipelineStageFlagBits::NONE)
         {
             if (!ret.empty())
             {
                 ret += " | ";
             }
-            ret += "DRAW_INDIRECT";
+            ret += "INDIRECT_COMMAND_READ";
         }
         if ((flags & PipelineStageFlagBits::VERTEX_SHADER) != PipelineStageFlagBits::NONE)
         {
@@ -2087,13 +2087,13 @@ namespace daxa
             }
             ret += "HOST";
         }
-        if ((flags & PipelineStageFlagBits::ALL_GRAPHICS) != PipelineStageFlagBits::NONE)
+        if ((flags & PipelineStageFlagBits::ALL_RASTER) != PipelineStageFlagBits::NONE)
         {
             if (!ret.empty())
             {
                 ret += " | ";
             }
-            ret += "ALL_GRAPHICS";
+            ret += "ALL_RASTER";
         }
         if ((flags & PipelineStageFlagBits::ALL_COMMANDS) != PipelineStageFlagBits::NONE)
         {

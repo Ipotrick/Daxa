@@ -644,7 +644,7 @@ namespace daxa
             InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStage::COLOR_ATTACHMENT> color_attachment;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStage::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStage::RESOLVE> resolve;
-            InternalValue<Allow::READ, TaskStage::INDIRECT_COMMAND> indirect_cmd;
+            InternalValue<Allow::READ, TaskStage::INDIRECT_COMMAND_READ> indirect_cmd;
             InternalValue<Allow::READ, TaskStage::INDEX_INPUT> index_input;
             InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::TRANSFER> transfer;
             InternalValue<Allow(Allow::READ | Allow::WRITE), TaskStage::HOST> host;

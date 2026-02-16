@@ -757,7 +757,7 @@ namespace daxa
         S_TRANSFER = 0x00001000ull,
         S_BOTTOM_OF_PIPE = 0x00002000ull,
         S_HOST = 0x00004000ull,
-        S_ALL_GRAPHICS = 0x00008000ull,
+        S_ALL_RASTER = 0x00008000ull,
         S_ALL_COMMANDS = 0x00010000ull,
         S_COPY = 0x100000000ull,
         S_RESOLVE = 0x200000000ull,
