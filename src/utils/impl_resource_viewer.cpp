@@ -575,7 +575,7 @@ namespace daxa
                         }
                         state.buffer.clone_buffer = context.device.create_buffer({
                             .size = buffer_info.size,
-                            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Want it in vram
+                            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Want it in vram
                             .name = std::format("{}::viewer::clone_buffer", resource->name),
                         });
                     }
@@ -646,7 +646,7 @@ namespace daxa
                             }
                             child_viewer.second.clone_buffer = context.device.create_buffer({
                                 .size = child_buffer_info.size,
-                                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Want it in vram
+                                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Want it in vram
                                 .name = std::format("{}::viewer::clone_buffer", child_buffer_info.name.c_str()),
                             });
                         }

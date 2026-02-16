@@ -183,7 +183,7 @@ struct App : BaseApp<App>
                 });
                 auto staging_gpu_input_buffer = device.create_buffer({
                     .size = sizeof(GpuInput),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("staging_gpu_input_buffer"),
                 });
                 ti.recorder.destroy_buffer_deferred(staging_gpu_input_buffer);

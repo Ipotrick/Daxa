@@ -23,7 +23,7 @@ auto main() -> int
     usize global_submit_timeline = 1;
     daxa::BufferId result_buffer = device.create_buffer({
         .size = sizeof(u32) * ELEMENT_COUNT * ITERATION_COUNT,
-        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .name = "result",
     });
 

@@ -37,7 +37,7 @@ typedef struct
 {
     size_t size;
     // Ignored when allocating with a memory block.
-    daxa_MemoryFlags allocate_info;
+    daxa_MemoryFlags memory_flags;
     daxa_SmallString name;
 } daxa_BufferInfo;
 
@@ -79,7 +79,7 @@ typedef struct
     daxa_ImageUsageFlags usage;
     daxa_SharingMode sharing_mode;
     // Ignored when allocating with a memory block.
-    daxa_MemoryFlags allocate_info;
+    daxa_MemoryFlags memory_flags;
     daxa_SmallString name;
 } daxa_ImageInfo;
 
@@ -115,7 +115,7 @@ typedef struct
 
 static daxa_BufferInfo const DAXA_DEFAULT_BUFFER_INFO = {
     .size = 0,
-    .allocate_info = DAXA_MEMORY_FLAG_NONE,
+    .memory_flags = DAXA_MEMORY_FLAG_NONE,
     .name = {.data = DAXA_ZERO_INIT, .size = 0},
 };
 static daxa_ImageInfo const DAXA_DEFAULT_IMAGE_INFO = {
@@ -128,7 +128,7 @@ static daxa_ImageInfo const DAXA_DEFAULT_IMAGE_INFO = {
     .sample_count = 1,
     .usage = 0,
     .sharing_mode = DAXA_SHARING_MODE_EXCLUSIVE,
-    .allocate_info = DAXA_MEMORY_FLAG_NONE,
+    .memory_flags = DAXA_MEMORY_FLAG_NONE,
     .name = {.data = DAXA_ZERO_INIT, .size = 0},
 };
 static daxa_ImageViewInfo const DAXA_DEFAULT_IMAGE_VIEW_INFO = {

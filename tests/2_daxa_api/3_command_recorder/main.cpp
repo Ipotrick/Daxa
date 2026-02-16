@@ -95,7 +95,7 @@ namespace tests
 
         daxa::BufferId const staging_upload_buffer = app.device.create_buffer({
             .size = sizeof(decltype(data)),
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "staging_upload_buffer",
         });
 
@@ -106,7 +106,7 @@ namespace tests
 
         daxa::BufferId const staging_readback_buffer = app.device.create_buffer({
             .size = sizeof(decltype(data)),
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "staging_readback_buffer",
         });
 
@@ -449,9 +449,9 @@ namespace tests
 
     void multiple_ecl(App & app)
     {
-        daxa::BufferId buf_a = app.device.create_buffer({.size = 4, .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, .name = "buf_a"});
+        daxa::BufferId buf_a = app.device.create_buffer({.size = 4, .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, .name = "buf_a"});
         daxa::BufferId buf_b = app.device.create_buffer({.size = 4, .name = "buf_b"});
-        daxa::BufferId buf_c = app.device.create_buffer({.size = 4, .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buf_c"});
+        daxa::BufferId buf_c = app.device.create_buffer({.size = 4, .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buf_c"});
 
         constexpr daxa::u32 TEST_VALUE = 0xf0abf0ab;
 
@@ -523,7 +523,7 @@ namespace tests
             };
             auto vertex_buffer = device.create_buffer({
                 .size = sizeof(decltype(vertices)),
-                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = "vertex buffer",
             });
             defer { device.destroy_buffer(vertex_buffer); };
@@ -532,7 +532,7 @@ namespace tests
             auto indices = std::array{0, 1, 2};
             auto index_buffer = device.create_buffer({
                 .size = sizeof(decltype(indices)),
-                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = "index buffer",
             });
             defer { device.destroy_buffer(index_buffer); };
@@ -545,7 +545,7 @@ namespace tests
             };
             auto transform_buffer = device.create_buffer({
                 .size = sizeof(daxa_f32mat3x4),
-                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = "transform buffer",
             });
             defer { device.destroy_buffer(transform_buffer); };

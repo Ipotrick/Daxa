@@ -145,7 +145,7 @@ namespace tests
     {
         constexpr daxa::BufferInfo host_test_buffer_info = {
             .size = 64,
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "host test buffer",
         };
         try

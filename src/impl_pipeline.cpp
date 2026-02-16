@@ -815,7 +815,7 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
     // Allocate a buffer for storing the SBT.
     auto sbt_info = daxa_BufferInfo{
         .size = sbt_size,
-        .allocate_info = DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE,
+        .memory_flags = DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE,
         .name = std::bit_cast<daxa_SmallString>(info.name),
     };
     // TODO: We need to store the buffer id somewhere, so we can destroy after the pipeline is destroyed

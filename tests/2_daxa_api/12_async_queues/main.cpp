@@ -117,7 +117,7 @@ namespace tests
 
         constexpr daxa::u32 initial_value = 42u;
         // Make buffer for a u32[4] array and write some data into the first element
-        auto buffer = device.create_buffer(daxa::BufferInfo{.size = sizeof(daxa::u32) * 4, .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buffer"});
+        auto buffer = device.create_buffer(daxa::BufferInfo{.size = sizeof(daxa::u32) * 4, .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buffer"});
         *device.buffer_host_address_as<daxa::u32>(buffer).value() = initial_value;    
 
         {
@@ -218,7 +218,7 @@ namespace tests
 
         constexpr daxa::u32 initial_value = 42u;
         // Make buffer for a u32[4] array and write some data into the first element
-        auto buffer = device.create_buffer(daxa::BufferInfo{.size = sizeof(daxa::u32) * 4, .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buffer"});
+        auto buffer = device.create_buffer(daxa::BufferInfo{.size = sizeof(daxa::u32) * 4, .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM, .name = "buffer"});
         *device.buffer_host_address_as<daxa::u32>(buffer).value() = initial_value;    
 
         // Instead of semaphores, this test is using submit indices to synchronize queues

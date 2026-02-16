@@ -94,7 +94,7 @@ namespace daxa
     {
         usize size = {};
         // Ignored when allocating with a memory block.
-        MemoryFlags allocate_info = {};
+        MemoryFlags memory_flags = {};
         SmallString name = {};
     };
 
@@ -132,7 +132,7 @@ namespace daxa
         ImageUsageFlags usage = {};
         SharingMode sharing_mode = SharingMode::EXCLUSIVE;
         // Ignored when allocating with a memory block.
-        MemoryFlags allocate_info = {};
+        MemoryFlags memory_flags = {};
         SmallString name = {};
     };
 

@@ -130,7 +130,7 @@ namespace tests
                 /// Create Camera Buffer
                 cam_buffer = device.create_buffer({
                     .size = cam_buffer_size,
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("cam_buffer"),
                 });
 
@@ -159,7 +159,7 @@ namespace tests
                 };
                 auto vertex_buffer = device.create_buffer({
                     .size = sizeof(decltype(vertices)),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "vertex buffer",
                 });
                 defer { device.destroy_buffer(vertex_buffer); };
@@ -170,7 +170,7 @@ namespace tests
                 auto indices = std::array{0, 1, 2};
                 auto index_buffer = device.create_buffer({
                     .size = sizeof(daxa_u32) * indices.size(),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "index buffer",
                 });
                 defer { device.destroy_buffer(index_buffer); };
@@ -179,7 +179,7 @@ namespace tests
                 /// Transforms:
                 auto transform_buffer = device.create_buffer({
                     .size = sizeof(daxa_f32mat3x4),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "transform buffer",
                 });
                 defer { device.destroy_buffer(transform_buffer); };
@@ -257,7 +257,7 @@ namespace tests
                     std::array{0.15f, 0.15f, 0.15f}};
                 aabb_buffer = device.create_buffer({
                     .size = sizeof(decltype(min_max)),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "aabb buffer",
                 });
                 *device.buffer_host_address_as<decltype(min_max)>(aabb_buffer).value() = min_max;
@@ -319,7 +319,7 @@ namespace tests
                 /// create blas instances for tlas:
                 auto blas_instances_buffer = device.create_buffer({
                     .size = sizeof(daxa_BlasInstanceData) * 2,
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "blas instances array buffer",
                 });
                 defer { device.destroy_buffer(blas_instances_buffer); };
@@ -609,7 +609,7 @@ namespace tests
 
                 auto cam_staging_buffer = device.create_buffer({
                     .size = cam_buffer_size,
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("cam_staging_buffer"),
                 });
                 defer { device.destroy_buffer(cam_staging_buffer); };

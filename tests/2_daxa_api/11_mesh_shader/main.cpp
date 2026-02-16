@@ -101,7 +101,7 @@ auto main() -> int
     daxa::Device device = instance.create_device_2(instance.choose_device(daxa::ImplicitFeatureFlagBits::MESH_SHADER, {}));
 
     indirect_dispatch_buffer = device.create_buffer({
-        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
         .size = sizeof(daxa_u32vec3),
     });
     *device.get_host_address_as<daxa_u32vec3>(indirect_dispatch_buffer).value() = {

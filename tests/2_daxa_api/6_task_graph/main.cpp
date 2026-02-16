@@ -434,7 +434,7 @@ namespace tests
         });
         auto buffer = app.device.create_buffer({
             .size = 16,
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "underlying buffer",
         });
         *app.device.buffer_host_address_as<float>(buffer).value() = 0.75f;

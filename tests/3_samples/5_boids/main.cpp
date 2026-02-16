@@ -112,7 +112,7 @@ struct App : AppWindow<App>
 
         auto upload_buffer_id = device.create_buffer({
             .size = sizeof(Boids),
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = ("boids buffer init staging buffer"),
         });
         recorder.destroy_buffer_deferred(upload_buffer_id);

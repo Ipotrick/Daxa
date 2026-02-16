@@ -126,7 +126,7 @@ auto main() -> int
     // a buffer with the device.
     daxa::BufferId vertex_buffer = device.create_buffer({
         .size = sizeof(MyVertex) * 3,
-        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Will allocate buffer in host visible vram
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE, // Will allocate buffer in host visible vram
         .name = "vertex buffer",
     });
 

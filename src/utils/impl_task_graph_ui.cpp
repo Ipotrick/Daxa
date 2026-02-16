@@ -239,7 +239,7 @@ namespace daxa
                 ui_context.resource_viewer_states[std::string(resource.name)].image.readback_buffer = ui_context.device.create_buffer({
                     .size = sizeof(TaskGraphDebugUiImageReadbackStruct) * READBACK_CIRCULAR_BUFFER_SIZE,
                     // We perform atomics on the readback buffer so we want the memory to be on the GPU even though it is still read by the CPU.
-                    .allocate_info = MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+                    .memory_flags = MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
                     .name = std::format("{} readback buffer", resource.name),
                 });
             }
@@ -1331,7 +1331,7 @@ namespace daxa
                         device_address = ui_context.device.buffer_device_address(id).value_or(0);
                         host_address = std::bit_cast<u64>(ui_context.device.buffer_host_address(id).value_or(0));
                         external_resource_name = info.name;
-                        memory_flags = info.allocate_info;
+                        memory_flags = info.memory_flags;
                         break;
                     }
                     case TaskResourceKind::BLAS:

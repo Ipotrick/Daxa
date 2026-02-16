@@ -67,12 +67,12 @@ namespace tests
         daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
         auto src_buffer = device.create_buffer({
             .size = sizeof(TestU64Alignment),
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
             .name = "align_test_src",
         });
         auto dst_buffer = device.create_buffer({
             .size = sizeof(TestU64Alignment),
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "align_test_dst",
         });
 

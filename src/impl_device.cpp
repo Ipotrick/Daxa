@@ -186,7 +186,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     };
 
     bool host_accessible = false;
-    daxa_MemoryFlags vma_allocation_flags = opt_memory_block != nullptr ? opt_memory_block->info.flags : info->allocate_info;
+    daxa_MemoryFlags vma_allocation_flags = opt_memory_block != nullptr ? opt_memory_block->info.flags : info->memory_flags;
     if (((vma_allocation_flags & DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM) != 0u) ||
         ((vma_allocation_flags & DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE) != 0u))
     {
@@ -227,14 +227,14 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
     {
         auto const & mem_block = *opt_memory_block;
 
-        bool const invalidMemoryFlags = info->allocate_info != DAXA_MEMORY_FLAG_NONE;
+        bool const invalidMemoryFlags = info->memory_flags != DAXA_MEMORY_FLAG_NONE;
         if (invalidMemoryFlags)
         {
             _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION, DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION);
         }
 
         // copy flags from memory block to buffer info.
-        ret.info.allocate_info = opt_memory_block->info.flags;
+        ret.info.memory_flags = opt_memory_block->info.flags;
 
         ret.opt_memory_block = opt_memory_block;
         result = static_cast<daxa_Result>(vkCreateBuffer(self->vk_device, &vk_buffer_create_info, nullptr, &hot_data.vk_buffer));
@@ -382,7 +382,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
     if (opt_memory_block == nullptr)
     {
         VmaAllocationCreateInfo const vma_allocation_create_info{
-            .flags = static_cast<VmaAllocationCreateFlags>(info->allocate_info),
+            .flags = static_cast<VmaAllocationCreateFlags>(info->memory_flags),
             .usage = VMA_MEMORY_USAGE_AUTO_PREFER_DEVICE,
             .requiredFlags = {},
             .preferredFlags = {},
@@ -403,14 +403,14 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
     {
         daxa_ImplMemoryBlock const & mem_block = *opt_memory_block;
 
-        bool const invalidMemoryFlags = info->allocate_info != DAXA_MEMORY_FLAG_NONE;
+        bool const invalidMemoryFlags = info->memory_flags != DAXA_MEMORY_FLAG_NONE;
         if (invalidMemoryFlags)
         {
             _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION, DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION);
         }
 
         // copy flags from memory block to image info.
-        ret.info.allocate_info = opt_memory_block->info.flags;
+        ret.info.memory_flags = opt_memory_block->info.flags;
 
         ret.opt_memory_block = opt_memory_block;
         result = static_cast<daxa_Result>(vkCreateImage(self->vk_device, &vk_image_create_info, nullptr, &ret.vk_image));
@@ -532,7 +532,7 @@ auto create_acceleration_structure_helper(
             buffer_name.push_back('f');
         auto cinfo = daxa_BufferInfo{
             .size = ret.info.size,
-            .allocate_info = {},
+            .memory_flags = {},
             .name = std::bit_cast<daxa_SmallString>(buffer_name),
         };
         result = daxa_dvc_create_buffer(self, &cinfo, r_cast<daxa_BufferId *>(&ret.buffer_id));
@@ -2206,7 +2206,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .sample_count = 1,
             .usage = ImageUsageFlagBits::SHADER_SAMPLED | ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::TRANSFER_DST,
             .sharing_mode = SharingMode::CONCURRENT,
-            .allocate_info = {},
+            .memory_flags = {},
         };
         VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(
             self, *r_cast<daxa_ImageInfo const *>(&image_info));

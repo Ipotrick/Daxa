@@ -203,7 +203,7 @@ namespace tests
             {
                 auto staging_buffer = device.create_buffer({
                     .size = sizeof(MipmappingGpuInput),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = "staging_mipmapping_gpu_input_buffer",
                 });
                 MipmappingGpuInput * buffer_ptr = device.buffer_host_address_as<MipmappingGpuInput>(staging_buffer).value();

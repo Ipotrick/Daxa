@@ -179,7 +179,7 @@ namespace daxa
 
             auto staging_vbuffer = info.device.create_buffer({
                 .size = static_cast<u32>(vbuffer_needed_size),
-                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = std::string("dear ImGui vertex staging buffer ") + std::to_string(frame_count % IMGUI_RESOURCE_NAME_MAX_NUMBER),
             });
             auto * vtx_dst = info.device.buffer_host_address_as<ImDrawVert>(staging_vbuffer).value();
@@ -192,7 +192,7 @@ namespace daxa
             recorder.destroy_buffer_deferred(staging_vbuffer);
             auto staging_ibuffer = info.device.create_buffer({
                 .size = static_cast<u32>(ibuffer_needed_size),
-                .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 .name = std::string("dear ImGui index staging buffer ") + std::to_string(frame_count % IMGUI_RESOURCE_NAME_MAX_NUMBER),
             });
             auto * idx_dst = info.device.buffer_host_address_as<ImDrawIdx>(staging_ibuffer).value();
@@ -369,7 +369,7 @@ namespace daxa
 
         auto texture_staging_buffer = this->info.device.create_buffer({
             .size = static_cast<u32>(upload_size),
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = "dear ImGui texture staging buffer",
         });
 

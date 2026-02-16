@@ -11,7 +11,7 @@ namespace daxa
         : m_info{std::move(a_info)},
           m_buffer{this->m_info.device.create_buffer({
               .size = this->m_info.capacity,
-              .allocate_info = a_info.prefer_device_memory ? daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE : daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+              .memory_flags = a_info.prefer_device_memory ? daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE : daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
               .name = this->m_info.name,
           })},
           buffer_device_address{this->m_info.device.device_address(this->m_buffer).value()},

@@ -351,7 +351,7 @@ struct App : BaseApp<App>
 
     daxa::BufferId gpu_status_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(GpuStatus),
-        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
         .name = "gpu_status_buffer",
     });
     GpuStatus* gpu_status = device.buffer_host_address_as<GpuStatus>(gpu_status_buffer).value();
@@ -383,14 +383,14 @@ struct App : BaseApp<App>
 
     daxa::BufferId camera_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(Camera),
-        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .name = "camera_buffer",
     });
     daxa::TaskBuffer task_camera_buffer{{.initial_buffers = {.buffers = std::array{camera_buffer}}, .name = "camera_buffer_task"}};
     /// create blas instances for tlas:
     daxa::BufferId blas_instances_buffer = device.create_buffer({
         .size = sizeof(daxa_BlasInstanceData),
-        .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .name = "blas instances array buffer",
     });
     daxa::BlasBuildInfo blas_build_info = {};
@@ -562,7 +562,7 @@ struct App : BaseApp<App>
             {
                 auto staging_particles_buffer = device.create_buffer({
                     .size = particles_size,
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("staging_particles_buffer"),
                 });
                 ti.recorder.destroy_buffer_deferred(staging_particles_buffer);
@@ -570,7 +570,7 @@ struct App : BaseApp<App>
 
                 auto staging_aabb_buffer = device.create_buffer({
                     .size = aabb_size,
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("staging_particles_buffer"),
                 });
                 ti.recorder.destroy_buffer_deferred(staging_aabb_buffer);
@@ -712,7 +712,7 @@ struct App : BaseApp<App>
             {
                 auto staging_gpu_input_buffer = device.create_buffer({
                     .size = sizeof(GpuInput),
-                    .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                    .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                     .name = ("staging_gpu_input_buffer"),
                 });
                 ti.recorder.destroy_buffer_deferred(staging_gpu_input_buffer);
@@ -726,7 +726,7 @@ struct App : BaseApp<App>
 
                 // auto staging_gpu_status_buffer = device.create_buffer({
                 //     .size = sizeof(GpuStatus),
-                //     .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                //     .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
                 //     .name = ("staging_gpu_status_buffer"),
                 // });
 

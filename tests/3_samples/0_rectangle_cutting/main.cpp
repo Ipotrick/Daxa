@@ -232,7 +232,7 @@ struct App : AppWindow<App>
 
         auto vertex_staging_buffer = device.create_buffer({
             .size = sizeof(DrawVertex) * MAX_VERTS,
-            .allocate_info = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
             .name = ("vertex_staging_buffer"),
         });
         recorder.destroy_buffer_deferred(vertex_staging_buffer);
