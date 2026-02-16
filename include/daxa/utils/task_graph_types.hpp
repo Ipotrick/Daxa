@@ -86,7 +86,7 @@ namespace daxa
         return (a_sampled_ignored == b_sampled_ignored) && is_access_concurrent(a) && is_access_concurrent(b);
     }
 
-    auto to_string(TaskAccessType taccess) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskAccessType taccess) -> std::string_view;
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags;
 
@@ -150,7 +150,7 @@ namespace daxa
         return static_cast<TaskStages>(~static_cast<u64>(a));
     }
 
-    auto to_string(TaskStages stage) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskStages stage) -> std::string;
 
     auto to_pipeline_stage_flags(TaskStages stage) -> PipelineStageFlags;
 
@@ -371,7 +371,7 @@ namespace daxa
         TRANSFER
     };
 
-    auto to_string(TaskType task_type) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskType task_type) -> std::string_view;
 
     DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStages;
 

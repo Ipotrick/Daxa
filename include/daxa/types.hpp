@@ -1316,7 +1316,7 @@ namespace daxa
         [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
     };
 
-    [[nodiscard]] auto to_string(MemoryFlags flags) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(MemoryFlags flags) -> std::string_view;
 
     enum struct ColorSpace
     {
@@ -1339,7 +1339,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    [[nodiscard]] auto to_string(ColorSpace color_space) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(ColorSpace color_space) -> std::string_view;
 
     enum struct ImageLayout
     {

@@ -17,7 +17,7 @@ namespace daxa
     using MemoryBarrierInfo [[deprecated("Use BarrierInfo instead; API:3.2")]] = BarrierInfo;
 #endif
 
-    [[nodiscard]] auto to_string(BarrierInfo const & info) -> std::string;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(BarrierInfo const & info) -> std::string;
 
 #if !DAXA_REMOVE_DEPRECATED
     struct [[deprecated("Use ImageBarrierInfo instead; API:3.2")]] ImageMemoryBarrierInfo
