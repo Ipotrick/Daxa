@@ -609,7 +609,6 @@ namespace daxa
     {
         daxa_CommandSubmitInfo const c_submit_info = {
             .queue = std::bit_cast<daxa_Queue>(submit_info.queue),
-            .wait_stages = static_cast<VkPipelineStageFlags>(submit_info.wait_stages.data),
             .command_lists = reinterpret_cast<daxa_ExecutableCommandList const *>(submit_info.command_lists.data()),
             .command_list_count = submit_info.command_lists.size(),
             .wait_binary_semaphores = reinterpret_cast<daxa_BinarySemaphore const *>(submit_info.wait_binary_semaphores.data()),

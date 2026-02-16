@@ -486,7 +486,6 @@ namespace tests
             .signal_binary_semaphores = std::array{sema},
         });
         app.device.submit_commands({
-            .wait_stages = daxa::PipelineStageFlagBits::TRANSFER,
             .command_lists = std::array{exc_commands_1},
             .wait_binary_semaphores = std::array{sema},
         });

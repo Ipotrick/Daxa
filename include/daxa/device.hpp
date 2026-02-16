@@ -448,7 +448,6 @@ namespace daxa
     struct CommandSubmitInfo
     {
         Queue queue = daxa::QUEUE_MAIN;
-        PipelineStageFlags wait_stages = {};
         daxa::Span<ExecutableCommandList const> command_lists = {};
         daxa::Span<BinarySemaphore const> wait_binary_semaphores = {};
         daxa::Span<BinarySemaphore const> signal_binary_semaphores = {};

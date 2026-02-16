@@ -401,7 +401,6 @@ typedef struct
 typedef struct
 {
     daxa_Queue queue;
-    VkPipelineStageFlags wait_stages;
     daxa_ExecutableCommandList const * command_lists;
     uint64_t command_list_count;
     daxa_BinarySemaphore const * wait_binary_semaphores;

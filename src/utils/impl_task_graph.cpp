@@ -3794,7 +3794,6 @@ namespace daxa
 
                 if (&submit_scope != &permutation.batch_submit_scopes.back())
                 {
-                    PipelineStageFlags const wait_stages = submit_scope.submit_info.wait_stages;
                     std::vector<ExecutableCommandList> commands = {submit_scope.submit_info.command_lists.begin(), submit_scope.submit_info.command_lists.end()};
                     std::vector<BinarySemaphore> wait_binary_semaphores = {submit_scope.submit_info.wait_binary_semaphores.begin(), submit_scope.submit_info.wait_binary_semaphores.end()};
                     std::vector<BinarySemaphore> signal_binary_semaphores = {submit_scope.submit_info.signal_binary_semaphores.begin(), submit_scope.submit_info.signal_binary_semaphores.end()};
@@ -3875,7 +3874,6 @@ namespace daxa
                     signal_timeline_semaphores.push_back(std::pair{queue_sema, ++impl.cpu_submit_timeline_values[flat_queue_idx]});
                     daxa::CommandSubmitInfo const submit_info = {
                         .queue = queue,
-                        .wait_stages = wait_stages,
                         .command_lists = commands,
                         .wait_binary_semaphores = wait_binary_semaphores,
                         .signal_binary_semaphores = signal_binary_semaphores,
