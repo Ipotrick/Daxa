@@ -132,7 +132,7 @@ namespace daxa
     {
         // when this ID is invalid, this barrier is NOT an image memory barrier but just a memory barrier.
         // So when ID invalid => memory barrier, ID valid => image memory barrier.
-        TaskImageView image_id = {};
+        TaskImageView image = {};
         ImageMipArraySlice slice = {};
         ImageLayout layout_before = {};
         ImageLayout layout_after = {};

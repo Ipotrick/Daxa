@@ -167,7 +167,7 @@ namespace tests
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .image_id = image_1,
+            .image = image_1,
             .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
@@ -180,13 +180,13 @@ namespace tests
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
-            .image_id = image_1,
+            .image = image_1,
             .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
         recorder.pipeline_image_barrier({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .image_id = image_2,
+            .image = image_2,
             .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
@@ -199,7 +199,7 @@ namespace tests
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ,
-            .image_id = image_2,
+            .image = image_2,
             .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 

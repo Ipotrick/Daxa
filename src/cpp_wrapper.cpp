@@ -509,13 +509,13 @@ namespace daxa
         return {};
     }
 
-    auto Device::buffer_device_address_to_buffer(DeviceAddress address) -> Optional<BufferIdOffsetPair>
+    auto Device::buffer_device_address_to_buffer(DeviceAddress address) -> Optional<BufferOffsetPair>
     {
-        daxa_BufferIdOffsetPair id_offset_pair = {}; 
+        daxa_BufferOffsetPair id_offset_pair = {}; 
         auto result = daxa_dvc_buffer_device_address_to_buffer(r_cast<daxa_Device>(this->object), std::bit_cast<daxa_DeviceAddress>(address), &id_offset_pair);
         if (result == DAXA_RESULT_SUCCESS)
         {
-            return std::bit_cast<BufferIdOffsetPair>(id_offset_pair);
+            return std::bit_cast<BufferOffsetPair>(id_offset_pair);
         }
         return {};
     }
@@ -1243,7 +1243,7 @@ namespace daxa
         ImageBarrierInfo new_info = {};
         new_info.src_access = info.src_access;
         new_info.dst_access = info.dst_access;
-        new_info.image_id = info.image_id;
+        new_info.image = info.image;
         if (info.src_layout == daxa::ImageLayout::UNDEFINED)
         {
             new_info.layout_operation = daxa::ImageLayoutOperation::TO_GENERAL;
@@ -1490,7 +1490,7 @@ namespace daxa
                            to_string(info.dst_access),
                            to_string(info.src_layout),
                            to_string(info.dst_layout),
-                           to_string(info.image_id));
+                           to_string(info.image));
     }
 
     DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string
@@ -1510,7 +1510,7 @@ namespace daxa
                            to_string(info.dst_access),
                            to_string(src_layout),
                            to_string(dst_layout),
-                           to_string(info.image_id));
+                           to_string(info.image));
     }
 
     auto to_string(AccessTypeFlags flags) -> std::string

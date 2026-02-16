@@ -27,7 +27,7 @@ namespace daxa
         ImageLayout src_layout = ImageLayout::UNDEFINED;
         ImageLayout dst_layout = ImageLayout::UNDEFINED;
         [[deprecated("Ignored parameter, whole image will be transitioned; API:3.2")]] ImageMipArraySlice image_slice = {};
-        ImageId image_id = {};
+        ImageId image = {};
     };
 
     [[nodiscard]] [[deprecated("Use ImageBarrierInfo instead; API:3.2")]] DAXA_EXPORT_CXX auto to_string(ImageMemoryBarrierInfo const & info) -> std::string;
@@ -44,7 +44,7 @@ namespace daxa
     {
         Access src_access = AccessConsts::NONE;
         Access dst_access = AccessConsts::NONE;
-        ImageId image_id = {};
+        ImageId image = {};
         ImageLayoutOperation layout_operation = {};
     };
 

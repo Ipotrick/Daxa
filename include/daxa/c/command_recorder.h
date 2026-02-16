@@ -66,9 +66,9 @@ static daxa_BufferCopyInfo const DAXA_DEFAULT_BUFFER_COPY_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
-    daxa_BufferId buffer;
+    daxa_BufferId src_buffer;
     size_t buffer_offset;
-    daxa_ImageId image;
+    daxa_ImageId dst_image;
     /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
@@ -76,9 +76,9 @@ typedef struct
 } daxa_BufferImageCopyInfo;
 
 static daxa_BufferImageCopyInfo const DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
-    .buffer = DAXA_ZERO_INIT,
+    .src_buffer = DAXA_ZERO_INIT,
     .buffer_offset = 0,
-    .image = DAXA_ZERO_INIT,
+    .dst_image = DAXA_ZERO_INIT,
     .image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .image_slice = DAXA_ZERO_INIT,
     .image_offset = DAXA_ZERO_INIT,
@@ -87,22 +87,22 @@ static daxa_BufferImageCopyInfo const DAXA_DEFAULT_BUFFER_IMAGE_COPY_INFO = {
 
 typedef struct
 {
-    daxa_ImageId image;
+    daxa_ImageId src_image;
     /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
-    daxa_BufferId buffer;
+    daxa_BufferId dst_buffer;
     size_t buffer_offset;
 } daxa_ImageBufferCopyInfo;
 
 static daxa_ImageBufferCopyInfo const DAXA_DEFAULT_IMAGE_BUFFER_COPY_INFO = {
-    .image = DAXA_ZERO_INIT,
+    .src_image = DAXA_ZERO_INIT,
     .image_layout = DAXA_IMAGE_LAYOUT_GENERAL,
     .image_slice = DAXA_ZERO_INIT,
     .image_offset = DAXA_ZERO_INIT,
     .image_extent = DAXA_ZERO_INIT,
-    .buffer = DAXA_ZERO_INIT,
+    .dst_buffer = DAXA_ZERO_INIT,
     .buffer_offset = 0,
 };
 
@@ -473,22 +473,22 @@ daxa_cmd_dispatch_indirect(daxa_CommandRecorder cmd_enc, daxa_DispatchIndirectIn
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id buffer to be destroyed after command list finishes.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_destroy_buffer_deferred(daxa_CommandRecorder cmd_enc, daxa_BufferId id);
+daxa_cmd_destroy_buffer_deferred(daxa_CommandRecorder cmd_enc, daxa_BufferId buffer);
 /// @brief  Destroys the image AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image to be destroyed after command list finishes.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_destroy_image_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageId id);
+daxa_cmd_destroy_image_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageId image);
 /// @brief  Destroys the image view AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image view to be destroyed after command list finishes.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_destroy_image_view_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageViewId id);
+daxa_cmd_destroy_image_view_deferred(daxa_CommandRecorder cmd_enc, daxa_ImageViewId image_view);
 /// @brief  Destroys the sampler AFTER the gpu is finished executing the command list.
 ///         Useful for large uploads exceeding staging memory pools.
 /// @param id image sampler be destroyed after command list finishes.
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId id);
+daxa_cmd_destroy_sampler_deferred(daxa_CommandRecorder cmd_enc, daxa_SamplerId sampler);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_trace_rays(daxa_CommandRecorder cmd_enc, daxa_TraceRaysInfo const * info);

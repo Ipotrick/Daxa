@@ -505,13 +505,13 @@ namespace daxa
                 }
                 if (attachment_info.type == TaskAttachmentType::IMAGE)
                 {
-                    ImageId image_id = ti.id(TaskImageAttachmentIndex{attach_i});
+                    ImageId image = ti.id(TaskImageAttachmentIndex{attach_i});
                     {
                         ti.recorder.pipeline_barrier(daxa::BarrierInfo{
                             .src_access = daxa::AccessConsts::READ_WRITE,
                             .dst_access = daxa::AccessConsts::READ_WRITE,
                         });
-                        ti.recorder.clear_image({.dst_image = image_id});
+                        ti.recorder.clear_image({.dst_image = image});
                         ti.recorder.pipeline_barrier(daxa::BarrierInfo{
                             .src_access = daxa::AccessConsts::READ_WRITE,
                             .dst_access = daxa::AccessConsts::READ_WRITE,
@@ -1450,8 +1450,8 @@ namespace daxa
                     if (!state.image.display_image.is_empty())
                     {
                         state.image.imgui_image_id = context.imgui_renderer.create_texture_id({
-                            .image_view_id = state.image.display_image.default_view(),
-                            .sampler_id = context.resource_viewer_sampler_id,
+                            .image_view = state.image.display_image.default_view(),
+                            .sampler = context.resource_viewer_sampler,
                         });
                         ImPlot::PushStyleVar(ImPlotStyleVar_PlotBorderSize, 2);
                         ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0.0f, 0.0f));
@@ -1907,7 +1907,7 @@ namespace daxa
                                 auto result = context.device.buffer_device_address_to_buffer(std::bit_cast<DeviceAddress>(address));
                                 if (result.has_value())
                                 {
-                                    BufferId child_buffer = result.value().buffer_id;
+                                    BufferId child_buffer = result.value().buffer;
                                     BufferInfo const info = context.device.info(child_buffer).value();
                                     printf("Belongs to buffer %s\n", info.name.c_str());
 

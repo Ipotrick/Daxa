@@ -914,16 +914,16 @@ namespace daxa
 
     struct TaskBufferCopyInfo
     {
-        TaskBufferView src = {};
-        TaskBufferView dst = {};
+        TaskBufferView src_buffer = {};
+        TaskBufferView dst_buffer = {};
         Queue queue = QUEUE_MAIN;
         std::string_view name = {};
     };
 
     struct TaskImageCopyInfo
     {
-        TaskImageView src = {};
-        TaskImageView dst = {};
+        TaskImageView src_image = {};
+        TaskImageView dst_image = {};
         Queue queue = QUEUE_MAIN;
         std::string_view name = {};
     };

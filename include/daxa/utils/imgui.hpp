@@ -15,8 +15,8 @@ namespace daxa
 {
     struct ImGuiImageContext
     {
-        ImageViewId image_view_id;
-        SamplerId sampler_id;
+        ImageViewId image_view;
+        SamplerId sampler;
     };
 
     struct ImGuiRendererInfo

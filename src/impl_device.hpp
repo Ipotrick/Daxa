@@ -152,23 +152,23 @@ struct daxa_ImplDevice final : public ImplHandle
     std::array<u32, 3> valid_vk_queue_families = {};
     u32 valid_vk_queue_family_count = {};
 
-    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId id) -> daxa_ImageMipArraySlice;
-    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId id) -> daxa_ImageMipArraySlice;
+    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId image) -> daxa_ImageMipArraySlice;
+    auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId image_view) -> daxa_ImageMipArraySlice;
     auto new_swapchain_image(VkImage swapchain_image, VkFormat format, u32 index, ImageUsageFlags usage, ImageInfo const & image_info, ImageId * out) -> daxa_Result;
 
-    auto slot(daxa_BufferId id) const -> ImplBufferSlot const &;
-    auto slot(daxa_ImageId id) const -> ImplImageSlot const &;
-    auto slot(daxa_ImageViewId id) const -> ImplImageViewSlot const &;
-    auto slot(daxa_SamplerId id) const -> ImplSamplerSlot const &;
-    auto slot(daxa_TlasId id) const -> ImplTlasSlot const &;
-    auto slot(daxa_BlasId id) const -> ImplBlasSlot const &;
+    auto slot(daxa_BufferId buffer) const -> ImplBufferSlot const &;
+    auto slot(daxa_ImageId image) const -> ImplImageSlot const &;
+    auto slot(daxa_ImageViewId image_view) const -> ImplImageViewSlot const &;
+    auto slot(daxa_SamplerId sampler) const -> ImplSamplerSlot const &;
+    auto slot(daxa_TlasId tlas) const -> ImplTlasSlot const &;
+    auto slot(daxa_BlasId blas) const -> ImplBlasSlot const &;
 
-    auto hot_slot(daxa_BufferId id) const -> ImplBufferSlot::HotData const &;
-    auto hot_slot(daxa_ImageId id) const -> ImplImageSlot::HotData const &;
-    auto hot_slot(daxa_ImageViewId id) const -> ImplImageViewSlot::HotData const &;
-    auto hot_slot(daxa_SamplerId id) const -> ImplSamplerSlot::HotData const &;
-    auto hot_slot(daxa_TlasId id) const -> ImplTlasSlot::HotData const &;
-    auto hot_slot(daxa_BlasId id) const -> ImplBlasSlot::HotData const &;
+    auto hot_slot(daxa_BufferId buffer) const -> ImplBufferSlot::HotData const &;
+    auto hot_slot(daxa_ImageId image) const -> ImplImageSlot::HotData const &;
+    auto hot_slot(daxa_ImageViewId image_view) const -> ImplImageViewSlot::HotData const &;
+    auto hot_slot(daxa_SamplerId sampler) const -> ImplSamplerSlot::HotData const &;
+    auto hot_slot(daxa_TlasId tlas) const -> ImplTlasSlot::HotData const &;
+    auto hot_slot(daxa_BlasId blas) const -> ImplBlasSlot::HotData const &;
 
     void cleanup_buffer(BufferId id);
     void cleanup_image(ImageId id);

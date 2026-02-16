@@ -501,41 +501,41 @@ namespace daxa
     struct BufferTlasInfo
     {
         TlasInfo tlas_info = {};
-        BufferId buffer_id = {};
+        BufferId buffer = {};
         u64 offset = {};
     };
 
     struct BufferBlasInfo
     {
         BlasInfo blas_info = {};
-        BufferId buffer_id = {};
+        BufferId buffer = {};
         u64 offset = {};
     };
 
     struct BufferIdDeviceMemorySizePair
     {
-        BufferId id = {};
+        BufferId buffer = {};
         u64 size = {};
         bool block_allocated = {};
     };
 
     struct ImageIdDeviceMemorySizePair
     {
-        ImageId id = {};
+        ImageId image = {};
         u64 size = {};
         bool block_allocated = {};
     };
 
     struct TlasIdDeviceMemorySizePair
     {
-        TlasId id = {};
+        TlasId tlas = {};
         u64 size = {};
         // NOTE: All tlas are aliased allocations into buffers
     };
 
     struct BlasIdDeviceMemorySizePair
     {
-        BlasId id = {};
+        BlasId blas = {};
         u64 size = {};
         // NOTE: All tlas are aliased allocations into buffers
     };
@@ -581,9 +581,9 @@ namespace daxa
         std::vector<MemoryBLockDeviceMemorySizePair> memory_block_list = {};
     };
 
-    struct BufferIdOffsetPair
+    struct BufferOffsetPair
     {
-        BufferId buffer_id = {};
+        BufferId buffer = {};
         u64 offset = {};
     };
 
@@ -639,31 +639,31 @@ namespace daxa
         [[nodiscard]] auto create(BufferTlasInfo const & info) { return create_tlas_from_buffer(info); }
         [[nodiscard]] auto create(BufferBlasInfo const & info) { return create_blas_from_buffer(info); }
 
-        auto inc_refcnt_buffer(BufferId id) -> bool;
-        auto inc_refcnt_image(ImageId id) -> bool;
-        auto inc_refcnt_image_view(ImageViewId id) -> bool;
-        auto inc_refcnt_sampler(SamplerId id) -> bool;
-        auto inc_refcnt_tlas(TlasId id) -> bool;
-        auto inc_refcnt_blas(BlasId id) -> bool;
-        auto inc_refcnt(BufferId id) -> bool { return inc_refcnt_buffer(id); }
-        auto inc_refcnt(ImageId id) -> bool { return inc_refcnt_image(id); }
-        auto inc_refcnt(ImageViewId id) -> bool { return inc_refcnt_image_view(id); }
-        auto inc_refcnt(SamplerId id) -> bool { return inc_refcnt_sampler(id); }
-        auto inc_refcnt(TlasId id) -> bool { return inc_refcnt_tlas(id); }
-        auto inc_refcnt(BlasId id) -> bool { return inc_refcnt_blas(id); }
+        auto inc_refcnt_buffer(BufferId buffer) -> bool;
+        auto inc_refcnt_image(ImageId image) -> bool;
+        auto inc_refcnt_image_view(ImageViewId image_view) -> bool;
+        auto inc_refcnt_sampler(SamplerId sampler) -> bool;
+        auto inc_refcnt_tlas(TlasId tlas) -> bool;
+        auto inc_refcnt_blas(BlasId blas) -> bool;
+        auto inc_refcnt(BufferId buffer) -> bool { return inc_refcnt_buffer(buffer); }
+        auto inc_refcnt(ImageId image) -> bool { return inc_refcnt_image(image); }
+        auto inc_refcnt(ImageViewId image_view) -> bool { return inc_refcnt_image_view(image_view); }
+        auto inc_refcnt(SamplerId sampler) -> bool { return inc_refcnt_sampler(sampler); }
+        auto inc_refcnt(TlasId tlas) -> bool { return inc_refcnt_tlas(tlas); }
+        auto inc_refcnt(BlasId blas) -> bool { return inc_refcnt_blas(blas); }
 
-        void destroy_buffer(BufferId id);
-        void destroy_image(ImageId id);
-        void destroy_image_view(ImageViewId id);
-        void destroy_sampler(SamplerId id);
-        void destroy_tlas(TlasId id);
-        void destroy_blas(BlasId id);
-        void destroy(BufferId id) { destroy_buffer(id); }
-        void destroy(ImageId id) { destroy_image(id); }
-        void destroy(ImageViewId id) { destroy_image_view(id); }
-        void destroy(SamplerId id) { destroy_sampler(id); }
-        void destroy(TlasId id) { destroy_tlas(id); }
-        void destroy(BlasId id) { destroy_blas(id); }
+        void destroy_buffer(BufferId buffer);
+        void destroy_image(ImageId image);
+        void destroy_image_view(ImageViewId image_view);
+        void destroy_sampler(SamplerId sampler);
+        void destroy_tlas(TlasId tlas);
+        void destroy_blas(BlasId blas);
+        void destroy(BufferId buffer) { destroy_buffer(buffer); }
+        void destroy(ImageId image) { destroy_image(image); }
+        void destroy(ImageViewId image_view) { destroy_image_view(image_view); }
+        void destroy(SamplerId sampler) { destroy_sampler(sampler); }
+        void destroy(TlasId tlas) { destroy_tlas(tlas); }
+        void destroy(BlasId blas) { destroy_blas(blas); }
 
         // TODO: deprecate?
 
@@ -671,51 +671,51 @@ namespace daxa
         ///         This is also the case for gpu resources (buffer, image(view), sampler, as).
         /// @param id of the object.
         /// @return a value copy of the info. Returns nullopt when the id is invalid.
-        [[nodiscard]] auto buffer_info(BufferId id) const -> Optional<BufferInfo>;
-        [[nodiscard]] auto image_info(ImageId id) const -> Optional<ImageInfo>;
-        [[nodiscard]] auto image_view_info(ImageViewId id) const -> Optional<ImageViewInfo>;
-        [[nodiscard]] auto sampler_info(SamplerId id) const -> Optional<SamplerInfo>;
-        [[nodiscard]] auto tlas_info(TlasId id) const -> Optional<TlasInfo>;
-        [[nodiscard]] auto blas_info(BlasId id) const -> Optional<BlasInfo>;
-        [[nodiscard]] auto info(BufferId id) const { return buffer_info(id); }
-        [[nodiscard]] auto info(ImageId id) const { return image_info(id); }
-        [[nodiscard]] auto info(ImageViewId id) const { return image_view_info(id); }
-        [[nodiscard]] auto info(SamplerId id) const { return sampler_info(id); }
-        [[nodiscard]] auto info(TlasId id) const { return tlas_info(id); }
-        [[nodiscard]] auto info(BlasId id) const { return blas_info(id); }
+        [[nodiscard]] auto buffer_info(BufferId buffer) const -> Optional<BufferInfo>;
+        [[nodiscard]] auto image_info(ImageId image) const -> Optional<ImageInfo>;
+        [[nodiscard]] auto image_view_info(ImageViewId image_view) const -> Optional<ImageViewInfo>;
+        [[nodiscard]] auto sampler_info(SamplerId sampler) const -> Optional<SamplerInfo>;
+        [[nodiscard]] auto tlas_info(TlasId tlas) const -> Optional<TlasInfo>;
+        [[nodiscard]] auto blas_info(BlasId blas) const -> Optional<BlasInfo>;
+        [[nodiscard]] auto info(BufferId buffer) const { return buffer_info(buffer); }
+        [[nodiscard]] auto info(ImageId image) const { return image_info(image); }
+        [[nodiscard]] auto info(ImageViewId image_view) const { return image_view_info(image_view); }
+        [[nodiscard]] auto info(SamplerId sampler) const { return sampler_info(sampler); }
+        [[nodiscard]] auto info(TlasId tlas) const { return tlas_info(tlas); }
+        [[nodiscard]] auto info(BlasId blas) const { return blas_info(blas); }
 
         /// @brief  Will describe if a given id is valid.
         ///         An id is valid as long as it was created by the device and not yet destroyed.
         /// @param id or the object.
         /// @return validity of id
-        [[nodiscard]] auto is_image_id_valid(ImageId id) const -> bool;
-        [[nodiscard]] auto is_image_view_id_valid(ImageViewId id) const -> bool;
-        [[nodiscard]] auto is_buffer_id_valid(BufferId id) const -> bool;
-        [[nodiscard]] auto is_sampler_id_valid(SamplerId id) const -> bool;
-        [[nodiscard]] auto is_tlas_id_valid(TlasId id) const -> bool;
-        [[nodiscard]] auto is_blas_id_valid(BlasId id) const -> bool;
-        [[nodiscard]] auto is_id_valid(ImageId id) const { return is_image_id_valid(id); }
-        [[nodiscard]] auto is_id_valid(ImageViewId id) const { return is_image_view_id_valid(id); }
-        [[nodiscard]] auto is_id_valid(BufferId id) const { return is_buffer_id_valid(id); }
-        [[nodiscard]] auto is_id_valid(SamplerId id) const { return is_sampler_id_valid(id); }
-        [[nodiscard]] auto is_id_valid(TlasId id) const { return is_tlas_id_valid(id); }
-        [[nodiscard]] auto is_id_valid(BlasId id) const { return is_blas_id_valid(id); }
+        [[nodiscard]] auto is_image_id_valid(ImageId image) const -> bool;
+        [[nodiscard]] auto is_image_view_id_valid(ImageViewId image_view) const -> bool;
+        [[nodiscard]] auto is_buffer_id_valid(BufferId buffer) const -> bool;
+        [[nodiscard]] auto is_sampler_id_valid(SamplerId sampler) const -> bool;
+        [[nodiscard]] auto is_tlas_id_valid(TlasId tlas) const -> bool;
+        [[nodiscard]] auto is_blas_id_valid(BlasId blas) const -> bool;
+        [[nodiscard]] auto is_id_valid(ImageId image) const { return is_image_id_valid(image); }
+        [[nodiscard]] auto is_id_valid(ImageViewId image_view) const { return is_image_view_id_valid(image_view); }
+        [[nodiscard]] auto is_id_valid(BufferId buffer) const { return is_buffer_id_valid(buffer); }
+        [[nodiscard]] auto is_id_valid(SamplerId sampler) const { return is_sampler_id_valid(sampler); }
+        [[nodiscard]] auto is_id_valid(TlasId tlas) const { return is_tlas_id_valid(tlas); }
+        [[nodiscard]] auto is_id_valid(BlasId blas) const { return is_blas_id_valid(blas); }
 
-        [[nodiscard]] auto buffer_device_address(BufferId id) const -> Optional<DeviceAddress>;
-        [[nodiscard]] auto blas_device_address(BlasId id) const -> Optional<DeviceAddress>;
-        [[nodiscard]] auto tlas_device_address(TlasId id) const -> Optional<DeviceAddress>;
-        [[nodiscard]] auto device_address(BufferId id) const { return buffer_device_address(id); }
-        [[nodiscard]] auto device_address(BlasId id) const { return blas_device_address(id); }
-        [[nodiscard]] auto device_address(TlasId id) const { return tlas_device_address(id); }
+        [[nodiscard]] auto buffer_device_address(BufferId buffer) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto blas_device_address(BlasId blas) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto tlas_device_address(TlasId tlas) const -> Optional<DeviceAddress>;
+        [[nodiscard]] auto device_address(BufferId buffer) const { return buffer_device_address(buffer); }
+        [[nodiscard]] auto device_address(BlasId blas) const { return blas_device_address(blas); }
+        [[nodiscard]] auto device_address(TlasId tlas) const { return tlas_device_address(tlas); }
 
         /// WARNING: THIS FUNCTION IS VERY SLOW, ONLY CALL IT FOR DEBUGGING PURPOSES!
-        [[nodiscard]] auto buffer_device_address_to_buffer(DeviceAddress address) -> Optional<BufferIdOffsetPair>;
+        [[nodiscard]] auto buffer_device_address_to_buffer(DeviceAddress address) -> Optional<BufferOffsetPair>;
 
-        [[nodiscard]] auto buffer_host_address(BufferId id) const -> Optional<std::byte *>;
+        [[nodiscard]] auto buffer_host_address(BufferId buffer) const -> Optional<std::byte *>;
         template <typename T>
-        [[nodiscard]] auto buffer_host_address_as(BufferId id) const -> Optional<T *>
+        [[nodiscard]] auto buffer_host_address_as(BufferId buffer) const -> Optional<T *>
         {
-            auto opt = buffer_host_address(id);
+            auto opt = buffer_host_address(buffer);
             if (opt.has_value())
             {
                 return {reinterpret_cast<T *>(opt.value())};
@@ -794,23 +794,23 @@ namespace daxa
         [[deprecated("Use blas_build_sizes or as_build_sizes Instead, API:3.0")]] [[nodiscard]] auto get_blas_build_sizes(BlasBuildInfo const & info) { return blas_build_sizes(info); }
         [[deprecated("Use buffer_memory_requirements or memory_requirements Instead, API:3.0")]] [[nodiscard]] auto get_memory_requirements(BufferInfo const & info) const { return buffer_memory_requirements(info); }
         [[deprecated("Use image_memory_requirements or memory_requirements Instead, API:3.0")]] [[nodiscard]] auto get_memory_requirements(ImageInfo const & info) const { return image_memory_requirements(info); }
-        [[deprecated("Use buffer_info or info instead, API:3.0")]] [[nodiscard]] auto info_buffer(BufferId id) const { return buffer_info(id); }
-        [[deprecated("Use image_info or info instead, API:3.0")]] [[nodiscard]] auto info_image(ImageId id) const { return image_info(id); }
-        [[deprecated("Use image_view_info or info instead, API:3.0")]] [[nodiscard]] auto info_image_view(ImageViewId id) const { return image_view_info(id); }
-        [[deprecated("Use sampler_info or info instead, API:3.0")]] [[nodiscard]] auto info_sampler(SamplerId id) const { return sampler_info(id); }
-        [[deprecated("Use tlas_info or info instead, API:3.0")]] [[nodiscard]] auto info_tlas(TlasId id) const { return tlas_info(id); }
-        [[deprecated("Use blas_info or info instead, API:3.0")]] [[nodiscard]] auto info_blas(BlasId id) const { return blas_info(id); }
+        [[deprecated("Use buffer_info or info instead, API:3.0")]] [[nodiscard]] auto info_buffer(BufferId buffer) const { return buffer_info(buffer); }
+        [[deprecated("Use image_info or info instead, API:3.0")]] [[nodiscard]] auto info_image(ImageId image) const { return image_info(image); }
+        [[deprecated("Use image_view_info or info instead, API:3.0")]] [[nodiscard]] auto info_image_view(ImageViewId image_view) const { return image_view_info(image_view); }
+        [[deprecated("Use sampler_info or info instead, API:3.0")]] [[nodiscard]] auto info_sampler(SamplerId sampler) const { return sampler_info(sampler); }
+        [[deprecated("Use tlas_info or info instead, API:3.0")]] [[nodiscard]] auto info_tlas(TlasId tlas) const { return tlas_info(tlas); }
+        [[deprecated("Use blas_info or info instead, API:3.0")]] [[nodiscard]] auto info_blas(BlasId blas) const { return blas_info(blas); }
 
         template <typename T>
-        [[deprecated("Use buffer_host_address_as instead, API:3.0")]] [[nodiscard]] auto get_host_address_as(BufferId id) const
+        [[deprecated("Use buffer_host_address_as instead, API:3.0")]] [[nodiscard]] auto get_host_address_as(BufferId buffer) const
         {
-            return buffer_host_address_as<T>(id);
+            return buffer_host_address_as<T>(buffer);
         }
 
-        [[deprecated("Use buffer_host_address instead, API:3.0")]] [[nodiscard]] auto get_host_address(BufferId id) const { return buffer_host_address(id); }
-        [[deprecated("Use buffer_device_address or device_address instead, API:3.0")]] [[nodiscard]] auto get_device_address(BufferId id) const { return buffer_device_address(id); }
-        [[deprecated("Use blas_device_address or device_address instead, API:3.0")]] [[nodiscard]] auto get_device_address(BlasId id) const { return blas_device_address(id); }
-        [[deprecated("Use tlas_device_address or device_address instead, API:3.0")]] [[nodiscard]] auto get_device_address(TlasId id) const { return tlas_device_address(id); }
+        [[deprecated("Use buffer_host_address instead, API:3.0")]] [[nodiscard]] auto get_host_address(BufferId buffer) const { return buffer_host_address(buffer); }
+        [[deprecated("Use buffer_device_address or device_address instead, API:3.0")]] [[nodiscard]] auto get_device_address(BufferId buffer) const { return buffer_device_address(buffer); }
+        [[deprecated("Use blas_device_address or device_address instead, API:3.0")]] [[nodiscard]] auto get_device_address(BlasId blas) const { return blas_device_address(blas); }
+        [[deprecated("Use tlas_device_address or device_address instead, API:3.0")]] [[nodiscard]] auto get_device_address(TlasId tlas) const { return tlas_device_address(tlas); }
 #endif
 
       protected:

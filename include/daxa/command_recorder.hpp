@@ -47,9 +47,9 @@ namespace daxa
 
     struct BufferImageCopyInfo
     {
-        BufferId buffer = {};
+        BufferId src_buffer = {};
         usize buffer_offset = {};
-        ImageId image = {};
+        ImageId dst_image = {};
         [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout image_layout = ImageLayout::GENERAL;
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
@@ -58,12 +58,12 @@ namespace daxa
 
     struct ImageBufferCopyInfo
     {
-        ImageId image = {};
+        ImageId src_image = {};
         [[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] ImageLayout image_layout = ImageLayout::GENERAL;
         ImageArraySlice image_slice = {};
         Offset3D image_offset = {};
         Extent3D image_extent = {};
-        BufferId buffer = {};
+        BufferId dst_buffer = {};
         usize buffer_offset = {};
     };
 
@@ -260,7 +260,7 @@ namespace daxa
 
     struct SetIndexBufferInfo
     {
-        BufferId id = {};
+        BufferId buffer = {};
         usize offset = {};
         IndexType index_type = IndexType::uint32;
     };
@@ -386,23 +386,23 @@ namespace daxa
         /// @brief  Destroys the buffer AFTER the gpu is finished executing the command list.
         ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
-        /// @param id buffer to be destroyed after command list finishes.
-        void destroy_buffer_deferred(BufferId id);
+        /// @param buffer buffer to be destroyed after command list finishes.
+        void destroy_buffer_deferred(BufferId buffer);
         /// @brief  Destroys the image AFTER the gpu is finished executing the command list.
         ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
-        /// @param id image to be destroyed after command list finishes.
-        void destroy_image_deferred(ImageId id);
+        /// @param image image to be destroyed after command list finishes.
+        void destroy_image_deferred(ImageId image);
         /// @brief  Destroys the image view AFTER the gpu is finished executing the command list.
         ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
-        /// @param id image view to be destroyed after command list finishes.
-        void destroy_image_view_deferred(ImageViewId id);
+        /// @param image_view image view to be destroyed after command list finishes.
+        void destroy_image_view_deferred(ImageViewId image_view);
         /// @brief  Destroys the sampler AFTER the gpu is finished executing the command list.
         ///         Zombifies object after submitting the commands.
         ///         Useful for large uploads exceeding staging memory pools.
-        /// @param id image sampler be destroyed after command list finishes.
-        void destroy_sampler_deferred(SamplerId id);
+        /// @param sampler image sampler be destroyed after command list finishes.
+        void destroy_sampler_deferred(SamplerId sampler);
 
         void write_timestamp(WriteTimestampInfo const & info);
         void reset_timestamps(ResetTimestampsInfo const & info);

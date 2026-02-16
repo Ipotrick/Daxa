@@ -182,7 +182,7 @@ auto main() -> int
 
         recorder.pipeline_image_barrier({
             .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .image_id = swapchain_image,
+            .image = swapchain_image,
             .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
 
@@ -194,7 +194,7 @@ auto main() -> int
 
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .image_id = swapchain_image,
+            .image = swapchain_image,
             .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
         });
 

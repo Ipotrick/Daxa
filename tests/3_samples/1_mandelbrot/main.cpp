@@ -97,8 +97,8 @@ struct App : BaseApp<App>
 
         ImGui::Image(
             imgui_renderer.create_texture_id({
-                .image_view_id = render_image.default_view(),
-                .sampler_id = sampler,
+                .image_view = render_image.default_view(),
+                .sampler = sampler,
             }),
             ImVec2(200, 200));
 

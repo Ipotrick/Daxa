@@ -230,7 +230,7 @@ namespace daxa
             render_recorder.set_pipeline(raster_pipeline);
 
             render_recorder.set_index_buffer({
-                .id = ibuffer,
+                .buffer = ibuffer,
                 .offset = 0,
                 .index_type = IndexType::uint16,
             });
@@ -274,8 +274,8 @@ namespace daxa
 
                     // Draw
                     auto const image_context = this->image_sampler_pairs.at(std::bit_cast<usize>(pcmd->TextureId));
-                    push.texture0_id = image_context.image_view_id;
-                    push.sampler0_id = image_context.sampler_id;
+                    push.texture0_id = image_context.image_view;
+                    push.sampler0_id = image_context.sampler;
 
                     push.vbuffer_offset = pcmd->VtxOffset + static_cast<u32>(global_vtx_offset);
                     push.ibuffer_offset = pcmd->IdxOffset + static_cast<u32>(global_idx_offset);
@@ -380,12 +380,12 @@ namespace daxa
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::HOST_WRITE,
             .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-            .image_id = font_sheet,
+            .image = font_sheet,
             .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
         });
         recorder.copy_buffer_to_image({
-            .buffer = texture_staging_buffer,
-            .image = font_sheet,
+            .src_buffer = texture_staging_buffer,
+            .dst_image = font_sheet,
             .image_slice = {
                 .mip_level = 0,
                 .base_array_layer = 0,
@@ -405,8 +405,8 @@ namespace daxa
         this->info.device.destroy_buffer(texture_staging_buffer);
         this->font_sampler = this->info.device.create_sampler({.name = "ImGui Font Sampler"});
         this->image_sampler_pairs.push_back(ImGuiImageContext{
-            .image_view_id = font_sheet.default_view(),
-            .sampler_id = this->font_sampler,
+            .image_view = font_sheet.default_view(),
+            .sampler = this->font_sampler,
         });
         io.Fonts->SetTexID({});
     }

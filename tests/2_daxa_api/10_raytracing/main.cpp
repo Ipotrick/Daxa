@@ -238,7 +238,7 @@ namespace tests
                         .size = build_size_info.acceleration_structure_size,
                         .name = "test blas",
                     },
-                    .buffer_id = blas_buffer,
+                    .buffer = blas_buffer,
                     .offset = blas_buffer_offset,
                 });
                 blas_build_info.dst_blas = blas;
@@ -307,7 +307,7 @@ namespace tests
                     .blas_info = {   .size = build_size_info.acceleration_structure_size,
                         .name = "test procedural blas",
                     },
-                    .buffer_id = blas_buffer,
+                    .buffer = blas_buffer,
                     .offset = blas_buffer_offset,
                 });
                 proc_blas_build_info.dst_blas = proc_blas;
@@ -634,7 +634,7 @@ namespace tests
 
                 recorder.pipeline_image_barrier({
                     .dst_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
-                    .image_id = swapchain_image,
+                    .image = swapchain_image,
                     .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
                 });
 
@@ -677,7 +677,7 @@ namespace tests
 
                 recorder.pipeline_image_barrier({
                     .src_access = daxa::AccessConsts::RAY_TRACING_SHADER_WRITE,
-                    .image_id = swapchain_image,
+                    .image = swapchain_image,
                     .layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC,
                 });
 

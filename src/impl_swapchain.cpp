@@ -212,7 +212,7 @@ auto daxa_swp_wait_for_next_frame(daxa_Swapchain self) -> daxa_Result
     return DAXA_RESULT_SUCCESS;
 }
 
-auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_id) -> daxa_Result
+auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image) -> daxa_Result
 {
     daxa_Result result = {};
     result = daxa_swp_wait_for_next_frame(self);
@@ -229,7 +229,7 @@ auto daxa_swp_acquire_next_image(daxa_Swapchain self, daxa_ImageId * out_image_i
     if (result == DAXA_RESULT_SUCCESS)
     {
         // We only bump the cpu timeline, when the acquire succeeds.
-        *out_image_id = static_cast<daxa_ImageId>(self->images[self->current_image_index]);
+        *out_image = static_cast<daxa_ImageId>(self->images[self->current_image_index]);
         self->cpu_frame_timeline += 1;
     }
 

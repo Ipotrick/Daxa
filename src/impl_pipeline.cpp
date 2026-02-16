@@ -819,25 +819,25 @@ auto daxa_ray_tracing_pipeline_create_default_sbt(daxa_RayTracingPipeline pipeli
         .name = std::bit_cast<daxa_SmallString>(info.name),
     };
     // TODO: We need to store the buffer id somewhere, so we can destroy after the pipeline is destroyed
-    auto & sbt_buffer_id = *out_buffer;
-    auto const create_buffer_result = daxa_dvc_create_buffer(device, &sbt_info, r_cast<daxa_BufferId *>(&sbt_buffer_id));
+    auto & sbt_buffer = *out_buffer;
+    auto const create_buffer_result = daxa_dvc_create_buffer(device, &sbt_info, r_cast<daxa_BufferId *>(&sbt_buffer));
     _DAXA_RETURN_IF_ERROR(create_buffer_result, create_buffer_result);
 
     u8 * sbt_buffer_ptr = nullptr;
-    auto const get_host_address_result = daxa_dvc_buffer_host_address(device, sbt_buffer_id, reinterpret_cast<void **>(&sbt_buffer_ptr));
+    auto const get_host_address_result = daxa_dvc_buffer_host_address(device, sbt_buffer, reinterpret_cast<void **>(&sbt_buffer_ptr));
     if (get_host_address_result != DAXA_RESULT_SUCCESS)
     {
-        auto const destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer_id);
+        auto const destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer);
         _DAXA_RETURN_IF_ERROR(destroy_buffer_result, destroy_buffer_result);
         _DAXA_RETURN_IF_ERROR(get_host_address_result, get_host_address_result);
     }
 
     // Find the SBT addresses of each group
     VkDeviceAddress sbt_address = 0;
-    auto const device_address_result = daxa_dvc_buffer_device_address(device, sbt_buffer_id, reinterpret_cast<daxa_DeviceAddress *>(&sbt_address));
+    auto const device_address_result = daxa_dvc_buffer_device_address(device, sbt_buffer, reinterpret_cast<daxa_DeviceAddress *>(&sbt_address));
     if (device_address_result != DAXA_RESULT_SUCCESS)
     {
-        auto const destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer_id);
+        auto const destroy_buffer_result = daxa_dvc_destroy_buffer(device, sbt_buffer);
         _DAXA_RETURN_IF_ERROR(destroy_buffer_result, destroy_buffer_result);
         _DAXA_RETURN_IF_ERROR(device_address_result, device_address_result);
     }

@@ -80,7 +80,7 @@ namespace daxa
         std::optional<ImageViewerLimits> boardcast_image_viewer_limits = {};
         std::unordered_map<std::string, ResourceViewerState> resource_viewer_states = {};
         std::shared_ptr<daxa::ComputePipeline> resource_viewer_pipeline = {};
-        SamplerId resource_viewer_sampler_id = {};
+        SamplerId resource_viewer_sampler = {};
         
         static void zero_ref_callback(ImplHandle const * handle);
     };

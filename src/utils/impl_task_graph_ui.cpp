@@ -2337,9 +2337,9 @@ namespace daxa
             }
         }
 
-        DAXA_DBG_ASSERT_TRUE_M(ui_context.resource_viewer_sampler_id.is_empty(), "IMPOSSIBLE CASE! The UI cannot already ahve a sampler created");
+        DAXA_DBG_ASSERT_TRUE_M(ui_context.resource_viewer_sampler.is_empty(), "IMPOSSIBLE CASE! The UI cannot already ahve a sampler created");
         {
-            ui_context.resource_viewer_sampler_id = ui_context.device.create_sampler({
+            ui_context.resource_viewer_sampler = ui_context.device.create_sampler({
                 .magnification_filter = Filter::NEAREST,
                 .minification_filter = Filter::NEAREST,
             });
@@ -2412,7 +2412,7 @@ namespace daxa
 
     ImplTaskGraphDebugUi::~ImplTaskGraphDebugUi()
     {
-        this->device.destroy_sampler(this->resource_viewer_sampler_id);
+        this->device.destroy_sampler(this->resource_viewer_sampler);
 
         for (auto av_iter = this->resource_viewer_states.begin(); av_iter != this->resource_viewer_states.end();)
         {

@@ -440,49 +440,49 @@ void daxa_as_build_info_to_vk(
 
 // --- Begin API Functions
 
-auto daxa_default_view(daxa_ImageId id) -> daxa_ImageViewId
+auto daxa_default_view(daxa_ImageId image) -> daxa_ImageViewId
 {
-    return daxa_ImageViewId{.value = id.value};
+    return daxa_ImageViewId{.value = image.value};
 }
 
-auto daxa_index_of_buffer(daxa_BufferId id) -> u32
+auto daxa_index_of_buffer(daxa_BufferId buffer) -> u32
 {
-    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+    return static_cast<u32>(buffer.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
 }
 
-auto daxa_index_of_image(daxa_ImageId id) -> u32
+auto daxa_index_of_image(daxa_ImageId image) -> u32
 {
-    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+    return static_cast<u32>(image.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
 }
 
-auto daxa_index_of_image_view(daxa_ImageViewId id) -> u32
+auto daxa_index_of_image_view(daxa_ImageViewId image_view) -> u32
 {
-    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+    return static_cast<u32>(image_view.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
 }
 
-auto daxa_index_of_sampler(daxa_SamplerId id) -> u32
+auto daxa_index_of_sampler(daxa_SamplerId sampler) -> u32
 {
-    return static_cast<u32>(id.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
+    return static_cast<u32>(sampler.value & mask_from_bit_count(DAXA_ID_INDEX_BITS));
 }
 
-auto daxa_version_of_buffer(daxa_BufferId id) -> u64
+auto daxa_version_of_buffer(daxa_BufferId buffer) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (buffer.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
-auto daxa_version_of_image(daxa_ImageId id) -> u64
+auto daxa_version_of_image(daxa_ImageId image) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (image.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
-auto daxa_version_of_image_view(daxa_ImageViewId id) -> u64
+auto daxa_version_of_image_view(daxa_ImageViewId image_view) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (image_view.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
-auto daxa_version_of_sampler(daxa_SamplerId id) -> u64
+auto daxa_version_of_sampler(daxa_SamplerId sampler) -> u64
 {
-    return (id.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
+    return (sampler.value >> DAXA_ID_VERSION_OFFSET) & mask_from_bit_count(DAXA_ID_VERSION_BITS);
 }
 
 // --- End API Functions

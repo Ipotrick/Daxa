@@ -1174,8 +1174,8 @@ namespace daxa
     DAXA_EXPORT_CXX void TaskGraph::copy_buffer_to_buffer(TaskBufferCopyInfo const & info)
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        auto src = validate_and_translate_view(impl, info.src);
-        auto dst = validate_and_translate_view(impl, info.dst);
+        auto src = validate_and_translate_view(impl, info.src_buffer);
+        auto dst = validate_and_translate_view(impl, info.dst_buffer);
 
         auto src_i = TaskBufferAttachmentIndex{0};
         auto dst_i = TaskBufferAttachmentIndex{1};
@@ -1206,8 +1206,8 @@ namespace daxa
     DAXA_EXPORT_CXX void TaskGraph::copy_image_to_image(TaskImageCopyInfo const & info)
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        auto src = validate_and_translate_view(impl, info.src);
-        auto dst = validate_and_translate_view(impl, info.dst);
+        auto src = validate_and_translate_view(impl, info.src_image);
+        auto dst = validate_and_translate_view(impl, info.dst_image);
 
         auto src_i = TaskImageAttachmentIndex{0};
         auto dst_i = TaskImageAttachmentIndex{1};
@@ -3500,7 +3500,7 @@ namespace daxa
                     cr.pipeline_image_barrier(ImageBarrierInfo{
                         .src_access = task_image_barrier.src_access,
                         .dst_access = task_image_barrier.dst_access,
-                        .image_id = task_image_barrier.resource->id.image,
+                        .image = task_image_barrier.resource->id.image,
                         .layout_operation = task_image_barrier.layout_operation,
                     });
                 }
@@ -3528,7 +3528,7 @@ namespace daxa
                         cr.pipeline_image_barrier(ImageBarrierInfo{
                             .src_access = task_image_barrier.src_access,
                             .dst_access = task_image_barrier.dst_access,
-                            .image_id = task_image_barrier.resource->id.image,
+                            .image = task_image_barrier.resource->id.image,
                             .layout_operation = task_image_barrier.layout_operation,
                         });
                     }
@@ -3681,7 +3681,7 @@ namespace daxa
                         push_back_static(signal_timeline_semaphores, signal_timeline_semaphore_count, impl.info.swapchain->current_timeline_pair());
                         cr.pipeline_image_barrier(ImageBarrierInfo{
                             .src_access = Access{task_stage_to_pipeline_stage(last_access.stages), to_access_type(last_access.type)},
-                            .image_id = impl.swapchain_image->id.image,
+                            .image = impl.swapchain_image->id.image,
                             .layout_operation = ImageLayoutOperation::TO_PRESENT_SRC,
                         });
                     }

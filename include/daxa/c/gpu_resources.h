@@ -12,22 +12,22 @@ DAXA_EXPORT daxa_ImageViewId
 daxa_default_view(daxa_ImageId image);
 
 DAXA_EXPORT uint32_t
-daxa_index_of_buffer(daxa_BufferId id);
+daxa_index_of_buffer(daxa_BufferId buffer);
 DAXA_EXPORT uint32_t
-daxa_index_of_image(daxa_ImageId id);
+daxa_index_of_image(daxa_ImageId image);
 DAXA_EXPORT uint32_t
-daxa_index_of_image_view(daxa_ImageViewId id);
+daxa_index_of_image_view(daxa_ImageViewId image_view);
 DAXA_EXPORT uint32_t
-daxa_index_of_sampler(daxa_SamplerId id);
+daxa_index_of_sampler(daxa_SamplerId sampler);
 
 DAXA_EXPORT uint64_t
-daxa_version_of_buffer(daxa_BufferId id);
+daxa_version_of_buffer(daxa_BufferId buffer);
 DAXA_EXPORT uint64_t
-daxa_version_of_image(daxa_ImageId id);
+daxa_version_of_image(daxa_ImageId image);
 DAXA_EXPORT uint64_t
-daxa_version_of_image_view(daxa_ImageViewId id);
+daxa_version_of_image_view(daxa_ImageViewId image_view);
 DAXA_EXPORT uint64_t
-daxa_version_of_sampler(daxa_SamplerId id);
+daxa_version_of_sampler(daxa_SamplerId sampler);
 typedef struct
 {
     uint64_t address;
