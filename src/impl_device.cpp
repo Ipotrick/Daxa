@@ -1503,10 +1503,10 @@ auto daxa_dvc_wait_on_submit(daxa_Device self, daxa_WaitOnSubmitInfo const * inf
     return static_cast<daxa_Result>(vkWaitSemaphores(self->vk_device, &vk_semaphore_wait_info, info->timeout));
 }
 
-auto daxa_dvc_submit(daxa_Device self, daxa_CommandSubmitInfo const * info, daxa_u64 * out_submit_index) -> daxa_Result
+auto daxa_dvc_submit_commands(daxa_Device self, daxa_CommandSubmitInfo const * info, daxa_u64 * out_submit_index) -> daxa_Result
 {
     std::array<u8, 1u << 13u /*8kib*/> stack_memory;
-    MemoryArena m_arena = MemoryArena{"daxa_dvc_submit dyn stack memory", stack_memory};
+    MemoryArena m_arena = MemoryArena{"daxa_dvc_submit_commands dyn stack memory", stack_memory};
 
     if (!self->valid_queue(info->queue))
     {

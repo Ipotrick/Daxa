@@ -771,7 +771,7 @@ daxa_dvc_queue_count(daxa_Device device, daxa_QueueFamily queue_family, daxa_u32
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_wait_idle(daxa_Device device);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_submit(daxa_Device device, daxa_CommandSubmitInfo const * info, daxa_u64 * out_submit_index);
+daxa_dvc_submit_commands(daxa_Device device, daxa_CommandSubmitInfo const * info, daxa_u64 * out_submit_index);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_latest_submit_index(daxa_Device device, daxa_u64 * submit_index);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

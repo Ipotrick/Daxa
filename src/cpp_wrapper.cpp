@@ -624,7 +624,7 @@ namespace daxa
         };
         u64 submit_index = {};
         check_result(
-            daxa_dvc_submit(r_cast<daxa_Device>(this->object), &c_submit_info, &submit_index),
+            daxa_dvc_submit_commands(r_cast<daxa_Device>(this->object), &c_submit_info, &submit_index),
             "failed to submit commands");
         return submit_index;
     }
