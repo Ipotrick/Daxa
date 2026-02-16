@@ -54,7 +54,6 @@
 #undef DAXA_REMOVE_DEPRECATED
 #endif
 
-#define DAXA_REMOVE_DEPRECATED 0
 #include <daxa/daxa.hpp>
 #include <vulkan/vulkan.h>
 #include <vk_mem_alloc.h>

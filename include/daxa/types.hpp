@@ -1308,12 +1308,8 @@ namespace daxa
     struct MemoryFlagBits
     {
         static inline constexpr MemoryFlags NONE = {0x00000000};
-        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags DEDICATED_MEMORY = {0x00000001};
-        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags CAN_ALIAS = {0x00000200};
         static inline constexpr MemoryFlags HOST_ACCESS_SEQUENTIAL_WRITE = {0x00000400};
         static inline constexpr MemoryFlags HOST_ACCESS_RANDOM = {0x00000800};
-        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_MEMORY = {0x00010000};
-        [[deprecated("deprecated without replacement; API:3.3.1")]] static inline constexpr MemoryFlags STRATEGY_MIN_TIME = {0x00020000};
     };
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(MemoryFlags flags) -> std::string_view;
@@ -1345,12 +1341,6 @@ namespace daxa
     {
         UNDEFINED = 0,
         GENERAL = 1,
-#if !DAXA_REMOVE_DEPRECATED
-        TRANSFER_SRC_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 6,
-        TRANSFER_DST_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 7,
-        READ_ONLY_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 1000314000,
-        ATTACHMENT_OPTIMAL [[deprecated("Use GENERAL instead; API:3.2")]]  = 1000314001,
-#endif
         PRESENT_SRC = 1000001002,
         MAX_ENUM = 0x7fffffff,
     };

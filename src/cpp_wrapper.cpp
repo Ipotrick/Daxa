@@ -189,19 +189,6 @@ namespace daxa
         return ret;
     }
 
-#if !DAXA_REMOVE_DEPRECATED
-    auto Instance::create_device(DeviceInfo const & info) -> Device
-    {
-        Device ret = {};
-        check_result(daxa_instance_create_device(
-                         r_cast<daxa_Instance>(this->object),
-                         r_cast<daxa_DeviceInfo const *>(&info),
-                         r_cast<daxa_Device *>(&ret)),
-                     "failed to create device");
-        return ret;
-    }
-#endif
-
     auto Instance::create_device_2(DeviceInfo2 const & info) -> Device
     {
         Device ret = {};
@@ -250,13 +237,6 @@ namespace daxa
     /// --- End Instance ---
 
     /// --- Begin Device ---
-
-#if !DAXA_REMOVE_DEPRECATED
-    auto default_device_score(DeviceProperties const & device_props) -> i32
-    {
-        return daxa_default_device_score(r_cast<daxa_DeviceProperties const *>(&device_props));
-    }
-#endif
 
     auto Device::create_memory(MemoryBlockInfo const & info) -> MemoryBlock
     {
@@ -530,12 +510,6 @@ namespace daxa
     {
         auto result = daxa_dvc_copy_image_to_memory(r_cast<daxa_Device>(this->object), r_cast<daxa_ImageToMemoryCopyInfo const *>(&info));
         check_result(result, "failed copy image to memory");
-    }
-
-    void Device::transition_image_layout(HostImageLayoutTransitionInfo const & info)
-    {
-        auto result = daxa_dvc_transition_image_layout(r_cast<daxa_Device>(this->object), r_cast<daxa_HostImageLayoutTransitionInfo const *>(&info));
-        check_result(result, "failed host transition image layout");
     }
 
     void Device::image_layout_operation(HostImageLayoutOperationInfo const & info)
@@ -1237,25 +1211,6 @@ namespace daxa
     DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_barrier, BarrierInfo)
     DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, pipeline_image_barrier, ImageBarrierInfo)
 
-    [[deprecated]] void CommandRecorder::pipeline_barrier_image_transition(ImageMemoryBarrierInfo const & info)
-    {
-        // All non general image layouts are treated as general layout.
-        ImageBarrierInfo new_info = {};
-        new_info.src_access = info.src_access;
-        new_info.dst_access = info.dst_access;
-        new_info.image = info.image;
-        if (info.src_layout == daxa::ImageLayout::UNDEFINED)
-        {
-            new_info.layout_operation = daxa::ImageLayoutOperation::TO_GENERAL;
-        }
-        if (info.dst_layout == daxa::ImageLayout::PRESENT_SRC)
-        {
-            new_info.layout_operation = daxa::ImageLayoutOperation::TO_PRESENT_SRC;
-        }
-
-        this->pipeline_image_barrier(new_info);
-    }
-
     DAXA_DECL_COMMAND_LIST_WRAPPER_CHECK_RESULT(CommandRecorder, signal_event, EventSignalInfo)
 
     void CommandRecorder::wait_events(daxa::Span<EventWaitInfo const> const & infos)
@@ -1483,17 +1438,7 @@ namespace daxa
         return std::format("access: ({}) -> ({})", to_string(info.src_access), to_string(info.dst_access));
     }
 
-    [[deprecated]] auto to_string(ImageMemoryBarrierInfo const & info) -> std::string
-    {
-        return std::format("access: ({}) -> ({}), layout: ({}) -> ({}), id: {}, SLICE IGNORED",
-                           to_string(info.src_access),
-                           to_string(info.dst_access),
-                           to_string(info.src_layout),
-                           to_string(info.dst_layout),
-                           to_string(info.image));
-    }
-
-    DAXA_EXPORT_CXX auto to_string(ImageBarrierInfo const & info) -> std::string
+    auto to_string(ImageBarrierInfo const & info) -> std::string
     {
         ImageLayout src_layout = ImageLayout::GENERAL;
         ImageLayout dst_layout = ImageLayout::GENERAL;

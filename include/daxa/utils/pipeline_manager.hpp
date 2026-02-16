@@ -42,76 +42,6 @@ namespace daxa
         u32 major, minor;
     };
 
-#if !DAXA_REMOVE_DEPRECATED
-    struct [[deprecated("Use ShaderCompileInfo2 instead, API:3.0.4")]] ShaderCompileOptions
-    {
-        std::optional<std::string> entry_point = {};
-        std::vector<std::filesystem::path> root_paths = {};
-        std::optional<std::filesystem::path> write_out_preprocessed_code = {};
-        std::optional<std::filesystem::path> write_out_shader_binary = {};
-        std::optional<std::filesystem::path> spirv_cache_folder = {};
-        std::optional<ShaderLanguage> language = {};
-        std::vector<ShaderDefine> defines = {};
-        std::optional<bool> enable_debug_info = {};
-        std::optional<ShaderCreateFlags> create_flags = {};
-        std::optional<u32> required_subgroup_size = {};
-
-        void inherit(ShaderCompileOptions const & other);
-    };
-
-    struct [[deprecated("Use ShaderCompileInfo2 instead, API:3.0.4")]] ShaderCompileInfo
-    {
-        ShaderSource source = Monostate{};
-        ShaderCompileOptions compile_options = {};
-    };
-
-    struct [[deprecated("Use RayTracingPipelineCompileInfo2 instead, API:3.0.4")]] RayTracingPipelineCompileInfo
-    {
-        std::vector<ShaderCompileInfo> ray_gen_infos = {};
-        std::vector<ShaderCompileInfo> intersection_infos = {};
-        std::vector<ShaderCompileInfo> any_hit_infos = {};
-        std::vector<ShaderCompileInfo> callable_infos = {};
-        std::vector<ShaderCompileInfo> closest_hit_infos = {};
-        std::vector<ShaderCompileInfo> miss_hit_infos = {};
-        std::vector<RayTracingShaderGroupInfo> shader_groups_infos = {};
-        u32 max_ray_recursion_depth = {};
-        u32 push_constant_size = {};
-        std::string name = {};
-    };
-
-    struct [[deprecated("Use ComputePipelineCompileInfo2 instead, API:3.0.4")]] ComputePipelineCompileInfo
-    {
-        ShaderCompileInfo shader_info = {};
-        u32 push_constant_size = {};
-        std::string name = {};
-    };
-
-    struct [[deprecated("Use RasterPipelineCompileInfo2 instead, API:3.0.4")]] RasterPipelineCompileInfo
-    {
-        Optional<ShaderCompileInfo> mesh_shader_info = {};
-        Optional<ShaderCompileInfo> vertex_shader_info = {};
-        Optional<ShaderCompileInfo> tesselation_control_shader_info = {};
-        Optional<ShaderCompileInfo> tesselation_evaluation_shader_info = {};
-        Optional<ShaderCompileInfo> fragment_shader_info = {};
-        Optional<ShaderCompileInfo> task_shader_info = {};
-        std::vector<RenderAttachment> color_attachments = {};
-        Optional<DepthTestInfo> depth_test = {};
-        RasterizerInfo raster = {};
-        TesselationInfo tesselation = {};
-        u32 push_constant_size = {};
-        std::string name = {};
-    };
-
-    struct [[deprecated("Use PipelineManagerInfo2 instead, API:3.0.4")]] PipelineManagerInfo
-    {
-        Device device;
-        ShaderCompileOptions shader_compile_options = {};
-        bool register_null_pipelines_when_first_compile_fails = false;
-        std::function<void(std::string &, std::filesystem::path const & path)> custom_preprocessor = {};
-        std::string name = {};
-    };
-#endif
-
     struct ShaderCompileInfo2
     {
         ShaderSource source = Monostate{};
@@ -205,13 +135,6 @@ namespace daxa
     struct ImplPipelineManager;
     struct DAXA_EXPORT_CXX PipelineManager : ManagedPtr<PipelineManager, ImplPipelineManager *>
     {
-#if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use PipelineManager(PipelineManagerInfo2) instead, API:3.0.4")]] PipelineManager(PipelineManagerInfo info);
-        [[deprecated("Use add_ray_tracing_pipeline2 instead, API:3.0.4")]] auto add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
-        [[deprecated("Use add_compute_pipeline2 instead, API:3.0.4")]] auto add_compute_pipeline(ComputePipelineCompileInfo info) -> Result<std::shared_ptr<ComputePipeline>>;
-        [[deprecated("Use add_raster_pipeline2 instead, API:3.0.4")]] auto add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>;
-#endif
-
         PipelineManager() = default;
         PipelineManager(PipelineManagerInfo2 info);
 

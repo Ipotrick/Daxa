@@ -98,27 +98,6 @@ typedef struct
 
 static const daxa_BarrierInfo DAXA_DEFAULT_BARRIER_INFO = DAXA_ZERO_INIT;
 
-#if !DAXA_REMOVE_DEPRECATED
-/* deprecated("Use daxa_BarrierInfo instead; API:3.2") */
-#define daxa_MemoryBarrierInfo daxa_BarrierInfo
-#endif
-
-#if !DAXA_REMOVE_DEPRECATED
-
-/* deprecated("Use ImageBarrierInfo instead; API:3.2") */ typedef struct
-{
-    daxa_Access src_access;
-    daxa_Access dst_access;
-    daxa_ImageLayout src_layout;
-    daxa_ImageLayout dst_layout;
-    /* deprecated("Ignored parameter, whole image will be transitioned; API:3.2") */ daxa_ImageMipArraySlice image_slice;
-    daxa_ImageId image;
-} daxa_ImageMemoryBarrierInfo;
-
-static const daxa_ImageMemoryBarrierInfo DAXA_DEFAULT_BARRIER_IMAGE_TRANSITION_INFO = DAXA_ZERO_INIT;
-
-#endif
-
 typedef enum
 {
     DAXA_IMAGE_LAYOUT_OPERATION_NONE = 0,

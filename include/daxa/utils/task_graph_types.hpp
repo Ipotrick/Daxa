@@ -75,7 +75,7 @@ namespace daxa
     inline auto is_access_concurrent(TaskAccessType type) -> bool
     {
         return (static_cast<u8>(type) & static_cast<u8>(TaskAccessType::CONCURRENT_BIT)) != 0;
-    } 
+    }
 
     inline auto are_accesses_compatible(TaskAccessType a, TaskAccessType b) -> bool
     {
@@ -245,118 +245,6 @@ namespace daxa
         static constexpr TaskAccess ICR = INDIRECT_COMMAND_READ;
         static constexpr TaskAccess INDEX_INPUT_READ = TaskAccess{TaskStages::INDEX_INPUT, TaskAccessType::READ, TaskAttachmentType::BUFFER};
         static constexpr TaskAccess IDXR = INDEX_INPUT_READ;
-
-#if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_READ = TaskAccessConsts::RS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_WRITE = TaskAccessConsts::RS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_READ_WRITE = TaskAccessConsts::RS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::RS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_READ = TaskAccessConsts::COMPUTE_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_WRITE = TaskAccessConsts::COMPUTE_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_READ_WRITE = TaskAccessConsts::COMPUTE_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::COMPUTE_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_READ = TaskAccessConsts::RAY_TRACING_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_WRITE = TaskAccessConsts::RAY_TRACING_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_READ_WRITE = TaskAccessConsts::RAY_TRACING_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::RAY_TRACING_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_READ = TaskAccessConsts::TASK_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_WRITE = TaskAccessConsts::TASK_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_READ_WRITE = TaskAccessConsts::TASK_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::TASK_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_READ = TaskAccessConsts::MESH_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_WRITE = TaskAccessConsts::MESH_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_READ_WRITE = TaskAccessConsts::MESH_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::MESH_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_READ = TaskAccessConsts::VERTEX_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_WRITE = TaskAccessConsts::VERTEX_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_READ_WRITE = TaskAccessConsts::VERTEX_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::VERTEX_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_WRITE = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ_WRITE = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::TESSELLATION_CONTROL_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_WRITE = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ_WRITE = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::TESSELLATION_EVALUATION_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_READ = TaskAccessConsts::GEOMETRY_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_WRITE = TaskAccessConsts::GEOMETRY_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_READ_WRITE = TaskAccessConsts::GEOMETRY_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::GEOMETRY_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_READ = TaskAccessConsts::FRAGMENT_SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_WRITE = TaskAccessConsts::FRAGMENT_SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_READ_WRITE_CONCURRENT = TaskAccessConsts::FRAGMENT_SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess INDEX_READ = TaskAccessConsts::INDEX_INPUT_READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess INDIRECT_COMMAND_READ_READ = TaskAccessConsts::INDIRECT_COMMAND_READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TRANSFER_READ = TaskAccessConsts::TRANSFER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TRANSFER_WRITE = TaskAccessConsts::TRANSFER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TRANSFER_READ_WRITE = TaskAccessConsts::TRANSFER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess HOST_TRANSFER_READ = TaskAccessConsts::HOST::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess HOST_TRANSFER_WRITE = TaskAccessConsts::HOST::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess HOST_TRANSFER_READ_WRITE = TaskAccessConsts::HOST::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_READ = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_WRITE = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess ACCELERATION_STRUCTURE_BUILD_READ_WRITE = TaskAccessConsts::ACCELERATION_STRUCTURE_BUILD::READ_WRITE;
-
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess SHADER_SAMPLED = TaskAccessConsts::SHADER::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::SHADER::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess SHADER_STORAGE_READ_ONLY = TaskAccessConsts::SHADER::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess SHADER_STORAGE_READ_WRITE = TaskAccessConsts::SHADER::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::SHADER::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_SAMPLED = TaskAccessConsts::RS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::RS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::RS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::RS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GRAPHICS_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::RS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_SAMPLED = TaskAccessConsts::CS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::CS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::CS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::CS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess COMPUTE_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::CS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_SAMPLED = TaskAccessConsts::RT::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::RT::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::RT::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::RT::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RAY_TRACING_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::RT::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_SAMPLED = TaskAccessConsts::TS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::TS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::TS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::TS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TASK_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::TS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_SAMPLED = TaskAccessConsts::MS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::MS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::MS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::MS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess MESH_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::MS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_SAMPLED = TaskAccessConsts::VS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::VS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::VS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::VS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess VERTEX_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::VS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_SAMPLED = TaskAccessConsts::TCS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::TCS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::TCS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::TCS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_CONTROL_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::TCS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_SAMPLED = TaskAccessConsts::TES::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::TES::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::TES::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::TES::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess TESSELLATION_EVALUATION_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::TES::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_SAMPLED = TaskAccessConsts::GS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::GS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::GS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::GS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess GEOMETRY_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::GS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_SAMPLED = TaskAccessConsts::FS::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_WRITE_ONLY = TaskAccessConsts::FS::WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_ONLY = TaskAccessConsts::FS::READ;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE = TaskAccessConsts::FS::READ_WRITE;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess FRAGMENT_SHADER_STORAGE_READ_WRITE_CONCURRENT = TaskAccessConsts::FS::READ_WRITE_CONCURRENT;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess DEPTH_STENCIL_ATTACHMENT_READ = TaskAccessConsts::DSA::SAMPLED;
-        [[deprecated("Use new TaskAccessConsts instead, API:3.1")]] static constexpr TaskAccess RESOLVE_WRITE = TaskAccessConsts::RESOLVE::READ_WRITE;
-#endif // #if !DAXA_REMOVE_DEPRECATED
     }; // namespace TaskAccessConsts
 
     enum struct TaskType : u16
@@ -411,14 +299,7 @@ namespace daxa
         TaskResourceIndex task_graph_index = {};
         TaskResourceIndex index = {};
         ImageMipArraySlice slice = {};
-#if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use .mips and .layers instead, API:3.1")]] auto view(daxa::ImageMipArraySlice const & new_slice) const -> TaskImageView
-        {
-            auto ret = *this;
-            ret.slice = new_slice;
-            return ret;
-        }
-#endif // #if !DAXA_REMOVE_DEPRECATED
+
         auto mips(u32 base_mip_level, u32 level_count = 1) const -> TaskImageView
         {
             auto ret = *this;
@@ -733,7 +614,6 @@ namespace daxa
 
         TaskImageView view = {};
         TaskImageView translated_view = {};
-        [[deprecated("Parameter Ignored, always layout general; API:3.2")]] ImageLayout layout = {};
         std::span<ImageId const> ids = {};
         std::span<ImageViewId const> view_ids = {};
     };
@@ -831,16 +711,6 @@ namespace daxa
         usize task_index = {};
         Queue queue = {};
 
-#if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use AttachmentBlob(std::span<std::byte const>) constructor instead, API:3.0")]] void assign_attachment_shader_blob(std::span<std::byte> arr) const
-        {
-            std::memcpy(
-                arr.data(),
-                attachment_shader_blob.data(),
-                attachment_shader_blob.size());
-        }
-#endif
-
         auto get(TaskBufferAttachmentIndex index) const -> TaskBufferAttachmentInfo const &;
         auto get(TaskBufferView view) const -> TaskBufferAttachmentInfo const &;
         auto get(TaskBlasAttachmentIndex index) const -> TaskBlasAttachmentInfo const &;
@@ -851,11 +721,6 @@ namespace daxa
         auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
-        [[deprecated("Layout is guaranteed to always be general, stop using this function; API:3.2")]]
-        auto layout(TaskImageIndexOrView auto) const -> ImageLayout
-        {
-            return daxa::ImageLayout::GENERAL;
-        }
         auto info(TaskIndexOrView auto tresource, u32 array_index = 0) const
         {
             return this->device.info(this->get(tresource).ids[array_index]);
@@ -1376,14 +1241,14 @@ namespace daxa
             }                                                                                                                                           \
         };                                                                                                                                              \
     };                                                                                                                                                  \
-    /*deprecated("Use Head::Info instead; API:3.1")*/ using Views = Info::Views;                                                                        \
-    /*deprecated("Use Head::Info instead; API:3.1")*/ using AttachmentViews = Info::Views;                                                              \
-    /*deprecated("Use Head::Info instead; API:3.1")*/ using AttachmentShaderBlob = Info::AttachmentShaderBlob;                                          \
-    [[deprecated("Use Head::Info instead; API:3.1")]] static inline constexpr daxa::TaskType TYPE = Info::TYPE;                                         \
-    [[deprecated("Use Head::Info instead; API:3.1")]] static inline constexpr char const * NAME = Info::NAME;                                           \
-    [[deprecated("Use Head::Info instead; API:3.1")]] static constexpr decltype(Info::ATTACHMENT_COUNT) ATTACHMENT_COUNT = Info::ATTACHMENT_COUNT;      \
-    [[deprecated("Use Head::Info instead; API:3.1")]] static constexpr auto const & ATTACHMENTS = Info::ATTACHMENTS;                                    \
-    [[deprecated("Use Head::Info instead; API:3.1")]] static constexpr auto const & AT = Info::ATTACHMENTS;                                             \
+    using Views = Info::Views;                                                                                                                          \
+    using AttachmentViews = Info::Views;                                                                                                                \
+    using AttachmentShaderBlob = Info::AttachmentShaderBlob;                                                                                            \
+    static inline constexpr daxa::TaskType TYPE = Info::TYPE;                                                                                           \
+    static inline constexpr char const * NAME = Info::NAME;                                                                                             \
+    static constexpr decltype(Info::ATTACHMENT_COUNT) ATTACHMENT_COUNT = Info::ATTACHMENT_COUNT;                                                        \
+    static constexpr auto const & ATTACHMENTS = Info::ATTACHMENTS;                                                                                      \
+    static constexpr auto const & AT = Info::ATTACHMENTS;                                                                                               \
     struct Task : public daxa::IPartialTask                                                                                                             \
     {                                                                                                                                                   \
         using Info = Info;                                                                                                                              \
@@ -1449,49 +1314,6 @@ namespace daxa
             }
         }
     }
-
-#if !DAXA_REMOVE_DEPRECATED
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>(index, view);
-    }
-
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskBlasAttachmentIndex index, TaskBlasView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>(index, view);
-    }
-
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskTlasAttachmentIndex index, TaskTlasView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>(index, view);
-    }
-
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto attachment_view(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
-    }
-
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskBufferAttachmentIndex index, TaskBufferView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskBufferAttachmentIndex, daxa::TaskBufferView>(index, view);
-    }
-
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskBlasAttachmentIndex index, TaskBlasView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskBlasAttachmentIndex, daxa::TaskBlasView>(index, view);
-    }
-
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskTlasAttachmentIndex index, TaskTlasView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskTlasAttachmentIndex, daxa::TaskTlasView>(index, view);
-    }
-
-    [[deprecated("Task::Views asignment instead, API:3.1")]] inline auto operator|(TaskImageAttachmentIndex index, TaskImageView view) -> TaskViewIndexVariant
-    {
-        return std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>(index, view);
-    }
-
-#endif // !DAXA_REMOVE_DEPRECATED
 
     inline auto inl_attachment(TaskAccess access, TaskBufferView view) -> TaskAttachmentInfo
     {

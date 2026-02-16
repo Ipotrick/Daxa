@@ -210,16 +210,6 @@ namespace daxa
         }
     };
 
-#if !DAXA_REMOVE_DEPRECATED
-    struct [[deprecated("Use struct InlineTask constructors instead, API:3.1")]] InlineTaskInfo
-    {
-        TaskType task_type = TaskType::GENERAL;
-        FixedList<TaskAttachmentInfo, MAX_TASK_ATTACHMENTS> attachments = {};
-        TaskCallback task = {};
-        std::string_view name = "unnamed";
-    };
-#endif
-
     inline namespace detail
     {
         constexpr inline auto replace_joker_stage(TaskStages stage, TaskStages default_stage) -> TaskStages
@@ -345,17 +335,7 @@ namespace daxa
         {
             value = {}; // Prevents ICE
         }
-#if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use other InlineTask constructors instead, API:3.1")]] TInlineTask(InlineTaskInfo const & info)
-        {
-            value = {}; // Prevents ICE
-            value._internal._task_type = info.task_type;
-            value._internal._default_stage = task_type_default_stage(info.task_type);
-            value._internal._attachments = info.attachments;
-            value._internal._callback = info.task;
-            value._internal._name = info.name;
-        }
-#endif
+        
         TInlineTask(std::string_view name, TaskType task_type = TaskType::GENERAL)
         {
             value._internal._name = name;
@@ -1024,13 +1004,6 @@ namespace daxa
                 task_callback, task_callback_memory,
                 attachments, asb_size, asb_align, task_type, name, inline_task.value._internal._queue);
         }
-
-#if !DAXA_REMOVE_DEPRECATED
-        [[deprecated("Use add_task(T && inline_task) instead, API:3.1")]] void add_task(InlineTaskInfo const & inline_task_info)
-        {
-            add_task(InlineTask{inline_task_info});
-        }
-#endif
 
         DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
         DAXA_EXPORT_CXX void submit(TaskSubmitInfo const & info);

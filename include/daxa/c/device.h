@@ -309,54 +309,6 @@ typedef struct
     daxa_MissingRequiredVkFeature missing_required_feature;
 } daxa_DeviceProperties;
 
-/// DEPRECATED: use daxa_instance_create_device_2 and daxa_DeviceInfo2 instead!
-DAXA_EXPORT int32_t
-daxa_default_device_score(daxa_DeviceProperties const * properties);
-
-/// WARNING: DEPRECATED, use daxa_ImplicitFeatureFlags and daxa_ExplicitFeatureFlags instead!
-typedef enum
-{
-    DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT = 0x1 << 0,
-    DAXA_DEVICE_FLAG_CONSERVATIVE_RASTERIZATION = 0x1 << 1,
-    DAXA_DEVICE_FLAG_MESH_SHADER_BIT = 0x1 << 2,
-    DAXA_DEVICE_FLAG_SHADER_ATOMIC64 = 0x1 << 3,
-    DAXA_DEVICE_FLAG_IMAGE_ATOMIC64 = 0x1 << 4,
-    DAXA_DEVICE_FLAG_VK_MEMORY_MODEL = 0x1 << 5,
-    DAXA_DEVICE_FLAG_RAY_TRACING = 0x1 << 6,
-    DAXA_DEVICE_FLAG_SHADER_FLOAT16 = 0x1 << 7,
-    DAXA_DEVICE_FLAG_SHADER_INT8 = 0x1 << 8,
-    DAXA_DEVICE_FLAG_ROBUST_BUFFER_ACCESS = 0x1 << 9,
-    DAXA_DEVICE_FLAG_ROBUST_IMAGE_ACCESS = 0x1 << 10,
-    DAXA_DEVICE_FLAG_DYNAMIC_STATE_3 = 0x1 << 11,
-    DAXA_DEVICE_FLAG_SHADER_ATOMIC_FLOAT = 0x1 << 12,
-} daxa_DeviceFlagBits;
-
-/// WARNING: DEPRECATED, use daxa_ImplicitFeatureFlags and daxa_ExplicitFeatureFlags instead!
-typedef uint32_t daxa_DeviceFlags;
-
-/// WARNING: DEPRECATED, use daxa_DeviceInfo2 instead!
-typedef struct
-{
-    int32_t (*selector)(daxa_DeviceProperties const * properties);
-    daxa_DeviceFlags flags;
-    uint32_t max_allowed_images;
-    uint32_t max_allowed_buffers;
-    uint32_t max_allowed_samplers;
-    uint32_t max_allowed_acceleration_structures;
-    daxa_SmallString name;
-} daxa_DeviceInfo;
-
-/// WARNING: DEPRECATED, use daxa_DeviceInfo2 instead!
-static daxa_DeviceInfo const DAXA_DEFAULT_DEVICE_INFO = {
-    .selector = &daxa_default_device_score,
-    .flags = DAXA_DEVICE_FLAG_BUFFER_DEVICE_ADDRESS_CAPTURE_REPLAY_BIT,
-    .max_allowed_images = 10000,
-    .max_allowed_buffers = 10000,
-    .max_allowed_samplers = 400,
-    .max_allowed_acceleration_structures = 10000,
-    .name = DAXA_ZERO_INIT,
-};
-
 typedef struct
 {
     daxa_u32 physical_device_index;              // Index into list of devices returned from daxa_instance_list_devices_properties.
@@ -559,7 +511,6 @@ typedef struct
     daxa_MemoryImageCopyFlagBits flags;
     uint8_t const * memory_ptr;
     daxa_ImageId image;
-    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
@@ -572,7 +523,6 @@ typedef struct
 {
     daxa_MemoryImageCopyFlagBits flags;
     daxa_ImageId image;
-    /*[[deprecated("Ignored parameter, layout must be GENERAL; API:3.2")]] */ daxa_ImageLayout image_layout;
     daxa_ImageArraySlice image_slice;
     VkOffset3D image_offset;
     VkExtent3D image_extent;
@@ -580,19 +530,6 @@ typedef struct
 } daxa_ImageToMemoryCopyInfo;
 
 static daxa_ImageToMemoryCopyInfo const DAXA_DEFAULT_IMAGE_TO_MEMORY_COPY_INFO = DAXA_ZERO_INIT;
-
-#if !DAXA_REMOVE_DEPRECATED
-/* deprecated("Use daxa_HostImageLayoutOperationInfo instead; API:3.2") */
-typedef struct
-{
-    daxa_ImageId image;
-    daxa_ImageLayout old_image_layout;
-    daxa_ImageLayout new_image_layout;
-    daxa_ImageMipArraySlice image_slice;
-} daxa_HostImageLayoutTransitionInfo;
-
-static daxa_HostImageLayoutTransitionInfo const DAXA_DEFAULT_HOST_IMAGE_LAYOUT_TRANSITION_INFO = DAXA_ZERO_INIT;
-#endif
 
 typedef struct
 {
@@ -746,12 +683,6 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_copy_memory_to_image(daxa_Device device, daxa_MemoryToImageCopyInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_copy_image_to_memory(daxa_Device device, daxa_ImageToMemoryCopyInfo const * info);
-
-#if !DAXA_REMOVE_DEPRECATED
-/* deprecated("Use image_layout_operation instead; API:3.2") */
-DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_transition_image_layout(daxa_Device device, daxa_HostImageLayoutTransitionInfo const * info);
-#endif
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_image_layout_operation(daxa_Device device, daxa_HostImageLayoutOperationInfo const * info);

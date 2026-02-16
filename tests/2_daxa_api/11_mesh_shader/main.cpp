@@ -1,4 +1,3 @@
-#define DAXA_REMOVE_DEPRECATED 0
 #include <daxa/daxa.hpp>
 #include <daxa/utils/pipeline_manager.hpp>
 #include <daxa/utils/task_graph.hpp>

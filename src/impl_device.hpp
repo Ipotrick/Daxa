@@ -185,6 +185,5 @@ struct daxa_ImplDevice final : public ImplHandle
     void zombify_blas(BlasId id);
 
     static auto create_2(daxa_Instance instance, daxa_DeviceInfo2 const & info, struct ImplPhysicalDevice const & physical_device, daxa_DeviceProperties const & properties, daxa_Device device) -> daxa_Result;
-    static auto create(daxa_Instance instance, daxa_DeviceInfo const & info, VkPhysicalDevice physical_device, daxa_Device device) -> daxa_Result;
     static void zero_ref_callback(ImplHandle const * handle);
 };

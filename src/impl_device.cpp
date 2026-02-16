@@ -2920,21 +2920,6 @@ auto daxa_dvc_copy_image_to_memory(daxa_Device self, daxa_ImageToMemoryCopyInfo 
     return result;
 }
 
-auto daxa_dvc_transition_image_layout(daxa_Device self, daxa_HostImageLayoutTransitionInfo const * info) -> daxa_Result
-{
-    daxa_HostImageLayoutOperationInfo new_info = {};
-    new_info.image = info->image;
-    if (info->old_image_layout == DAXA_IMAGE_LAYOUT_UNDEFINED)
-    {
-        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_GENERAL;
-    }
-    if (info->new_image_layout == DAXA_IMAGE_LAYOUT_PRESENT_SRC)
-    {
-        new_info.layout_operation = DAXA_IMAGE_LAYOUT_OPERATION_TO_PRESENT_SRC;
-    }
-    return daxa_dvc_image_layout_operation(self, &new_info);
-}
-
 auto daxa_dvc_image_layout_operation(daxa_Device self, daxa_HostImageLayoutOperationInfo const * info) -> daxa_Result
 {
     if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY) == 0)

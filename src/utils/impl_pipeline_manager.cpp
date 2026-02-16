@@ -201,19 +201,6 @@ namespace daxa
         return ret;
     }
 
-    [[deprecated]] auto upgrade_shader_compile_info(ShaderCompileInfo const & src) -> ShaderCompileInfo2
-    {
-        ShaderCompileInfo2 ret = {};
-        ret.source = src.source;
-        ret.entry_point = src.compile_options.entry_point;
-        ret.language = src.compile_options.language;
-        ret.defines = src.compile_options.defines;
-        ret.enable_debug_info = src.compile_options.enable_debug_info;
-        ret.create_flags = src.compile_options.create_flags;
-        ret.required_subgroup_size = src.compile_options.required_subgroup_size;
-        return ret;
-    }
-
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
     class GlslangFileIncluder : public glslang::TShader::Includer
     {
@@ -377,56 +364,9 @@ namespace daxa
         dst.defines.insert(dst.defines.end(), src.default_defines.begin(), src.default_defines.end());
     }
 
-    PipelineManager::PipelineManager(PipelineManagerInfo old_info)
-    {
-        PipelineManagerInfo2 info = {};
-        info.device = old_info.device;
-        info.root_paths = old_info.shader_compile_options.root_paths;
-        info.write_out_preprocessed_code = old_info.shader_compile_options.write_out_preprocessed_code;
-        info.write_out_spirv = old_info.shader_compile_options.write_out_shader_binary;
-        info.spirv_cache_folder = old_info.shader_compile_options.spirv_cache_folder;
-        info.default_entry_point = old_info.shader_compile_options.entry_point;
-        info.default_language = old_info.shader_compile_options.language;
-        info.default_defines = old_info.shader_compile_options.defines;
-        info.default_enable_debug_info = old_info.shader_compile_options.enable_debug_info;
-        info.default_create_flags = old_info.shader_compile_options.create_flags;
-        info.default_required_subgroup_size = old_info.shader_compile_options.required_subgroup_size;
-        info.register_null_pipelines_when_first_compile_fails = old_info.register_null_pipelines_when_first_compile_fails;
-        info.custom_preprocessor = old_info.custom_preprocessor;
-        info.name = old_info.name;
-        this->object = new ImplPipelineManager{std::move(info)};
-    }
-
     PipelineManager::PipelineManager(PipelineManagerInfo2 info)
     {
         this->object = new ImplPipelineManager{std::move(info)};
-    }
-
-    auto PipelineManager::add_ray_tracing_pipeline(RayTracingPipelineCompileInfo const & info) -> Result<std::shared_ptr<RayTracingPipeline>>
-    {
-        auto update_info_vector = [&](auto const & infos)
-        {
-            std::vector<ShaderCompileInfo2> converted_infos = {};
-            converted_infos.reserve(infos.size());
-            for (auto const & info : infos)
-            {
-                converted_infos.push_back(upgrade_shader_compile_info(info));
-            }
-            return converted_infos;
-        };
-        RayTracingPipelineCompileInfo2 converted_info = {};
-        converted_info.ray_gen_infos = update_info_vector(info.ray_gen_infos);
-        converted_info.intersection_infos = update_info_vector(info.intersection_infos);
-        converted_info.any_hit_infos = update_info_vector(info.any_hit_infos);
-        converted_info.callable_infos = update_info_vector(info.callable_infos);
-        converted_info.closest_hit_infos = update_info_vector(info.closest_hit_infos);
-        converted_info.miss_hit_infos = update_info_vector(info.miss_hit_infos);
-        converted_info.shader_groups_infos = info.shader_groups_infos;
-        converted_info.max_ray_recursion_depth = info.max_ray_recursion_depth;
-        converted_info.push_constant_size = info.push_constant_size;
-        converted_info.name = info.name;
-
-        return this->add_ray_tracing_pipeline2(converted_info);
     }
 
     template<typename T>
@@ -510,21 +450,6 @@ namespace daxa
         }
     }
 
-    auto PipelineManager::add_compute_pipeline(ComputePipelineCompileInfo a_info) -> Result<std::shared_ptr<ComputePipeline>>
-    {
-        ComputePipelineCompileInfo2 info = {};
-        info.source = std::move(a_info.shader_info.source);
-        info.entry_point = std::move(a_info.shader_info.compile_options.entry_point);
-        info.language = std::move(a_info.shader_info.compile_options.language);
-        info.defines = std::move(a_info.shader_info.compile_options.defines);
-        info.enable_debug_info = std::move(a_info.shader_info.compile_options.enable_debug_info);
-        info.create_flags = std::move(a_info.shader_info.compile_options.create_flags);
-        info.required_subgroup_size = std::move(a_info.shader_info.compile_options.required_subgroup_size);
-        info.push_constant_size = std::move(a_info.push_constant_size);
-        info.name = std::move(a_info.name);
-        return this->add_compute_pipeline2(std::move(info));
-    }
-
     auto PipelineManager::add_compute_pipeline2(ComputePipelineCompileInfo2 a_info) -> Result<std::shared_ptr<ComputePipeline>>
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
@@ -552,24 +477,6 @@ namespace daxa
         {
             return Result<std::shared_ptr<ComputePipeline>>(std::move(pipe_result.value().pipeline_ptr));
         }
-    }
-
-    auto PipelineManager::add_raster_pipeline(RasterPipelineCompileInfo const & info) -> Result<std::shared_ptr<RasterPipeline>>
-    {
-        RasterPipelineCompileInfo2 converted_info = {};
-        converted_info.mesh_shader_info = info.mesh_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.mesh_shader_info.value())) : daxa::None;
-        converted_info.vertex_shader_info = info.vertex_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.vertex_shader_info.value())) : daxa::None;
-        converted_info.tesselation_control_shader_info = info.tesselation_control_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.tesselation_control_shader_info.value())) : daxa::None;
-        converted_info.tesselation_evaluation_shader_info = info.tesselation_evaluation_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.tesselation_evaluation_shader_info.value())) : daxa::None;
-        converted_info.fragment_shader_info = info.fragment_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.fragment_shader_info.value())) : daxa::None;
-        converted_info.task_shader_info = info.task_shader_info.has_value() ? Optional(upgrade_shader_compile_info(info.task_shader_info.value())) : daxa::None;
-        converted_info.color_attachments = info.color_attachments;
-        converted_info.depth_test = info.depth_test;
-        converted_info.raster = info.raster;
-        converted_info.tesselation = info.tesselation;
-        converted_info.push_constant_size = info.push_constant_size;
-        converted_info.name = info.name;
-        return add_raster_pipeline2(converted_info);
     }
 
     auto PipelineManager::add_raster_pipeline2(RasterPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RasterPipeline>>

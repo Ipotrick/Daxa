@@ -143,12 +143,6 @@ typedef enum
 {
     DAXA_IMAGE_LAYOUT_UNDEFINED = 0,
     DAXA_IMAGE_LAYOUT_GENERAL = 1,
-#if !DAXA_REMOVE_DEPRECATED
-    /*[[deprecated("Use GENERAL instead; API:3.2")]]*/ DAXA_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL = 6,
-    /*[[deprecated("Use GENERAL instead; API:3.2")]]*/ DAXA_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL = 7,
-    /*[[deprecated("Use GENERAL instead; API:3.2")]]*/ DAXA_IMAGE_LAYOUT_READ_ONLY_OPTIMAL = 1000314000,
-    /*[[deprecated("Use GENERAL instead; API:3.2")]]*/ DAXA_IMAGE_LAYOUT_ATTACHMENT_OPTIMAL = 1000314001,
-#endif
     DAXA_IMAGE_LAYOUT_PRESENT_SRC = 1000001002,
     DAXA_IMAGE_LAYOUT_MAX_ENUM = 0x7FFFFFFF,
 } daxa_ImageLayout;
@@ -221,12 +215,8 @@ typedef struct
 
 typedef uint32_t daxa_MemoryFlags;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_NONE = 0x00000000;
-/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_DEDICATED_MEMORY = 0x00000001;
-/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_CAN_ALIAS = 0x00000200;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_SEQUENTIAL_WRITE = 0x00000400;
 static daxa_MemoryFlags const DAXA_MEMORY_FLAG_HOST_ACCESS_RANDOM = 0x00000800;
-/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_MEMORY = 0x00010000;
-/* deprecated("Removed without replacement; API:3.3.1") */ static daxa_MemoryFlags const DAXA_MEMORY_FLAG_STRATEGY_MIN_TIME = 0x00020000;
 
 typedef struct
 {
