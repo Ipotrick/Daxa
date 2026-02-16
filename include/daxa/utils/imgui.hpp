@@ -31,6 +31,15 @@ namespace daxa
         bool use_custom_config = true;
     };
 
+    struct ImGuiRecordCommandsInfo
+    {
+        ImDrawData* draw_data;
+        CommandRecorder & recorder;
+        ImageId target_image = {};
+        u32 size_x = {};
+        u32 size_y = {};
+    };
+
     struct ImplImGuiRenderer;
     struct DAXA_EXPORT_CXX ImGuiRenderer : ManagedPtr<ImGuiRenderer, ImplImGuiRenderer *>
     {
@@ -40,7 +49,7 @@ namespace daxa
 
         auto create_texture_id(ImGuiImageContext const & context) -> ImTextureID;
 
-        void record_commands(ImDrawData * draw_data, CommandRecorder & recorder, ImageId target_image, u32 size_x, u32 size_y);
+        void record_commands(ImGuiRecordCommandsInfo const & info);
       protected:
         template <typename T, typename H_T>
         friend struct ManagedPtr;

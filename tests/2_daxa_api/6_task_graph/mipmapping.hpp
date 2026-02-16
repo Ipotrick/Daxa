@@ -233,7 +233,7 @@ namespace tests
             void draw_ui(daxa::CommandRecorder & recorder, daxa::ImageId render_target_id)
             {
                 auto render_size = device.image_info(render_target_id).value().size;
-                imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, render_target_id, render_size.x, render_size.y);
+                imgui_renderer.record_commands({ImGui::GetDrawData(), recorder, render_target_id, render_size.x, render_size.y});
             }
             void blit_image_to_swapchain(daxa::CommandRecorder & recorder, daxa::ImageId src_image_id, daxa::ImageId dst_image_id)
             {

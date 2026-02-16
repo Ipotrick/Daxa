@@ -279,7 +279,7 @@ struct App : AppWindow<App>
         render_recorder.draw({.vertex_count = vert_n});
         recorder = std::move(render_recorder).end_renderpass();
 
-        imgui_renderer.record_commands(ImGui::GetDrawData(), recorder, swapchain_image, size_x, size_y);
+        imgui_renderer.record_commands({ImGui::GetDrawData(), recorder, swapchain_image, size_x, size_y});
 
         recorder.pipeline_image_barrier({
             .src_access = daxa::AccessConsts::ALL_RASTER_READ_WRITE,
