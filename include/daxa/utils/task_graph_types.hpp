@@ -20,8 +20,6 @@
 #include <daxa/device.hpp>
 #include <daxa/utils/mem.hpp>
 
-#define DAXA_ENABLE_TASK_GRAPH_MK2 1
-
 namespace daxa
 {
     static inline constexpr usize MAX_TASK_ATTACHMENTS = 48;
@@ -912,12 +910,8 @@ namespace daxa
         std::string name = {};
     };
 
-#if DAXA_ENABLE_TASK_GRAPH_MK2
     struct ImplExternalResource;
     using ImplPersistentTaskBufferBlasTlas = ImplExternalResource;
-#else
-    struct ImplPersistentTaskBufferBlasTlas;
-#endif
 
     struct DAXA_EXPORT_CXX TaskBuffer : ManagedPtr<TaskBuffer, ImplPersistentTaskBufferBlasTlas *>
     {
@@ -1031,12 +1025,8 @@ namespace daxa
         std::string name = {};
     };
 
-#if DAXA_ENABLE_TASK_GRAPH_MK2
     struct ImplExternalResource;
     using ImplPersistentTaskImage = ImplExternalResource;
-#else
-    struct ImplPersistentTaskImage;
-#endif
 
     struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {

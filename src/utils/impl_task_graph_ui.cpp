@@ -3,13 +3,13 @@
 
 #define TASK_GRAPH_RESOURCE_VIEWER_ONLINE_COMPILE_SHADERS 1
 
-#if DAXA_BUILT_WITH_UTILS_IMGUI && DAXA_ENABLE_TASK_GRAPH_MK2
+#if DAXA_BUILT_WITH_UTILS_IMGUI
 
 #include "impl_task_graph_ui.hpp"
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>
 #include <implot.h>
-#include "impl_task_graph_mk2.hpp"
+#include "impl_task_graph.hpp"
 #include <filesystem>
 
 #if TASK_GRAPH_RESOURCE_VIEWER_ONLINE_COMPILE_SHADERS
@@ -2579,5 +2579,5 @@ namespace daxa
     }
 } // namespace daxa
 
-#endif // #if DAXA_BUILT_WITH_UTILS_IMGUI && DAXA_ENABLE_TASK_GRAPH_MK2
+#endif // #if DAXA_BUILT_WITH_UTILS_IMGUI
 #endif

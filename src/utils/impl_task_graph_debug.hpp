@@ -88,66 +88,6 @@ namespace daxa
                         attach.name, attach_index, to_string(attach.task_access), task.name));
     }
 
-    void validate_overlapping_attachment_views(ImplTaskGraph const & impl, ImplTask const & task)
-    {
-#if !DAXA_ENABLE_TASK_GRAPH_MK2
-#if DAXA_VALIDATION
-        for_each(
-            task.attachments,
-            [&](u32 index_a, auto const & a)
-            {
-                if (a.view.is_null())
-                    return;
-                for_each(
-                    task.attachments,
-                    [&](u32 index_b, auto const & b)
-                    {
-                        if (b.view.is_null())
-                            return;
-                        if (index_a == index_b)
-                            return;
-                        [[maybe_unused]] bool const overlapping = a.view == b.view;
-                        DAXA_DBG_ASSERT_TRUE_M(
-                            !overlapping,
-                            std::format(
-                                "Detected overlapping attachment buffer views;\n"
-                                "Attachments \"{}\" and \"{}\" both refer to the same task buffer \"{}\" in task \"{}\";\n"
-                                "All buffer attachments must refer to different buffers within each task!",
-                                a.name, b.name,
-                                impl.global_buffer_infos[a.view.index].name,
-                                task.name));
-                    },
-                    [&](u32, TaskImageAttachmentInfo const &) {});
-            },
-            [&](u32 index_a, TaskImageAttachmentInfo const & a)
-            {
-                if (a.view.is_null())
-                    return;
-                for_each(
-                    task.attachments,
-                    [&](u32, auto const &) {},
-                    [&](u32 index_b, TaskImageAttachmentInfo const & b)
-                    {
-                        if (b.view.is_null())
-                            return;
-                        if (index_a == index_b)
-                            return;
-                        [[maybe_unused]] auto const intersect = a.view == b.view && a.view.slice.intersects(b.view.slice);
-                        DAXA_DBG_ASSERT_TRUE_M(
-                            !intersect,
-                            std::format(
-                                "Detected overlapping attachment image views.\n"
-                                "Attachments \"{}\" and \"{}\" refer overlapping slices ({} and {}) to the same task image \"{}\" in task \"{}\";"
-                                "All task image attachment views and their slices must refer to disjoint parts of images within each task!",
-                                a.name, b.name, to_string(a.view.slice), to_string(b.view.slice),
-                                impl.global_image_infos.at(b.translated_view.index).name,
-                                task.name));
-                    });
-            });
-#endif
-#endif
-    }
-
     template <typename BufferBlasTlasT>
     void validate_task_buffer_blas_tlas_runtime_data(ImplTask & task, BufferBlasTlasT const & attach)
     {

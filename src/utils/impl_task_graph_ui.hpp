@@ -4,8 +4,6 @@
 #include <daxa/utils/imgui.hpp>
 #include <daxa/utils/imgui.hpp>
 
-#if DAXA_ENABLE_TASK_GRAPH_MK2
-
 #include "impl_resource_viewer.hpp"
 #include <set>
 #include <optional>
@@ -86,5 +84,4 @@ namespace daxa
     };
 }
 
-#endif
 #endif

@@ -1,12 +1,10 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH && DAXA_BUILT_WITH_UTILS_IMGUI
 #include <daxa/utils/task_graph_types.hpp>
 
-#if DAXA_ENABLE_TASK_GRAPH_MK2
-
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>
 #include <implot.h>
-#include "impl_task_graph_mk2.hpp"
+#include "impl_task_graph.hpp"
 #include "impl_task_graph_ui.hpp"
 #include "impl_resource_viewer.slang"
 
@@ -2194,5 +2192,4 @@ namespace daxa
     }
 } // namespace daxa
 
-#endif
 #endif

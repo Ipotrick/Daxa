@@ -2,7 +2,6 @@
 #if DAXA_BUILT_WITH_UTILS_TASK_GRAPH && DAXA_BUILT_WITH_UTILS_IMGUI
 #include <daxa/utils/task_graph_types.hpp>
 
-#if DAXA_ENABLE_TASK_GRAPH_MK2
 #include "impl_resource_viewer.slang"
 
 // 1mb
@@ -134,5 +133,4 @@ namespace daxa
     auto resource_viewer_ui(ImplTaskGraphDebugUi & context, ImplTaskGraph * impl, std::string const & resource_name, ResourceViewerState & state) -> bool;
 }
 
-#endif
 #endif
