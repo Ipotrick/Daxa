@@ -165,6 +165,13 @@ namespace daxa
         usize offset = {};
     };
 
+    struct DrawMeshTasksInfo
+    {
+        u32 x = {};
+        u32 y = {};
+        u32 z = {};
+    };
+
     struct DrawMeshTasksIndirectInfo
     {
         BufferId indirect_buffer = {};
@@ -320,7 +327,7 @@ namespace daxa
         void draw_indexed(DrawIndexedInfo const & info);
         void draw_indirect(DrawIndirectInfo const & info);
         void draw_indirect_count(DrawIndirectCountInfo const & info);
-        void draw_mesh_tasks(u32 x, u32 y, u32 z);
+        void draw_mesh_tasks(DrawMeshTasksInfo const & info);
         void draw_mesh_tasks_indirect(DrawMeshTasksIndirectInfo const & info);
         void draw_mesh_tasks_indirect_count(DrawMeshTasksIndirectCountInfo const & info);
     };

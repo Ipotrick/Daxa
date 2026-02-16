@@ -244,6 +244,15 @@ static daxa_DispatchIndirectInfo const DAXA_DEFAULT_DISPATCH_INDIRECT_INFO = DAX
 
 typedef struct
 {
+    uint32_t x;
+    uint32_t y;
+    uint32_t z;
+} daxa_DrawMeshTasksInfo;
+
+static daxa_DrawMeshTasksInfo const DAXA_DEFAULT_DRAW_MESH_TASKS_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
     daxa_BufferId indirect_buffer;
     size_t offset;
     uint32_t draw_count;
@@ -523,7 +532,7 @@ daxa_cmd_draw_indirect(daxa_CommandRecorder cmd_enc, daxa_DrawIndirectInfo const
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_indirect_count(daxa_CommandRecorder cmd_enc, daxa_DrawIndirectCountInfo const * info);
 DAXA_EXPORT void
-daxa_cmd_draw_mesh_tasks(daxa_CommandRecorder cmd_enc, uint32_t x, uint32_t y, uint32_t z);
+daxa_cmd_draw_mesh_tasks(daxa_CommandRecorder cmd_enc, daxa_DrawMeshTasksInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_cmd_draw_mesh_tasks_indirect(daxa_CommandRecorder cmd_enc, daxa_DrawMeshTasksIndirectInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result

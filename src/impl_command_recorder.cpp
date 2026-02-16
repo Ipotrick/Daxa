@@ -1059,11 +1059,11 @@ auto daxa_cmd_draw_indirect_count(daxa_CommandRecorder self, daxa_DrawIndirectCo
     return DAXA_RESULT_SUCCESS;
 }
 
-void daxa_cmd_draw_mesh_tasks(daxa_CommandRecorder self, uint32_t x, uint32_t y, uint32_t z)
+void daxa_cmd_draw_mesh_tasks(daxa_CommandRecorder self, daxa_DrawMeshTasksInfo const * info)
 {
     if (self->device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER)
     {
-        self->device->vkCmdDrawMeshTasksEXT(self->command_arena->vk_command_buffer, x, y, z);
+        self->device->vkCmdDrawMeshTasksEXT(self->command_arena->vk_command_buffer, info->x, info->y, info->z);
     }
 }
 

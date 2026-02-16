@@ -347,7 +347,7 @@ namespace tests
                 });
                 render_recorder.set_rasterization_samples(daxa::RasterizationSamples::E4);
                 render_recorder.set_pipeline(*pipeline);
-                render_recorder.draw_mesh_tasks(1, 1, 1);
+                render_recorder.draw_mesh_tasks({1u, 1u, 1u});
                 ti.recorder = std::move(render_recorder).end_renderpass();
             }
         };

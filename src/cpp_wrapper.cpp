@@ -1175,11 +1175,11 @@ namespace daxa
     DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect, DrawIndirectInfo)
     DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_indirect_count, DrawIndirectCountInfo)
 
-    void RenderCommandRecorder::draw_mesh_tasks(u32 x, u32 y, u32 z)
+    void RenderCommandRecorder::draw_mesh_tasks(DrawMeshTasksInfo const & info)
     {
         daxa_cmd_draw_mesh_tasks(
             this->internal,
-            x, y, z);
+            reinterpret_cast<daxa_DrawMeshTasksInfo const *>(&info));
     }
     DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect, DrawMeshTasksIndirectInfo)
     DAXA_DECL_RENDER_COMMAND_LIST_WRAPPER_CHECK_RESULT(draw_mesh_tasks_indirect_count, DrawMeshTasksIndirectCountInfo)
