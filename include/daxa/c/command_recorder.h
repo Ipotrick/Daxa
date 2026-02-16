@@ -12,7 +12,7 @@
 ///   Allows for more predictable performance (move all vk recording ops to tight place in code)
 
 /// WARNING:
-///   Checks for command types against queue family only performed in c++ api!!
+///   Checks for command types against queue type only performed in c++ api!!
 
 typedef struct
 {
@@ -22,7 +22,7 @@ typedef struct
 
 typedef struct
 {
-    daxa_QueueFamily queue_family;
+    daxa_QueueType queue_type;
     daxa_SmallString name;
 } daxa_CommandRecorderInfo;
 

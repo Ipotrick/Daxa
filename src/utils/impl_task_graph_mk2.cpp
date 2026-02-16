@@ -1711,14 +1711,14 @@ namespace daxa
         );
 
         // Validate stages based on queue:
-        switch (task.queue.family)
+        switch (task.queue.type)
         {
-        case QueueFamily::MAIN:
+        case QueueType::MAIN:
         {
             allowed_pipeline_stages = static_cast<PipelineStageFlags>(~0ull);
             break;
         }
-        case QueueFamily::COMPUTE:
+        case QueueType::COMPUTE:
         {
             static constexpr TaskStage allowed_stages = 
                 TaskStage::INDIRECT_COMMAND_READ |
@@ -1730,7 +1730,7 @@ namespace daxa
             allowed_pipeline_stages = std::bit_cast<PipelineStageFlags>(allowed_stages);
             break;
         }
-        case QueueFamily::TRANSFER:
+        case QueueType::TRANSFER:
         {
             static constexpr TaskStage allowed_stages = TaskStage::TRANSFER |
                 TaskStage::HOST |
@@ -1744,9 +1744,9 @@ namespace daxa
             present_disallowed_stages == PipelineStageFlagBits::NONE,
             std::format(
                 "ERROR: The stage (\"{}\") of attachment \"{}\" (index: {}) in task \"{}\" is not allowed in the tasks queue \"{}\"! "
-                "Queue family \"{}\" allows the following stages: \"{}\".",
+                "Queue type \"{}\" allows the following stages: \"{}\".",
                 to_string(present_disallowed_stages), attach_name, attach_i, task.name, to_string(task.queue),
-                to_string(task.queue.family), to_string(allowed_pipeline_stages)
+                to_string(task.queue.type), to_string(allowed_pipeline_stages)
             ).c_str()
         );
     }
@@ -3480,7 +3480,7 @@ namespace daxa
                 Queue queue = queue_index_to_queue(queue_index);
 
                 auto cr = device.create_command_recorder({
-                    .queue_family = queue.family,
+                    .queue_type = queue.type,
                     .name = submit.queue_batch_cmd_recorder_labels[queue_index],
                 });
 

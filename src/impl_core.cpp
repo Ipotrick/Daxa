@@ -258,17 +258,17 @@ auto construct_daxa_physical_device_properties(VkPhysicalDevice physical_device)
         ret.host_image_copy_properties.value.identical_memory_type_requirements = static_cast<daxa_Bool8>(vk_physical_device_host_image_copy_properties_ext.identicalMemoryTypeRequirements);
     }
 
-    u32 queue_family_props_count = 0;
+    u32 queue_type_props_count = 0;
     std::vector<VkQueueFamilyProperties> queue_props;
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_props_count, nullptr);
-    queue_props.resize(queue_family_props_count);
-    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_family_props_count, queue_props.data());
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_type_props_count, nullptr);
+    queue_props.resize(queue_type_props_count);
+    vkGetPhysicalDeviceQueueFamilyProperties(physical_device, &queue_type_props_count, queue_props.data());
     std::vector<VkBool32> supports_present;
-    supports_present.resize(queue_family_props_count);
+    supports_present.resize(queue_type_props_count);
 
     ret.compute_queue_count = ~0u;
     ret.transfer_queue_count = ~0u;
-    for (u32 i = 0; i < queue_family_props_count; i++)
+    for (u32 i = 0; i < queue_type_props_count; i++)
     {
         bool const supports_graphics = queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT;
         bool const supports_compute = queue_props[i].queueFlags & VK_QUEUE_COMPUTE_BIT;

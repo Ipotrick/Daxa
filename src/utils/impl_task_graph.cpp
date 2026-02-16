@@ -46,7 +46,7 @@ namespace daxa
             1,
             1 + DAXA_MAX_COMPUTE_QUEUE_COUNT,
         };
-        return offsets[static_cast<u32>(queue.family)] + queue.index;
+        return offsets[static_cast<u32>(queue.type)] + queue.index;
     }
 
     auto flat_index_to_queue(u32 flat_index) -> daxa::Queue
@@ -1887,7 +1887,7 @@ namespace daxa
         case TaskType::RAY_TRACING:
         {
             DAXA_DBG_ASSERT_TRUE_M(
-                queue == daxa::QUEUE_MAIN || queue.family == daxa::QueueFamily::COMPUTE,
+                queue == daxa::QUEUE_MAIN || queue.type == daxa::QueueType::COMPUTE,
                 std::format("Detected invalid multi-queue use."
                             " Task \"{}\" of type {} was added to be run on the queue {}."
                             " COMPUTE/RAYTRACING tasks are only allowed to be run on compute queues or the main queue."
@@ -3596,7 +3596,7 @@ namespace daxa
                     // Skip empty submit scopes.
                     continue;
                 }
-                CommandRecorder recorder = impl.info.device.create_command_recorder({queue.family});
+                CommandRecorder recorder = impl.info.device.create_command_recorder({queue.type});
                 ImplTaskRuntimeInterface impl_runtime{.task_graph = impl, .permutation = permutation, .recorder = recorder};
 
                 // Setup commands are always recorded in the first submit scope to the default queue

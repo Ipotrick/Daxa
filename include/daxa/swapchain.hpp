@@ -46,7 +46,7 @@ namespace daxa
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
         usize max_allowed_frames_in_flight = 2;
-        QueueFamily queue_family = {};
+        QueueType queue_type = {};
         SmallString name = {};
     };
 

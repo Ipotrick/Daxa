@@ -19,15 +19,15 @@
 
 // DO NOT VALIDATE RENDER PASS COMMANDS
 // VALIDATING THE START OF A RENDERPASS SHOULD ALWAYS BE ENOUGH!
-auto validate_queue_family(daxa_QueueFamily recorder_qf, daxa_QueueFamily command_qf) -> daxa_Result
+auto validate_queue_type(daxa_QueueType recorder_qf, daxa_QueueType command_qf) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    bool const main_on_transfer = command_qf == DAXA_QUEUE_FAMILY_MAIN && recorder_qf == DAXA_QUEUE_FAMILY_TRANSFER;
-    bool const comp_on_transfer = command_qf == DAXA_QUEUE_FAMILY_COMPUTE && recorder_qf == DAXA_QUEUE_FAMILY_TRANSFER;
-    bool const main_on_comp = command_qf == DAXA_QUEUE_FAMILY_MAIN && recorder_qf == DAXA_QUEUE_FAMILY_COMPUTE;
-    result = main_on_transfer ? DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
-    result = comp_on_transfer ? DAXA_RESULT_ERROR_COMPUTE_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
-    result = main_on_comp ? DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER : result;
+    bool const main_on_transfer = command_qf == DAXA_QUEUE_TYPE_MAIN && recorder_qf == DAXA_QUEUE_TYPE_TRANSFER;
+    bool const comp_on_transfer = command_qf == DAXA_QUEUE_TYPE_COMPUTE && recorder_qf == DAXA_QUEUE_TYPE_TRANSFER;
+    bool const main_on_comp = command_qf == DAXA_QUEUE_TYPE_MAIN && recorder_qf == DAXA_QUEUE_TYPE_COMPUTE;
+    result = main_on_transfer ? DAXA_RESULT_ERROR_MAIN_TYPE_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
+    result = comp_on_transfer ? DAXA_RESULT_ERROR_COMPUTE_TYPE_CMD_ON_TRANSFER_QUEUE_RECORDER : result;
+    result = main_on_comp ? DAXA_RESULT_ERROR_MAIN_TYPE_CMD_ON_COMPUTE_QUEUE_RECORDER : result;
     return result;
 }
 
@@ -373,7 +373,7 @@ auto daxa_cmd_build_acceleration_structures(daxa_CommandRecorder self, daxa_Buil
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     if ((self->device->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
@@ -634,7 +634,7 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
     if (daxa::holds_alternative<daxa_ImplCommandRecorder::NoPipeline>(self->current_pipeline))
@@ -674,7 +674,7 @@ auto daxa_cmd_set_ray_tracing_pipeline(daxa_CommandRecorder self, daxa_RayTracin
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
     bool const prev_pipeline_rt = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RayTracingPipeline>;
@@ -692,7 +692,7 @@ auto daxa_cmd_set_compute_pipeline(daxa_CommandRecorder self, daxa_ComputePipeli
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
     bool const prev_pipeline_compute = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_ComputePipeline>;
@@ -710,7 +710,7 @@ auto daxa_cmd_set_raster_pipeline(daxa_CommandRecorder self, daxa_RasterPipeline
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_MAIN);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_MAIN);
     _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
     bool const prev_pipeline_raster = self->current_pipeline.index() == decltype(self->current_pipeline)::index_of<daxa_RasterPipeline>;
@@ -728,7 +728,7 @@ auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
@@ -758,7 +758,7 @@ auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndir
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_RayTracingPipeline>(self->current_pipeline))
@@ -788,7 +788,7 @@ auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     // TODO: Check if those offsets are in range?
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
@@ -803,7 +803,7 @@ auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirect
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_COMPUTE);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_COMPUTE);
     _DAXA_RETURN_IF_ERROR(result, result);
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->indirect_buffer)
     if (!daxa::holds_alternative<daxa_ComputePipeline>(self->current_pipeline))
@@ -850,7 +850,7 @@ auto daxa_cmd_begin_renderpass(daxa_CommandRecorder self, daxa_RenderPassBeginIn
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_Result result = DAXA_RESULT_SUCCESS;
-    result = validate_queue_family(self->info.queue_family, DAXA_QUEUE_FAMILY_MAIN);
+    result = validate_queue_type(self->info.queue_type, DAXA_QUEUE_TYPE_MAIN);
     _DAXA_RETURN_IF_ERROR(result, result);
     daxa_cmd_flush_barriers(self);
 
@@ -1228,7 +1228,7 @@ void daxa_destroy_command_recorder(daxa_CommandRecorder self)
 auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderInfo const * info, daxa_CommandRecorder * out_cmd_list) -> daxa_Result
 {
     ImplTransientCommandArena *cmd_arena = {};
-    daxa_Result result = device->commands.get_arena(device->vk_device, info->queue_family, device->queue_families[info->queue_family].vk_queue_family_index, cmd_arena);
+    daxa_Result result = device->commands.get_arena(device->vk_device, info->queue_type, device->queue_families[info->queue_type].vk_queue_type_index, cmd_arena);
     _DAXA_RETURN_IF_ERROR(result, result);
     defer {
         if (result != DAXA_RESULT_SUCCESS)

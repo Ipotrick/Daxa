@@ -25,8 +25,8 @@ struct ImplTransientCommandArena
 {
     VkCommandPool vk_command_pool = {};
     VkCommandBuffer vk_command_buffer = {};
-    daxa_QueueFamily queue_family = {};
-    u32 vk_queue_family_index = {};
+    daxa_QueueType queue_type = {};
+    u32 vk_queue_type_index = {};
     
     /// TODO: Replace these with arena dynamic arrays
     /// TODO: Add Automatically growing memory arena (when writing this i like the idea of having a per device pool of slabs (maybe 1-128kib) that the arenas can source their memory from)
@@ -42,7 +42,7 @@ struct ImplTransientCommandArena
 struct ImplTransientCommandArenas
 {
     std::pair<std::array<ImplTransientCommandArena, DAXA_MAX_COMMAND_POOLS>, u32> transient_command_arenas = {};
-    std::array<std::deque<u32>, DAXA_QUEUE_FAMILY_MAX_ENUM> available_arenas = {};
+    std::array<std::deque<u32>, DAXA_QUEUE_TYPE_MAX_ENUM> available_arenas = {};
     std::mutex mtx = {};
 
     void initialize() 
@@ -58,13 +58,13 @@ struct ImplTransientCommandArenas
         }
     }
 
-    auto get_arena(VkDevice vk_device, daxa_QueueFamily queue_family, u32 queue_family_index, ImplTransientCommandArena*& out, std::unique_lock<std::mutex>* lock = {}) -> daxa_Result
+    auto get_arena(VkDevice vk_device, daxa_QueueType queue_type, u32 queue_type_index, ImplTransientCommandArena*& out, std::unique_lock<std::mutex>* lock = {}) -> daxa_Result
     {
         std::unique_lock<std::mutex> local_lock = lock == nullptr ? std::unique_lock(mtx) : std::unique_lock<std::mutex>{};
 
         out = {};
         daxa_Result result = DAXA_RESULT_SUCCESS;
-        std::deque<u32>& available_command_pools = available_arenas[queue_family];
+        std::deque<u32>& available_command_pools = available_arenas[queue_type];
 
         if (available_command_pools.size() == 0)
         {
@@ -89,7 +89,7 @@ struct ImplTransientCommandArenas
                 .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
                 .pNext = nullptr,
                 .flags = VK_COMMAND_POOL_CREATE_TRANSIENT_BIT,
-                .queueFamilyIndex = queue_family_index,
+                .queueFamilyIndex = queue_type_index,
             };
             result = static_cast<daxa_Result>(vkCreateCommandPool(vk_device, &vk_command_pool_create_info, nullptr, &transient_cmd_arena.vk_command_pool));
             _DAXA_RETURN_IF_ERROR(result, result);
@@ -112,8 +112,8 @@ struct ImplTransientCommandArenas
             result = static_cast<daxa_Result>(vkAllocateCommandBuffers(vk_device, &vk_command_buffer_allocate_info, &transient_cmd_arena.vk_command_buffer));
             _DAXA_RETURN_IF_ERROR(result, result);
 
-            transient_cmd_arena.queue_family = queue_family;
-            transient_cmd_arena.vk_queue_family_index = queue_family_index;
+            transient_cmd_arena.queue_type = queue_type;
+            transient_cmd_arena.vk_queue_type_index = queue_type_index;
 
             // Append pool to available list
             available_command_pools.push_back(command_arena_index);
@@ -145,7 +145,7 @@ struct ImplTransientCommandArenas
         cmd_arena->used_blass.clear();
         cmd_arena->deferred_destructions.clear();
 
-        available_arenas[cmd_arena->queue_family].push_front(cmd_arena_index);
+        available_arenas[cmd_arena->queue_type].push_front(cmd_arena_index);
 
         return result;
     }

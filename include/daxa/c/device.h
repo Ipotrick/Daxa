@@ -380,17 +380,17 @@ static daxa_DeviceInfo2 const DAXA_DEFAULT_DEVICE_INFO_2 = {
 
 typedef struct
 {
-    daxa_QueueFamily family;
+    daxa_QueueType type;
     daxa_u32 index;
 } daxa_Queue;
 
-static daxa_Queue const DAXA_QUEUE_MAIN = {DAXA_QUEUE_FAMILY_MAIN, 0};
-static daxa_Queue const DAXA_QUEUE_COMPUTE_0 = {DAXA_QUEUE_FAMILY_COMPUTE, 0};
-static daxa_Queue const DAXA_QUEUE_COMPUTE_1 = {DAXA_QUEUE_FAMILY_COMPUTE, 1};
-static daxa_Queue const DAXA_QUEUE_COMPUTE_2 = {DAXA_QUEUE_FAMILY_COMPUTE, 2};
-static daxa_Queue const DAXA_QUEUE_COMPUTE_3 = {DAXA_QUEUE_FAMILY_COMPUTE, 3};
-static daxa_Queue const DAXA_QUEUE_TRANSFER_0 = {DAXA_QUEUE_FAMILY_TRANSFER, 0};
-static daxa_Queue const DAXA_QUEUE_TRANSFER_1 = {DAXA_QUEUE_FAMILY_TRANSFER, 1};
+static daxa_Queue const DAXA_QUEUE_MAIN = {DAXA_QUEUE_TYPE_MAIN, 0};
+static daxa_Queue const DAXA_QUEUE_COMPUTE_0 = {DAXA_QUEUE_TYPE_COMPUTE, 0};
+static daxa_Queue const DAXA_QUEUE_COMPUTE_1 = {DAXA_QUEUE_TYPE_COMPUTE, 1};
+static daxa_Queue const DAXA_QUEUE_COMPUTE_2 = {DAXA_QUEUE_TYPE_COMPUTE, 2};
+static daxa_Queue const DAXA_QUEUE_COMPUTE_3 = {DAXA_QUEUE_TYPE_COMPUTE, 3};
+static daxa_Queue const DAXA_QUEUE_TRANSFER_0 = {DAXA_QUEUE_TYPE_TRANSFER, 0};
+static daxa_Queue const DAXA_QUEUE_TRANSFER_1 = {DAXA_QUEUE_TYPE_TRANSFER, 1};
 
 typedef struct
 {
@@ -761,12 +761,12 @@ daxa_dvc_get_vk_device(daxa_Device device);
 DAXA_EXPORT VkPhysicalDevice
 daxa_dvc_get_vk_physical_device(daxa_Device device);
 DAXA_EXPORT daxa_Result
-daxa_dvc_get_vk_queue(daxa_Device self, daxa_Queue queue, VkQueue* vk_queue, uint32_t* vk_queue_family_index);
+daxa_dvc_get_vk_queue(daxa_Device self, daxa_Queue queue, VkQueue* vk_queue, uint32_t* vk_queue_type_index);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_queue_wait_idle(daxa_Device device, daxa_Queue queue);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_queue_count(daxa_Device device, daxa_QueueFamily queue_family, daxa_u32 * out_value);
+daxa_dvc_queue_count(daxa_Device device, daxa_QueueType queue_type, daxa_u32 * out_value);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_wait_idle(daxa_Device device);

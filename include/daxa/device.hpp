@@ -419,12 +419,12 @@ namespace daxa
 
     struct Queue
     {
-        QueueFamily family = {};
+        QueueType type = {};
         u32 index = {};
 
         [[nodiscard]] DAXA_EXPORT_CXX auto operator==(Queue const & other) const noexcept -> bool
         {
-            return this->family == other.family && this->index == other.index;
+            return this->type == other.type && this->index == other.index;
         }
 
         [[nodiscard]] DAXA_EXPORT_CXX auto operator!=(Queue const & other) const noexcept -> bool
@@ -433,17 +433,17 @@ namespace daxa
         }
     };
 
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily queue_family) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueType queue_type) -> std::string_view;
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(Queue queue) -> std::string_view;
 
-    static constexpr inline Queue QUEUE_NONE = Queue{QueueFamily::MAX_ENUM, 0};
-    static constexpr inline Queue QUEUE_MAIN = Queue{QueueFamily::MAIN, 0};
-    static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{QueueFamily::COMPUTE, 0};
-    static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{QueueFamily::COMPUTE, 1};
-    static constexpr inline Queue QUEUE_COMPUTE_2 = Queue{QueueFamily::COMPUTE, 2};
-    static constexpr inline Queue QUEUE_COMPUTE_3 = Queue{QueueFamily::COMPUTE, 3};
-    static constexpr inline Queue QUEUE_TRANSFER_0 = Queue{QueueFamily::TRANSFER, 0};
-    static constexpr inline Queue QUEUE_TRANSFER_1 = Queue{QueueFamily::TRANSFER, 1};
+    static constexpr inline Queue QUEUE_NONE = Queue{QueueType::MAX_ENUM, 0};
+    static constexpr inline Queue QUEUE_MAIN = Queue{QueueType::MAIN, 0};
+    static constexpr inline Queue QUEUE_COMPUTE_0 = Queue{QueueType::COMPUTE, 0};
+    static constexpr inline Queue QUEUE_COMPUTE_1 = Queue{QueueType::COMPUTE, 1};
+    static constexpr inline Queue QUEUE_COMPUTE_2 = Queue{QueueType::COMPUTE, 2};
+    static constexpr inline Queue QUEUE_COMPUTE_3 = Queue{QueueType::COMPUTE, 3};
+    static constexpr inline Queue QUEUE_TRANSFER_0 = Queue{QueueType::TRANSFER, 0};
+    static constexpr inline Queue QUEUE_TRANSFER_1 = Queue{QueueType::TRANSFER, 1};
 
     struct CommandSubmitInfo
     {
@@ -746,7 +746,7 @@ namespace daxa
         void wait_idle();
 
         void queue_wait_idle(Queue queue);
-        auto queue_count(QueueFamily queue_count) -> u32;
+        auto queue_count(QueueType queue_count) -> u32;
 
         /// @brief  Submits a command list to the device.
         /// @return a unique id for each submit, can be used to wait for it to finish.

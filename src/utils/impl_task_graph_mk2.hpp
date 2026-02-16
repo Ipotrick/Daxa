@@ -50,7 +50,7 @@ namespace daxa
             1,
             1 + DAXA_MAX_COMPUTE_QUEUE_COUNT,
         };
-        return offsets[static_cast<u32>(queue.family)] + queue.index;
+        return offsets[static_cast<u32>(queue.type)] + queue.index;
     }
 
     auto queue_index_to_queue(u32 flat_index) -> daxa::Queue

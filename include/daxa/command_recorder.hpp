@@ -19,7 +19,7 @@ namespace daxa
 
     struct CommandRecorderInfo
     {
-        QueueFamily queue_family = {};
+        QueueType queue_type = {};
         SmallString name = {};
     };
 

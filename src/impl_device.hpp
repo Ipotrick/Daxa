@@ -85,7 +85,7 @@ struct daxa_ImplDevice final : public ImplHandle
     VmaAllocation vk_null_image_vma_allocation = {};
 
     // Command Buffer/Pool recycling:
-    // Index with daxa_QueueFamily.
+    // Index with daxa_QueueType.
     ImplTransientCommandArenas commands = {};
 
     // Gpu Shader Resource Object table:
@@ -115,9 +115,9 @@ struct daxa_ImplDevice final : public ImplHandle
     struct ImplQueue
     {
         // Constant after initialization:
-        daxa_QueueFamily family = {};
+        daxa_QueueType type = {};
         u32 queue_index = {};
-        u32 vk_queue_family_index = ~0u;
+        u32 vk_queue_type_index = ~0u;
         VkQueue vk_queue = {};
         VkSemaphore gpu_queue_local_timeline = {};
         // atomically synchronized:
@@ -129,28 +129,28 @@ struct daxa_ImplDevice final : public ImplHandle
         auto get_oldest_pending_submit(VkDevice vk_device, std::optional<u64> & out) -> daxa_Result;
     };
     std::array<ImplQueue, DAXA_MAX_COMPUTE_QUEUE_COUNT + DAXA_MAX_TRANSFER_QUEUE_COUNT + 1> queues = {
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_MAIN, .queue_index = 0},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 0},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 1},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 2},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_COMPUTE, .queue_index = 3},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_TRANSFER, .queue_index = 0},
-        ImplQueue{.family = DAXA_QUEUE_FAMILY_TRANSFER, .queue_index = 1},
+        ImplQueue{.type = DAXA_QUEUE_TYPE_MAIN, .queue_index = 0},
+        ImplQueue{.type = DAXA_QUEUE_TYPE_COMPUTE, .queue_index = 0},
+        ImplQueue{.type = DAXA_QUEUE_TYPE_COMPUTE, .queue_index = 1},
+        ImplQueue{.type = DAXA_QUEUE_TYPE_COMPUTE, .queue_index = 2},
+        ImplQueue{.type = DAXA_QUEUE_TYPE_COMPUTE, .queue_index = 3},
+        ImplQueue{.type = DAXA_QUEUE_TYPE_TRANSFER, .queue_index = 0},
+        ImplQueue{.type = DAXA_QUEUE_TYPE_TRANSFER, .queue_index = 1},
     };
 
     auto get_queue(daxa_Queue queue) -> ImplQueue &;
     auto valid_queue(daxa_Queue queue) -> bool;
 
-    struct ImplQueueFamily
+    struct ImplQueueType
     {
-        u32 vk_queue_family_index = {};
+        u32 vk_queue_type_index = {};
         u32 queue_count = {};
         u32 vk_index = ~0u;
     };
-    std::array<ImplQueueFamily, 3> queue_families = {};
+    std::array<ImplQueueType, 3> queue_families = {};
 
     std::array<u32, 3> valid_vk_queue_families = {};
-    u32 valid_vk_queue_family_count = {};
+    u32 valid_vk_queue_type_count = {};
 
     auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageId image) -> daxa_ImageMipArraySlice;
     auto validate_image_slice(daxa_ImageMipArraySlice const & slice, daxa_ImageViewId image_view) -> daxa_ImageMipArraySlice;

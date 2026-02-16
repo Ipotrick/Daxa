@@ -272,13 +272,13 @@ namespace daxa
         }
     }
 
-    auto queue_family_to_str(QueueFamily queue_family) -> char const *
+    auto queue_type_to_str(QueueType queue_type) -> char const *
     {
-        switch (queue_family)
+        switch (queue_type)
         {
-        case QueueFamily::MAIN: return "GN";
-        case QueueFamily::COMPUTE: return "CT";
-        case QueueFamily::TRANSFER: return "TF";
+        case QueueType::MAIN: return "GN";
+        case QueueType::COMPUTE: return "CT";
+        case QueueType::TRANSFER: return "TF";
         default: return "UNKNOWN";
         }
     }
@@ -337,14 +337,14 @@ namespace daxa
         return ret;
     }
 
-    auto queue_family_to_color(QueueFamily type) -> ImVec4
+    auto queue_type_to_color(QueueType type) -> ImVec4
     {
         ImVec4 ret = {};
         switch (type)
         {
-        case QueueFamily::MAIN: ret = ImVec4(0.47060f, 0.52941f, 0.61960f, 1.0f); break;     //           #8D99AE
-        case QueueFamily::COMPUTE: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break;  //        #F9C74F
-        case QueueFamily::TRANSFER: ret = ImVec4(0.03112f, 0.78413f, 0.60552f, 1.0f); break; //       #06D6A0
+        case QueueType::MAIN: ret = ImVec4(0.47060f, 0.52941f, 0.61960f, 1.0f); break;     //           #8D99AE
+        case QueueType::COMPUTE: ret = ImVec4(0.95500f, 0.58500f, 0.09300f, 1.0f); break;  //        #F9C74F
+        case QueueType::TRANSFER: ret = ImVec4(0.03112f, 0.78413f, 0.60552f, 1.0f); break; //       #06D6A0
         }
         // ret.x = std::sqrt(ret.x);
         // ret.y = std::sqrt(ret.y);
@@ -1050,12 +1050,12 @@ namespace daxa
                 ImGui::TableNextColumn();
                 ImGui::Text("Queue");
                 ImGui::TableNextColumn();
-                ImVec4 const queue_family_color = queue_family_to_color(task.queue.family);
+                ImVec4 const queue_type_color = queue_type_to_color(task.queue.type);
                 colored_banner_text(
-                    std::format("Family {} - Index {}", queue_family_to_str(task.queue.family), task.queue.index),
+                    std::format("Type {} - Index {}", queue_type_to_str(task.queue.type), task.queue.index),
                     true,
-                    queue_family_color,
-                    ImVec4(queue_family_color.x * 0.6f, queue_family_color.y * 0.6f, queue_family_color.z * 0.6f, 1.0f));
+                    queue_type_color,
+                    ImVec4(queue_type_color.x * 0.6f, queue_type_color.y * 0.6f, queue_type_color.z * 0.6f, 1.0f));
 
                 ImGui::EndTable();
             }
@@ -2039,8 +2039,8 @@ namespace daxa
                     ImVec4 color = {};
                     if (col_ui.is_queue_submit_border)
                     {
-                        name = queue_family_to_str(queue_index_to_queue(col_ui.queue_index).family);
-                        color = queue_family_to_color(queue_index_to_queue(col_ui.queue_index).family);
+                        name = queue_type_to_str(queue_index_to_queue(col_ui.queue_index).type);
+                        color = queue_type_to_color(queue_index_to_queue(col_ui.queue_index).type);
                         color.x *= 0.6f;
                         color.y *= 0.6f;
                         color.z *= 0.6f;

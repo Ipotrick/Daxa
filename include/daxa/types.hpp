@@ -1879,7 +1879,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    enum struct QueueFamily
+    enum struct QueueType
     {
         MAIN,
         COMPUTE,
@@ -1887,7 +1887,7 @@ namespace daxa
         MAX_ENUM = 0x7fffffff,
     };
 
-    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueFamily family) -> std::string_view;
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(QueueType type) -> std::string_view;
     
     template <typename T>
     auto constexpr align_up(T value, T align) -> T

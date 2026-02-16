@@ -128,16 +128,16 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
     case DAXA_RESULT_ERROR_NO_GRAPHICS_QUEUE_FOUND: return "ERROR_NO_GRAPHICS_QUEUE_FOUND";
     case DAXA_RESULT_ERROR_COULD_NOT_QUERY_QUEUE: return "ERROR_COULD_NOT_QUERY_QUEUE";
     case DAXA_RESULT_ERROR_INVALID_QUEUE: return "ERROR_INVALID_QUEUE";
-    case DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH: return "ERROR_CMD_LIST_SUBMIT_QUEUE_FAMILY_MISMATCH";
-    case DAXA_RESULT_ERROR_PRESENT_QUEUE_FAMILY_MISMATCH: return "ERROR_PRESENT_QUEUE_FAMILY_MISMATCH";
-    case DAXA_RESULT_ERROR_INVALID_QUEUE_FAMILY: return "ERROR_INVALID_QUEUE_FAMILY";
+    case DAXA_RESULT_ERROR_CMD_LIST_SUBMIT_QUEUE_TYPE_MISMATCH: return "ERROR_CMD_LIST_SUBMIT_QUEUE_TYPE_MISMATCH";
+    case DAXA_RESULT_ERROR_PRESENT_QUEUE_TYPE_MISMATCH: return "ERROR_PRESENT_QUEUE_TYPE_MISMATCH";
+    case DAXA_RESULT_ERROR_INVALID_QUEUE_TYPE: return "ERROR_INVALID_QUEUE_TYPE";
     case DAXA_RESULT_ERROR_INVALID_DEVICE_INDEX: return "ERROR_INVALID_DEVICE_INDEX";
     case DAXA_RESULT_ERROR_DEVICE_NOT_SUPPORTED: return "ERROR_DEVICE_NOT_SUPPORTED";
     case DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_ACCELERATION_STRUCTURE_COUNT: return "DEVICE_DOES_NOT_SUPPORT_ACCELERATION_STRUCTURE_COUNT";
     case DAXA_RESULT_ERROR_NO_SUITABLE_DEVICE_FOUND: return "ERROR_NO_SUITABLE_DEVICE_FOUND";
-    case DAXA_RESULT_ERROR_COMPUTE_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER: return "ERROR_COMPUTE_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER";
-    case DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER: return "ERROR_MAIN_FAMILY_CMD_ON_TRANSFER_QUEUE_RECORDER";
-    case DAXA_RESULT_ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER: return "ERROR_MAIN_FAMILY_CMD_ON_COMPUTE_QUEUE_RECORDER";
+    case DAXA_RESULT_ERROR_COMPUTE_TYPE_CMD_ON_TRANSFER_QUEUE_RECORDER: return "ERROR_COMPUTE_TYPE_CMD_ON_TRANSFER_QUEUE_RECORDER";
+    case DAXA_RESULT_ERROR_MAIN_TYPE_CMD_ON_TRANSFER_QUEUE_RECORDER: return "ERROR_MAIN_TYPE_CMD_ON_TRANSFER_QUEUE_RECORDER";
+    case DAXA_RESULT_ERROR_MAIN_TYPE_CMD_ON_COMPUTE_QUEUE_RECORDER: return "ERROR_MAIN_TYPE_CMD_ON_COMPUTE_QUEUE_RECORDER";
     case DAXA_RESULT_ERROR_ZERO_REQUIRED_MEMORY_TYPE_BITS: return "ERROR_ZERO_REQUIRED_MEMORY_TYPE_BITS";
     case DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION: return "ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION";
     case DAXA_RESULT_ERROR_EXCEEDED_MAX_COMMAND_POOLS: return "ERROR_EXCEEDED_MAX_COMMAND_POOLS";
@@ -597,10 +597,10 @@ namespace daxa
         check_result(result, "failed to queue wait idle device");
     }
 
-    auto Device::queue_count(QueueFamily queue_family) -> u32
+    auto Device::queue_count(QueueType queue_type) -> u32
     {
         u32 out_value = {};
-        auto result = daxa_dvc_queue_count(r_cast<daxa_Device>(this->object), static_cast<daxa_QueueFamily>(queue_family), &out_value);
+        auto result = daxa_dvc_queue_count(r_cast<daxa_Device>(this->object), static_cast<daxa_QueueType>(queue_type), &out_value);
         check_result(result, "failed to get queue count");
         return out_value;
     }
@@ -1431,13 +1431,13 @@ namespace daxa
         return ret;
     }
 
-    auto to_string(QueueFamily queue_family) -> std::string_view
+    auto to_string(QueueType queue_type) -> std::string_view
     {
-        switch (queue_family)
+        switch (queue_type)
         {
-        case QueueFamily::MAIN: return "MAIN";
-        case QueueFamily::COMPUTE: return "COMPUTE";
-        case QueueFamily::TRANSFER: return "TRANSFER";
+        case QueueType::MAIN: return "MAIN";
+        case QueueType::COMPUTE: return "COMPUTE";
+        case QueueType::TRANSFER: return "TRANSFER";
         default: return "UNIMPLEMENTED CASE";
         }
     }

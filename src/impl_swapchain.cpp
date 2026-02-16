@@ -59,7 +59,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     VkBool32 present_support = VK_FALSE;
     result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceSupportKHR(
         device->vk_physical_device,
-        device->queue_families[info->queue_family].vk_queue_family_index,
+        device->queue_families[info->queue_type].vk_queue_type_index,
         ret.vk_surface,
         &present_support));
     _DAXA_RETURN_IF_ERROR(result, result);
@@ -70,7 +70,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         _DAXA_RETURN_IF_ERROR(result, result);
     }
 
-    if (info->queue_family >= DAXA_QUEUE_FAMILY_MAX_ENUM || device->queue_families[info->queue_family].queue_count == 0)
+    if (info->queue_type >= DAXA_QUEUE_TYPE_MAX_ENUM || device->queue_families[info->queue_type].queue_count == 0)
     {
         result = DAXA_RESULT_ERROR_INVALID_QUEUE;
         _DAXA_RETURN_IF_ERROR(result, result);
@@ -371,7 +371,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         .imageUsage = usage.data,
         .imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
         .queueFamilyIndexCount = 1,
-        .pQueueFamilyIndices = &this->device->get_queue(DAXA_QUEUE_MAIN).vk_queue_family_index,
+        .pQueueFamilyIndices = &this->device->get_queue(DAXA_QUEUE_MAIN).vk_queue_type_index,
         .preTransform = static_cast<VkSurfaceTransformFlagBitsKHR>(info.present_operation),
         .compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
         .presentMode = static_cast<VkPresentModeKHR>(info.present_mode),
