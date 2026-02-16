@@ -1656,7 +1656,7 @@ auto daxa_dvc_submit_commands(daxa_Device self, daxa_CommandSubmitInfo const * i
     return result;
 }
 
-auto daxa_dvc_present(daxa_Device self, daxa_PresentInfo const * info) -> daxa_Result
+auto daxa_dvc_present_frame(daxa_Device self, daxa_PresentInfo const * info) -> daxa_Result
 {
     if (info->queue.family != static_cast<daxa_QueueFamily>(info->swapchain->info.queue_family))
     {

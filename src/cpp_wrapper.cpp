@@ -672,7 +672,7 @@ namespace daxa
             .queue = std::bit_cast<daxa_Queue>(info.queue),
         };
         check_result(
-            daxa_dvc_present(r_cast<daxa_Device>(this->object), &c_present_info),
+            daxa_dvc_present_frame(r_cast<daxa_Device>(this->object), &c_present_info),
             "failed to present frame", std::array{DAXA_RESULT_SUCCESS, DAXA_RESULT_SUBOPTIMAL_KHR, DAXA_RESULT_ERROR_OUT_OF_DATE_KHR});
     }
 

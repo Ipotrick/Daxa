@@ -781,7 +781,7 @@ daxa_dvc_latest_queue_submit_index(daxa_Device device, daxa_Queue queue, daxa_u6
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_wait_on_submit(daxa_Device device, daxa_WaitOnSubmitInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
-daxa_dvc_present(daxa_Device device, daxa_PresentInfo const * info);
+daxa_dvc_present_frame(daxa_Device device, daxa_PresentInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_collect_garbage(daxa_Device device);
 
