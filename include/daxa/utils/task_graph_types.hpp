@@ -763,16 +763,10 @@ namespace daxa
         }
     };
 
-    struct TrackedBuffers
-    {
-        std::span<BufferId const> buffers = {};
-        Access latest_access = {};
-    };
-
     struct TaskBufferInfo
     {
-        TrackedBuffers initial_buffers = {};
-        std::string name = {};
+        daxa::BufferId buffer = {};
+        std::string_view name = {};
     };
 
     struct ImplExternalResource;
@@ -782,20 +776,15 @@ namespace daxa
     {
         TaskBuffer() = default;
         TaskBuffer(TaskBufferInfo const & info);
-        TaskBuffer(daxa::Device & device, BufferInfo const & info);
 
         operator TaskBufferView() const;
 
         auto view() const -> TaskBufferView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
         auto info() const -> TaskBufferInfo;
-        auto get_state() const -> TrackedBuffers;
-        auto is_owning() const -> bool;
 
-        void set_buffers(TrackedBuffers const & buffers);
+        void set_buffer(BufferId buffer);
         void swap_buffers(TaskBuffer & other);
+        auto id() const -> BufferId;
 
       protected:
         template <typename T, typename H_T>
@@ -804,16 +793,10 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    struct TrackedBlas
-    {
-        std::span<BlasId const> blas = {};
-        Access latest_access = {};
-    };
-
     struct TaskBlasInfo
     {
-        TrackedBlas initial_blas = {};
-        std::string name = {};
+        BlasId blas = {};
+        std::string_view name = {};
     };
 
     struct DAXA_EXPORT_CXX TaskBlas : ManagedPtr<TaskBlas, ImplPersistentTaskBufferBlasTlas *>
@@ -824,13 +807,9 @@ namespace daxa
         operator TaskBlasView() const;
 
         auto view() const -> TaskBlasView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
         auto info() const -> TaskBlasInfo;
-        auto get_state() const -> TrackedBlas;
-
-        void set_blas(TrackedBlas const & blas);
+        auto id() const -> BlasId;
+        void set_blas(BlasId blas);
         void swap_blas(TaskBlas & other);
 
       protected:
@@ -840,16 +819,10 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    struct TrackedTlas
-    {
-        std::span<TlasId const> tlas = {};
-        Access latest_access = {};
-    };
-
     struct TaskTlasInfo
     {
-        TrackedTlas initial_tlas = {};
-        std::string name = {};
+        TlasId tlas = {};
+        std::string_view name = {};
     };
 
     struct DAXA_EXPORT_CXX TaskTlas : ManagedPtr<TaskTlas, ImplPersistentTaskBufferBlasTlas *>
@@ -860,13 +833,9 @@ namespace daxa
         operator TaskTlasView() const;
 
         auto view() const -> TaskTlasView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
         auto info() const -> TaskTlasInfo;
-        auto get_state() const -> TrackedTlas;
-
-        void set_tlas(TrackedTlas const & tlas);
+        auto id() const -> TlasId;
+        void set_tlas(TlasId tlas);
         void swap_tlas(TaskTlas & other);
 
       protected:
@@ -876,18 +845,12 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    struct TrackedImages
-    {
-        std::span<ImageId const> images = {};
-        // optional:
-        std::span<ImageSliceState const> latest_slice_states = {};
-    };
-
     struct TaskImageInfo
     {
-        TrackedImages initial_images = {};
-        bool swapchain_image = {};
-        std::string name = {};
+        ImageId image = {};
+        bool is_general_layout = {};
+        bool is_swapchain_image = {};
+        std::string_view name = {};
     };
 
     struct ImplExternalResource;
@@ -896,19 +859,14 @@ namespace daxa
     struct DAXA_EXPORT_CXX TaskImage : ManagedPtr<TaskImage, ImplPersistentTaskImage *>
     {
         TaskImage() = default;
-        // TaskImage(TaskImage const & ti) = default;
         TaskImage(TaskImageInfo const & info);
 
         operator TaskImageView() const;
 
         auto view() const -> TaskImageView;
-        /// THREADSAFETY:
-        /// * reference MUST NOT be read after the object is destroyed.
-        /// @return reference to info of object.
         auto info() const -> TaskImageInfo;
-        auto get_state() const -> TrackedImages;
-
-        void set_images(TrackedImages const & images);
+        auto id() const -> ImageId;
+        void set_image(ImageId image, bool is_general_layout = false);
         void swap_images(TaskImage & other);
 
       protected:

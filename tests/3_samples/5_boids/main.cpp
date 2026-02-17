@@ -219,9 +219,9 @@ struct App : AppWindow<App>
     auto record_tasks() -> daxa::TaskGraph
     {
         daxa::TaskGraph new_task_graph = daxa::TaskGraph({.device = device, .swapchain = swapchain, .name = ("main task graph")});
-        new_task_graph.use_persistent_image(task_swapchain_image);
-        new_task_graph.use_persistent_buffer(task_boids_current);
-        new_task_graph.use_persistent_buffer(task_boids_old);
+        new_task_graph.register_image(task_swapchain_image);
+        new_task_graph.register_buffer(task_boids_current);
+        new_task_graph.register_buffer(task_boids_old);
         using namespace UpdateBoids;
         new_task_graph.add_task(UpdateBoidsTask{
             .views = UpdateBoidsTask::Views{

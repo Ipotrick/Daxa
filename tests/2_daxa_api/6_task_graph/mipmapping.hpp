@@ -94,9 +94,9 @@ namespace tests
             daxa::TaskBuffer task_mipmapping_gpu_input_buffer = [&]()
             {
                 auto ret = daxa::TaskBuffer{{
+                    .buffer = mipmapping_gpu_input_buffer,
                     .name = "task_mipmapping_gpu_input_buffer",
                 }};
-                ret.set_buffers(daxa::TrackedBuffers{.buffers = std::span{execution_buffers.data(), execution_buffers.size()}});
                 return ret;
             }();
 
@@ -408,9 +408,9 @@ namespace tests
                     .record_debug_information = true,
                     .name = "main task graph",
                 });
-                new_task_graph.use_persistent_image(task_swapchain_image);
-                new_task_graph.use_persistent_buffer(task_mipmapping_gpu_input_buffer);
-                new_task_graph.use_persistent_image(task_render_image);
+                new_task_graph.register_image(task_swapchain_image);
+                new_task_graph.register_buffer(task_mipmapping_gpu_input_buffer);
+                new_task_graph.register_image(task_render_image);
 
                 using namespace daxa;
 

@@ -221,7 +221,7 @@ namespace tests
                     std::cout << "blas_scratch_buffer_offset > blas_scratch_buffer_size" << std::endl;
                     abort();
                 }
-                blas_build_info.scratch_data = device.device_address(blas_scratch_buffer.get_state().buffers[0]).value() + blas_scratch_buffer_offset;
+                blas_build_info.scratch_data = device.device_address(blas_scratch_buffer.id()).value() + blas_scratch_buffer_offset;
                 blas_scratch_buffer_offset += scratch_alignment_size;
 
                 daxa_u64 build_aligment_size = get_aligned(build_size_info.acceleration_structure_size, ACCELERATION_STRUCTURE_BUILD_OFFSET_ALIGMENT);
@@ -290,7 +290,7 @@ namespace tests
                     std::cout << "blas_scratch_buffer_offset > blas_scratch_buffer_size" << std::endl;
                     abort();
                 }
-                proc_blas_build_info.scratch_data = device.device_address(blas_scratch_buffer.get_state().buffers[0]).value() + blas_scratch_buffer_offset;
+                proc_blas_build_info.scratch_data = device.device_address(blas_scratch_buffer.id()).value() + blas_scratch_buffer_offset;
                 blas_scratch_buffer_offset += scratch_alignment_size;
 
                 

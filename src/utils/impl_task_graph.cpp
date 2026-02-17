@@ -244,7 +244,7 @@ namespace daxa
             DAXA_DBG_ASSERT_TRUE_M(
                 impl.external_idx_to_resource_table.contains(id.index),
                 std::format("Detected invalid access of external resource id ({}) in task graph \"{}\"; "
-                            "please make sure to declare external resource use to each task graph that uses this buffer with the function use_persistent_buffer!",
+                            "please make sure to declare external resource use to each task graph that uses this buffer with the function register_buffer!",
                             id.index, impl.info.name));
             TaskResourceIdT translated_id = id;
             translated_id.task_graph_index = impl.unique_index;
@@ -516,20 +516,9 @@ namespace daxa
 
     ImplExternalResource::ImplExternalResource(TaskBufferInfo a_info)
     {
-        this->name = std::move(a_info.name);
+        this->name = a_info.name;
         kind = TaskResourceKind::BUFFER;
-        DAXA_DBG_ASSERT_TRUE_M(a_info.initial_buffers.buffers.size() <= 1, "ERROR: External resources support exactly one actual resource!");
-        this->id.buffer = a_info.initial_buffers.buffers.size() > 0 ? a_info.initial_buffers.buffers[0] : BufferId{};
-        this->unique_index = exec_unique_resource_next_index++;
-    }
-
-    ImplExternalResource::ImplExternalResource(Device & device, BufferInfo const & a_info)
-    {
-        this->name = std::string(a_info.name.c_str());
-        this->kind = TaskResourceKind::BUFFER;
-        this->id.buffer = device.create_buffer(a_info);
-        this->owns_resource = true;
-        this->device = device;
+        this->id.buffer = a_info.buffer;
         this->unique_index = exec_unique_resource_next_index++;
     }
 
@@ -537,8 +526,7 @@ namespace daxa
     {
         this->name = std::move(a_info.name);
         this->kind = TaskResourceKind::BLAS;
-        DAXA_DBG_ASSERT_TRUE_M(a_info.initial_blas.blas.size() <= 1, "ERROR: External resources support exactly one actual resource!");
-        this->id.blas = a_info.initial_blas.blas.size() > 0 ? a_info.initial_blas.blas[0] : BlasId{};
+        this->id.blas = a_info.blas;
         this->unique_index = exec_unique_resource_next_index++;
     }
 
@@ -546,8 +534,7 @@ namespace daxa
     {
         this->name = std::move(a_info.name);
         this->kind = TaskResourceKind::TLAS;
-        DAXA_DBG_ASSERT_TRUE_M(a_info.initial_tlas.tlas.size() <= 1, "ERROR: External resources support exactly one actual resource!");
-        this->id.tlas = a_info.initial_tlas.tlas.size() > 0 ? a_info.initial_tlas.tlas[0] : TlasId{};
+        this->id.tlas = a_info.tlas;
         this->unique_index = exec_unique_resource_next_index++;
     }
 
@@ -555,9 +542,9 @@ namespace daxa
     {
         this->name = std::move(a_info.name);
         this->kind = TaskResourceKind::IMAGE;
-        DAXA_DBG_ASSERT_TRUE_M(a_info.initial_images.images.size() <= 1, "ERROR: External resources support exactly one actual resource!");
-        this->id.image = a_info.initial_images.images.size() > 0 ? a_info.initial_images.images[0] : ImageId{};
-        this->is_swapchain_image = a_info.swapchain_image;
+        this->id.image = a_info.image;
+        this->is_swapchain_image = a_info.is_swapchain_image;
+        this->pre_graph_is_general_layout = a_info.is_general_layout;
         this->unique_index = exec_unique_resource_next_index++;
     }
 
@@ -568,10 +555,6 @@ namespace daxa
     void ImplExternalResource::zero_ref_callback(ImplHandle const * handle)
     {
         auto * self = rc_cast<ImplExternalResource *>(handle);
-        if (self->kind == TaskResourceKind::BUFFER && self->owns_resource)
-        {
-            self->device->destroy_buffer(self->id.buffer);
-        }
         delete self;
     }
 
@@ -582,11 +565,6 @@ namespace daxa
     TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
     {
         this->object = new ImplExternalResource(info);
-    }
-
-    TaskBuffer::TaskBuffer(daxa::Device & device, BufferInfo const & info)
-    {
-        this->object = new ImplExternalResource(device, info);
     }
 
     auto TaskBuffer::view() const -> TaskBufferView
@@ -604,37 +582,22 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskBufferInfo{
-            .initial_buffers = TrackedBuffers{
-                .buffers = std::span{&impl.id.buffer, impl.id.buffer.is_empty() ? 0ull : 1ull},
-                .latest_access = {},
-            },
+            .buffer = impl.id.buffer,
             .name = std::string(impl.name),
         };
     }
 
-    auto TaskBuffer::get_state() const -> TrackedBuffers
+    auto TaskBuffer::id() const -> BufferId
     {
         auto const & impl = *r_cast<ImplExternalResource const *>(this->object);
-        return TrackedBuffers{
-            .buffers = {&impl.id.buffer, impl.id.buffer.is_empty() ? 0ull : 1ull},
-            .latest_access = {},
-        };
+        return impl.id.buffer;
     }
 
-    auto TaskBuffer::is_owning() const -> bool
-    {
-        auto const & impl = *r_cast<ImplExternalResource const *>(this->object);
-        return impl.owns_resource;
-    }
-
-    void TaskBuffer::set_buffers(TrackedBuffers const & buffers)
+    void TaskBuffer::set_buffer(BufferId buffer)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
-        DAXA_DBG_ASSERT_TRUE_M(buffers.buffers.size() == 1, "ERROR: External resources support exactly one actual resource!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not set actual resource when task resource is owning!");
-
-        impl.id.buffer = buffers.buffers[0];
+        impl.id.buffer = buffer;
         impl.pre_graph_queue_bits = {};
     }
 
@@ -642,9 +605,6 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
-
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl_other.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
 
         std::swap(impl.id.buffer, impl_other.id.buffer);
         std::swap(impl.pre_graph_queue_bits, impl_other.pre_graph_queue_bits);
@@ -686,31 +646,22 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskBlasInfo{
-            .initial_blas = TrackedBlas{
-                .blas = std::span{&impl.id.blas, impl.id.blas.is_empty() ? 0ull : 1ull},
-                .latest_access = {},
-            },
+            .blas = impl.id.blas,
             .name = std::string(impl.name),
         };
     }
 
-    auto TaskBlas::get_state() const -> TrackedBlas
+    auto TaskBlas::id() const -> BlasId
     {
-        auto const & impl = *r_cast<ImplExternalResource const *>(this->object);
-        return TrackedBlas{
-            .blas = {&impl.id.blas, impl.id.blas.is_empty() ? 0ull : 1ull},
-            .latest_access = {},
-        };
+        auto & impl = *r_cast<ImplExternalResource *>(this->object);
+        return impl.id.blas;
     }
 
-    void TaskBlas::set_blas(TrackedBlas const & other_tracked)
+    void TaskBlas::set_blas(BlasId blas)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
-        DAXA_DBG_ASSERT_TRUE_M(other_tracked.blas.size() == 1, "ERROR: External resources support exactly one actual resource!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not set actual resource when task resource is owning!");
-
-        impl.id.blas = other_tracked.blas[0];
+        impl.id.blas = blas;
         impl.pre_graph_queue_bits = {};
     }
 
@@ -718,9 +669,6 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
-
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl_other.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
 
         std::swap(impl.id.blas, impl_other.id.blas);
         std::swap(impl.pre_graph_queue_bits, impl_other.pre_graph_queue_bits);
@@ -762,31 +710,22 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskTlasInfo{
-            .initial_tlas = TrackedTlas{
-                .tlas = std::span{&impl.id.tlas, impl.id.tlas.is_empty() ? 0ull : 1ull},
-                .latest_access = {},
-            },
+            .tlas = impl.id.tlas,
             .name = std::string(impl.name),
         };
     }
 
-    auto TaskTlas::get_state() const -> TrackedTlas
+    auto TaskTlas::id() const -> TlasId
     {
         auto const & impl = *r_cast<ImplExternalResource const *>(this->object);
-        return TrackedTlas{
-            .tlas = {&impl.id.tlas, impl.id.tlas.is_empty() ? 0ull : 1ull},
-            .latest_access = {},
-        };
+        return impl.id.tlas;
     }
 
-    void TaskTlas::set_tlas(TrackedTlas const & other_tracked)
+    void TaskTlas::set_tlas(TlasId tlas)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
-        DAXA_DBG_ASSERT_TRUE_M(other_tracked.tlas.size() == 1, "ERROR: External resources support exactly one actual resource!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not set actual resource when task resource is owning!");
-
-        impl.id.tlas = other_tracked.tlas[0];
+        impl.id.tlas = tlas;
         impl.pre_graph_queue_bits = {};
     }
 
@@ -794,9 +733,6 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
-
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl_other.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
 
         std::swap(impl.id.tlas, impl_other.id.tlas);
         std::swap(impl.pre_graph_queue_bits, impl_other.pre_graph_queue_bits);
@@ -838,34 +774,26 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskImageInfo{
-            .initial_images = TrackedImages{
-                .images = std::span{&impl.id.image, impl.id.image.is_empty() ? 0ull : 1ull},
-                .latest_slice_states = {},
-            },
-            .name = std::string(impl.name),
+            .image = impl.id.image,
+            .name = impl.name,
         };
     }
 
-    auto TaskImage::get_state() const -> TrackedImages
+    auto TaskImage::id() const -> ImageId
     {
-        auto const & impl = *r_cast<ImplExternalResource const *>(this->object);
-        return TrackedImages{
-            .images = {&impl.id.image, impl.id.image.is_empty() ? 0ull : 1ull},
-            .latest_slice_states = {},
-        };
+        auto & impl = *r_cast<ImplExternalResource *>(this->object);
+        return impl.id.image;
     }
 
-    void TaskImage::set_images(TrackedImages const & images)
+    void TaskImage::set_image(ImageId image, bool is_general_layout)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
-        DAXA_DBG_ASSERT_TRUE_M(images.images.size() == 1, "ERROR: External resources support exactly one actual resource!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not set actual resource when task resource is owning!");
-
-        impl.id.image = images.images[0];
+        impl.id.image = image;
         impl.pre_graph_queue_bits = {};
         impl.pre_graph_is_general_layout = false;
         impl.was_presented = false;
+        impl.pre_graph_is_general_layout = is_general_layout;
     }
 
     void TaskImage::swap_images(TaskImage & other)
@@ -873,12 +801,11 @@ namespace daxa
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
 
-        DAXA_DBG_ASSERT_TRUE_M(!impl.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
-        DAXA_DBG_ASSERT_TRUE_M(!impl_other.owns_resource, "ERROR: Can not swap actual resource when task resource is owning!");
-
         std::swap(impl.id.image, impl_other.id.image);
         std::swap(impl.pre_graph_queue_bits, impl_other.pre_graph_queue_bits);
         std::swap(impl.pre_graph_is_general_layout, impl_other.pre_graph_is_general_layout);
+        std::swap(impl.is_swapchain_image, impl_other.is_swapchain_image);
+        std::swap(impl.was_presented, impl_other.was_presented);
     }
 
     auto TaskImage::inc_refcnt(ImplHandle const * object) -> u64
@@ -929,25 +856,31 @@ namespace daxa
     /// ==== TASK GRAPH INTERFACE IMPLEMENTATION ====
     /// =============================================
 
-    void TaskGraph::use_persistent_buffer(TaskBuffer const & buffer)
+    auto TaskGraph::register_buffer(TaskBuffer const & buffer) -> TaskBufferView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         register_external_buffer_helper(impl, TaskResourceKind::BUFFER, buffer.get());
+
+        return { static_cast<u32>(impl.resources.size() - 1u), impl.unique_index };
     }
 
-    void TaskGraph::use_persistent_blas(TaskBlas const & blas)
+    auto TaskGraph::register_blas(TaskBlas const & blas) -> TaskBlasView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         register_external_buffer_helper(impl, TaskResourceKind::BLAS, blas.get());
+
+        return { static_cast<u32>(impl.resources.size() - 1u), impl.unique_index };
     }
 
-    void TaskGraph::use_persistent_tlas(TaskTlas const & tlas)
+    auto TaskGraph::register_tlas(TaskTlas const & tlas) -> TaskTlasView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         register_external_buffer_helper(impl, TaskResourceKind::TLAS, tlas.get());
+
+        return { static_cast<u32>(impl.resources.size() - 1u), impl.unique_index };
     }
 
-    void TaskGraph::use_persistent_image(TaskImage const & timg)
+    auto TaskGraph::register_image(TaskImage const & timg) -> TaskImageView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
 
@@ -1000,6 +933,8 @@ namespace daxa
         impl.name_to_resource_table[name] = std::pair{&impl.resources.back(), index};
 
         impl.external_idx_to_resource_table[global_unique_external_index] = std::pair{&impl.resources.back(), index};
+
+        return { static_cast<u32>(impl.resources.size() - 1u), impl.unique_index };
     }
 
     auto create_buffer_helper(ImplTaskGraph & impl, TaskResourceKind kind, usize size, std::string_view name)

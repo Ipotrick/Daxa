@@ -250,9 +250,6 @@ namespace daxa
         bool pre_graph_is_general_layout = false;
         bool was_presented = false;
         bool is_swapchain_image = false;
-        bool owns_resource = false;
-        std::optional<Device> device = {};
-
         u32 unique_index = std::numeric_limits<u32>::max();
 
         static void zero_ref_callback(ImplHandle const * handle);

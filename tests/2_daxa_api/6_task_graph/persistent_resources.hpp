@@ -43,8 +43,8 @@ namespace tests
             .name = "task_graph_b",
         });
 
-        task_graph_A.use_persistent_buffer(persistent_task_buffer);
-        task_graph_B.use_persistent_buffer(persistent_task_buffer);
+        task_graph_A.register_buffer(persistent_task_buffer);
+        task_graph_B.register_buffer(persistent_task_buffer);
         task_graph_A.add_task(daxa::InlineTask::Raster("write persistent buffer")
             .raster_shader.writes(persistent_task_buffer)
             .executes([](daxa::TaskInterface){}));
@@ -112,7 +112,7 @@ namespace tests
             .name = "task_graph_a",
         });
 
-        task_graph_A.use_persistent_image(persistent_task_image);
+        task_graph_A.register_image(persistent_task_image);
         task_graph_A.add_task(daxa::InlineTask::Raster("write persistent image")
             .raster_shader.writes(persistent_task_image)
             .executes([](daxa::TaskInterface){}));
@@ -129,7 +129,7 @@ namespace tests
             .record_debug_information = true,
             .name = "task_graph_b",
         });
-        task_graph_B.use_persistent_image(persistent_task_image);
+        task_graph_B.register_image(persistent_task_image);
         
         task_graph_B.add_task(daxa::InlineTask::Raster("sample persistent image")
             .raster_shader.reads(persistent_task_image)

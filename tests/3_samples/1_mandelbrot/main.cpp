@@ -162,8 +162,8 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskGraph & new_task_graph)
     {
-        new_task_graph.use_persistent_image(task_render_image);
-        new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
+        new_task_graph.register_image(task_render_image);
+        new_task_graph.register_buffer(task_gpu_input_buffer);
 
         imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskAccessConsts::FRAGMENT_SHADER::READ, task_render_image));
 

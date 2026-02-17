@@ -114,12 +114,12 @@ namespace tests
             .initial_buffers = {.buffers = {&src_buffer, 1}},
             .name = "align_test_src",
         }};
-        task_graph.use_persistent_buffer(src);
+        task_graph.register_buffer(src);
         auto dst = daxa::TaskBuffer{{
             .initial_buffers = {.buffers = {&dst_buffer, 1}},
             .name = "align_test_dst",
         }};
-        task_graph.use_persistent_buffer(dst);
+        task_graph.register_buffer(dst);
 
         struct TestTask : TestShaderTaskHead::Task
         {

@@ -449,8 +449,8 @@ namespace tests
                 .name = "loop",
             });
 
-            loop_task_graph.use_persistent_image(task_swapchain_image);
-            loop_task_graph.use_persistent_image(trender_image);
+            loop_task_graph.register_image(task_swapchain_image);
+            loop_task_graph.register_image(trender_image);
 
             // And a task to draw to the screen
             loop_task_graph.add_task(DrawTask{

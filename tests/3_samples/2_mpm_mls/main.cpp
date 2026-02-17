@@ -550,8 +550,8 @@ struct App : BaseApp<App>
     }
 
     void particle_set_position() {
-        upload_task_graph.use_persistent_buffer(task_particles_buffer);
-        upload_task_graph.use_persistent_buffer(task_aabb_buffer);
+        upload_task_graph.register_buffer(task_particles_buffer);
+        upload_task_graph.register_buffer(task_aabb_buffer);
 
         upload_task_graph.add_task({
             .attachments = {
@@ -691,12 +691,12 @@ struct App : BaseApp<App>
             .name = "input_task_graph",
         });
 
-        input_task_graph.use_persistent_image(task_render_image);
-        input_task_graph.use_persistent_buffer(task_gpu_input_buffer);
-        input_task_graph.use_persistent_buffer(task_gpu_status_buffer);
-        input_task_graph.use_persistent_buffer(task_particles_buffer);
-        input_task_graph.use_persistent_buffer(task_grid_buffer);
-        input_task_graph.use_persistent_buffer(task_camera_buffer);
+        input_task_graph.register_image(task_render_image);
+        input_task_graph.register_buffer(task_gpu_input_buffer);
+        input_task_graph.register_buffer(task_gpu_status_buffer);
+        input_task_graph.register_buffer(task_particles_buffer);
+        input_task_graph.register_buffer(task_grid_buffer);
+        input_task_graph.register_buffer(task_camera_buffer);
         
         reset_camera(cam);
 
@@ -761,13 +761,13 @@ struct App : BaseApp<App>
             .name = "sim_task_graph",
         });
 
-        sim_task_graph.use_persistent_image(task_render_image);
-        sim_task_graph.use_persistent_buffer(task_gpu_input_buffer);
-        sim_task_graph.use_persistent_buffer(task_gpu_status_buffer);
-        sim_task_graph.use_persistent_buffer(task_particles_buffer);
-        sim_task_graph.use_persistent_buffer(task_grid_buffer);
-        sim_task_graph.use_persistent_buffer(task_aabb_buffer);
-        sim_task_graph.use_persistent_buffer(task_camera_buffer);
+        sim_task_graph.register_image(task_render_image);
+        sim_task_graph.register_buffer(task_gpu_input_buffer);
+        sim_task_graph.register_buffer(task_gpu_status_buffer);
+        sim_task_graph.register_buffer(task_particles_buffer);
+        sim_task_graph.register_buffer(task_grid_buffer);
+        sim_task_graph.register_buffer(task_aabb_buffer);
+        sim_task_graph.register_buffer(task_camera_buffer);
 
         sim_task_graph.add_task({
             .attachments = {
@@ -1031,15 +1031,15 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskGraph & new_task_graph)
     {
-        new_task_graph.use_persistent_image(task_render_image);
-        new_task_graph.use_persistent_buffer(task_gpu_input_buffer);
-        new_task_graph.use_persistent_buffer(task_gpu_status_buffer);
-        new_task_graph.use_persistent_buffer(task_particles_buffer);
-        new_task_graph.use_persistent_buffer(task_grid_buffer);
-        new_task_graph.use_persistent_buffer(task_aabb_buffer);
-        new_task_graph.use_persistent_buffer(task_camera_buffer);
-        new_task_graph.use_persistent_blas(task_blas);
-        new_task_graph.use_persistent_tlas(task_tlas);
+        new_task_graph.register_image(task_render_image);
+        new_task_graph.register_buffer(task_gpu_input_buffer);
+        new_task_graph.register_buffer(task_gpu_status_buffer);
+        new_task_graph.register_buffer(task_particles_buffer);
+        new_task_graph.register_buffer(task_grid_buffer);
+        new_task_graph.register_buffer(task_aabb_buffer);
+        new_task_graph.register_buffer(task_camera_buffer);
+        new_task_graph.register_blas(task_blas);
+        new_task_graph.register_tlas(task_tlas);
 
         imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskImageAccess::FRAGMENT_SHADER_SAMPLED, task_render_image));
         record_accel_struct_tasks(new_task_graph);

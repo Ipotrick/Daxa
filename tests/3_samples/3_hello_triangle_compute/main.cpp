@@ -85,7 +85,7 @@ struct App : BaseApp<App>
 
     void record_tasks(daxa::TaskGraph & new_task_graph)
     {
-        new_task_graph.use_persistent_image(task_render_image);
+        new_task_graph.register_image(task_render_image);
 
         new_task_graph.add_task(daxa::InlineTask::Compute(APPNAME_PREFIX("Draw (Compute)"))
             .writes(task_render_image)
