@@ -493,22 +493,6 @@ namespace daxa
         return attachment_infos[index];
     }
 
-    auto TaskGPUResourceView::is_empty() const -> bool
-    {
-        return index == 0 && task_graph_index == 0;
-    }
-
-    auto TaskGPUResourceView::is_external() const -> bool
-    {
-        return task_graph_index == std::numeric_limits<u32>::max() && !is_null();
-    }
-
-    auto TaskGPUResourceView::is_null() const -> bool
-    {
-        return task_graph_index == std::numeric_limits<u32>::max() &&
-               index == std::numeric_limits<u32>::max();
-    }
-
     /// ====================================================
     /// ==== EXTERNAL RESOURCE INTERFACE IMPLEMENTATION ====
     /// ====================================================
@@ -569,7 +553,7 @@ namespace daxa
     auto TaskBuffer::view() const -> TaskBufferView
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
-        return TaskBufferView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
+        return TaskBufferView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
     TaskBuffer::operator TaskBufferView() const
@@ -633,7 +617,7 @@ namespace daxa
     auto TaskBlas::view() const -> TaskBlasView
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
-        return TaskBlasView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
+        return TaskBlasView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
     TaskBlas::operator TaskBlasView() const
@@ -697,7 +681,7 @@ namespace daxa
     auto TaskTlas::view() const -> TaskTlasView
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
-        return TaskTlasView{{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index}};
+        return TaskTlasView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
     TaskTlas::operator TaskTlasView() const
@@ -959,13 +943,13 @@ namespace daxa
     auto TaskGraph::create_transient_buffer(TaskTransientBufferInfo info) -> TaskBufferView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        return TaskBufferView{{.task_graph_index = impl.unique_index, .index = create_buffer_helper(impl, TaskResourceKind::BUFFER, info.size, info.name)}};
+        return TaskBufferView{.task_graph_index = impl.unique_index, .index = create_buffer_helper(impl, TaskResourceKind::BUFFER, info.size, info.name)};
     }
 
     auto TaskGraph::create_transient_tlas(TaskTransientTlasInfo info) -> TaskTlasView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        return TaskTlasView{{.task_graph_index = impl.unique_index, .index = create_buffer_helper(impl, TaskResourceKind::TLAS, info.size, info.name)}};
+        return TaskTlasView{.task_graph_index = impl.unique_index, .index = create_buffer_helper(impl, TaskResourceKind::TLAS, info.size, info.name)};
     }
 
     auto TaskGraph::create_transient_image(TaskTransientImageInfo info) -> TaskImageView
@@ -1289,7 +1273,7 @@ namespace daxa
                 break;
             case TaskAttachmentType::BUFFER:
             {
-                if (attachment_info.value.buffer.shader_array_size == 0)
+                if (attachment_info.value.buffer.shader_access_type == TaskBufferShaderAccessType::NONE)
                 {
                     task.attachment_shader_blob_sections[attach_i].buffer_address = {};
                     break;
@@ -1299,7 +1283,7 @@ namespace daxa
                 {
                     resource = &impl.resources[attachment_info.value.buffer.translated_view.index];
                 }
-                if (attachment_info.value.buffer.shader_as_address)
+                if (attachment_info.value.buffer.shader_access_type == TaskBufferShaderAccessType::ADDRESS)
                 {
                     current_offset = align_up(current_offset, sizeof(DeviceAddress));
                     additional_size = sizeof(DeviceAddress);
@@ -1330,7 +1314,7 @@ namespace daxa
             break;
             case TaskAttachmentType::TLAS:
             {
-                if (attachment_info.value.tlas.shader_array_size == 0)
+                if (attachment_info.value.tlas.shader_access_type == TaskBufferShaderAccessType::NONE)
                 {
                     task.attachment_shader_blob_sections[attach_i].tlas_id = {};
                     break;
@@ -1340,7 +1324,7 @@ namespace daxa
                 {
                     resource = &impl.resources[attachment_info.value.tlas.translated_view.index];
                 }
-                if (attachment_info.value.tlas.shader_as_address)
+                if (attachment_info.value.tlas.shader_access_type == TaskBufferShaderAccessType::ADDRESS)
                 {
                     current_offset = align_up(current_offset, sizeof(DeviceAddress));
                     additional_size = sizeof(DeviceAddress);
@@ -1544,11 +1528,11 @@ namespace daxa
             break;
         case TaskAttachmentType::BUFFER:
         {
-            if (attachment_info.value.buffer.shader_array_size == 0)
+            if (attachment_info.value.buffer.shader_access_type == TaskBufferShaderAccessType::NONE)
             {
                 break;
             }
-            if (attachment_info.value.buffer.shader_as_address)
+            if (attachment_info.value.buffer.shader_access_type == TaskBufferShaderAccessType::ADDRESS)
             {
                 *asb_section.buffer_address = impl.info.device.device_address(resource.id.buffer).value();
             }
@@ -1560,11 +1544,11 @@ namespace daxa
         break;
         case TaskAttachmentType::TLAS:
         {
-            if (attachment_info.value.tlas.shader_array_size == 0)
+            if (attachment_info.value.tlas.shader_access_type == TaskBufferShaderAccessType::NONE)
             {
                 break;
             }
-            if (attachment_info.value.tlas.shader_as_address)
+            if (attachment_info.value.tlas.shader_access_type == TaskBufferShaderAccessType::ADDRESS)
             {
                 *asb_section.tlas_address = impl.info.device.device_address(resource.id.tlas).value();
             }
@@ -1889,7 +1873,7 @@ namespace daxa
                                 std::format(
                                     "ERROR: Attachment \"{}\" of task \"{}\" is assigned a image view for resource \"{}\" exceeding the images mips/layers!\n"
                                     "\"{}\" mip levels: {}, array layers: {}. Attachment view mips: [{},{}], layers: [{},{}].",
-                                    attachment.name(), task.name, resource.name,
+                                    attachment.value.common.name, task.name, resource.name,
                                     resource.name, resource.info.image.mip_level_count, resource.info.image.array_layer_count,
                                     attachment.value.image.translated_view.slice.base_mip_level, attachment.value.image.translated_view.slice.base_mip_level + attachment.value.image.translated_view.slice.level_count - 1,
                                     attachment.value.image.translated_view.slice.base_array_layer, attachment.value.image.translated_view.slice.base_array_layer + attachment.value.image.translated_view.slice.layer_count - 1)

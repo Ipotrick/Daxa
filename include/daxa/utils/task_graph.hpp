@@ -234,8 +234,7 @@ namespace daxa
                 info.task_access = attachment_decl.value.buffer.task_access;
                 DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
-                info.shader_array_size = attachment_decl.value.buffer.shader_array_size;
-                info.shader_as_address = attachment_decl.value.buffer.shader_as_address;
+                info.shader_access_type = attachment_decl.value.buffer.shader_access_type;
                 if (auto * ptr = get_if<TaskBufferView>(&view))
                 {
                     info.view = *ptr;
@@ -254,8 +253,7 @@ namespace daxa
                 info.task_access = attachment_decl.value.tlas.task_access;
                 DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
-                info.shader_array_size = attachment_decl.value.tlas.shader_array_size;
-                info.shader_as_address = attachment_decl.value.tlas.shader_as_address;
+                info.shader_access_type = attachment_decl.value.tlas.shader_access_type;
                 if (auto * ptr = get_if<TaskTlasView>(&view))
                 {
                     info.view = *ptr;

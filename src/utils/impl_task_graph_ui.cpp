@@ -2273,7 +2273,7 @@ namespace daxa
                                         if (ImGui::BeginItemTooltip())
                                         {
                                             TaskAttachmentInfo const & attach_info = col_ui.task->attachments[attachment_index];
-                                            ImGui::Text(std::format("Attachment name: {}", attach_info.name()).c_str());
+                                            ImGui::Text(std::format("Attachment name: {}", attach_info.value.common.name).c_str());
                                             ImGui::EndTooltip();
                                         }
                                         make_cell_darker = false;

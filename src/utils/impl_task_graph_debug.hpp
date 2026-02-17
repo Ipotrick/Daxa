@@ -76,7 +76,7 @@ namespace daxa
 
     void validate_image_task_view(ImplTask const & task, u32 attach_index, TaskImageAttachmentInfo const & attach)
     {
-        bool const type_restriction_upheld = attach.task_access.restriction == TaskImageAttachment::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
+        bool const type_restriction_upheld = attach.task_access.restriction == TaskImageAttachmentInfo::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
         bool const view_filled_or_null = !attach.view.is_empty();
         DAXA_DBG_ASSERT_TRUE_M(
             type_restriction_upheld,
