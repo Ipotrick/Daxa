@@ -294,7 +294,7 @@ namespace daxa
                 info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
                 info.view_type = attachment_decl.value.image.view_type;
                 info.shader_array_size = attachment_decl.value.image.shader_array_size;
-                info.shader_array_type = attachment_decl.value.image.shader_array_type;
+                info.is_mip_array = attachment_decl.value.image.is_mip_array;
                 info.shader_as_index = attachment_decl.value.image.shader_as_index;
                 if (auto * ptr = get_if<TaskImageView>(&view))
                 {

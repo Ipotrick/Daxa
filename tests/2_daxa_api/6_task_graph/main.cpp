@@ -21,7 +21,7 @@ void example_task_callback(daxa::TaskInterface ti)
     }
     // The Buffer Attachment info contents:
     {
-        [[maybe_unused]] daxa::BufferId id = ti.get(AI.buffer0).ids[0];
+        [[maybe_unused]] daxa::BufferId id = ti.get(AI.buffer0).id;
         [[maybe_unused]] char const * name = ti.get(AI.buffer0).name;
         [[maybe_unused]] daxa::TaskAccess access = ti.get(AI.buffer0).task_access;
         [[maybe_unused]] u8 shader_array_size = ti.get(AI.buffer0).shader_array_size;
@@ -35,9 +35,9 @@ void example_task_callback(daxa::TaskInterface ti)
         [[maybe_unused]] daxa::TaskAccess access = ti.get(AI.image0).task_access;
         [[maybe_unused]] daxa::ImageViewType view_type = ti.get(AI.image0).view_type;
         [[maybe_unused]] u8 shader_array_size = ti.get(AI.image0).shader_array_size;
-        [[maybe_unused]] daxa::TaskHeadImageArrayType shader_array_type = ti.get(AI.image0).shader_array_type;
+        [[maybe_unused]] bool is_mip_array = ti.get(AI.image0).is_mip_array;
         [[maybe_unused]] daxa::TaskImageView view = ti.get(AI.image0).view;
-        [[maybe_unused]] std::span<daxa::ImageId const> ids = ti.get(AI.image0).ids;
+        [[maybe_unused]] daxa::ImageId id = ti.get(AI.image0).id;
         [[maybe_unused]] std::span<daxa::ImageViewId const> view_ids = ti.get(AI.image0).view_ids;
     }
     // The interface has multiple convenience functions for easier access to the underlying resources attributes:

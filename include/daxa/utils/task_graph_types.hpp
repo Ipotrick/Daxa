@@ -367,12 +367,6 @@ namespace daxa
         ImageMipArraySlice slice = {};
     };
 
-    enum struct TaskHeadImageArrayType : u8
-    {
-        RUNTIME_IMAGES,
-        MIP_LEVELS,
-    };
-
     template <typename T>
     concept TaskBufferIndexOrView = std::is_same_v<T, TaskBufferAttachmentIndex> || std::is_same_v<T, TaskBufferView>;
     template <typename T>
@@ -431,7 +425,7 @@ namespace daxa
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
         bool shader_as_index = {};
-        TaskHeadImageArrayType shader_array_type = {};
+        bool is_mip_array = {};
     };
 
     struct TaskBufferInlineAttachment
@@ -463,7 +457,7 @@ namespace daxa
         TaskAccess access = {};
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
-        TaskHeadImageArrayType shader_array_type = {};
+        bool is_mip_array = {};
         TaskImageView view = {};
     };
 
@@ -561,7 +555,7 @@ namespace daxa
 
         TaskBufferView view = {};
         TaskBufferView translated_view = {};
-        std::span<BufferId const> ids = {};
+        BufferId id = {};
     };
 
     static_assert(std::is_standard_layout_v<TaskBufferAttachmentInfo>);
@@ -578,7 +572,7 @@ namespace daxa
 
         TaskBlasView view = {};
         TaskBlasView translated_view = {};
-        std::span<BlasId const> ids = {};
+        BlasId id = {};
     };
 
     static_assert(std::is_standard_layout_v<TaskBlasAttachmentInfo>);
@@ -595,7 +589,7 @@ namespace daxa
 
         TaskTlasView view = {};
         TaskTlasView translated_view = {};
-        std::span<TlasId const> ids = {};
+        TlasId id = {};
     };
 
     static_assert(std::is_standard_layout_v<TaskTlasAttachmentInfo>);
@@ -610,11 +604,11 @@ namespace daxa
         ImageViewType view_type = ImageViewType::MAX_ENUM;
         u8 shader_array_size = {};
         bool shader_as_index = {};
-        TaskHeadImageArrayType shader_array_type = {};
+        bool is_mip_array = {};
 
         TaskImageView view = {};
         TaskImageView translated_view = {};
-        std::span<ImageId const> ids = {};
+        ImageId id = {};
         std::span<ImageViewId const> view_ids = {};
     };
 
@@ -721,37 +715,37 @@ namespace daxa
         auto get(TaskImageView view) const -> TaskImageAttachmentInfo const &;
         auto get(usize index) const -> TaskAttachmentInfo const &;
 
-        auto info(TaskIndexOrView auto tresource, u32 array_index = 0) const
+        auto info(TaskIndexOrView auto tresource) const
         {
-            return this->device.info(this->get(tresource).ids[array_index]);
+            return this->device.info(this->get(tresource).id);
         }
-        auto image_view_info(TaskImageIndexOrView auto timage, u32 array_index = 0) const -> Optional<ImageViewInfo>
+        auto image_view_info(TaskImageIndexOrView auto timage, u32 mip_index = 0u) const -> Optional<ImageViewInfo>
         {
-            return this->device.image_view_info(this->get(timage).view_ids[array_index]);
+            return this->device.image_view_info(this->get(timage).view_ids[mip_index]);
         }
-        auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) const -> Optional<DeviceAddress>
+        auto device_address(TaskBufferBlasOrTlasIndexOrView auto tresource) const -> Optional<DeviceAddress>
         {
-            return this->device.device_address(this->get(tresource).ids[array_index]);
+            return this->device.device_address(this->get(tresource).id);
         }
-        auto buffer_device_address(TaskBufferBlasOrTlasIndexOrView auto tresource, u32 array_index = 0) const -> Optional<DeviceAddress>
+        auto buffer_device_address(TaskBufferBlasOrTlasIndexOrView auto tresource) const -> Optional<DeviceAddress>
         {
-            return this->device.device_address(this->get(tresource).ids[array_index]);
+            return this->device.device_address(this->get(tresource).id);
         }
-        auto host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) const -> Optional<std::byte *>
+        auto host_address(TaskBufferIndexOrView auto tbuffer) const -> Optional<std::byte *>
         {
-            return this->device.buffer_host_address(this->get(tbuffer).ids[array_index]);
+            return this->device.buffer_host_address(this->get(tbuffer).id);
         }
-        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer, u32 array_index = 0) const -> Optional<std::byte *>
+        auto buffer_host_address(TaskBufferIndexOrView auto tbuffer) const -> Optional<std::byte *>
         {
-            return this->device.buffer_host_address(this->get(tbuffer).ids[array_index]);
+            return this->device.buffer_host_address(this->get(tbuffer).id);
         }
-        auto id(TaskIndexOrView auto tresource, u32 index = 0)
+        auto id(TaskIndexOrView auto tresource)
         {
-            return this->get(tresource).ids[index];
+            return this->get(tresource).id;
         }
-        auto view(TaskImageIndexOrView auto timg, u32 index = 0)
+        auto view(TaskImageIndexOrView auto timg, u32 mip_index = 0u)
         {
-            auto const v = this->get(timg).view_ids[index];
+            auto const v = this->get(timg).view_ids[mip_index];
             DAXA_DBG_ASSERT_TRUE_M(
                 !v.is_empty(),
                 "Failed to return cached image view for image attachment!\n"
@@ -1223,13 +1217,13 @@ namespace daxa
 #define DAXA_TH_IMAGE(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 0)
 
 #define DAXA_TH_IMAGE_ID(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1)
-#define DAXA_TH_IMAGE_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
+#define DAXA_TH_IMAGE_ID_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .is_mip_array = true)
 
 #define DAXA_TH_IMAGE_INDEX(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = 1, .shader_as_index = true)
-#define DAXA_TH_IMAGE_INDEX_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS, .shader_as_index = true)
+#define DAXA_TH_IMAGE_INDEX_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = daxa::ImageViewType::VIEW_TYPE, .shader_array_size = SIZE, .is_mip_array = true, .shader_as_index = true)
 
 #define DAXA_TH_IMAGE_TYPED(TASK_ACCESS, VIEW_TYPE, NAME) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = 1, .shader_as_index = VIEW_TYPE::SHADER_INDEX32)
-#define DAXA_TH_IMAGE_TYPED_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32, .shader_array_type = daxa::TaskHeadImageArrayType::MIP_LEVELS)
+#define DAXA_TH_IMAGE_TYPED_MIP_ARRAY(TASK_ACCESS, VIEW_TYPE, NAME, SIZE) _DAXA_HELPER_TH_IMAGE(NAME, TASK_ACCESS, .view_type = VIEW_TYPE::IMAGE_VIEW_TYPE, .shader_array_size = SIZE, .shader_as_index = VIEW_TYPE::SHADER_INDEX32, .is_mip_array = true)
 
 #define DAXA_TH_STAGE_VAR(STAGE_VAR) daxa::TaskStages stage = {};
 
@@ -1240,38 +1234,6 @@ namespace daxa
 #define DAXA_TH_TLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 0)
 #define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = true)
 #define DAXA_TH_TLAS_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_array_size = 1, .shader_as_address = false)
-
-    template <typename BufFn, typename ImgFn>
-    constexpr void for_each(std::span<TaskAttachmentInfo> attachments, BufFn && buf_fn, ImgFn && img_fn)
-    {
-        for (u32 index = 0; index < attachments.size(); ++index)
-        {
-            switch (attachments[index].type)
-            {
-            case TaskAttachmentType::BUFFER: buf_fn(index, attachments[index].value.buffer); break;
-            case TaskAttachmentType::BLAS: buf_fn(index, attachments[index].value.blas); break;
-            case TaskAttachmentType::TLAS: buf_fn(index, attachments[index].value.tlas); break;
-            case TaskAttachmentType::IMAGE: img_fn(index, attachments[index].value.image); break;
-            default: break;
-            }
-        }
-    }
-
-    template <typename BufFn, typename ImgFn>
-    constexpr void for_each(std::span<TaskAttachmentInfo const> attachments, BufFn && buf_fn, ImgFn && img_fn)
-    {
-        for (u32 index = 0; index < attachments.size(); ++index)
-        {
-            switch (attachments[index].type)
-            {
-            case TaskAttachmentType::BUFFER: buf_fn(index, attachments[index].value.buffer); break;
-            case TaskAttachmentType::BLAS: buf_fn(index, attachments[index].value.blas); break;
-            case TaskAttachmentType::TLAS: buf_fn(index, attachments[index].value.tlas); break;
-            case TaskAttachmentType::IMAGE: img_fn(index, attachments[index].value.image); break;
-            default: break;
-            }
-        }
-    }
 
     inline auto inl_attachment(TaskAccess access, TaskBufferView view) -> TaskAttachmentInfo
     {

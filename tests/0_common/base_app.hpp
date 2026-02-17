@@ -134,7 +134,7 @@ struct BaseApp : AppWindow<T>
             .color_attachment.reads_writes(task_swapchain_image)
             .executes([=](daxa::TaskInterface ti)
             {
-                imgui_renderer.record_commands({ImGui::GetDrawData(), ti.recorder, ti.get(task_swapchain_image).ids[0], AppWindow<T>::size_x, AppWindow<T>::size_y});
+                imgui_renderer.record_commands({ImGui::GetDrawData(), ti.recorder, ti.get(task_swapchain_image).id, AppWindow<T>::size_x, AppWindow<T>::size_y});
             });
 
         for (int i = 0; i < imgui_task_attachments.size(); ++i)
