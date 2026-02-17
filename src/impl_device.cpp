@@ -346,7 +346,7 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
     ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
         .type = static_cast<ImageViewType>(vk_image_view_type),
         .format = std::bit_cast<Format>(ret.info.format),
-        .image = {id},
+        .image = std::bit_cast<ImageId>(id),
         .slice = ImageMipArraySlice{
             .base_mip_level = 0,
             .level_count = info->mip_level_count,
@@ -2542,7 +2542,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
     ret.view_slot.info = std::bit_cast<daxa_ImageViewInfo>(ImageViewInfo{
         .type = static_cast<ImageViewType>(image_info.dimensions - 1),
         .format = image_info.format,
-        .image = {id},
+        .image = std::bit_cast<ImageId>(id),
         .slice = ImageMipArraySlice{
             .base_mip_level = 0,
             .level_count = image_info.mip_level_count,
@@ -2607,7 +2607,7 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
         write_descriptor_set_image(this->vk_device, this->gpu_sro_table.vk_descriptor_set, ret.view_slot.vk_image_view, usage, id.index);
     }
 
-    *out = ImageId{id};
+    *out = std::bit_cast<ImageId>(id);
 
     return result;
 }

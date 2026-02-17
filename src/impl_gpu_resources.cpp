@@ -7,19 +7,34 @@
 
 namespace daxa
 {
-    auto GPUResourceId::is_empty() const -> bool
-    {
-        return version == 0;
-    }
-
-    auto ImageId::default_view() const -> ImageViewId
-    {
-        return ImageViewId{{.index = index, .version = version}};
-    }
-
-    auto to_string(GPUResourceId const & id) -> std::string
+    auto to_string(GPUResourceId id) -> std::string
     {
         return std::format("index: {}, version: {}", static_cast<u32>(id.index), static_cast<u32>(id.version));
+    }
+
+    auto to_string(ImageId id) -> std::string
+    {
+        return to_string(std::bit_cast<GPUResourceId>(id));
+    }
+
+    auto to_string(ImageViewId id) -> std::string
+    {
+        return to_string(std::bit_cast<GPUResourceId>(id));
+    }
+
+    auto to_string(SamplerId id) -> std::string
+    {
+        return to_string(std::bit_cast<GPUResourceId>(id));
+    }
+
+    auto to_string(BlasId id) -> std::string
+    {
+        return to_string(std::bit_cast<GPUResourceId>(id));
+    }
+
+    auto to_string(TlasId id) -> std::string
+    {
+        return to_string(std::bit_cast<GPUResourceId>(id));
     }
 
     auto to_string(ImageViewType const & type) -> std::string_view
