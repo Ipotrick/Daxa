@@ -222,95 +222,29 @@ namespace daxa
         }
 
         template <typename TaskHeadAttachmentDeclT>
-        auto convert_to_task_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStages default_stage, std::string_view task_name) -> TaskAttachmentInfo
+        auto complete_head_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStages default_stage, std::string_view task_name) -> TaskAttachmentInfo
         {
-            TaskAttachmentInfo ret = {};
-            switch (attachment_decl.type)
+            TaskAttachmentInfo ret = attachment_decl;
+            DAXA_DBG_ASSERT_TRUE_M(((ret.value.common.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, ret.value.common.name, ret.value.common.task_access));
+            ret.value.common.task_access.stage = replace_joker_stage(ret.value.common.task_access.stage, default_stage);
+
+            if (auto * buffer_ptr = get_if<TaskBufferView>(&view))
             {
-            case TaskAttachmentType::BUFFER:
+                ret.value.buffer.view = *buffer_ptr;
+            }
+            else if (auto * blas_ptr = get_if<TaskBlasView>(&view))
             {
-                TaskBufferAttachmentInfo info;
-                info.name = attachment_decl.value.buffer.name;
-                info.task_access = attachment_decl.value.buffer.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
-                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
-                info.shader_access_type = attachment_decl.value.buffer.shader_access_type;
-                if (auto * ptr = get_if<TaskBufferView>(&view))
-                {
-                    info.view = *ptr;
-                }
-                else
-                {
-                    info.view = {};
-                }
-                ret = info;
+                ret.value.blas.view = *blas_ptr;
             }
-            break;
-            case TaskAttachmentType::TLAS:
+            else if (auto * tlas_ptr = get_if<TaskTlasView>(&view))
             {
-                TaskTlasAttachmentInfo info;
-                info.name = attachment_decl.value.tlas.name;
-                info.task_access = attachment_decl.value.tlas.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
-                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
-                info.shader_access_type = attachment_decl.value.tlas.shader_access_type;
-                if (auto * ptr = get_if<TaskTlasView>(&view))
-                {
-                    info.view = *ptr;
-                }
-                else
-                {
-                    info.view = {};
-                }
-                ret = info;
+                ret.value.tlas.view = *tlas_ptr;
             }
-            break;
-            case TaskAttachmentType::BLAS:
+            else if (auto * image_ptr = get_if<TaskImageView>(&view))
             {
-                TaskBlasAttachmentInfo info;
-                info.name = attachment_decl.value.blas.name;
-                info.task_access = attachment_decl.value.blas.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
-                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
-                if (auto * ptr = get_if<TaskBlasView>(&view))
-                {
-                    info.view = *ptr;
-                }
-                else
-                {
-                    info.view = {};
-                }
-                ret = info;
+                ret.value.image.view = *image_ptr;
             }
-            break;
-            case TaskAttachmentType::IMAGE:
-            {
-                TaskImageAttachmentInfo info;
-                info.name = attachment_decl.value.image.name;
-                info.task_access = attachment_decl.value.image.task_access;
-                DAXA_DBG_ASSERT_TRUE_M(((info.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, info.name, info.task_access));
-                info.task_access.stage = replace_joker_stage(info.task_access.stage, default_stage);
-                info.view_type = attachment_decl.value.image.view_type;
-                info.shader_array_size = attachment_decl.value.image.shader_array_size;
-                info.is_mip_array = attachment_decl.value.image.is_mip_array;
-                info.shader_as_index = attachment_decl.value.image.shader_as_index;
-                if (auto * ptr = get_if<TaskImageView>(&view))
-                {
-                    info.view = *ptr;
-                }
-                else
-                {
-                    info.view = {};
-                }
-                ret = info;
-            }
-            break;
-            default:
-            {
-                DAXA_DBG_ASSERT_TRUE_M(false, "Declared attachment count does not match actually declared attachment count");
-            }
-            break;
-            }
+
             return ret;
         }
     } // namespace detail
@@ -711,7 +645,7 @@ namespace daxa
             TaskStages default_stage = value._internal._default_stage != TaskStages::NONE ? value._internal._default_stage : head_default_stage;
             for (u32 i = 0; i < NewTaskHeadInfo::ATTACHMENT_COUNT; ++i)
             {
-                ret.value._internal._attachments.push_back(detail::convert_to_task_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, default_stage, value._internal._name));
+                ret.value._internal._attachments.push_back(detail::complete_head_attachment_info(NewTaskHeadInfo::AT._internal.value[i], {}, default_stage, value._internal._name));
             }
             ret.value._internal._callback = this->value._internal._callback;
             ret.value._internal._name = this->value._internal._name;
@@ -950,7 +884,7 @@ namespace daxa
             auto view_array = task.views.convert_to_array();
             for (u32 i = 0; i < NoRefTTask::Info::ATTACHMENT_COUNT; ++i)
             {
-                converted_attachments[i] = detail::convert_to_task_attachment_info(ATTACHMENTS[i], view_array[i], default_stage, TTask::Info::NAME);
+                converted_attachments[i] = detail::complete_head_attachment_info(ATTACHMENTS[i], view_array[i], default_stage, TTask::Info::NAME);
             }
             auto attachment_memory = std::span{ 
                 reinterpret_cast<TaskAttachmentInfo *>(
