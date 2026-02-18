@@ -229,11 +229,11 @@ namespace daxa
 
     struct ImplExternalResource final : ImplHandle
     {
-        ImplExternalResource(TaskBufferInfo a_info);
+        ImplExternalResource(TaskBufferAdapterInfo a_info);
         ImplExternalResource(Device & device, BufferInfo const & a_info);
-        ImplExternalResource(TaskBlasInfo a_info);
-        ImplExternalResource(TaskTlasInfo a_info);
-        ImplExternalResource(TaskImageInfo a_info);
+        ImplExternalResource(TaskBlasAdapterInfo a_info);
+        ImplExternalResource(TaskTlasAdapterInfo a_info);
+        ImplExternalResource(TaskImageAdapterInfo a_info);
         ~ImplExternalResource();
 
         std::string name = {};

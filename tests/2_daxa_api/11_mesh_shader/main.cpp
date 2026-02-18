@@ -132,7 +132,7 @@ auto main() -> int
         .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render target",
     });
-    daxa::TaskImage trender_image = daxa::TaskImage{{
+    daxa::TaskImageAdapter trender_image = daxa::TaskImageAdapter{{
         .initial_images = {
             .images = std::array{render_target},
         },
@@ -179,7 +179,7 @@ auto main() -> int
         pipeline = result.value();
     }
 
-    auto task_swapchain_image = daxa::TaskImage{{.swapchain_image = true, .name = "swapchain image"}};
+    auto task_swapchain_image = daxa::TaskImageAdapter{{.swapchain_image = true, .name = "swapchain image"}};
 
     auto loop_task_graph = daxa::TaskGraph({
         .device = device,

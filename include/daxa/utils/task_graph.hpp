@@ -29,19 +29,17 @@ namespace daxa
     DAXA_EXPORT_CXX auto error_message_unassigned_blas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_no_access_sage(std::string_view task_name, std::string_view attachment_name, TaskAccess task_access) -> std::string;
 
-    struct TaskTransientBufferInfo
+    struct TaskBufferInfo
     {
         u64 size = {};
         std::string_view name = {};
     };
 
-    using TaskTransientTlasInfo = TaskTransientBufferInfo;
+    using TaskTlasInfo = TaskBufferInfo;
 
-    struct TaskmanagedImageInfo
+    struct TaskImageInfo
     {
-        bool temporal = false;
         u32 dimensions = 2;
-        // TODO: Add option to pass span with all mutable formats here!
         Format format = Format::R8G8B8A8_UNORM;
         Extent3D size = {0, 0, 0};
         u32 mip_level_count = 1;
@@ -49,8 +47,6 @@ namespace daxa
         u32 sample_count = 1;
         std::string_view name = {};
     };
-
-    using TaskTransientImageInfo = TaskmanagedImageInfo;
 
     struct TaskGraphInfo
     {
@@ -85,7 +81,7 @@ namespace daxa
         /// @brief  CPU Memory allocated for task data
         u32 task_memory_pool_size = 1u << 19u; // 512kib
         // Useful for debugging tools that are invisible to the graph.
-        ImageUsageFlags additional_transient_image_usage_flags = {};
+        ImageUsageFlags additional_image_usage_flags = {};
         // Useful for reflection/ debugging.
         std::function<void(TaskInterface)> pre_task_callback = {};
         std::function<void(TaskInterface)> post_task_callback = {};
@@ -851,18 +847,18 @@ namespace daxa
         DAXA_EXPORT_CXX TaskGraph(TaskGraphInfo const & info);
         DAXA_EXPORT_CXX ~TaskGraph();
 
-        DAXA_EXPORT_CXX auto register_buffer(TaskBuffer const & buffer) -> TaskBufferView;
-        DAXA_EXPORT_CXX auto register_blas(TaskBlas const & blas) -> TaskBlasView;
-        DAXA_EXPORT_CXX auto register_tlas(TaskTlas const & tlas) -> TaskTlasView;
-        DAXA_EXPORT_CXX auto register_image(TaskImage const & image) -> TaskImageView;
+        DAXA_EXPORT_CXX auto register_buffer(TaskBufferAdapter const & buffer) -> TaskBufferView;
+        DAXA_EXPORT_CXX auto register_blas(TaskBlasAdapter const & blas) -> TaskBlasView;
+        DAXA_EXPORT_CXX auto register_tlas(TaskTlasAdapter const & tlas) -> TaskTlasView;
+        DAXA_EXPORT_CXX auto register_image(TaskImageAdapter const & image) -> TaskImageView;
 
-        DAXA_EXPORT_CXX auto create_transient_buffer(TaskTransientBufferInfo info) -> TaskBufferView;
-        DAXA_EXPORT_CXX auto create_transient_tlas(TaskTransientTlasInfo info) -> TaskTlasView;
-        DAXA_EXPORT_CXX auto create_transient_image(TaskTransientImageInfo info) -> TaskImageView;
+        DAXA_EXPORT_CXX auto create_task_buffer(TaskBufferInfo info) -> TaskBufferView;
+        DAXA_EXPORT_CXX auto create_task_tlas(TaskTlasInfo info) -> TaskTlasView;
+        DAXA_EXPORT_CXX auto create_task_image(TaskImageInfo info) -> TaskImageView;
 
-        DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo;
-        DAXA_EXPORT_CXX auto transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo;
-        DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo;
+        DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskBufferInfo;
+        DAXA_EXPORT_CXX auto transient_tlas_info(TaskTlasView const & transient) -> TaskTlasInfo;
+        DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskImageInfo;
 
         DAXA_EXPORT_CXX void clear_buffer(TaskBufferClearInfo const & info);
         DAXA_EXPORT_CXX void clear_image(TaskImageClearInfo const & info);

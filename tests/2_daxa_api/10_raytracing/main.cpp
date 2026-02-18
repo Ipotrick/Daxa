@@ -45,7 +45,7 @@ namespace tests
             daxa::BlasId proc_blas = {};
             daxa::BufferId aabb_buffer = {};
             
-            daxa::TaskBuffer blas_scratch_buffer = {};
+            daxa::TaskBufferAdapter blas_scratch_buffer = {};
             daxa_u64 blas_scratch_buffer_size = 1024 * 1024 * 10;
             daxa_u64 blas_scratch_buffer_offset = 0;
             daxa_u32 acceleration_structure_scratch_offset_alignment = 0;
@@ -134,7 +134,7 @@ namespace tests
                     .name = ("cam_buffer"),
                 });
 
-                blas_scratch_buffer = daxa::TaskBuffer{device,{
+                blas_scratch_buffer = daxa::TaskBufferAdapter{device,{
                     .size = blas_scratch_buffer_size,
                     .name = ("blas_scratch_buffer"),
                 }};

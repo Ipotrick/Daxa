@@ -72,8 +72,8 @@ struct App : BaseApp<App>
     camera cam = {};
     daxa::TlasId tlas = {};
     daxa::BlasId blas = {};
-    daxa::TaskBlas task_blas{{.initial_blas = {.blas = std::array{blas}}, .name = "blas_task"}};
-    daxa::TaskTlas task_tlas{{.initial_tlas = {.tlas = std::array{tlas}}, .name = "tlas_task"}};
+    daxa::TaskBlasAdapter task_blas{{.initial_blas = {.blas = std::array{blas}}, .name = "blas_task"}};
+    daxa::TaskTlasAdapter task_tlas{{.initial_tlas = {.tlas = std::array{tlas}}, .name = "tlas_task"}};
     const daxa_u32 ACCELERATION_STRUCTURE_BUILD_OFFSET_ALIGMENT = 256; // NOTE: Requested by the spec
     void update_virtual_shader()
     {
@@ -347,7 +347,7 @@ struct App : BaseApp<App>
 #endif
         };
 
-    daxa::TaskBuffer task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
+    daxa::TaskBufferAdapter task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
 
     daxa::BufferId gpu_status_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(GpuStatus),
@@ -355,7 +355,7 @@ struct App : BaseApp<App>
         .name = "gpu_status_buffer",
     });
     GpuStatus* gpu_status = device.buffer_host_address_as<GpuStatus>(gpu_status_buffer).value();
-    daxa::TaskBuffer task_gpu_status_buffer{{.initial_buffers = {.buffers = std::array{gpu_status_buffer}}, .name = "status_buffer"}};
+    daxa::TaskBufferAdapter task_gpu_status_buffer{{.initial_buffers = {.buffers = std::array{gpu_status_buffer}}, .name = "status_buffer"}};
 
 
     daxa::usize particles_size = NUM_PARTICLES * sizeof(Particle);
@@ -363,14 +363,14 @@ struct App : BaseApp<App>
         .size = particles_size,
         .name = "particles_buffer",
     });
-    daxa::TaskBuffer task_particles_buffer{{.initial_buffers = {.buffers = std::array{particles_buffer}}, .name = "particles_buffer_task"}};
+    daxa::TaskBufferAdapter task_particles_buffer{{.initial_buffers = {.buffers = std::array{particles_buffer}}, .name = "particles_buffer_task"}};
 
     daxa::usize grid_size = GRID_SIZE * sizeof(Cell);
     daxa::BufferId grid_buffer = device.create_buffer(daxa::BufferInfo{
         .size = grid_size,
         .name = "grid_buffer",
     });
-    daxa::TaskBuffer task_grid_buffer{{.initial_buffers = {.buffers = std::array{grid_buffer}}, .name = "grid_buffer_task"}};
+    daxa::TaskBufferAdapter task_grid_buffer{{.initial_buffers = {.buffers = std::array{grid_buffer}}, .name = "grid_buffer_task"}};
     
     daxa::BufferClearInfo clear_info = {grid_buffer, 0, grid_size, 0};
 
@@ -379,14 +379,14 @@ struct App : BaseApp<App>
         .size = aabb_size,
         .name = "aabb_buffer",
     });
-    daxa::TaskBuffer task_aabb_buffer{{.initial_buffers = {.buffers = std::array{aabb_buffer}}, .name = "aabb_buffer_task"}};
+    daxa::TaskBufferAdapter task_aabb_buffer{{.initial_buffers = {.buffers = std::array{aabb_buffer}}, .name = "aabb_buffer_task"}};
 
     daxa::BufferId camera_buffer = device.create_buffer(daxa::BufferInfo{
         .size = sizeof(Camera),
         .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
         .name = "camera_buffer",
     });
-    daxa::TaskBuffer task_camera_buffer{{.initial_buffers = {.buffers = std::array{camera_buffer}}, .name = "camera_buffer_task"}};
+    daxa::TaskBufferAdapter task_camera_buffer{{.initial_buffers = {.buffers = std::array{camera_buffer}}, .name = "camera_buffer_task"}};
     /// create blas instances for tlas:
     daxa::BufferId blas_instances_buffer = device.create_buffer({
         .size = sizeof(daxa_BlasInstanceData),
@@ -420,7 +420,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
+    daxa::TaskImageAdapter task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
     daxa::SamplerId sampler = device.create_sampler({.name = "sampler"});
 
     daxa::TaskGraph loop_task_graph = record_loop_task_graph();

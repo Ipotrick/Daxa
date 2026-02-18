@@ -25,7 +25,7 @@ namespace tests
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .name = "swapchain",
             });
-            daxa::TaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain"}};
+            daxa::TaskImageAdapter task_swapchain_image{{.swapchain_image = true, .name = "swapchain"}};
             daxa::ImageId swapchain_image = {};
 
             daxa::PipelineManager pipeline_manager = daxa::PipelineManager({
@@ -68,9 +68,9 @@ namespace tests
             });
 
             daxa::CommandSubmitInfo submit_info = {};
-            daxa::TaskImage task_render_image = [&]()
+            daxa::TaskImageAdapter task_render_image = [&]()
             {
-                auto ret = daxa::TaskImage{{
+                auto ret = daxa::TaskImageAdapter{{
                     .name = "persistent render image",
                 }};
                 ret.set_images({.images = {&render_image, 1}});
@@ -91,16 +91,16 @@ namespace tests
             });
 
             std::array<BufferId, 1> execution_buffers{mipmapping_gpu_input_buffer};
-            daxa::TaskBuffer task_mipmapping_gpu_input_buffer = [&]()
+            daxa::TaskBufferAdapter task_mipmapping_gpu_input_buffer = [&]()
             {
-                auto ret = daxa::TaskBuffer{{
+                auto ret = daxa::TaskBufferAdapter{{
                     .buffer = mipmapping_gpu_input_buffer,
                     .name = "task_mipmapping_gpu_input_buffer",
                 }};
                 return ret;
             }();
 
-            daxa::TaskBuffer task_staging_mipmapping_gpu_input_buffer;
+            daxa::TaskBufferAdapter task_staging_mipmapping_gpu_input_buffer;
 
             bool mouse_drawing = false;
 

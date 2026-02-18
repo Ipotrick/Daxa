@@ -26,7 +26,7 @@ namespace tests
             .name = "actual buffer",
         });
 
-        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+        auto persistent_task_buffer = daxa::TaskBufferAdapter(daxa::TaskBufferAdapterInfo{
             .initial_buffers = {.buffers = {&buffer, 1}},
             .name = "persistent buffer",
         });
@@ -97,8 +97,8 @@ namespace tests
             .name = "actual image",
         });
 
-        auto persistent_task_image = daxa::TaskImage(
-            daxa::TaskImageInfo{
+        auto persistent_task_image = daxa::TaskImageAdapter(
+            daxa::TaskImageAdapterInfo{
                 .initial_images = {.images = {&image, 1}},
                 .swapchain_image = false,
                 .name = "image",

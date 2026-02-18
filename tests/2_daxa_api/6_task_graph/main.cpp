@@ -204,7 +204,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE
-        auto task_image = task_graph.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
+        auto task_image = task_graph.create_task_image(daxa::TaskImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
         // WRITE IMAGE 1
         task_graph.add_task(daxa::InlineTask::Compute("write image 1")
                                 .writes(task_image)
@@ -231,7 +231,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-write-read array layer"),
         });
         // CREATE IMAGE
-        auto task_image = task_graph.create_transient_image({
+        auto task_image = task_graph.create_task_image({
             .size = {1, 1, 1},
             .array_layer_count = 2,
             .name = "task graph tested image",
@@ -264,7 +264,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-transfer-read buffer"),
         });
 
-        auto task_buffer = task_graph.create_transient_buffer({
+        auto task_buffer = task_graph.create_task_buffer({
             .size = sizeof(u32),
             .name = "task graph tested buffer",
         });
@@ -304,7 +304,7 @@ namespace tests
             },
         };
 
-        auto task_image = daxa::TaskImage(daxa::TaskImageInfo{
+        auto task_image = daxa::TaskImageAdapter(daxa::TaskImageAdapterInfo{
             .initial_images = {
                 .images = {&image, 1},
                 .latest_slice_states = {init_access.data(), 1}},
@@ -363,7 +363,7 @@ namespace tests
                 .latest_layout = daxa::ImageLayout::GENERAL,
                 .slice = {.base_array_layer = 2, .layer_count = 2},
             }};
-        auto task_image = daxa::TaskImage({
+        auto task_image = daxa::TaskImageAdapter({
             .name = "task graph tested image",
         });
 
@@ -420,7 +420,7 @@ namespace tests
             .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             .name = "underlying image",
         });
-        auto task_image = daxa::TaskImage({
+        auto task_image = daxa::TaskImageAdapter({
             // In this test, this image name will be "aliased", so the name must not be the same.
             .initial_images = {
                 .images = {&image, 1},
@@ -433,7 +433,7 @@ namespace tests
             .name = "underlying buffer",
         });
         *app.device.buffer_host_address_as<float>(buffer).value() = 0.75f;
-        auto task_buffer = daxa::TaskBuffer({
+        auto task_buffer = daxa::TaskBufferAdapter({
             .initial_buffers = {
                 .buffers = {&buffer, 1},
                 .latest_access = daxa::AccessConsts::HOST_WRITE,
@@ -535,13 +535,13 @@ namespace tests
             .name = "actual_buffer",
         });
 
-        auto persistent_task_image = daxa::TaskImage(daxa::TaskImageInfo{
+        auto persistent_task_image = daxa::TaskImageAdapter(daxa::TaskImageAdapterInfo{
             .initial_images = {.images = {&image, 1}},
             .swapchain_image = false,
             .name = "image",
         });
 
-        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+        auto persistent_task_buffer = daxa::TaskBufferAdapter(daxa::TaskBufferAdapterInfo{
             .initial_buffers = {.buffers = {&buffer, 1}},
             .name = "buffer",
         });
@@ -604,7 +604,7 @@ namespace tests
             .name = "actual_buffer",
         });
 
-        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+        auto persistent_task_buffer = daxa::TaskBufferAdapter(daxa::TaskBufferAdapterInfo{
             .initial_buffers = {.buffers = {&buffer, 1}},
             .name = "buffer",
         });
@@ -674,7 +674,7 @@ namespace tests
             .name = "actual image",
         });
 
-        auto persistent_task_image = daxa::TaskImage(daxa::TaskImageInfo{
+        auto persistent_task_image = daxa::TaskImageAdapter(daxa::TaskImageAdapterInfo{
             .initial_images = {.images = {&image, 1}},
             .swapchain_image = false,
             .name = "image",
@@ -738,7 +738,7 @@ namespace tests
             .name = "actual_buffer",
         });
 
-        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+        auto persistent_task_buffer = daxa::TaskBufferAdapter(daxa::TaskBufferAdapterInfo{
             .initial_buffers = {.buffers = {&buffer, 1}},
             .name = "buffer",
         });
@@ -798,7 +798,7 @@ namespace tests
             .name = "actual_buffer",
         });
 
-        auto tbuffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+        auto tbuffer = daxa::TaskBufferAdapter(daxa::TaskBufferAdapterInfo{
             .initial_buffers = {.buffers = {&buffer, 1}},
             .name = "buffer",
         });
@@ -860,12 +860,12 @@ namespace tests
             .name = "actual_buffer",
         });
 
-        auto persistent_task_buffer = daxa::TaskBuffer(daxa::TaskBufferInfo{
+        auto persistent_task_buffer = daxa::TaskBufferAdapter(daxa::TaskBufferAdapterInfo{
             .initial_buffers = {.buffers = {&buffer, 1}},
             .name = "buffer",
         });
 
-        auto buffer_b = daxa::TaskBuffer(daxa::TaskBufferInfo{
+        auto buffer_b = daxa::TaskBufferAdapter(daxa::TaskBufferAdapterInfo{
             .initial_buffers = {.buffers = {&buffer, 1}},
             .name = "buffer b",
         });
@@ -928,7 +928,7 @@ namespace tests
             .name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE
-        auto task_image = task_graph.create_transient_image(daxa::TaskTransientImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
+        auto task_image = task_graph.create_task_image(daxa::TaskImageInfo{.size = {1, 1, 1}, .name = "task graph tested image"});
 
         task_graph.add_task(
             daxa::InlineTask::Compute("write image 1")

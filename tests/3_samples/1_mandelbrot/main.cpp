@@ -61,7 +61,7 @@ struct App : BaseApp<App>
         .name = "gpu_input_buffer",
     });
     GpuInput gpu_input = {};
-    daxa::TaskBuffer task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
+    daxa::TaskBufferAdapter task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
@@ -69,7 +69,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::TaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
+    daxa::TaskImageAdapter task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
     daxa::SamplerId sampler = device.create_sampler({.name = "sampler"});
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({

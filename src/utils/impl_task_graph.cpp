@@ -497,7 +497,7 @@ namespace daxa
     /// ==== EXTERNAL RESOURCE INTERFACE IMPLEMENTATION ====
     /// ====================================================
 
-    ImplExternalResource::ImplExternalResource(TaskBufferInfo a_info)
+    ImplExternalResource::ImplExternalResource(TaskBufferAdapterInfo a_info)
     {
         this->name = a_info.name;
         kind = TaskResourceKind::BUFFER;
@@ -505,7 +505,7 @@ namespace daxa
         this->unique_index = exec_unique_resource_next_index++;
     }
 
-    ImplExternalResource::ImplExternalResource(TaskBlasInfo a_info)
+    ImplExternalResource::ImplExternalResource(TaskBlasAdapterInfo a_info)
     {
         this->name = std::move(a_info.name);
         this->kind = TaskResourceKind::BLAS;
@@ -513,7 +513,7 @@ namespace daxa
         this->unique_index = exec_unique_resource_next_index++;
     }
 
-    ImplExternalResource::ImplExternalResource(TaskTlasInfo a_info)
+    ImplExternalResource::ImplExternalResource(TaskTlasAdapterInfo a_info)
     {
         this->name = std::move(a_info.name);
         this->kind = TaskResourceKind::TLAS;
@@ -521,7 +521,7 @@ namespace daxa
         this->unique_index = exec_unique_resource_next_index++;
     }
 
-    ImplExternalResource::ImplExternalResource(TaskImageInfo a_info)
+    ImplExternalResource::ImplExternalResource(TaskImageAdapterInfo a_info)
     {
         this->name = std::move(a_info.name);
         this->kind = TaskResourceKind::IMAGE;
@@ -545,38 +545,38 @@ namespace daxa
     /// ==== EXTERNAL TASK BUFFER IMPLEMENTATION ====
     /// =============================================
 
-    TaskBuffer::TaskBuffer(TaskBufferInfo const & info)
+    TaskBufferAdapter::TaskBufferAdapter(TaskBufferAdapterInfo const & info)
     {
         this->object = new ImplExternalResource(info);
     }
 
-    auto TaskBuffer::view() const -> TaskBufferView
+    auto TaskBufferAdapter::view() const -> TaskBufferView
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskBufferView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
-    TaskBuffer::operator TaskBufferView() const
+    TaskBufferAdapter::operator TaskBufferView() const
     {
         return view();
     }
 
-    auto TaskBuffer::info() const -> TaskBufferInfo
+    auto TaskBufferAdapter::info() const -> TaskBufferAdapterInfo
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
-        return TaskBufferInfo{
+        return TaskBufferAdapterInfo{
             .buffer = impl.id.buffer,
             .name = std::string(impl.name),
         };
     }
 
-    auto TaskBuffer::id() const -> BufferId
+    auto TaskBufferAdapter::id() const -> BufferId
     {
         auto const & impl = *r_cast<ImplExternalResource const *>(this->object);
         return impl.id.buffer;
     }
 
-    void TaskBuffer::set_buffer(BufferId buffer)
+    void TaskBufferAdapter::set_buffer(BufferId buffer)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
@@ -584,7 +584,7 @@ namespace daxa
         impl.pre_graph_queue_bits = {};
     }
 
-    void TaskBuffer::swap_buffers(TaskBuffer & other)
+    void TaskBufferAdapter::swap_buffers(TaskBufferAdapter & other)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
@@ -593,12 +593,12 @@ namespace daxa
         std::swap(impl.pre_graph_queue_bits, impl_other.pre_graph_queue_bits);
     }
 
-    auto TaskBuffer::inc_refcnt(ImplHandle const * object) -> u64
+    auto TaskBufferAdapter::inc_refcnt(ImplHandle const * object) -> u64
     {
         return object->inc_refcnt();
     }
 
-    auto TaskBuffer::dec_refcnt(ImplHandle const * object) -> u64
+    auto TaskBufferAdapter::dec_refcnt(ImplHandle const * object) -> u64
     {
         return object->dec_refcnt(
             ImplExternalResource::zero_ref_callback,
@@ -609,38 +609,38 @@ namespace daxa
     /// ==== EXTERNAL TASK BLAS IMPLEMENTATION ====
     /// ===========================================
 
-    TaskBlas::TaskBlas(TaskBlasInfo const & info)
+    TaskBlasAdapter::TaskBlasAdapter(TaskBlasAdapterInfo const & info)
     {
         this->object = new ImplExternalResource(info);
     }
 
-    auto TaskBlas::view() const -> TaskBlasView
+    auto TaskBlasAdapter::view() const -> TaskBlasView
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskBlasView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
-    TaskBlas::operator TaskBlasView() const
+    TaskBlasAdapter::operator TaskBlasView() const
     {
         return view();
     }
 
-    auto TaskBlas::info() const -> TaskBlasInfo
+    auto TaskBlasAdapter::info() const -> TaskBlasAdapterInfo
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
-        return TaskBlasInfo{
+        return TaskBlasAdapterInfo{
             .blas = impl.id.blas,
             .name = std::string(impl.name),
         };
     }
 
-    auto TaskBlas::id() const -> BlasId
+    auto TaskBlasAdapter::id() const -> BlasId
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return impl.id.blas;
     }
 
-    void TaskBlas::set_blas(BlasId blas)
+    void TaskBlasAdapter::set_blas(BlasId blas)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
@@ -648,7 +648,7 @@ namespace daxa
         impl.pre_graph_queue_bits = {};
     }
 
-    void TaskBlas::swap_blas(TaskBlas & other)
+    void TaskBlasAdapter::swap_blas(TaskBlasAdapter & other)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
@@ -657,12 +657,12 @@ namespace daxa
         std::swap(impl.pre_graph_queue_bits, impl_other.pre_graph_queue_bits);
     }
 
-    auto TaskBlas::inc_refcnt(ImplHandle const * object) -> u64
+    auto TaskBlasAdapter::inc_refcnt(ImplHandle const * object) -> u64
     {
         return object->inc_refcnt();
     }
 
-    auto TaskBlas::dec_refcnt(ImplHandle const * object) -> u64
+    auto TaskBlasAdapter::dec_refcnt(ImplHandle const * object) -> u64
     {
         return object->dec_refcnt(
             ImplExternalResource::zero_ref_callback,
@@ -673,38 +673,38 @@ namespace daxa
     /// ==== EXTERNAL TASK TLAS IMPLEMENTATION ====
     /// ===========================================
 
-    TaskTlas::TaskTlas(TaskTlasInfo const & info)
+    TaskTlasAdapter::TaskTlasAdapter(TaskTlasAdapterInfo const & info)
     {
         this->object = new ImplExternalResource(info);
     }
 
-    auto TaskTlas::view() const -> TaskTlasView
+    auto TaskTlasAdapter::view() const -> TaskTlasView
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskTlasView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
-    TaskTlas::operator TaskTlasView() const
+    TaskTlasAdapter::operator TaskTlasView() const
     {
         return view();
     }
 
-    auto TaskTlas::info() const -> TaskTlasInfo
+    auto TaskTlasAdapter::info() const -> TaskTlasAdapterInfo
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
-        return TaskTlasInfo{
+        return TaskTlasAdapterInfo{
             .tlas = impl.id.tlas,
             .name = std::string(impl.name),
         };
     }
 
-    auto TaskTlas::id() const -> TlasId
+    auto TaskTlasAdapter::id() const -> TlasId
     {
         auto const & impl = *r_cast<ImplExternalResource const *>(this->object);
         return impl.id.tlas;
     }
 
-    void TaskTlas::set_tlas(TlasId tlas)
+    void TaskTlasAdapter::set_tlas(TlasId tlas)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
@@ -712,7 +712,7 @@ namespace daxa
         impl.pre_graph_queue_bits = {};
     }
 
-    void TaskTlas::swap_tlas(TaskTlas & other)
+    void TaskTlasAdapter::swap_tlas(TaskTlasAdapter & other)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
@@ -721,12 +721,12 @@ namespace daxa
         std::swap(impl.pre_graph_queue_bits, impl_other.pre_graph_queue_bits);
     }
 
-    auto TaskTlas::inc_refcnt(ImplHandle const * object) -> u64
+    auto TaskTlasAdapter::inc_refcnt(ImplHandle const * object) -> u64
     {
         return object->inc_refcnt();
     }
 
-    auto TaskTlas::dec_refcnt(ImplHandle const * object) -> u64
+    auto TaskTlasAdapter::dec_refcnt(ImplHandle const * object) -> u64
     {
         return object->dec_refcnt(
             ImplExternalResource::zero_ref_callback,
@@ -737,38 +737,38 @@ namespace daxa
     /// ==== EXTERNAL TASK IMAGE IMPLEMENTATION ====
     /// ============================================
 
-    TaskImage::TaskImage(TaskImageInfo const & a_info)
+    TaskImageAdapter::TaskImageAdapter(TaskImageAdapterInfo const & a_info)
     {
         this->object = new ImplExternalResource(a_info);
     }
 
-    TaskImage::operator TaskImageView() const
+    TaskImageAdapter::operator TaskImageView() const
     {
         return view();
     }
 
-    auto TaskImage::view() const -> TaskImageView
+    auto TaskImageAdapter::view() const -> TaskImageView
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return TaskImageView{.task_graph_index = std::numeric_limits<u32>::max(), .index = impl.unique_index};
     }
 
-    auto TaskImage::info() const -> TaskImageInfo
+    auto TaskImageAdapter::info() const -> TaskImageAdapterInfo
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
-        return TaskImageInfo{
+        return TaskImageAdapterInfo{
             .image = impl.id.image,
             .name = impl.name,
         };
     }
 
-    auto TaskImage::id() const -> ImageId
+    auto TaskImageAdapter::id() const -> ImageId
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return impl.id.image;
     }
 
-    void TaskImage::set_image(ImageId image, bool is_general_layout)
+    void TaskImageAdapter::set_image(ImageId image, bool is_general_layout)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
 
@@ -779,7 +779,7 @@ namespace daxa
         impl.pre_graph_is_general_layout = is_general_layout;
     }
 
-    void TaskImage::swap_images(TaskImage & other)
+    void TaskImageAdapter::swap_images(TaskImageAdapter & other)
     {
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         auto & impl_other = *r_cast<ImplExternalResource *>(other.object);
@@ -791,12 +791,12 @@ namespace daxa
         std::swap(impl.was_presented, impl_other.was_presented);
     }
 
-    auto TaskImage::inc_refcnt(ImplHandle const * object) -> u64
+    auto TaskImageAdapter::inc_refcnt(ImplHandle const * object) -> u64
     {
         return object->inc_refcnt();
     }
 
-    auto TaskImage::dec_refcnt(ImplHandle const * object) -> u64
+    auto TaskImageAdapter::dec_refcnt(ImplHandle const * object) -> u64
     {
         return object->dec_refcnt(
             ImplExternalResource::zero_ref_callback,
@@ -839,7 +839,7 @@ namespace daxa
     /// ==== TASK GRAPH INTERFACE IMPLEMENTATION ====
     /// =============================================
 
-    auto TaskGraph::register_buffer(TaskBuffer const & buffer) -> TaskBufferView
+    auto TaskGraph::register_buffer(TaskBufferAdapter const & buffer) -> TaskBufferView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         register_external_buffer_helper(impl, TaskResourceKind::BUFFER, buffer.get());
@@ -847,7 +847,7 @@ namespace daxa
         return {static_cast<u32>(impl.resources.size() - 1u), impl.unique_index};
     }
 
-    auto TaskGraph::register_blas(TaskBlas const & blas) -> TaskBlasView
+    auto TaskGraph::register_blas(TaskBlasAdapter const & blas) -> TaskBlasView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         register_external_buffer_helper(impl, TaskResourceKind::BLAS, blas.get());
@@ -855,7 +855,7 @@ namespace daxa
         return {static_cast<u32>(impl.resources.size() - 1u), impl.unique_index};
     }
 
-    auto TaskGraph::register_tlas(TaskTlas const & tlas) -> TaskTlasView
+    auto TaskGraph::register_tlas(TaskTlasAdapter const & tlas) -> TaskTlasView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         register_external_buffer_helper(impl, TaskResourceKind::TLAS, tlas.get());
@@ -863,7 +863,7 @@ namespace daxa
         return {static_cast<u32>(impl.resources.size() - 1u), impl.unique_index};
     }
 
-    auto TaskGraph::register_image(TaskImage const & timg) -> TaskImageView
+    auto TaskGraph::register_image(TaskImageAdapter const & timg) -> TaskImageView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
 
@@ -940,19 +940,19 @@ namespace daxa
         return index;
     }
 
-    auto TaskGraph::create_transient_buffer(TaskTransientBufferInfo info) -> TaskBufferView
+    auto TaskGraph::create_task_buffer(TaskBufferInfo info) -> TaskBufferView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         return TaskBufferView{.task_graph_index = impl.unique_index, .index = create_buffer_helper(impl, TaskResourceKind::BUFFER, info.size, info.name)};
     }
 
-    auto TaskGraph::create_transient_tlas(TaskTransientTlasInfo info) -> TaskTlasView
+    auto TaskGraph::create_task_tlas(TaskTlasInfo info) -> TaskTlasView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         return TaskTlasView{.task_graph_index = impl.unique_index, .index = create_buffer_helper(impl, TaskResourceKind::TLAS, info.size, info.name)};
     }
 
-    auto TaskGraph::create_transient_image(TaskTransientImageInfo info) -> TaskImageView
+    auto TaskGraph::create_task_image(TaskImageInfo info) -> TaskImageView
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "completed task graphs can not record new tasks");
@@ -997,36 +997,35 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(transient.index < impl.resources.size(), "ERROR: Given resource view is invalid!");
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_buffer_info(TaskBufferView const & transient) -> TaskTransientBufferInfo
+    DAXA_EXPORT_CXX auto TaskGraph::transient_buffer_info(TaskBufferView const & transient) -> TaskBufferInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_resource_view_is_owned_by_graph(impl, transient);
 
-        return TaskTransientBufferInfo{
+        return TaskBufferInfo{
             .size = impl.resources[transient.index].info.buffer.size,
             .name = impl.resources[transient.index].name,
         };
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_tlas_info(TaskTlasView const & transient) -> TaskTransientTlasInfo
+    DAXA_EXPORT_CXX auto TaskGraph::transient_tlas_info(TaskTlasView const & transient) -> TaskTlasInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_resource_view_is_owned_by_graph(impl, transient);
 
-        return TaskTransientTlasInfo{
+        return TaskTlasInfo{
             .size = impl.resources[transient.index].info.buffer.size,
             .name = impl.resources[transient.index].name,
         };
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_image_info(TaskImageView const & transient) -> TaskTransientImageInfo
+    DAXA_EXPORT_CXX auto TaskGraph::transient_image_info(TaskImageView const & transient) -> TaskImageInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_resource_view_is_owned_by_graph(impl, transient);
 
         auto const & resource_image_info = impl.resources[transient.index].info.image;
-        return TaskTransientImageInfo{
-            .temporal = false,
+        return TaskImageInfo{
             .dimensions = resource_image_info.dimensions,
             .format = resource_image_info.format,
             .size = resource_image_info.size,
@@ -2338,9 +2337,9 @@ namespace daxa
             }
         }
 
-        /// =======================================================
-        /// ==== DETERMINE TRANSIENT RESOURCE ALLOCATION SIZES ====
-        /// =======================================================
+        /// =============================================
+        /// ==== DETERMINE RESOURCE ALLOCATION SIZES ====
+        /// =============================================
 
         // We need the memory allocation requirements for optimizing the task shedule heuristically.
 
@@ -2836,7 +2835,7 @@ namespace daxa
             }
             break;
             case TaskResourceKind::BLAS:
-                DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE! THERE IS NO SUPPORT FOR TRANSIENT BLAS!");
+                DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE! THERE IS NO SUPPORT FOR GRAPH OWNED TASK BLAS!");
                 break;
             case TaskResourceKind::IMAGE:
             {
@@ -2848,7 +2847,7 @@ namespace daxa
                     .mip_level_count = allocation.resource->info.image.mip_level_count,
                     .array_layer_count = allocation.resource->info.image.array_layer_count,
                     .sample_count = allocation.resource->info.image.sample_count,
-                    .usage = allocation.resource->info.image.usage | impl.info.additional_transient_image_usage_flags,
+                    .usage = allocation.resource->info.image.usage | impl.info.additional_image_usage_flags,
                     .sharing_mode = allocation.resource->info.image.sharing_mode,
                     .name = allocation.resource->name,
                 };
@@ -3776,7 +3775,7 @@ namespace daxa
             ImplTaskResource & resource = this->resources[i];
             if (resource.external != nullptr)
             {
-                // TaskBuffer is idential to Tlas and Blas internals.
+                // TaskBufferAdapter is idential to Tlas and Blas internals.
                 if (resource.kind != TaskResourceKind::IMAGE)
                 {
                     static_cast<ImplExternalResource *>(resource.external)->dec_refcnt(ImplExternalResource::zero_ref_callback, nullptr);
