@@ -354,18 +354,64 @@ namespace daxa
             TaskStages _default_stage = TaskStages::ANY_COMMAND;
             Queue _queue = QUEUE_MAIN;
 
-            void _process_parameter(TaskStages, TaskAccessType, ImageViewType &, TaskStages) {}
-            void _process_parameter(TaskStages stage, TaskAccessType type, ImageViewType &, TaskBufferBlasTlasViewOrBufferBlasTlas auto param)
+            void _process_parameter(TaskStages &, TaskAccessType, ImageViewType &, std::string_view &, TaskStages) {}
+
+            void _process_parameter(TaskStages & stage, TaskAccessType type, ImageViewType &, char const * & name, TaskBufferViewOrTaskBuffer auto param)
             {
-                _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param));
+                auto info = TaskAttachmentInfo{};
+                info.type = daxa::TaskAttachmentType::BUFFER;
+                info.value.buffer = TaskBufferAttachmentInfo{
+                    .name = name,
+                    .task_access = TaskAccess{stage, type},
+                    .view = param,
+                };
+                _attachments.push_back(info);
             }
-            void _process_parameter(TaskStages stage, TaskAccessType type, ImageViewType & view_override, TaskImageViewOrTaskImage auto param)
+            void _process_parameter(TaskStages & stage, TaskAccessType type, ImageViewType &, char const * & name, TaskBlasViewOrTaskBlas auto param)
             {
-                _attachments.push_back(inl_attachment(TaskAccess{stage, type}, param, view_override));
+                auto info = TaskAttachmentInfo{};
+                info.type = daxa::TaskAttachmentType::BLAS;
+                info.value.blas = TaskBlasAttachmentInfo{
+                    .name = name,
+                    .task_access = TaskAccess{stage, type},
+                    .view = param,
+                };
+                _attachments.push_back(info);
             }
-            void _process_parameter(TaskStages, TaskAccessType, ImageViewType & view_override, ImageViewType param)
+            void _process_parameter(TaskStages & stage, TaskAccessType type, ImageViewType &, char const * & name, TaskTlasViewOrTaskTlas auto param)
+            {
+                auto info = TaskAttachmentInfo{};
+                info.type = daxa::TaskAttachmentType::TLAS;
+                info.value.tlas = TaskTlasAttachmentInfo{
+                    .name = name,
+                    .task_access = TaskAccess{stage, type},
+                    .view = param,
+                };
+                _attachments.push_back(info);
+            }
+            void _process_parameter(TaskStages & stage, TaskAccessType type, ImageViewType & view_override, char const * & name, TaskImageViewOrTaskImage auto param)
+            {
+                auto info = TaskAttachmentInfo{};
+                info.type = daxa::TaskAttachmentType::IMAGE;
+                info.value.image = TaskImageAttachmentInfo{
+                    .name = name,
+                    .task_access = TaskAccess{stage, type},
+                    .view = param,
+                    .view_type = view_override,
+                };
+                _attachments.push_back(info);
+            }
+            void _process_parameter(TaskStages &, TaskAccessType, ImageViewType & view_override, char const * &, ImageViewType param)
             {
                 view_override = param;
+            }
+            void _process_parameter(TaskStages &, TaskAccessType, ImageViewType &, char const * & name, char const * & param)
+            {
+                name = param;
+            }
+            void _process_parameter(TaskStages & stages, TaskAccessType, ImageViewType &, char const * &, TaskStages param)
+            {
+                stages = param;
             }
         };
         template <Allow ALLOWED_ACCESS, TaskStages STAGE = TaskStages::NONE>
@@ -375,50 +421,52 @@ namespace daxa
 
             // inline attachment interface:
 
-            template <TaskResourceViewOrResourceOrImageViewType... TParams>
-            auto _process_parameters(TaskAccessType access, TaskStages stage, TParams... v) -> TInlineTask &
+            template <AttachmentParamBasic... TParams>
+            auto _process_parameters(TaskAccessType access_type, TaskStages set_stage, TParams... v) -> TInlineTask &
             {
                 ImageViewType view_override = ImageViewType::MAX_ENUM;
-                (_internal._process_parameter(stage, access, view_override, v), ...);
+                char const * attachment_name = "unnamed attachment";
+                TaskStages stage_override = set_stage;
+                (_internal._process_parameter(stage_override, access_type, view_override, attachment_name, v), ...);
                 return *reinterpret_cast<TInlineTask *>(this);
             }
 
-            template <TaskResourceViewOrResourceOrImageViewType... TParams>
+            template <AttachmentParamBasic... TParams>
             auto reads(TParams... v) -> TInlineTask &
                 requires((ALLOWED_ACCESS & Allow::READ) != 0)
             {
                 return _process_parameters(TaskAccessType::READ, STAGE, v...);
             }
 
-            template <TaskResourceViewOrResourceOrImageViewType... TParams>
+            template <AttachmentParamBasic... TParams>
             auto writes(TParams... v) -> TInlineTask &
                 requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::WRITE, STAGE, v...);
             }
 
-            template <TaskResourceViewOrResourceOrImageViewType... TParams>
+            template <AttachmentParamBasic... TParams>
             auto writes_concurrent(TParams... v) -> TInlineTask &
                 requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::WRITE_CONCURRENT, STAGE, v...);
             }
 
-            template <TaskResourceViewOrResourceOrImageViewType... TParams>
+            template <AttachmentParamBasic... TParams>
             auto reads_writes(TParams... v) -> TInlineTask &
                 requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::READ_WRITE, STAGE, v...);
             }
 
-            template <TaskResourceViewOrResourceOrImageViewType... TParams>
+            template <AttachmentParamBasic... TParams>
             auto reads_writes_concurrent(TParams... v) -> TInlineTask &
                 requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, STAGE, v...);
             }
 
-            template <TaskImageViewOrTaskImageOrImageViewType... TParams>
+            template <AttachmentParamSampled... TParams>
             auto samples(TParams... v) -> TInlineTask &
                 requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0)
             {
@@ -579,42 +627,23 @@ namespace daxa
       public:
         // untyped inline attachments interface:
 
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
+        template <AttachmentParamBasic... TParams>
         auto reads(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ, value._internal._default_stage, v...); }
 
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
+        template <AttachmentParamBasic... TParams>
         auto writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE, value._internal._default_stage, v...); }
 
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
+        template <AttachmentParamBasic... TParams>
         auto writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
+        template <AttachmentParamBasic... TParams>
         auto reads_writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE, value._internal._default_stage, v...); }
 
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
+        template <AttachmentParamBasic... TParams>
         auto reads_writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
+        template <AttachmentParamSampled... TParams>
         auto samples(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, value._internal._default_stage, v...); }
-        
-
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ, stage, v...); }
-
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto writes(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE, stage, v...); }
-
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto writes_concurrent(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, stage, v...); }
-
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads_writes(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE, stage, v...); }
-
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto reads_writes_concurrent(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, stage, v...); }
-
-        template <TaskResourceViewOrResourceOrImageViewTypeOrStage... TParams>
-        auto samples(TaskStages stage, TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, stage, v...); }
 
 
         template <TaskResourceViewOrResource... TParams>

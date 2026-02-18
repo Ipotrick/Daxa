@@ -771,25 +771,12 @@ namespace daxa
         TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T> || TaskImageViewOrTaskImage<T>;
 
     template <typename T>
-    concept TaskBufferBlasTlasViewOrBufferBlasTlas =
-        TaskBufferViewOrTaskBuffer<T> || TaskBlasViewOrTaskBlas<T> || TaskTlasViewOrTaskTlas<T>;
+    concept AttachmentParamBasic =
+        TaskResourceViewOrResource<T> || std::is_same_v<ImageViewType, T> || std::is_same_v<char const *, T> || std::is_same_v<T, TaskStages>;
 
     template <typename T>
-    concept TaskResourceViewOrResourceOrImageViewType =
-        TaskResourceViewOrResource<T> || std::is_same_v<ImageViewType, T>;
-
-    template <typename T>
-    concept TaskResourceViewOrResourceOrImageViewTypeOrStage =
-        TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStages>;
-
-    template <typename T>
-    concept TaskImageViewOrTaskImageOrImageViewType = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImage> || std::is_same_v<ImageViewType, T>;
-
-    template <typename T>
-    concept TaskResourceOrViewOrAccess = TaskResourceViewOrResourceOrImageViewType<T> || std::is_same_v<T, TaskStages>;
-
-    template <typename T>
-    concept TaskImageOrViewOrAccess = TaskImageViewOrTaskImageOrImageViewType<T> || std::is_same_v<T, TaskStages>;
+    concept AttachmentParamSampled =
+        TaskImageViewOrTaskImage<T> || std::is_same_v<ImageViewType, T> || std::is_same_v<char const *, T> || std::is_same_v<T, TaskStages>;
 
     inline namespace detail
     {
@@ -1112,71 +1099,4 @@ namespace daxa
 #define DAXA_TH_TLAS(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS)
 #define DAXA_TH_TLAS_ID(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_access_type = daxa::TaskBufferShaderAccessType::ID)
 #define DAXA_TH_TLAS_PTR(TASK_ACCESS, NAME) _DAXA_HELPER_TH_TLAS(NAME, TASK_ACCESS, .shader_access_type = daxa::TaskBufferShaderAccessType::ADDRESS)
-
-    inline auto inl_attachment(TaskAccess access, TaskBufferView view) -> TaskAttachmentInfo
-    {
-        TaskBufferAttachmentInfo buf = {};
-        buf.name = "inline attachment";
-        buf.task_access = access;
-        buf.shader_access_type = TaskBufferShaderAccessType::NONE;
-        buf.view = view;
-        TaskAttachmentInfo info = {};
-        info.type = daxa::TaskAttachmentType::BUFFER;
-        info.value.buffer = buf;
-        return info;
-    }
-
-    inline auto inl_attachment(TaskAccess access, TaskBlasView view) -> TaskAttachmentInfo
-    {
-        TaskBlasAttachmentInfo blas = {};
-        blas.name = "inline attachment";
-        blas.task_access = access;
-        blas.view = view;
-        blas.shader_access_type = TaskBufferShaderAccessType::NONE;
-        TaskAttachmentInfo info = {};
-        info.type = daxa::TaskAttachmentType::BLAS;
-        info.value.blas = blas;
-        return info;
-    }
-
-    inline auto inl_attachment(TaskAccess access, TaskTlasView view) -> TaskAttachmentInfo
-    {
-        TaskTlasAttachmentInfo tlas = {};
-        tlas.name = "inline attachment";
-        tlas.task_access = access;
-        tlas.view = view;
-        tlas.shader_access_type = TaskBufferShaderAccessType::NONE;
-        TaskAttachmentInfo info = {};
-        info.type = daxa::TaskAttachmentType::TLAS;
-        info.value.tlas = tlas;
-        return info;
-    }
-
-    inline auto inl_attachment(TaskAccess access, TaskImageView view, ImageViewType view_type = daxa::ImageViewType::MAX_ENUM) -> TaskAttachmentInfo
-    {
-        TaskImageAttachmentInfo img = {};
-        img.name = "inline attachment";
-        img.task_access = access;
-        img.view_type = view_type;
-        img.shader_array_size = 0;
-        img.view = view;
-        TaskAttachmentInfo info = {};
-        info.value.image = img;
-        info.type = daxa::TaskAttachmentType::IMAGE;
-        return info;
-    }
-
-    inline auto inl_attachment(TaskAccess access, ImageViewType view_type, TaskImageView view) -> TaskAttachmentInfo
-    {
-        TaskImageAttachmentInfo img = {};
-        img.name = "inline attachment";
-        img.task_access = access;
-        img.view_type = view_type;
-        img.shader_array_size = 0;
-        img.view = view;
-        TaskAttachmentInfo info = {};
-        info.type = daxa::TaskAttachmentType::IMAGE;
-        info.value.image = img;
-        return info;
-    }
 } // namespace daxa
