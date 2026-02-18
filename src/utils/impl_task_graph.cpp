@@ -997,7 +997,7 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(transient.index < impl.resources.size(), "ERROR: Given resource view is invalid!");
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_buffer_info(TaskBufferView const & transient) -> TaskBufferInfo
+    DAXA_EXPORT_CXX auto TaskGraph::task_buffer_info(TaskBufferView const & transient) -> TaskBufferInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_resource_view_is_owned_by_graph(impl, transient);
@@ -1008,7 +1008,7 @@ namespace daxa
         };
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_tlas_info(TaskTlasView const & transient) -> TaskTlasInfo
+    DAXA_EXPORT_CXX auto TaskGraph::task_tlas_info(TaskTlasView const & transient) -> TaskTlasInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_resource_view_is_owned_by_graph(impl, transient);
@@ -1019,7 +1019,7 @@ namespace daxa
         };
     }
 
-    DAXA_EXPORT_CXX auto TaskGraph::transient_image_info(TaskImageView const & transient) -> TaskImageInfo
+    DAXA_EXPORT_CXX auto TaskGraph::task_image_info(TaskImageView const & transient) -> TaskImageInfo
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
         validate_resource_view_is_owned_by_graph(impl, transient);

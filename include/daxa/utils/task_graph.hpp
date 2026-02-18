@@ -838,9 +838,9 @@ namespace daxa
         DAXA_EXPORT_CXX auto create_task_tlas(TaskTlasInfo info) -> TaskTlasView;
         DAXA_EXPORT_CXX auto create_task_image(TaskImageInfo info) -> TaskImageView;
 
-        DAXA_EXPORT_CXX auto transient_buffer_info(TaskBufferView const & transient) -> TaskBufferInfo;
-        DAXA_EXPORT_CXX auto transient_tlas_info(TaskTlasView const & transient) -> TaskTlasInfo;
-        DAXA_EXPORT_CXX auto transient_image_info(TaskImageView const & transient) -> TaskImageInfo;
+        DAXA_EXPORT_CXX auto task_buffer_info(TaskBufferView const & task_buffer) -> TaskBufferInfo;
+        DAXA_EXPORT_CXX auto task_tlas_info(TaskTlasView const & task_tlas) -> TaskTlasInfo;
+        DAXA_EXPORT_CXX auto task_image_info(TaskImageView const & task_image) -> TaskImageInfo;
 
         DAXA_EXPORT_CXX void clear_buffer(TaskBufferClearInfo const & info);
         DAXA_EXPORT_CXX void clear_image(TaskImageClearInfo const & info);
