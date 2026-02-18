@@ -427,7 +427,6 @@ struct App : BaseApp<App>
     
     daxa::TaskGraph upload_task_graph = daxa::TaskGraph({
         .device = device,
-        .use_split_barriers = false,
         .name = "upload_task_graph",
     });
 
@@ -687,7 +686,6 @@ struct App : BaseApp<App>
     {
         daxa::TaskGraph input_task_graph = daxa::TaskGraph({
             .device = device,
-            .use_split_barriers = false,
             .name = "input_task_graph",
         });
 
@@ -757,7 +755,6 @@ struct App : BaseApp<App>
     daxa::TaskGraph record_sim_task_graph() {
         daxa::TaskGraph sim_task_graph = daxa::TaskGraph({
             .device = device,
-            .use_split_barriers = false,
             .name = "sim_task_graph",
         });
 

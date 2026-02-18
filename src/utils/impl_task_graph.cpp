@@ -1579,10 +1579,6 @@ namespace daxa
         }
     }
 
-    void TaskGraph::conditional(TaskGraphConditionalInfo const & conditional_info)
-    {
-    }
-
     auto TaskGraph::allocate_task_memory(usize size, usize align) -> void *
     {
         auto & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);

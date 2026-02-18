@@ -122,7 +122,6 @@ struct BaseApp : AppWindow<T>
         daxa::TaskGraph new_task_graph = daxa::TaskGraph({
             .device = device,
             .swapchain = swapchain,
-            .use_split_barriers = false,
             .name = "main_task_graph",
         });
         new_task_graph.register_image(task_swapchain_image);

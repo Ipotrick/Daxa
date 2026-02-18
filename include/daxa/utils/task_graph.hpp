@@ -62,10 +62,6 @@ namespace daxa
         bool optimize_transient_lifetimes = true;
         /// @brief  Allows task graph to alias transient resources memory (ofc only when that wont break the program)
         bool alias_transients = {};
-        /// @brief  Some drivers have bad implementations for split barriers.
-        ///         If that is the case for you, you can turn off all use of split barriers.
-        ///         Daxa will use pipeline barriers instead if this is set.
-        bool use_split_barriers = true;
         /// @brief  Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
         bool enable_command_labels = true;
         std::array<f32, 4> task_graph_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
@@ -107,20 +103,6 @@ namespace daxa
 
     struct TaskCompleteInfo
     {
-    };
-
-    struct TaskImageLastUse
-    {
-        ImageMipArraySlice slice = {};
-        ImageLayout layout = {};
-        Access access = {};
-    };
-
-    struct TaskGraphConditionalInfo
-    {
-        u32 condition_index = {};
-        std::function<void()> when_true = {};
-        std::function<void()> when_false = {};
     };
     
     struct TaskGraphDebugUi;
@@ -932,7 +914,6 @@ namespace daxa
                 attachments, asb_size, asb_align, task_type, name, inline_task.value._internal._queue);
         }
 
-        DAXA_EXPORT_CXX void conditional(TaskGraphConditionalInfo const & conditional_info);
         DAXA_EXPORT_CXX void submit(TaskSubmitInfo const & info);
         DAXA_EXPORT_CXX void present(TaskPresentInfo const & info);
 
