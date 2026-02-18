@@ -106,7 +106,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "shader integration test - alignment",
         });
 
@@ -194,7 +193,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "shader integration test - alignment",
         });
 

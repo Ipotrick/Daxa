@@ -123,7 +123,6 @@ struct BaseApp : AppWindow<T>
             .device = device,
             .swapchain = swapchain,
             .use_split_barriers = false,
-            .record_debug_information = true,
             .name = "main_task_graph",
         });
         new_task_graph.register_image(task_swapchain_image);

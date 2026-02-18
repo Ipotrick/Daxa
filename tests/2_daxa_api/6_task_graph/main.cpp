@@ -201,7 +201,6 @@ namespace tests
         // Task graph MUST die before we call wait_idle and collect_garbage.
         auto task_graph = daxa::TaskGraph({
             .device = app.device,
-            .record_debug_information = true,
             .name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE
@@ -229,7 +228,6 @@ namespace tests
         AppContext app = {};
         auto task_graph = daxa::TaskGraph({
             .device = app.device,
-            .record_debug_information = true,
             .name = APPNAME_PREFIX("create-write-read array layer"),
         });
         // CREATE IMAGE
@@ -263,7 +261,6 @@ namespace tests
         AppContext app = {};
         auto task_graph = daxa::TaskGraph({
             .device = app.device,
-            .record_debug_information = true,
             .name = APPNAME_PREFIX("create-transfer-read buffer"),
         });
 
@@ -319,7 +316,6 @@ namespace tests
         {
             auto task_graph = daxa::TaskGraph({
                 .device = app.device,
-                .record_debug_information = true,
                 .name = APPNAME_PREFIX("initial layout image"),
             });
             // CREATE IMAGE
@@ -375,7 +371,6 @@ namespace tests
         {
             auto task_graph = daxa::TaskGraph({
                 .device = app.device,
-                .record_debug_information = true,
                 .name = APPNAME_PREFIX("tracked slice barrier collapsing"),
             });
 
@@ -464,7 +459,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = app.device,
-            .record_debug_information = true,
             .name = "shader integration test - task graph",
         });
         task_graph.register_image(task_image);
@@ -554,7 +548,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task_graph",
         });
 
@@ -618,7 +611,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task_graph",
         });
 
@@ -690,7 +682,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task_graph",
         });
 
@@ -754,13 +745,11 @@ namespace tests
 
         auto task_graph_A = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task graph A",
         });
 
         auto task_graph_B = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task graph B",
         });
 
@@ -816,7 +805,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task graph",
         });
 
@@ -884,7 +872,6 @@ namespace tests
 
         auto task_graph = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task graph A",
         });
 
@@ -938,7 +925,6 @@ namespace tests
         // Task graph MUST die before we call wait_idle and collect_garbage.
         auto task_graph = daxa::TaskGraph({
             .device = app.device,
-            .record_debug_information = true,
             .name = APPNAME_PREFIX("create-write-read image"),
         });
         // CREATE IMAGE

@@ -70,22 +70,11 @@ namespace daxa
         ///         If that is the case for you, you can turn off all use of split barriers.
         ///         Daxa will use pipeline barriers instead if this is set.
         bool use_split_barriers = true;
-        /// @brief  Each condition doubled the number of permutations.
-        ///         For a low number of permutations its is preferable to precompile all permutations.
-        ///         For a large number of permutations it might be preferable to only create the permutations actually used on the fly just before they are needed.
-        ///         The second option is enabled by using jit (just in time) compilation.
-        bool jit_compile_permutations = {};
-        /// @brief  Task graph can branch the execution based on conditionals. All conditionals must be set before execution and stay constant while executing.
-        ///         This is useful to create permutations of a task graph without having to create a separate task graph.
-        ///         Another benefit is that task graph can generate synch between executions of permutations while it can not generate synch between two separate task graphs.
-        usize permutation_condition_count = {};
         /// @brief  Task graph will put performance markers that are used by profilers like nsight around each tasks execution by default.
         bool enable_command_labels = true;
         std::array<f32, 4> task_graph_label_color = {0.463f, 0.333f, 0.671f, 1.0f};
         std::array<f32, 4> task_batch_label_color = {0.563f, 0.433f, 0.771f, 1.0f};
         std::array<f32, 4> task_label_color = {0.663f, 0.533f, 0.871f, 1.0f};
-        /// @brief  Records debug information about the execution if enabled. This string is retrievable with the function get_debug_string.
-        bool record_debug_information = {};
         /// @brief  AMD gpus of the generations RDNA3 and RDNA4 have hardware bugs that make image barriers still useful for cache flushes.
         ///         This boolean makes task graph insert image barriers for image sync instead of global barriers to help the drivers out.
         bool amd_rdna3_4_image_barrier_fix = true;
@@ -956,7 +945,6 @@ namespace daxa
 
         DAXA_EXPORT_CXX void execute(ExecutionInfo const & info);
 
-        DAXA_EXPORT_CXX auto get_debug_string() -> std::string;
         DAXA_EXPORT_CXX auto get_transient_memory_size() -> usize;
 
       protected:

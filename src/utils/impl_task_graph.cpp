@@ -3809,11 +3809,6 @@ namespace daxa
         }
     }
 
-    auto TaskGraph::get_debug_string() -> std::string
-    {
-        return "";
-    }
-
     auto TaskGraph::inc_refcnt(ImplHandle const * object) -> u64
     {
         return object->inc_refcnt();

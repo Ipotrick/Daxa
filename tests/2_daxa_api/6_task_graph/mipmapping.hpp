@@ -404,8 +404,6 @@ namespace tests
                 daxa::TaskGraph new_task_graph = daxa::TaskGraph({
                     .device = device,
                     .swapchain = swapchain,
-                    .permutation_condition_count = TASK_CONDITION_COUNT,
-                    .record_debug_information = true,
                     .name = "main task graph",
                 });
                 new_task_graph.register_image(task_swapchain_image);

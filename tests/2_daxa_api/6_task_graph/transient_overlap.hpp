@@ -140,7 +140,6 @@ namespace tests
             auto task_graph = daxa::TaskGraph({
                 .device = device,
                 .alias_transients = true,
-                .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
                 .name = "task_graph",
             });
@@ -250,8 +249,6 @@ namespace tests
 
             auto task_graph = daxa::TaskGraph({
                 .device = device,
-                .permutation_condition_count = 1,
-                .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
                 .name = "task_graph",
             });
@@ -373,7 +370,6 @@ namespace tests
             auto task_graph = daxa::TaskGraph({
                 .device = device,
                 .reorder_tasks = false, // Disable reordering for testing purposes.
-                .record_debug_information = true,
                 .staging_memory_pool_size = 4'000'000,
                 .name = "task_graph",
             });

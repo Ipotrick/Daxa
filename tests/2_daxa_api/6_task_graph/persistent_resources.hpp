@@ -33,13 +33,11 @@ namespace tests
 
         auto task_graph_A = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task_graph_a",
         });
 
         auto task_graph_B = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task_graph_b",
         });
 
@@ -108,7 +106,6 @@ namespace tests
 
         auto task_graph_A = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task_graph_a",
         });
 
@@ -126,7 +123,6 @@ namespace tests
 
         auto task_graph_B = daxa::TaskGraph({
             .device = device,
-            .record_debug_information = true,
             .name = "task_graph_b",
         });
         task_graph_B.register_image(persistent_task_image);
