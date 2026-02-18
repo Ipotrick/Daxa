@@ -491,55 +491,36 @@ namespace daxa
                 for (u32 i = 0; i < TaskHeadT::ATTACHMENT_COUNT; ++i)
                 {
                     TaskAttachmentInfo & attach = _internal._attachments[i];
+
+                    if (!keep_access)
+                    {
+                        attach.value.common.task_access.stage = override_stage;
+                        attach.value.common.task_access.type = access;
+                    }
+                    DAXA_DBG_ASSERT_TRUE_M(((attach.value.common.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.common.name, attach.value.common.task_access));
+                    attach.value.common.task_access.stage = replace_joker_stage(attach.value.common.task_access.stage, default_stage);
+
                     if (daxa::holds_alternative<TaskViewUndefined>(av[i])) // skip unassigned views
                     {
                     }
                     else if (TaskBufferView * buffer_ptr = daxa::get_if<TaskBufferView>(&av[i]); buffer_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!buffer_ptr->is_empty(), error_message_unassigned_buffer_view(_internal._name, attach.value.buffer.name));
-                        if (!keep_access)
-                        {
-                            attach.value.buffer.task_access.stage = override_stage;
-                            attach.value.buffer.task_access.type = access;
-                        }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.buffer.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.buffer.name, attach.value.buffer.task_access));
-                        attach.value.buffer.task_access.stage = replace_joker_stage(attach.value.buffer.task_access.stage, default_stage);
                         attach.value.buffer.view = *buffer_ptr;
                     }
                     else if (TaskImageView * image_ptr = daxa::get_if<TaskImageView>(&av[i]); image_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!image_ptr->is_empty(), error_message_unassigned_image_view(_internal._name, attach.value.image.name));
-                        if (!keep_access)
-                        {
-                            attach.value.image.task_access.stage = override_stage;
-                            attach.value.image.task_access.type = access;
-                        }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.image.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.image.name, attach.value.image.task_access));
-                        attach.value.image.task_access.stage = replace_joker_stage(attach.value.image.task_access.stage, default_stage);
                         attach.value.image.view = *image_ptr;
                     }
                     else if (TaskBlasView * blas_ptr = daxa::get_if<TaskBlasView>(&av[i]); blas_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!blas_ptr->is_empty(), error_message_unassigned_tlas_view(_internal._name, attach.value.blas.name));
-                        if (!keep_access)
-                        {
-                            attach.value.blas.task_access.stage = override_stage;
-                            attach.value.blas.task_access.type = access;
-                        }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.blas.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.blas.name, attach.value.blas.task_access));
-                        attach.value.blas.task_access.stage = replace_joker_stage(attach.value.blas.task_access.stage, default_stage);
                         attach.value.blas.view = *blas_ptr;
                     }
                     else if (TaskTlasView * tlas_ptr = daxa::get_if<TaskTlasView>(&av[i]); tlas_ptr != nullptr)
                     {
                         DAXA_DBG_ASSERT_TRUE_M(!tlas_ptr->is_empty(), error_message_unassigned_blas_view(_internal._name, attach.value.tlas.name));
-                        if (!keep_access)
-                        {
-                            attach.value.tlas.task_access.stage = override_stage;
-                            attach.value.tlas.task_access.type = access;
-                        }
-                        DAXA_DBG_ASSERT_TRUE_M(((attach.value.tlas.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(_internal._name, attach.value.tlas.name, attach.value.tlas.task_access));
-                        attach.value.tlas.task_access.stage = replace_joker_stage(attach.value.tlas.task_access.stage, default_stage);
                         attach.value.tlas.view = *tlas_ptr;
                     }
                 }
