@@ -107,7 +107,7 @@ namespace daxa
         /// WARNING:
         /// * Due to wsi limitations this function will WAIT IDLE THE DEVICE.
         /// * If the function throws an error, The swapchain will be invalidated and unusable!
-        void resize();
+        void resize(Extent2D new_size);
         /// @brief Recreates swapchain with new present mode.
         /// WARNING:
         /// * Due to wsi limitations this function will WAIT IDLE THE DEVICE.
