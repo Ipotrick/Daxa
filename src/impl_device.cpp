@@ -40,17 +40,11 @@ namespace
             .samples = static_cast<VkSampleCountFlagBits>(image_info.sample_count),
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = image_info.usage,
-            .sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-            .queueFamilyIndexCount = 1,
-            .pQueueFamilyIndices = &self->get_queue(DAXA_QUEUE_MAIN).vk_queue_type_index,
+            .sharingMode = VK_SHARING_MODE_CONCURRENT,
+            .queueFamilyIndexCount = self->valid_vk_queue_type_count,
+            .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
         };
-        if (image_info.sharing_mode == daxa_SharingMode::DAXA_SHARING_MODE_CONCURRENT)
-        {
-            vk_image_create_info.sharingMode = VK_SHARING_MODE_CONCURRENT;
-            vk_image_create_info.queueFamilyIndexCount = self->valid_vk_queue_type_count;
-            vk_image_create_info.pQueueFamilyIndices = self->valid_vk_queue_families.data();
-        }
         return vk_image_create_info;
     }
     using namespace daxa::types;
@@ -2205,7 +2199,6 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .array_layer_count = 1,
             .sample_count = 1,
             .usage = ImageUsageFlagBits::SHADER_SAMPLED | ImageUsageFlagBits::SHADER_STORAGE | ImageUsageFlagBits::TRANSFER_DST,
-            .sharing_mode = SharingMode::CONCURRENT,
             .memory_flags = {},
         };
         VkImageCreateInfo const vk_image_create_info = initialize_image_create_info_from_image_info(

@@ -29,9 +29,19 @@ namespace daxa
     DAXA_EXPORT_CXX auto error_message_unassigned_blas_view(std::string_view task_name, std::string_view attachment_name) -> std::string;
     DAXA_EXPORT_CXX auto error_message_no_access_sage(std::string_view task_name, std::string_view attachment_name, TaskAccess task_access) -> std::string;
 
+    enum struct TaskResourceLifetimeType
+    {
+        TRANSIENT,
+        PERSISTENT,
+        EXTERNAL,
+    };
+
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskResourceLifetimeType lifetime_type) -> std::string_view;
+
     struct TaskBufferInfo
     {
         u64 size = {};
+        TaskResourceLifetimeType lifetime_type = TaskResourceLifetimeType::TRANSIENT;
         std::string_view name = {};
     };
 
@@ -45,6 +55,7 @@ namespace daxa
         u32 mip_level_count = 1;
         u32 array_layer_count = 1;
         u32 sample_count = 1;
+        TaskResourceLifetimeType lifetime_type = TaskResourceLifetimeType::TRANSIENT;
         std::string_view name = {};
     };
 
@@ -922,7 +933,12 @@ namespace daxa
 
         DAXA_EXPORT_CXX void execute(ExecutionInfo const & info);
 
-        DAXA_EXPORT_CXX auto get_transient_memory_size() -> usize;
+        // Alternative to clear_buffer and clear_image, these functions are only for persistent resources and they can only be called AFTER recording.
+        // All persistent resources are automatically cleared to zero before the first graph execution.
+        DAXA_EXPORT_CXX void request_persistent_buffer_clear(TaskBufferView const & task_buffer);
+        DAXA_EXPORT_CXX void request_persistent_image_clear(TaskImageView const & task_image);
+
+        DAXA_EXPORT_CXX auto get_resource_memory_block_size() -> usize;
 
       protected:
         template <typename T, typename H_T>

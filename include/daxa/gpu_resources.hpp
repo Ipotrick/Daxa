@@ -174,12 +174,6 @@ namespace daxa
 
     DAXA_EXPORT_CXX auto to_string(ImageCreateFlags flags) -> std::string;
 
-    enum struct SharingMode
-    {
-        EXCLUSIVE,
-        CONCURRENT,
-    };
-
     struct ImageInfo
     {
         ImageCreateFlags flags = ImageCreateFlagBits::NONE;
@@ -190,7 +184,6 @@ namespace daxa
         u32 array_layer_count = 1;
         u32 sample_count = 1;
         ImageUsageFlags usage = {};
-        SharingMode sharing_mode = SharingMode::EXCLUSIVE;
         // Ignored when allocating with a memory block.
         MemoryFlags memory_flags = {};
         SmallString name = {};

@@ -818,7 +818,7 @@ namespace daxa
             /// ==== DRAW RESOURCE MEMORY HEAP ====
             /// ===================================
 
-            ImVec2 const max_extent = ImVec2(impl_tg->flat_batch_count, impl_tg->transient_memory_block.info().requirements.size);
+            ImVec2 const max_extent = ImVec2(impl_tg->flat_batch_count, impl_tg->resource_memory_block.info().requirements.size);
             ImVec2 const world_extent = ImVec2((max_extent.x) * GRID_STEP, (max_extent.y / (8192.0f * 1024 * 4)) * GRID_STEP);
 
             float const width_scale = 1.0f / max_extent.x * world_extent.x;
@@ -1166,7 +1166,7 @@ namespace daxa
 
     auto resource_detail_ui(ImplTaskGraphDebugUi & ui_context, ImplTaskGraph * impl_tg, u32 resource_index) -> bool
     {
-        ImplTaskResource const & resource = impl_tg->resources[resource_index];
+        ImplTaskResource & resource = impl_tg->resources[resource_index];
         bool open = true;
         ImGui::SetNextWindowSize(ImVec2(500, 500), ImGuiCond_FirstUseEver);
         if (ImGui::Begin(resource.name.data(), &open, ImGuiWindowFlags_NoSavedSettings))
@@ -1186,6 +1186,24 @@ namespace daxa
             {
                 ImGui::SameLine();
                 resource_viewer_checkbox(ui_context, impl_tg, resource_index);
+            }
+            
+            if (resource.lifetime_type != daxa::TaskResourceLifetimeType::TRANSIENT && (resource.kind == TaskResourceKind::BUFFER || resource.kind == TaskResourceKind::IMAGE))
+            {
+                ImGui::SameLine();
+                if (ImGui::Button("Clear"))
+                {
+                    if (resource.clear_request_index == ~0u)
+                    {
+                        u32 const clear_request_index = impl_tg->resource_clear_request_count;
+                        DAXA_DBG_ASSERT_TRUE_M(clear_request_index < impl_tg->resource_clear_requests.size(), "IMPOSSIBLE CASE! THE CODE SHOULD BE SET UP IN A WAY THAT THE CLEAR REQUEST SPAN SIZE CAN NEVER BE EXCEEDED!");
+
+                        impl_tg->resource_clear_requests[clear_request_index] = { &resource, resource_index };
+                        resource.clear_request_index = clear_request_index;
+
+                        impl_tg->resource_clear_request_count += 1;
+                    }
+                }
             }
 
             /// ======================================
@@ -1278,19 +1296,29 @@ namespace daxa
                 ImGui::EndTable();
             }
 
-            if (resource.allocation_size != 0 && ImGui::BeginTable("Attribute Table Transient Memory", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit))
+            if (resource.allocation_size != 0 && ImGui::BeginTable("Attribute Table Memory", 8, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit))
             {
                 ImGui::TableNextColumn();
                 set_table_cell_name_color();
-                ImGui::Text("Transient Memory Offset");
+                ImGui::Text("Allocation");
+
+                ImGui::TableNextColumn();
+                set_table_cell_name_color();
+                ImGui::Text("Offset");
                 ImGui::TableNextColumn();
                 ImGui::Text("%i", resource.allocation_offset);
 
                 ImGui::TableNextColumn();
                 set_table_cell_name_color();
-                ImGui::Text("Transient Memory Size");
+                ImGui::Text("Size");
                 ImGui::TableNextColumn();
                 ImGui::Text("%i", resource.allocation_size);
+
+                ImGui::TableNextColumn();
+                set_table_cell_name_color();
+                ImGui::Text("Lifetime");
+                ImGui::TableNextColumn();
+                ImGui::Text(to_string(resource.lifetime_type).data());
 
                 ImGui::TableNextColumn();
                 ImGui::EndTable();
@@ -1710,7 +1738,7 @@ namespace daxa
                 ImGui::TableNextColumn();
                 ImGui::Text("Transient Memory");
                 ImGui::TableNextColumn();
-                ImGui::Text("%imb", impl_tg->transient_memory_block.info().requirements.size / (1u << 20u));
+                ImGui::Text("%imb", impl_tg->resource_memory_block.info().requirements.size / (1u << 20u));
 
                 ImGui::EndTable();
             }

@@ -61,12 +61,6 @@ static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_FRAGMENT_DENSITY_MAP = 0x0
 static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_FRAGMENT_SHADING_RATE_ATTACHMENT = 0x00000100;
 static daxa_ImageUsageFlags const DAXA_IMAGE_USE_FLAG_HOST_TRANSFER = 0x00400000;
 
-typedef enum
-{
-    DAXA_SHARING_MODE_EXCLUSIVE,
-    DAXA_SHARING_MODE_CONCURRENT,
-} daxa_SharingMode;
-
 typedef struct
 {
     daxa_ImageFlags flags;
@@ -77,7 +71,6 @@ typedef struct
     uint32_t array_layer_count;
     uint32_t sample_count;
     daxa_ImageUsageFlags usage;
-    daxa_SharingMode sharing_mode;
     // Ignored when allocating with a memory block.
     daxa_MemoryFlags memory_flags;
     daxa_SmallString name;
@@ -127,7 +120,6 @@ static daxa_ImageInfo const DAXA_DEFAULT_IMAGE_INFO = {
     .array_layer_count = 1,
     .sample_count = 1,
     .usage = 0,
-    .sharing_mode = DAXA_SHARING_MODE_EXCLUSIVE,
     .memory_flags = DAXA_MEMORY_FLAG_NONE,
     .name = {.data = DAXA_ZERO_INIT, .size = 0},
 };

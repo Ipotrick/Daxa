@@ -154,6 +154,8 @@ namespace daxa
         u64 allocation_alignment = {};
         u32 allocation_allowed_memory_type_bits = {};
         u64 allocation_offset = {};
+        TaskResourceLifetimeType lifetime_type = {};
+        u32 clear_request_index = ~0u;
 
         union {
             BufferId buffer;
@@ -176,7 +178,6 @@ namespace daxa
                 u32 mip_level_count = {};
                 u32 array_layer_count = {};
                 u32 sample_count = {};
-                SharingMode sharing_mode = {};
                 ImageUsageFlags usage = {};
             } image;
         } info;
@@ -311,12 +312,14 @@ namespace daxa
         ArenaDynamicArray8k<ImplTaskResource> resources = {};
         std::unordered_map<std::string_view, std::tuple<ImplTask*, u32, u32>> name_to_task_table = {};          // unique task name -> local id into task. Duplicate Task names are modified to be unique
         std::span<std::pair<ImplTaskResource*, u32>> external_resources = {};
+        std::span<std::pair<ImplTaskResource*, u32>> resource_clear_requests = {};
+        u32 resource_clear_request_count = {};
         std::unordered_map<std::string_view, std::pair<ImplTaskResource*, u32>> name_to_resource_table = {};    // unique buffer name -> local id into buffers.
         std::unordered_map<u32, std::pair<ImplTaskResource*, u32>> external_idx_to_resource_table = {};         // global unique external id -> local id into buffers.
         ArenaDynamicArray8k<TasksSubmit> submits = {};
         u32 flat_batch_count = {};                                                                              // total batch count ignoring async compute;
         u32 queue_bits = {};
-        daxa::MemoryBlock transient_memory_block = {};
+        daxa::MemoryBlock resource_memory_block = {};
         std::optional<daxa::TransferMemoryPool> staging_memory = {};
         std::optional<TaskGraphPresent> present = {};
         ImplTaskResource* swapchain_image = nullptr;
