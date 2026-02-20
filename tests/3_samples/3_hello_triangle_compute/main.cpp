@@ -25,7 +25,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::TaskImageAdapter task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "task_render_image"}};
+    daxa::ExternalTaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "task_render_image"}};
 
     daxa::TaskGraph loop_task_graph = record_loop_task_graph();
 

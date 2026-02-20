@@ -840,10 +840,10 @@ namespace daxa
         DAXA_EXPORT_CXX TaskGraph(TaskGraphInfo const & info);
         DAXA_EXPORT_CXX ~TaskGraph();
 
-        DAXA_EXPORT_CXX auto register_buffer(TaskBufferAdapter const & buffer) -> TaskBufferView;
-        DAXA_EXPORT_CXX auto register_blas(TaskBlasAdapter const & blas) -> TaskBlasView;
-        DAXA_EXPORT_CXX auto register_tlas(TaskTlasAdapter const & tlas) -> TaskTlasView;
-        DAXA_EXPORT_CXX auto register_image(TaskImageAdapter const & image) -> TaskImageView;
+        DAXA_EXPORT_CXX auto register_buffer(ExternalTaskBuffer const & buffer) -> TaskBufferView;
+        DAXA_EXPORT_CXX auto register_blas(ExternalTaskBlas const & blas) -> TaskBlasView;
+        DAXA_EXPORT_CXX auto register_tlas(ExternalTaskTlas const & tlas) -> TaskTlasView;
+        DAXA_EXPORT_CXX auto register_image(ExternalTaskImage const & image) -> TaskImageView;
 
         DAXA_EXPORT_CXX auto create_task_buffer(TaskBufferInfo info) -> TaskBufferView;
         DAXA_EXPORT_CXX auto create_task_tlas(TaskTlasInfo info) -> TaskTlasView;

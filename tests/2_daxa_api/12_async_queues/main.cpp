@@ -400,7 +400,7 @@ namespace tests
                 .usage = daxa::ImageUsageFlagBits::COLOR_ATTACHMENT | daxa::ImageUsageFlagBits::TRANSFER_SRC,
                 .name = "render target",
             });
-            daxa::TaskImageAdapter trender_image = daxa::TaskImageAdapter{{
+            daxa::ExternalTaskImage trender_image = daxa::ExternalTaskImage{{
                 .initial_images = {
                     .images = std::array{render_target},
                 },
@@ -441,7 +441,7 @@ namespace tests
                 pipeline = result.value();
             }
 
-            auto task_swapchain_image = daxa::TaskImageAdapter{{.swapchain_image = true, .name = "swapchain image"}};
+            auto task_swapchain_image = daxa::ExternalTaskImage{{.swapchain_image = true, .name = "swapchain image"}};
 
             auto loop_task_graph = daxa::TaskGraph({
                 .device = device,

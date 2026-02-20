@@ -109,12 +109,12 @@ namespace tests
             .name = "shader integration test - alignment",
         });
 
-        auto src = daxa::TaskBufferAdapter{{
+        auto src = daxa::ExternalTaskBuffer{{
             .initial_buffers = {.buffers = {&src_buffer, 1}},
             .name = "align_test_src",
         }};
         task_graph.register_buffer(src);
-        auto dst = daxa::TaskBufferAdapter{{
+        auto dst = daxa::ExternalTaskBuffer{{
             .initial_buffers = {.buffers = {&dst_buffer, 1}},
             .name = "align_test_dst",
         }};

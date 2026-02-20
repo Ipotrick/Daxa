@@ -635,27 +635,27 @@ namespace daxa
         }
     };
 
-    struct TaskBufferAdapterInfo
+    struct ExternalTaskBufferInfo
     {
         daxa::BufferId buffer = {};
         std::string_view name = {};
     };
 
     struct ImplExternalResource;
-    using ImplTaskBufferBlasTlasAdapter = ImplExternalResource;
+    using ImplExternalTaskBufferBlasTlas = ImplExternalResource;
 
-    struct DAXA_EXPORT_CXX TaskBufferAdapter : ManagedPtr<TaskBufferAdapter, ImplTaskBufferBlasTlasAdapter *>
+    struct DAXA_EXPORT_CXX ExternalTaskBuffer : ManagedPtr<ExternalTaskBuffer, ImplExternalTaskBufferBlasTlas *>
     {
-        TaskBufferAdapter() = default;
-        TaskBufferAdapter(TaskBufferAdapterInfo const & info);
+        ExternalTaskBuffer() = default;
+        ExternalTaskBuffer(ExternalTaskBufferInfo const & info);
 
         operator TaskBufferView() const;
 
         auto view() const -> TaskBufferView;
-        auto info() const -> TaskBufferAdapterInfo;
+        auto info() const -> ExternalTaskBufferInfo;
 
         void set_buffer(BufferId buffer);
-        void swap_buffers(TaskBufferAdapter & other);
+        void swap_buffers(ExternalTaskBuffer & other);
         auto id() const -> BufferId;
 
       protected:
@@ -665,24 +665,24 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    struct TaskBlasAdapterInfo
+    struct ExternalTaskBlasInfo
     {
         BlasId blas = {};
         std::string_view name = {};
     };
 
-    struct DAXA_EXPORT_CXX TaskBlasAdapter : ManagedPtr<TaskBlasAdapter, ImplTaskBufferBlasTlasAdapter *>
+    struct DAXA_EXPORT_CXX ExternalTaskBlas : ManagedPtr<ExternalTaskBlas, ImplExternalTaskBufferBlasTlas *>
     {
-        TaskBlasAdapter() = default;
-        TaskBlasAdapter(TaskBlasAdapterInfo const & info);
+        ExternalTaskBlas() = default;
+        ExternalTaskBlas(ExternalTaskBlasInfo const & info);
 
         operator TaskBlasView() const;
 
         auto view() const -> TaskBlasView;
-        auto info() const -> TaskBlasAdapterInfo;
+        auto info() const -> ExternalTaskBlasInfo;
         auto id() const -> BlasId;
         void set_blas(BlasId blas);
-        void swap_blas(TaskBlasAdapter & other);
+        void swap_blas(ExternalTaskBlas & other);
 
       protected:
         template <typename T, typename H_T>
@@ -691,24 +691,24 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    struct TaskTlasAdapterInfo
+    struct ExternalTaskTlasInfo
     {
         TlasId tlas = {};
         std::string_view name = {};
     };
 
-    struct DAXA_EXPORT_CXX TaskTlasAdapter : ManagedPtr<TaskTlasAdapter, ImplTaskBufferBlasTlasAdapter *>
+    struct DAXA_EXPORT_CXX ExternalTaskTlas : ManagedPtr<ExternalTaskTlas, ImplExternalTaskBufferBlasTlas *>
     {
-        TaskTlasAdapter() = default;
-        TaskTlasAdapter(TaskTlasAdapterInfo const & info);
+        ExternalTaskTlas() = default;
+        ExternalTaskTlas(ExternalTaskTlasInfo const & info);
 
         operator TaskTlasView() const;
 
         auto view() const -> TaskTlasView;
-        auto info() const -> TaskTlasAdapterInfo;
+        auto info() const -> ExternalTaskTlasInfo;
         auto id() const -> TlasId;
         void set_tlas(TlasId tlas);
-        void swap_tlas(TaskTlasAdapter & other);
+        void swap_tlas(ExternalTaskTlas & other);
 
       protected:
         template <typename T, typename H_T>
@@ -717,7 +717,7 @@ namespace daxa
         static auto dec_refcnt(ImplHandle const * object) -> u64;
     };
 
-    struct TaskImageAdapterInfo
+    struct ExternalTaskImageInfo
     {
         ImageId image = {};
         bool is_general_layout = {};
@@ -726,20 +726,20 @@ namespace daxa
     };
 
     struct ImplExternalResource;
-    using ImplTaskImageAdapter = ImplExternalResource;
+    using ImplExternalTaskImage = ImplExternalResource;
 
-    struct DAXA_EXPORT_CXX TaskImageAdapter : ManagedPtr<TaskImageAdapter, ImplTaskImageAdapter *>
+    struct DAXA_EXPORT_CXX ExternalTaskImage : ManagedPtr<ExternalTaskImage, ImplExternalTaskImage *>
     {
-        TaskImageAdapter() = default;
-        TaskImageAdapter(TaskImageAdapterInfo const & info);
+        ExternalTaskImage() = default;
+        ExternalTaskImage(ExternalTaskImageInfo const & info);
 
         operator TaskImageView() const;
 
         auto view() const -> TaskImageView;
-        auto info() const -> TaskImageAdapterInfo;
+        auto info() const -> ExternalTaskImageInfo;
         auto id() const -> ImageId;
         void set_image(ImageId image, bool is_general_layout = false);
-        void swap_images(TaskImageAdapter & other);
+        void swap_images(ExternalTaskImage & other);
 
       protected:
         template <typename T, typename H_T>
@@ -755,16 +755,16 @@ namespace daxa
         std::pair<daxa::TaskImageAttachmentIndex, daxa::TaskImageView>>;
 
     template <typename T>
-    concept TaskBufferViewOrTaskBuffer = std::is_same_v<T, TaskBufferView> || std::is_same_v<T, TaskBufferAdapter>;
+    concept TaskBufferViewOrTaskBuffer = std::is_same_v<T, TaskBufferView> || std::is_same_v<T, ExternalTaskBuffer>;
 
     template <typename T>
-    concept TaskBlasViewOrTaskBlas = std::is_same_v<T, TaskBlasView> || std::is_same_v<T, TaskBlasAdapter>;
+    concept TaskBlasViewOrTaskBlas = std::is_same_v<T, TaskBlasView> || std::is_same_v<T, ExternalTaskBlas>;
 
     template <typename T>
-    concept TaskTlasViewOrTaskTlas = std::is_same_v<T, TaskTlasView> || std::is_same_v<T, TaskTlasAdapter>;
+    concept TaskTlasViewOrTaskTlas = std::is_same_v<T, TaskTlasView> || std::is_same_v<T, ExternalTaskTlas>;
 
     template <typename T>
-    concept TaskImageViewOrTaskImage = std::is_same_v<T, TaskImageView> || std::is_same_v<T, TaskImageAdapter>;
+    concept TaskImageViewOrTaskImage = std::is_same_v<T, TaskImageView> || std::is_same_v<T, ExternalTaskImage>;
 
     template <typename T>
     concept TaskResourceViewOrResource =
