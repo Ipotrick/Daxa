@@ -76,9 +76,9 @@ namespace daxa
 
     struct ImageClearInfo
     {
-        ClearValue clear_value = {};
         ImageId image = {};
         ImageMipArraySlice slice = {};
+        ClearValue clear_value = {};
     };
 
     struct BufferClearInfo

@@ -122,16 +122,12 @@ static daxa_ImageCopyInfo const DAXA_DEFAULT_IMAGE_COPY_INFO = {
 typedef struct
 {
     // Make sure this stays abi compatible with daxa::ClearValue
-    daxa_Variant(VkClearValue) clear_value;
     daxa_ImageId image;
     daxa_ImageMipArraySlice slice;
+    daxa_Variant(VkClearValue) clear_value;
 } daxa_ImageClearInfo;
 
-static daxa_ImageClearInfo const DAXA_DEFAULT_IMAGE_CLEAR_INFO = {
-    .clear_value = DAXA_ZERO_INIT,
-    .image = DAXA_ZERO_INIT,
-    .slice = DAXA_ZERO_INIT,
-};
+static daxa_ImageClearInfo const DAXA_DEFAULT_IMAGE_CLEAR_INFO = DAXA_ZERO_INIT;
 
 typedef struct
 {
