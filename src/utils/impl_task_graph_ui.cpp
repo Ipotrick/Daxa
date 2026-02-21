@@ -1324,6 +1324,23 @@ namespace daxa
                 ImGui::EndTable();
             }
 
+            if (resource.lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER && ImGui::BeginTable("Double Buffer", 4, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit))
+            {
+                ImGui::TableNextColumn();
+                set_table_cell_name_color();
+                ImGui::Text(resource.double_buffer_index == 0 ? "IS_FRONT_BUFFER" : "IS_BACK_BUFFER");
+
+                ImGui::TableNextColumn();
+                ImGui::Text(resource.double_buffer_index == 0 ? "BACK_BUFFER:" : "FRONT_BUFFER:");
+                ImGui::TableNextColumn();
+                set_table_cell_name_color();
+                ImGui::Text(resource.double_buffer_pair_resource.first->name.data());
+                resource_popup_context_ui(ui_context, impl_tg, resource.double_buffer_pair_resource.second, false);
+
+                ImGui::TableNextColumn();
+                ImGui::EndTable();
+            }
+
             if (ImGui::BeginTable("Attribute Table", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit))
             {
                 ImGui::TableSetupColumn("Attribute");

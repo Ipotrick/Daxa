@@ -119,6 +119,7 @@ namespace daxa
         {
             case TaskResourceLifetimeType::TRANSIENT: return "TRANSIENT";
             case TaskResourceLifetimeType::PERSISTENT: return "PERSISTENT";
+            case TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER: return "PERSISTENT_DOUBLE_BUFFER";
             case TaskResourceLifetimeType::EXTERNAL: return "EXTERNAL";
             default: return "UNKNOWN";
         }
@@ -255,7 +256,7 @@ namespace daxa
                 impl.external_idx_to_resource_table.contains(id.index),
                 std::format("Detected invalid access of external resource id ({}) in task graph \"{}\"; "
                             "please make sure to declare external resource use to each task graph that uses this buffer with the function register_buffer!",
-                            id.index, impl.info.name));
+                            static_cast<u32>(id.index), impl.info.name));
             TaskResourceIdT translated_id = id;
             translated_id.task_graph_index = impl.unique_index;
             translated_id.index = impl.external_idx_to_resource_table.at(id.index).second;
@@ -266,7 +267,20 @@ namespace daxa
             id.task_graph_index == impl.unique_index,
             std::format("Detected invalid access of transient resource id ({}) in task graph \"{}\"; "
                         "please make sure that you only use transient resources within the list they are created in!",
-                        id.index, impl.info.name));
+                        static_cast<u32>(id.index), impl.info.name));
+
+        DAXA_DBG_ASSERT_TRUE_M(
+            id.double_buffer_index == 0 || impl.resources[id.index].double_buffer_pair_resource.first != nullptr,
+            std::format("Detected invalid double buffer indexing of resource id ({}) in task graph \"{}\"; "
+                        "The given resource is NOT double buffered, yet the view is set to use the previous double buffer value of the resource!",
+                        static_cast<u32>(id.index), impl.info.name));
+
+        if (id.double_buffer_index == 1)
+        {
+            id.index = impl.resources[id.index].double_buffer_pair_resource.second;
+            id.double_buffer_index = 0;
+        }
+
         return id;
     }
 
@@ -943,13 +957,29 @@ namespace daxa
         buffer.kind = kind;
         buffer.external = {};
         buffer.lifetime_type = lifetime_type,
-        buffer.id = {}; // Set in transient resource creation.
+        buffer.id = {};
         buffer.info.buffer.size = size;
 
         impl.resources.push_back(buffer);
         u32 const index = static_cast<u32>(impl.resources.size()) - 1u;
 
         impl.name_to_resource_table[buffer.name] = std::pair{&impl.resources.back(), index};
+
+        if (lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER)
+        {
+            auto buffer_back_buffer = buffer;
+            buffer_back_buffer.name = impl.task_memory.allocate_copy_string(std::format("{}::back_buffer", name).c_str());
+
+            impl.resources.push_back(buffer_back_buffer);
+            u32 const back_buffer_resource_index = static_cast<u32>(impl.resources.size()) - 1u;
+
+            impl.name_to_resource_table[buffer_back_buffer.name] = std::pair{&impl.resources.back(), back_buffer_resource_index};
+
+            impl.resources[index].double_buffer_pair_resource = { &impl.resources.back(), back_buffer_resource_index };
+            impl.resources[index].double_buffer_index = 0u;
+            impl.resources[back_buffer_resource_index].double_buffer_pair_resource = { (&impl.resources.back()) - 1u, index };
+            impl.resources[back_buffer_resource_index].double_buffer_index = 1u;
+        }
 
         return index;
     }
@@ -989,6 +1019,22 @@ namespace daxa
         u32 const index = static_cast<u32>(impl.resources.size()) - 1u;
 
         impl.name_to_resource_table[image.name] = std::pair{&impl.resources.back(), index};
+
+        if (info.lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER)
+        {
+            auto image_back_buffer = image;
+            image_back_buffer.name = impl.task_memory.allocate_copy_string(std::format("{}::back_buffer", info.name).c_str());
+
+            impl.resources.push_back(image_back_buffer);
+            u32 const back_buffer_resource_index = static_cast<u32>(impl.resources.size()) - 1u;
+
+            impl.name_to_resource_table[image_back_buffer.name] = std::pair{&impl.resources.back(), back_buffer_resource_index};
+
+            impl.resources[index].double_buffer_pair_resource = { &impl.resources.back(), back_buffer_resource_index };
+            impl.resources[index].double_buffer_index = 0u;
+            impl.resources[back_buffer_resource_index].double_buffer_pair_resource = { (&impl.resources.back()) - 1u, index };
+            impl.resources[back_buffer_resource_index].double_buffer_index = 1u;
+        }
 
         auto task_image_view = TaskImageView{
             .task_graph_index = impl.unique_index,
@@ -1460,6 +1506,10 @@ namespace daxa
             return;
         }
         TaskAttachmentInfo & attachment_info = task.attachments[attach_i];
+
+        DAXA_DBG_ASSERT_TRUE_M(!attachment_info.value.image.translated_view.is_null(), "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NULL ATTACHMENTS!");
+        DAXA_DBG_ASSERT_TRUE_M(resource.external != nullptr || resource.lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER, "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NON EXTERNAL, NON DOUBLE BUFFER RESOURCE ATTACHMENTS!");
+
         switch (attachment_info.type)
         {
         case TaskAttachmentType::UNDEFINED:
@@ -1467,25 +1517,21 @@ namespace daxa
             break;
         case TaskAttachmentType::BUFFER:
         {
-            ImplTaskResource const & resource = impl.resources[attachment_info.value.buffer.translated_view.index];
             attachment_info.value.buffer.id = resource.id.buffer;
         }
         break;
         case TaskAttachmentType::TLAS:
         {
-            ImplTaskResource const & resource = impl.resources[attachment_info.value.tlas.translated_view.index];
             attachment_info.value.tlas.id = resource.id.tlas;
         }
         break;
         case TaskAttachmentType::BLAS:
         {
-            ImplTaskResource const & resource = impl.resources[attachment_info.value.blas.translated_view.index];
             attachment_info.value.blas.id = resource.id.blas;
         }
         break;
         case TaskAttachmentType::IMAGE:
         {
-            ImplTaskResource const & resource = impl.resources[attachment_info.value.image.translated_view.index];
             attachment_info.value.image.id = resource.id.image;
         }
         break;
@@ -1501,7 +1547,7 @@ namespace daxa
         }
 
         DAXA_DBG_ASSERT_TRUE_M(!attachment_info.value.image.translated_view.is_null(), "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NULL ATTACHMENTS!");
-        DAXA_DBG_ASSERT_TRUE_M(resource.external != nullptr, "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NON EXTERNAL RESOURCE ATTACHMENTS!");
+        DAXA_DBG_ASSERT_TRUE_M(resource.external != nullptr || resource.lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER, "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NON EXTERNAL, NON DOUBLE BUFFER RESOURCE ATTACHMENTS!");
 
         if (attachment_info.value.image.is_mip_array)
         {
@@ -1576,9 +1622,11 @@ namespace daxa
 
     auto patch_attachment_shader_blob(ImplTaskGraph & impl, ImplTask & task, u32 attach_i, ImplTaskResource & resource)
     {
-        DAXA_DBG_ASSERT_TRUE_M(resource.external != nullptr, "IMPOSSIBLE CASE, PATCHING IS ONLY POSSIBLE FOR EXTERNAL RESOURCES!");
         TaskAttachmentInfo const & attachment_info = task.attachments[attach_i];
         auto asb_section = task.attachment_shader_blob_sections[attach_i];
+
+        DAXA_DBG_ASSERT_TRUE_M(!attachment_info.value.image.translated_view.is_null(), "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NULL ATTACHMENTS!");
+        DAXA_DBG_ASSERT_TRUE_M(resource.external != nullptr || resource.lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER, "IMPOSSIBLE CASE, WE SHOULD NEVER TRY TO PATCH NON EXTERNAL, NON DOUBLE BUFFER RESOURCE ATTACHMENTS!");
 
         switch (attachment_info.type)
         {
@@ -2000,7 +2048,7 @@ namespace daxa
                 TaskAttachmentInfo const & attachment = task.attachments[attach_i];
 
                 task.attachment_access_groups[attach_i] = {nullptr, ~0u}; // Zero init attachment_access_groups. Only non-null attachments are assigned access groups later.
-                task.attachment_resources[attach_i] = {nullptr, 0u};
+                task.attachment_resources[attach_i] = {nullptr, ~0u};
 
                 TaskAccessType access_type = {};
                 ArenaDynamicArray8k<TmpAccessGroup> * access_timeline = nullptr;
@@ -2666,18 +2714,23 @@ namespace daxa
         // This works out good in most cases as the short lived allocations will then "sit on top" of many long lived allocations, leaving larger holes for aliasing overlapping.
 
         // Filter and sort transient resources by lifetime
-        auto transient_resources_sorted_by_lifetime = tmp_memory.allocate_trivial_span<ImplTaskResource *>(impl.resources.size());
-        auto transient_resource_count = 0u;
+        auto non_external_resources_sorted_by_lifetime = tmp_memory.allocate_trivial_span<ImplTaskResource *>(impl.resources.size());
+        auto non_external_resources_count = 0u;
+        auto primary_double_buffer_resources = 0u;
         for (u32 r = 0; r < impl.resources.size(); ++r)
         {
             ImplTaskResource & resource = impl.resources[r];
             if (resource.external == nullptr)
             {
-                transient_resources_sorted_by_lifetime[transient_resource_count++] = &resource;
+                non_external_resources_sorted_by_lifetime[non_external_resources_count++] = &resource;
+            }
+            if (resource.lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER && resource.double_buffer_index == 0)
+            {
+                primary_double_buffer_resources += 1u;
             }
         }
-        transient_resources_sorted_by_lifetime = std::span{transient_resources_sorted_by_lifetime.data(), static_cast<usize>(transient_resource_count)};
-        std::sort(transient_resources_sorted_by_lifetime.begin(), transient_resources_sorted_by_lifetime.end(), [&](ImplTaskResource const * r0, ImplTaskResource const * r1)
+        non_external_resources_sorted_by_lifetime = std::span{non_external_resources_sorted_by_lifetime.data(), static_cast<usize>(non_external_resources_count)};
+        std::sort(non_external_resources_sorted_by_lifetime.begin(), non_external_resources_sorted_by_lifetime.end(), [&](ImplTaskResource const * r0, ImplTaskResource const * r1)
                   {
             u32 const r0_lifetime = r0->final_schedule_last_batch - r0->final_schedule_first_batch + 1u;
             u32 const r1_lifetime = r1->final_schedule_last_batch - r1->final_schedule_first_batch + 1u;
@@ -2687,34 +2740,35 @@ namespace daxa
         auto resource_heap_size = 0ull;
         auto resource_heap_alignment = 0ull;
         auto resource_heap_memory_bits = ~0u;
-        struct TransientResourceAllocation
+        struct NonExternalResourceAllocation
         {
             ImplTaskResource * resource = {};
             u32 resource_index = {};
             u64 offset = {};
             u64 size = {};
         };
-        auto transient_resource_allocations = tmp_memory.allocate_trivial_span<TransientResourceAllocation>(transient_resource_count);
-        for (u32 tr = 0; tr < transient_resource_count; ++tr)
+        auto non_external_resource_allocations = tmp_memory.allocate_trivial_span<NonExternalResourceAllocation>(non_external_resources_count);
+        for (u32 tr = 0; tr < non_external_resources_count; ++tr)
         {
             u32 const allocation_count = tr;
-            ImplTaskResource & resource = *transient_resources_sorted_by_lifetime[tr];
+            ImplTaskResource & resource = *non_external_resources_sorted_by_lifetime[tr];
             MemoryRequirements new_allocation_memory_requirements = {
                 .size = resource.allocation_size,
                 .alignment = resource.allocation_alignment,
                 .memory_type_bits = resource.allocation_allowed_memory_type_bits,
             };
 
-            auto new_allocation = TransientResourceAllocation{
+            u32 const size_factor = resource.lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER ? 2u : 1u;
+            auto new_allocation = NonExternalResourceAllocation{
                 .resource = &resource,
                 .resource_index = tr,
                 .offset = 0u,
-                .size = new_allocation_memory_requirements.size,
+                .size = new_allocation_memory_requirements.size * size_factor,
             };
-            auto new_allocation_first_batch = transient_resources_sorted_by_lifetime[tr]->final_schedule_first_batch;
-            auto new_allocation_last_batch = transient_resources_sorted_by_lifetime[tr]->final_schedule_last_batch;
-            auto new_allocation_first_submit = transient_resources_sorted_by_lifetime[tr]->final_schedule_first_submit;
-            auto new_allocation_last_submit = transient_resources_sorted_by_lifetime[tr]->final_schedule_last_submit;
+            auto new_allocation_first_batch = non_external_resources_sorted_by_lifetime[tr]->final_schedule_first_batch;
+            auto new_allocation_last_batch = non_external_resources_sorted_by_lifetime[tr]->final_schedule_last_batch;
+            auto new_allocation_first_submit = non_external_resources_sorted_by_lifetime[tr]->final_schedule_first_submit;
+            auto new_allocation_last_submit = non_external_resources_sorted_by_lifetime[tr]->final_schedule_last_submit;
 
             if (impl.info.alias_transients)
             {
@@ -2727,7 +2781,7 @@ namespace daxa
                 u32 last_colliding_allocation = 0u;
                 for (u32 alloc_i = 0; alloc_i < allocation_count; ++alloc_i)
                 {
-                    auto const & other_allocation = transient_resource_allocations[alloc_i];
+                    auto const & other_allocation = non_external_resource_allocations[alloc_i];
 
                     auto other_allocation_first_batch = other_allocation.resource->final_schedule_first_batch;
                     auto other_allocation_last_batch = other_allocation.resource->final_schedule_last_batch;
@@ -2777,7 +2831,7 @@ namespace daxa
                 bool inserted = false;
                 for (u32 alloc_i = last_colliding_allocation; alloc_i < allocation_count; ++alloc_i)
                 {
-                    bool const insert = new_allocation.offset < transient_resource_allocations[alloc_i].offset;
+                    bool const insert = new_allocation.offset < non_external_resource_allocations[alloc_i].offset;
                     if (insert)
                     {
                         // Insert new allocation at alloc_i
@@ -2786,9 +2840,9 @@ namespace daxa
                         u32 const last_new_allocation_index = allocation_count;
                         for (u32 i = last_new_allocation_index; i >= (alloc_i + 1); --i)
                         {
-                            transient_resource_allocations[i] = transient_resource_allocations[i - 1];
+                            non_external_resource_allocations[i] = non_external_resource_allocations[i - 1];
                         }
-                        transient_resource_allocations[alloc_i] = new_allocation;
+                        non_external_resource_allocations[alloc_i] = new_allocation;
                         inserted = true;
                         break;
                     }
@@ -2796,25 +2850,25 @@ namespace daxa
                 if (!inserted)
                 {
                     // append to end
-                    transient_resource_allocations[allocation_count] = new_allocation;
+                    non_external_resource_allocations[allocation_count] = new_allocation;
                 }
                 if (tr == 0)
                 {
-                    transient_resource_allocations[0] = new_allocation;
+                    non_external_resource_allocations[0] = new_allocation;
                 }
 
                 // SANITY CHECK, CAN BE REMOVED
                 for (u32 a = 1; a < allocation_count + 1; ++a)
                 {
-                    TransientResourceAllocation & allocation_a = transient_resource_allocations[a - 1];
-                    TransientResourceAllocation & allocation_b = transient_resource_allocations[a];
+                    NonExternalResourceAllocation & allocation_a = non_external_resource_allocations[a - 1];
+                    NonExternalResourceAllocation & allocation_b = non_external_resource_allocations[a];
                     DAXA_DBG_ASSERT_TRUE_M(allocation_a.offset <= allocation_b.offset, "IMPOSSIBLE CASE!");
                 }
             }
             else
             {
                 new_allocation.offset = align_up(resource_heap_size, new_allocation_memory_requirements.alignment);
-                transient_resource_allocations[tr] = new_allocation;
+                non_external_resource_allocations[tr] = new_allocation;
             }
 
             resource_heap_size = std::max(resource_heap_size, new_allocation.offset + new_allocation.size);
@@ -2823,23 +2877,23 @@ namespace daxa
         }
 
         // SANITY CHECK, CAN BE REMOVED
-        for (u32 a = 0; a < transient_resource_count; ++a)
+        for (u32 a = 0; a < non_external_resources_count; ++a)
         {
-            for (u32 b = 0; b < transient_resource_count; ++b)
+            for (u32 b = 0; b < non_external_resources_count; ++b)
             {
                 if (a == b)
                 {
                     continue;
                 }
 
-                TransientResourceAllocation & allocation_a = transient_resource_allocations[a];
-                TransientResourceAllocation & allocation_b = transient_resource_allocations[b];
+                NonExternalResourceAllocation & allocation_a = non_external_resource_allocations[a];
+                NonExternalResourceAllocation & allocation_b = non_external_resource_allocations[b];
 
-                auto a_first_batch = transient_resources_sorted_by_lifetime[allocation_a.resource_index]->final_schedule_first_batch;
-                auto a_last_batch = transient_resources_sorted_by_lifetime[allocation_a.resource_index]->final_schedule_last_batch;
+                auto a_first_batch = non_external_resources_sorted_by_lifetime[allocation_a.resource_index]->final_schedule_first_batch;
+                auto a_last_batch = non_external_resources_sorted_by_lifetime[allocation_a.resource_index]->final_schedule_last_batch;
 
-                auto b_first_batch = transient_resources_sorted_by_lifetime[allocation_b.resource_index]->final_schedule_first_batch;
-                auto b_last_batch = transient_resources_sorted_by_lifetime[allocation_b.resource_index]->final_schedule_last_batch;
+                auto b_first_batch = non_external_resources_sorted_by_lifetime[allocation_b.resource_index]->final_schedule_first_batch;
+                auto b_last_batch = non_external_resources_sorted_by_lifetime[allocation_b.resource_index]->final_schedule_last_batch;
 
                 bool const lifetime_exclusive = a_first_batch > b_last_batch || a_last_batch < b_first_batch;
                 bool const memory_exclusive = allocation_a.offset >= (allocation_b.offset + allocation_b.size) || (allocation_a.offset + allocation_a.size) <= allocation_b.offset;
@@ -2865,9 +2919,9 @@ namespace daxa
         /// ==== CREATE RESOURCES ====
         /// ==========================
 
-        for (u32 alloc_i = 0; alloc_i < transient_resource_allocations.size(); ++alloc_i)
+        for (u32 alloc_i = 0; alloc_i < non_external_resource_allocations.size(); ++alloc_i)
         {
-            TransientResourceAllocation & allocation = transient_resource_allocations[alloc_i];
+            NonExternalResourceAllocation & allocation = non_external_resource_allocations[alloc_i];
             allocation.resource->allocation_offset = allocation.offset;
             allocation.resource->allocation_size = allocation.size;
 
@@ -3056,9 +3110,9 @@ namespace daxa
         }
 
         // All transient images have to be transformed from UNDEFINED to GENERAL layout before their first usage
-        for (u32 tr = 0u; tr < transient_resources_sorted_by_lifetime.size(); ++tr)
+        for (u32 tr = 0u; tr < non_external_resources_sorted_by_lifetime.size(); ++tr)
         {
-            ImplTaskResource & resource = *transient_resources_sorted_by_lifetime[tr];
+            ImplTaskResource & resource = *non_external_resources_sorted_by_lifetime[tr];
 
             if (resource.access_timeline.size() == 0 || resource.kind != TaskResourceKind::IMAGE)
             {
@@ -3218,13 +3272,16 @@ namespace daxa
             initialize_attachment_shader_blob(impl, task);
         }
 
-        /// =========================================================================================
-        /// ==== CREATE EXTERNAL RESOURCE LIST +++ CREATE AND INITIALIZE RESOURCE CLEAR REQUESTS ====
-        /// =========================================================================================
+        /// ========================================================================================================
+        /// ==== CREATE EXTERNAL/DOUBLE_BUFFER RESOURCE LISTS +++ CREATE AND INITIALIZE RESOURCE CLEAR REQUESTS ====
+        /// ========================================================================================================
 
-        u32 external_resource_count = static_cast<u32>(impl.resources.size()) - transient_resource_count;
+        u32 external_resource_count = static_cast<u32>(impl.resources.size()) - non_external_resources_count;
         impl.external_resources = impl.task_memory.allocate_trivial_span<std::pair<ImplTaskResource *, u32>>(external_resource_count);
         u32 tmp_current_external_resource = 0;
+
+        impl.primary_double_buffer_resources = impl.task_memory.allocate_trivial_span<std::pair<ImplTaskResource *, u32>>(primary_double_buffer_resources);
+        u32 tmp_current_primary_double_buffer_resource = 0;
 
         impl.resource_clear_requests = impl.task_memory.allocate_trivial_span<std::pair<ImplTaskResource*, u32>>(impl.resources.size());
         impl.resource_clear_request_count = {};
@@ -3237,11 +3294,16 @@ namespace daxa
                 impl.external_resources[tmp_current_external_resource++] = std::pair{&impl.resources[r], r};
             }
 
-            if (!is_external && impl.resources[r].lifetime_type == TaskResourceLifetimeType::PERSISTENT)
+            if (impl.resources[r].lifetime_type == TaskResourceLifetimeType::PERSISTENT || impl.resources[r].lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER)
             {
                 impl.resources[r].clear_request_index = impl.resource_clear_request_count;
                 impl.resource_clear_requests[impl.resources[r].clear_request_index] = { &impl.resources[r], r };
                 impl.resource_clear_request_count += 1;
+            }
+
+            if (impl.resources[r].lifetime_type == TaskResourceLifetimeType::PERSISTENT_DOUBLE_BUFFER && impl.resources[r].double_buffer_index == 0)
+            {
+                impl.primary_double_buffer_resources[tmp_current_primary_double_buffer_resource++] = std::pair{&impl.resources[r], r};
             }
         }
 
@@ -3424,6 +3486,57 @@ namespace daxa
                             .layout_operation = ImageLayoutOperation::TO_GENERAL,
                         });
                     }
+                }
+            }
+        }
+
+        /// ================================================
+        /// ==== SWAP AND PATCH DOUBLE BUFFER RESOURCES ====
+        /// ================================================
+
+        for (u32 dbr_i = 0u; dbr_i < impl.primary_double_buffer_resources.size(); ++dbr_i)
+        {
+            auto [resource, resource_index] = impl.primary_double_buffer_resources[dbr_i];
+
+            DAXA_DBG_ASSERT_TRUE_M(resource->double_buffer_index == 0, "IMPOSSIBLE CASE! ONLY PRIMARY DOUBLE BUFFER RESOURCES SHOULD BE IN THE primary_double_buffer_resources SPAN!");
+
+            // swap current and prevous double buffer
+            ImplTaskResource* back_buffer_resource = resource->double_buffer_pair_resource.first;
+            std::swap(resource->id, back_buffer_resource->id);
+            
+            // As the ids changed, all datastructures must be patched.
+            for (u32 access_group_i = 0; access_group_i < resource->access_timeline.size(); ++access_group_i)
+            {
+                AccessGroup const & access_group = resource->access_timeline[access_group_i];
+
+                for (u32 t = 0; t < access_group.tasks.size(); ++t)
+                {
+                    TaskAttachmentAccess const & task_attachment_access = access_group.tasks[t];
+
+                    patch_attachment_id(impl, *task_attachment_access.task, task_attachment_access.attachment_index, *resource);
+                    if (resource->kind == TaskResourceKind::IMAGE)
+                    {
+                        patch_attachment_image_views(impl, *task_attachment_access.task, task_attachment_access.attachment_index, *resource);
+                    }
+                    patch_attachment_shader_blob(impl, *task_attachment_access.task, task_attachment_access.attachment_index, *resource);
+                }
+            }
+
+            // Also patch back buffer resource.
+            for (u32 access_group_i = 0; access_group_i < back_buffer_resource->access_timeline.size(); ++access_group_i)
+            {
+                AccessGroup const & access_group = back_buffer_resource->access_timeline[access_group_i];
+
+                for (u32 t = 0; t < access_group.tasks.size(); ++t)
+                {
+                    TaskAttachmentAccess const & task_attachment_access = access_group.tasks[t];
+
+                    patch_attachment_id(impl, *task_attachment_access.task, task_attachment_access.attachment_index, *back_buffer_resource);
+                    if (back_buffer_resource->kind == TaskResourceKind::IMAGE)
+                    {
+                        patch_attachment_image_views(impl, *task_attachment_access.task, task_attachment_access.attachment_index, *back_buffer_resource);
+                    }
+                    patch_attachment_shader_blob(impl, *task_attachment_access.task, task_attachment_access.attachment_index, *back_buffer_resource);
                 }
             }
         }

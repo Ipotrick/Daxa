@@ -33,6 +33,7 @@ namespace daxa
     {
         TRANSIENT,
         PERSISTENT,
+        PERSISTENT_DOUBLE_BUFFER,
         EXTERNAL,
     };
 

@@ -261,14 +261,29 @@ namespace daxa
 
     DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStages;
 
+    static constexpr u32 INVALID_TASK_GRAPH_INDEX = (std::numeric_limits<u32>::max() >> 1u);
+
     struct DAXA_EXPORT_CXX TaskGPUResourceView
     {
-        u32 task_graph_index = {};
+        u32 task_graph_index : 31 = {};
+        u32 double_buffer_index : 1 = {};
         u32 index = {};
 
-        auto is_empty() const -> bool { return index == 0 && task_graph_index == 0; }
-        auto is_external() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && !is_null(); }
-        auto is_null() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && index == std::numeric_limits<u32>::max(); }
+        auto current() const -> TaskGPUResourceView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 0;
+            return ret;
+        };
+        auto previous() const -> TaskGPUResourceView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 1;
+            return ret;
+        };
+        auto is_empty() const -> bool { return index == 0u && task_graph_index == 0u; }
+        auto is_external() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && !is_null(); }
+        auto is_null() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && index == ~0u; }
 
         auto operator<=>(TaskGPUResourceView const & other) const = default;
     };
@@ -278,12 +293,25 @@ namespace daxa
 
     struct DAXA_EXPORT_CXX TaskBufferView
     {        
-        u32 task_graph_index = {};
+        u32 task_graph_index : 31 = {};
+        u32 double_buffer_index : 1 = {};
         u32 index = {};
 
-        auto is_empty() const -> bool { return index == 0 && task_graph_index == 0; }
-        auto is_external() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && !is_null(); }
-        auto is_null() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && index == std::numeric_limits<u32>::max(); }
+        auto current() const -> TaskBufferView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 0;
+            return ret;
+        };
+        auto previous() const -> TaskBufferView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 1;
+            return ret;
+        };
+        auto is_empty() const -> bool { return index == 0u && task_graph_index == 0u; }
+        auto is_external() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && !is_null(); }
+        auto is_null() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && index == ~0u; }
 
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskBufferView const & other) const = default;
@@ -293,12 +321,25 @@ namespace daxa
 
     struct DAXA_EXPORT_CXX TaskBlasView
     {        
-        u32 task_graph_index = {};
+        u32 task_graph_index : 31 = {};
+        u32 double_buffer_index : 1 = {};
         u32 index = {};
 
-        auto is_empty() const -> bool { return index == 0 && task_graph_index == 0; }
-        auto is_external() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && !is_null(); }
-        auto is_null() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && index == std::numeric_limits<u32>::max(); }
+        auto current() const -> TaskBlasView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 0;
+            return ret;
+        };
+        auto previous() const -> TaskBlasView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 1;
+            return ret;
+        };
+        auto is_empty() const -> bool { return index == 0u && task_graph_index == 0u; }
+        auto is_external() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && !is_null(); }
+        auto is_null() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && index == ~0u; }
 
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskBlasView const & other) const = default;
@@ -308,12 +349,25 @@ namespace daxa
 
     struct DAXA_EXPORT_CXX TaskTlasView
     {        
-        u32 task_graph_index = {};
+        u32 task_graph_index : 31 = {};
+        u32 double_buffer_index : 1 = {};
         u32 index = {};
 
-        auto is_empty() const -> bool { return index == 0 && task_graph_index == 0; }
-        auto is_external() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && !is_null(); }
-        auto is_null() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && index == std::numeric_limits<u32>::max(); }
+        auto current() const -> TaskTlasView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 0;
+            return ret;
+        };
+        auto previous() const -> TaskTlasView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 1;
+            return ret;
+        };
+        auto is_empty() const -> bool { return index == 0u && task_graph_index == 0u; }
+        auto is_external() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && !is_null(); }
+        auto is_null() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && index == ~0u; }
 
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskTlasView const & other) const = default;
@@ -325,10 +379,23 @@ namespace daxa
 
     struct DAXA_EXPORT_CXX TaskImageView
     {
-        u32 task_graph_index = {};
+        u32 task_graph_index : 31 = {};
+        u32 double_buffer_index : 1 = {};
         u32 index = {};
         ImageMipArraySlice slice = {};
 
+        auto current() const -> TaskImageView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 0;
+            return ret;
+        };
+        auto previous() const -> TaskImageView
+        {
+            auto ret = *this;
+            ret.double_buffer_index = 1;
+            return ret;
+        };
         auto mips(u32 base_mip_level, u32 level_count = 1) const -> TaskImageView
         {
             auto ret = *this;
@@ -346,9 +413,9 @@ namespace daxa
         auto operator<=>(TaskGPUResourceView const & other) const = delete;
         auto operator<=>(TaskImageView const & other) const = default;
 
-        auto is_empty() const -> bool { return index == 0 && task_graph_index == 0; }
-        auto is_external() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && !is_null(); }
-        auto is_null() const -> bool { return task_graph_index == std::numeric_limits<u32>::max() && index == std::numeric_limits<u32>::max(); }
+        auto is_empty() const -> bool { return index == 0u && task_graph_index == 0u; }
+        auto is_external() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && !is_null(); }
+        auto is_null() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && index == ~0u; }
     };
     static_assert(std::is_standard_layout_v<TaskImageView>);
     // static_assert(std::is_layout_compatible_v<TaskGPUResourceView, TaskImageView>);
@@ -359,38 +426,37 @@ namespace daxa
     // * TaskGPUResourceView and TaskImageView share a common initial sequence for all fields in TaskGPUResourceView
     static_assert(std::is_standard_layout_v<TaskGPUResourceView>);
     static_assert(std::is_standard_layout_v<TaskImageView>);
-    static_assert(std::is_corresponding_member(&TaskGPUResourceView::index, &TaskImageView::index)); // Tests for common initial sequence up to TaskGPUResourceView::index.
 #endif
 
     static constexpr inline TaskBufferView NullTaskBuffer = []()
     {
         TaskBufferView ret = {};
-        ret.task_graph_index = std::numeric_limits<u32>::max();
-        ret.index = std::numeric_limits<u32>::max();
+        ret.task_graph_index = INVALID_TASK_GRAPH_INDEX;
+        ret.index = ~0u;
         return ret;
     }();
 
     static constexpr inline TaskBlasView NullTaskBlas = []()
     {
         TaskBlasView ret = {};
-        ret.task_graph_index = std::numeric_limits<u32>::max();
-        ret.index = std::numeric_limits<u32>::max();
+        ret.task_graph_index = INVALID_TASK_GRAPH_INDEX;
+        ret.index = ~0u;
         return ret;
     }();
 
     static constexpr inline TaskTlasView NullTaskTlas = []()
     {
         TaskTlasView ret = {};
-        ret.task_graph_index = std::numeric_limits<u32>::max();
-        ret.index = std::numeric_limits<u32>::max();
+        ret.task_graph_index = INVALID_TASK_GRAPH_INDEX;
+        ret.index = ~0u;
         return ret;
     }();
 
     static constexpr inline TaskImageView NullTaskImage = []()
     {
         TaskImageView ret = {};
-        ret.task_graph_index = std::numeric_limits<u32>::max();
-        ret.index = std::numeric_limits<u32>::max();
+        ret.task_graph_index = INVALID_TASK_GRAPH_INDEX;
+        ret.index = ~0u;
         return ret;
     }();
 
