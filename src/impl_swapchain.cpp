@@ -175,8 +175,16 @@ auto daxa_swp_get_color_space(daxa_Swapchain self) -> VkColorSpaceKHR
     return self->vk_surface_format.colorSpace;
 }
 
-auto daxa_swp_resize(daxa_Swapchain self) -> daxa_Result
+auto daxa_swp_resize(daxa_Swapchain self, VkExtent2D new_size) -> daxa_Result
 {
+#if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
+    if (NativeWindowInfoWayland* wayland_info = daxa::get_if<NativeWindowInfoWayland>(&self->info.native_window_info))
+    {
+        wayland_info->width = new_size.width;
+        wayland_info->height = new_size.height;
+    }
+#endif
+
     auto result = self->recreate();
     if (result != DAXA_RESULT_SUCCESS)
     {
