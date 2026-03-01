@@ -169,7 +169,7 @@ void check_result(daxa_Result result, char const * message, std::array<daxa_Resu
                          message)
                   << std::flush;
 #endif
-        throw std::runtime_error({});
+        throw std::runtime_error(message);
     }
 }
 
