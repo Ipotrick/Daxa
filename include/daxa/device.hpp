@@ -726,6 +726,8 @@ namespace daxa
         /// @return reference to device properties
         [[nodiscard]] auto properties() const -> DeviceProperties const &;
         [[nodiscard]] auto get_supported_present_modes(NativeWindowInfo native_window_info) const -> std::vector<PresentMode>;
+        [[nodiscard]] auto get_supported_image_formats(NativeWindowInfo native_window_info) const -> std::vector<Format>;
+        [[nodiscard]] auto choose_swapchain_surface_format(NativeWindowInfo native_window_info, Span<SurfaceFormat const> preferred_formats) const -> SurfaceFormat;
 
       protected:
         template <typename T, typename H_T>

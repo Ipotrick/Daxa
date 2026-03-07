@@ -716,6 +716,18 @@ daxa_dvc_present_frame(daxa_Device device, daxa_PresentInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_collect_garbage(daxa_Device device);
 
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_report_supported_present_modes(daxa_Device device, daxa_NativeWindowInfo native_window, uint32_t * out_present_mode_count, VkPresentModeKHR * out_present_modes);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_report_supported_image_formats(daxa_Device device, daxa_NativeWindowInfo native_window, uint32_t * out_format_count, VkSurfaceFormatKHR * out_formats);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_choose_swapchain_surface_format(
+    daxa_Device device,
+    daxa_NativeWindowInfo native_window,
+    uint32_t preferred_format_count,
+    VkSurfaceFormatKHR const * preferred_formats,
+    VkSurfaceFormatKHR * out_format);
+
 DAXA_EXPORT daxa_DeviceInfo2 const *
 daxa_dvc_info(daxa_Device device);
 DAXA_EXPORT daxa_DeviceProperties const *

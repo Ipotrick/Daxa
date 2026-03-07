@@ -1787,6 +1787,167 @@ auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
     return DAXA_RESULT_SUCCESS;
 }
 
+auto daxa_dvc_report_supported_present_modes(daxa_Device device, daxa_NativeWindowInfo native_window, uint32_t * out_present_mode_count, VkPresentModeKHR * out_present_modes) -> daxa_Result
+{
+    if (out_present_mode_count == nullptr)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER, DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER);
+    }
+
+    VkSurfaceKHR surface = {};
+    auto result = create_surface(device->instance, native_window, &surface);
+    _DAXA_RETURN_IF_ERROR(result, result);
+    defer
+    {
+        vkDestroySurfaceKHR(device->instance->vk_instance, surface, nullptr);
+    };
+
+    u32 reported_present_mode_count = 0;
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
+        device->vk_physical_device,
+        surface,
+        &reported_present_mode_count,
+        nullptr));
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    bool const report_size_only = out_present_modes == nullptr || *out_present_mode_count == 0;
+    if (report_size_only)
+    {
+        *out_present_mode_count = reported_present_mode_count;
+        return DAXA_RESULT_SUCCESS;
+    }
+
+    *out_present_mode_count = std::min(*out_present_mode_count, reported_present_mode_count);
+
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
+        device->vk_physical_device,
+        surface,
+        out_present_mode_count,
+        out_present_modes));
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    // WORKAROUND:
+    // Nvidia drivers may report present modes from extensions that are not enabled.
+    for (u32 i = 0; i < *out_present_mode_count;)
+    {
+        bool const is_illegal_present_mode = 
+            out_present_modes[i] != VK_PRESENT_MODE_IMMEDIATE_KHR &&
+            out_present_modes[i] != VK_PRESENT_MODE_MAILBOX_KHR &&
+            out_present_modes[i] != VK_PRESENT_MODE_FIFO_KHR &&
+            out_present_modes[i] != VK_PRESENT_MODE_FIFO_RELAXED_KHR;
+        if (is_illegal_present_mode)
+        {
+            out_present_modes[i] = out_present_modes[*out_present_mode_count - 1];
+            *out_present_mode_count -= 1;
+        }
+        else
+        {
+            ++i;
+        }
+    }
+
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_report_supported_image_formats(daxa_Device device, daxa_NativeWindowInfo native_window, uint32_t * out_format_count, VkSurfaceFormatKHR * out_formats) -> daxa_Result
+{
+    if (out_format_count == nullptr)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER, DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER);
+    }
+
+    VkSurfaceKHR surface = {};
+    auto result = create_surface(device->instance, native_window, &surface);
+    _DAXA_RETURN_IF_ERROR(result, result);
+    defer
+    {
+        vkDestroySurfaceKHR(device->instance->vk_instance, surface, nullptr);
+    };
+
+    u32 reported_surface_format_count = 0;
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceFormatsKHR(
+        device->vk_physical_device,
+        surface,
+        &reported_surface_format_count,
+        nullptr));
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    bool const report_size_only = out_formats == nullptr || *out_format_count == 0;
+    if (report_size_only)
+    {
+        *out_format_count = reported_surface_format_count;
+        return DAXA_RESULT_SUCCESS;
+    }
+
+    *out_format_count = std::min(*out_format_count, reported_surface_format_count);
+    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceFormatsKHR(
+        device->vk_physical_device,
+        surface,
+        out_format_count,
+        out_formats));
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    return DAXA_RESULT_SUCCESS;
+}
+
+auto daxa_dvc_choose_swapchain_surface_format(
+    daxa_Device device,
+    daxa_NativeWindowInfo native_window,
+    uint32_t preferred_format_count,
+    VkSurfaceFormatKHR const * preferred_formats,
+    VkSurfaceFormatKHR * out_format) -> daxa_Result
+{
+    if (out_format == nullptr)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER, DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER);
+    }
+
+    u32 supported_format_count = 0;
+    auto result = daxa_dvc_report_supported_image_formats(
+        device,
+        native_window,
+        &supported_format_count,
+        nullptr);
+    _DAXA_RETURN_IF_ERROR(result, result);
+
+    if (supported_format_count == 0)
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND, DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND);
+    }
+
+    std::vector<VkSurfaceFormatKHR> supported_formats = {};
+    supported_formats.resize(supported_format_count);
+    result = daxa_dvc_report_supported_image_formats(
+        device,
+        native_window,
+        &supported_format_count,
+        supported_formats.data());
+    _DAXA_RETURN_IF_ERROR(result, result);
+    supported_formats.resize(supported_format_count);
+
+    if (preferred_format_count == 0 || preferred_formats == nullptr)
+    {
+        *out_format = supported_formats.front();
+        return DAXA_RESULT_SUCCESS;
+    }
+
+    for (u32 preferred_i = 0; preferred_i < preferred_format_count; ++preferred_i)
+    {
+        for (auto const & supported_format : supported_formats)
+        {
+            bool const format_matches = supported_format.format == preferred_formats[preferred_i].format;
+            bool const color_space_matches = supported_format.colorSpace == preferred_formats[preferred_i].colorSpace;
+            if (format_matches && color_space_matches)
+            {
+                *out_format = supported_format;
+                return DAXA_RESULT_SUCCESS;
+            }
+        }
+    }
+
+    _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND, DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND);
+}
+
 auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
 {
     return &device->properties;

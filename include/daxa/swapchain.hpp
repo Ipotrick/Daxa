@@ -18,6 +18,14 @@ namespace daxa
         default: return 0;
         }
     }
+
+    // Must stay ABI compatible with VkSurfaceFormatKHR.
+    struct SurfaceFormat
+    {
+        Format format = {};
+        ColorSpace color_space = {};
+    };
+
     struct NativeWindowInfoWin32
     {
         void * hwnd = {};
