@@ -735,15 +735,7 @@ namespace tests
         };
 
         App app;
-        try
-        {
-            app.initialize();
-        }
-        catch (std::runtime_error err)
-        {
-            std::cout << "Failed initialization: \"" << err.what() << "\"" << std::endl;
-            return;
-        }
+        app.initialize();
         while (true)
         {
             if (app.update())

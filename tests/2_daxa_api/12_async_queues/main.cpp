@@ -86,19 +86,6 @@ namespace tests
         {
             device.queue_wait_idle(daxa::Queue{daxa::QueueType::TRANSFER, queue});
         }   
-
-        bool found_error = false;
-        try
-        {
-            /// NOTE: This should fail. This is an intentional error.
-            device.queue_wait_idle(daxa::Queue{daxa::QueueType::COMPUTE, 800});
-        }  
-        catch(std::runtime_error e)
-        {
-            std::cout << "  ^^ Above assertion failure is expected!" << std::endl;
-            found_error = true;
-        }
-        DAXA_DBG_ASSERT_TRUE_M(found_error, "device failed to detect invalid queue value!");
     }
 
     void simple_submit_chain()

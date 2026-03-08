@@ -502,18 +502,7 @@ namespace tests
     }
     void build_acceleration_structure(App & app)
     {
-        try
-        {
-            daxa::Device device;
-            try
-            {
-                device = app.daxa_ctx.create_device_2(app.daxa_ctx.choose_device(daxa::ImplicitFeatureFlagBits::BASIC_RAY_TRACING, {}));
-            }
-            catch (std::runtime_error error)
-            {
-                std::cout << "Test skipped. No present device supports raytracing!" << std::endl;
-                return;
-            }
+            daxa::Device device = app.daxa_ctx.create_device_2(app.daxa_ctx.choose_device(daxa::ImplicitFeatureFlagBits::BASIC_RAY_TRACING, {}));
 
             /// Prepare mesh data:
             auto vertices = std::array{
