@@ -9,18 +9,6 @@
 
 // --- Begin API Functions ---
 
-auto daxa_default_format_selector(VkFormat format) -> i32
-{
-    switch (format)
-    {
-    case VK_FORMAT_R8G8B8A8_SRGB: return 90;
-    case VK_FORMAT_R8G8B8A8_UNORM: return 80;
-    case VK_FORMAT_B8G8R8A8_SRGB: return 70;
-    case VK_FORMAT_B8G8R8A8_UNORM: return 60;
-    default: return 0;
-    }
-}
-
 auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * info, daxa_Swapchain * out_swapchain) -> daxa_Result
 {
     auto ret = daxa_ImplSwapchain{};
@@ -93,32 +81,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         r_cast<VkPresentModeKHR *>(ret.supported_present_modes.data())));
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    // Format Selection:
-    u32 format_count = 0;
-    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, nullptr));
-    _DAXA_RETURN_IF_ERROR(result, result);
-    
-    std::vector<VkSurfaceFormatKHR> surface_formats;
-    surface_formats.resize(format_count);
-    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfaceFormatsKHR(ret.device->vk_physical_device, ret.vk_surface, &format_count, surface_formats.data()));
-    _DAXA_RETURN_IF_ERROR(result, result);
-
-    if (format_count == 0)
-    {
-        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND, DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND);
-    }
-    auto format_comparator = [&](auto const & a, auto const & b) -> bool
-    {
-        return ret.info.surface_format_selector(std::bit_cast<Format>(a.format), std::bit_cast<ColorSpace>(a.colorSpace)) <
-               ret.info.surface_format_selector(std::bit_cast<Format>(b.format), std::bit_cast<ColorSpace>(b.colorSpace));
-    };
-    auto best_format = std::max_element(surface_formats.begin(), surface_formats.end(), format_comparator);
-    if (best_format == surface_formats.end())
-    {
-        ret.full_cleanup();
-        return DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND;
-    }
-    ret.vk_surface_format = *best_format;
+    ret.vk_surface_format = info->surface_format;
 
     result = ret.recreate();
     _DAXA_RETURN_IF_ERROR(result, result);

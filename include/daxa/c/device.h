@@ -545,6 +545,18 @@ typedef struct
     daxa_u64 offset;
 } daxa_BufferOffsetPair;
 
+static daxa_BufferOffsetPair const DAXA_DEFAULT_BUFFER_OFFSET_PAIR_INFO = DAXA_ZERO_INIT;
+
+typedef struct
+{
+    daxa_NativeWindowInfo native_window_info;
+    // Leave this span completely empty for daxa to select a surface format.
+    // For each preferred format, leave the color space empty for daxa to select a color space.
+    daxa_SpanToConst(VkSurfaceFormatKHR) preferred_formats;
+} daxa_ChooseSwapchainSurfaceFormatInfo;
+
+static daxa_ChooseSwapchainSurfaceFormatInfo const DAXA_DEFAULT_CHOOSE_SWAPCHAIN_SURFACE_INFO = DAXA_ZERO_INIT;
+
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_device_memory_report(daxa_Device device, daxa_DeviceMemoryReport * report);
 DAXA_EXPORT DAXA_NO_DISCARD VkMemoryRequirements
@@ -723,9 +735,7 @@ daxa_dvc_report_supported_image_formats(daxa_Device device, daxa_NativeWindowInf
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_choose_swapchain_surface_format(
     daxa_Device device,
-    daxa_NativeWindowInfo native_window,
-    uint32_t preferred_format_count,
-    VkSurfaceFormatKHR const * preferred_formats,
+    daxa_ChooseSwapchainSurfaceFormatInfo const * info,
     VkSurfaceFormatKHR * out_format);
 
 DAXA_EXPORT daxa_DeviceInfo2 const *

@@ -5,9 +5,6 @@
 #include <daxa/c/sync.h>
 #include <vulkan/vulkan_core.h>
 
-DAXA_EXPORT int32_t
-daxa_default_format_selector(VkFormat format);
-
 typedef struct 
 {
     void * hwnd;
@@ -46,7 +43,7 @@ typedef daxa_Variant(daxa_NativeWindowInfoUnion) daxa_NativeWindowInfo;
 typedef struct
 {
     daxa_NativeWindowInfo native_window_info;
-    int32_t (*surface_format_selector)(VkFormat);
+    VkSurfaceFormatKHR surface_format;
     VkPresentModeKHR present_mode;
     VkSurfaceTransformFlagBitsKHR present_operation;
     daxa_ImageUsageFlags image_usage;

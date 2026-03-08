@@ -7,12 +7,91 @@
 #include <utility>
 #include <format>
 #include <bit>
+#include <type_traits>
 
 #include "impl_device.hpp"
 #include "impl_instance.hpp"
 
 static_assert(sizeof(daxa::Queue) == sizeof(daxa_Queue));
 static_assert(alignof(daxa::Queue) == alignof(daxa_Queue));
+
+#define DAXA_ASSERT_INFO_SAME_SIZE(T) static_assert(sizeof(daxa::T) == sizeof(daxa_##T))
+DAXA_ASSERT_INFO_SAME_SIZE(AccelerationStructureBuildSizesInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(AttachmentResolveInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BarrierInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BinarySemaphoreInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BlasAabbGeometryInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BlasBuildInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BlasInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BlasTriangleGeometryInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BlendInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BufferBlasInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BufferClearInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BufferCopyInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BufferImageCopyInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BufferInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(BufferTlasInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ChooseSwapchainSurfaceFormatInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(CommandLabelInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(CommandRecorderInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(CommandSubmitInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ComputePipelineInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ConservativeRasterInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DepthBiasInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DepthTestInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DispatchIndirectInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DispatchInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DrawIndexedInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DrawIndirectCountInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DrawIndirectInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DrawInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DrawMeshTasksIndirectCountInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DrawMeshTasksIndirectInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(DrawMeshTasksInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(EventInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(EventSignalInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(EventWaitInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(HostImageLayoutOperationInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageBarrierInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageBlitInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageBufferCopyInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageClearInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageCopyInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageToMemoryCopyInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ImageViewInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(InstanceInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(LineRasterInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(MemoryBlockBufferInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(MemoryBlockImageInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(MemoryBlockInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(MemoryBlockTlasInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(MemoryToImageCopyInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(PresentInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(PushConstantInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(RasterizerInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(RasterPipelineInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(RayTracingPipelineInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(RayTracingShaderGroupInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(RenderAttachmentInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(RenderPassBeginInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ResetEventInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ResetTimestampsInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(SamplerInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(SetIndexBufferInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(ShaderInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(SwapchainInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TesselationInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TimelineQueryPoolInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TimelineSemaphoreInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TlasBuildInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TlasInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TlasInstanceInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TraceRaysIndirectInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(TraceRaysInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(WaitOnSubmitInfo);
+DAXA_ASSERT_INFO_SAME_SIZE(WriteTimestampInfo);
+#undef DAXA_ASSERT_INFO_SAME_SIZE
 
 // --- Begin Helpers ---
 
@@ -720,17 +799,13 @@ namespace daxa
         return ret;
     }
 
-    auto Device::choose_swapchain_surface_format(NativeWindowInfo native_window_info, Span<SurfaceFormat const> preferred_formats) const -> SurfaceFormat
+    auto Device::choose_swapchain_surface_format(ChooseSwapchainSurfaceFormatInfo const & info) const -> SurfaceFormat
     {
-        auto const c_native_window_info = std::bit_cast<daxa_NativeWindowInfo>(native_window_info);
-
         VkSurfaceFormatKHR out_format = {};
         check_result(
             daxa_dvc_choose_swapchain_surface_format(
                 rc_cast<daxa_Device>(object),
-                c_native_window_info,
-                static_cast<u32>(preferred_formats.size()),
-                reinterpret_cast<VkSurfaceFormatKHR const *>(preferred_formats.data()),
+                reinterpret_cast<daxa_ChooseSwapchainSurfaceFormatInfo const*>(&info),
                 &out_format),
             "failed to choose swapchain surface format");
 

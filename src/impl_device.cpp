@@ -1892,20 +1892,21 @@ auto daxa_dvc_report_supported_image_formats(daxa_Device device, daxa_NativeWind
 
 auto daxa_dvc_choose_swapchain_surface_format(
     daxa_Device device,
-    daxa_NativeWindowInfo native_window,
-    uint32_t preferred_format_count,
-    VkSurfaceFormatKHR const * preferred_formats,
+    daxa_ChooseSwapchainSurfaceFormatInfo const * info,
     VkSurfaceFormatKHR * out_format) -> daxa_Result
 {
-    if (out_format == nullptr)
+    if (info == nullptr || out_format == nullptr)
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER, DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER);
     }
 
+    auto const preferred_formats = info->preferred_formats.data;
+    auto const preferred_format_count = static_cast<u32>(info->preferred_formats.size);
+
     u32 supported_format_count = 0;
     auto result = daxa_dvc_report_supported_image_formats(
         device,
-        native_window,
+        info->native_window_info,
         &supported_format_count,
         nullptr);
     _DAXA_RETURN_IF_ERROR(result, result);
@@ -1919,7 +1920,7 @@ auto daxa_dvc_choose_swapchain_surface_format(
     supported_formats.resize(supported_format_count);
     result = daxa_dvc_report_supported_image_formats(
         device,
-        native_window,
+        info->native_window_info,
         &supported_format_count,
         supported_formats.data());
     _DAXA_RETURN_IF_ERROR(result, result);
@@ -1936,7 +1937,7 @@ auto daxa_dvc_choose_swapchain_surface_format(
         for (auto const & supported_format : supported_formats)
         {
             bool const format_matches = supported_format.format == preferred_formats[preferred_i].format;
-            bool const color_space_matches = supported_format.colorSpace == preferred_formats[preferred_i].colorSpace;
+            bool const color_space_matches = supported_format.colorSpace == preferred_formats[preferred_i].colorSpace || preferred_formats[preferred_i].colorSpace == VK_COLOR_SPACE_MAX_ENUM_KHR;
             if (format_matches && color_space_matches)
             {
                 *out_format = supported_format;

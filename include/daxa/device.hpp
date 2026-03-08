@@ -531,6 +531,14 @@ namespace daxa
         u64 offset = {};
     };
 
+    struct ChooseSwapchainSurfaceFormatInfo
+    {
+        NativeWindowInfo native_window_info = {};
+        // Leave this span completely empty for daxa to select a surface format.
+        // For each preferred format, leave the color space empty for daxa to select a color space.
+        Span<SurfaceFormat const> preferred_formats = {};
+    };
+
     /**
      * @brief   Device represents a logical device that may be a virtual or physical gpu.
      *          Device manages all general gpu operations that are not handled by other objects.
@@ -727,7 +735,9 @@ namespace daxa
         [[nodiscard]] auto properties() const -> DeviceProperties const &;
         [[nodiscard]] auto get_supported_present_modes(NativeWindowInfo native_window_info) const -> std::vector<PresentMode>;
         [[nodiscard]] auto get_supported_image_formats(NativeWindowInfo native_window_info) const -> std::vector<Format>;
-        [[nodiscard]] auto choose_swapchain_surface_format(NativeWindowInfo native_window_info, Span<SurfaceFormat const> preferred_formats) const -> SurfaceFormat;
+
+        // Set color space to MAX_ENUM to be ignored in selection.
+        [[nodiscard]] auto choose_swapchain_surface_format(ChooseSwapchainSurfaceFormatInfo const & info) const -> SurfaceFormat;
 
       protected:
         template <typename T, typename H_T>

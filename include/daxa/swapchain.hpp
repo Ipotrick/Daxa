@@ -7,18 +7,6 @@
 
 namespace daxa
 {
-    static inline auto default_format_score(Format format, ColorSpace) -> i32
-    {
-        switch (format)
-        {
-        case Format::B8G8R8A8_UNORM: return 90;
-        case Format::R8G8B8A8_UNORM: return 80;
-        case Format::B8G8R8A8_SRGB: return 70;
-        case Format::R8G8B8A8_SRGB: return 60;
-        default: return 0;
-        }
-    }
-
     // Must stay ABI compatible with VkSurfaceFormatKHR.
     struct SurfaceFormat
     {
@@ -49,7 +37,7 @@ namespace daxa
     struct SwapchainInfo
     {
         NativeWindowInfo native_window_info = NativeWindowInfoWin32{};
-        i32 (*surface_format_selector)(Format, ColorSpace) = default_format_score;
+        SurfaceFormat surface_format = {};
         PresentMode present_mode = PresentMode::FIFO;
         PresentOp present_operation = PresentOp::IDENTITY;
         ImageUsageFlags image_usage = {};
