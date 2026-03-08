@@ -30,7 +30,7 @@
         else if (!(x))                                                            \
         {                                                                         \
             std::cerr << DAXA_DBG_ASSERT_FAIL_STRING << ": " << (m) << std::endl; \
-            throw std::runtime_error("DAXA DEBUG ASSERTION FAILURE");             \
+            std::abort();                                                         \
         }                                                                         \
     } while (false)
 #else
