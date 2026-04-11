@@ -291,7 +291,7 @@ namespace daxa
         case TaskAccessType::NONE: ret = ColorPalette::GREY; break;
         case TaskAccessType::WRITE: ret = ColorPalette::RED; break;
         case TaskAccessType::READ: ret = ColorPalette::GREEN; break;
-        case TaskAccessType::SAMPLED: ret = ColorPalette::GREEN; break;
+        case TaskAccessType::SAMPLE: ret = ColorPalette::GREEN; break;
         case TaskAccessType::READ_WRITE: ret = ColorPalette::BLUE; break;
         case TaskAccessType::WRITE_CONCURRENT: ret = ColorPalette::DARK_RED; break;
         case TaskAccessType::READ_WRITE_CONCURRENT: ret = ColorPalette::DARK_BLUE; break; 

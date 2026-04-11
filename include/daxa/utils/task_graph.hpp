@@ -237,9 +237,11 @@ namespace daxa
         static constexpr inline usize ATTACHMENT_COUNT = 0;
     };
 
-    template <typename TaskHeadT>
+    template <typename TaskHeadT, bool JUST_DECLARED_ATTACHMENT = false>
     struct TInlineTask
     {
+        using TInlineTaskPostAttachment = TInlineTask<TaskHeadT, true>;
+
         // construction interface:
 
         TInlineTask()
@@ -321,7 +323,7 @@ namespace daxa
             READ = (1 << 0),
             WRITE = (1 << 1),
             READ_WRITE = (1 << 2),
-            SAMPLED = (1 << 5),
+            SAMPLE = (1 << 5),
         };
 
         struct Internal
@@ -332,8 +334,6 @@ namespace daxa
             TaskType _task_type = TaskType::GENERAL;
             TaskStages _default_stage = TaskStages::ANY_COMMAND;
             Queue _queue = QUEUE_MAIN;
-
-            void _process_parameter(TaskStages &, TaskAccessType, ImageViewType &, std::string_view &, TaskStages) {}
 
             void _process_parameter(TaskStages & stage, TaskAccessType type, ImageViewType &, char const * & name, TaskBufferViewOrTaskBuffer auto param)
             {
@@ -401,55 +401,69 @@ namespace daxa
             // inline attachment interface:
 
             template <AttachmentParamBasic... TParams>
-            auto _process_parameters(TaskAccessType access_type, TaskStages set_stage, TParams... v) -> TInlineTask &
+            auto _process_parameters(TaskAccessType access_type, TaskStages set_stage, TParams... v) -> TInlineTaskPostAttachment &
             {
                 ImageViewType view_override = ImageViewType::MAX_ENUM;
                 char const * attachment_name = "unnamed attachment";
                 TaskStages stage_override = set_stage;
                 (_internal._process_parameter(stage_override, access_type, view_override, attachment_name, v), ...);
-                return *reinterpret_cast<TInlineTask *>(this);
+                return *reinterpret_cast<TInlineTaskPostAttachment *>(this);
             }
 
             template <AttachmentParamBasic... TParams>
-            auto reads(TParams... v) -> TInlineTask &
+            auto reads(TParams... v) -> TInlineTaskPostAttachment &
                 requires((ALLOWED_ACCESS & Allow::READ) != 0)
             {
                 return _process_parameters(TaskAccessType::READ, STAGE, v...);
             }
 
             template <AttachmentParamBasic... TParams>
-            auto writes(TParams... v) -> TInlineTask &
+            auto writes(TParams... v) -> TInlineTaskPostAttachment &
                 requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::WRITE, STAGE, v...);
             }
 
             template <AttachmentParamBasic... TParams>
-            auto writes_concurrent(TParams... v) -> TInlineTask &
+            auto writes_concurrent(TParams... v) -> TInlineTaskPostAttachment &
                 requires((ALLOWED_ACCESS & Allow::WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::WRITE_CONCURRENT, STAGE, v...);
             }
 
             template <AttachmentParamBasic... TParams>
-            auto reads_writes(TParams... v) -> TInlineTask &
+            auto reads_writes(TParams... v) -> TInlineTaskPostAttachment &
                 requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::READ_WRITE, STAGE, v...);
             }
 
             template <AttachmentParamBasic... TParams>
-            auto reads_writes_concurrent(TParams... v) -> TInlineTask &
+            auto reads_writes_concurrent(TParams... v) -> TInlineTaskPostAttachment &
                 requires((ALLOWED_ACCESS & Allow::READ_WRITE) != 0)
             {
                 return _process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, STAGE, v...);
             }
 
             template <AttachmentParamSampled... TParams>
-            auto samples(TParams... v) -> TInlineTask &
-                requires((ALLOWED_ACCESS & Allow::SAMPLED) != 0)
+            auto samples(TParams... v) -> TInlineTaskPostAttachment &
+                requires((ALLOWED_ACCESS & Allow::SAMPLE) != 0)
             {
-                return _process_parameters(TaskAccessType::SAMPLED, STAGE, v...);
+                return _process_parameters(TaskAccessType::SAMPLE, STAGE, v...);
+            }
+
+            template <AttachmentParamSampled... TParams>
+            auto samples_writes(TParams... v) -> TInlineTaskPostAttachment &
+                requires((ALLOWED_ACCESS & Allow::SAMPLE) != 0 && (ALLOWED_ACCESS & Allow::WRITE) != 0)
+            {
+                return _process_parameters(TaskAccessType::SAMPLE_WRITE, STAGE, v...);
+            }
+
+            template <AttachmentParamSampled... TParams>
+            auto samples_writes_concurrent(TParams... v) -> TInlineTaskPostAttachment &
+                requires((ALLOWED_ACCESS & Allow::SAMPLE) != 0 && (ALLOWED_ACCESS & Allow::WRITE) != 0)
+            {
+                return _process_parameters(TaskAccessType::SAMPLE_WRITE_CONCURRENT, STAGE, v...);
             }
 
             // task head attachment interface:
@@ -539,7 +553,19 @@ namespace daxa
             auto samples(TaskHeadT::Views const & views) -> TInlineTask &
                 requires(HAS_HEAD)
             {
-                return _process_th_views(views, TaskAccessType::SAMPLED, STAGE);
+                return _process_th_views(views, TaskAccessType::SAMPLE, STAGE);
+            }
+
+            auto samples_writes(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::SAMPLE_WRITE, STAGE);
+            }
+
+            auto samples_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask &
+                requires(HAS_HEAD)
+            {
+                return _process_th_views(views, TaskAccessType::SAMPLE_WRITE_CONCURRENT, STAGE);
             }
         };
 
@@ -549,20 +575,20 @@ namespace daxa
         union
         {
             InternalValue<Allow::NONE, TaskStages::NONE> value = {};
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::VERTEX_SHADER> vertex_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::TESSELLATION_CONTROL_SHADER> tesselation_control_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::TESSELLATION_EVALUATION_SHADER> tesselation_evaluation_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::GEOMETRY_SHADER> geometry_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::FRAGMENT_SHADER> fragment_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::COMPUTE_SHADER> compute_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::RAY_TRACING_SHADER> ray_tracing_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::TASK_SHADER> task_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::MESH_SHADER> mesh_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::PRE_RASTERIZATION_SHADERS> pre_rasterization_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::RASTER_SHADER> raster_shader;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::SHADER> shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::VERTEX_SHADER> vertex_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::TESSELLATION_CONTROL_SHADER> tesselation_control_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::TESSELLATION_EVALUATION_SHADER> tesselation_evaluation_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::GEOMETRY_SHADER> geometry_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::FRAGMENT_SHADER> fragment_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::COMPUTE_SHADER> compute_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::RAY_TRACING_SHADER> ray_tracing_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::TASK_SHADER> task_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::MESH_SHADER> mesh_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::PRE_RASTERIZATION_SHADERS> pre_rasterization_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::RASTER_SHADER> raster_shader;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::SHADER> shader;
             InternalValue<Allow(Allow::WRITE | Allow::READ_WRITE), TaskStages::COLOR_ATTACHMENT> color_attachment;
-            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLED), TaskStages::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
+            InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE | Allow::SAMPLE), TaskStages::DEPTH_STENCIL_ATTACHMENT> depth_stencil_attachment;
             InternalValue<Allow(Allow::READ | Allow::WRITE | Allow::READ_WRITE), TaskStages::RESOLVE> resolve;
             InternalValue<Allow::READ, TaskStages::INDIRECT_COMMAND_READ> indirect_cmd;
             InternalValue<Allow::READ, TaskStages::INDEX_INPUT> index_input;
@@ -588,28 +614,33 @@ namespace daxa
         // untyped inline attachments interface:
 
         template <AttachmentParamBasic... TParams>
-        auto reads(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ, value._internal._default_stage, v...); }
+        auto reads(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::READ, value._internal._default_stage, v...); }
 
         template <AttachmentParamBasic... TParams>
-        auto writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE, value._internal._default_stage, v...); }
+        auto writes(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::WRITE, value._internal._default_stage, v...); }
 
         template <AttachmentParamBasic... TParams>
-        auto writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, value._internal._default_stage, v...); }
+        auto writes_concurrent(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
         template <AttachmentParamBasic... TParams>
-        auto reads_writes(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE, value._internal._default_stage, v...); }
+        auto reads_writes(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::READ_WRITE, value._internal._default_stage, v...); }
 
         template <AttachmentParamBasic... TParams>
-        auto reads_writes_concurrent(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage, v...); }
+        auto reads_writes_concurrent(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::READ_WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
         template <AttachmentParamSampled... TParams>
-        auto samples(TParams... v) -> TInlineTask & { return value._process_parameters(TaskAccessType::SAMPLED, value._internal._default_stage, v...); }
+        auto samples(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::SAMPLE, value._internal._default_stage, v...); }
 
+        template <AttachmentParamSampled... TParams>
+        auto samples_writes(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::SAMPLE_WRITE, value._internal._default_stage, v...); }
+
+        template <AttachmentParamSampled... TParams>
+        auto samples_writes_concurrent(TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(TaskAccessType::SAMPLE_WRITE_CONCURRENT, value._internal._default_stage, v...); }
 
         template <TaskResourceViewOrResource... TParams>
-        auto uses(TaskAccess access, TParams... v) -> TInlineTask & { return value._process_parameters(access.type, access.stage, v...); }
+        auto uses(TaskAccess access, TParams... v) -> TInlineTaskPostAttachment & { return value._process_parameters(access.type, access.stage, v...); }
 
-        auto uses(TaskAttachmentInfo const & inl_attachment) -> TInlineTask &
+        auto uses(TaskAttachmentInfo const & inl_attachment) -> TInlineTaskPostAttachment &
         {
             value._internal._attachments.push_back(inl_attachment);
             return *this;
@@ -675,7 +706,19 @@ namespace daxa
         auto samples(TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
-            return value._process_th_views(views, TaskAccessType::SAMPLED, value._internal._default_stage);
+            return value._process_th_views(views, TaskAccessType::SAMPLE, value._internal._default_stage);
+        }
+
+        auto samples_writes(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::SAMPLE_WRITE, value._internal._default_stage);
+        }
+
+        auto samples_writes_concurrent(TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::SAMPLE_WRITE_CONCURRENT, value._internal._default_stage);
         }
 
         auto head_views(TaskHeadT::Views const & views) -> TInlineTask &
@@ -719,7 +762,19 @@ namespace daxa
         auto samples(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
             requires(HAS_HEAD)
         {
-            return value._process_th_views(views, TaskAccessType::SAMPLED, stage);
+            return value._process_th_views(views, TaskAccessType::SAMPLE, stage);
+        }
+
+        auto samples_writes(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::SAMPLE_WRITE, stage);
+        }
+
+        auto samples_writes_concurrent(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
+            requires(HAS_HEAD)
+        {
+            return value._process_th_views(views, TaskAccessType::SAMPLE_WRITE_CONCURRENT, stage);
         }
 
         auto uses(TaskStages stage, TaskHeadT::Views const & views) -> TInlineTask &
@@ -759,6 +814,27 @@ namespace daxa
             return *this;
         }
 
+        auto as_mip_array(u32 mip_count = 16u) -> TInlineTaskPostAttachment &
+            requires(JUST_DECLARED_ATTACHMENT)
+        {
+            if (this->value._internal._attachments.back().type == TaskAttachmentType::IMAGE)
+            {
+                this->value._internal._attachments.back().value.image.shader_array_size = static_cast<u8>(mip_count);
+                this->value._internal._attachments.back().value.image.is_mip_array = true;
+            }
+            return *this;
+        }
+
+        auto as_view_type(daxa::ImageViewType image_view_type) -> TInlineTaskPostAttachment &
+            requires(JUST_DECLARED_ATTACHMENT)
+        {
+            if (this->value._internal._attachments.back().type == TaskAttachmentType::IMAGE)
+            {
+                this->value._internal._attachments.back().value.image.view_type = image_view_type;
+            }
+            return *this;
+        }
+
       private:
         TInlineTask(Internal && internal)
         {
@@ -768,6 +844,7 @@ namespace daxa
 
     using InlineTask = TInlineTask<NoTaskHeadStruct>;
     using Task = TInlineTask<NoTaskHeadStruct>;
+    
     
     template <typename HeadInfoT>
     auto HeadTask(std::string_view name = {}) -> TInlineTask<HeadInfoT>
@@ -860,8 +937,8 @@ namespace daxa
         DAXA_EXPORT_CXX void copy_buffer_to_buffer(TaskBufferCopyInfo const & info);
         DAXA_EXPORT_CXX void copy_image_to_image(TaskImageCopyInfo const & info);
 
-        template <typename TaskHeadType>
-        void add_task(TInlineTask<TaskHeadType> const & inline_task)
+        template <typename TaskHeadType, bool JUST_DECLARED_ATTACHMENT>
+        void add_task(TInlineTask<TaskHeadType, JUST_DECLARED_ATTACHMENT> const & inline_task)
         {
             DAXA_DBG_ASSERT_TRUE_M(static_cast<bool>(inline_task.value._internal._callback), "Detected empty callback on inline task!");
 

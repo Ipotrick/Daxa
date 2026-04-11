@@ -3,8 +3,8 @@
 #include "common.hpp"
 DAXA_DECL_COMPUTE_TASK_HEAD_BEGIN(ExampleTaskHead)
 DAXA_TH_BUFFER(READ, buffer0)
-DAXA_TH_IMAGE(SAMPLED, REGULAR_2D, image0)
-DAXA_TH_IMAGE(SAMPLED, REGULAR_2D, image1)
+DAXA_TH_IMAGE(SAMPLE, REGULAR_2D, image0)
+DAXA_TH_IMAGE(SAMPLE, REGULAR_2D, image1)
 DAXA_TH_BUFFER(READ, test_buffer_no_shader)
 DAXA_DECL_TASK_HEAD_END
 
@@ -83,11 +83,6 @@ void test_task_copy_and_move()
 #include "shaders/shader_integration.inl"
 #include "persistent_resources.hpp"
 #include "transient_overlap.hpp"
-
-namespace daxa
-{
-    using Task = InlineTask;
-}
 
 namespace tests
 {

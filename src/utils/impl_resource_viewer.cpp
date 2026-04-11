@@ -755,7 +755,7 @@ namespace daxa
                     {
                         clone_image_info.format = daxa::Format::R16_UNORM;
                     }
-                    // STORAGE is better than SAMPLED as it supports 64bit images.
+                    // STORAGE is better than SAMPLE as it supports 64bit images.
                     clone_image_info.usage = daxa::ImageUsageFlagBits::TRANSFER_DST | daxa::ImageUsageFlagBits::SHADER_STORAGE;
                     clone_image_info.name = std::format("{}::viewer::clone_image", resource->name);
 

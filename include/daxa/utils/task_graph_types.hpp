@@ -61,15 +61,17 @@ namespace daxa
         // Write bit: 3
         NONE = 0,
         CONCURRENT_BIT = (1 << 0),
-        SAMPLED_BIT = (1 << 1),
+        SAMPLE_BIT = (1 << 1),
         READ_BIT = (1 << 2),
         WRITE_BIT = (1 << 3),
         READ = READ_BIT | CONCURRENT_BIT,
-        SAMPLED = READ_BIT | CONCURRENT_BIT | SAMPLED_BIT,
+        SAMPLE = READ_BIT | CONCURRENT_BIT | SAMPLE_BIT,
         WRITE = WRITE_BIT,
         READ_WRITE = READ_BIT | WRITE_BIT,
+        SAMPLE_WRITE = READ_BIT | SAMPLE_BIT | WRITE_BIT,
         WRITE_CONCURRENT = WRITE_BIT | CONCURRENT_BIT,
         READ_WRITE_CONCURRENT = READ_BIT | WRITE_BIT | CONCURRENT_BIT,
+        SAMPLE_WRITE_CONCURRENT = READ_BIT | SAMPLE_BIT | WRITE_BIT | CONCURRENT_BIT,
     };
 
     inline auto is_access_concurrent(TaskAccessType type) -> bool
@@ -79,8 +81,8 @@ namespace daxa
 
     inline auto are_accesses_compatible(TaskAccessType a, TaskAccessType b) -> bool
     {
-        u8 const a_sampled_ignored = static_cast<u8>(a) & ~(static_cast<u8>(TaskAccessType::SAMPLED_BIT));
-        u8 const b_sampled_ignored = static_cast<u8>(b) & ~(static_cast<u8>(TaskAccessType::SAMPLED_BIT));
+        u8 const a_sampled_ignored = static_cast<u8>(a) & ~(static_cast<u8>(TaskAccessType::SAMPLE_BIT));
+        u8 const b_sampled_ignored = static_cast<u8>(b) & ~(static_cast<u8>(TaskAccessType::SAMPLE_BIT));
         return (a_sampled_ignored == b_sampled_ignored) && is_access_concurrent(a) && is_access_concurrent(b);
     }
 
@@ -175,17 +177,21 @@ namespace daxa
     {
         static constexpr TaskAccess NONE = TaskAccess{};
         static constexpr TaskAccess READ = TaskAccess{STAGE, TaskAccessType::READ, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess SAMPLE = TaskAccess{STAGE, TaskAccessType::SAMPLE, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess WRITE = TaskAccess{STAGE, TaskAccessType::WRITE, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE = TaskAccess{STAGE, TaskAccessType::READ_WRITE, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::READ_WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
-        static constexpr TaskAccess SAMPLED = TaskAccess{STAGE, TaskAccessType::SAMPLED, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess SAMPLE_WRITE = TaskAccess{STAGE, TaskAccessType::SAMPLE_WRITE, ATTACHMENT_TYPE_RESTRICTION};
+        static constexpr TaskAccess SAMPLE_WRITE_CONCURRENT = TaskAccess{STAGE, TaskAccessType::SAMPLE_WRITE_CONCURRENT, ATTACHMENT_TYPE_RESTRICTION};
         static constexpr TaskAccess R = READ;
+        static constexpr TaskAccess S = SAMPLE;
         static constexpr TaskAccess W = WRITE;
         static constexpr TaskAccess WC = WRITE_CONCURRENT;
-        static constexpr TaskAccess RW = READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess RW = READ_WRITE;
         static constexpr TaskAccess RWC = READ_WRITE_CONCURRENT;
-        static constexpr TaskAccess S = SAMPLED;
+        static constexpr TaskAccess SW = SAMPLE_WRITE;
+        static constexpr TaskAccess SWC = SAMPLE_WRITE_CONCURRENT;
     };
 
     namespace TaskAccessConsts
@@ -231,7 +237,7 @@ namespace daxa
         static constexpr TaskAccess WRITE_CONCURRENT = TaskAccess{TaskStages::JOKER, TaskAccessType::WRITE_CONCURRENT};
         static constexpr TaskAccess READ_WRITE = TaskAccess{TaskStages::JOKER, TaskAccessType::READ_WRITE};
         static constexpr TaskAccess READ_WRITE_CONCURRENT = TaskAccess{TaskStages::JOKER, TaskAccessType::READ_WRITE_CONCURRENT};
-        static constexpr TaskAccess SAMPLED = TaskAccess{TaskStages::JOKER, TaskAccessType::SAMPLED};
+        static constexpr TaskAccess SAMPLE = TaskAccess{TaskStages::JOKER, TaskAccessType::SAMPLE};
 
         static constexpr TaskAccess COLOR_ATTACHMENT = TaskAccess{TaskStages::COLOR_ATTACHMENT, TaskAccessType::READ_WRITE, TaskAttachmentType::IMAGE};
         static constexpr TaskAccess CA = COLOR_ATTACHMENT;

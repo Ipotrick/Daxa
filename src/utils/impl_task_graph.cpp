@@ -172,9 +172,9 @@ namespace daxa
         {
         case TaskAccessType::NONE: return "NONE";
         case TaskAccessType::CONCURRENT_BIT: return "CONCURRENT_BIT";
-        case TaskAccessType::SAMPLED_BIT: return "SAMPLED_BIT";
+        case TaskAccessType::SAMPLE_BIT: return "SAMPLE_BIT";
         case TaskAccessType::READ: return "READ";
-        case TaskAccessType::SAMPLED: return "SAMPLED";
+        case TaskAccessType::SAMPLE: return "SAMPLE";
         case TaskAccessType::WRITE: return "WRITE";
         case TaskAccessType::READ_WRITE: return "READ_WRITE";
         case TaskAccessType::WRITE_CONCURRENT: return "WRITE_CONCURRENT";
@@ -212,7 +212,7 @@ namespace daxa
         {
         case TaskAccessType::NONE: ret += "NONE"; break;
         case TaskAccessType::READ: ret += "READ"; break;
-        case TaskAccessType::SAMPLED: ret += "SAMPLED"; break;
+        case TaskAccessType::SAMPLE: ret += "SAMPLE"; break;
         case TaskAccessType::WRITE: ret += "WRITE"; break;
         case TaskAccessType::READ_WRITE: ret += "READ_WRITE"; break;
         case TaskAccessType::WRITE_CONCURRENT: ret += "WRITE_CONCURRENT"; break;
@@ -291,7 +291,7 @@ namespace daxa
         {
         case TaskAccessType::NONE: ret = AccessTypeFlagBits::NONE; break;
         case TaskAccessType::READ: ret = AccessTypeFlagBits::READ; break;
-        case TaskAccessType::SAMPLED: ret = AccessTypeFlagBits::READ; break;
+        case TaskAccessType::SAMPLE: ret = AccessTypeFlagBits::READ; break;
         case TaskAccessType::WRITE: ret = AccessTypeFlagBits::WRITE; break;
         case TaskAccessType::READ_WRITE: ret = AccessTypeFlagBits::READ_WRITE; break;
         case TaskAccessType::WRITE_CONCURRENT: ret = AccessTypeFlagBits::WRITE; break;
@@ -341,7 +341,7 @@ namespace daxa
     {
         bool const used_as_read = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::READ)) == static_cast<u32>(TaskAccessType::READ);
         bool const used_as_write = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::WRITE)) == static_cast<u32>(TaskAccessType::WRITE);
-        bool const used_as_sampled = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::SAMPLED)) == static_cast<u32>(TaskAccessType::SAMPLED);
+        bool const used_as_sampled = (static_cast<u32>(taccess.type) & static_cast<u32>(TaskAccessType::SAMPLE)) == static_cast<u32>(TaskAccessType::SAMPLE);
         bool const used_in_shader = is_task_stage_shader_access(taccess.stage);
         bool const used_as_sampled_image = used_in_shader && used_as_sampled;
         bool const used_as_storage_image = used_in_shader && (used_as_read || used_as_write);
