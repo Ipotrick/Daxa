@@ -183,7 +183,7 @@ namespace daxa
         static constexpr TaskAccess R = READ;
         static constexpr TaskAccess W = WRITE;
         static constexpr TaskAccess WC = WRITE_CONCURRENT;
-        static constexpr TaskAccess RW = READ_WRITE_CONCURRENT;
+        static constexpr TaskAccess RW = READ_WRITE;
         static constexpr TaskAccess RWC = READ_WRITE_CONCURRENT;
         static constexpr TaskAccess S = SAMPLED;
     };
