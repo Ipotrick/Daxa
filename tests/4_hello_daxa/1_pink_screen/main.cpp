@@ -5,24 +5,29 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #elif defined(__linux__)
 #define GLFW_EXPOSE_NATIVE_X11
+#define GLFW_EXPOSE_NATIVE_WAYLAND
 #endif
 #include <GLFW/glfw3native.h>
 
-auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
+auto get_native_window_info(GLFWwindow * glfw_window_ptr, daxa::u32 width, daxa::u32 height) -> daxa::NativeWindowInfo
 {
 #if defined(_WIN32)
     return glfwGetWin32Window(glfw_window_ptr);
 #elif defined(__linux__)
-    return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
-#endif
-}
-
-auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform
-{
-#if defined(_WIN32)
-    return daxa::NativeWindowPlatform::WIN32_API;
-#elif defined(__linux__)
-    return daxa::NativeWindowPlatform::XLIB_API;
+    switch (glfwGetPlatform())
+    {
+    case GLFW_PLATFORM_WAYLAND:
+        return daxa::NativeWindowInfoWayland {
+            .display = glfwGetWaylandDisplay(),
+            .surface = glfwGetWaylandWindow(glfw_window_ptr),
+            .width   = width,
+            .height  = height,
+        };
+    default:
+        return daxa::NativeWindowInfoXlib {
+            .window = reinterpret_cast<void*>(glfwGetX11Window(glfw_window_ptr))
+        };
+    }
 #endif
 }
 
@@ -52,8 +57,6 @@ auto main() -> int
             info.width = static_cast<daxa::u32>(width);
             info.height = static_cast<daxa::u32>(height);
         });
-    auto * native_window_handle = get_native_handle(glfw_window_ptr);
-    auto native_window_platform = get_native_platform(glfw_window_ptr);
 
     // First thing we do is create a Daxa instance. This essentially exists
     // to initialize the Vulkan instance, and allows for the creation of multiple
@@ -126,11 +129,7 @@ auto main() -> int
     // format type selector, the additional image uses (image uses will be explained later),
     // and present mode (this controls sync)
     daxa::Swapchain swapchain = device.create_swapchain({
-        // this handle is given by the windowing API
-        .native_window = native_window_handle,
-        // The platform would also be retrieved from the windowing API,
-        // or by hard-coding it depending on the OS.
-        .native_window_platform = native_window_platform,
+        .native_window_info = get_native_window_info(glfw_window_ptr, window_info.width, window_info.height),
         .surface_format_selector = [](daxa::Format format, daxa::ColorSpace colorspace)
         {
             switch (format)
