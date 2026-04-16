@@ -1335,7 +1335,7 @@ namespace daxa
                             break;
                         }
                         }
-                        ImGui::Text(std::format("Min {:#010x} Max {:#010x}", hex_min, hex_max).c_str());
+                        ImGui::Text("%s", std::format("Min {:#010x} Max {:#010x}", hex_min, hex_max).c_str());
                     }
                     else
                     {
@@ -1343,17 +1343,17 @@ namespace daxa
                         {
                         case ScalarKind::FLOAT:
                         {
-                            ImGui::Text(std::format("Min {:<10.3} Max {:<10.3}", min_value, max_value).c_str());
+                            ImGui::Text("%s", std::format("Min {:<10.3} Max {:<10.3}", min_value, max_value).c_str());
                             break;
                         }
                         case ScalarKind::INT:
                         {
-                            ImGui::Text(std::format("Min {:<10} Max {:<10}", static_cast<i32>(min_value), static_cast<i32>(max_value)).c_str());
+                            ImGui::Text("%s", std::format("Min {:<10} Max {:<10}", static_cast<i32>(min_value), static_cast<i32>(max_value)).c_str());
                             break;
                         }
                         case ScalarKind::UINT:
                         {
-                            ImGui::Text(std::format("Min {:<10} Max {:<10}", static_cast<u32>(min_value), static_cast<u32>(max_value)).c_str());
+                            ImGui::Text("%s", std::format("Min {:<10} Max {:<10}", static_cast<u32>(min_value), static_cast<u32>(max_value)).c_str());
                             break;
                         }
                         }
@@ -1495,28 +1495,28 @@ namespace daxa
                         if (ImGui::IsItemHovered())
                         {
                             ImGui::BeginTooltip();
-                            ImGui::Text(std::format("{}, {}", static_cast<i32>(mouse_pos.x), static_cast<i32>(mouse_pos.y)).c_str());
+                            ImGui::Text("%s", std::format("{}, {}", static_cast<i32>(mouse_pos.x), static_cast<i32>(mouse_pos.y)).c_str());
 
                             if (state.display_as_hexadecimal)
                             {
                                 if (state.image.enabled_channels.x)
                                 {
-                                    ImGui::Text(std::format("R {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.x)).c_str());
+                                    ImGui::Text("%s", std::format("R {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.x)).c_str());
                                     ImGui::SameLine();
                                 }
                                 if (state.image.enabled_channels.y)
                                 {
-                                    ImGui::Text(std::format("G {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.y)).c_str());
+                                    ImGui::Text("%s", std::format("G {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.y)).c_str());
                                     ImGui::SameLine();
                                 }
                                 if (state.image.enabled_channels.z)
                                 {
-                                    ImGui::Text(std::format("B {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.z)).c_str());
+                                    ImGui::Text("%s", std::format("B {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.z)).c_str());
                                     ImGui::SameLine();
                                 }
                                 if (state.image.enabled_channels.w)
                                 {
-                                    ImGui::Text(std::format("A {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.w)).c_str());
+                                    ImGui::Text("%s", std::format("A {:#010x}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.w)).c_str());
                                     ImGui::SameLine();
                                 }
                                 ImGui::Dummy({});
@@ -1529,22 +1529,22 @@ namespace daxa
                                 {
                                     if (state.image.enabled_channels.x)
                                     {
-                                        ImGui::Text(std::format("R {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.x))).c_str());
+                                        ImGui::Text("%s", std::format("R {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.x))).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.y)
                                     {
-                                        ImGui::Text(std::format("G {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.y))).c_str());
+                                        ImGui::Text("%s", std::format("G {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.y))).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.z)
                                     {
-                                        ImGui::Text(std::format("B {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.z))).c_str());
+                                        ImGui::Text("%s", std::format("B {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.z))).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.w)
                                     {
-                                        ImGui::Text(std::format("A {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.w))).c_str());
+                                        ImGui::Text("%s", std::format("A {:<10.3}", static_cast<f64>(std::bit_cast<f32>(state.image.latest_readback.hovered_value.w))).c_str());
                                     }
                                     ImGui::Dummy({});
                                     break;
@@ -1554,22 +1554,22 @@ namespace daxa
 
                                     if (state.image.enabled_channels.x)
                                     {
-                                        ImGui::Text(std::format("R {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.x)).c_str());
+                                        ImGui::Text("%s", std::format("R {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.x)).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.y)
                                     {
-                                        ImGui::Text(std::format("G {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.y)).c_str());
+                                        ImGui::Text("%s", std::format("G {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.y)).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.z)
                                     {
-                                        ImGui::Text(std::format("B {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.z)).c_str());
+                                        ImGui::Text("%s", std::format("B {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.z)).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.w)
                                     {
-                                        ImGui::Text(std::format("A {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.w)).c_str());
+                                        ImGui::Text("%s", std::format("A {:<10}", std::bit_cast<i32>(state.image.latest_readback.hovered_value.w)).c_str());
                                     }
                                     ImGui::Dummy({});
                                     break;
@@ -1578,22 +1578,22 @@ namespace daxa
                                 {
                                     if (state.image.enabled_channels.x)
                                     {
-                                        ImGui::Text(std::format("R {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.x)).c_str());
+                                        ImGui::Text("%s", std::format("R {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.x)).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.y)
                                     {
-                                        ImGui::Text(std::format("G {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.y)).c_str());
+                                        ImGui::Text("%s", std::format("G {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.y)).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.z)
                                     {
-                                        ImGui::Text(std::format("B {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.z)).c_str());
+                                        ImGui::Text("%s", std::format("B {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.z)).c_str());
                                         ImGui::SameLine();
                                     }
                                     if (state.image.enabled_channels.w)
                                     {
-                                        ImGui::Text(std::format("A {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.w)).c_str());
+                                        ImGui::Text("%s", std::format("A {:<10}", std::bit_cast<u32>(state.image.latest_readback.hovered_value.w)).c_str());
                                     }
                                     ImGui::Dummy({});
                                     break;
@@ -1685,7 +1685,7 @@ namespace daxa
                         if (state.buffer.format_c_struct_code_compile_error_message.size() > 0)
                         {
                             ImGui::PushStyleColor(ImGuiCol_Text, ColorPalette::RED);
-                            ImGui::TextWrapped(state.buffer.format_c_struct_code_compile_error_message.data());
+                            ImGui::TextWrapped("%s", state.buffer.format_c_struct_code_compile_error_message.data());
                             ImGui::PopStyleColor();
                         }
                         ImGui::InputTextMultiline("##input", state.buffer.format_c_struct_code.data(), state.buffer.format_c_struct_code.size(), ImGui::GetContentRegionAvail());
@@ -1812,11 +1812,11 @@ namespace daxa
                         if (is_pointer)
                         {
                             std::string text = std::format("{}{}", type_def.name, std::string(field_def.pointer_depth, '*'));
-                            ImGui::Text(text.c_str());
+                            ImGui::Text("%s", text.c_str());
                         }
                         else
                         {
-                            ImGui::Text(type_def.name.c_str());
+                            ImGui::Text("%s", type_def.name.c_str());
                         }
                         ImGui::TableNextColumn();
                         if (is_array)
@@ -1840,57 +1840,57 @@ namespace daxa
                             {
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_F16:
                                 {
-                                    ImGui::Text(std::format({":#05x"}, *reinterpret_cast<u16 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format({":#05x"}, *reinterpret_cast<u16 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_F32: 
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<f32 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<f32 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_F64:
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<f64 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<f64 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_I8:
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<i8 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<i8 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_I16:
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<i16 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<i16 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_I32: 
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<i32 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<i32 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_I64:
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<i64 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<i64 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U8:
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<u8 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<u8 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U16:
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<u16 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<u16 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U32: 
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<u32 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<u32 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                                 case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U64: 
                                 {
-                                    ImGui::Text(std::format("{}", *reinterpret_cast<u64 const*>(readback_ptr + memory_offset)).c_str());
+                                    ImGui::Text("%s", std::format("{}", *reinterpret_cast<u64 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
                             }
@@ -1964,7 +1964,7 @@ namespace daxa
                         ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, TYPE_COL_WIDTH);
                         ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_None);
                         ImGui::TableNextColumn();
-                        ImGui::Text(type_def.name.c_str());
+                        ImGui::Text("%s", type_def.name.c_str());
                         ImGui::TableNextColumn();
                         if (array_index != ~0u)
                         {
@@ -2008,7 +2008,7 @@ namespace daxa
                                     ImGui::TableSetupColumn("Field", ImGuiTableColumnFlags_None);
                                     ImGui::TableSetupColumn("Settings", ImGuiTableColumnFlags_None);
                                     ImGui::TableNextColumn();
-                                    ImGui::Text(field_type_def.name.c_str());
+                                    ImGui::Text("%s", field_type_def.name.c_str());
                                     ImGui::TableNextColumn();
                                     ImGui::Text("%s[%i]", field_def.name.c_str(), field_def.array_size);
                                     ImGui::TableNextColumn();
@@ -2128,7 +2128,7 @@ namespace daxa
 
                                     auto child_readback_host_ptr = context.device.buffer_host_address(child_viewer_state.clone_buffer).value();
 
-                                    ImGui::Text(std::format("pointer address to \"{:<32}\" offset {:<20}", info.name.c_str(), child_viewer_state.base_offset).c_str());
+                                    ImGui::Text("%s", std::format("pointer address to \"{:<32}\" offset {:<20}", info.name.c_str(), child_viewer_state.base_offset).c_str());
                                     ImGui::SetNextItemWidth(120);
                                     ImGui::InputInt("Array Size", &child_viewer_state.display_array_size);
                                     ImGui::SameLine();
