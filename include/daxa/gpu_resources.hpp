@@ -91,7 +91,7 @@ namespace daxa
 
             constexpr operator GPUResourceId() const { return std::bit_cast<GPUResourceId>(*this); }
             constexpr operator daxa_ImageId() const { return std::bit_cast<daxa_ImageId>(*this); }
-            DAXA_EXPORT_CXX auto default_view() const -> ImageViewId { return { .index = index, .version = version }; }
+            auto default_view() const -> ImageViewId { return { .index = index, .version = version }; }
         };
         static_assert(std::is_standard_layout_v<ImageId>);
         static_assert(std::is_layout_compatible_v<GPUResourceId, ImageId>);
