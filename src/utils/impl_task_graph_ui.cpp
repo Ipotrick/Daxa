@@ -368,7 +368,7 @@ namespace daxa
                 ImGui::SameLine(15, 15);
             }
             ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
-            ImGui::Text(text.c_str());
+            ImGui::Text("%s", text.c_str());
             ImGui::PopStyleColor();
             ImGui::SameLine();
         }
@@ -414,11 +414,11 @@ namespace daxa
             }
             else
             {
-                for (u32 i = 0; i < std::min(255ull, resource.name.size()); ++i)
+                for (u32 i = 0; i < std::min<uint64_t>(255ull, resource.name.size()); ++i)
                 {
                     ui_context.resource_name_search[i] = resource.name[i];
                 }
-                ui_context.resource_name_search[std::min(255ull, resource.name.size())] = 0;
+                ui_context.resource_name_search[std::min<uint64_t>(255ull, resource.name.size())] = 0;
             }
         }
     }
@@ -479,11 +479,11 @@ namespace daxa
             }
             else
             {
-                for (u32 i = 0; i < std::min(255ull, task.name.size()); ++i)
+                for (u32 i = 0; i < std::min<uint64_t>(255ull, task.name.size()); ++i)
                 {
                     ui_context.task_name_search[i] = task.name[i];
                 }
-                ui_context.task_name_search[std::min(255ull, task.name.size())] = 0;
+                ui_context.task_name_search[std::min<uint64_t>(255ull, task.name.size())] = 0;
             }
         }
     }
@@ -599,7 +599,7 @@ namespace daxa
         if (ImGui::BeginPopupContextItem(task.name.data()))
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
-            ImGui::Text(task.name.data());
+            ImGui::Text("%s", task.name.data());
             if (ImGui::Button("Open Task Detail Ui (Double Click)"))
             {
                 if (detail_window_open)
@@ -658,7 +658,7 @@ namespace daxa
         if (ImGui::BeginPopupContextItem(resource.name.data()))
         {
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, ImGui::GetStyle().FramePadding.y));
-            ImGui::Text(resource.name.data());
+            ImGui::Text("%s", resource.name.data());
             if (ImGui::Button("Open Resource Detail Ui (Double Click)"))
             {
                 open_or_focus_resource_detail_ui(ui_context, impl_tg, resource_index);
@@ -859,7 +859,7 @@ namespace daxa
                         ImGui::SetCursorScreenPos(clipped_start);
                         auto const size = ImVec2(clipped_end.x - clipped_start.x, clipped_end.y - clipped_start.y);
                         ImGui::InvisibleButton(std::format("##LALA{}", resource.name.data()).c_str(), size);
-                        ImGui::SetItemTooltip(resource.name.data());
+                        ImGui::SetItemTooltip("%s", resource.name.data());
                         resource_popup_context_ui(ui_context, impl_tg, resource_index, true);
                         ImVec4 const fill_color = resource_kind_to_color(resource.kind);
                         ImVec4 const fill_color_final = ImGui::IsItemHovered() ? ImVec4(fill_color.x * 1.3f, fill_color.y * 1.3f, fill_color.z * 1.3f, 1.0f) : fill_color;
@@ -1143,12 +1143,12 @@ namespace daxa
                             }
                             else
                             {
-                                ImGui::Text(impl_tg->resources[row_info.resource_index].name.data());
+                                ImGui::Text("%s", impl_tg->resources[row_info.resource_index].name.data());
                             }
                         }
                         else
                         {
-                            ImGui::Text(row_info.cell_text.at(cell_idx).c_str());
+                            ImGui::Text("%s", row_info.cell_text.at(cell_idx).c_str());
                         }
                     }
                     if (row_info.resource_index == ~0u)
@@ -1318,7 +1318,7 @@ namespace daxa
                 set_table_cell_name_color();
                 ImGui::Text("Lifetime");
                 ImGui::TableNextColumn();
-                ImGui::Text(to_string(resource.lifetime_type).data());
+                ImGui::Text("%s", to_string(resource.lifetime_type).data());
 
                 ImGui::TableNextColumn();
                 ImGui::EndTable();
@@ -1328,13 +1328,13 @@ namespace daxa
             {
                 ImGui::TableNextColumn();
                 set_table_cell_name_color();
-                ImGui::Text(resource.double_buffer_index == 0 ? "IS_FRONT_BUFFER" : "IS_BACK_BUFFER");
+                ImGui::Text("%s", resource.double_buffer_index == 0 ? "IS_FRONT_BUFFER" : "IS_BACK_BUFFER");
 
                 ImGui::TableNextColumn();
-                ImGui::Text(resource.double_buffer_index == 0 ? "BACK_BUFFER:" : "FRONT_BUFFER:");
+                ImGui::Text("%s", resource.double_buffer_index == 0 ? "BACK_BUFFER:" : "FRONT_BUFFER:");
                 ImGui::TableNextColumn();
                 set_table_cell_name_color();
-                ImGui::Text(resource.double_buffer_pair_resource.first->name.data());
+                ImGui::Text("%s", resource.double_buffer_pair_resource.first->name.data());
                 resource_popup_context_ui(ui_context, impl_tg, resource.double_buffer_pair_resource.second, false);
 
                 ImGui::TableNextColumn();
@@ -1352,7 +1352,7 @@ namespace daxa
                     set_table_cell_name_color();
                     ImGui::Text("External Resource Link");
                     ImGui::TableNextColumn();
-                    ImGui::Text(resource.external->name.data());
+                    ImGui::Text("%s", resource.external->name.data());
                 }
 
                 switch (resource.kind)
@@ -1407,13 +1407,13 @@ namespace daxa
                     set_table_cell_name_color();
                     ImGui::Text("MemoryFlags");
                     ImGui::TableNextColumn();
-                    ImGui::Text(to_string(memory_flags).data());
+                    ImGui::Text("%s", to_string(memory_flags).data());
 
                     ImGui::TableNextColumn();
                     set_table_cell_name_color();
                     ImGui::Text("Device Address");
                     ImGui::TableNextColumn();
-                    ImGui::Text(std::to_string(device_address).c_str());
+                    ImGui::Text("%s", std::to_string(device_address).c_str());
 
                     if (host_address)
                     {
@@ -1421,7 +1421,7 @@ namespace daxa
                         set_table_cell_name_color();
                         ImGui::Text("Host Address");
                         ImGui::TableNextColumn();
-                        ImGui::Text(std::to_string(host_address).c_str());
+                        ImGui::Text("%s", std::to_string(host_address).c_str());
                     }
 
                     break;
@@ -1435,7 +1435,7 @@ namespace daxa
                     set_table_cell_name_color();
                     ImGui::Text("Format");
                     ImGui::TableNextColumn();
-                    ImGui::Text(to_string(info.format).data());
+                    ImGui::Text("%s", to_string(info.format).data());
 
                     if (info.flags != ImageCreateFlagBits::NONE)
                     {
@@ -1443,14 +1443,14 @@ namespace daxa
                         set_table_cell_name_color();
                         ImGui::Text("Flags");
                         ImGui::TableNextColumn();
-                        ImGui::Text(to_string(info.flags).data());
+                        ImGui::Text("%s", to_string(info.flags).data());
                     }
 
                     ImGui::TableNextColumn();
                     set_table_cell_name_color();
                     ImGui::Text("Usage Flags");
                     ImGui::TableNextColumn();
-                    ImGui::Text(to_string(info.usage).data());
+                    ImGui::Text("%s", to_string(info.usage).data());
 
                     break;
                 }
@@ -1547,7 +1547,7 @@ namespace daxa
                     if (ImGui::BeginTable("Barrier Table", 1, BARRIER_TABLE_FLAGS))
                     {
                         ImGui::TableNextColumn();
-                        ImGui::Text(std::format("Barrier. Src: {} Dst: {}", to_string(ag.final_schedule_pre_barrier->src_access), to_string(ag.final_schedule_pre_barrier->dst_access)).c_str());
+                        ImGui::Text("%s", std::format("Barrier. Src: {} Dst: {}", to_string(ag.final_schedule_pre_barrier->src_access), to_string(ag.final_schedule_pre_barrier->dst_access)).c_str());
                         ImGui::EndTable();
                     }
                 }
@@ -1576,7 +1576,7 @@ namespace daxa
                             color,
                             ImVec4(color.x * 0.6f, color.y * 0.6f, color.z * 0.6f, 1.0f));
                         ImGui::TableNextColumn();
-                        ImGui::Text(task->attachments[attach_i].value.buffer.name);
+                        ImGui::Text("%s", task->attachments[attach_i].value.buffer.name);
                     }
                     ImGui::EndTable();
                 }
@@ -1623,13 +1623,13 @@ namespace daxa
             if (batch_ui.access_group->final_schedule_pre_barrier->src_access.stages != PipelineStageFlagBits::NONE)
             {
                 ImGui::Text("Src:");
-                ImGui::Text(std::format("  Access: {}", to_string(batch_ui.access_group->final_schedule_pre_barrier->src_access)).c_str());
+                ImGui::Text("%s", std::format("  Access: {}", to_string(batch_ui.access_group->final_schedule_pre_barrier->src_access)).c_str());
                 ImGui::Text("  Tasks:");
                 ImGui::SameLine();
                 auto const & src_tasks = batch_ui.access_group->final_schedule_pre_barrier->src_access_group->tasks;
                 for (u32 t = 0; t < src_tasks.size(); ++t)
                 {
-                    ImGui::Text(src_tasks[t].task->name.data());
+                    ImGui::Text("%s", src_tasks[t].task->name.data());
                     if (t < src_tasks.size() - 1)
                     {
                         ImGui::SameLine();
@@ -1639,13 +1639,13 @@ namespace daxa
                 }
             }
             ImGui::Text("Dst:");
-            ImGui::Text(std::format("  Access: {}", to_string(batch_ui.access_group->final_schedule_pre_barrier->dst_access)).c_str());
+            ImGui::Text("%s", std::format("  Access: {}", to_string(batch_ui.access_group->final_schedule_pre_barrier->dst_access)).c_str());
             ImGui::Text("  Tasks:");
             ImGui::SameLine();
             auto const & dst_tasks = batch_ui.access_group->tasks;
             for (u32 t = 0; t < dst_tasks.size(); ++t)
             {
-                ImGui::Text(dst_tasks[t].task->name.data());
+                ImGui::Text("%s", dst_tasks[t].task->name.data());
                 if (t < dst_tasks.size() - 1)
                 {
                     ImGui::SameLine();
@@ -2111,7 +2111,7 @@ namespace daxa
                     float const text_offset = (column_width - text_width) / 2;
                     ImGui::Dummy(ImVec2(0.0f, 0.0f));
                     ImGui::SameLine(text_offset);
-                    ImGui::Text(name);
+                    ImGui::Text("%s", name);
                     ImGui::PopStyleColor();
                     if (!col_ui.is_queue_submit_border && !col_ui.is_submit_border)
                     {
@@ -2194,12 +2194,12 @@ namespace daxa
                         ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(ImVec4(0.9, 0.9, 0.9, 1)));
                         ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0, 0, 0, 1));
                     }
-                    ImGui::Text(resource.name.data());
+                    ImGui::Text("%s", resource.name.data());
                     if (is_pinned)
                     {
                         ImGui::PopStyleColor();
                     }
-                    ImGui::SetItemTooltip(resource.name.data());
+                    ImGui::SetItemTooltip("%s", resource.name.data());
                     resource_popup_context_ui(ui_context, impl_tg, resource_index, true);
 
                     /// =========================================
@@ -2318,7 +2318,7 @@ namespace daxa
                                         if (ImGui::BeginItemTooltip())
                                         {
                                             TaskAttachmentInfo const & attach_info = col_ui.task->attachments[attachment_index];
-                                            ImGui::Text(std::format("Attachment name: {}", attach_info.value.common.name).c_str());
+                                            ImGui::Text("%s", std::format("Attachment name: {}", attach_info.value.common.name).c_str());
                                             ImGui::EndTooltip();
                                         }
                                         make_cell_darker = false;
