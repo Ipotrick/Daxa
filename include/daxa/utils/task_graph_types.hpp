@@ -323,7 +323,9 @@ namespace daxa
         auto operator<=>(TaskBufferView const & other) const = default;
     };
     static_assert(std::is_standard_layout_v<TaskBufferView>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
     static_assert(std::is_layout_compatible_v<TaskGPUResourceView, TaskBufferView>);
+#endif
 
     struct DAXA_EXPORT_CXX TaskBlasView
     {
@@ -351,7 +353,9 @@ namespace daxa
         auto operator<=>(TaskBlasView const & other) const = default;
     };
     static_assert(std::is_standard_layout_v<TaskBlasView>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
     static_assert(std::is_layout_compatible_v<TaskGPUResourceView, TaskBlasView>);
+#endif
 
     struct DAXA_EXPORT_CXX TaskTlasView
     {
@@ -379,7 +383,9 @@ namespace daxa
         auto operator<=>(TaskTlasView const & other) const = default;
     };
     static_assert(std::is_standard_layout_v<TaskTlasView>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
     static_assert(std::is_layout_compatible_v<TaskGPUResourceView, TaskTlasView>);
+#endif
 
     struct TaskAttachmentInfo;
 
@@ -423,8 +429,10 @@ namespace daxa
         auto is_external() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && !is_null(); }
         auto is_null() const -> bool { return task_graph_index == INVALID_TASK_GRAPH_INDEX && index == ~0u; }
     };
+
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
     static_assert(std::is_standard_layout_v<TaskImageView>);
-    // static_assert(std::is_layout_compatible_v<TaskGPUResourceView, TaskImageView>);
+#endif
 
 #ifndef __clang__ // MSVC STL does not implement these for clang :/
     // The TaskImageView::operator TaskGPUResourceView const&() const are only valid IF AND ONLY IF:

@@ -49,7 +49,9 @@ namespace daxa
             constexpr operator daxa_BufferId() const { return std::bit_cast<daxa_BufferId>(*this); }
         };
         static_assert(std::is_standard_layout_v<BufferId>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
         static_assert(std::is_layout_compatible_v<GPUResourceId, BufferId>);
+#endif
 
         struct DAXA_EXPORT_CXX ImageViewId
         {
@@ -65,7 +67,9 @@ namespace daxa
             constexpr operator daxa_ImageViewIndex() const { return daxa_ImageViewIndex(index); }
         };
         static_assert(std::is_standard_layout_v<ImageViewId>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
         static_assert(std::is_layout_compatible_v<GPUResourceId, ImageViewId>);
+#endif
 
         // Shader only
         struct ImageViewIndex
@@ -94,7 +98,9 @@ namespace daxa
             DAXA_EXPORT_CXX auto default_view() const -> ImageViewId { return { .index = index, .version = version }; }
         };
         static_assert(std::is_standard_layout_v<ImageId>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
         static_assert(std::is_layout_compatible_v<GPUResourceId, ImageId>);
+#endif
 
         struct DAXA_EXPORT_CXX SamplerId
         {
@@ -109,7 +115,9 @@ namespace daxa
             constexpr operator daxa_SamplerId() const { return std::bit_cast<daxa_SamplerId>(*this); }
         };
         static_assert(std::is_standard_layout_v<SamplerId>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
         static_assert(std::is_layout_compatible_v<GPUResourceId, SamplerId>);
+#endif
 
         struct DAXA_EXPORT_CXX BlasId
         {
@@ -124,7 +132,9 @@ namespace daxa
             constexpr operator daxa_BlasId() const { return std::bit_cast<daxa_BlasId>(*this); }
         };
         static_assert(std::is_standard_layout_v<BlasId>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
         static_assert(std::is_layout_compatible_v<GPUResourceId, BlasId>);
+#endif
 
         struct DAXA_EXPORT_CXX TlasId
         {
@@ -139,7 +149,9 @@ namespace daxa
             constexpr operator daxa_TlasId() const { return std::bit_cast<daxa_TlasId>(*this); }
         };
         static_assert(std::is_standard_layout_v<TlasId>);
+#ifndef __clang__ // MSVC STL does not implement these for clang :/
         static_assert(std::is_layout_compatible_v<GPUResourceId, TlasId>);
+#endif
 
     } // namespace types
 
