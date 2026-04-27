@@ -26,8 +26,8 @@ namespace daxa
 
     struct DAXA_EXPORT_CXX GPUResourceId
     {
-        u64 index : 20 = {};
-        u64 version : 44 = {};
+        u64 index : ID_INDEX_BITS = {};
+        u64 version : ID_VERSION_BITS = {};
 
         auto is_empty() const -> bool { return version == 0; }
         constexpr bool operator==(GPUResourceId const & other) const = default;
