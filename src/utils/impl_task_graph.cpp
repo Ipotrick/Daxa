@@ -2867,12 +2867,12 @@ namespace daxa
             }
             else
             {
-                new_allocation.offset = align_up(resource_heap_size, new_allocation_memory_requirements.alignment);
+                new_allocation.offset = align_up<uint64_t>(resource_heap_size, new_allocation_memory_requirements.alignment);
                 non_external_resource_allocations[tr] = new_allocation;
             }
 
-            resource_heap_size = std::max(resource_heap_size, new_allocation.offset + new_allocation.size);
-            resource_heap_alignment = std::max(resource_heap_alignment, new_allocation_memory_requirements.alignment);
+            resource_heap_size = std::max<uint64_t>(resource_heap_size, new_allocation.offset + new_allocation.size);
+            resource_heap_alignment = std::max<uint64_t>(resource_heap_alignment, new_allocation_memory_requirements.alignment);
             resource_heap_memory_bits &= new_allocation_memory_requirements.memory_type_bits;
         }
 
