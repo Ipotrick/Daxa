@@ -11,21 +11,25 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
+auto get_native_window_info(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowInfo
 {
 #if defined(_WIN32)
-    return glfwGetWin32Window(glfw_window_ptr);
+    return daxa::NativeWindowInfoWin32{ glfwGetWin32Window(glfw_window_ptr) };
 #elif defined(__linux__)
-    return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
-#endif
-}
-
-auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform
-{
-#if defined(_WIN32)
-    return daxa::NativeWindowPlatform::WIN32_API;
-#elif defined(__linux__)
-    return daxa::NativeWindowPlatform::XLIB_API;
+    switch (glfwGetPlatform())
+    {
+    case GLFW_PLATFORM_WAYLAND:
+        return daxa::NativeWindowInfoWayland {
+            .display = glfwGetWaylandDisplay(),
+            .surface = glfwGetWaylandWindow(glfw_window_ptr),
+            .width   = size_x,
+            .height  = size_y,
+        };
+    default:
+        return daxa::NativeWindowInfoXlib {
+            .window = reinterpret_cast<void*>(glfwGetX11Window(glfw_window_ptr))
+        };
+    }
 #endif
 }
 
@@ -38,40 +42,6 @@ struct WindowInfo
 #include "shared.inl"
 
 daxa::BufferId indirect_dispatch_buffer = {};
-
-struct DrawTask : DrawTri::Task
-{
-    AttachmentViews views = {};
-    daxa::RasterPipeline* pipeline = {};
-    void callback(daxa::TaskInterface ti)
-    {
-        daxa::ImageInfo color_img_info = ti.info(AT.render_target).value();
-        auto const size_x = color_img_info.size.x;
-        auto const size_y = color_img_info.size.y;
-        auto render_recorder = std::move(ti.recorder).begin_renderpass({
-            .color_attachments = std::array{
-                daxa::RenderAttachmentInfo{
-                    .image_view = ti.get(AT.render_target).view_ids[0],
-                    .load_op = daxa::AttachmentLoadOp::CLEAR,
-                    .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
-                    .resolve = daxa::AttachmentResolveInfo{
-                        .image = ti.get(AT.resolve_target).view_ids[0],
-                    },
-                },
-            },
-            .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
-        });
-        render_recorder.set_rasterization_samples(daxa::RasterizationSamples::E4);
-        render_recorder.set_pipeline(*pipeline);
-
-        render_recorder.draw_mesh_tasks_indirect({
-            .indirect_buffer = indirect_dispatch_buffer, 
-            .draw_count = 1u,
-            .stride = 12u,
-        });
-        ti.recorder = std::move(render_recorder).end_renderpass();
-    }
-};
 
 auto main() -> int
 {
@@ -92,35 +62,29 @@ auto main() -> int
             window_info_ref.width = static_cast<daxa::u32>(width);
             window_info_ref.height = static_cast<daxa::u32>(height);
         });
-    auto * native_window_handle = get_native_handle(glfw_window_ptr);
-    auto native_window_platform = get_native_platform(glfw_window_ptr);
+    auto native_window_info = get_native_window_info(glfw_window_ptr);
 
     daxa::Instance instance = daxa::create_instance({});
 
     daxa::Device device = instance.create_device_2(instance.choose_device(daxa::ImplicitFeatureFlagBits::MESH_SHADER, {}));
 
     indirect_dispatch_buffer = device.create_buffer({
-        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
         .size = sizeof(daxa_u32vec3),
+        .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_SEQUENTIAL_WRITE,
     });
-    *device.get_host_address_as<daxa_u32vec3>(indirect_dispatch_buffer).value() = {
+    *device.buffer_host_address_as<daxa_u32vec3>(indirect_dispatch_buffer).value() = {
         1,
         1,
         1,
     };
 
     daxa::Swapchain swapchain = device.create_swapchain({
-        .native_window = native_window_handle,
-        .native_window_platform = native_window_platform,
-        .surface_format_selector = [](daxa::Format format, daxa::ColorSpace colorspace)
-        {
-            switch (format)
-            {
-            case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format, colorspace);
-            }
-        },
+        .native_window_info = native_window_info,
         .present_mode = daxa::PresentMode::FIFO,
+        .surface_format = device.choose_swapchain_surface_format({
+            .native_window_info = native_window_info,
+            .preferred_formats = std::array{daxa::SurfaceFormat{ .format = daxa::Format::B8G8R8A8_UNORM }},
+        }),
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "my swapchain",
     });
@@ -133,39 +97,35 @@ auto main() -> int
         .name = "render target",
     });
     daxa::ExternalTaskImage trender_image = daxa::ExternalTaskImage{{
-        .initial_images = {
-            .images = std::array{render_target},
-        },
+        .image = render_target,
         .name = "render target",
     }};
 
     auto pipeline_manager = daxa::PipelineManager({
         .device = device,
-        .shader_compile_options = {
-            .root_paths = {
-                DAXA_SHADER_INCLUDE_DIR,
-                "./tests/2_daxa_api/11_mesh_shader",
-            },
-            .language = daxa::ShaderLanguage::SLANG,
-            .enable_debug_info = true,
+        .root_paths = {
+            DAXA_SHADER_INCLUDE_DIR,
+            "./tests/2_daxa_api/11_mesh_shader",
         },
+        .default_language = daxa::ShaderLanguage::SLANG,
+        .default_enable_debug_info = true,
         .name = "my pipeline manager",
     });
     // Then just adding it to the pipeline manager
     std::shared_ptr<daxa::RasterPipeline> pipeline;
     {
-        auto result = pipeline_manager.add_raster_pipeline({
-            .mesh_shader_info = daxa::ShaderCompileInfo{
+        auto result = pipeline_manager.add_raster_pipeline2({
+            .mesh_shader_info = daxa::ShaderCompileInfo2{
                 .source = daxa::ShaderFile{"draw.slang"},
-                .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_mesh"},
+                .entry_point = "entry_mesh",
             },
-            .task_shader_info = daxa::ShaderCompileInfo{
+            .fragment_shader_info = daxa::ShaderCompileInfo2{
                 .source = daxa::ShaderFile{"draw.slang"},
-                .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_task"},
+                .entry_point = "entry_fragment",
             },
-            .fragment_shader_info = daxa::ShaderCompileInfo{
+            .task_shader_info = daxa::ShaderCompileInfo2{
                 .source = daxa::ShaderFile{"draw.slang"},
-                .compile_options = daxa::ShaderCompileOptions{.entry_point = "entry_fragment"},
+                .entry_point = "entry_task",
             },
             .color_attachments = {{.format = swapchain.get_format()}},
             .raster = {.static_state_sample_count = daxa::None},
@@ -179,7 +139,7 @@ auto main() -> int
         pipeline = result.value();
     }
 
-    auto task_swapchain_image = daxa::ExternalTaskImage{{.swapchain_image = true, .name = "swapchain image"}};
+    auto task_swapchain_image = daxa::ExternalTaskImage{{.is_swapchain_image = true, .name = "swapchain image"}};
 
     auto loop_task_graph = daxa::TaskGraph({
         .device = device,
@@ -187,17 +147,43 @@ auto main() -> int
         .name = "loop",
     });
 
-    loop_task_graph.register_image(task_swapchain_image);
+    auto swapchain_tview = loop_task_graph.register_image(task_swapchain_image);
     loop_task_graph.register_image(trender_image);
 
     // And a task to draw to the screen
-    loop_task_graph.add_task(DrawTask{
-        .views = DrawTask::Views{
-            .resolve_target = task_swapchain_image.view(),
+    loop_task_graph.add_task(daxa::HeadTask<DrawTri::Info>()
+        .head_views({
+            .resolve_target = swapchain_tview,
             .render_target = trender_image.view(),
-        },
-        .pipeline = pipeline.get(),
-    });
+        })
+        .executes([=, pipeline_ptr = &pipeline](daxa::TaskInterface ti){
+            using namespace DrawTri;
+            daxa::ImageInfo color_img_info = ti.info(AT.render_target).value();
+            auto const size_x = color_img_info.size.x;
+            auto const size_y = color_img_info.size.y;
+            auto render_recorder = std::move(ti.recorder).begin_renderpass({
+                .color_attachments = std::array{
+                    daxa::RenderAttachmentInfo{
+                        .image_view = ti.get(AT.render_target).view_ids[0],
+                        .load_op = daxa::AttachmentLoadOp::CLEAR,
+                        .clear_value = std::array<daxa::f32, 4>{0.1f, 0.0f, 0.5f, 1.0f},
+                        .resolve = daxa::AttachmentResolveInfo{
+                            .image = ti.get(AT.resolve_target).view_ids[0],
+                        },
+                    },
+                },
+                .render_area = {.x = 0, .y = 0, .width = size_x, .height = size_y},
+            });
+            render_recorder.set_rasterization_samples(daxa::RasterizationSamples::E4);
+            render_recorder.set_pipeline(**pipeline_ptr);
+
+            render_recorder.draw_mesh_tasks_indirect({
+                .indirect_buffer = indirect_dispatch_buffer, 
+                .draw_count = 1u,
+                .stride = 12u,
+            });
+            ti.recorder = std::move(render_recorder).end_renderpass();
+        }));
 
     loop_task_graph.submit({});
     loop_task_graph.present({});
@@ -223,7 +209,7 @@ auto main() -> int
         {
             continue;
         }
-        task_swapchain_image.set_images({.images = std::array{swapchain_image}});
+        task_swapchain_image.set_image(swapchain_image);
         loop_task_graph.execute({});
         device.collect_garbage();
     }
