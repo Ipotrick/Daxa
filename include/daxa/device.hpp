@@ -535,7 +535,7 @@ namespace daxa
     {
         NativeWindowInfo native_window_info = {};
         // Leave this span completely empty for daxa to select a surface format.
-        // For each preferred format, leave the color space empty for daxa to select a color space.
+        // For each preferred format, leave the color space as MAX_ENUM for daxa to select it.
         Span<SurfaceFormat const> preferred_formats = {};
     };
 
