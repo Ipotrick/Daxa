@@ -783,6 +783,8 @@ namespace daxa
         auto & impl = *r_cast<ImplExternalResource *>(this->object);
         return ExternalTaskImageInfo{
             .image = impl.id.image,
+            .is_general_layout = impl.pre_graph_is_general_layout,
+            .is_swapchain_image = impl.is_swapchain_image,
             .name = impl.name,
         };
     }
@@ -799,9 +801,8 @@ namespace daxa
 
         impl.id.image = image;
         impl.pre_graph_queue_bits = {};
-        impl.pre_graph_is_general_layout = false;
-        impl.was_presented = false;
         impl.pre_graph_is_general_layout = is_general_layout;
+        impl.was_presented = false;
     }
 
     void ExternalTaskImage::swap_images(ExternalTaskImage & other)
