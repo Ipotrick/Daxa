@@ -945,7 +945,7 @@ namespace daxa
 
         impl.external_idx_to_resource_table[global_unique_external_index] = std::pair{&impl.resources.back(), index};
 
-        return TaskImageView{ .index = static_cast<u32>(impl.resources.size() - 1u), .task_graph_index = impl.unique_index};
+        return TaskImageView{ .task_graph_index = impl.unique_index, .index = static_cast<u32>(impl.resources.size() - 1u) };
     }
 
     auto create_buffer_helper(ImplTaskGraph & impl, TaskResourceKind kind, usize size, TaskResourceLifetimeType lifetime_type, std::string_view name)
