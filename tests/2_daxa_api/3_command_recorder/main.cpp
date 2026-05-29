@@ -503,96 +503,90 @@ namespace tests
     }
     void build_acceleration_structure(App & app)
     {
-            daxa::Device device = app.daxa_ctx.create_device_2(app.daxa_ctx.choose_device(daxa::ImplicitFeatureFlagBits::BASIC_RAY_TRACING, {}));
+        daxa::Device device = app.daxa_ctx.create_device_2(app.daxa_ctx.choose_device(daxa::ImplicitFeatureFlagBits::BASIC_RAY_TRACING, {}));
 
-            /// Prepare mesh data:
-            auto vertices = std::array{
-                std::array{0.25f, 0.75f, 0.5f},
-                std::array{0.5f, 0.25f, 0.5f},
-                std::array{0.75f, 0.75f, 0.5f},
-            };
-            auto vertex_buffer = device.create_buffer({
-                .size = sizeof(decltype(vertices)),
-                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                .name = "vertex buffer",
-            });
-            defer { device.destroy_buffer(vertex_buffer); };
-            std::memcpy(device.buffer_host_address(vertex_buffer).value(), &vertices, sizeof(decltype(vertices)));
+        /// Prepare mesh data:
+        auto vertices = std::array{
+            std::array{0.25f, 0.75f, 0.5f},
+            std::array{0.5f, 0.25f, 0.5f},
+            std::array{0.75f, 0.75f, 0.5f},
+        };
+        auto vertex_buffer = device.create_buffer({
+            .size = sizeof(decltype(vertices)),
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .name = "vertex buffer",
+        });
+        defer { device.destroy_buffer(vertex_buffer); };
+        std::memcpy(device.buffer_host_address(vertex_buffer).value(), &vertices, sizeof(decltype(vertices)));
 
-            auto indices = std::array{0, 1, 2};
-            auto index_buffer = device.create_buffer({
-                .size = sizeof(decltype(indices)),
-                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                .name = "index buffer",
-            });
-            defer { device.destroy_buffer(index_buffer); };
-            std::memcpy(device.buffer_host_address(index_buffer).value(), &indices, sizeof(decltype(indices)));
+        auto indices = std::array{0, 1, 2};
+        auto index_buffer = device.create_buffer({
+            .size = sizeof(decltype(indices)),
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .name = "index buffer",
+        });
+        defer { device.destroy_buffer(index_buffer); };
+        std::memcpy(device.buffer_host_address(index_buffer).value(), &indices, sizeof(decltype(indices)));
 
-            auto transform = daxa_f32mat3x4{
-                {1, 0, 0, 0},
-                {0, 1, 0, 0},
-                {0, 0, 1, 0},
-            };
-            auto transform_buffer = device.create_buffer({
-                .size = sizeof(daxa_f32mat3x4),
-                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-                .name = "transform buffer",
-            });
-            defer { device.destroy_buffer(transform_buffer); };
-            std::memcpy(device.buffer_host_address(transform_buffer).value(), &transform, sizeof(daxa_f32mat3x4));
+        auto transform = daxa_f32mat3x4{
+            {1, 0, 0, 0},
+            {0, 1, 0, 0},
+            {0, 0, 1, 0},
+        };
+        auto transform_buffer = device.create_buffer({
+            .size = sizeof(daxa_f32mat3x4),
+            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+            .name = "transform buffer",
+        });
+        defer { device.destroy_buffer(transform_buffer); };
+        std::memcpy(device.buffer_host_address(transform_buffer).value(), &transform, sizeof(daxa_f32mat3x4));
 
-            // Now the geometry for the BLAS is described as a series of geometries and instances of geometries:
-            auto geometries = std::array{
-                daxa::BlasTriangleGeometryInfo{
-                    .vertex_format = daxa::Format::R32G32B32_SFLOAT,
-                    .vertex_data = device.device_address(vertex_buffer).value(),
-                    .vertex_stride = sizeof(daxa_f32vec3),
-                    .max_vertex = static_cast<u32>(vertices.size() - 1),
-                    .index_type = daxa::IndexType::uint32,
-                    .index_data = device.device_address(index_buffer).value(),
-                    .transform_data = device.device_address(transform_buffer).value(),
-                    .count = 1,
-                    .flags = {},
-                }};
-            auto build_info = daxa::BlasBuildInfo{
-                .dst_blas = {},             // Ignored in get_acceleration_structure_build_sizes, fill out later.
-                .geometries = geometries,
-                .scratch_data = {},         // Ignored in get_acceleration_structure_build_sizes, fill out later.
-            };
+        // Now the geometry for the BLAS is described as a series of geometries and instances of geometries:
+        auto geometries = std::array{
+            daxa::BlasTriangleGeometryInfo{
+                .vertex_format = daxa::Format::R32G32B32_SFLOAT,
+                .vertex_data = device.device_address(vertex_buffer).value(),
+                .vertex_stride = sizeof(daxa_f32vec3),
+                .max_vertex = static_cast<u32>(vertices.size() - 1),
+                .index_type = daxa::IndexType::uint32,
+                .index_data = device.device_address(index_buffer).value(),
+                .transform_data = device.device_address(transform_buffer).value(),
+                .count = 1,
+                .flags = {},
+            }};
+        auto build_info = daxa::BlasBuildInfo{
+            .dst_blas = {},             // Ignored in get_acceleration_structure_build_sizes, fill out later.
+            .geometries = geometries,
+            .scratch_data = {},         // Ignored in get_acceleration_structure_build_sizes, fill out later.
+        };
 
-            // Query actually needed scratch and blas buffer sizes:
-            daxa::AccelerationStructureBuildSizesInfo build_size_info = device.blas_build_sizes(build_info);
+        // Query actually needed scratch and blas buffer sizes:
+        daxa::AccelerationStructureBuildSizesInfo build_size_info = device.blas_build_sizes(build_info);
 
-            // Create scratch and blas:
-            auto scratch_buffer = device.create_buffer({
-                .size = build_size_info.build_scratch_size,
-                .name = "scratch buffer",
-            });
-            defer { device.destroy_buffer(scratch_buffer); };
-            daxa::BlasId blas = device.create_blas({
-                .size = build_size_info.acceleration_structure_size,
-                .name = "test blas",
-            });
-            defer { device.destroy_blas(blas); };
+        // Create scratch and blas:
+        auto scratch_buffer = device.create_buffer({
+            .size = build_size_info.build_scratch_size,
+            .name = "scratch buffer",
+        });
+        defer { device.destroy_buffer(scratch_buffer); };
+        daxa::BlasId blas = device.create_blas({
+            .size = build_size_info.acceleration_structure_size,
+            .name = "test blas",
+        });
+        defer { device.destroy_blas(blas); };
 
-            /// Fill the remaining fields of the build info:
-            build_info.dst_blas = blas;
-            build_info.scratch_data = device.device_address(scratch_buffer).value();
-            /// Record build commands:
-            
-            auto recorder = device.create_command_recorder({});
-            recorder.build_acceleration_structures({
-                .blas_build_infos = std::array{build_info},
-            });
-            auto exec_cmd_list = recorder.complete_current_commands();
-            device.submit_commands({.command_lists = std::array{exec_cmd_list}});
-            device.wait_idle();
-        }
-        catch (std::runtime_error error)
-        {
-            std::cout << "failed test \"acceleration_structure_creation\": " << error.what() << std::endl;
-            exit(-1);
-        }
+        /// Fill the remaining fields of the build info:
+        build_info.dst_blas = blas;
+        build_info.scratch_data = device.device_address(scratch_buffer).value();
+        /// Record build commands:
+        
+        auto recorder = device.create_command_recorder({});
+        recorder.build_acceleration_structures({
+            .blas_build_infos = std::array{build_info},
+        });
+        auto exec_cmd_list = recorder.complete_current_commands();
+        device.submit_commands({.command_lists = std::array{exec_cmd_list}});
+        device.wait_idle();
     }
 } // namespace tests
 
