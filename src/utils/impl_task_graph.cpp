@@ -2150,6 +2150,25 @@ namespace daxa
             }
         }
 
+        /// =========================================
+        /// ==== PATCH PAIR RESOURCE INFORMATION ====
+        /// =========================================
+
+        // As the double buffer resources have difference access timelines between the current and previous frame,
+        // the access modifiers such as usage, the queue bits etc must be merged together for both.
+        
+        for (u32 i = 0; i < impl.resources.size(); ++i)
+        {
+            ImplTaskResource* resource = &impl.resources[i];
+            ImplTaskResource* back_buffer_resource = resource->double_buffer_pair_resource.first;
+            if (back_buffer_resource)
+            {
+                resource->queue_bits = resource->queue_bits | back_buffer_resource->queue_bits;
+                resource->info.image.flags = resource->info.image.flags | back_buffer_resource->info.image.flags;
+                resource->info.image.usage = resource->info.image.usage | back_buffer_resource->info.image.usage;
+            }
+        }
+
         /// ============================================
         /// ==== VALIDATE SWAPCHAIN ACCESS TIMELINE ====
         /// ============================================
