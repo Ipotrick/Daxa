@@ -64,7 +64,7 @@ struct AppWindow
     auto get_native_window_info() -> daxa::NativeWindowInfo
     {
 #if defined(_WIN32)
-        return glfwGetWin32Window(glfw_window_ptr);
+        return daxa::NativeWindowInfoWin32{glfwGetWin32Window(glfw_window_ptr)};
 #elif defined(__linux__)
         switch (glfwGetPlatform())
         {

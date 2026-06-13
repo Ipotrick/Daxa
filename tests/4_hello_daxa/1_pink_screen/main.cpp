@@ -12,7 +12,7 @@
 auto get_native_window_info(GLFWwindow * glfw_window_ptr, daxa::u32 width, daxa::u32 height) -> daxa::NativeWindowInfo
 {
 #if defined(_WIN32)
-    return glfwGetWin32Window(glfw_window_ptr);
+    return daxa::NativeWindowInfoWin32{glfwGetWin32Window(glfw_window_ptr)};
 #elif defined(__linux__)
     switch (glfwGetPlatform())
     {
@@ -130,14 +130,9 @@ auto main() -> int
     // and present mode (this controls sync)
     daxa::Swapchain swapchain = device.create_swapchain({
         .native_window_info = get_native_window_info(glfw_window_ptr, window_info.width, window_info.height),
-        .surface_format_selector = [](daxa::Format format, daxa::ColorSpace colorspace)
-        {
-            switch (format)
-            {
-            case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format, colorspace);
-            }
-        },
+        .surface_format = device.choose_swapchain_surface_format({
+            .native_window_info = get_native_window_info(glfw_window_ptr, window_info.width, window_info.height),
+        }),
         .present_mode = daxa::PresentMode::FIFO,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "my swapchain",
@@ -186,9 +181,9 @@ auto main() -> int
         });
 
         recorder.clear_image({
+            .image = swapchain_image,
+            .slice = swapchain_image_full_slice,
             .clear_value = std::array<daxa::f32, 4>{1.0f, 0.0f, 1.0f, 1.0f},
-            .dst_image = swapchain_image,
-            .dst_slice = swapchain_image_full_slice,
         });
 
         recorder.pipeline_image_barrier({

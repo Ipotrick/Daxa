@@ -25,7 +25,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::ExternalTaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "task_render_image"}};
+    daxa::ExternalTaskImage task_render_image{{.image = render_image, .name = "task_render_image"}};
 
     daxa::TaskGraph loop_task_graph = record_loop_task_graph();
 
@@ -52,7 +52,7 @@ struct App : BaseApp<App>
         ui_update();
 
         auto swapchain_image = swapchain.acquire_next_image();
-        task_swapchain_image.set_images({.images = std::array{swapchain_image}});
+        task_swapchain_image.set_image(swapchain_image);
         if (swapchain_image.is_empty())
         {
             return;
@@ -78,7 +78,7 @@ struct App : BaseApp<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            task_render_image.set_images({.images = std::array{render_image}});
+            task_render_image.set_image(render_image);
             base_on_update();
         }
     }
@@ -104,8 +104,8 @@ struct App : BaseApp<App>
             .executes([this](daxa::TaskInterface ti)
             {
                 ti.recorder.blit_image_to_image({
-                    .src_image = ti.get(task_render_image).ids[0],
-                    .dst_image = ti.get(task_swapchain_image).ids[0],
+                    .src_image = ti.get(task_render_image).id,
+                    .dst_image = ti.get(task_swapchain_image).id,
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });

@@ -173,8 +173,8 @@ namespace tests
         });
 
         recorder.copy_buffer_to_image({
-            .buffer = device_local_buffer,
-            .image = image_1,
+            .src_buffer = device_local_buffer,
+            .dst_image = image_1,
             .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
         });
 
@@ -211,9 +211,9 @@ namespace tests
         });
 
         recorder.copy_image_to_buffer({
-            .image = image_2,
+            .src_image = image_2,
             .image_extent = {SIZE_X, SIZE_Y, SIZE_Z},
-            .buffer = device_local_buffer,
+            .dst_buffer = device_local_buffer,
         });
 
         // Barrier to make sure device_local_buffer is has no read after write hazard.
@@ -384,8 +384,8 @@ namespace tests
                 for (int i = 0; i < iterations; ++i)
                 {
                     recorder.copy_image_to_buffer({
-                        .image = img,
-                        .buffer = buf,
+                        .src_image = img,
+                        .dst_buffer = buf,
                     });
                 }
                 std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
@@ -420,8 +420,8 @@ namespace tests
                 for (int i = 0; i < iterations; ++i)
                 {
                     recorder.copy_buffer_to_image({
-                        .buffer = buf,
-                        .image = img,
+                        .src_buffer = buf,
+                        .dst_image = img,
                     });
                 }
                 std::chrono::time_point end_time_point = std::chrono::high_resolution_clock::now();
@@ -503,6 +503,8 @@ namespace tests
     }
     void build_acceleration_structure(App & app)
     {
+        try
+        {
             daxa::Device device = app.daxa_ctx.create_device_2(app.daxa_ctx.choose_device(daxa::ImplicitFeatureFlagBits::BASIC_RAY_TRACING, {}));
 
             /// Prepare mesh data:

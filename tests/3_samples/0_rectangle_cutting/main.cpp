@@ -28,9 +28,11 @@ struct App : AppWindow<App>
     daxa::Device device = daxa_ctx.create_device_2(daxa_ctx.choose_device({},{}));
 
     daxa::Swapchain swapchain = device.create_swapchain({
-        .native_window = get_native_handle(),
-        .native_window_platform = get_native_platform(),
+        .native_window_info = get_native_window_info(),
         .present_mode = daxa::PresentMode::FIFO,
+        .surface_format = device.choose_swapchain_surface_format({
+            .native_window_info = get_native_window_info(),
+        }),
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = ("swapchain"),
     });

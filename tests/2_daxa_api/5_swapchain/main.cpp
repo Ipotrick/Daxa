@@ -13,6 +13,9 @@ namespace tests
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window_info = get_native_window_info(),
                 .present_mode = daxa::PresentMode::FIFO,
+                .surface_format = device.choose_swapchain_surface_format({
+                    .native_window_info = get_native_window_info(),
+                }),
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .name = ("swapchain (simple_creation)"),
             });
@@ -41,6 +44,9 @@ namespace tests
 
             daxa::Swapchain swapchain = device.create_swapchain({
                 .native_window_info = get_native_window_info(),
+                .surface_format = device.choose_swapchain_surface_format({
+                    .native_window_info = get_native_window_info(),
+                }),
                 .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
                 .name = ("swapchain (clearcolor)"),
             });
@@ -86,8 +92,8 @@ namespace tests
                 });
 
                 recorder.clear_image({
+                    .image = swapchain_image,
                     .clear_value = {std::array<f32, 4>{1, 0, 1, 1}},
-                    .dst_image = swapchain_image,
                 });
 
                 recorder.pipeline_image_barrier({

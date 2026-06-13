@@ -39,9 +39,11 @@ struct BaseApp : AppWindow<T>
     }();
 
     daxa::Swapchain swapchain = device.create_swapchain({
-        .native_window = AppWindow<T>::get_native_handle(),
-        .native_window_platform = AppWindow<T>::get_native_platform(),
+        .native_window_info = AppWindow<T>::get_native_window_info(),
         .present_mode = daxa::PresentMode::FIFO,
+        .surface_format = device.choose_swapchain_surface_format({
+            .native_window_info = AppWindow<T>::get_native_window_info(),
+        }),
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "swapchain",
     });
@@ -76,7 +78,7 @@ struct BaseApp : AppWindow<T>
     Clock::time_point start = Clock::now(), prev_time = start;
     f32 time = 0.0f, delta_time = 1.0f;
 
-    daxa::ExternalTaskImage task_swapchain_image{{.swapchain_image = true, .name = "swapchain_image"}};
+    daxa::ExternalTaskImage task_swapchain_image{{.is_swapchain_image = true, .name = "swapchain_image"}};
     daxa::FixedList<daxa::TaskAttachmentInfo, daxa::MAX_TASK_ATTACHMENTS> imgui_task_attachments{};
 
     BaseApp() : AppWindow<T>(APPNAME)

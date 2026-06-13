@@ -61,7 +61,7 @@ struct App : BaseApp<App>
         .name = "gpu_input_buffer",
     });
     GpuInput gpu_input = {};
-    daxa::ExternalTaskBuffer task_gpu_input_buffer{{.initial_buffers = {.buffers = std::array{gpu_input_buffer}}, .name = "input_buffer"}};
+    daxa::ExternalTaskBuffer task_gpu_input_buffer{{.buffer = gpu_input_buffer, .name = "input_buffer"}};
 
     daxa::ImageId render_image = device.create_image(daxa::ImageInfo{
         .format = daxa::Format::R8G8B8A8_UNORM,
@@ -69,7 +69,7 @@ struct App : BaseApp<App>
         .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
         .name = "render_image",
     });
-    daxa::ExternalTaskImage task_render_image{{.initial_images = {.images = std::array{render_image}}, .name = "render_image"}};
+    daxa::ExternalTaskImage task_render_image{{.image = render_image, .name = "render_image"}};
     daxa::SamplerId sampler = device.create_sampler({.name = "sampler"});
 
     daxa::TimelineQueryPool timeline_query_pool = device.create_timeline_query_pool({
@@ -123,7 +123,7 @@ struct App : BaseApp<App>
         ui_update();
 
         auto swapchain_image = swapchain.acquire_next_image();
-        task_swapchain_image.set_images({.images = std::array{swapchain_image}});
+        task_swapchain_image.set_image(swapchain_image);
         if (swapchain_image.is_empty())
         {
             return;
@@ -155,7 +155,7 @@ struct App : BaseApp<App>
                 .size = {size_x, size_y, 1},
                 .usage = daxa::ImageUsageFlagBits::SHADER_SAMPLED | daxa::ImageUsageFlagBits::SHADER_STORAGE | daxa::ImageUsageFlagBits::TRANSFER_SRC,
             });
-            task_render_image.set_images({.images = std::array{render_image}});
+            task_render_image.set_image(render_image);
             base_on_update();
         }
     }
@@ -165,7 +165,11 @@ struct App : BaseApp<App>
         new_task_graph.register_image(task_render_image);
         new_task_graph.register_buffer(task_gpu_input_buffer);
 
-        imgui_task_attachments.push_back(daxa::inl_attachment(daxa::TaskAccessConsts::FRAGMENT_SHADER::READ, task_render_image));
+        imgui_task_attachments.push_back(daxa::TaskAttachmentInfo{daxa::TaskImageAttachmentInfo{
+            .name = "render_image",
+            .task_access = daxa::TaskAccessConsts::FRAGMENT_SHADER::READ,
+            .view = task_render_image.view(),
+        }});
 
         new_task_graph.add_task(daxa::InlineTask::Transfer("Upload Input")
             .host.writes(task_gpu_input_buffer)
@@ -217,8 +221,8 @@ struct App : BaseApp<App>
             .executes([=](daxa::TaskInterface ti)
             {
                 ti.recorder.blit_image_to_image({
-                    .src_image = ti.get(task_render_image).ids[0],
-                    .dst_image = ti.get(task_swapchain_image).ids[0],
+                    .src_image = ti.get(task_render_image).id,
+                    .dst_image = ti.get(task_swapchain_image).id,
                     .src_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                     .dst_offsets = {{{0, 0, 0}, {static_cast<i32>(size_x), static_cast<i32>(size_y), 1}}},
                 });
