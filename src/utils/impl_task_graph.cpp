@@ -2757,8 +2757,8 @@ namespace daxa
             return r0_lifetime > r1_lifetime; });
 
         // Calculate transient heap size and allocation offsets.
-        auto resource_heap_size = 0ull;
-        auto resource_heap_alignment = 0ull;
+        u64 resource_heap_size = {};
+        u64 resource_heap_alignment = {};
         auto resource_heap_memory_bits = ~0u;
         struct NonExternalResourceAllocation
         {
