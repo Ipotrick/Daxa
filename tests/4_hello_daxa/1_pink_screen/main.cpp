@@ -195,16 +195,13 @@ auto main() -> int
         // Here we create executable commands from the currently recorded commands from the command recorder.
         // After doing this the recorder is empty and can record and create new executable commands later.
         auto executalbe_commands = recorder.complete_current_commands();
-        // But for now we only need this one executable commands blob, and we destroy the recorder.
-        // Encoders CAN NOT be keept over multiple frames. They are temporary objects and need to be destroyed before calling collect_garbage!
-        recorder.~CommandRecorder();
 
         auto const & acquire_semaphore = swapchain.current_acquire_semaphore();
         auto const & present_semaphore = swapchain.current_present_semaphore();
         device.submit_commands(daxa::CommandSubmitInfo{
-            .command_lists = std::array{executalbe_commands},
-            .wait_binary_semaphores = std::array{acquire_semaphore},
-            .signal_binary_semaphores = std::array{present_semaphore},
+            .command_lists = std::array{executalbe_commands},           
+            .wait_binary_semaphores = std::array{acquire_semaphore},    
+            .signal_binary_semaphores = std::array{present_semaphore},  
             .signal_timeline_semaphores = std::array{swapchain.current_timeline_pair()},
         });
         device.present_frame({

@@ -19,21 +19,12 @@
 #endif
 #include <GLFW/glfw3native.h>
 
-auto get_native_handle(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowHandle
+auto get_native_window_info(GLFWwindow * glfw_window_ptr) -> daxa::NativeWindowInfo
 {
 #if defined(_WIN32)
-    return glfwGetWin32Window(glfw_window_ptr);
+    return daxa::NativeWindowInfoWin32{glfwGetWin32Window(glfw_window_ptr)};
 #elif defined(__linux__)
-    return reinterpret_cast<daxa::NativeWindowHandle>(glfwGetX11Window(glfw_window_ptr));
-#endif
-}
-
-auto get_native_platform(GLFWwindow * /*unused*/) -> daxa::NativeWindowPlatform
-{
-#if defined(_WIN32)
-    return daxa::NativeWindowPlatform::WIN32_API;
-#elif defined(__linux__)
-    return daxa::NativeWindowPlatform::XLIB_API;
+    return daxa::NativeWindowInfoXlib{reinterpret_cast<void *>(glfwGetX11Window(glfw_window_ptr))};
 #endif
 }
 
@@ -62,25 +53,16 @@ auto main() -> int
             window_info_ref.width = static_cast<daxa::u32>(width);
             window_info_ref.height = static_cast<daxa::u32>(height);
         });
-    auto * native_window_handle = get_native_handle(glfw_window_ptr);
-    auto native_window_platform = get_native_platform(glfw_window_ptr);
-
     daxa::Instance instance = daxa::create_instance({});
 
     // Let instance auto select a device
     daxa::Device device = instance.create_device_2(instance.choose_device({}, {}));
 
     daxa::Swapchain swapchain = device.create_swapchain({
-        .native_window = native_window_handle,
-        .native_window_platform = native_window_platform,
-        .surface_format_selector = [](daxa::Format format, daxa::ColorSpace colorspace)
-        {
-            switch (format)
-            {
-            case daxa::Format::R8G8B8A8_UINT: return 100;
-            default: return daxa::default_format_score(format, colorspace);
-            }
-        },
+        .native_window_info = get_native_window_info(glfw_window_ptr),
+        .surface_format = device.choose_swapchain_surface_format({
+            .native_window_info = get_native_window_info(glfw_window_ptr),
+        }),
         .present_mode = daxa::PresentMode::FIFO,
         .image_usage = daxa::ImageUsageFlagBits::TRANSFER_DST,
         .name = "my swapchain",
