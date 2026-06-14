@@ -341,9 +341,14 @@ _DAXA_DECL_IMAGE(1D)
 #define daxa_sampler1D(image_view_id, sampler_id) _DAXA_GET_SAMPLER(1D, image_view_id, sampler_id)
 #define daxa_isampler1D(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(1D, image_view_id, sampler_id)
 #define daxa_usampler1D(image_view_id, sampler_id) _DAXA_GET_USAMPLER(1D, image_view_id, sampler_id)
-#define daxa_samplerShadow1D(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1D, image_view_id, sampler_id)
-#define daxa_isamplerShadow1D(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1D, image_view_id, sampler_id)
-#define daxa_usamplerShadow1D(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1D, image_view_id, sampler_id)
+#define daxa_sampler1DShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1D, image_view_id, sampler_id)
+#define daxa_isampler1DShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1D, image_view_id, sampler_id)
+#define daxa_usampler1DShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1D, image_view_id, sampler_id)
+
+// Deprecated, inconsistent naming vs. all other dimensions
+#define daxa_samplerShadow1D(image_view_id, sampler_id) daxa_sampler1DShadow(image_view_id, sampler_id)
+#define daxa_isamplerShadow1D(image_view_id, sampler_id) daxa_isampler1DShadow(image_view_id, sampler_id)
+#define daxa_usamplerShadow1D(image_view_id, sampler_id) daxa_usampler1DShadow(image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2D)
 #define daxa_image2D(image_view_id) _DAXA_GET_IMAGE(2D, image_view_id)
