@@ -297,17 +297,11 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
 #define _DAXA_GET_IMAGE(DIMENSION, image_view_id) daxa_image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 #define _DAXA_GET_IIMAGE(DIMENSION, image_view_id) daxa_iimage##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 #define _DAXA_GET_UIMAGE(DIMENSION, image_view_id) daxa_uimage##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
-#define _DAXA_GET_IMAGE_NONUNIFORM(DIMENSION, image_view_id) daxa_image##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
-#define _DAXA_GET_IIMAGE_NONUNIFORM(DIMENSION, image_view_id) daxa_iimage##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
-#define _DAXA_GET_UIMAGE_NONUNIFORM(DIMENSION, image_view_id) daxa_uimage##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_GET_TEXTURE(DIMENSION, image_view_id) daxa_texture##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 #define _DAXA_GET_ITEXTURE(DIMENSION, image_view_id) daxa_itexture##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 #define _DAXA_GET_UTEXTURE(DIMENSION, image_view_id) daxa_utexture##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
-#define _DAXA_GET_TEXTURE_NONUNIFORM(DIMENSION, image_view_id) daxa_texture##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
-#define _DAXA_GET_ITEXTURE_NONUNIFORM(DIMENSION, image_view_id) daxa_itexture##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
-#define _DAXA_GET_UTEXTURE_NONUNIFORM(DIMENSION, image_view_id) daxa_utexture##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_GET_SAMPLER(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE(DIMENSION, image_view_id), daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)])
@@ -316,12 +310,6 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
 #define _DAXA_GET_SAMPLERSHADOW(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_TEXTURE(DIMENSION, image_view_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
 #define _DAXA_GET_ISAMPLERSHADOW(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE(DIMENSION, image_view_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
 #define _DAXA_GET_USAMPLERSHADOW(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE(DIMENSION, image_view_id), daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)])
-#define _DAXA_GET_SAMPLER_NONUNIFORM(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION(_DAXA_GET_TEXTURE_NONUNIFORM(DIMENSION, image_view_id), daxa_samplerTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))])
-#define _DAXA_GET_ISAMPLER_NONUNIFORM(DIMENSION, image_view_id, sampler_id) isampler##DIMENSION(_DAXA_GET_ITEXTURE_NONUNIFORM(DIMENSION, image_view_id), daxa_samplerTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))])
-#define _DAXA_GET_USAMPLER_NONUNIFORM(DIMENSION, image_view_id, sampler_id) usampler##DIMENSION(_DAXA_GET_UTEXTURE_NONUNIFORM(DIMENSION, image_view_id), daxa_samplerTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))])
-#define _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_TEXTURE_NONUNIFORM(DIMENSION, image_view_id), daxa_samplerShadowTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))])
-#define _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_ITEXTURE_NONUNIFORM(DIMENSION, image_view_id), daxa_samplerShadowTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))])
-#define _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(DIMENSION, image_view_id, sampler_id) sampler##DIMENSION##Shadow(_DAXA_GET_UTEXTURE_NONUNIFORM(DIMENSION, image_view_id), daxa_samplerShadowTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))])
 
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_DECL_IMAGE(DIMENSION)                                                          \
@@ -339,12 +327,8 @@ DAXA_SAMPLER_LAYOUT uniform samplerShadow daxa_samplerShadowTable[];
 #define daxa_sampler(sampler_id) daxa_samplerTable[daxa_sampler_id_to_index(sampler_id)]
 #define daxa_samplerShadow(sampler_id) daxa_samplerShadowTable[daxa_sampler_id_to_index(sampler_id)]
 
-#define daxa_sampler_nonuniformEXT(sampler_id) daxa_samplerTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))]
-#define daxa_samplerShadow_nonuniformEXT(sampler_id) daxa_samplerShadowTable[nonuniformEXT(daxa_sampler_id_to_index(sampler_id))]
-
 #if defined(DAXA_RAY_TRACING)
 #define daxa_accelerationStructureEXT(as_id) daxa_AccelerationStructureTable[daxa_acceleration_structure_id_to_index(as_id)]
-#define daxa_accelerationStructureEXT_nonuniformEXT(as_id) daxa_AccelerationStructureTable[nonuniformEXT(daxa_acceleration_structure_id_to_index(as_id))]
 #endif
 
 _DAXA_DECL_IMAGE(1D)
@@ -357,27 +341,9 @@ _DAXA_DECL_IMAGE(1D)
 #define daxa_sampler1D(image_view_id, sampler_id) _DAXA_GET_SAMPLER(1D, image_view_id, sampler_id)
 #define daxa_isampler1D(image_view_id, sampler_id) _DAXA_GET_ISAMPLER(1D, image_view_id, sampler_id)
 #define daxa_usampler1D(image_view_id, sampler_id) _DAXA_GET_USAMPLER(1D, image_view_id, sampler_id)
-#define daxa_sampler1DShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1D, image_view_id, sampler_id)
-#define daxa_isampler1DShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1D, image_view_id, sampler_id)
-#define daxa_usampler1DShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1D, image_view_id, sampler_id)
-
-// Deprecated, inconsistent naming vs. all other dimensions
-#define daxa_samplerShadow1D(image_view_id, sampler_id) daxa_sampler1DShadow(image_view_id, sampler_id)
-#define daxa_isamplerShadow1D(image_view_id, sampler_id) daxa_isampler1DShadow(image_view_id, sampler_id)
-#define daxa_usamplerShadow1D(image_view_id, sampler_id) daxa_usampler1DShadow(image_view_id, sampler_id)
-
-#define daxa_image1D_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(1D, image_view_id)
-#define daxa_iimage1D_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(1D, image_view_id)
-#define daxa_uimage1D_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(1D, image_view_id)
-#define daxa_texture1D_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(1D, image_view_id)
-#define daxa_itexture1D_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(1D, image_view_id)
-#define daxa_utexture1D_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(1D, image_view_id)
-#define daxa_sampler1D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(1D, image_view_id, sampler_id)
-#define daxa_isampler1D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(1D, image_view_id, sampler_id)
-#define daxa_usampler1D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(1D, image_view_id, sampler_id)
-#define daxa_sampler1DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(1D, image_view_id, sampler_id)
-#define daxa_isampler1DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(1D, image_view_id, sampler_id)
-#define daxa_usampler1DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(1D, image_view_id, sampler_id)
+#define daxa_samplerShadow1D(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(1D, image_view_id, sampler_id)
+#define daxa_isamplerShadow1D(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1D, image_view_id, sampler_id)
+#define daxa_usamplerShadow1D(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1D, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2D)
 #define daxa_image2D(image_view_id) _DAXA_GET_IMAGE(2D, image_view_id)
@@ -393,19 +359,6 @@ _DAXA_DECL_IMAGE(2D)
 #define daxa_isampler2DShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2D, image_view_id, sampler_id)
 #define daxa_usampler2DShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2D, image_view_id, sampler_id)
 
-#define daxa_image2D_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(2D, image_view_id)
-#define daxa_iimage2D_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(2D, image_view_id)
-#define daxa_uimage2D_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(2D, image_view_id)
-#define daxa_texture2D_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(2D, image_view_id)
-#define daxa_itexture2D_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(2D, image_view_id)
-#define daxa_utexture2D_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(2D, image_view_id)
-#define daxa_sampler2D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(2D, image_view_id, sampler_id)
-#define daxa_isampler2D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(2D, image_view_id, sampler_id)
-#define daxa_usampler2D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(2D, image_view_id, sampler_id)
-#define daxa_sampler2DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(2D, image_view_id, sampler_id)
-#define daxa_isampler2DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(2D, image_view_id, sampler_id)
-#define daxa_usampler2DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(2D, image_view_id, sampler_id)
-
 _DAXA_DECL_IMAGE(3D)
 #define daxa_image3D(image_view_id) _DAXA_GET_IMAGE(3D, image_view_id)
 #define daxa_iimage3D(image_view_id) _DAXA_GET_IIMAGE(3D, image_view_id)
@@ -419,19 +372,6 @@ _DAXA_DECL_IMAGE(3D)
 #define daxa_sampler3DShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(3D, image_view_id, sampler_id)
 #define daxa_isampler3DShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(3D, image_view_id, sampler_id)
 #define daxa_usampler3DShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(3D, image_view_id, sampler_id)
-
-#define daxa_image3D_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(3D, image_view_id)
-#define daxa_iimage3D_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(3D, image_view_id)
-#define daxa_uimage3D_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(3D, image_view_id)
-#define daxa_texture3D_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(3D, image_view_id)
-#define daxa_itexture3D_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(3D, image_view_id)
-#define daxa_utexture3D_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(3D, image_view_id)
-#define daxa_sampler3D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(3D, image_view_id, sampler_id)
-#define daxa_isampler3D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(3D, image_view_id, sampler_id)
-#define daxa_usampler3D_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(3D, image_view_id, sampler_id)
-#define daxa_sampler3DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(3D, image_view_id, sampler_id)
-#define daxa_isampler3DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(3D, image_view_id, sampler_id)
-#define daxa_usampler3DShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(3D, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(Cube)
 #define daxa_imageCube(image_view_id) _DAXA_GET_IMAGE(Cube, image_view_id)
@@ -447,19 +387,6 @@ _DAXA_DECL_IMAGE(Cube)
 #define daxa_isamplerCubeShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(Cube, image_view_id, sampler_id)
 #define daxa_usamplerCubeShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(Cube, image_view_id, sampler_id)
 
-#define daxa_imageCube_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(Cube, image_view_id)
-#define daxa_iimageCube_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(Cube, image_view_id)
-#define daxa_uimageCube_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(Cube, image_view_id)
-#define daxa_textureCube_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(Cube, image_view_id)
-#define daxa_itextureCube_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(Cube, image_view_id)
-#define daxa_utextureCube_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(Cube, image_view_id)
-#define daxa_samplerCube_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(Cube, image_view_id, sampler_id)
-#define daxa_isamplerCube_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(Cube, image_view_id, sampler_id)
-#define daxa_usamplerCube_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(Cube, image_view_id, sampler_id)
-#define daxa_samplerCubeShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(Cube, image_view_id, sampler_id)
-#define daxa_isamplerCubeShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(Cube, image_view_id, sampler_id)
-#define daxa_usamplerCubeShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(Cube, image_view_id, sampler_id)
-
 _DAXA_DECL_IMAGE(CubeArray)
 #define daxa_imageCubeArray(image_view_id) _DAXA_GET_IMAGE(CubeArray, image_view_id)
 #define daxa_iimageCubeArray(image_view_id) _DAXA_GET_IIMAGE(CubeArray, image_view_id)
@@ -473,19 +400,6 @@ _DAXA_DECL_IMAGE(CubeArray)
 #define daxa_samplerCubeArrayShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(CubeArray, image_view_id, sampler_id)
 #define daxa_isamplerCubeArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(CubeArray, image_view_id, sampler_id)
 #define daxa_usamplerCubeArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(CubeArray, image_view_id, sampler_id)
-
-#define daxa_imageCubeArray_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(CubeArray, image_view_id)
-#define daxa_iimageCubeArray_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(CubeArray, image_view_id)
-#define daxa_uimageCubeArray_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(CubeArray, image_view_id)
-#define daxa_textureCubeArray_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(CubeArray, image_view_id)
-#define daxa_itextureCubeArray_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(CubeArray, image_view_id)
-#define daxa_utextureCubeArray_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(CubeArray, image_view_id)
-#define daxa_samplerCubeArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(CubeArray, image_view_id, sampler_id)
-#define daxa_isamplerCubeArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(CubeArray, image_view_id, sampler_id)
-#define daxa_usamplerCubeArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(CubeArray, image_view_id, sampler_id)
-#define daxa_samplerCubeArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(CubeArray, image_view_id, sampler_id)
-#define daxa_isamplerCubeArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(CubeArray, image_view_id, sampler_id)
-#define daxa_usamplerCubeArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(CubeArray, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(1DArray)
 #define daxa_image1DArray(image_view_id) _DAXA_GET_IMAGE(1DArray, image_view_id)
@@ -501,19 +415,6 @@ _DAXA_DECL_IMAGE(1DArray)
 #define daxa_isampler1DArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(1DArray, image_view_id, sampler_id)
 #define daxa_usampler1DArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(1DArray, image_view_id, sampler_id)
 
-#define daxa_image1DArray_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(1DArray, image_view_id)
-#define daxa_iimage1DArray_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(1DArray, image_view_id)
-#define daxa_uimage1DArray_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(1DArray, image_view_id)
-#define daxa_texture1DArray_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(1DArray, image_view_id)
-#define daxa_itexture1DArray_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(1DArray, image_view_id)
-#define daxa_utexture1DArray_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(1DArray, image_view_id)
-#define daxa_sampler1DArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(1DArray, image_view_id, sampler_id)
-#define daxa_isampler1DArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(1DArray, image_view_id, sampler_id)
-#define daxa_usampler1DArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(1DArray, image_view_id, sampler_id)
-#define daxa_sampler1DArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(1DArray, image_view_id, sampler_id)
-#define daxa_isampler1DArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(1DArray, image_view_id, sampler_id)
-#define daxa_usampler1DArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(1DArray, image_view_id, sampler_id)
-
 _DAXA_DECL_IMAGE(2DArray)
 #define daxa_image2DArray(image_view_id) _DAXA_GET_IMAGE(2DArray, image_view_id)
 #define daxa_iimage2DArray(image_view_id) _DAXA_GET_IIMAGE(2DArray, image_view_id)
@@ -527,19 +428,6 @@ _DAXA_DECL_IMAGE(2DArray)
 #define daxa_sampler2DArrayShadow(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW(2DArray, image_view_id, sampler_id)
 #define daxa_isampler2DArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DArray, image_view_id, sampler_id)
 #define daxa_usampler2DArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DArray, image_view_id, sampler_id)
-
-#define daxa_image2DArray_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(2DArray, image_view_id)
-#define daxa_iimage2DArray_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(2DArray, image_view_id)
-#define daxa_uimage2DArray_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(2DArray, image_view_id)
-#define daxa_texture2DArray_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(2DArray, image_view_id)
-#define daxa_itexture2DArray_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(2DArray, image_view_id)
-#define daxa_utexture2DArray_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(2DArray, image_view_id)
-#define daxa_sampler2DArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(2DArray, image_view_id, sampler_id)
-#define daxa_isampler2DArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(2DArray, image_view_id, sampler_id)
-#define daxa_usampler2DArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(2DArray, image_view_id, sampler_id)
-#define daxa_sampler2DArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(2DArray, image_view_id, sampler_id)
-#define daxa_isampler2DArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(2DArray, image_view_id, sampler_id)
-#define daxa_usampler2DArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(2DArray, image_view_id, sampler_id)
 
 _DAXA_DECL_IMAGE(2DMS)
 #define daxa_image2DMS(image_view_id) _DAXA_GET_IMAGE(2DMS, image_view_id)
@@ -555,19 +443,6 @@ _DAXA_DECL_IMAGE(2DMS)
 #define daxa_isampler2DMSShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMS, image_view_id, sampler_id)
 #define daxa_usampler2DMSShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMS, image_view_id, sampler_id)
 
-#define daxa_image2DMS_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(2DMS, image_view_id)
-#define daxa_iimage2DMS_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(2DMS, image_view_id)
-#define daxa_uimage2DMS_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(2DMS, image_view_id)
-#define daxa_texture2DMS_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(2DMS, image_view_id)
-#define daxa_itexture2DMS_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(2DMS, image_view_id)
-#define daxa_utexture2DMS_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(2DMS, image_view_id)
-#define daxa_sampler2DMS_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(2DMS, image_view_id, sampler_id)
-#define daxa_isampler2DMS_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(2DMS, image_view_id, sampler_id)
-#define daxa_usampler2DMS_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(2DMS, image_view_id, sampler_id)
-#define daxa_sampler2DMSShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(2DMS, image_view_id, sampler_id)
-#define daxa_isampler2DMSShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(2DMS, image_view_id, sampler_id)
-#define daxa_usampler2DMSShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(2DMS, image_view_id, sampler_id)
-
 _DAXA_DECL_IMAGE(2DMSArray)
 #define daxa_image2DMSArray(image_view_id) _DAXA_GET_IMAGE(2DMSArray, image_view_id)
 #define daxa_iimage2DMSArray(image_view_id) _DAXA_GET_IIMAGE(2DMSArray, image_view_id)
@@ -582,19 +457,6 @@ _DAXA_DECL_IMAGE(2DMSArray)
 #define daxa_isampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 #define daxa_usampler2DMSArrayShadow(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW(2DMSArray, image_view_id, sampler_id)
 
-#define daxa_image2DMSArray_nonuniformEXT(image_view_id) _DAXA_GET_IMAGE_NONUNIFORM(2DMSArray, image_view_id)
-#define daxa_iimage2DMSArray_nonuniformEXT(image_view_id) _DAXA_GET_IIMAGE_NONUNIFORM(2DMSArray, image_view_id)
-#define daxa_uimage2DMSArray_nonuniformEXT(image_view_id) _DAXA_GET_UIMAGE_NONUNIFORM(2DMSArray, image_view_id)
-#define daxa_texture2DMSArray_nonuniformEXT(image_view_id) _DAXA_GET_TEXTURE_NONUNIFORM(2DMSArray, image_view_id)
-#define daxa_itexture2DMSArray_nonuniformEXT(image_view_id) _DAXA_GET_ITEXTURE_NONUNIFORM(2DMSArray, image_view_id)
-#define daxa_utexture2DMSArray_nonuniformEXT(image_view_id) _DAXA_GET_UTEXTURE_NONUNIFORM(2DMSArray, image_view_id)
-#define daxa_sampler2DMSArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLER_NONUNIFORM(2DMSArray, image_view_id, sampler_id)
-#define daxa_isampler2DMSArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLER_NONUNIFORM(2DMSArray, image_view_id, sampler_id)
-#define daxa_usampler2DMSArray_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLER_NONUNIFORM(2DMSArray, image_view_id, sampler_id)
-#define daxa_sampler2DMSArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_SAMPLERSHADOW_NONUNIFORM(2DMSArray, image_view_id, sampler_id)
-#define daxa_isampler2DMSArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_ISAMPLERSHADOW_NONUNIFORM(2DMSArray, image_view_id, sampler_id)
-#define daxa_usampler2DMSArrayShadow_nonuniformEXT(image_view_id, sampler_id) _DAXA_GET_USAMPLERSHADOW_NONUNIFORM(2DMSArray, image_view_id, sampler_id)
-
 #if DAXA_IMAGE_INT64
 /// ONLY USED BY IMPLEMENTATION!
 #define _DAXA_DECL_IMAGE_INT64(DIMENSION)                                                    \
@@ -603,43 +465,26 @@ _DAXA_DECL_IMAGE(2DMSArray)
 
 #define _DAXA_GET_I64IMAGE(DIMENSION, image_view_id) daxa_i64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
 #define _DAXA_GET_U64IMAGE(DIMENSION, image_view_id) daxa_u64image##DIMENSION##Table[daxa_image_view_id_to_index(image_view_id)]
-#define _DAXA_GET_I64IMAGE_NONUNIFORM(DIMENSION, image_view_id) daxa_i64image##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
-#define _DAXA_GET_U64IMAGE_NONUNIFORM(DIMENSION, image_view_id) daxa_u64image##DIMENSION##Table[nonuniformEXT(daxa_image_view_id_to_index(image_view_id))]
 
 _DAXA_DECL_IMAGE_INT64(1D)
 #define daxa_i64image1D(image_view_id) _DAXA_GET_I64IMAGE(1D, image_view_id)
 #define daxa_u64image1D(image_view_id) _DAXA_GET_U64IMAGE(1D, image_view_id)
 
-#define daxa_i64image1D_nonuniformEXT(image_view_id) _DAXA_GET_I64IMAGE_NONUNIFORM(1D, image_view_id)
-#define daxa_u64image1D_nonuniformEXT(image_view_id) _DAXA_GET_U64IMAGE_NONUNIFORM(1D, image_view_id)
-
 _DAXA_DECL_IMAGE_INT64(2D)
 #define daxa_i64image2D(image_view_id) _DAXA_GET_I64IMAGE(2D, image_view_id)
 #define daxa_u64image2D(image_view_id) _DAXA_GET_U64IMAGE(2D, image_view_id)
-
-#define daxa_i64image2D_nonuniformEXT(image_view_id) _DAXA_GET_I64IMAGE_NONUNIFORM(2D, image_view_id)
-#define daxa_u64image2D_nonuniformEXT(image_view_id) _DAXA_GET_U64IMAGE_NONUNIFORM(2D, image_view_id)
 
 _DAXA_DECL_IMAGE_INT64(3D)
 #define daxa_i64image3D(image_view_id) _DAXA_GET_I64IMAGE(3D, image_view_id)
 #define daxa_u64image3D(image_view_id) _DAXA_GET_U64IMAGE(3D, image_view_id)
 
-#define daxa_i64image3D_nonuniformEXT(image_view_id) _DAXA_GET_I64IMAGE_NONUNIFORM(3D, image_view_id)
-#define daxa_u64image3D_nonuniformEXT(image_view_id) _DAXA_GET_U64IMAGE_NONUNIFORM(3D, image_view_id)
-
 _DAXA_DECL_IMAGE_INT64(1DArray)
 #define daxa_i64image1DArray(image_view_id) _DAXA_GET_I64IMAGE(1DArray, image_view_id)
 #define daxa_u64image1DArray(image_view_id) _DAXA_GET_U64IMAGE(1DArray, image_view_id)
 
-#define daxa_i64image1DArray_nonuniformEXT(image_view_id) _DAXA_GET_I64IMAGE_NONUNIFORM(1DArray, image_view_id)
-#define daxa_u64image1DArray_nonuniformEXT(image_view_id) _DAXA_GET_U64IMAGE_NONUNIFORM(1DArray, image_view_id)
-
 _DAXA_DECL_IMAGE_INT64(2DArray)
 #define daxa_i64image2DArray(image_view_id) _DAXA_GET_I64IMAGE(2DArray, image_view_id)
 #define daxa_u64image2DArray(image_view_id) _DAXA_GET_U64IMAGE(2DArray, image_view_id)
-
-#define daxa_i64image2DArray_nonuniformEXT(image_view_id) _DAXA_GET_I64IMAGE_NONUNIFORM(2DArray, image_view_id)
-#define daxa_u64image2DArray_nonuniformEXT(image_view_id) _DAXA_GET_U64IMAGE_NONUNIFORM(2DArray, image_view_id)
 #endif
 
 DAXA_DECL_BUFFER_PTR(daxa_f32)
