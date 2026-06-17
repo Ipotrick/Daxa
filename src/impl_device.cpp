@@ -1936,8 +1936,9 @@ auto daxa_dvc_choose_swapchain_surface_format(
     {
         for (auto const & supported_format : supported_formats)
         {
-            bool const format_matches = supported_format.format == preferred_formats[preferred_i].format;
-            bool const color_space_matches = supported_format.colorSpace == preferred_formats[preferred_i].colorSpace || preferred_formats[preferred_i].colorSpace == VK_COLOR_SPACE_MAX_ENUM_KHR;
+            auto const & preferred_format = preferred_formats[preferred_i];
+            bool const format_matches = supported_format.format == preferred_format.format;
+            bool const color_space_matches = supported_format.colorSpace == preferred_format.colorSpace || preferred_format.colorSpace == VK_COLOR_SPACE_MAX_ENUM_KHR;
             if (format_matches && color_space_matches)
             {
                 *out_format = supported_format;
