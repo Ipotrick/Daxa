@@ -1627,7 +1627,7 @@ namespace daxa
             bool recompiled_format = false;
             if (context.device.is_id_valid(state.buffer.clone_buffer) && state.open_frame_count > READBACK_CIRCULAR_BUFFER_SIZE)
             {
-                BufferInfo const & source_buffer_info = context.device.buffer_info(resource.id.buffer).value();
+                BufferInfo const & clone_buffer_info = context.device.buffer_info(state.buffer.clone_buffer).value();
 
                 viewer_shared_header();
                 ImGui::SameLine();
@@ -2100,7 +2100,7 @@ namespace daxa
                 if (ImGui::BeginChild("root child",ImVec2(0, DEFAULT_ROOT_TABLE_HEIGHT + 200), NESTED_CHILD_FLAGS | ImGuiChildFlags_ResizeY))
                 {
                     auto readback_host_ptr = context.device.buffer_host_address(state.buffer.clone_buffer).value();
-                    draw_type(type_defs.back(), "root", ~0u, 0ull, draw_type, readback_host_ptr, source_buffer_info.size);
+                    draw_type(type_defs.back(), "root", ~0u, 0ull, draw_type, readback_host_ptr, clone_buffer_info.size);
                 }
                 ImGui::PopStyleVar(2);
                 ImGui::EndChild();
@@ -2180,6 +2180,12 @@ namespace daxa
                         }
                     }
                 }
+            }
+            else
+            {
+                ImGui::PushStyleColor(ImGuiCol_Text, ColorPalette::RED);
+                ImGui::Text("Buffer id is invalid index - %d version - %d", resource.id.buffer.index, resource.id.buffer.version);
+                ImGui::PopStyleColor();
             }
 
             if (state.free_window)
