@@ -121,6 +121,39 @@ namespace daxa
         std::string contents = {};
     };
 
+    // Generic parallel executor interface for pipeline compilation.
+    // daxa does not depend on any specific thread pool implementation.
+    // user_data: arbitrary pointer forwarded to blocking_parallel_for (e.g. a ThreadPool*).
+    // blocking_parallel_for: must call task_fn(task_user_data, i, thread_index) for every i in [0, count),
+    //   optionally from multiple threads, and MUST block until all invocations complete.
+    //   thread_index identifies which worker executed the task (implementation-defined, e.g. 0..N-1).
+    // worker_thread_count: total number of worker threads (used for "x/y active" display).
+    // print_fn (optional): called under an internal mutex after each pipeline finishes.
+    //   msg: null-terminated progress string, e.g. "[ 42%] OK   my_shader".
+    //   thread_index: which worker thread compiled this pipeline.
+    //   active_workers: how many workers are still compiling after this one finished.
+    //   total_workers: worker_thread_count value passed in.
+    struct PipelineManagerParallelInfo
+    {
+        void * user_data = {};
+        void (*blocking_parallel_for)(
+            void * user_data,
+            u32 count,
+            void * task_user_data,
+            void (*task_fn)(void * task_user_data, u32 task_index, u32 thread_index)) = {};
+        u32 worker_thread_count = 0;
+        void * print_user_data = {};
+        void (*print_fn)(void * print_user_data, char const * msg, u32 thread_index, u32 active_workers, u32 total_workers) = {};
+    };
+
+    // Results returned by compile_pipelines_parallel, in the same order as the input vectors.
+    struct PipelineCompileBatch
+    {
+        std::vector<Result<std::shared_ptr<ComputePipeline>>> compute = {};
+        std::vector<Result<std::shared_ptr<RasterPipeline>>> raster = {};
+        std::vector<Result<std::shared_ptr<RayTracingPipeline>>> ray_tracing = {};
+    };
+
     struct PipelineReloadSuccess
     {
     };
@@ -141,6 +174,16 @@ namespace daxa
         auto add_ray_tracing_pipeline2(RayTracingPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RayTracingPipeline>>;
         auto add_compute_pipeline2(ComputePipelineCompileInfo2 info) -> Result<std::shared_ptr<ComputePipeline>>;
         auto add_raster_pipeline2(RasterPipelineCompileInfo2 const & info) -> Result<std::shared_ptr<RasterPipeline>>;
+        // Compiles all supplied pipelines in parallel using the provided thread pool abstraction.
+        // All add_*_pipeline2 calls and compile_pipelines_parallel calls must be externally serialized;
+        // only the internal per-pipeline work is parallelised.
+        auto compile_pipelines_parallel(
+            std::vector<ComputePipelineCompileInfo2> computes,
+            std::vector<RasterPipelineCompileInfo2> rasters,
+            std::vector<RayTracingPipelineCompileInfo2> ray_tracings,
+            PipelineManagerParallelInfo parallel_info) -> PipelineCompileBatch;
+        // Like reload_all() but compiles changed pipelines in parallel using the supplied executor.
+        auto reload_all_parallel(PipelineManagerParallelInfo parallel_info) -> PipelineReloadResult;
         void remove_ray_tracing_pipeline(std::shared_ptr<RayTracingPipeline> const & pipeline);
         void remove_compute_pipeline(std::shared_ptr<ComputePipeline> const & pipeline);
         void remove_raster_pipeline(std::shared_ptr<RasterPipeline> const & pipeline);

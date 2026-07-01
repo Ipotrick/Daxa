@@ -21,6 +21,10 @@
 #include <spirv-tools/libspirv.hpp>
 #endif
 
+#include <shared_mutex>
+#include <unordered_map>
+#include <optional>
+
 namespace daxa
 {
     struct ImplDevice;
@@ -57,9 +61,35 @@ namespace daxa
         PipelineManagerInfo2 info = {};
 
         std::vector<std::filesystem::path> current_seen_shader_files = {};
-        ShaderFileTimeSet * current_observed_hotload_files = nullptr;
+        // These two are per-compile-call state. Made static thread_local so that concurrent
+        // per-pipeline compiles inside compile_pipelines_parallel each get their own copy.
+        static thread_local ShaderFileTimeSet * current_observed_hotload_files;
+        static thread_local ShaderCompileInfo2 const * current_shader_info;
+        static thread_local bool tl_last_spirv_from_cache;
 
         VirtualFileSet virtual_files = {};
+
+        // Populated only during compile_pipelines_parallel; caches file contents so that
+        // header files included by many pipelines are only read from disk once.
+        struct FileCacheEntry
+        {
+            ShaderCode code = {};
+            std::filesystem::file_time_type write_time = {};
+        };
+        struct FileCache
+        {
+            std::shared_mutex mtx = {};
+            std::unordered_map<std::string, FileCacheEntry> files = {};
+        };
+        std::optional<FileCache> parallel_file_cache = {};
+        // Set for the duration of compile_pipelines_parallel / reload_all_parallel.
+        // Allows create_raster/rt_pipeline to fan out their per-stage get_spirv calls
+        // and to share the outer ParallelState's print mutex for interleave-free output.
+        PipelineManagerParallelInfo const * current_parallel_info = nullptr;
+        std::mutex * current_print_mtx = nullptr;
+        std::atomic<u32> * current_completed_stages = nullptr;
+        std::atomic<u32> * current_stage_cache_hits = nullptr;
+        u32 current_total_stages = 0;
 
         template <typename PipeT, typename InfoT>
         struct PipelineState
@@ -77,13 +107,6 @@ namespace daxa
         std::vector<ComputePipelineState> compute_pipelines;
         std::vector<RasterPipelineState> raster_pipelines;
         std::vector<RayTracingPipelineState> ray_tracing_pipelines;
-
-        // COMMENT(pahrens): epic code
-        // TODO(grundlett): Maybe make the pipeline compiler *internally* thread-safe!
-        // This variable is accessed by the includer, which makes that not thread-safe
-        // PipelineManager is still externally thread-safe. You can create as many
-        // PipelineManagers from as many threads as you'd like!
-        ShaderCompileInfo2 const * current_shader_info = nullptr;
 
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_GLSLANG
         struct GlslangBackend

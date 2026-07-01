@@ -133,8 +133,11 @@ static constexpr TBuiltInResource DAXA_DEFAULT_BUILTIN_RESOURCE = {
 #include <iostream>
 #include <string>
 #include <algorithm>
-// for std::hash<std::string>
 #include <unordered_map>
+#include <shared_mutex>
+#include <atomic>
+#include <mutex>
+#include <cstdio>
 
 // static auto const PRAGMA_ONCE_REGEX = RE2(R"regex(\s*#\s*pragma\s+once\s*)regex");
 static void shader_preprocess(std::string & file_str, std::filesystem::path const & path)
@@ -188,6 +191,12 @@ static void shader_preprocess(std::string & file_str, std::filesystem::path cons
 
 namespace daxa
 {
+    // Per-compile-call state made thread_local so concurrent compiles inside
+    // compile_pipelines_parallel each maintain their own copy.
+    thread_local ShaderFileTimeSet * ImplPipelineManager::current_observed_hotload_files = nullptr;
+    thread_local ShaderCompileInfo2 const * ImplPipelineManager::current_shader_info = nullptr;
+    thread_local bool ImplPipelineManager::tl_last_spirv_from_cache = false;
+
     auto compute2_to_shader_compile_info2(ComputePipelineCompileInfo2 const & src) -> ShaderCompileInfo2
     {
         ShaderCompileInfo2 ret = {};
@@ -536,6 +545,286 @@ namespace daxa
         return impl.remove_raster_pipeline(pipeline);
     }
 
+    static char const * shader_stage_abbrev(ImplPipelineManager::ShaderStage s)
+    {
+        switch (s)
+        {
+        case ImplPipelineManager::ShaderStage::VERT:            return "VERT";
+        case ImplPipelineManager::ShaderStage::FRAG:            return "FRAG";
+        case ImplPipelineManager::ShaderStage::COMP:            return "COMP";
+        case ImplPipelineManager::ShaderStage::TASK:            return "TASK";
+        case ImplPipelineManager::ShaderStage::MESH:            return "MESH";
+        case ImplPipelineManager::ShaderStage::TESS_CONTROL:    return "TESSC";
+        case ImplPipelineManager::ShaderStage::TESS_EVAL:       return "TESSE";
+        case ImplPipelineManager::ShaderStage::RAY_GEN:         return "RGEN";
+        case ImplPipelineManager::ShaderStage::RAY_ANY_HIT:     return "RAHIT";
+        case ImplPipelineManager::ShaderStage::RAY_CLOSEST_HIT: return "RCHIT";
+        case ImplPipelineManager::ShaderStage::RAY_MISS:        return "RMISS";
+        case ImplPipelineManager::ShaderStage::RAY_INTERSECT:   return "RISEC";
+        case ImplPipelineManager::ShaderStage::RAY_CALLABLE:    return "RCALL";
+        default:                                                  return "???";
+        }
+    }
+
+    static u32 count_raster_stages(RasterPipelineCompileInfo2 const & r)
+    {
+        u32 n = 0;
+        if (r.mesh_shader_info.has_value()) n++;
+        if (r.vertex_shader_info.has_value()) n++;
+        if (r.tesselation_control_shader_info.has_value()) n++;
+        if (r.tesselation_evaluation_shader_info.has_value()) n++;
+        if (r.fragment_shader_info.has_value()) n++;
+        if (r.task_shader_info.has_value()) n++;
+        return n;
+    }
+
+    static u32 count_rt_stages(RayTracingPipelineCompileInfo2 const & rt)
+    {
+        return static_cast<u32>(rt.ray_gen_infos.size() + rt.intersection_infos.size() +
+                                rt.any_hit_infos.size() + rt.callable_infos.size() +
+                                rt.closest_hit_infos.size() + rt.miss_hit_infos.size());
+    }
+
+    auto PipelineManager::compile_pipelines_parallel(
+        std::vector<ComputePipelineCompileInfo2> computes,
+        std::vector<RasterPipelineCompileInfo2> rasters,
+        std::vector<RayTracingPipelineCompileInfo2> ray_tracings,
+        PipelineManagerParallelInfo parallel_info) -> PipelineCompileBatch
+    {
+        auto & impl = *r_cast<ImplPipelineManager *>(this->object);
+
+        // Pre-process all infos on the calling thread (same logic as the individual add_* functions).
+        for (auto & info : computes)
+        {
+            auto_complete_pipeline_name(info);
+            auto_complete_shader_compile_info(info);
+            inherit_shader_compile_options(info, impl.info);
+        }
+        for (auto & info : rasters)
+        {
+            auto const modified_shader_compile_infos = std::array<Optional<ShaderCompileInfo2> *, 6>{
+                &info.vertex_shader_info, &info.tesselation_control_shader_info,
+                &info.tesselation_evaluation_shader_info, &info.fragment_shader_info,
+                &info.mesh_shader_info, &info.task_shader_info,
+            };
+            for (auto * sci : modified_shader_compile_infos)
+            {
+                if (sci->has_value())
+                {
+                    auto_complete_shader_compile_info(sci->value());
+                    inherit_shader_compile_options(sci->value(), impl.info);
+                }
+            }
+        }
+        for (auto & info : ray_tracings)
+        {
+            auto shader_infos = std::array{
+                &info.ray_gen_infos, &info.intersection_infos, &info.any_hit_infos,
+                &info.callable_infos, &info.closest_hit_infos, &info.miss_hit_infos,
+            };
+            for (auto * infos : shader_infos)
+            {
+                for (auto & sci : *infos)
+                {
+                    auto_complete_shader_compile_info(sci);
+                    inherit_shader_compile_options(sci, impl.info);
+                }
+            }
+        }
+
+        auto const compute_count = static_cast<u32>(computes.size());
+        auto const raster_count  = static_cast<u32>(rasters.size());
+        auto const rt_count      = static_cast<u32>(ray_tracings.size());
+        auto const total         = compute_count + raster_count + rt_count;
+
+        // Count total stages across all pipelines for the progress percentage.
+        u32 total_stages = compute_count; // each compute is exactly 1 stage
+        for (auto const & r : rasters) total_stages += count_raster_stages(r);
+        for (auto const & rt : ray_tracings) total_stages += count_rt_stages(rt);
+
+        // Pre-allocate result arrays (indexed by task_index, overwritten in parallel).
+        using ComputeState   = ImplPipelineManager::ComputePipelineState;
+        using RasterState    = ImplPipelineManager::RasterPipelineState;
+        using RtState        = ImplPipelineManager::RayTracingPipelineState;
+        auto compute_states  = std::vector<Result<ComputeState>>(compute_count,  Result<ComputeState>(std::string{"pending"}));
+        auto raster_states   = std::vector<Result<RasterState>>(raster_count,   Result<RasterState>(std::string{"pending"}));
+        auto rt_states       = std::vector<Result<RtState>>(rt_count,           Result<RtState>(std::string{"pending"}));
+
+        struct ParallelState
+        {
+            ImplPipelineManager *                impl;
+            std::vector<ComputePipelineCompileInfo2> * computes;
+            std::vector<RasterPipelineCompileInfo2> *  rasters;
+            std::vector<RayTracingPipelineCompileInfo2> * ray_tracings;
+            std::vector<Result<ComputeState>> *  compute_states;
+            std::vector<Result<RasterState>> *   raster_states;
+            std::vector<Result<RtState>> *        rt_states;
+            u32 compute_count;
+            u32 raster_count;
+            u32 total_stages;
+            u32 total_pipelines;
+            u32 total_workers;
+            std::atomic<u32> stage_completed = {};
+            std::atomic<u32> stage_cache_hits = {};
+            std::atomic<u32> active_workers = {};
+            std::mutex print_mtx = {};
+            void * print_user_data = {};
+            void (*print_fn)(void *, char const *, u32, u32, u32) = {};
+        };
+        ParallelState state{
+            &impl,
+            &computes, &rasters, &ray_tracings,
+            &compute_states, &raster_states, &rt_states,
+            compute_count, raster_count, total_stages, total,
+            parallel_info.worker_thread_count,
+            {}, {}, {}, {}, parallel_info.print_user_data, parallel_info.print_fn,
+        };
+
+        // Activate per-batch file cache and expose parallel_info/stage counter to per-pipeline stage dispatches.
+        impl.parallel_file_cache.emplace();
+        impl.current_parallel_info = &parallel_info;
+        impl.current_print_mtx = &state.print_mtx;
+        impl.current_completed_stages = &state.stage_completed;
+        impl.current_stage_cache_hits = &state.stage_cache_hits;
+        impl.current_total_stages = total_stages;
+
+        auto const batch_start = std::chrono::steady_clock::now();
+        parallel_info.blocking_parallel_for(
+            parallel_info.user_data,
+            total,
+            &state,
+            +[](void * ud, u32 idx, u32 thread_index)
+            {
+                auto & s = *static_cast<ParallelState *>(ud);
+                // A thread that steals work while waiting inside a nested blocking_parallel_for
+                // would execute this lambda recursively. Count it only once (outermost entry).
+                static thread_local u32 pipeline_depth = 0;
+                bool const is_outermost = (pipeline_depth == 0);
+                if (is_outermost) { ++s.active_workers; }
+                ++pipeline_depth;
+                auto const pipeline_t0 = std::chrono::steady_clock::now();
+                if (idx < s.compute_count)
+                {
+                    // Compute pipelines have exactly one stage — print it here.
+                    (*s.compute_states)[idx] = s.impl->create_compute_pipeline((*s.computes)[idx]);
+                    bool const from_cache = ImplPipelineManager::tl_last_spirv_from_cache;
+                    if (from_cache) { ++s.stage_cache_hits; }
+                    if (is_outermost && s.print_fn)
+                    {
+                        bool const ok = (*s.compute_states)[idx].is_ok();
+                        auto const done = ++s.stage_completed;
+                        auto const pct = done * 100u / s.total_stages;
+                        auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pipeline_t0).count());
+                        char const * status = ok ? (from_cache ? "CACHED" : "OK") : "FAIL";
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[%3u%%] %5ums %-6s COMP  %s",
+                            pct, ms, status, (*s.computes)[idx].name.c_str());
+                        std::lock_guard<std::mutex> lock{s.print_mtx};
+                        s.print_fn(s.print_user_data, buf, thread_index, 0u, s.total_workers);
+                    }
+                }
+                else if (idx < s.compute_count + s.raster_count)
+                {
+                    u32 const i = idx - s.compute_count;
+                    (*s.raster_states)[i] = s.impl->create_raster_pipeline((*s.rasters)[i]);
+                    if (is_outermost && s.print_fn)
+                    {
+                        bool const ok = (*s.raster_states)[i].is_ok();
+                        auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pipeline_t0).count());
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[ -- ] %5ums %-6s %s",
+                            ms, ok ? "OK" : "FAIL", (*s.rasters)[i].name.c_str());
+                        std::lock_guard<std::mutex> lock{s.print_mtx};
+                        s.print_fn(s.print_user_data, buf, thread_index, 0u, s.total_workers);
+                    }
+                }
+                else
+                {
+                    u32 const i = idx - s.compute_count - s.raster_count;
+                    (*s.rt_states)[i] = s.impl->create_ray_tracing_pipeline((*s.ray_tracings)[i]);
+                    if (is_outermost && s.print_fn)
+                    {
+                        bool const ok = (*s.rt_states)[i].is_ok();
+                        auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pipeline_t0).count());
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[ -- ] %5ums %-6s %s",
+                            ms, ok ? "OK" : "FAIL", (*s.ray_tracings)[i].name.c_str());
+                        std::lock_guard<std::mutex> lock{s.print_mtx};
+                        s.print_fn(s.print_user_data, buf, thread_index, 0u, s.total_workers);
+                    }
+                }
+                --pipeline_depth;
+                if (is_outermost) { --s.active_workers; }
+            });
+
+        if (parallel_info.print_fn)
+        {
+            auto const total_ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - batch_start).count());
+            char buf[128];
+            std::snprintf(buf, sizeof(buf), "[done] %5ums  %u/%u stages cached  %u pipelines",
+                total_ms, state.stage_cache_hits.load(), state.total_stages, state.total_pipelines);
+            std::lock_guard<std::mutex> lock{state.print_mtx};
+            parallel_info.print_fn(parallel_info.print_user_data, buf, ~0u, 0u, parallel_info.worker_thread_count);
+        }
+
+        // All parallel work done; discard the file cache and parallel info.
+        impl.current_parallel_info = nullptr;
+        impl.current_print_mtx = nullptr;
+        impl.current_completed_stages = nullptr;
+        impl.current_stage_cache_hits = nullptr;
+        impl.current_total_stages = 0;
+        impl.parallel_file_cache.reset();
+
+        // Serial post-processing: register pipeline states and build the public result batch.
+        PipelineCompileBatch batch{};
+        for (u32 i = 0; i < compute_count; ++i)
+        {
+            auto & state_result = compute_states[i];
+            if (state_result.is_ok())
+            {
+                auto pub = Result<std::shared_ptr<ComputePipeline>>(state_result.value().pipeline_ptr);
+                pub.m = state_result.m;
+                batch.compute.push_back(std::move(pub));
+                impl.compute_pipelines.push_back(std::move(state_result.value()));
+            }
+            else
+            {
+                batch.compute.push_back(Result<std::shared_ptr<ComputePipeline>>(state_result.m));
+            }
+        }
+        for (u32 i = 0; i < raster_count; ++i)
+        {
+            auto & state_result = raster_states[i];
+            if (state_result.is_ok())
+            {
+                auto pub = Result<std::shared_ptr<RasterPipeline>>(state_result.value().pipeline_ptr);
+                pub.m = state_result.m;
+                batch.raster.push_back(std::move(pub));
+                impl.raster_pipelines.push_back(std::move(state_result.value()));
+            }
+            else
+            {
+                batch.raster.push_back(Result<std::shared_ptr<RasterPipeline>>(state_result.m));
+            }
+        }
+        for (u32 i = 0; i < rt_count; ++i)
+        {
+            auto & state_result = rt_states[i];
+            if (state_result.is_ok())
+            {
+                auto pub = Result<std::shared_ptr<RayTracingPipeline>>(state_result.value().pipeline_ptr);
+                pub.m = state_result.m;
+                batch.ray_tracing.push_back(std::move(pub));
+                impl.ray_tracing_pipelines.push_back(std::move(state_result.value()));
+            }
+            else
+            {
+                batch.ray_tracing.push_back(Result<std::shared_ptr<RayTracingPipeline>>(state_result.m));
+            }
+        }
+        return batch;
+    }
+
     void PipelineManager::add_virtual_file(VirtualFileInfo const & virtual_info)
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
@@ -546,6 +835,286 @@ namespace daxa
     {
         auto & impl = *r_cast<ImplPipelineManager *>(this->object);
         return impl.reload_all();
+    }
+
+    using FileWriteTimeLookupTable = std::unordered_map<std::string, std::filesystem::file_time_type>;
+
+    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files, VirtualFileSet & virtual_files, FileWriteTimeLookupTable & lookup_table) -> bool
+    {
+        using namespace std::chrono_literals;
+        static constexpr auto HOTRELOAD_MIN_TIME = 250ms;
+
+        auto now = std::chrono::file_clock::now();
+        using namespace std::chrono_literals;
+        if (now - last_hotload_time < HOTRELOAD_MIN_TIME)
+        {
+            return false;
+        }
+        last_hotload_time = now;
+        bool reload = false;
+
+        auto get_last_file_write_time = [&](std::filesystem::path const & path)
+        {
+            auto full_path_str = std::filesystem::absolute(path).string();
+            auto iter = lookup_table.find(full_path_str);
+            if (iter != lookup_table.end())
+            {
+                return iter->second;
+            }
+            else
+            {
+                auto latest_write_time = std::filesystem::last_write_time(path);
+                lookup_table[full_path_str] = latest_write_time;
+                return latest_write_time;
+            }
+        };
+
+        for (auto & [path, recorded_write_time] : observed_hotload_files)
+        {
+            auto path_str = path.string();
+            if (virtual_files.contains(path_str))
+            {
+                auto latest_write_time = virtual_files[path_str].timestamp;
+                if (latest_write_time > recorded_write_time)
+                {
+                    reload = true;
+                }
+            }
+            else // if (std::filesystem::exists(path))
+            {
+                auto latest_write_time = get_last_file_write_time(path);
+                if (latest_write_time > recorded_write_time)
+                {
+                    reload = true;
+                }
+            }
+            // else
+            // {
+            //     std::cout << "How?" << std::endl;
+            // }
+        }
+        if (reload)
+        {
+            for (auto & pair : observed_hotload_files)
+            {
+                auto path_str = pair.first.string();
+                if (virtual_files.contains(path_str))
+                {
+                    pair.second = virtual_files[path_str].timestamp;
+                }
+                else if (std::filesystem::exists(pair.first))
+                {
+                    pair.second = get_last_file_write_time(pair.first);
+                }
+            }
+        }
+        return reload;
+    };
+
+    auto PipelineManager::reload_all_parallel(PipelineManagerParallelInfo parallel_info) -> PipelineReloadResult
+    {
+        auto & impl = *r_cast<ImplPipelineManager *>(this->object);
+
+        // Serial pass: collect which pipelines changed (fast filesystem stat checks).
+        auto lookup_table = FileWriteTimeLookupTable{};
+        struct ReloadItem { enum class Type { Compute, Raster, RayTracing } type; u32 index; };
+        auto work = std::vector<ReloadItem>{};
+
+        for (u32 i = 0; i < impl.compute_pipelines.size(); ++i)
+        {
+            auto & s = impl.compute_pipelines[i];
+            if (check_if_sources_changed(s.last_hotload_time, s.observed_hotload_files, impl.virtual_files, lookup_table))
+                work.push_back({ReloadItem::Type::Compute, i});
+        }
+        for (u32 i = 0; i < impl.raster_pipelines.size(); ++i)
+        {
+            auto & s = impl.raster_pipelines[i];
+            if (check_if_sources_changed(s.last_hotload_time, s.observed_hotload_files, impl.virtual_files, lookup_table))
+                work.push_back({ReloadItem::Type::Raster, i});
+        }
+        for (u32 i = 0; i < impl.ray_tracing_pipelines.size(); ++i)
+        {
+            auto & s = impl.ray_tracing_pipelines[i];
+            if (check_if_sources_changed(s.last_hotload_time, s.observed_hotload_files, impl.virtual_files, lookup_table))
+                work.push_back({ReloadItem::Type::RayTracing, i});
+        }
+        if (work.empty())
+            return NoPipelineChanged{};
+
+        using ComputeState   = ImplPipelineManager::ComputePipelineState;
+        using RasterState    = ImplPipelineManager::RasterPipelineState;
+        using RtState        = ImplPipelineManager::RayTracingPipelineState;
+
+        // Count total stages for the progress percentage.
+        u32 total_stages = 0;
+        for (auto const & item : work)
+        {
+            switch (item.type)
+            {
+            case ReloadItem::Type::Compute:   total_stages += 1; break;
+            case ReloadItem::Type::Raster:    total_stages += count_raster_stages(impl.raster_pipelines[item.index].info); break;
+            case ReloadItem::Type::RayTracing: total_stages += count_rt_stages(impl.ray_tracing_pipelines[item.index].info); break;
+            }
+        }
+
+        // Pre-allocate result slots (one per work item).
+        auto compute_results  = std::vector<Result<ComputeState>>(impl.compute_pipelines.size(),   Result<ComputeState>(std::string{"pending"}));
+        auto raster_results   = std::vector<Result<RasterState>>(impl.raster_pipelines.size(),    Result<RasterState>(std::string{"pending"}));
+        auto rt_results       = std::vector<Result<RtState>>(impl.ray_tracing_pipelines.size(),    Result<RtState>(std::string{"pending"}));
+
+        struct ParallelState
+        {
+            ImplPipelineManager *             impl;
+            std::vector<ReloadItem> *          work;
+            std::vector<Result<ComputeState>> * compute_results;
+            std::vector<Result<RasterState>> *  raster_results;
+            std::vector<Result<RtState>> *       rt_results;
+            u32 total_stages;
+            u32 total_pipelines;
+            u32 total_workers;
+            std::atomic<u32> stage_completed = {};
+            std::atomic<u32> stage_cache_hits = {};
+            std::atomic<u32> active_workers = {};
+            std::mutex print_mtx = {};
+            void * print_user_data = {};
+            void (*print_fn)(void *, char const *, u32, u32, u32) = {};
+        };
+        ParallelState ps{
+            &impl, &work, &compute_results, &raster_results, &rt_results,
+            total_stages, static_cast<u32>(work.size()), parallel_info.worker_thread_count,
+            {}, {}, {}, {}, parallel_info.print_user_data, parallel_info.print_fn,
+        };
+
+        impl.parallel_file_cache.emplace();
+        impl.current_parallel_info = &parallel_info;
+        impl.current_print_mtx = &ps.print_mtx;
+        impl.current_completed_stages = &ps.stage_completed;
+        impl.current_stage_cache_hits = &ps.stage_cache_hits;
+        impl.current_total_stages = total_stages;
+
+        auto const batch_start = std::chrono::steady_clock::now();
+        parallel_info.blocking_parallel_for(
+            parallel_info.user_data,
+            static_cast<u32>(work.size()),
+            &ps,
+            +[](void * ud, u32 idx, u32 thread_index)
+            {
+                auto & s = *static_cast<ParallelState *>(ud);
+                static thread_local u32 pipeline_depth = 0;
+                bool const is_outermost = (pipeline_depth == 0);
+                if (is_outermost) { ++s.active_workers; }
+                ++pipeline_depth;
+                auto const pipeline_t0 = std::chrono::steady_clock::now();
+                auto const & item = (*s.work)[idx];
+                switch (item.type)
+                {
+                case ReloadItem::Type::Compute:
+                {
+                    (*s.compute_results)[item.index] = s.impl->create_compute_pipeline(s.impl->compute_pipelines[item.index].info);
+                    bool const from_cache = ImplPipelineManager::tl_last_spirv_from_cache;
+                    if (from_cache) { ++s.stage_cache_hits; }
+                    if (is_outermost && s.print_fn)
+                    {
+                        bool const ok = (*s.compute_results)[item.index].is_ok();
+                        auto const done = ++s.stage_completed;
+                        auto const pct = done * 100u / s.total_stages;
+                        auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pipeline_t0).count());
+                        char const * status = ok ? (from_cache ? "CACHED" : "OK") : "FAIL";
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[%3u%%] %5ums %-6s COMP  %s",
+                            pct, ms, status, s.impl->compute_pipelines[item.index].info.name.c_str());
+                        std::lock_guard<std::mutex> lock{s.print_mtx};
+                        s.print_fn(s.print_user_data, buf, thread_index, 0u, s.total_workers);
+                    }
+                    break;
+                }
+                case ReloadItem::Type::Raster:
+                    (*s.raster_results)[item.index] = s.impl->create_raster_pipeline(s.impl->raster_pipelines[item.index].info);
+                    if (is_outermost && s.print_fn)
+                    {
+                        bool const ok = (*s.raster_results)[item.index].is_ok();
+                        auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pipeline_t0).count());
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[ -- ] %5ums %-6s %s",
+                            ms, ok ? "OK" : "FAIL", s.impl->raster_pipelines[item.index].info.name.c_str());
+                        std::lock_guard<std::mutex> lock{s.print_mtx};
+                        s.print_fn(s.print_user_data, buf, thread_index, 0u, s.total_workers);
+                    }
+                    break;
+                case ReloadItem::Type::RayTracing:
+                    (*s.rt_results)[item.index] = s.impl->create_ray_tracing_pipeline(s.impl->ray_tracing_pipelines[item.index].info);
+                    if (is_outermost && s.print_fn)
+                    {
+                        bool const ok = (*s.rt_results)[item.index].is_ok();
+                        auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - pipeline_t0).count());
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[ -- ] %5ums %-6s %s",
+                            ms, ok ? "OK" : "FAIL", s.impl->ray_tracing_pipelines[item.index].info.name.c_str());
+                        std::lock_guard<std::mutex> lock{s.print_mtx};
+                        s.print_fn(s.print_user_data, buf, thread_index, 0u, s.total_workers);
+                    }
+                    break;
+                }
+                --pipeline_depth;
+                if (is_outermost) { --s.active_workers; }
+            });
+
+        if (parallel_info.print_fn)
+        {
+            auto const total_ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - batch_start).count());
+            char buf[128];
+            std::snprintf(buf, sizeof(buf), "[done] %5ums  %u/%u stages cached  %u pipelines",
+                total_ms, ps.stage_cache_hits.load(), ps.total_stages, ps.total_pipelines);
+            std::lock_guard<std::mutex> lock{ps.print_mtx};
+            parallel_info.print_fn(parallel_info.print_user_data, buf, ~0u, 0u, parallel_info.worker_thread_count);
+        }
+
+        impl.current_parallel_info = nullptr;
+        impl.current_print_mtx = nullptr;
+        impl.current_completed_stages = nullptr;
+        impl.current_stage_cache_hits = nullptr;
+        impl.current_total_stages = 0;
+        impl.parallel_file_cache.reset();
+
+        // Serial pass: apply valid results; return first error if any.
+        for (auto const & item : work)
+        {
+            if (item.type == ReloadItem::Type::Compute)
+            {
+                auto & new_pipe = compute_results[item.index];
+                bool const is_valid = impl.info.register_null_pipelines_when_first_compile_fails
+                    ? (new_pipe.is_ok() && new_pipe.value().pipeline_ptr->is_valid())
+                    : new_pipe.is_ok();
+                if (is_valid)
+                    *impl.compute_pipelines[item.index].pipeline_ptr = std::move(*new_pipe.value().pipeline_ptr);
+                else
+                    return PipelineReloadError{new_pipe.m};
+            }
+            else if (item.type == ReloadItem::Type::Raster)
+            {
+                auto & new_pipe = raster_results[item.index];
+                bool const is_valid = impl.info.register_null_pipelines_when_first_compile_fails
+                    ? (new_pipe.is_ok() && new_pipe.value().pipeline_ptr->is_valid())
+                    : new_pipe.is_ok();
+                if (is_valid)
+                    *impl.raster_pipelines[item.index].pipeline_ptr = std::move(*new_pipe.value().pipeline_ptr);
+                else
+                    return PipelineReloadError{new_pipe.m};
+            }
+            else
+            {
+                auto & new_pipe = rt_results[item.index];
+                bool const is_valid = impl.info.register_null_pipelines_when_first_compile_fails
+                    ? (new_pipe.is_ok() && new_pipe.value().pipeline_ptr->is_valid())
+                    : new_pipe.is_ok();
+                if (is_valid)
+                    *impl.ray_tracing_pipelines[item.index].pipeline_ptr = std::move(*new_pipe.value().pipeline_ptr);
+                else
+                    return PipelineReloadError{new_pipe.m};
+            }
+        }
+
+        return PipelineReloadSuccess{};
     }
 
     auto PipelineManager::all_pipelines_valid() const -> bool
@@ -620,7 +1189,6 @@ namespace daxa
             .last_hotload_time = std::chrono::file_clock::now(),
             .observed_hotload_files = {},
         };
-        this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
         auto ray_tracing_pipeline_info = RayTracingPipelineInfo{
             .ray_gen_shaders = {},
             .intersection_shaders = {},
@@ -655,11 +1223,93 @@ namespace daxa
             ElemT{&pipe_result.info.miss_hit_infos, &miss_hit_shader_infos, &miss_hit_spirv_result, ShaderStage::RAY_MISS},
         };
 
+        // Pre-size all per-group spv result vectors so parallel writes are by index (no push_back races).
+        for (auto [infos, shader_infos, spv_results, stage] : result_shader_compile_infos)
+            spv_results->assign(infos->size(), daxa::Result<std::vector<unsigned int>>(std::string{"pending"}));
+
+        // Flatten all shaders across all stage groups into a single list for parallel dispatch.
+        struct RtStageWork
+        {
+            ShaderCompileInfo2 compile_info;
+            ShaderStage stage;
+            ShaderFileTimeSet hotload_files;
+            daxa::Result<std::vector<unsigned int>> * spv_dest;
+        };
+        auto rt_active_stages = std::vector<RtStageWork>{};
+        for (auto [infos, shader_infos, spv_results, stage] : result_shader_compile_infos)
+        {
+            for (u32 j = 0; j < static_cast<u32>(infos->size()); ++j)
+                rt_active_stages.push_back({(*infos)[j], stage, {}, &(*spv_results)[j]});
+        }
+
+        if (rt_active_stages.size() > 1 && this->current_parallel_info && this->current_parallel_info->blocking_parallel_for)
+        {
+            struct RtState { ImplPipelineManager * impl; std::vector<RtStageWork> * work; std::string const * name; };
+            RtState rs{this, &rt_active_stages, &pipe_result.info.name};
+            this->current_parallel_info->blocking_parallel_for(
+                this->current_parallel_info->user_data,
+                static_cast<u32>(rt_active_stages.size()), &rs,
+                +[](void * ud, u32 i, u32 thread_index)
+                {
+                    auto & s = *static_cast<RtState *>(ud);
+                    auto & w = (*s.work)[i];
+                    ImplPipelineManager::current_observed_hotload_files = &w.hotload_files;
+                    auto const t0 = std::chrono::steady_clock::now();
+                    *w.spv_dest = s.impl->get_spirv(w.compile_info, *s.name, w.stage);
+                    bool const from_cache = ImplPipelineManager::tl_last_spirv_from_cache;
+                    auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count());
+                    auto * completed = s.impl->current_completed_stages;
+                    auto * cache_hits = s.impl->current_stage_cache_hits;
+                    auto * print_mtx = s.impl->current_print_mtx;
+                    auto const * pi = s.impl->current_parallel_info;
+                    if (from_cache && cache_hits) { ++(*cache_hits); }
+                    if (completed && print_mtx && pi && pi->print_fn)
+                    {
+                        bool const ok = w.spv_dest->is_ok();
+                        auto const done = ++(*completed);
+                        auto const pct = done * 100u / s.impl->current_total_stages;
+                        char const * status = ok ? (from_cache ? "CACHED" : "OK") : "FAIL";
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[%3u%%] %5ums %-6s %-5s %s",
+                            pct, ms, status, shader_stage_abbrev(w.stage), s.name->c_str());
+                        std::lock_guard<std::mutex> lock{*print_mtx};
+                        pi->print_fn(pi->print_user_data, buf, thread_index, 0u, pi->worker_thread_count);
+                    }
+                });
+        }
+        else
+        {
+            for (auto & w : rt_active_stages)
+            {
+                ImplPipelineManager::current_observed_hotload_files = &w.hotload_files;
+                auto const t0 = std::chrono::steady_clock::now();
+                *w.spv_dest = get_spirv(w.compile_info, pipe_result.info.name, w.stage);
+                bool const from_cache = tl_last_spirv_from_cache;
+                auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count());
+                if (from_cache && current_stage_cache_hits) { ++(*current_stage_cache_hits); }
+                if (current_completed_stages && current_print_mtx && current_parallel_info && current_parallel_info->print_fn)
+                {
+                    bool const ok = w.spv_dest->is_ok();
+                    auto const done = ++(*current_completed_stages);
+                    auto const pct = done * 100u / current_total_stages;
+                    char const * status = ok ? (from_cache ? "CACHED" : "OK") : "FAIL";
+                    char buf[288];
+                    std::snprintf(buf, sizeof(buf), "[%3u%%] %5ums %-6s %-5s %s",
+                        pct, ms, status, shader_stage_abbrev(w.stage), pipe_result.info.name.c_str());
+                    std::lock_guard<std::mutex> lock{*current_print_mtx};
+                    current_parallel_info->print_fn(current_parallel_info->print_user_data, buf, ~0u, 0u, current_parallel_info->worker_thread_count);
+                }
+            }
+        }
+        for (auto & w : rt_active_stages) pipe_result.observed_hotload_files.merge(w.hotload_files);
+
+        // Check results and build final shader infos in group order (order matters for SBT indices).
         for (auto [pipe_result_shader_info, final_shader_info, spv_results, stage] : result_shader_compile_infos)
         {
-            for (auto & shader_compile_info : *pipe_result_shader_info)
+            for (u32 j = 0; j < static_cast<u32>(pipe_result_shader_info->size()); ++j)
             {
-                auto spv_result = get_spirv(shader_compile_info, pipe_result.info.name, stage);
+                auto & spv_result = (*spv_results)[j];
+                auto & shader_compile_info = (*pipe_result_shader_info)[j];
                 if (spv_result.is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
@@ -673,10 +1323,9 @@ namespace daxa
                         return Result<RayTracingPipelineState>(spv_result.message());
                     }
                 }
-                spv_results->push_back(std::move(spv_result));
                 final_shader_info->push_back(daxa::ShaderInfo{
-                    .byte_code = spv_results->back().value().data(),
-                    .byte_code_size = static_cast<u32>(spv_results->back().value().size()),
+                    .byte_code = spv_result.value().data(),
+                    .byte_code_size = static_cast<u32>(spv_result.value().size()),
                     .create_flags = shader_compile_info.create_flags.value_or(ShaderCreateFlagBits::NONE),
                     .required_subgroup_size =
                         shader_compile_info.required_subgroup_size.has_value() ? Optional{shader_compile_info.required_subgroup_size.value()} : daxa::None,
@@ -766,7 +1415,6 @@ namespace daxa
             .last_hotload_time = std::chrono::file_clock::now(),
             .observed_hotload_files = {},
         };
-        this->current_observed_hotload_files = &pipe_result.observed_hotload_files;
         auto raster_pipeline_info = RasterPipelineInfo{
             .color_attachments = {a_info.color_attachments.data(), a_info.color_attachments.size()},
             .depth_test = a_info.depth_test,
@@ -790,11 +1438,87 @@ namespace daxa
             ElemT{&pipe_result.info.task_shader_info, &raster_pipeline_info.task_shader_info, &task_spirv_result, ShaderStage::TASK},
             ElemT{&pipe_result.info.mesh_shader_info, &raster_pipeline_info.mesh_shader_info, &mesh_spirv_result, ShaderStage::MESH},
         };
+        // Collect active stages for parallel (or serial) SPIR-V compilation.
+        struct RasterStageWork
+        {
+            ShaderCompileInfo2 compile_info;
+            ShaderStage stage;
+            ShaderFileTimeSet hotload_files;
+            daxa::Result<std::vector<unsigned int>> * spv_dest;
+        };
+        auto raster_active_stages = std::vector<RasterStageWork>{};
+        for (auto [psi, fsi, spv_result, stage] : result_shader_compile_infos)
+        {
+            if (psi->has_value())
+                raster_active_stages.push_back({psi->value(), stage, {}, spv_result});
+        }
+
+        if (raster_active_stages.size() > 1 && this->current_parallel_info && this->current_parallel_info->blocking_parallel_for)
+        {
+            struct StState { ImplPipelineManager * impl; std::vector<RasterStageWork> * work; std::string const * pipe_name; };
+            StState ss{this, &raster_active_stages, &pipe_result.info.name};
+            this->current_parallel_info->blocking_parallel_for(
+                this->current_parallel_info->user_data,
+                static_cast<u32>(raster_active_stages.size()), &ss,
+                +[](void * ud, u32 i, u32 thread_index)
+                {
+                    auto & s = *static_cast<StState *>(ud);
+                    auto & w = (*s.work)[i];
+                    ImplPipelineManager::current_observed_hotload_files = &w.hotload_files;
+                    auto const t0 = std::chrono::steady_clock::now();
+                    *w.spv_dest = s.impl->get_spirv(w.compile_info, *s.pipe_name, w.stage);
+                    bool const from_cache = ImplPipelineManager::tl_last_spirv_from_cache;
+                    auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count());
+                    auto * completed = s.impl->current_completed_stages;
+                    auto * cache_hits = s.impl->current_stage_cache_hits;
+                    auto * print_mtx = s.impl->current_print_mtx;
+                    auto const * pi = s.impl->current_parallel_info;
+                    if (from_cache && cache_hits) { ++(*cache_hits); }
+                    if (completed && print_mtx && pi && pi->print_fn)
+                    {
+                        bool const ok = w.spv_dest->is_ok();
+                        auto const done = ++(*completed);
+                        auto const pct = done * 100u / s.impl->current_total_stages;
+                        char const * status = ok ? (from_cache ? "CACHED" : "OK") : "FAIL";
+                        char buf[288];
+                        std::snprintf(buf, sizeof(buf), "[%3u%%] %5ums %-6s %-5s %s",
+                            pct, ms, status, shader_stage_abbrev(w.stage), s.pipe_name->c_str());
+                        std::lock_guard<std::mutex> lock{*print_mtx};
+                        pi->print_fn(pi->print_user_data, buf, thread_index, 0u, pi->worker_thread_count);
+                    }
+                });
+        }
+        else
+        {
+            for (auto & w : raster_active_stages)
+            {
+                ImplPipelineManager::current_observed_hotload_files = &w.hotload_files;
+                auto const t0 = std::chrono::steady_clock::now();
+                *w.spv_dest = get_spirv(w.compile_info, pipe_result.info.name, w.stage);
+                bool const from_cache = tl_last_spirv_from_cache;
+                auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count());
+                if (from_cache && current_stage_cache_hits) { ++(*current_stage_cache_hits); }
+                if (current_completed_stages && current_print_mtx && current_parallel_info && current_parallel_info->print_fn)
+                {
+                    bool const ok = w.spv_dest->is_ok();
+                    auto const done = ++(*current_completed_stages);
+                    auto const pct = done * 100u / current_total_stages;
+                    char const * status = ok ? (from_cache ? "CACHED" : "OK") : "FAIL";
+                    char buf[288];
+                    std::snprintf(buf, sizeof(buf), "[%3u%%] %5ums %-6s %-5s %s",
+                        pct, ms, status, shader_stage_abbrev(w.stage), pipe_result.info.name.c_str());
+                    std::lock_guard<std::mutex> lock{*current_print_mtx};
+                    current_parallel_info->print_fn(current_parallel_info->print_user_data, buf, ~0u, 0u, current_parallel_info->worker_thread_count);
+                }
+            }
+        }
+        for (auto & w : raster_active_stages) pipe_result.observed_hotload_files.merge(w.hotload_files);
+
+        // Check results and assign shader infos (serial, original order preserved).
         for (auto [pipe_result_shader_info, final_shader_info, spv_result, stage] : result_shader_compile_infos)
         {
             if (pipe_result_shader_info->has_value())
             {
-                *spv_result = get_spirv(pipe_result_shader_info->value(), pipe_result.info.name, stage);
                 if (spv_result->is_err())
                 {
                     if (this->info.register_null_pipelines_when_first_compile_fails)
@@ -873,80 +1597,6 @@ namespace daxa
         this->raster_pipelines.erase(pipeline_iter);
     }
 
-    using FileWriteTimeLookupTable = std::unordered_map<std::string, std::filesystem::file_time_type>;
-
-    static auto check_if_sources_changed(std::chrono::file_clock::time_point & last_hotload_time, ShaderFileTimeSet & observed_hotload_files, VirtualFileSet & virtual_files, FileWriteTimeLookupTable & lookup_table) -> bool
-    {
-        using namespace std::chrono_literals;
-        static constexpr auto HOTRELOAD_MIN_TIME = 250ms;
-
-        auto now = std::chrono::file_clock::now();
-        using namespace std::chrono_literals;
-        if (now - last_hotload_time < HOTRELOAD_MIN_TIME)
-        {
-            return false;
-        }
-        last_hotload_time = now;
-        bool reload = false;
-
-        auto get_last_file_write_time = [&](std::filesystem::path const & path)
-        {
-            auto full_path_str = std::filesystem::absolute(path).string();
-            auto iter = lookup_table.find(full_path_str);
-            if (iter != lookup_table.end())
-            {
-                return iter->second;
-            }
-            else
-            {
-                auto latest_write_time = std::filesystem::last_write_time(path);
-                lookup_table[full_path_str] = latest_write_time;
-                return latest_write_time;
-            }
-        };
-
-        for (auto & [path, recorded_write_time] : observed_hotload_files)
-        {
-            auto path_str = path.string();
-            if (virtual_files.contains(path_str))
-            {
-                auto latest_write_time = virtual_files[path_str].timestamp;
-                if (latest_write_time > recorded_write_time)
-                {
-                    reload = true;
-                }
-            }
-            else // if (std::filesystem::exists(path))
-            {
-                auto latest_write_time = get_last_file_write_time(path);
-                if (latest_write_time > recorded_write_time)
-                {
-                    reload = true;
-                }
-            }
-            // else
-            // {
-            //     std::cout << "How?" << std::endl;
-            // }
-        }
-        if (reload)
-        {
-            for (auto & pair : observed_hotload_files)
-            {
-                auto path_str = pair.first.string();
-                if (virtual_files.contains(path_str))
-                {
-                    pair.second = virtual_files[path_str].timestamp;
-                }
-                else if (std::filesystem::exists(pair.first))
-                {
-                    pair.second = get_last_file_write_time(pair.first);
-                }
-            }
-        }
-        return reload;
-    };
-
     void ImplPipelineManager::add_virtual_file(VirtualFileInfo const & virtual_info)
     {
         virtual_files[virtual_info.name] = VirtualFileState{
@@ -964,6 +1614,7 @@ namespace daxa
     auto ImplPipelineManager::reload_all() -> PipelineReloadResult
     {
         bool reloaded = false;
+        auto const t0 = std::chrono::steady_clock::now();
 
         // Optimization for caching the write times so that multiple pipelines don't check the
         // filesystem for the same file's write-time. Filesystem checks are really slow...
@@ -1049,6 +1700,8 @@ namespace daxa
 
         if (reloaded)
         {
+            auto const ms = static_cast<u32>(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count());
+            std::printf("[reload_all] %5ums\n", ms);
             return PipelineReloadSuccess{};
         }
         else
@@ -1297,15 +1950,18 @@ namespace daxa
             }
 
             // TODO: Test if this is slow, as it's not needed if there's no shader cache.
+            tl_last_spirv_from_cache = false;
             auto shader_info_hash = hash_shader_info(code.string, shader_info, shader_stage);
             if (this->info.spirv_cache_folder.has_value())
             {
                 auto cache_ret = try_load_shader_cache(this->info.spirv_cache_folder.value(), shader_info_hash);
                 if (cache_ret.is_ok())
                 {
+                    tl_last_spirv_from_cache = true;
                     return cache_ret;
                 }
             }
+            tl_last_spirv_from_cache = false;
 
             Result<std::vector<u32>> ret = Result<std::vector<u32>>("No shader was compiled");
 
@@ -1490,6 +2146,49 @@ namespace daxa
         {
             return Result<ShaderCode>(result_path.message());
         }
+        auto const path_str = result_path.value().string();
+
+        // When inside compile_pipelines_parallel, use the shared file cache so that header
+        // files included by many pipelines are only read from disk once per batch.
+        if (parallel_file_cache.has_value())
+        {
+            // Fast path: already cached (shared read lock).
+            {
+                std::shared_lock read_lock{parallel_file_cache->mtx};
+                auto it = parallel_file_cache->files.find(path_str);
+                if (it != parallel_file_cache->files.end())
+                {
+                    current_observed_hotload_files->insert({result_path.value(), it->second.write_time});
+                    return Result(it->second.code);
+                }
+            }
+            // Slow path: load under exclusive lock, then insert into cache.
+            // Holding the write lock while reading disk ensures only one thread
+            // loads each distinct file, avoiding redundant IO.
+            std::unique_lock write_lock{parallel_file_cache->mtx};
+            auto it = parallel_file_cache->files.find(path_str); // double-check
+            if (it != parallel_file_cache->files.end())
+            {
+                current_observed_hotload_files->insert({result_path.value(), it->second.write_time});
+                return Result(it->second.code);
+            }
+            auto write_time = std::filesystem::last_write_time(result_path.value());
+            std::ifstream ifs{path};
+            if (!ifs.good()) { return Result<ShaderCode>(std::string{"Could not open shader file: "} + path_str); }
+            std::string str = {};
+            ifs.seekg(0, std::ios::end);
+            str.reserve(static_cast<usize>(ifs.tellg()));
+            ifs.seekg(0, std::ios::beg);
+            str.assign(std::istreambuf_iterator<char>(ifs), std::istreambuf_iterator<char>());
+            if (this->info.custom_preprocessor) { this->info.custom_preprocessor(str, result_path.value()); }
+            shader_preprocess(str, result_path.value());
+            auto entry = FileCacheEntry{ShaderCode{.string = str}, write_time};
+            current_observed_hotload_files->insert({result_path.value(), entry.write_time});
+            parallel_file_cache->files.emplace(path_str, std::move(entry));
+            return Result(parallel_file_cache->files.at(path_str).code);
+        }
+
+        // Normal (non-parallel) path.
         auto start_time = std::chrono::steady_clock::now();
         using namespace std::chrono_literals;
         while (std::chrono::duration<f32>(std::chrono::steady_clock::now() - start_time) < 0.1s)
@@ -1700,6 +2399,16 @@ namespace daxa
     auto ImplPipelineManager::get_spirv_slang([[maybe_unused]] ShaderCompileInfo2 const & shader_info, [[maybe_unused]] ShaderStage shader_stage, [[maybe_unused]] ShaderCode const & code) -> Result<std::vector<u32>>
     {
 #if DAXA_BUILT_WITH_UTILS_PIPELINE_MANAGER_SLANG
+        // IGlobalSession is NOT thread-safe: concurrent compile() calls on sessions derived
+        // from a shared global session race on its internal type registry and module cache.
+        // Fix: each thread owns an independent IGlobalSession, created lazily on first use.
+        static thread_local Slang::ComPtr<slang::IGlobalSession> tl_global_session = {};
+        if (!tl_global_session)
+        {
+            auto ret = slang::createGlobalSession(tl_global_session.writeRef());
+            DAXA_DBG_ASSERT_TRUE_M(SLANG_SUCCEEDED(ret), "slang::createGlobalSession failed for worker thread");
+        }
+
         auto session = Slang::ComPtr<slang::ISession>{};
 
         {
@@ -1722,8 +2431,8 @@ namespace daxa
 
             auto target_desc = slang::TargetDesc{};
             target_desc.format = SlangCompileTarget::SLANG_SPIRV;
-            auto session_lock = std::lock_guard{slang_backend.session_mtx};
-            target_desc.profile = slang_backend.global_session->findProfile("spirv_1_4");
+            // tl_global_session is thread-local so no lock is needed here.
+            target_desc.profile = tl_global_session->findProfile("spirv_1_4");
             target_desc.flags = SLANG_TARGET_FLAG_GENERATE_SPIRV_DIRECTLY;
 
             // NOTE(grundlett): Does GLSL here refer to SPIR-V?
@@ -1738,7 +2447,7 @@ namespace daxa
             session_desc.preprocessorMacroCount = static_cast<SlangInt>(macros.size());
             session_desc.defaultMatrixLayoutMode = SLANG_MATRIX_LAYOUT_COLUMN_MAJOR;
 
-            slang_backend.global_session->createSession(session_desc, session.writeRef());
+            tl_global_session->createSession(session_desc, session.writeRef());
         }
 
         auto name = std::string{"test"};
