@@ -180,7 +180,7 @@ void remember_ids(daxa_CommandRecorder self, T id)
 }
 
 template <typename... Args>
-auto check_ids(daxa_CommandRecorder self, Args... args) -> daxa_Result
+auto check_ids([[maybe_unused]] daxa_CommandRecorder self, [[maybe_unused]] Args... args) -> daxa_Result
 {
 #if DAXA_VALIDATION
     if (!(only_check_buffer(self, args) && ...))
@@ -613,8 +613,7 @@ auto daxa_cmd_wait_events(daxa_CommandRecorder self, daxa_EventWaitInfo const * 
 auto daxa_cmd_wait_event(daxa_CommandRecorder self, daxa_EventWaitInfo const * info) -> daxa_Result
 {
     DAXA_CHECK_UNCOMPLETED(self)
-    daxa_cmd_wait_events(self, info, 1);
-    return DAXA_RESULT_SUCCESS;
+    return daxa_cmd_wait_events(self, info, 1);
 }
 
 auto daxa_cmd_reset_event(daxa_CommandRecorder self, daxa_ResetEventInfo const * info) -> daxa_Result

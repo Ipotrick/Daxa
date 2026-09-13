@@ -12,7 +12,6 @@
 
 #if DAXA_BUILT_WITH_UTILS_IMGUI
 #include <daxa/utils/imgui.hpp>
-#include <filesystem>
 #include <optional>
 #endif
 
@@ -201,7 +200,7 @@ namespace daxa
         }
 
         template <typename TaskHeadAttachmentDeclT>
-        auto complete_head_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStages default_stage, std::string_view task_name) -> TaskAttachmentInfo
+        auto complete_head_attachment_info(TaskHeadAttachmentDeclT const & attachment_decl, TaskViewVariant const & view, TaskStages default_stage, [[maybe_unused]] std::string_view task_name) -> TaskAttachmentInfo
         {
             TaskAttachmentInfo ret = attachment_decl;
             DAXA_DBG_ASSERT_TRUE_M(((ret.value.common.task_access.stage & TaskStages::JOKER) == TaskStages::NONE) || (default_stage != TaskStages::NONE), error_message_no_access_sage(task_name, ret.value.common.name, ret.value.common.task_access));
@@ -1004,7 +1003,7 @@ namespace daxa
     {
         Device device = {};
         ImGuiRenderer imgui_renderer = {};
-        std::optional<std::filesystem::path> buffer_layout_cache_folder = {};
+        std::optional<std::string> buffer_layout_cache_folder = {};
     };
 
     struct TaskGraphDebugUi : ManagedPtr<TaskGraphDebugUi, ImplTaskGraphDebugUi *>

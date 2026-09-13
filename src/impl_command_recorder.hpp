@@ -132,7 +132,7 @@ struct ImplTransientCommandArenas
         std::unique_lock<std::mutex> local_lock = lock == nullptr ? std::unique_lock(mtx) : std::unique_lock<std::mutex>{};
         daxa_Result result = DAXA_RESULT_SUCCESS;
 
-        u32 const cmd_arena_index = (cmd_arena - transient_command_arenas.first.data());
+        u32 const cmd_arena_index = static_cast<u32>(cmd_arena - transient_command_arenas.first.data());
 
         result = static_cast<daxa_Result>(vkResetCommandPool(vk_device, cmd_arena->vk_command_pool, {}));
         _DAXA_RETURN_IF_ERROR(result, result);

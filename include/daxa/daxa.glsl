@@ -235,9 +235,9 @@ DAXA_ACCELERATION_STRUCTURE_LAYOUT uniform accelerationStructureEXT daxa_Acceler
     {                                                        \
         readonly STRUCT_TYPE value;                          \
     };
-#define _DAXA_FWD_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)         \
-    DAXA_DECL_BUFFER_REFERENCE daxa_RWBufferPtr##STRUCT_TYPE; \
-    DAXA_DECL_BUFFER_REFERENCE daxa_BufferPtr##STRUCT_TYPE;
+#define _DAXA_FWD_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)              \
+    layout(buffer_reference) buffer daxa_RWBufferPtr##STRUCT_TYPE; \
+    layout(buffer_reference) buffer daxa_BufferPtr##STRUCT_TYPE;
 
 #define DAXA_DECL_BUFFER_PTR(STRUCT_TYPE) _DAXA_DECL_BUFFER_PTR_HELPER(STRUCT_TYPE)
 

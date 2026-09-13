@@ -6,6 +6,7 @@
 
 #include <utility>
 #include <bit>
+#include <daxa/profiling.hpp>
 
 // --- Begin API Functions ---
 
@@ -25,7 +26,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     };
 
 #if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
-    if (NativeWindowInfoWayland* wayland_info = daxa::get_if<NativeWindowInfoWayland>(&ret.info.native_window_info))
+    if (NativeWindowInfoWayland * wayland_info = daxa::get_if<NativeWindowInfoWayland>(&ret.info.native_window_info))
     {
         if (wayland_info->display == nullptr)
         {
@@ -41,7 +42,10 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     }
 #endif
 
-    result = ret.recreate_surface();
+    {
+        DAXA_PROFILE_SCOPE("recreate_surface");
+        result = ret.recreate_surface();
+    }
     _DAXA_RETURN_IF_ERROR(result, result);
 
     VkBool32 present_support = VK_FALSE;
@@ -52,7 +56,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         &present_support));
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    if (present_support != VK_TRUE) 
+    if (present_support != VK_TRUE)
     {
         result = DAXA_RESULT_ERROR_QUEUE_DOES_NOT_SUPPORT_SURFACE;
         _DAXA_RETURN_IF_ERROR(result, result);
@@ -65,34 +69,37 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     }
 
     // Save supported present modes.
-    u32 present_mode_count = {};
-    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
-        ret.device->vk_physical_device,
-        ret.vk_surface,
-        &present_mode_count,
-        nullptr));
-    _DAXA_RETURN_IF_ERROR(result, result);
+    {
+        DAXA_PROFILE_SCOPE("query present modes");
+        u32 present_mode_count = {};
+        result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
+            ret.device->vk_physical_device,
+            ret.vk_surface,
+            &present_mode_count,
+            nullptr));
+        _DAXA_RETURN_IF_ERROR(result, result);
 
-    ret.supported_present_modes.resize(present_mode_count);
-    result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
-        device->vk_physical_device,
-        ret.vk_surface,
-        &present_mode_count,
-        r_cast<VkPresentModeKHR *>(ret.supported_present_modes.data())));
-    _DAXA_RETURN_IF_ERROR(result, result);
+        ret.supported_present_modes.resize(present_mode_count);
+        result = static_cast<daxa_Result>(vkGetPhysicalDeviceSurfacePresentModesKHR(
+            device->vk_physical_device,
+            ret.vk_surface,
+            &present_mode_count,
+            r_cast<VkPresentModeKHR *>(ret.supported_present_modes.data())));
+        _DAXA_RETURN_IF_ERROR(result, result);
+    }
 
     ret.vk_surface_format = info->surface_format;
 
     result = ret.recreate();
     _DAXA_RETURN_IF_ERROR(result, result);
-    
+
     // We have an acquire semaphore for each frame in flight.
     for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight; i++)
     {
         BinarySemaphore sema = {};
         daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
         binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
-        daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
+        daxa_BinarySemaphoreInfo const sema_info = {.name = binary_sema_name};
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         _DAXA_RETURN_IF_ERROR(result, result);
 
@@ -104,7 +111,7 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
         BinarySemaphore sema = {};
         daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
         binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
-        daxa_BinarySemaphoreInfo const sema_info = { .name = binary_sema_name };
+        daxa_BinarySemaphoreInfo const sema_info = {.name = binary_sema_name};
         result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
         _DAXA_RETURN_IF_ERROR(result, result);
 
@@ -252,6 +259,7 @@ auto daxa_swp_dec_refcnt(daxa_Swapchain self) -> u64
 
 auto daxa_ImplSwapchain::recreate() -> daxa_Result
 {
+    DAXA_PROFILE_SCOPE(__FUNCTION__);
     daxa_Result result = DAXA_RESULT_SUCCESS;
 
     // Check present mode:
@@ -272,7 +280,7 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
     surface_extent.width = surface_capabilities.currentExtent.width;
     surface_extent.height = surface_capabilities.currentExtent.height;
 #if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
-    if (NativeWindowInfoWayland* wayland_info = daxa::get_if<NativeWindowInfoWayland>(&info.native_window_info))
+    if (NativeWindowInfoWayland * wayland_info = daxa::get_if<NativeWindowInfoWayland>(&info.native_window_info))
     {
         // Quoting Vulkan spec:
         // > "On Wayland, currentExtent is the special value (0xFFFFFFFF, 0xFFFFFFFF),
@@ -285,13 +293,11 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
             surface_extent.width = std::clamp(
                 wayland_info->width,
                 surface_capabilities.minImageExtent.width,
-                surface_capabilities.maxImageExtent.width
-            );
+                surface_capabilities.maxImageExtent.width);
             surface_extent.height = std::clamp(
                 wayland_info->height,
                 surface_capabilities.minImageExtent.height,
-                surface_capabilities.maxImageExtent.height
-            );
+                surface_capabilities.maxImageExtent.height);
         }
     }
 #endif // #if defined(__linux__) && DAXA_BUILT_WITH_WAYLAND
@@ -303,6 +309,11 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
     info.present_mode = PresentMode::IMMEDIATE;
 #endif
 
+    // NOTE: this is a hack that allows us to ignore issues caused
+    // by things that are just underspecified in the Vulkan spec.
+    result = daxa_dvc_wait_idle(this->device);
+    _DAXA_RETURN_IF_ERROR(result, result)
+
     // WORKAROUND
     // Some AMD RDNA4 drivers can not handle passing the old swapchain to swapchain resizing.
     // We must destroy the old swapchain and then create the new one fresh.
@@ -311,11 +322,6 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         vkDestroySwapchainKHR(this->device->vk_device, this->vk_swapchain, nullptr);
         this->vk_swapchain = VK_NULL_HANDLE;
     }
-
-    // NOTE: this is a hack that allows us to ignore issues caused
-    // by things that are just underspecified in the Vulkan spec.
-    result = daxa_dvc_wait_idle(this->device);
-    _DAXA_RETURN_IF_ERROR(result, result)
 
     this->partial_cleanup();
 
@@ -342,11 +348,14 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         .oldSwapchain = VK_NULL_HANDLE,
     };
 
-    result = static_cast<daxa_Result>(vkCreateSwapchainKHR(
-        this->device->vk_device,
-        &swapchain_create_info,
-        nullptr,
-        &this->vk_swapchain));
+    {
+        DAXA_PROFILE_SCOPE("vkCreateSwapchainKHR");
+        result = static_cast<daxa_Result>(vkCreateSwapchainKHR(
+            this->device->vk_device,
+            &swapchain_create_info,
+            nullptr,
+            &this->vk_swapchain));
+    }
     _DAXA_RETURN_IF_ERROR(result, result)
 
     defer

@@ -21,7 +21,7 @@ namespace daxa
 
         void recreate_vbuffer(usize vbuffer_new_size);
         void recreate_ibuffer(usize ibuffer_new_size);
-        void record_commands(ImGuiRecordCommandsInfo const & info);
+        void record_commands(ImGuiRecordCommandsInfo const & record_info);
 
         ImplImGuiRenderer(ImGuiRendererInfo a_info);
         ~ImplImGuiRenderer();

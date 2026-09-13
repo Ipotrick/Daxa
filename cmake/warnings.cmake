@@ -72,6 +72,6 @@ function(set_project_warnings project_name)
     message(AUTHOR_WARNING "No compiler warnings set for '${CMAKE_CXX_COMPILER_ID}' compiler.")
   endif()
 
-  target_compile_options(${project_name} PUBLIC $<BUILD_INTERFACE:${PROJECT_WARNINGS}>)
+  target_compile_options(${project_name} PRIVATE $<BUILD_INTERFACE:${PROJECT_WARNINGS}>)
 
 endfunction()

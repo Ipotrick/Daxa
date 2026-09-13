@@ -4,6 +4,7 @@
 
 #include <daxa/daxa.inl>
 #include <format>
+#include <daxa/profiling.hpp>
 
 namespace daxa
 {
@@ -56,6 +57,8 @@ namespace daxa
                                             VkDevice device, VkBuffer device_address_buffer,
                                             PFN_vkSetDebugUtilsObjectNameEXT vkSetDebugUtilsObjectNameEXT) -> daxa_Result
     {
+        DAXA_PROFILE_SCOPE(__FUNCTION__);
+
         daxa_Result result = DAXA_RESULT_SUCCESS;
         defer
         {

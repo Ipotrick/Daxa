@@ -233,7 +233,7 @@ auto daxa_result_to_string(daxa_Result result) -> std::string_view
 };
 
 template <usize N = 1>
-void check_result(daxa_Result result, char const * message, std::array<daxa_Result, N> allowed_codes = {DAXA_RESULT_SUCCESS})
+void check_result(daxa_Result result, [[maybe_unused]] char const * message, std::array<daxa_Result, N> allowed_codes = {DAXA_RESULT_SUCCESS})
 {
     bool result_allowed = false;
     for (auto allowed_code : allowed_codes)
@@ -878,7 +878,7 @@ namespace daxa
 
     void TimelineSemaphore::signal_value(u64 value)
     {
-        auto result = daxa_timeline_semaphore_signal_value(r_cast<daxa_TimelineSemaphore>(this->object), value);
+        [[maybe_unused]] auto result = daxa_timeline_semaphore_signal_value(r_cast<daxa_TimelineSemaphore>(this->object), value);
         DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to signal timeline semaphore");
     }
 
@@ -1311,7 +1311,7 @@ namespace daxa
 
     void CommandRecorder::wait_events(daxa::Span<EventWaitInfo const> const & infos)
     {
-        daxa_cmd_wait_events(
+        (void)daxa_cmd_wait_events(
             this->internal, r_cast<daxa_EventSignalInfo const *>(infos.data()), infos.size());
     }
 

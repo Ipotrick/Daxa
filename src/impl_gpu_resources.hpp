@@ -269,7 +269,7 @@ namespace daxa
          * Always threadsafe.
          * @returns if successful. Returns false when the resource is invalid or already at 0 reference count.
          */
-        auto try_dec_refcnt(GPUResourceId id, bool * zero_references = nullptr) -> TryDecRefcntResult
+        auto try_dec_refcnt(GPUResourceId id) -> TryDecRefcntResult
         {
             if (!is_id_valid(id))
             {
@@ -310,8 +310,6 @@ namespace daxa
             {
                 return false;
             }
-            u64 version = id.version;
-
             u64 version_refcnt = {};
             u64 new_version_refcnt = {};
             do

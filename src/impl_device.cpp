@@ -8,6 +8,7 @@
 #include "impl_features.hpp"
 #include "impl_swapchain.hpp"
 #include "impl_instance.hpp"
+#include <daxa/profiling.hpp>
 
 /// --- Begin Helpers ---
 
@@ -947,17 +948,13 @@ auto daxa_dvc_create_tlas_from_memory_block(daxa_Device self, daxa_MemoryBlockTl
 {
     auto buffer_info = daxa_BufferInfo{
         .size = info->tlas_info.size,
+        .memory_flags = DAXA_MEMORY_FLAG_NONE,
         .name = info->tlas_info.name,
     };
     daxa_BufferId buffer = {};
     daxa_Result result = create_buffer_helper(self, &buffer_info, &buffer, *info->memory_block, info->offset);
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    auto buffer_tlas_info = daxa_BufferTlasInfo{
-        .tlas_info = info->tlas_info,
-        .buffer = buffer,
-        .offset = {},
-    };
     u64 const buffer_offset = 0u; // the offset is used for sub allocating the memory block, the tlas is the whole buffer
     return create_acceleration_structure_helper(
         self,
@@ -1478,6 +1475,7 @@ auto daxa_dvc_latest_queue_submit_index(daxa_Device self, daxa_Queue queue, daxa
 
 auto daxa_dvc_wait_on_submit(daxa_Device self, daxa_WaitOnSubmitInfo const * info) -> daxa_Result
 {
+    DAXA_PROFILE_SCOPE(__FUNCTION__);
     if (!self->valid_queue(info->queue))
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_QUEUE, DAXA_RESULT_ERROR_INVALID_QUEUE);
@@ -1851,6 +1849,7 @@ auto daxa_dvc_report_supported_present_modes(daxa_Device device, daxa_NativeWind
 
 auto daxa_dvc_report_supported_image_formats(daxa_Device device, daxa_NativeWindowInfo native_window, uint32_t * out_format_count, VkSurfaceFormatKHR * out_formats) -> daxa_Result
 {
+    DAXA_PROFILE_SCOPE(__FUNCTION__);
     if (out_format_count == nullptr)
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER, DAXA_RESULT_ERROR_INVALID_POINTER_PARAMETER);
@@ -1972,6 +1971,7 @@ auto daxa_dvc_dec_refcnt(daxa_Device self) -> u64
 
 auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & info, ImplPhysicalDevice const & physical_device, daxa_DeviceProperties const & properties, daxa_Device out_device) -> daxa_Result
 {
+    DAXA_PROFILE_SCOPE(__FUNCTION__);
     using namespace daxa;
     daxa_Result result = {};
 
@@ -2098,7 +2098,10 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         .ppEnabledExtensionNames = physical_device.extensions.extension_name_list,
         .pEnabledFeatures = nullptr,
     };
-    result = static_cast<daxa_Result>(vkCreateDevice(self->vk_physical_device, &device_ci, nullptr, &self->vk_device));
+    {
+        DAXA_PROFILE_SCOPE("vkCreateDevice");
+        result = static_cast<daxa_Result>(vkCreateDevice(self->vk_physical_device, &device_ci, nullptr, &self->vk_device));
+    }
     _DAXA_RETURN_IF_ERROR(result, result)
     defer
     {
@@ -2617,8 +2620,11 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         .signalSemaphoreCount = {},
         .pSignalSemaphores = {},
     };
-    result = static_cast<daxa_Result>(vkQueueSubmit(self->get_queue(DAXA_QUEUE_MAIN).vk_queue, 1, &init_submit, {}));
-    _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
+    {
+        DAXA_PROFILE_SCOPE("vkQueueSubmit");
+        result = static_cast<daxa_Result>(vkQueueSubmit(self->get_queue(DAXA_QUEUE_MAIN).vk_queue, 1, &init_submit, {}));
+        _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
+    }
 
     // Wait for commands in from the init cmd list to complete.
     result = static_cast<daxa_Result>(vkDeviceWaitIdle(self->vk_device));
@@ -2922,7 +2928,7 @@ auto daxa_ImplDevice::hot_slot(daxa_BlasId blas) const -> ImplBlasSlot::HotData 
 void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
 {
     auto self = rc_cast<daxa_Device>(handle);
-    auto result = daxa_dvc_wait_idle(self);
+    [[maybe_unused]] auto result = daxa_dvc_wait_idle(self);
     DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to wait idle");
     result = daxa_dvc_collect_garbage(self);
     DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "failed to wait idle");
@@ -2962,7 +2968,7 @@ void zombiefy(daxa_Device self, T id, auto & slots, auto & zombies)
     {
         if (slot.owns_buffer)
         {
-            auto result = daxa_dvc_destroy_buffer(self, slot.buffer_id);
+            [[maybe_unused]] auto result = daxa_dvc_destroy_buffer(self, slot.buffer_id);
             DAXA_DBG_ASSERT_TRUE_M(result == DAXA_RESULT_SUCCESS, "Tlas owned buffer could not be destroyed.");
         }
     }

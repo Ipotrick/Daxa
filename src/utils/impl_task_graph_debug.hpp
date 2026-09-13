@@ -54,16 +54,16 @@ namespace daxa
         }
     };
 
-    void validate_not_compiled(ImplTaskGraph & impl)
+    void validate_not_compiled([[maybe_unused]] ImplTaskGraph & impl)
     {
         DAXA_DBG_ASSERT_TRUE_M(!impl.compiled, "Completed task graphs can not record new tasks");
     }
 
     template <typename BufferBlasTlasAttachmentT>
-    void validate_buffer_blas_tlas_task_view(ImplTask const & task, u32 attach_index, BufferBlasTlasAttachmentT const & attach)
+    void validate_buffer_blas_tlas_task_view([[maybe_unused]] ImplTask const & task, [[maybe_unused]] u32 attach_index, BufferBlasTlasAttachmentT const & attach)
     {
-        bool const type_restriction_upheld = attach.task_access.restriction == BufferBlasTlasAttachmentT::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
-        bool const view_filled_or_null = !attach.view.is_empty();
+        [[maybe_unused]] bool const type_restriction_upheld = attach.task_access.restriction == BufferBlasTlasAttachmentT::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
+        [[maybe_unused]] bool const view_filled_or_null = !attach.view.is_empty();
         DAXA_DBG_ASSERT_TRUE_M(
             type_restriction_upheld,
             std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
@@ -74,10 +74,10 @@ namespace daxa
                         attach.name, attach_index, to_string(attach.task_access), task.name));
     }
 
-    void validate_image_task_view(ImplTask const & task, u32 attach_index, TaskImageAttachmentInfo const & attach)
+    void validate_image_task_view([[maybe_unused]] ImplTask const & task, [[maybe_unused]] u32 attach_index, TaskImageAttachmentInfo const & attach)
     {
-        bool const type_restriction_upheld = attach.task_access.restriction == TaskImageAttachmentInfo::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
-        bool const view_filled_or_null = !attach.view.is_empty();
+        [[maybe_unused]] bool const type_restriction_upheld = attach.task_access.restriction == TaskImageAttachmentInfo::ATTACHMENT_TYPE || attach.task_access.restriction == TaskAttachmentType::UNDEFINED;
+        [[maybe_unused]] bool const view_filled_or_null = !attach.view.is_empty();
         DAXA_DBG_ASSERT_TRUE_M(
             type_restriction_upheld,
             std::format("Detected TaskAccess that is not compatible with Resource type \"{}\" (index: {}, access: {}) in task \"{}\"\n",
@@ -89,7 +89,7 @@ namespace daxa
     }
 
     template <typename BufferBlasTlasT>
-    void validate_task_buffer_blas_tlas_runtime_data(ImplTask & task, BufferBlasTlasT const & attach)
+    void validate_task_buffer_blas_tlas_runtime_data([[maybe_unused]] ImplTask & task, [[maybe_unused]] BufferBlasTlasT const & attach)
     {
 #if DAXA_VALIDATION
         if constexpr (std::is_same_v<BufferBlasTlasT, TaskBufferAttachmentInfo>)

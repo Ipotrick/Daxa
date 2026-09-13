@@ -192,6 +192,10 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     auto vk_line_raster_state = VkPipelineRasterizationLineStateCreateInfoKHR{
         .sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_LINE_STATE_CREATE_INFO_KHR,
         .pNext = nullptr,
+        .lineRasterizationMode = {},
+        .stippledLineEnable = {},
+        .lineStippleFactor = {},
+        .lineStipplePattern = {},
     };
     if (
         ret.info.raster.line_raster_info.has_value() &&
@@ -199,7 +203,7 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
     {
         auto const & line_raster_info = ret.info.raster.line_raster_info.value();
         vk_line_raster_state.lineRasterizationMode = static_cast<VkLineRasterizationMode>(line_raster_info.mode);
-        vk_line_raster_state.stippledLineEnable = line_raster_info.stippled;
+        vk_line_raster_state.stippledLineEnable = static_cast<VkBool32>(line_raster_info.stippled);
         vk_line_raster_state.lineStippleFactor = line_raster_info.stipple_factor;
         vk_line_raster_state.lineStipplePattern = line_raster_info.stipple_pattern;
         vk_raster_state.pNext = &vk_line_raster_state;
@@ -895,7 +899,7 @@ auto daxa_ray_tracing_pipeline_get_shader_group_handles(daxa_RayTracingPipeline 
 {
     auto * device = pipeline->device;
 
-    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : group_count;
+    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : static_cast<u32>(group_count);
     u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
 
     u32 const data_size = handle_count * handle_size;
@@ -917,7 +921,7 @@ auto daxa_ray_tracing_pipeline_library_get_shader_group_handles(daxa_RayTracingP
 {
     auto * device = pipeline->device;
 
-    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : group_count;
+    u32 const handle_count = group_count == -1 ? static_cast<u32>(pipeline->shader_groups.size()) - first_group : static_cast<u32>(group_count);
     u32 const handle_size = device->properties.ray_tracing_pipeline_properties.value.shader_group_handle_size;
 
     u32 const data_size = handle_count * handle_size;
