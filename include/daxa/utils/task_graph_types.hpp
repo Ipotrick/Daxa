@@ -265,6 +265,8 @@ namespace daxa
 
     [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskType task_type) -> std::string_view;
 
+    [[nodiscard]] DAXA_EXPORT_CXX auto to_string(TaskAttachmentType attachment_type) -> std::string_view;
+
     DAXA_EXPORT_CXX auto task_type_default_stage(TaskType task_type) -> TaskStages;
 
     static constexpr u32 INVALID_TASK_GRAPH_INDEX = (std::numeric_limits<u32>::max() >> 1u);

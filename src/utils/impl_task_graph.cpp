@@ -161,6 +161,18 @@ namespace daxa
         }
     }
 
+    auto to_string(TaskAttachmentType attachment_type) -> std::string_view
+    {
+        switch (attachment_type)
+        {
+        case TaskAttachmentType::BUFFER: return "Buffer";
+        case TaskAttachmentType::BLAS: return "Blas";
+        case TaskAttachmentType::TLAS: return "Tlas";
+        case TaskAttachmentType::IMAGE: return "Image";
+        default: return "UNKNOWN";
+        }
+    }
+
     auto to_string(TaskGPUResourceView const & id) -> std::string
     {
         return std::format("tg idx: {}, index: {}", id.task_graph_index, id.index);
@@ -240,48 +252,109 @@ namespace daxa
         }
     }
 
-    template <typename TaskResourceIdT>
-    auto validate_and_translate_view(ImplTaskGraph & impl, TaskResourceIdT id) -> TaskResourceIdT
+    void validate_and_translate_view(ImplTaskGraph & impl, TaskAttachmentInfo & attachment, std::string_view task_name, u32 attach_i)
     {
-        DAXA_DBG_ASSERT_TRUE_M(!id.is_empty(), "Detected empty task resource id. All ids must either be filled with a valid id or null.");
-
-        if (id.is_null())
+        TaskGPUResourceView view = {};
+        std::string_view register_function = {};
+        switch (attachment.type)
         {
-            return id;
+        case TaskAttachmentType::BUFFER:
+            view = {attachment.value.buffer.view.task_graph_index, attachment.value.buffer.view.double_buffer_index, attachment.value.buffer.view.index};
+            attachment.value.buffer.translated_view = attachment.value.buffer.view;
+            register_function = "register_buffer";
+            break;
+        case TaskAttachmentType::BLAS:
+            view = {attachment.value.blas.view.task_graph_index, attachment.value.blas.view.double_buffer_index, attachment.value.blas.view.index};
+            attachment.value.blas.translated_view = attachment.value.blas.view;
+            register_function = "register_blas";
+            break;
+        case TaskAttachmentType::TLAS:
+            view = {attachment.value.tlas.view.task_graph_index, attachment.value.tlas.view.double_buffer_index, attachment.value.tlas.view.index};
+            attachment.value.tlas.translated_view = attachment.value.tlas.view;
+            register_function = "register_tlas";
+            break;
+        case TaskAttachmentType::IMAGE:
+            view = {attachment.value.image.view.task_graph_index, attachment.value.image.view.double_buffer_index, attachment.value.image.view.index};
+            attachment.value.image.translated_view = attachment.value.image.view;
+            register_function = "register_image";
+            break;
+        default:
+            DAXA_DBG_ASSERT_TRUE_M(
+                false,
+                std::format("ERROR: Attachment (index: {}) of task \"{}\" in task graph \"{}\" has an undefined attachment type! "
+                            "This is an impossible case and indicates uninitialized data or memory corruption.",
+                            attach_i, task_name, impl.info.name));
+            return;
+        }
+        std::string_view const type_name = to_string(attachment.type);
+        std::string_view const attach_name = attachment.value.common.name != nullptr ? attachment.value.common.name : "";
+
+        DAXA_DBG_ASSERT_TRUE_M(
+            !view.is_empty(),
+            std::format("ERROR: The view of {} attachment \"{}\" (index: {}) of task \"{}\" in task graph \"{}\" is empty (default initialized)! "
+                        "Every attachment view must either be a valid {} view or explicitly null (e.g. daxa::NullTaskBuffer, daxa::NullTaskImage).",
+                        type_name, attach_name, attach_i, task_name, impl.info.name, type_name));
+
+        if (view.is_null())
+        {
+            return;
         }
 
-        if (id.is_external())
+        if (view.is_external())
         {
             DAXA_DBG_ASSERT_TRUE_M(
-                impl.external_idx_to_resource_table.contains(id.index),
-                std::format("Detected invalid access of external resource id ({}) in task graph \"{}\"; "
-                            "please make sure to declare external resource use to each task graph that uses this buffer with the function register_buffer!",
-                            static_cast<u32>(id.index), impl.info.name));
-            TaskResourceIdT translated_id = id;
-            translated_id.task_graph_index = impl.unique_index;
-            translated_id.index = impl.external_idx_to_resource_table.at(id.index).second;
-            return translated_id;
+                impl.external_idx_to_resource_table.contains(view.index),
+                std::format("ERROR: The view of {} attachment \"{}\" (index: {}) of task \"{}\" refers to an external {} (external index: {}) that is not registered in task graph \"{}\"! "
+                            "Every external {} must be declared to each task graph that uses it by calling {} on that task graph before recording tasks that use it.",
+                            type_name, attach_name, attach_i, task_name, type_name, static_cast<u32>(view.index), impl.info.name, type_name, register_function));
+            view.task_graph_index = impl.unique_index;
+            view.index = impl.external_idx_to_resource_table.at(view.index).second;
         }
-
-        DAXA_DBG_ASSERT_TRUE_M(
-            id.task_graph_index == impl.unique_index,
-            std::format("Detected invalid access of transient resource id ({}) in task graph \"{}\"; "
-                        "please make sure that you only use transient resources within the list they are created in!",
-                        static_cast<u32>(id.index), impl.info.name));
-
-        DAXA_DBG_ASSERT_TRUE_M(
-            id.double_buffer_index == 0 || impl.resources[id.index].double_buffer_pair_resource.first != nullptr,
-            std::format("Detected invalid double buffer indexing of resource id ({}) in task graph \"{}\"; "
-                        "The given resource is NOT double buffered, yet the view is set to use the previous double buffer value of the resource!",
-                        static_cast<u32>(id.index), impl.info.name));
-
-        if (id.double_buffer_index == 1)
+        else
         {
-            id.index = impl.resources[id.index].double_buffer_pair_resource.second;
-            id.double_buffer_index = 0;
+            DAXA_DBG_ASSERT_TRUE_M(
+                view.task_graph_index == impl.unique_index,
+                std::format("ERROR: The view of {} attachment \"{}\" (index: {}) of task \"{}\" refers to a transient {} (transient index: {}) that belongs to a different task graph (graph index: {}) than task graph \"{}\" (graph index: {})! "
+                            "Transient resources can only be used within the task graph they are created in.",
+                            type_name, attach_name, attach_i, task_name, type_name, static_cast<u32>(view.index), static_cast<u32>(view.task_graph_index), impl.info.name, impl.unique_index));
+
+            DAXA_DBG_ASSERT_TRUE_M(
+                view.double_buffer_index == 0 || impl.resources[view.index].double_buffer_pair_resource.first != nullptr,
+                std::format("ERROR: The view of {} attachment \"{}\" (index: {}) of task \"{}\" in task graph \"{}\" selects the previous double buffer of transient {} \"{}\" (transient index: {}), but that resource is NOT double buffered! "
+                            "Only call previous() on views of resources created with double buffering enabled.",
+                            type_name, attach_name, attach_i, task_name, impl.info.name, type_name, impl.resources[view.index].name, static_cast<u32>(view.index)));
+
+            if (view.double_buffer_index == 1)
+            {
+                view.index = impl.resources[view.index].double_buffer_pair_resource.second;
+                view.double_buffer_index = 0;
+            }
         }
 
-        return id;
+        switch (attachment.type)
+        {
+        case TaskAttachmentType::BUFFER:
+            attachment.value.buffer.translated_view.task_graph_index = view.task_graph_index;
+            attachment.value.buffer.translated_view.double_buffer_index = view.double_buffer_index;
+            attachment.value.buffer.translated_view.index = view.index;
+            break;
+        case TaskAttachmentType::BLAS:
+            attachment.value.blas.translated_view.task_graph_index = view.task_graph_index;
+            attachment.value.blas.translated_view.double_buffer_index = view.double_buffer_index;
+            attachment.value.blas.translated_view.index = view.index;
+            break;
+        case TaskAttachmentType::TLAS:
+            attachment.value.tlas.translated_view.task_graph_index = view.task_graph_index;
+            attachment.value.tlas.translated_view.double_buffer_index = view.double_buffer_index;
+            attachment.value.tlas.translated_view.index = view.index;
+            break;
+        case TaskAttachmentType::IMAGE:
+            attachment.value.image.translated_view.task_graph_index = view.task_graph_index;
+            attachment.value.image.translated_view.double_buffer_index = view.double_buffer_index;
+            attachment.value.image.translated_view.index = view.index;
+            break;
+        default: break;
+        }
     }
 
     auto to_access_type(TaskAccessType taccess) -> AccessTypeFlags
@@ -1105,7 +1178,9 @@ namespace daxa
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
 
-        auto const view = validate_and_translate_view(impl, info.buffer);
+        TaskAttachmentInfo attachment = TaskBufferAttachmentInfo{.name = "clear buffer", .view = info.buffer};
+        validate_and_translate_view(impl, attachment, info.name.empty() ? "clear buffer" : info.name, 0);
+        auto const view = attachment.value.buffer.translated_view;
 
         auto name = info.name.size() > 0 ? std::string(info.name) : std::string("clear buffer: ") + std::string(impl.resources[view.index].name);
 
@@ -1127,7 +1202,9 @@ namespace daxa
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
 
-        auto const view = validate_and_translate_view(impl, info.view);
+        TaskAttachmentInfo attachment = TaskImageAttachmentInfo{.name = "clear image", .view = info.view};
+        validate_and_translate_view(impl, attachment, info.name.empty() ? "clear image" : info.name, 0);
+        auto const view = attachment.value.image.translated_view;
 
         auto name = info.name.size() > 0 ? std::string(info.name) : std::string("clear image: ") + std::string(impl.resources[view.index].name);
 
@@ -1150,8 +1227,12 @@ namespace daxa
     void TaskGraph::copy_buffer_to_buffer(TaskBufferCopyInfo const & info)
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        auto src = validate_and_translate_view(impl, info.src_buffer);
-        auto dst = validate_and_translate_view(impl, info.dst_buffer);
+        TaskAttachmentInfo src_attachment = TaskBufferAttachmentInfo{.name = "copy src", .view = info.src_buffer};
+        TaskAttachmentInfo dst_attachment = TaskBufferAttachmentInfo{.name = "copy dst", .view = info.dst_buffer};
+        validate_and_translate_view(impl, src_attachment, info.name.empty() ? "copy buffer to buffer" : info.name, 0);
+        validate_and_translate_view(impl, dst_attachment, info.name.empty() ? "copy buffer to buffer" : info.name, 1);
+        auto src = src_attachment.value.buffer.translated_view;
+        auto dst = dst_attachment.value.buffer.translated_view;
 
         auto src_i = TaskBufferAttachmentIndex{0};
         auto dst_i = TaskBufferAttachmentIndex{1};
@@ -1178,8 +1259,12 @@ namespace daxa
     void TaskGraph::copy_image_to_image(TaskImageCopyInfo const & info)
     {
         ImplTaskGraph & impl = *reinterpret_cast<ImplTaskGraph *>(this->object);
-        auto src = validate_and_translate_view(impl, info.src_image);
-        auto dst = validate_and_translate_view(impl, info.dst_image);
+        TaskAttachmentInfo src_attachment = TaskImageAttachmentInfo{.name = "copy src", .view = info.src_image};
+        TaskAttachmentInfo dst_attachment = TaskImageAttachmentInfo{.name = "copy dst", .view = info.dst_image};
+        validate_and_translate_view(impl, src_attachment, info.name.empty() ? "copy image to image" : info.name, 0);
+        validate_and_translate_view(impl, dst_attachment, info.name.empty() ? "copy image to image" : info.name, 1);
+        auto src = src_attachment.value.image.translated_view;
+        auto dst = dst_attachment.value.image.translated_view;
 
         auto src_i = TaskImageAttachmentIndex{0};
         auto dst_i = TaskImageAttachmentIndex{1};
@@ -1220,7 +1305,9 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "ERROR: Persistent resource clear requests can ONLY be done outside of graph recording. Hint: all persistent resources are automatically cleared before the first execution.");
 
-        u32 const resource_index = validate_and_translate_view(impl, task_buffer).index;
+        TaskAttachmentInfo attachment = TaskBufferAttachmentInfo{.name = "persistent buffer clear request", .view = task_buffer};
+        validate_and_translate_view(impl, attachment, "request_persistent_buffer_clear", 0);
+        u32 const resource_index = attachment.value.buffer.translated_view.index;
         ImplTaskResource & resource = impl.resources[resource_index];
 
         if (resource.clear_request_index == ~0u)
@@ -1241,7 +1328,9 @@ namespace daxa
 
         DAXA_DBG_ASSERT_TRUE_M(impl.compiled, "ERROR: Persistent resource clear requests can ONLY be done outside of graph recording. Hint: all persistent resources are automatically cleared before the first execution.");
 
-        u32 const resource_index = validate_and_translate_view(impl, task_image).index;
+        TaskAttachmentInfo attachment = TaskImageAttachmentInfo{.name = "persistent image clear request", .view = task_image};
+        validate_and_translate_view(impl, attachment, "request_persistent_image_clear", 0);
+        u32 const resource_index = attachment.value.image.translated_view.index;
         ImplTaskResource & resource = impl.resources[resource_index];
 
         if (resource.clear_request_index == ~0u)
@@ -1696,8 +1785,12 @@ namespace daxa
         return task_memory;
     }
 
-    void validate_attachment_stages(ImplTask & task, TaskStages stage, u32 attach_i, std::string_view attach_name)
+    void validate_attachment_stages(ImplTask & task, TaskAttachmentInfo const & attachment, u32 attach_i)
     {
+        TaskStages const stage = attachment.value.common.task_access.stage;
+        std::string_view const attach_name = attachment.value.common.name != nullptr ? attachment.value.common.name : "";
+        std::string_view const attach_type_name = to_string(attachment.type);
+
         // Validate stages based on task type:
         PipelineStageFlags allowed_pipeline_stages = static_cast<PipelineStageFlags>(~0ull);
         switch (task.task_type)
@@ -1753,9 +1846,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             present_disallowed_stages == PipelineStageFlagBits::NONE,
             std::format(
-                "ERROR: The stage (\"{}\") of attachment \"{}\" (index: {}) of task \"{}\" is not allowed for the tasks type \"{}\"! "
+                "ERROR: The stage (\"{}\") of {} attachment \"{}\" (index: {}) of task \"{}\" is not allowed for the tasks type \"{}\"! "
                 "The task type \"{}\" allows for the stages \"{}\".",
-                to_string(present_disallowed_stages), attach_name, attach_i, task.name, to_string(task.task_type),
+                to_string(present_disallowed_stages), attach_type_name, attach_name, attach_i, task.name, to_string(task.task_type),
                 to_string(task.task_type), to_string(allowed_pipeline_stages))
                 .c_str());
 
@@ -1792,9 +1885,9 @@ namespace daxa
         DAXA_DBG_ASSERT_TRUE_M(
             present_disallowed_stages == PipelineStageFlagBits::NONE,
             std::format(
-                "ERROR: The stage (\"{}\") of attachment \"{}\" (index: {}) in task \"{}\" is not allowed in the tasks queue \"{}\"! "
+                "ERROR: The stage (\"{}\") of {} attachment \"{}\" (index: {}) in task \"{}\" is not allowed in the tasks queue \"{}\"! "
                 "Queue type \"{}\" allows the following stages: \"{}\".",
-                to_string(present_disallowed_stages), attach_name, attach_i, task.name, to_string(task.queue),
+                to_string(present_disallowed_stages), attach_type_name, attach_name, attach_i, task.name, to_string(task.queue),
                 to_string(task.queue.type), to_string(allowed_pipeline_stages))
                 .c_str());
     }
@@ -1880,27 +1973,8 @@ namespace daxa
             for (u32 attach_i = 0; attach_i < impl_task.attachments.size(); ++attach_i)
             {
                 TaskAttachmentInfo & attachment = impl_task.attachments[attach_i];
-                switch (attachment.type)
-                {
-                case TaskAttachmentType::BUFFER:
-                    attachment.value.buffer.translated_view = validate_and_translate_view(impl, attachment.value.buffer.view);
-                    validate_attachment_stages(impl_task, attachment.value.buffer.task_access.stage, attach_i, attachment.value.buffer.name);
-                    break;
-                case TaskAttachmentType::BLAS:
-                    attachment.value.blas.translated_view = validate_and_translate_view(impl, attachment.value.blas.view);
-                    validate_attachment_stages(impl_task, attachment.value.blas.task_access.stage, attach_i, attachment.value.blas.name);
-                    break;
-                case TaskAttachmentType::TLAS:
-                    attachment.value.tlas.translated_view = validate_and_translate_view(impl, attachment.value.tlas.view);
-                    validate_attachment_stages(impl_task, attachment.value.tlas.task_access.stage, attach_i, attachment.value.tlas.name);
-                    break;
-                case TaskAttachmentType::IMAGE:
-                    attachment.value.image.translated_view = validate_and_translate_view(impl, attachment.value.image.view);
-                    validate_attachment_stages(impl_task, attachment.value.image.task_access.stage, attach_i, attachment.value.image.name);
-                    break;
-                default:
-                    DAXA_DBG_ASSERT_TRUE_M(false, "IMPOSSIBLE CASE, STRONG LIKELYHOOD OF UNINITIALIZED DATA OR CORRUPTION!");
-                }
+                validate_and_translate_view(impl, attachment, impl_task.name, attach_i);
+                validate_attachment_stages(impl_task, attachment, attach_i);
             }
         }
 
