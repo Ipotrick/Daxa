@@ -551,7 +551,7 @@ typedef struct
 {
     daxa_NativeWindowInfo native_window_info;
     // Leave this span completely empty for daxa to select a surface format.
-    // For each preferred format, leave the color space empty for daxa to select a color space.
+    // For each preferred format, set color space to VK_COLOR_SPACE_MAX_ENUM_KHR for daxa to select it.
     daxa_SpanToConst(VkSurfaceFormatKHR) preferred_formats;
 } daxa_ChooseSwapchainSurfaceFormatInfo;
 
