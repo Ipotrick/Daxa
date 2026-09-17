@@ -404,6 +404,8 @@ namespace daxa
         void begin_label(CommandLabelInfo const & info);
         void end_label();
 
+        [[nodiscard]] auto get() const -> daxa_CommandRecorder { return internal; }
+
         [[nodiscard]] auto complete_current_commands() -> ExecutableCommandList;
 
         /// THREADSAFETY:
