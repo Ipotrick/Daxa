@@ -93,31 +93,6 @@ auto daxa_dvc_create_swapchain(daxa_Device device, daxa_SwapchainInfo const * in
     result = ret.recreate();
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    // We have an acquire semaphore for each frame in flight.
-    for (u32 i = 0; i < ret.info.max_allowed_frames_in_flight; i++)
-    {
-        BinarySemaphore sema = {};
-        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
-        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
-        daxa_BinarySemaphoreInfo const sema_info = {.name = binary_sema_name};
-        result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
-        _DAXA_RETURN_IF_ERROR(result, result);
-
-        ret.acquire_semaphores.push_back(std::move(sema));
-    }
-    // We have a present semaphore for each swapchain image.
-    for (u32 i = 0; i < ret.images.size(); i++)
-    {
-        BinarySemaphore sema = {};
-        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
-        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", info->name.data, i)));
-        daxa_BinarySemaphoreInfo const sema_info = {.name = binary_sema_name};
-        result = daxa_dvc_create_binary_semaphore(device, &sema_info, reinterpret_cast<daxa_BinarySemaphore *>(&sema));
-        _DAXA_RETURN_IF_ERROR(result, result);
-
-        ret.present_semaphores.push_back(std::move(sema));
-    }
-
     auto timeline_sema_info = daxa_TimelineSemaphoreInfo{};
     timeline_sema_info.name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(timeline_sema_info.name.data, DAXA_SMALL_STRING_CAPACITY, "%s Timeline Sema", info->name.data)));
     result = daxa_dvc_create_timeline_semaphore(device, &timeline_sema_info, r_cast<daxa_TimelineSemaphore *>(&ret.gpu_frame_timeline));
@@ -224,6 +199,20 @@ auto daxa_swp_gpu_timeline_semaphore(daxa_Swapchain self) -> daxa_TimelineSemaph
 auto daxa_swp_current_cpu_timeline_value(daxa_Swapchain self) -> u64
 {
     return static_cast<u64>(std::max(i64{0}, self->cpu_frame_timeline));
+}
+
+auto daxa_swp_current_present_id(daxa_Swapchain self) -> u64
+{
+    return self->valid_present_id;
+}
+
+auto daxa_swp_wait_for_present(daxa_Swapchain self, u64 present_id, u64 timeout) -> daxa_Result
+{
+    if (self->device->vkWaitForPresentKHR == nullptr)
+    {
+        return DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT;
+    }
+    return static_cast<daxa_Result>(self->device->vkWaitForPresentKHR(self->device->vk_device, self->vk_swapchain, present_id, timeout));
 }
 
 auto daxa_swp_info(daxa_Swapchain self) -> daxa_SwapchainInfo const *
@@ -399,6 +388,33 @@ auto daxa_ImplSwapchain::recreate() -> daxa_Result
         _DAXA_RETURN_IF_ERROR(result, result)
 
         this->images[i] = id;
+    }
+
+    // Semaphores are recreated with the swapchain: after a failed present they may still be pending,
+    // and there must be one present semaphore per (possibly changed number of) swapchain image.
+    this->acquire_semaphores.clear();
+    this->present_semaphores.clear();
+    // We have an acquire semaphore for each frame in flight.
+    for (u32 i = 0; i < this->info.max_allowed_frames_in_flight; i++)
+    {
+        BinarySemaphore sema = {};
+        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
+        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Acquire Sema %i", this->info.name.c_str(), i)));
+        daxa_BinarySemaphoreInfo const sema_info = {.name = binary_sema_name};
+        result = daxa_dvc_create_binary_semaphore(this->device, &sema_info, r_cast<daxa_BinarySemaphore *>(&sema));
+        _DAXA_RETURN_IF_ERROR(result, result)
+        this->acquire_semaphores.push_back(std::move(sema));
+    }
+    // We have a present semaphore for each swapchain image.
+    for (u32 i = 0; i < this->images.size(); i++)
+    {
+        BinarySemaphore sema = {};
+        daxa_SmallString binary_sema_name = DAXA_DEFAULT_SMALL_STRING;
+        binary_sema_name.size = static_cast<u8>(std::min(DAXA_SMALL_STRING_CAPACITY, std::snprintf(binary_sema_name.data, DAXA_SMALL_STRING_CAPACITY, "%s Present Sema %i", this->info.name.c_str(), i)));
+        daxa_BinarySemaphoreInfo const sema_info = {.name = binary_sema_name};
+        result = daxa_dvc_create_binary_semaphore(this->device, &sema_info, r_cast<daxa_BinarySemaphore *>(&sema));
+        _DAXA_RETURN_IF_ERROR(result, result)
+        this->present_semaphores.push_back(std::move(sema));
     }
 
     if ((this->device->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && !this->info_name.empty())

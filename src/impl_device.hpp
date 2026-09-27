@@ -46,6 +46,13 @@ struct daxa_ImplDevice final : public ImplHandle
     PFN_vkCmdBeginDebugUtilsLabelEXT vkCmdBeginDebugUtilsLabelEXT = {};
     PFN_vkCmdEndDebugUtilsLabelEXT vkCmdEndDebugUtilsLabelEXT = {};
 
+    // Present wait:
+    PFN_vkWaitForPresentKHR vkWaitForPresentKHR = {};
+
+    // Null when calibrated timestamps are unsupported or the device/host time domains are not calibrateable.
+    PFN_vkGetCalibratedTimestampsKHR vkGetCalibratedTimestampsKHR = {};
+    VkTimeDomainKHR calibrated_host_time_domain = {};
+
     // Mesh shader:
     PFN_vkCmdDrawMeshTasksEXT vkCmdDrawMeshTasksEXT = {};
     PFN_vkCmdDrawMeshTasksIndirectEXT vkCmdDrawMeshTasksIndirectEXT = {};

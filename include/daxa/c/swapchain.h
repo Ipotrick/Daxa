@@ -75,6 +75,10 @@ DAXA_EXPORT uint64_t
 daxa_swp_current_cpu_timeline_value(daxa_Swapchain swapchain);
 DAXA_EXPORT daxa_TimelineSemaphore *
 daxa_swp_gpu_timeline_semaphore(daxa_Swapchain swapchain);
+DAXA_EXPORT uint64_t
+daxa_swp_current_present_id(daxa_Swapchain swapchain);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_swp_wait_for_present(daxa_Swapchain swapchain, uint64_t present_id, uint64_t timeout);
 
 DAXA_EXPORT daxa_SwapchainInfo const *
 daxa_swp_info(daxa_Swapchain swapchain);

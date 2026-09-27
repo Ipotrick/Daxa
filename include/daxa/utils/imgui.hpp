@@ -9,8 +9,6 @@
 
 #include <imgui.h>
 
-struct ImPlotContext;
-
 namespace daxa
 {
     struct ImGuiImageContext
@@ -24,7 +22,6 @@ namespace daxa
         Device device;
         Format format;
         ImGuiContext * imgui_context = {};
-        ImPlotContext * implot_context = {};
         // NOTE: This is for backwards compatibility. Though,
         // I'm not sure the ImGui renderer util should set the
         // ImGui style. Something to bikeshed.

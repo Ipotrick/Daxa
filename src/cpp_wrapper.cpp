@@ -737,6 +737,14 @@ namespace daxa
             "failed to collect garbage");
     }
 
+    auto Device::get_calibrated_timestamps() const -> CalibratedTimestamps
+    {
+        CalibratedTimestamps ret = {};
+        auto result = daxa_dvc_get_calibrated_timestamps(rc_cast<daxa_Device>(this->object), &ret.device_timestamp, &ret.host_timestamp, &ret.max_deviation);
+        check_result(result, "failed to get calibrated timestamps");
+        return ret;
+    }
+
     auto Device::properties() const -> DeviceProperties const &
     {
         return *r_cast<DeviceProperties const *>(daxa_dvc_properties(rc_cast<daxa_Device>(object)));
@@ -1029,6 +1037,32 @@ namespace daxa
         auto gpu_value = *r_cast<TimelineSemaphore const *>(daxa_swp_gpu_timeline_semaphore(rc_cast<daxa_Swapchain>(this->object)));
         auto cpu_value = daxa_swp_current_cpu_timeline_value(rc_cast<daxa_Swapchain>(this->object));
         return std::pair{gpu_value, cpu_value};
+    }
+
+    auto Swapchain::current_present_id() const -> u64
+    {
+        return daxa_swp_current_present_id(rc_cast<daxa_Swapchain>(this->object));
+    }
+
+    auto Swapchain::wait_for_present(u64 present_id, u64 timeout_nanoseconds) const -> bool
+    {
+        auto result = daxa_swp_wait_for_present(rc_cast<daxa_Swapchain>(this->object), present_id, timeout_nanoseconds);
+        if (result == DAXA_RESULT_SUCCESS)
+        {
+            return true;
+        }
+        // NOTE: SUBOPTIMAL is reported as not presented. It does say the present completed, but it also says the
+        // swapchain no longer matches the surface, and it is not worth guessing what the timing means then.
+        if (result == DAXA_RESULT_TIMEOUT ||
+            result == DAXA_RESULT_SUBOPTIMAL_KHR ||
+            result == DAXA_RESULT_ERROR_OUT_OF_DATE_KHR ||
+            result == DAXA_RESULT_ERROR_SURFACE_LOST_KHR ||
+            result == DAXA_RESULT_ERROR_FULL_SCREEN_EXCLUSIVE_MODE_LOST_EXT)
+        {
+            return false;
+        }
+        check_result(result, "failed to wait for present");
+        return false;
     }
 
     auto Swapchain::info() const -> SwapchainInfo const &

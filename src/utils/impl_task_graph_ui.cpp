@@ -6,7 +6,6 @@
 #include "impl_task_graph_ui.hpp"
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>
-#include <implot.h>
 #include "impl_task_graph.hpp"
 #include <filesystem>
 

@@ -725,6 +725,17 @@ namespace daxa
         ///         A zombie lives until the gpu catches up to the point of zombification.
         void collect_garbage();
 
+        struct CalibratedTimestamps
+        {
+            u64 device_timestamp = {};
+            u64 host_timestamp = {};
+            u64 max_deviation = {};
+        };
+        /// @brief  Samples the device timestamp clock (same clock as timestamp queries) and the host clock at the same moment.
+        ///         The host clock is `QueryPerformanceCounter` on Windows and `CLOCK_MONOTONIC` on Linux.
+        ///         Requires `ImplicitFeatureFlagBits::CALIBRATED_TIMESTAMPS`.
+        [[nodiscard]] auto get_calibrated_timestamps() const -> CalibratedTimestamps;
+
         /// THREADSAFETY:
         /// * reference MUST NOT be read after the device is destroyed.
         /// @return reference to info of object.

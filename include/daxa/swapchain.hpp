@@ -97,6 +97,16 @@ namespace daxa
         ///         The difference between cpu and gpu timeline describes how many frames in flight the gpu is behind the cpu.
         /// @return Returns pair of a gpu timeline and cpu timeline value.
         [[nodiscard]] auto current_timeline_pair() const -> std::pair<TimelineSemaphore, u64>;
+        /// @brief  Id of the most recent present on this swapchain that reached the presentation engine.
+        ///         Ids keep increasing across swapchain recreation (resize or set_present_mode).
+        /// @return The present id, 0 if there was no present yet or ImplicitFeatureFlagBits::PRESENT_WAIT is missing.
+        [[nodiscard]] auto current_present_id() const -> u64;
+        /// @brief  Blocks until the present with the given id (or a later one) is visible on screen, or the timeout expires.
+        ///         Requires ImplicitFeatureFlagBits::PRESENT_WAIT.
+        /// THREADSAFETY:
+        /// * may be called from another thread than the one presenting, but not while the swapchain is recreated or destroyed.
+        /// @return True if the present is visible, false on timeout or if the swapchain is suboptimal or out of date.
+        [[nodiscard]] auto wait_for_present(u64 present_id, u64 timeout_nanoseconds) const -> bool;
 
         /// @brief  When the window size changes the swapchain is in an invalid state for new commands.
         ///         Calling resize will recreate the swapchain with the proper window size.

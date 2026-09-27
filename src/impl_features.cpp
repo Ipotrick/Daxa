@@ -188,6 +188,20 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_pipeline_library_group_handles_ext);
         }
 
+        if (extensions.extensions_present[extensions.physical_device_present_id_khr])
+        {
+            physical_device_present_id_features_khr.pNext = chain;
+            physical_device_present_id_features_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_ID_FEATURES_KHR;
+            chain = static_cast<void *>(&physical_device_present_id_features_khr);
+        }
+
+        if (extensions.extensions_present[extensions.physical_device_present_wait_khr])
+        {
+            physical_device_present_wait_features_khr.pNext = chain;
+            physical_device_present_wait_features_khr.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_PRESENT_WAIT_FEATURES_KHR;
+            chain = static_cast<void *>(&physical_device_present_wait_features_khr);
+        }
+
         physical_device_shader_demote_to_helper_invocation_features.pNext = chain;
         physical_device_shader_demote_to_helper_invocation_features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_DEMOTE_TO_HELPER_INVOCATION_FEATURES;
         physical_device_shader_demote_to_helper_invocation_features.shaderDemoteToHelperInvocation = true;
@@ -195,6 +209,8 @@ namespace daxa
 
         conservative_rasterization = extensions.extensions_present[extensions.physical_device_conservative_rasterization_ext];
         swapchain = extensions.extensions_present[extensions.physical_device_swapchain_khr];
+        calibrated_timestamps = extensions.extensions_present[extensions.physical_device_calibrated_timestamps_khr] ||
+                                extensions.extensions_present[extensions.physical_device_calibrated_timestamps_ext];
 
         physical_device_features_2.pNext = chain;
         physical_device_features_2.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
@@ -356,6 +372,15 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, physical_device_line_rasterization_features_khr.stippledSmoothLines),
     };
 
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_present_id_features_khr.presentId),
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_present_wait_features_khr.presentWait),
+    };
+
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, calibrated_timestamps),
+    };
+
     constexpr static std::array IMPLICIT_FEATURES = std::array{
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING},
@@ -375,6 +400,8 @@ namespace daxa
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS},
     };
 
     // === Explicit Features ===

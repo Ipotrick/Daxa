@@ -282,6 +282,8 @@ typedef enum
     DAXA_IMPLICIT_FEATURE_FLAG_SHADER_CLOCK = 0x1 << 14,
     DAXA_IMPLICIT_FEATURE_FLAG_HOST_IMAGE_COPY = 0x1 << 15,
     DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION = 0x1 << 16,
+    DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT = 0x1 << 17,
+    DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS = 0x1 << 18,
 } daxa_DeviceImplicitFeatureFlagBits;
 
 typedef daxa_DeviceImplicitFeatureFlagBits daxa_ImplicitFeatureFlags;
@@ -727,6 +729,8 @@ DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_present_frame(daxa_Device device, daxa_PresentInfo const * info);
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_collect_garbage(daxa_Device device);
+DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
+daxa_dvc_get_calibrated_timestamps(daxa_Device device, uint64_t * out_device_timestamp, uint64_t * out_host_timestamp, uint64_t * out_max_deviation);
 
 DAXA_EXPORT DAXA_NO_DISCARD daxa_Result
 daxa_dvc_report_supported_present_modes(daxa_Device device, daxa_NativeWindowInfo native_window, uint32_t * out_present_mode_count, VkPresentModeKHR * out_present_modes);

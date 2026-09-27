@@ -13,15 +13,14 @@ namespace daxa
         RasterPipeline raster_pipeline = {};
         BufferId vbuffer = {};
         BufferId ibuffer = {};
-        ImageId font_sheet = {};
-        SamplerId font_sampler = {};
+        SamplerId default_sampler = {};
         usize frame_count = {};
-
-        std::vector<ImGuiImageContext> image_sampler_pairs = {};
 
         void recreate_vbuffer(usize vbuffer_new_size);
         void recreate_ibuffer(usize ibuffer_new_size);
+        void update_textures(ImDrawData * draw_data, CommandRecorder & recorder);
         void record_commands(ImGuiRecordCommandsInfo const & record_info);
+        void delete_texture(ImTextureData * tex);
 
         ImplImGuiRenderer(ImGuiRendererInfo a_info);
         ~ImplImGuiRenderer();

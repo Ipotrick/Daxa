@@ -29,7 +29,6 @@ struct Push
 #include <utility>
 #include <algorithm>
 #include <iostream>
-#include <implot.h>
 
 void set_imgui_style()
 {
@@ -132,9 +131,9 @@ namespace daxa
 
     auto ImGuiRenderer::create_texture_id(ImGuiImageContext const & context) -> ImTextureID
     {
-        auto & impl = *r_cast<ImplImGuiRenderer *>(this->object);
-        impl.image_sampler_pairs.push_back(context);
-        return std::bit_cast<ImTextureID>(impl.image_sampler_pairs.size() - 1);
+        auto image_view_id = static_cast<daxa_ImageViewId>(context.image_view);
+        auto sampler_id = static_cast<daxa_SamplerId>(context.sampler);
+        return static_cast<ImTextureID>((image_view_id.value & 0xffffffff) | ((sampler_id.value & 0xffffffff) << 32));
     }
 
     void ImplImGuiRenderer::recreate_vbuffer(usize vbuffer_new_size)
@@ -152,11 +151,152 @@ namespace daxa
         });
     }
 
+    static auto get_daxa_image(Device & device, ImTextureData * tex) -> ImageId
+    {
+        auto hi = std::bit_cast<u64>(tex->BackendUserData);
+        auto lo = static_cast<u64>(tex->GetTexID());
+        auto image_view_id = daxa_ImageViewId{(hi << 32) | (lo & 0xffffffff)};
+        auto view_info = device.info(std::bit_cast<ImageViewId>(image_view_id));
+        DAXA_DBG_ASSERT_TRUE_M(view_info.has_value(), "Must be valid view");
+        return view_info.value().image;
+    }
+
+    void ImplImGuiRenderer::delete_texture(ImTextureData * tex)
+    {
+        this->info.device.destroy_image(get_daxa_image(this->info.device, tex));
+        tex->SetTexID(ImTextureID_Invalid);
+        tex->BackendUserData = nullptr;
+        tex->SetStatus(ImTextureStatus_Destroyed);
+    }
+
+    void ImplImGuiRenderer::update_textures(ImDrawData * draw_data, CommandRecorder & recorder)
+    {
+        if (draw_data->Textures == nullptr)
+        {
+            return;
+        }
+
+        usize staging_size = 0;
+        for (ImTextureData * tex : *draw_data->Textures)
+        {
+            DAXA_DBG_ASSERT_TRUE_M(tex->BytesPerPixel == 4 * sizeof(u8), "BPP should be 4");
+            if (tex->Status == ImTextureStatus_WantCreate)
+            {
+                staging_size += static_cast<usize>(tex->Width) * static_cast<usize>(tex->Height) * 4 * sizeof(u8);
+            }
+            else if (tex->Status == ImTextureStatus_WantUpdates)
+            {
+                for (ImTextureRect const & r : tex->Updates)
+                {
+                    staging_size += static_cast<usize>(r.w) * static_cast<usize>(r.h) * 4 * sizeof(u8);
+                }
+            }
+        }
+        auto texture_staging_buffer = BufferId{};
+        u8 * staging_buffer_data = nullptr;
+        if (staging_size != 0)
+        {
+            texture_staging_buffer = this->info.device.create_buffer({
+                .size = static_cast<u32>(staging_size),
+                .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
+                .name = "dear ImGui texture staging buffer",
+            });
+            staging_buffer_data = this->info.device.buffer_host_address_as<u8>(texture_staging_buffer).value();
+            recorder.destroy_buffer_deferred(texture_staging_buffer);
+        }
+        u8 * const staging_buffer_base = staging_buffer_data;
+
+        for (ImTextureData * tex : *draw_data->Textures)
+        {
+            if (tex->Status == ImTextureStatus_OK)
+            {
+                continue;
+            }
+            if (tex->Status == ImTextureStatus_WantCreate)
+            {
+                IM_ASSERT(tex->TexID == ImTextureID_Invalid && tex->BackendUserData == nullptr);
+                IM_ASSERT(tex->Format == ImTextureFormat_RGBA32);
+                u32 const width = static_cast<u32>(tex->Width);
+                u32 const height = static_cast<u32>(tex->Height);
+                usize const upload_size = static_cast<usize>(width) * static_cast<usize>(height) * 4 * sizeof(u8);
+                auto new_image_id = this->info.device.create_image({
+                    .size = {width, height, 1},
+                    .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_SAMPLED,
+                    .name = "dear ImGui image",
+                });
+                std::memcpy(staging_buffer_data, tex->GetPixels(), upload_size);
+
+                recorder.pipeline_image_barrier({
+                    .src_access = daxa::AccessConsts::HOST_WRITE,
+                    .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .image = new_image_id,
+                    .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
+                });
+                recorder.copy_buffer_to_image({
+                    .src_buffer = texture_staging_buffer,
+                    .buffer_offset = static_cast<usize>(staging_buffer_data - staging_buffer_base),
+                    .dst_image = new_image_id,
+                    .image_extent = {width, height, 1},
+                });
+                recorder.pipeline_barrier({
+                    .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
+                });
+
+                // The low 32 bits of the image view and sampler ids (their indices) are packed into the ImTextureID,
+                // the high 32 bits (their versions) are stored in BackendUserData.
+                auto image_view_id = static_cast<daxa_ImageViewId>(new_image_id.default_view());
+                auto sampler_id = static_cast<daxa_SamplerId>(this->default_sampler);
+                tex->BackendUserData = std::bit_cast<void *>((image_view_id.value >> 32) | ((sampler_id.value >> 32) << 32));
+                tex->SetTexID(static_cast<ImTextureID>((image_view_id.value & 0xffffffff) | ((sampler_id.value & 0xffffffff) << 32)));
+                tex->SetStatus(ImTextureStatus_OK);
+                staging_buffer_data += upload_size;
+            }
+            else if (tex->Status == ImTextureStatus_WantUpdates)
+            {
+                auto image_id = get_daxa_image(this->info.device, tex);
+                recorder.pipeline_barrier({
+                    .src_access = daxa::AccessConsts::HOST_WRITE | daxa::AccessConsts::FRAGMENT_SHADER_READ,
+                    .dst_access = daxa::AccessConsts::TRANSFER_WRITE,
+                });
+                for (ImTextureRect const & r : tex->Updates)
+                {
+                    usize const src_pitch = static_cast<usize>(r.w) * 4 * sizeof(u8);
+                    usize const upload_size = static_cast<usize>(r.h) * src_pitch;
+                    u8 * out_p = staging_buffer_data;
+                    for (i32 y = 0; y < r.h; y++, out_p += src_pitch)
+                    {
+                        std::memcpy(out_p, tex->GetPixelsAt(r.x, r.y + y), src_pitch);
+                    }
+                    recorder.copy_buffer_to_image({
+                        .src_buffer = texture_staging_buffer,
+                        .buffer_offset = static_cast<usize>(staging_buffer_data - staging_buffer_base),
+                        .dst_image = image_id,
+                        .image_offset = {static_cast<i32>(r.x), static_cast<i32>(r.y), 0},
+                        .image_extent = {static_cast<u32>(r.w), static_cast<u32>(r.h), 1},
+                    });
+                    staging_buffer_data += upload_size;
+                }
+                recorder.pipeline_barrier({
+                    .src_access = daxa::AccessConsts::TRANSFER_WRITE,
+                    .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
+                });
+                tex->SetStatus(ImTextureStatus_OK);
+            }
+            else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
+            {
+                delete_texture(tex);
+            }
+        }
+    }
+
     void ImplImGuiRenderer::record_commands(ImGuiRecordCommandsInfo const & record_info)
     {
         ++frame_count;
         if ((record_info.draw_data != nullptr) && record_info.draw_data->TotalIdxCount > 0)
         {
+            update_textures(record_info.draw_data, record_info.recorder);
+
             auto vbuffer_current_size = this->info.device.buffer_info(vbuffer).value().size;
             auto vbuffer_needed_size = static_cast<usize>(record_info.draw_data->TotalVtxCount) * sizeof(ImDrawVert);
             auto ibuffer_current_size = this->info.device.buffer_info(ibuffer).value().size;
@@ -273,9 +413,9 @@ namespace daxa
                     render_recorder.set_scissor(scissor);
 
                     // Draw
-                    auto const image_context = this->image_sampler_pairs.at(std::bit_cast<usize>(pcmd->TextureId));
-                    push.texture0_id = image_context.image_view;
-                    push.sampler0_id = image_context.sampler;
+                    auto const tex_id = static_cast<u64>(pcmd->GetTexID());
+                    push.texture0_id = {tex_id & 0xffffffff};
+                    push.sampler0_id = {tex_id >> 32};
 
                     push.vbuffer_offset = pcmd->VtxOffset + static_cast<u32>(global_vtx_offset);
                     push.ibuffer_offset = pcmd->IdxOffset + static_cast<u32>(global_idx_offset);
@@ -293,7 +433,6 @@ namespace daxa
 
             record_info.recorder = std::move(render_recorder).end_renderpass();
         }
-        this->image_sampler_pairs.resize(1);
     }
 
     ImplImGuiRenderer::ImplImGuiRenderer(ImGuiRendererInfo a_info)
@@ -338,15 +477,6 @@ namespace daxa
         {
             ImGui::SetCurrentContext(this->info.imgui_context);
         }
-        if (this->info.implot_context != nullptr)
-        {
-            ImPlot::SetCurrentContext(this->info.implot_context);
-        }
-        else
-        {
-            ImPlot::CreateContext();
-        }
-
         if (this->info.use_custom_config)
         {
             set_imgui_style();
@@ -355,68 +485,22 @@ namespace daxa
         recreate_ibuffer(4096);
 
         ImGuiIO & io = ImGui::GetIO();
-        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-        u8 * pixels = nullptr;
-        i32 width = 0;
-        i32 height = 0;
-        io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-        usize const upload_size = static_cast<usize>(width) * static_cast<usize>(height) * 4 * sizeof(u8);
-        font_sheet = this->info.device.create_image({
-            .size = {static_cast<u32>(width), static_cast<u32>(height), 1},
-            .usage = ImageUsageFlagBits::TRANSFER_DST | ImageUsageFlagBits::SHADER_SAMPLED,
-            .name = "dear ImGui font sheet",
-        });
-
-        auto texture_staging_buffer = this->info.device.create_buffer({
-            .size = static_cast<u32>(upload_size),
-            .memory_flags = daxa::MemoryFlagBits::HOST_ACCESS_RANDOM,
-            .name = "dear ImGui texture staging buffer",
-        });
-
-        u8 * staging_buffer_data = this->info.device.buffer_host_address_as<u8>(texture_staging_buffer).value();
-        std::memcpy(staging_buffer_data, pixels, upload_size);
-
-        auto recorder = this->info.device.create_command_recorder({.name = "dear ImGui Font Sheet Upload"});
-        recorder.pipeline_image_barrier({
-            .src_access = daxa::AccessConsts::HOST_WRITE,
-            .dst_access = daxa::AccessConsts::TRANSFER_READ_WRITE,
-            .image = font_sheet,
-            .layout_operation = daxa::ImageLayoutOperation::TO_GENERAL,
-        });
-        recorder.copy_buffer_to_image({
-            .src_buffer = texture_staging_buffer,
-            .dst_image = font_sheet,
-            .image_slice = {
-                .mip_level = 0,
-                .base_array_layer = 0,
-                .layer_count = 1,
-            },
-            .image_offset = {0, 0, 0},
-            .image_extent = {static_cast<u32>(width), static_cast<u32>(height), 1},
-        });
-        recorder.pipeline_barrier({
-            .src_access = daxa::AccessConsts::TRANSFER_WRITE,
-            .dst_access = daxa::AccessConsts::FRAGMENT_SHADER_READ,
-        });
-        auto executable_commands = recorder.complete_current_commands();
-        this->info.device.submit_commands({
-            .command_lists = std::array{executable_commands},
-        });
-        this->info.device.destroy_buffer(texture_staging_buffer);
-        this->font_sampler = this->info.device.create_sampler({.name = "ImGui Font Sampler"});
-        this->image_sampler_pairs.push_back(ImGuiImageContext{
-            .image_view = font_sheet.default_view(),
-            .sampler = this->font_sampler,
-        });
-        io.Fonts->SetTexID({});
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset | ImGuiBackendFlags_RendererHasTextures;
+        this->default_sampler = this->info.device.create_sampler({.name = "ImGui Default Sampler"});
     }
 
     ImplImGuiRenderer::~ImplImGuiRenderer()
     {
         this->info.device.destroy_buffer(this->vbuffer);
         this->info.device.destroy_buffer(this->ibuffer);
-        this->info.device.destroy_image(this->font_sheet);
-        this->info.device.destroy_sampler(this->font_sampler);
+        this->info.device.destroy_sampler(this->default_sampler);
+        for (ImTextureData * tex : ImGui::GetPlatformIO().Textures)
+        {
+            if (tex->RefCount == 1 && tex->Status != ImTextureStatus_WantCreate && tex->Status != ImTextureStatus_Destroyed)
+            {
+                delete_texture(tex);
+            }
+        }
     }
 
     void ImplImGuiRenderer::zero_ref_callback(ImplHandle const * handle)

@@ -10,6 +10,15 @@
 
 namespace daxa
 {
+    // Visible region of an image in the image viewer, in uv space (0,0 is the top left, 1,1 the bottom right of the image).
+    struct ImageViewerLimits
+    {
+        f32 min_x = 0.0f;
+        f32 max_x = 1.0f;
+        f32 min_y = 0.0f;
+        f32 max_y = 1.0f;
+    };
+
     union Vec4Union
     {
         daxa_f32vec4 _float = {0, 0, 0, 0};
@@ -99,6 +108,7 @@ namespace daxa
             i32 layer = {};
             daxa_i32vec4 enabled_channels = {true, true, true, false};
             daxa_i32vec2 mouse_texel_index = {};
+            ImageViewerLimits view = {};
             bool gamma_correct = false;
             bool display_value_range_initialized = {};
             BufferId readback_buffer = {};

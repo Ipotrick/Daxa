@@ -62,6 +62,11 @@ namespace daxa
             physical_device_shader_clock_khr,
             physical_device_host_image_copy_ext,
             physical_device_line_rasterization_khr,
+            // Used for frame pacing/latency profiling
+            physical_device_present_id_khr,
+            physical_device_present_wait_khr,
+            physical_device_calibrated_timestamps_khr,
+            physical_device_calibrated_timestamps_ext,
             COUNT
         };
         constexpr static std::array<char const *, COUNT> extension_names = {
@@ -84,6 +89,11 @@ namespace daxa
             VK_KHR_SHADER_CLOCK_EXTENSION_NAME,
             VK_EXT_HOST_IMAGE_COPY_EXTENSION_NAME,
             VK_KHR_LINE_RASTERIZATION_EXTENSION_NAME,
+            // Used for frame pacing/latency profiling
+            VK_KHR_PRESENT_ID_EXTENSION_NAME,
+            VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
+            VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME,
+            VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME,
         };
         char const * extension_name_list[COUNT] = {};
         u32 extension_name_list_size = {};
@@ -124,9 +134,13 @@ namespace daxa
         VkPhysicalDeviceLineRasterizationFeaturesKHR physical_device_line_rasterization_features_khr = {};
         VkPhysicalDevicePipelineLibraryGroupHandlesFeaturesEXT physical_device_pipeline_library_group_handles_ext = {};
         VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures physical_device_shader_demote_to_helper_invocation_features = {};
+        VkPhysicalDevicePresentIdFeaturesKHR physical_device_present_id_features_khr = {};
+        VkPhysicalDevicePresentWaitFeaturesKHR physical_device_present_wait_features_khr = {};
         VkPhysicalDeviceFeatures2 physical_device_features_2 = {};
-        bool conservative_rasterization = {};
-        bool swapchain = {};
+        // NOTE: Must be VkBool32, the feature tables read every entry as a VkBool32.
+        VkBool32 conservative_rasterization = {};
+        VkBool32 swapchain = {};
+        VkBool32 calibrated_timestamps = {};
 
         void initialize(PhysicalDeviceExtensionsStruct const & extensions);
     };

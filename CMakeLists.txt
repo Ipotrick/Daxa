@@ -109,10 +109,6 @@ if(DAXA_ENABLE_UTILS_IMGUI)
         PUBLIC
         imgui::imgui
     )
-    target_link_libraries(daxa
-        PUBLIC
-        implot::implot
-    )
 endif()
 if(DAXA_ENABLE_UTILS_MEM)
     target_compile_definitions(daxa

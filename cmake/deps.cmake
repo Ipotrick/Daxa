@@ -44,7 +44,7 @@ if (DAXA_ENABLE_UTILS_IMGUI AND NOT TARGET imgui::imgui)
     FetchContent_Declare(
         imgui
         GIT_REPOSITORY https://github.com/ocornut/imgui
-        GIT_TAG        fdc084f532189fda8474079f79e74fa5e3541c9f
+        GIT_TAG        v1.92.6-docking
     )
 
     FetchContent_GetProperties(imgui)
@@ -73,33 +73,6 @@ if (DAXA_ENABLE_UTILS_IMGUI AND NOT TARGET imgui::imgui)
         endif()
 
         add_library(imgui::imgui ALIAS lib_imgui)
-    endif()
-endif()
-
-if (DAXA_ENABLE_UTILS_IMGUI AND NOT TARGET implot::implot)
-    FetchContent_Declare(
-        implot
-        GIT_REPOSITORY https://github.com/epezent/implot
-        GIT_TAG        v0.17
-        EXCLUDE_FROM_ALL
-    )
-
-    FetchContent_GetProperties(implot)
-    if(NOT implot_POPULATED)
-        FetchContent_MakeAvailable(implot)
-
-        add_library(lib_implot
-            ${implot_SOURCE_DIR}/implot.cpp
-            ${implot_SOURCE_DIR}/implot_items.cpp
-            ${implot_SOURCE_DIR}/implot_demo.cpp)
-
-        target_include_directories(lib_implot SYSTEM PUBLIC ${implot_SOURCE_DIR})
-        if(NOT (CMAKE_CXX_COMPILER_ID STREQUAL "MSVC"))
-            target_compile_options(lib_implot PRIVATE -Wno-nontrivial-memcall)
-        endif()
-        target_link_libraries(lib_implot PRIVATE imgui::imgui)
-
-        add_library(implot::implot ALIAS lib_implot)
     endif()
 endif()
 

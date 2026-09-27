@@ -3,7 +3,6 @@
 
 #include <daxa/utils/imgui.hpp>
 #include <imgui_internal.h>
-#include <implot.h>
 #include "impl_task_graph.hpp"
 #include "impl_task_graph_ui.hpp"
 #include "impl_resource_viewer.slang"
@@ -12,10 +11,6 @@ static inline ImVec2 operator+(ImVec2 const & lhs, ImVec2 const & rhs);
 static inline ImVec2 operator-(ImVec2 const & lhs, ImVec2 const & rhs);
 static inline ImVec2 operator*(ImVec2 const & lhs, ImVec2 const & rhs);
 static inline ImVec2 operator/(ImVec2 const & lhs, ImVec2 const & rhs);
-static inline ImPlotPoint operator+(ImPlotPoint const & lhs, ImPlotPoint const & rhs) { return ImPlotPoint(lhs.x + rhs.x, lhs.y + rhs.y); }
-static inline ImPlotPoint operator-(ImPlotPoint const & lhs, ImPlotPoint const & rhs) { return ImPlotPoint(lhs.x - rhs.x, lhs.y - rhs.y); }
-static inline ImPlotPoint operator*(ImPlotPoint const & lhs, ImPlotPoint const & rhs) { return ImPlotPoint(lhs.x * rhs.x, lhs.y * rhs.y); }
-static inline ImPlotPoint operator/(ImPlotPoint const & lhs, ImPlotPoint const & rhs) { return ImPlotPoint(lhs.x / rhs.x, lhs.y / rhs.y); }
 
 namespace daxa
 {
@@ -1034,51 +1029,79 @@ namespace daxa
                             .image_view = state.image.display_image.default_view(),
                             .sampler = context.resource_viewer_sampler,
                         }));
-                        ImPlot::PushStyleVar(ImPlotStyleVar_PlotBorderSize, 2);
-                        ImPlot::PushStyleVar(ImPlotStyleVar_PlotPadding, ImVec2(0.0f, 0.0f));
-                        ImPlot::PushStyleVar(ImPlotStyleVar_LabelPadding, ImVec2(0.0f, 0.0f));
                         f32 const aspect_ratio = static_cast<f32>(size_x) / static_cast<f32>(size_y);
                         ImVec2 const available_region = ImGui::GetContentRegionAvail();
                         f32 const wanted_height = available_region.x * (1.0f / aspect_ratio);
                         f32 const real_height = wanted_height > available_region.y ? available_region.y : wanted_height;
                         f32 const real_width = real_height * aspect_ratio;
-                        ImPlotPoint mouse_pos = ImPlotPoint(std::numeric_limits<f64>::max(), std::numeric_limits<f64>::max());
-                        if (ImPlot::BeginPlot("##image", ImVec2(real_width, real_height), ImPlotFlags_NoTitle | ImPlotFlags_NoLegend | ImPlotFlags_NoMouseText))
+
+                        // Image view with scroll to zoom, left drag to pan and double click to reset.
+                        // Holding left shift while hovering broadcasts this view to all other image viewers.
+                        ImVec2 const canvas_min = ImGui::GetCursorScreenPos();
+                        ImVec2 const canvas_max = ImVec2(canvas_min.x + real_width, canvas_min.y + real_height);
+                        ImGui::InvisibleButton("##image", ImVec2(std::max(real_width, 1.0f), std::max(real_height, 1.0f)));
+                        bool const canvas_hovered = ImGui::IsItemHovered();
+                        ImageViewerLimits & view = state.image.view;
+                        if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && ImGui::IsWindowHovered())
                         {
-                            u32 const flags = ImPlotAxisFlags_NoDecorations & (~ImPlotAxisFlags_NoTickMarks);
-                            ImPlot::SetupAxes("", "", flags, flags);
-                            if (ImGui::IsKeyDown(ImGuiKey_LeftShift) && ImGui::IsWindowHovered())
-                            {
-                                // Sender
-                                context.boardcast_image_viewer_limits = {
-                                    .min_x = static_cast<f32>(ImPlot::GetPlotLimits().Min().x),
-                                    .max_x = static_cast<f32>(ImPlot::GetPlotLimits().Max().x),
-                                    .min_y = static_cast<f32>(ImPlot::GetPlotLimits().Min().y),
-                                    .max_y = static_cast<f32>(ImPlot::GetPlotLimits().Max().y),
-                                };
-                            }
-                            else if (context.boardcast_image_viewer_limits_prev_frame.has_value())
-                            {
-                                ImPlot::SetupAxisLimits(ImAxis_X1, static_cast<double>(context.boardcast_image_viewer_limits_prev_frame->min_x), static_cast<double>(context.boardcast_image_viewer_limits_prev_frame->max_x), ImPlotCond_Always);
-                                ImPlot::SetupAxisLimits(ImAxis_Y1, static_cast<double>(context.boardcast_image_viewer_limits_prev_frame->min_y), static_cast<double>(context.boardcast_image_viewer_limits_prev_frame->max_y), ImPlotCond_Always);
-                            }
-                            if (ImPlot::IsPlotHovered())
-                            {
-                                auto raw_mouse_pos = ImPlot::GetPlotMousePos(IMPLOT_AUTO, IMPLOT_AUTO);
-                                mouse_pos = ImPlotPoint(raw_mouse_pos.x, 1.0 - raw_mouse_pos.y) * ImPlotPoint(size_x, size_y);
-                            }
-
-                            ImPlot::PlotImage("##my image", reinterpret_cast<ImTextureID>(state.image.imgui_image_id), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f), ImVec2(0.0f, 0.0f), ImVec2(1.0f, 1.0f));
-                            ImPlot::EndPlot();
+                            // Sender
+                            context.boardcast_image_viewer_limits = view;
                         }
-                        state.image.mouse_texel_index = {
-                            std::clamp(static_cast<i32>(mouse_pos.x), 0, static_cast<i32>(size_x) - 1),
-                            std::clamp(static_cast<i32>(mouse_pos.y), 0, static_cast<i32>(size_y) - 1)};
+                        else if (context.boardcast_image_viewer_limits_prev_frame.has_value())
+                        {
+                            view = context.boardcast_image_viewer_limits_prev_frame.value();
+                        }
+                        ImGuiIO const & io = ImGui::GetIO();
+                        f32 const view_width = view.max_x - view.min_x;
+                        f32 const view_height = view.max_y - view.min_y;
+                        f32 const mouse_u = view.min_x + (io.MousePos.x - canvas_min.x) / real_width * view_width;
+                        f32 const mouse_v = view.min_y + (io.MousePos.y - canvas_min.y) / real_height * view_height;
+                        if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f))
+                        {
+                            f32 const du = io.MouseDelta.x / real_width * view_width;
+                            f32 const dv = io.MouseDelta.y / real_height * view_height;
+                            view = {view.min_x - du, view.max_x - du, view.min_y - dv, view.max_y - dv};
+                        }
+                        if (canvas_hovered && io.MouseWheel != 0.0f)
+                        {
+                            f32 const zoom = std::pow(0.9f, io.MouseWheel);
+                            view = {
+                                mouse_u - (mouse_u - view.min_x) * zoom,
+                                mouse_u + (view.max_x - mouse_u) * zoom,
+                                mouse_v - (mouse_v - view.min_y) * zoom,
+                                mouse_v + (view.max_y - mouse_v) * zoom,
+                            };
+                        }
+                        if (canvas_hovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+                        {
+                            view = {};
+                        }
+                        if (canvas_hovered)
+                        {
+                            state.image.mouse_texel_index = {
+                                std::clamp(static_cast<i32>(std::floor(mouse_u * static_cast<f32>(size_x))), 0, static_cast<i32>(size_x) - 1),
+                                std::clamp(static_cast<i32>(std::floor(mouse_v * static_cast<f32>(size_y))), 0, static_cast<i32>(size_y) - 1)};
+                        }
 
-                        if (ImGui::IsItemHovered())
+                        // Only the part of the canvas covered by the image is drawn, so the sampler never sees uvs outside [0,1].
+                        ImDrawList * draw_list = ImGui::GetWindowDrawList();
+                        ImVec2 const image_min = ImVec2(
+                            canvas_min.x + (0.0f - view.min_x) / (view.max_x - view.min_x) * real_width,
+                            canvas_min.y + (0.0f - view.min_y) / (view.max_y - view.min_y) * real_height);
+                        ImVec2 const image_max = ImVec2(
+                            canvas_min.x + (1.0f - view.min_x) / (view.max_x - view.min_x) * real_width,
+                            canvas_min.y + (1.0f - view.min_y) / (view.max_y - view.min_y) * real_height);
+                        draw_list->PushClipRect(canvas_min, canvas_max, true);
+                        draw_list->AddImage(static_cast<ImTextureID>(std::bit_cast<u64>(state.image.imgui_image_id)), image_min, image_max);
+                        draw_list->PopClipRect();
+                        draw_list->AddRect(canvas_min, canvas_max, ImGui::GetColorU32(ImGuiCol_Border), 0.0f, 0, 2.0f);
+                        f64 const mouse_x = static_cast<f64>(mouse_u) * static_cast<f64>(size_x);
+                        f64 const mouse_y = static_cast<f64>(mouse_v) * static_cast<f64>(size_y);
+
+                        if (canvas_hovered)
                         {
                             ImGui::BeginTooltip();
-                            ImGui::Text("%s", std::format("{}, {}", static_cast<i32>(mouse_pos.x), static_cast<i32>(mouse_pos.y)).c_str());
+                            ImGui::Text("%s", std::format("{}, {}", static_cast<i32>(std::floor(mouse_x)), static_cast<i32>(std::floor(mouse_y))).c_str());
 
                             if (state.display_as_hexadecimal)
                             {
@@ -1186,7 +1209,6 @@ namespace daxa
                             ImGui::EndTooltip();
                         }
 
-                        ImPlot::PopStyleVar(3);
                     }
                 }
             }
@@ -1363,7 +1385,7 @@ namespace daxa
                 static constexpr f32 STRUCT_NEST_INDENTATION = 15.0f;
                 static constexpr f32 STRUCT_NEST_MUL = 0.85f;
 
-                static constexpr ImGuiChildFlags NESTED_CHILD_FLAGS = ImGuiChildFlags_Border;
+                static constexpr ImGuiChildFlags NESTED_CHILD_FLAGS = ImGuiChildFlags_Borders;
 
                 std::vector<TgDebugTypeDefinition> & type_defs = state.buffer.tg_debug_struct_definitions;
 

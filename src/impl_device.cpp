@@ -1666,9 +1666,19 @@ auto daxa_dvc_present_frame(daxa_Device self, daxa_PresentInfo const * info) -> 
         submit_semaphore_waits.push_back(binary_semaphore->vk_semaphore);
     }
 
+    // Tag every present with an increasing id so present timing can be observed with vkWaitForPresentKHR.
+    u64 const present_id = info->swapchain->present_id_counter + 1;
+    VkPresentIdKHR const present_id_info{
+        .sType = VK_STRUCTURE_TYPE_PRESENT_ID_KHR,
+        .pNext = nullptr,
+        .swapchainCount = 1,
+        .pPresentIds = &present_id,
+    };
+    bool const use_present_id = (self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT) != 0;
+
     VkPresentInfoKHR const present_info{
         .sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR,
-        .pNext = nullptr,
+        .pNext = use_present_id ? &present_id_info : nullptr,
         .waitSemaphoreCount = static_cast<u32>(submit_semaphore_waits.size()),
         .pWaitSemaphores = submit_semaphore_waits.data(),
         .swapchainCount = static_cast<u32>(1),
@@ -1680,7 +1690,36 @@ auto daxa_dvc_present_frame(daxa_Device self, daxa_PresentInfo const * info) -> 
     daxa_ImplDevice::ImplQueue & impl_queue = self->get_queue(info->queue);
     std::unique_lock queue_lock{impl_queue.mtx};
 
-    return static_cast<daxa_Result>(vkQueuePresentKHR(impl_queue.vk_queue, &present_info));
+    auto result = static_cast<daxa_Result>(vkQueuePresentKHR(impl_queue.vk_queue, &present_info));
+    if (use_present_id)
+    {
+        // The driver was handed this id either way, so it must never be used again: a later wait would then be
+        // satisfied by this present. Only a present that reached the presentation engine can be waited for.
+        info->swapchain->present_id_counter = present_id;
+        if (result == DAXA_RESULT_SUCCESS || result == DAXA_RESULT_SUBOPTIMAL_KHR)
+        {
+            info->swapchain->valid_present_id = present_id;
+        }
+    }
+    return result;
+}
+
+auto daxa_dvc_get_calibrated_timestamps(daxa_Device self, u64 * out_device_timestamp, u64 * out_host_timestamp, u64 * out_max_deviation) -> daxa_Result
+{
+    if (self->vkGetCalibratedTimestampsKHR == nullptr)
+    {
+        return DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT;
+    }
+    std::array<VkCalibratedTimestampInfoKHR, 2> const infos = {
+        VkCalibratedTimestampInfoKHR{.sType = VK_STRUCTURE_TYPE_CALIBRATED_TIMESTAMP_INFO_KHR, .pNext = nullptr, .timeDomain = VK_TIME_DOMAIN_DEVICE_KHR},
+        VkCalibratedTimestampInfoKHR{.sType = VK_STRUCTURE_TYPE_CALIBRATED_TIMESTAMP_INFO_KHR, .pNext = nullptr, .timeDomain = self->calibrated_host_time_domain},
+    };
+    std::array<u64, 2> timestamps = {};
+    auto result = static_cast<daxa_Result>(self->vkGetCalibratedTimestampsKHR(self->vk_device, 2, infos.data(), timestamps.data(), out_max_deviation));
+    _DAXA_RETURN_IF_ERROR(result, result)
+    *out_device_timestamp = timestamps[0];
+    *out_host_timestamp = timestamps[1];
+    return DAXA_RESULT_SUCCESS;
 }
 
 auto daxa_dvc_collect_garbage(daxa_Device self) -> daxa_Result
@@ -2146,6 +2185,44 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             self->vkSetDebugUtilsObjectNameEXT = r_cast<PFN_vkSetDebugUtilsObjectNameEXT>(vkGetDeviceProcAddr(self->vk_device, "vkSetDebugUtilsObjectNameEXT"));
             self->vkCmdBeginDebugUtilsLabelEXT = r_cast<PFN_vkCmdBeginDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdBeginDebugUtilsLabelEXT"));
             self->vkCmdEndDebugUtilsLabelEXT = r_cast<PFN_vkCmdEndDebugUtilsLabelEXT>(vkGetDeviceProcAddr(self->vk_device, "vkCmdEndDebugUtilsLabelEXT"));
+        }
+
+        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT)
+        {
+            self->vkWaitForPresentKHR = r_cast<PFN_vkWaitForPresentKHR>(vkGetDeviceProcAddr(self->vk_device, "vkWaitForPresentKHR"));
+        }
+
+        if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS)
+        {
+            // KHR and EXT versions share the same signature, prefer KHR when available.
+            bool const khr = physical_device.extensions.extensions_present[PhysicalDeviceExtensionsStruct::physical_device_calibrated_timestamps_khr];
+            auto const vkGetPhysicalDeviceCalibrateableTimeDomains = r_cast<PFN_vkGetPhysicalDeviceCalibrateableTimeDomainsKHR>(
+                vkGetInstanceProcAddr(self->instance->vk_instance, khr ? "vkGetPhysicalDeviceCalibrateableTimeDomainsKHR" : "vkGetPhysicalDeviceCalibrateableTimeDomainsEXT"));
+#if defined(_WIN32)
+            self->calibrated_host_time_domain = VK_TIME_DOMAIN_QUERY_PERFORMANCE_COUNTER_KHR;
+#else
+            self->calibrated_host_time_domain = VK_TIME_DOMAIN_CLOCK_MONOTONIC_KHR;
+#endif
+            u32 domain_count = 0;
+            std::vector<VkTimeDomainKHR> domains = {};
+            if (vkGetPhysicalDeviceCalibrateableTimeDomains != nullptr &&
+                vkGetPhysicalDeviceCalibrateableTimeDomains(self->vk_physical_device, &domain_count, nullptr) == VK_SUCCESS)
+            {
+                domains.resize(domain_count);
+                vkGetPhysicalDeviceCalibrateableTimeDomains(self->vk_physical_device, &domain_count, domains.data());
+                domains.resize(domain_count);
+            }
+            bool const has_device_domain = std::find(domains.begin(), domains.end(), VK_TIME_DOMAIN_DEVICE_KHR) != domains.end();
+            bool const has_host_domain = std::find(domains.begin(), domains.end(), self->calibrated_host_time_domain) != domains.end();
+            if (has_device_domain && has_host_domain)
+            {
+                self->vkGetCalibratedTimestampsKHR = r_cast<PFN_vkGetCalibratedTimestampsKHR>(
+                    vkGetDeviceProcAddr(self->vk_device, khr ? "vkGetCalibratedTimestampsKHR" : "vkGetCalibratedTimestampsEXT"));
+            }
+            if (self->vkGetCalibratedTimestampsKHR == nullptr)
+            {
+                self->properties.implicit_features = static_cast<daxa_ImplicitFeatureFlags>(self->properties.implicit_features & ~DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS);
+            }
         }
 
         if (properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER)

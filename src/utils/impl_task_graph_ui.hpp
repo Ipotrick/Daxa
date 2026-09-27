@@ -37,14 +37,6 @@ namespace daxa
         static constexpr ImVec4 DARK_BLUE = ImVec4(0.05490f, 0.32941f, 0.96470f, 1.0f);
     };
 
-    struct ImageViewerLimits
-    {
-        f32 min_x = {};
-        f32 max_x = {};
-        f32 min_y = {};
-        f32 max_y = {};
-    };
-
     struct ImplTaskGraphDebugUi final : ImplHandle
     {
         ImplTaskGraphDebugUi() = default;
