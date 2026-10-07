@@ -10,18 +10,18 @@
 #define DAXA_ACCELERATION_STRUCTURE_BINDING 5
 #endif
 
-#define DAXA_DECL_STORAGE_BUFFERS [[vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]]
-#define DAXA_DECL_STORAGE_IMAGES [[vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]]
-#define DAXA_DECL_SAMPLED_IMAGES [[vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]]
-#define DAXA_DECL_SAMPLERS [[vk::binding(DAXA_SAMPLER_BINDING, 0)]]
-#define DAXA_DECL_ACCELERATION_STRUCTURES [[vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]]
+#define DAXA_DECL_STORAGE_BUFFERS [vk::binding(DAXA_STORAGE_BUFFER_BINDING, 0)]
+#define DAXA_DECL_STORAGE_IMAGES [vk::binding(DAXA_STORAGE_IMAGE_BINDING, 0)]
+#define DAXA_DECL_SAMPLED_IMAGES [vk::binding(DAXA_SAMPLED_IMAGE_BINDING, 0)]
+#define DAXA_DECL_SAMPLERS [vk::binding(DAXA_SAMPLER_BINDING, 0)]
+#define DAXA_DECL_ACCELERATION_STRUCTURES [vk::binding(DAXA_ACCELERATION_STRUCTURE_BINDING, 0)]
 
 #define DAXA_ID_INDEX_BITS 20
 #define DAXA_ID_INDEX_MASK ((uint64_t(1) << DAXA_ID_INDEX_BITS) - uint64_t(1))
-#define DAXA_ID_INDEX_OFFSTET 0
+#define DAXA_ID_INDEX_OFFSET 0
 #define DAXA_ID_VERSION_BITS 44
 #define DAXA_ID_VERSION_MASK ((uint64_t(1) << DAXA_ID_VERSION_BITS) - uint64_t(1))
-#define DAXA_ID_VERSION_OFFSTET DAXA_ID_INDEX_BITS
+#define DAXA_ID_VERSION_OFFSET DAXA_ID_INDEX_BITS
 
 #define _DAXA_DECL_VEC_TYPES(SLANG_TYPE, DAXA_TYPE) \
     typedef SLANG_TYPE DAXA_TYPE;                   \
@@ -31,22 +31,22 @@
     typedef SLANG_TYPE ## 4 DAXA_TYPE ## vec4;
 
 #define _DAXA_DECL_MAT_TYPES(SLANG_TYPE, DAXA_TYPE)      \
-    typedef matrix<SLANG_TYPE, 1, 1> DAXA_TYPE ## mat1x1 \
-    typedef matrix<SLANG_TYPE, 2, 1> DAXA_TYPE ## mat1x2 \
-    typedef matrix<SLANG_TYPE, 3, 1> DAXA_TYPE ## mat1x3 \
-    typedef matrix<SLANG_TYPE, 4, 1> DAXA_TYPE ## mat1x4 \
-    typedef matrix<SLANG_TYPE, 1, 2> DAXA_TYPE ## mat2x1 \
-    typedef matrix<SLANG_TYPE, 2, 2> DAXA_TYPE ## mat2x2 \
-    typedef matrix<SLANG_TYPE, 3, 2> DAXA_TYPE ## mat2x3 \
-    typedef matrix<SLANG_TYPE, 4, 2> DAXA_TYPE ## mat2x4 \
-    typedef matrix<SLANG_TYPE, 1, 3> DAXA_TYPE ## mat3x1 \
-    typedef matrix<SLANG_TYPE, 2, 3> DAXA_TYPE ## mat3x2 \
-    typedef matrix<SLANG_TYPE, 3, 3> DAXA_TYPE ## mat3x3 \
-    typedef matrix<SLANG_TYPE, 4, 3> DAXA_TYPE ## mat3x4 \
-    typedef matrix<SLANG_TYPE, 1, 4> DAXA_TYPE ## mat4x1 \
-    typedef matrix<SLANG_TYPE, 2, 4> DAXA_TYPE ## mat4x2 \
-    typedef matrix<SLANG_TYPE, 3, 4> DAXA_TYPE ## mat4x3 \
-    typedef matrix<SLANG_TYPE, 4, 4> DAXA_TYPE ## mat4x4
+    typedef matrix<SLANG_TYPE, 1, 1> DAXA_TYPE ## mat1x1; \
+    typedef matrix<SLANG_TYPE, 2, 1> DAXA_TYPE ## mat1x2; \
+    typedef matrix<SLANG_TYPE, 3, 1> DAXA_TYPE ## mat1x3; \
+    typedef matrix<SLANG_TYPE, 4, 1> DAXA_TYPE ## mat1x4; \
+    typedef matrix<SLANG_TYPE, 1, 2> DAXA_TYPE ## mat2x1; \
+    typedef matrix<SLANG_TYPE, 2, 2> DAXA_TYPE ## mat2x2; \
+    typedef matrix<SLANG_TYPE, 3, 2> DAXA_TYPE ## mat2x3; \
+    typedef matrix<SLANG_TYPE, 4, 2> DAXA_TYPE ## mat2x4; \
+    typedef matrix<SLANG_TYPE, 1, 3> DAXA_TYPE ## mat3x1; \
+    typedef matrix<SLANG_TYPE, 2, 3> DAXA_TYPE ## mat3x2; \
+    typedef matrix<SLANG_TYPE, 3, 3> DAXA_TYPE ## mat3x3; \
+    typedef matrix<SLANG_TYPE, 4, 3> DAXA_TYPE ## mat3x4; \
+    typedef matrix<SLANG_TYPE, 1, 4> DAXA_TYPE ## mat4x1; \
+    typedef matrix<SLANG_TYPE, 2, 4> DAXA_TYPE ## mat4x2; \
+    typedef matrix<SLANG_TYPE, 3, 4> DAXA_TYPE ## mat4x3; \
+    typedef matrix<SLANG_TYPE, 4, 4> DAXA_TYPE ## mat4x4;
 
 #define _DAXA_DECL_VEC_MAT_8_16_32_64_TYPES(SLANG_TYPE, DAXA_TYPE)\
     _DAXA_DECL_VEC_TYPES(SLANG_TYPE ## 8_t, DAXA_TYPE ## 8)\
@@ -90,7 +90,7 @@ namespace daxa
         }
         daxa_u64 version()
         {
-            return (value >> DAXA_ID_VERSION_OFFSTET);
+            return (value >> DAXA_ID_VERSION_OFFSET);
         }
         daxa_b32 is_empty()
         {
@@ -111,7 +111,7 @@ namespace daxa
         }
         daxa_u64 version()
         {
-            return (value >> DAXA_ID_VERSION_OFFSTET);
+            return (value >> DAXA_ID_VERSION_OFFSET);
         }
         daxa_b32 is_empty()
         {
@@ -141,7 +141,7 @@ namespace daxa
         }
         daxa_u64 version()
         {
-            return (value >> DAXA_ID_VERSION_OFFSTET);
+            return (value >> DAXA_ID_VERSION_OFFSET);
         }
         daxa_b32 is_empty()
         {
@@ -174,7 +174,7 @@ namespace daxa
         }
         daxa_u64 version()
         {
-            return (value >> DAXA_ID_VERSION_OFFSTET);
+            return (value >> DAXA_ID_VERSION_OFFSET);
         }
         daxa_b32 is_empty()
         {
@@ -294,11 +294,11 @@ _DAXA_DECL_MAT_TYPES(float, daxa_f32)
 _DAXA_DECL_MAT_TYPES(double, daxa_f64)
 _DAXA_DECL_VEC_TYPES(bool, daxa_b32)
 _DAXA_DECL_MAT_TYPES(bool, daxa_b32)
-typedef daxa::BufferId daxa_BufferId
-typedef daxa::ImageViewId daxa_ImageViewId
-typedef daxa::SamplerId daxa_SamplerId
+typedef daxa::BufferId daxa_BufferId;
+typedef daxa::ImageViewId daxa_ImageViewId;
+typedef daxa::SamplerId daxa_SamplerId;
 #if defined(DAXA_RAY_TRACING)
-typedef daxa::TlasId daxa_TlasId
+typedef daxa::TlasId daxa_TlasId;
 #endif // DAXA_RAY_TRACING
 #define daxa_RWBufferPtr(STRUCT_TYPE) Ptr<STRUCT_TYPE>
 #define daxa_BufferPtr(STRUCT_TYPE) Ptr<STRUCT_TYPE>
