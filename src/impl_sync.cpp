@@ -29,8 +29,8 @@ auto daxa_dvc_create_binary_semaphore(daxa_Device device, daxa_BinarySemaphoreIn
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_semaphore = new daxa_ImplBinarySemaphore{};
     **out_semaphore = ret;
     return DAXA_RESULT_SUCCESS;
@@ -87,8 +87,8 @@ auto daxa_dvc_create_timeline_semaphore(daxa_Device device, daxa_TimelineSemapho
         };
         device->vkSetDebugUtilsObjectNameEXT(device->vk_device, &name_info);
     }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_semaphore = new daxa_ImplTimelineSemaphore{};
     **out_semaphore = ret;
     return DAXA_RESULT_SUCCESS;
@@ -107,7 +107,7 @@ auto daxa_timeline_semaphore_get_value(daxa_TimelineSemaphore self, uint64_t * o
 auto daxa_timeline_semaphore_set_value(daxa_TimelineSemaphore self, uint64_t value) -> daxa_Result
 {
     VkSemaphoreSignalInfo const vk_semaphore_signal_info{
-        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
+        .sType = VK_STRUCTURE_TYPE_SEMAPHORE_SIGNAL_INFO,
         .pNext = nullptr,
         .semaphore = self->vk_semaphore,
         .value = value,
@@ -184,8 +184,8 @@ auto daxa_dvc_create_event(daxa_Device device, daxa_EventInfo const * info, daxa
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_event = new daxa_ImplEvent{};
     **out_event = ret;
     return DAXA_RESULT_SUCCESS;
@@ -215,14 +215,18 @@ auto daxa_event_dec_refcnt(daxa_Event self) -> u64
 void daxa_ImplBinarySemaphore::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_BinarySemaphore>(handle);
-    std::unique_lock const lock{self->device->zombies_mtx};
-    u64 const main_queue_cpu_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    self->device->semaphore_zombies.emplace_back(
-        main_queue_cpu_timeline,
-        SemaphoreZombie{
-            .vk_semaphore = self->vk_semaphore,
-        });
-    self->device->dec_weak_refcnt(
+    {
+        // The lock must be released before dropping the device reference:
+        // destroying the device collects garbage, which locks zombies_mtx again.
+        std::unique_lock const lock{self->device->zombies_mtx};
+        u64 const main_queue_cpu_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+        self->device->semaphore_zombies.emplace_front(
+            main_queue_cpu_timeline,
+            SemaphoreZombie{
+                .vk_semaphore = self->vk_semaphore,
+            });
+    }
+    self->device->dec_child_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;
@@ -231,14 +235,18 @@ void daxa_ImplBinarySemaphore::zero_ref_callback(ImplHandle const * handle)
 void daxa_ImplTimelineSemaphore::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_TimelineSemaphore>(handle);
-    std::unique_lock const lock{self->device->zombies_mtx};
-    u64 const main_queue_cpu_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    self->device->semaphore_zombies.emplace_back(
-        main_queue_cpu_timeline,
-        SemaphoreZombie{
-            .vk_semaphore = self->vk_semaphore,
-        });
-    self->device->dec_weak_refcnt(
+    {
+        // The lock must be released before dropping the device reference:
+        // destroying the device collects garbage, which locks zombies_mtx again.
+        std::unique_lock const lock{self->device->zombies_mtx};
+        u64 const main_queue_cpu_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+        self->device->semaphore_zombies.emplace_front(
+            main_queue_cpu_timeline,
+            SemaphoreZombie{
+                .vk_semaphore = self->vk_semaphore,
+            });
+    }
+    self->device->dec_child_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;
@@ -247,14 +255,18 @@ void daxa_ImplTimelineSemaphore::zero_ref_callback(ImplHandle const * handle)
 void daxa_ImplEvent::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_Event>(handle);
-    std::unique_lock const lock{self->device->zombies_mtx};
-    u64 const main_queue_cpu_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    self->device->split_barrier_zombies.emplace_back(
-        main_queue_cpu_timeline,
-        EventZombie{
-            .vk_event = self->vk_event,
-        });
-    self->device->dec_weak_refcnt(
+    {
+        // The lock must be released before dropping the device reference:
+        // destroying the device collects garbage, which locks zombies_mtx again.
+        std::unique_lock const lock{self->device->zombies_mtx};
+        u64 const main_queue_cpu_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+        self->device->split_barrier_zombies.emplace_front(
+            main_queue_cpu_timeline,
+            EventZombie{
+                .vk_event = self->vk_event,
+            });
+    }
+    self->device->dec_child_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;

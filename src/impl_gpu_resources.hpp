@@ -185,6 +185,8 @@ namespace daxa
             // Remove Zombie Mark Bit.
             auto const version_refcnt = VERSION_COUNT_MASK & this->hot_data.at(id.index).second.load(std::memory_order_relaxed);
             auto const version = get_version(version_refcnt);
+            // Slots of failed creations still hold the initial reference, recycled slots must start at zero.
+            this->hot_data.at(id.index).second.store(pack_version_refcnt(version, 0ull), std::memory_order_relaxed);
             // Slots that reached max version CAN NOT be recycled.
             // That is because we can not guarantee uniqueness of ids when the version wraps back to 0.
             // Clear slot MUST HAPPEN before pushing into free list.
@@ -215,6 +217,8 @@ namespace daxa
                     index = this->next_index++;
                     if (index >= this->max_resources || index >= MAX_RESOURCE_COUNT)
                     {
+                        // Undo, next_index must only count handed out slots (leak detection compares against it).
+                        --this->next_index;
                         return std::nullopt;
                     }
                 }
@@ -234,12 +238,16 @@ namespace daxa
             if (page >= this->valid_page_count.load(std::memory_order_seq_cst))
             {
                 std::unique_lock l{page_alloc_mtx};
-                if (page >= this->valid_page_count.load(std::memory_order_relaxed))
+                // Allocate every page up to and including the needed one.
+                // Indices can be handed out out of order across threads, so a thread may need a page
+                // before the thread owning an earlier page got to allocate it.
+                // valid_page_count must only ever cover fully allocated pages.
+                for (usize new_page = this->valid_page_count.load(std::memory_order_relaxed); new_page <= page; ++new_page)
                 {
-                    this->paged_data[page] = std::make_unique<PageT>();
+                    this->paged_data[new_page] = std::make_unique<PageT>();
                     for (u32 i = 0; i < PAGE_SIZE; ++i)
                     {
-                        this->hot_data.at(page * PAGE_SIZE + i).second.store(pack_version_refcnt(1ull, 0ull), std::memory_order_relaxed);
+                        this->hot_data.at(new_page * PAGE_SIZE + i).second.store(pack_version_refcnt(1ull, 0ull), std::memory_order_relaxed);
                     }
                     // Needs to be sequential, so that the 0 writes to the versions are visible before the atomic op.
                     this->valid_page_count.fetch_add(1, std::memory_order_seq_cst);
@@ -385,19 +393,25 @@ namespace daxa
 
         auto unsafe_get_hot(GPUResourceId id) const -> ResourceT::HotData const &
         {
-            return this->hot_data.at(std::min(static_cast<u32>(id.index), this->max_resources)).first;
+            return this->hot_data.at(std::min(static_cast<u32>(id.index), this->max_resources - 1)).first;
         }
 
         auto unsafe_get_hot(u32 idx) const -> ResourceT::HotData const &
         {
-            return this->hot_data.at(std::min(static_cast<u32>(idx), this->max_resources)).first;
+            return this->hot_data.at(std::min(static_cast<u32>(idx), this->max_resources - 1)).first;
         }
 
         auto safe_get_hot(GPUResourceId id) const -> ResourceT::HotData const *
         {
-            auto & hot_slot = this->hot_data.data()[std::min(static_cast<u32>(id.index), this->max_resources)];
+            if (id.index >= this->max_resources)
+            {
+                return nullptr;
+            }
+            auto & hot_slot = this->hot_data.data()[id.index];
             auto version_refcnt = hot_slot.second.load();
-            return get_version(version_refcnt) == id.version ? &hot_slot.first : nullptr;
+            // Destroyed resources keep their version until the slot is recycled, the refcount tells them apart.
+            bool const alive = get_version(version_refcnt) == id.version && get_refcnt(version_refcnt) > 0;
+            return alive ? &hot_slot.first : nullptr;
         }
     };
 

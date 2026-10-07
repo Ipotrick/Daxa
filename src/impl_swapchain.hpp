@@ -38,7 +38,6 @@ struct daxa_ImplSwapchain final : ImplHandle
 {
     daxa_Device device = {};
     SwapchainInfo info = {};
-    std::string info_name = {};
     VkSwapchainKHR vk_swapchain = {};
     VkSurfaceKHR vk_surface = {};
     VkSurfaceFormatKHR vk_surface_format = {};

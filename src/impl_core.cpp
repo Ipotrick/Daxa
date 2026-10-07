@@ -730,58 +730,58 @@ auto daxa_version_of_sampler(daxa_SamplerId sampler) -> u64
 
 auto ImplHandle::inc_refcnt() const -> u64
 {
-    auto & mut_strong_ref = this->strong_count;
-    return std::atomic_ref{mut_strong_ref}.fetch_add(1, std::memory_order::relaxed);
+    return std::atomic_ref{this->ref_count}.fetch_add(1, std::memory_order::relaxed);
 }
 
 auto ImplHandle::dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64
 {
-    auto & mut_strong_ref = this->strong_count;
-    auto prev = std::atomic_ref{mut_strong_ref}.fetch_sub(1, std::memory_order::relaxed);
+    bool const validate_children = instance != nullptr && (instance->info.flags & InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD) != InstanceFlagBits::NONE;
+    // Must be read before the decrement, after it the object may already be destroyed by another thread.
+    auto const child_refs = validate_children ? std::atomic_ref{this->child_ref_count}.load(std::memory_order::acquire) : 0ull;
+    // acq_rel: the destroying thread must see all writes made while other references were alive.
+    auto const prev = std::atomic_ref{this->ref_count}.fetch_sub(1, std::memory_order::acq_rel);
     if (prev == 1)
     {
-        auto weak = this->get_weak_refcnt();
-        if (weak == 0)
-        {
-            zero_ref_callback(this);
-        }
-        else if (instance != nullptr && (instance->info.flags & InstanceFlagBits::PARENT_MUST_OUTLIVE_CHILD) != InstanceFlagBits::NONE)
-        {
-            DAXA_DBG_ASSERT_TRUE_M(false, "not all children have been destroyed prior to destroying object");
-        }
+        zero_ref_callback(this);
+    }
+    else if (validate_children)
+    {
+        // User handles = ref_count - child_ref_count. The two counters are separate atomics, so this is not an exact
+        // snapshot under concurrent child changes, which is fine for validation.
+        // Fires when the last user handle is gone but children still keep the object alive.
+        [[maybe_unused]] bool const last_user_handle_dropped = prev - 1 <= child_refs;
+        DAXA_DBG_ASSERT_TRUE_M(!last_user_handle_dropped, "not all children have been destroyed prior to destroying object");
     }
     return prev;
 }
 
 auto ImplHandle::get_refcnt() const -> u64
 {
-    return std::atomic_ref{this->strong_count}.load(std::memory_order::relaxed);
+    return std::atomic_ref{this->ref_count}.load(std::memory_order::relaxed);
 }
 
-auto ImplHandle::impl_inc_weak_refcnt([[maybe_unused]] char const * callsite) const -> u64
+auto ImplHandle::impl_inc_child_refcnt([[maybe_unused]] char const * callsite) const -> u64
 {
-    auto & mut_weak_ref = this->weak_count;
-    return std::atomic_ref{mut_weak_ref}.fetch_add(1, std::memory_order::relaxed);
+    // Owning count first, so the child count is never observed larger than the owning count.
+    std::atomic_ref{this->ref_count}.fetch_add(1, std::memory_order::relaxed);
+    return std::atomic_ref{this->child_ref_count}.fetch_add(1, std::memory_order::relaxed);
 }
 
-auto ImplHandle::impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance /*unused*/, [[maybe_unused]] char const * callsite) const -> u64
+auto ImplHandle::impl_dec_child_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance /*unused*/, [[maybe_unused]] char const * callsite) const -> u64
 {
-    auto & mut_weak_ref = this->weak_count;
-    auto prev = std::atomic_ref{mut_weak_ref}.fetch_sub(1, std::memory_order::relaxed);
+    // Child count first, so it is never observed larger than the owning count.
+    auto const prev_child_refs = std::atomic_ref{this->child_ref_count}.fetch_sub(1, std::memory_order::relaxed);
+    auto const prev = std::atomic_ref{this->ref_count}.fetch_sub(1, std::memory_order::acq_rel);
     if (prev == 1)
     {
-        auto strong = this->get_refcnt();
-        if (strong == 0)
-        {
-            zero_ref_callback(this);
-        }
+        zero_ref_callback(this);
     }
-    return prev;
+    return prev_child_refs;
 }
 
-auto ImplHandle::get_weak_refcnt() const -> u64
+auto ImplHandle::get_child_refcnt() const -> u64
 {
-    return std::atomic_ref{this->weak_count}.load(std::memory_order::relaxed);
+    return std::atomic_ref{this->child_ref_count}.load(std::memory_order::relaxed);
 }
 
 // --- End ImplHandle ---
@@ -830,8 +830,8 @@ auto daxa_dvc_create_memory(daxa_Device self, daxa_MemoryBlockInfo const * info,
     auto result = static_cast<daxa_Result>(vmaAllocateMemory(self->vma_allocator, &info->requirements, &create_info, &ret.allocation, &ret.alloc_info));
     _DAXA_RETURN_IF_ERROR(result, result)
 
-    ret.strong_count = 1;
-    self->inc_weak_refcnt();
+    ret.ref_count = 1;
+    self->inc_child_refcnt();
     *out_memory_block = new daxa_ImplMemoryBlock{};
     // TODO(general): memory block is missing a name.
     **out_memory_block = ret;
@@ -861,14 +861,18 @@ auto daxa_memory_block_dec_refcnt(daxa_MemoryBlock self) -> u64
 void daxa_ImplMemoryBlock::zero_ref_callback(ImplHandle const * handle)
 {
     auto const * self = r_cast<daxa_ImplMemoryBlock const*>(handle);
-    std::unique_lock const lock{self->device->zombies_mtx};
-    u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    self->device->memory_block_zombies.emplace_front(
-        submit_timeline_value,
-        MemoryBlockZombie{
-            .allocation = self->allocation,
-        });
-    self->device->dec_weak_refcnt(
+    {
+        // The lock must be released before dropping the device reference:
+        // destroying the device collects garbage, which locks zombies_mtx again.
+        std::unique_lock const lock{self->device->zombies_mtx};
+        u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+        self->device->memory_block_zombies.emplace_front(
+            submit_timeline_value,
+            MemoryBlockZombie{
+                .allocation = self->allocation,
+            });
+    }
+    self->device->dec_child_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;

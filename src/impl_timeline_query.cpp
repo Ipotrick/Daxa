@@ -34,12 +34,12 @@ auto daxa_dvc_create_timeline_query_pool(daxa_Device device, daxa_TimelineQueryP
             .pNext = nullptr,
             .objectType = VK_OBJECT_TYPE_QUERY_POOL,
             .objectHandle = std::bit_cast<uint64_t>(ret.vk_timeline_query_pool),
-            .pObjectName = ret.info_name.c_str(),
+            .pObjectName = ret.info.name.c_str(),
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &query_pool_name_info);
     }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_tqp = new daxa_ImplTimelineQueryPool{};
     **out_tqp = std::move(ret);
     return DAXA_RESULT_SUCCESS;
@@ -95,14 +95,18 @@ auto daxa_timeline_query_pool_dec_refcnt(daxa_TimelineQueryPool self) -> u64
 void daxa_ImplTimelineQueryPool::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<daxa_TimelineQueryPool>(handle);
-    std::unique_lock const lock{self->device->zombies_mtx};
-    u64 const submit_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    self->device->timeline_query_pool_zombies.emplace_back(
-        submit_timeline,
-        TimelineQueryPoolZombie{
-            .vk_timeline_query_pool = self->vk_timeline_query_pool,
-        });
-    self->device->dec_weak_refcnt(
+    {
+        // The lock must be released before dropping the device reference:
+        // destroying the device collects garbage, which locks zombies_mtx again.
+        std::unique_lock const lock{self->device->zombies_mtx};
+        u64 const submit_timeline = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+        self->device->timeline_query_pool_zombies.emplace_front(
+            submit_timeline,
+            TimelineQueryPoolZombie{
+                .vk_timeline_query_pool = self->vk_timeline_query_pool,
+            });
+    }
+    self->device->dec_child_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;

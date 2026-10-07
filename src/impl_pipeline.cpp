@@ -206,6 +206,8 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         vk_line_raster_state.stippledLineEnable = static_cast<VkBool32>(line_raster_info.stippled);
         vk_line_raster_state.lineStippleFactor = line_raster_info.stipple_factor;
         vk_line_raster_state.lineStipplePattern = line_raster_info.stipple_pattern;
+        // Chain in front, so a conservative raster state set above stays linked.
+        vk_line_raster_state.pNext = vk_raster_state.pNext;
         vk_raster_state.pNext = &vk_line_raster_state;
     }
 
@@ -341,8 +343,8 @@ auto daxa_dvc_create_raster_pipeline(daxa_Device device, daxa_RasterPipelineInfo
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_pipeline = new daxa_ImplRasterPipeline{};
     **out_pipeline = ret;
     return DAXA_RESULT_SUCCESS;
@@ -390,10 +392,11 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
     bool const supports_required_subgroup_size_for_stage = (device->properties.required_subgroup_size_stages & VK_SHADER_STAGE_COMPUTE_BIT) != 0;
     bool const uses_required_subgroup_size = requested_required_subgroup_size && supports_required_subgroup_size_for_stage;
 
-    if (!supports_required_subgroup_size_for_stage)
+    if (requested_required_subgroup_size && !supports_required_subgroup_size_for_stage)
     {
+        vkDestroyShaderModule(ret.device->vk_device, vk_shader_module, nullptr);
         _DAXA_DEBUG_BREAK
-        return std::bit_cast<daxa_Result>(module_result);
+        return DAXA_RESULT_ERROR_FEATURE_NOT_PRESENT;
     }
 
     VkPipelineShaderStageRequiredSubgroupSizeCreateInfo require_subgroup_size_vkstruct{
@@ -442,8 +445,8 @@ auto daxa_dvc_create_compute_pipeline(daxa_Device device, daxa_ComputePipelineIn
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_pipeline = new daxa_ImplComputePipeline{};
     **out_pipeline = ret;
     return DAXA_RESULT_SUCCESS;
@@ -687,8 +690,8 @@ auto daxa_dvc_create_ray_tracing_pipeline_or_library(daxa_Device device, daxa_Ra
         };
         ret.device->vkSetDebugUtilsObjectNameEXT(ret.device->vk_device, &name_info);
     }
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_pipeline = new ImplPipelineT{};
     **out_pipeline = ret;
     return DAXA_RESULT_SUCCESS;
@@ -980,14 +983,18 @@ auto daxa_ray_tracing_pipeline_library_dec_refcnt(daxa_RayTracingPipelineLibrary
 void ImplPipeline::zero_ref_callback(ImplHandle const * handle)
 {
     auto * self = rc_cast<ImplPipeline *>(handle);
-    std::unique_lock const lock{self->device->zombies_mtx};
-    u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);
-    self->device->pipeline_zombies.emplace_front(
-        submit_timeline_value,
-        PipelineZombie{
-            .vk_pipeline = self->vk_pipeline,
-        });
-    self->device->dec_weak_refcnt(
+    {
+        // The lock must be released before dropping the device reference:
+        // destroying the device collects garbage, which locks zombies_mtx again.
+        std::unique_lock const lock{self->device->zombies_mtx};
+        u64 const submit_timeline_value = self->device->global_submit_timeline.load(std::memory_order::relaxed);
+        self->device->pipeline_zombies.emplace_front(
+            submit_timeline_value,
+            PipelineZombie{
+                .vk_pipeline = self->vk_pipeline,
+            });
+    }
+    self->device->dec_child_refcnt(
         daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;

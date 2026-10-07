@@ -112,9 +112,13 @@ auto daxa_create_instance(daxa_InstanceInfo const * info, daxa_Instance * out_in
     _DAXA_RETURN_IF_ERROR(result, result);
 
     result = ret.initialize_physical_devices();
+    if (result != DAXA_RESULT_SUCCESS)
+    {
+        vkDestroyInstance(ret.vk_instance, nullptr);
+    }
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    ret.strong_count = 1;
+    ret.ref_count = 1;
     *out_instance = new daxa_ImplInstance{};
     **out_instance = std::move(ret);
     return DAXA_RESULT_SUCCESS;
@@ -175,7 +179,7 @@ auto daxa_instance_choose_device(daxa_Instance self, daxa_ImplicitFeatureFlags d
             info->max_allowed_buffers <= props.limits.max_descriptor_set_storage_buffers &&
             info->max_allowed_images <= props.limits.max_descriptor_set_storage_images &&
             info->max_allowed_images <= props.limits.max_descriptor_set_sampled_images &&
-            info->max_allowed_images <= props.limits.max_descriptor_set_storage_images;
+            info->max_allowed_samplers <= props.limits.max_descriptor_set_samplers;
         if (props.acceleration_structure_properties.has_value)
         {
             matches_info = matches_info &&
@@ -235,7 +239,7 @@ auto daxa_instance_create_device_2(daxa_Instance self, daxa_DeviceInfo2 const * 
         *out_device);
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    self->inc_weak_refcnt();
+    self->inc_child_refcnt();
     return result;
 }
 

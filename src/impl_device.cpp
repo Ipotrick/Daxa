@@ -14,6 +14,13 @@
 
 namespace
 {
+    // Resources are shared across all queue families.
+    // Concurrent sharing requires at least two distinct families, with a single family it must be exclusive.
+    auto resource_sharing_mode(daxa_Device self) -> VkSharingMode
+    {
+        return self->valid_vk_queue_type_count > 1 ? VK_SHARING_MODE_CONCURRENT : VK_SHARING_MODE_EXCLUSIVE;
+    }
+
     auto initialize_image_create_info_from_image_info(daxa_Device self, daxa_ImageInfo const & image_info) -> VkImageCreateInfo
     {
         DAXA_DBG_ASSERT_TRUE_M(std::popcount(image_info.sample_count) == 1 && image_info.sample_count <= 8, "image samples must be power of two and between 1 and 64(inclusive)");
@@ -41,7 +48,7 @@ namespace
             .samples = static_cast<VkSampleCountFlagBits>(image_info.sample_count),
             .tiling = VK_IMAGE_TILING_OPTIMAL,
             .usage = image_info.usage,
-            .sharingMode = VK_SHARING_MODE_CONCURRENT,
+            .sharingMode = resource_sharing_mode(self),
             .queueFamilyIndexCount = self->valid_vk_queue_type_count,
             .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
             .initialLayout = VK_IMAGE_LAYOUT_UNDEFINED,
@@ -175,7 +182,7 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
         .flags = {},
         .size = static_cast<VkDeviceSize>(ret.info.size),
         .usage = create_buffer_use_flags(self),
-        .sharingMode = VK_SHARING_MODE_CONCURRENT,                  // Buffers are always shared.
+        .sharingMode = resource_sharing_mode(self),
         .queueFamilyIndexCount = self->valid_vk_queue_type_count, // Buffers are always shared across all queues.
         .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
     };
@@ -225,8 +232,10 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
         bool const invalidMemoryFlags = info->memory_flags != DAXA_MEMORY_FLAG_NONE;
         if (invalidMemoryFlags)
         {
-            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION, DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION);
+            // Must be stored in result, the on-error defer keys off it.
+            result = DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION;
         }
+        _DAXA_RETURN_IF_ERROR(result, result);
 
         // copy flags from memory block to buffer info.
         ret.info.memory_flags = opt_memory_block->info.flags;
@@ -241,13 +250,10 @@ auto create_buffer_helper(daxa_Device self, daxa_BufferInfo const * info, daxa_B
             opt_offset,
             hot_data.vk_buffer,
             {}));
-        if (result != DAXA_RESULT_SUCCESS)
-        {
-            vkDestroyBuffer(self->vk_device, hot_data.vk_buffer, nullptr);
-        }
+        // On failure the defer destroys the buffer.
         _DAXA_RETURN_IF_ERROR(result, result)
 
-        opt_memory_block->inc_weak_refcnt();
+        opt_memory_block->inc_child_refcnt();
         if (host_accessible)
         {
             hot_data.host_address = static_cast<void *>(static_cast<u8 *>(opt_memory_block->alloc_info.pMappedData) + opt_offset);
@@ -316,14 +322,17 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
     {
         if (result != DAXA_RESULT_SUCCESS)
         {
-            if (ret.vk_image)
-            {
-                vmaDestroyImage(self->vma_allocator, ret.vk_image, ret.vma_allocation);
-            }
             if (ret.view_slot.vk_image_view)
             {
                 vkDestroyImageView(self->vk_device, ret.view_slot.vk_image_view, nullptr);
             }
+            if (ret.vk_image)
+            {
+                // A null allocation (memory block images) only destroys the image.
+                vmaDestroyImage(self->vma_allocator, ret.vk_image, ret.vma_allocation);
+            }
+            // Must come last, it clears the slot.
+            self->gpu_sro_table.image_slots.unsafe_destroy_zombie_slot(id);
         }
     };
 
@@ -401,8 +410,10 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
         bool const invalidMemoryFlags = info->memory_flags != DAXA_MEMORY_FLAG_NONE;
         if (invalidMemoryFlags)
         {
-            _DAXA_RETURN_IF_ERROR(DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION, DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION);
+            // Must be stored in result, the on-error defer keys off it.
+            result = DAXA_RESULT_ERROR_ALLOC_FLAGS_MUST_BE_ZERO_ON_BLOCK_ALLOCATION;
         }
+        _DAXA_RETURN_IF_ERROR(result, result);
 
         // copy flags from memory block to image info.
         ret.info.memory_flags = opt_memory_block->info.flags;
@@ -417,17 +428,14 @@ auto create_image_helper(daxa_Device self, daxa_ImageInfo const * info, daxa_Ima
             opt_offset,
             ret.vk_image,
             {}));
-        if (result != DAXA_RESULT_SUCCESS)
-        {
-            vkDestroyImage(self->vk_device, ret.vk_image, nullptr);
-        }
+        // On failure the defer destroys the image.
         _DAXA_RETURN_IF_ERROR(result, result);
 
         vk_image_view_create_info.image = ret.vk_image;
         result = static_cast<daxa_Result>(vkCreateImageView(self->vk_device, &vk_image_view_create_info, nullptr, &ret.view_slot.vk_image_view));
         _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_CREATE_DEFAULT_IMAGE_VIEW);
 
-        opt_memory_block->inc_weak_refcnt();
+        opt_memory_block->inc_child_refcnt();
     }
 
     if ((self->instance->info.flags & InstanceFlagBits::DEBUG_UTILS) != InstanceFlagBits::NONE && info->name.size != 0)
@@ -476,11 +484,21 @@ auto create_acceleration_structure_helper(
     bool owns_buffer_external = false) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
+    // An owned external buffer is handed over to the acceleration structure.
+    // Once the slot exists, the slot's on-error defer destroys it. Before that, it must be destroyed here.
+    auto destroy_owned_external_buffer = [&]()
+    {
+        if (buffer != nullptr && owns_buffer_external)
+        {
+            [[maybe_unused]] auto const _ignore = daxa_dvc_destroy_buffer(self, *buffer);
+        }
+    };
     // --- Begin Parameter Validation ---
 
     if ((self->properties.implicit_features & DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING) == 0)
     {
         result = DAXA_RESULT_INVALID_WITHOUT_ENABLING_RAY_TRACING;
+        destroy_owned_external_buffer();
     }
     _DAXA_RETURN_IF_ERROR(result, result);
 
@@ -490,6 +508,7 @@ auto create_acceleration_structure_helper(
     if (!slot_opt.has_value())
     {
         result = DAXA_RESULT_EXCEEDED_MAX_ACCELERATION_STRUCTURES;
+        destroy_owned_external_buffer();
     }
     _DAXA_RETURN_IF_ERROR(result, result);
 
@@ -498,11 +517,13 @@ auto create_acceleration_structure_helper(
     {
         if (result != DAXA_RESULT_SUCCESS)
         {
-            table.unsafe_destroy_zombie_slot(id);
-            if (!ret.buffer_id.is_empty())
+            // Only destroy buffers this acceleration structure owns, never a user provided one.
+            // Must happen before the slot is cleared.
+            if (ret.owns_buffer && !ret.buffer_id.is_empty())
             {
                 [[maybe_unused]] auto const _ignore = daxa_dvc_destroy_buffer(self, ret.buffer_id);
             }
+            table.unsafe_destroy_zombie_slot(id);
         }
     };
 
@@ -807,7 +828,7 @@ auto daxa_dvc_buffer_memory_requirements(daxa_Device self, daxa_BufferInfo const
         .flags = {},
         .size = static_cast<VkDeviceSize>(info->size),
         .usage = create_buffer_use_flags(self),
-        .sharingMode = VK_SHARING_MODE_CONCURRENT,                  // Buffers are always shared.
+        .sharingMode = resource_sharing_mode(self),
         .queueFamilyIndexCount = self->valid_vk_queue_type_count, // Buffers are always shared across all queues.
         .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
     };
@@ -1023,6 +1044,11 @@ auto daxa_dvc_create_blas_from_buffer(daxa_Device self, daxa_BufferBlasInfo cons
 auto daxa_dvc_create_image_view(daxa_Device self, daxa_ImageViewInfo const * info, daxa_ImageViewId * out_id) -> daxa_Result
 {
     daxa_Result result = DAXA_RESULT_SUCCESS;
+
+    if (!daxa_dvc_is_image_valid(self, info->image))
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_INVALID_IMAGE_ID, DAXA_RESULT_INVALID_IMAGE_ID);
+    }
 
     auto slot_opt = self->gpu_sro_table.image_slots.try_create_slot();
     if (!slot_opt.has_value())
@@ -1985,6 +2011,7 @@ auto daxa_dvc_choose_swapchain_surface_format(
     }
 
     _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND, DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND);
+    return DAXA_RESULT_NO_SUITABLE_FORMAT_FOUND;
 }
 
 auto daxa_dvc_properties(daxa_Device device) -> daxa_DeviceProperties const *
@@ -2029,7 +2056,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     _DAXA_RETURN_IF_ERROR(result, result)
 
     auto const max_device_supported_images_in_set = std::min(self->properties.limits.max_descriptor_set_sampled_images, self->properties.limits.max_descriptor_set_storage_images);
-    if (self->info.max_allowed_buffers > max_device_supported_images_in_set || self->info.max_allowed_buffers == 0)
+    if (self->info.max_allowed_images > max_device_supported_images_in_set || self->info.max_allowed_images == 0)
     {
         result = DAXA_RESULT_DEVICE_DOES_NOT_SUPPORT_IMAGE_COUNT;
     }
@@ -2357,10 +2384,6 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
     {
         if (result != DAXA_RESULT_SUCCESS)
         {
-            if (self->vma_allocator)
-            {
-                vmaDestroyAllocator(self->vma_allocator);
-            }
             if (self->vk_null_buffer)
             {
                 vmaDestroyBuffer(self->vma_allocator, self->vk_null_buffer, self->vk_null_buffer_vma_allocation);
@@ -2381,6 +2404,11 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             {
                 vmaDestroyBuffer(self->vma_allocator, self->buffer_device_address_buffer, self->buffer_device_address_buffer_allocation);
             }
+            // Must come last, everything above is allocated from it.
+            if (self->vma_allocator)
+            {
+                vmaDestroyAllocator(self->vma_allocator);
+            }
         }
     };
 
@@ -2394,7 +2422,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .flags = {},
             .size = sizeof(u8) * 4,
             .usage = create_buffer_use_flags(self),
-            .sharingMode = VK_SHARING_MODE_CONCURRENT,
+            .sharingMode = resource_sharing_mode(self),
             .queueFamilyIndexCount = self->valid_vk_queue_type_count,
             .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
         };
@@ -2596,7 +2624,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
             .flags = {},
             .size = self->info.max_allowed_buffers * sizeof(u64),
             .usage = usage_flags,
-            .sharingMode = VK_SHARING_MODE_CONCURRENT,                  // Buffers are always shared.
+            .sharingMode = resource_sharing_mode(self),
             .queueFamilyIndexCount = self->valid_vk_queue_type_count, // Buffers are always shared across all queues.
             .pQueueFamilyIndices = self->valid_vk_queue_families.data(),
         };
@@ -2679,7 +2707,7 @@ auto daxa_ImplDevice::create_2(daxa_Instance instance, daxa_DeviceInfo2 const & 
         self->vk_device,
         self->buffer_device_address_buffer,
         self->vkSetDebugUtilsObjectNameEXT);
-    _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
+    _DAXA_RETURN_IF_ERROR(result, result)
 
     result = static_cast<daxa_Result>(vkEndCommandBuffer(init_cmd_buffer));
     _DAXA_RETURN_IF_ERROR(result, DAXA_RESULT_FAILED_TO_SUBMIT_DEVICE_INIT_COMMANDS)
@@ -2766,7 +2794,10 @@ auto daxa_ImplDevice::new_swapchain_image(VkImage swapchain_image, VkFormat form
     daxa_Result result = DAXA_RESULT_SUCCESS;
 
     auto slot_opt = this->gpu_sro_table.image_slots.try_create_slot();
-    DAXA_DBG_ASSERT_TRUE_M(slot_opt.has_value(), "CRITICAL INTERNAL ERROR, EXCEEDED MAX IMAGES IN SWAPCHAIN CREATION");
+    if (!slot_opt.has_value())
+    {
+        _DAXA_RETURN_IF_ERROR(DAXA_RESULT_EXCEEDED_MAX_IMAGES, DAXA_RESULT_EXCEEDED_MAX_IMAGES);
+    }
     auto [id, ret, hot_data] = slot_opt.value();
     defer
     {
@@ -3022,7 +3053,7 @@ void daxa_ImplDevice::zero_ref_callback(ImplHandle const * handle)
         queue.cleanup(self->vk_device);
     }
     vkDestroyDevice(self->vk_device, nullptr);
-    self->instance->dec_weak_refcnt(
+    self->instance->dec_child_refcnt(
         daxa_ImplInstance::zero_ref_callback,
         self->instance);
     delete self;
@@ -3036,7 +3067,7 @@ void zombiefy(daxa_Device self, T id, auto & slots, auto & zombies)
     {
         if (slot.opt_memory_block != nullptr)
         {
-            slot.opt_memory_block->dec_weak_refcnt(
+            slot.opt_memory_block->dec_child_refcnt(
                 daxa_ImplMemoryBlock::zero_ref_callback,
                 self->instance);
         }

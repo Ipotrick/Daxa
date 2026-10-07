@@ -293,9 +293,13 @@ namespace daxa
     void ImplImGuiRenderer::record_commands(ImGuiRecordCommandsInfo const & record_info)
     {
         ++frame_count;
-        if ((record_info.draw_data != nullptr) && record_info.draw_data->TotalIdxCount > 0)
+        // Texture requests (create, update, destroy) must be processed even on frames that draw nothing.
+        if (record_info.draw_data != nullptr)
         {
             update_textures(record_info.draw_data, record_info.recorder);
+        }
+        if ((record_info.draw_data != nullptr) && record_info.draw_data->TotalIdxCount > 0)
+        {
 
             auto vbuffer_current_size = this->info.device.buffer_info(vbuffer).value().size;
             auto vbuffer_needed_size = static_cast<usize>(record_info.draw_data->TotalVtxCount) * sizeof(ImDrawVert);
@@ -391,6 +395,24 @@ namespace daxa
                 for (i32 cmd_i = 0; cmd_i < draws->CmdBuffer.Size; cmd_i++)
                 {
                     ImDrawCmd const * pcmd = &draws->CmdBuffer[cmd_i];
+
+                    if (pcmd->UserCallback != nullptr)
+                    {
+                        if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                        {
+                            render_recorder.set_pipeline(raster_pipeline);
+                            render_recorder.set_index_buffer({
+                                .buffer = ibuffer,
+                                .offset = 0,
+                                .index_type = IndexType::uint16,
+                            });
+                        }
+                        else
+                        {
+                            pcmd->UserCallback(draws, pcmd);
+                        }
+                        continue;
+                    }
 
                     // Project scissor/clipping rectangles into framebuffer space
                     ImVec2 clip_min((pcmd->ClipRect.x - clip_off.x) * clip_scale.x, (pcmd->ClipRect.y - clip_off.y) * clip_scale.y);

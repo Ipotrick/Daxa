@@ -123,22 +123,22 @@ namespace daxa
 {
     struct ImplHandle
     {
-        // Used for user side reference count.
-        mutable u64 strong_count = 1;
-        // Used for internal reference count.
-        mutable u64 weak_count = {};
+        // Counts every owner: user handles AND child objects that depend on this object.
+        // This is the only count that decides lifetime: the object is destroyed when it reaches zero.
+        mutable u64 ref_count = 1;
+        // Counts only the child objects (included in ref_count). Used purely for validation.
+        // User handle count = ref_count - child_ref_count.
+        mutable u64 child_ref_count = {};
 
-#define inc_weak_refcnt() impl_inc_weak_refcnt(__FUNCTION__)
-#define dec_weak_refcnt(CB, IS) impl_dec_weak_refcnt(CB, IS, __FUNCTION__)
+#define inc_child_refcnt() impl_inc_child_refcnt(__FUNCTION__)
+#define dec_child_refcnt(CB, IS) impl_dec_child_refcnt(CB, IS, __FUNCTION__)
 
-        // For user side ref counting.
         auto inc_refcnt() const -> u64;
         auto dec_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance) const -> u64;
         auto get_refcnt() const -> u64;
-        // For internal ref counting.
-        auto impl_inc_weak_refcnt(char const * callsite) const -> u64;
-        auto impl_dec_weak_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance, char const * callsite) const -> u64;
-        auto get_weak_refcnt() const -> u64;
+        auto impl_inc_child_refcnt(char const * callsite) const -> u64;
+        auto impl_dec_child_refcnt(void (*zero_ref_callback)(ImplHandle const *), daxa_Instance instance, char const * callsite) const -> u64;
+        auto get_child_refcnt() const -> u64;
     };
 } // namespace daxa
 

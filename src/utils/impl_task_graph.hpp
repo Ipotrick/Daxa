@@ -323,6 +323,7 @@ namespace daxa
         ArenaDynamicArray8k<TasksSubmit> submits = {};
         u32 flat_batch_count = {};                                                                              // total batch count ignoring async compute;
         u32 queue_bits = {};
+        u32 persistent_resource_queue_bits = {};                                                                // queues using graph owned persistent resources
         daxa::MemoryBlock resource_memory_block = {};
         std::optional<daxa::TransferMemoryPool> staging_memory = {};
         std::optional<TaskGraphPresent> present = {};

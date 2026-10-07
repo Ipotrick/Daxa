@@ -273,7 +273,7 @@ auto daxa_cmd_copy_buffer_to_image(daxa_CommandRecorder self, daxa_BufferImageCo
 {
     DAXA_CHECK_UNCOMPLETED(self)
     daxa_cmd_flush_barriers(self);
-    //_DAXA_CHECK_AND_REMEMBER_IDS(self, info->buffer, info->image)
+    DAXA_CHECK_AND_REMEMBER_IDS(self, info->src_buffer, info->dst_image)
     auto const & img_slot = self->device->slot(info->dst_image);
     VkBufferImageCopy const vk_buffer_image_copy{
         .bufferOffset = info->buffer_offset,
@@ -520,6 +520,7 @@ auto daxa_cmd_pipeline_barrier(daxa_CommandRecorder self, daxa_BarrierInfo const
 
 auto daxa_cmd_pipeline_image_barrier(daxa_CommandRecorder self, daxa_ImageBarrierInfo const * info) -> daxa_Result
 {
+    DAXA_CHECK_UNCOMPLETED(self)
     DAXA_CHECK_AND_REMEMBER_IDS(self, info->image)
     if (self->image_barrier_batch_count == COMMAND_RECORDER_BARRIER_MAX_BATCH_SIZE)
     {
@@ -661,7 +662,8 @@ auto daxa_cmd_push_constant(daxa_CommandRecorder self, daxa_PushConstantInfo con
     }
     // Always write the whole range, fill with 0xFF to the size of the push constant.
     // This makes validation and renderdoc happy as well as help debug uninitialized push constant data
-    std::array<std::byte, DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE> const_data = {std::byte{0xFF}};
+    std::array<std::byte, DAXA_MAX_PUSH_CONSTANT_BYTE_SIZE> const_data;
+    const_data.fill(std::byte{0xFF});
     std::memcpy(const_data.data(), info->data, info->size);
     vkCmdPushConstants(self->command_arena->vk_command_buffer, vk_pipeline_layout, VK_SHADER_STAGE_ALL, 0, current_pipeline_push_constant_size, const_data.data());
     return DAXA_RESULT_SUCCESS;
@@ -732,6 +734,7 @@ auto daxa_cmd_trace_rays(daxa_CommandRecorder self, daxa_TraceRaysInfo const * i
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET, DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET);
     }
+    daxa_cmd_flush_barriers(self);
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
     raygen_handle.deviceAddress += binding_table.raygen_region.stride * info->raygen_handle_offset;
@@ -762,6 +765,7 @@ auto daxa_cmd_trace_rays_indirect(daxa_CommandRecorder self, daxa_TraceRaysIndir
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET, DAXA_RESULT_NO_RAYTRACING_PIPELINE_SET);
     }
+    daxa_cmd_flush_barriers(self);
     auto const & binding_table = info->shader_binding_table;
     auto raygen_handle = binding_table.raygen_region;
     raygen_handle.deviceAddress += binding_table.raygen_region.stride * info->raygen_handle_offset;
@@ -792,6 +796,7 @@ auto daxa_cmd_dispatch(daxa_CommandRecorder self, daxa_DispatchInfo const * info
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_SET, DAXA_RESULT_NO_COMPUTE_PIPELINE_SET);
     }
+    daxa_cmd_flush_barriers(self);
     vkCmdDispatch(self->command_arena->vk_command_buffer, info->x, info->y, info->z);
     return DAXA_RESULT_SUCCESS;
 }
@@ -807,6 +812,7 @@ auto daxa_cmd_dispatch_indirect(daxa_CommandRecorder self, daxa_DispatchIndirect
     {
         _DAXA_RETURN_IF_ERROR(DAXA_RESULT_NO_COMPUTE_PIPELINE_SET, DAXA_RESULT_NO_COMPUTE_PIPELINE_SET);
     }
+    daxa_cmd_flush_barriers(self);
     vkCmdDispatchIndirect(self->command_arena->vk_command_buffer, self->device->hot_slot(info->indirect_buffer).vk_buffer, info->offset);
     return DAXA_RESULT_SUCCESS;
 }
@@ -1186,7 +1192,7 @@ auto daxa_cmd_complete_current_commands(
     auto result = static_cast<daxa_Result>(vkEndCommandBuffer(self->command_arena->vk_command_buffer));
     _DAXA_RETURN_IF_ERROR(result, result);
 
-    self->device->inc_weak_refcnt();
+    self->device->inc_child_refcnt();
     *out_executable_cmds = new daxa_ImplExecutableCommandList{
         .device = self->device,
         .info = self->info,
@@ -1262,8 +1268,8 @@ auto daxa_dvc_create_command_recorder(daxa_Device device, daxa_CommandRecorderIn
     }
     // CAUSED UB: EASILY CAUSED RECURSIVE SHARED LOCKING WHEN CALLING COLLECT GARBAGE OR SUBMIT WHILE THE THREAD OWNS AN ALIVE CMD RECORDER. THIS IS ILLEGAL IN C++!
     // ret.device->gpu_sro_table.lifetime_lock.lock_shared();
-    ret.strong_count = 1;
-    device->inc_weak_refcnt();
+    ret.ref_count = 1;
+    device->inc_child_refcnt();
     *out_cmd_list = new daxa_ImplCommandRecorder{};
     **out_cmd_list = std::move(ret);
     return DAXA_RESULT_SUCCESS;
@@ -1296,7 +1302,7 @@ void daxa_ImplCommandRecorder::zero_ref_callback(ImplHandle const * handle)
             submit_timeline,
             self->command_arena);
     }
-    self->device->dec_weak_refcnt(
+    self->device->dec_child_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;
@@ -1312,7 +1318,7 @@ void daxa_ImplExecutableCommandList::zero_ref_callback(ImplHandle const * handle
             submit_timeline,
             self->command_arena);
     }
-    self->device->dec_weak_refcnt(
+    self->device->dec_child_refcnt(
         &daxa_ImplDevice::zero_ref_callback,
         self->device->instance);
     delete self;

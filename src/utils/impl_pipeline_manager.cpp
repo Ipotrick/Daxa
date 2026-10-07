@@ -1082,42 +1082,44 @@ namespace daxa
         impl.current_total_stages = 0;
         impl.parallel_file_cache.reset();
 
-        // Serial pass: apply valid results; return first error if any.
+        // Serial pass: apply every valid result, then report the first error if any.
+        // Returning at the first error would drop the remaining successful results, while their
+        // sources were already marked as seen, so they would stay stale until edited again.
+        std::optional<PipelineReloadError> first_error = {};
+        auto apply = [&](auto & state, auto & new_pipe)
+        {
+            bool const is_valid = impl.info.register_null_pipelines_when_first_compile_fails
+                ? (new_pipe.is_ok() && new_pipe.value().pipeline_ptr->is_valid())
+                : new_pipe.is_ok();
+            if (is_valid)
+            {
+                *state.pipeline_ptr = std::move(*new_pipe.value().pipeline_ptr);
+                // The edit may have added or removed includes, watch what the new compile actually read.
+                state.observed_hotload_files = std::move(new_pipe.value().observed_hotload_files);
+            }
+            else if (!first_error.has_value())
+            {
+                first_error = PipelineReloadError{new_pipe.m};
+            }
+        };
         for (auto const & item : work)
         {
             if (item.type == ReloadItem::Type::Compute)
             {
-                auto & new_pipe = compute_results[item.index];
-                bool const is_valid = impl.info.register_null_pipelines_when_first_compile_fails
-                    ? (new_pipe.is_ok() && new_pipe.value().pipeline_ptr->is_valid())
-                    : new_pipe.is_ok();
-                if (is_valid)
-                    *impl.compute_pipelines[item.index].pipeline_ptr = std::move(*new_pipe.value().pipeline_ptr);
-                else
-                    return PipelineReloadError{new_pipe.m};
+                apply(impl.compute_pipelines[item.index], compute_results[item.index]);
             }
             else if (item.type == ReloadItem::Type::Raster)
             {
-                auto & new_pipe = raster_results[item.index];
-                bool const is_valid = impl.info.register_null_pipelines_when_first_compile_fails
-                    ? (new_pipe.is_ok() && new_pipe.value().pipeline_ptr->is_valid())
-                    : new_pipe.is_ok();
-                if (is_valid)
-                    *impl.raster_pipelines[item.index].pipeline_ptr = std::move(*new_pipe.value().pipeline_ptr);
-                else
-                    return PipelineReloadError{new_pipe.m};
+                apply(impl.raster_pipelines[item.index], raster_results[item.index]);
             }
             else
             {
-                auto & new_pipe = rt_results[item.index];
-                bool const is_valid = impl.info.register_null_pipelines_when_first_compile_fails
-                    ? (new_pipe.is_ok() && new_pipe.value().pipeline_ptr->is_valid())
-                    : new_pipe.is_ok();
-                if (is_valid)
-                    *impl.ray_tracing_pipelines[item.index].pipeline_ptr = std::move(*new_pipe.value().pipeline_ptr);
-                else
-                    return PipelineReloadError{new_pipe.m};
+                apply(impl.ray_tracing_pipelines[item.index], rt_results[item.index]);
             }
+        }
+        if (first_error.has_value())
+        {
+            return first_error.value();
         }
 
         return PipelineReloadSuccess{};
@@ -1648,6 +1650,8 @@ namespace daxa
                 if (is_valid)
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
+                    // The edit may have added or removed includes, watch what the new compile actually read.
+                    observed_hotload_files = std::move(new_pipeline.value().observed_hotload_files);
                 }
                 else
                 {
@@ -1674,6 +1678,8 @@ namespace daxa
                 if (is_valid)
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
+                    // The edit may have added or removed includes, watch what the new compile actually read.
+                    observed_hotload_files = std::move(new_pipeline.value().observed_hotload_files);
                 }
                 else
                 {
@@ -1700,6 +1706,8 @@ namespace daxa
                 if (is_valid)
                 {
                     *pipeline = std::move(*new_pipeline.value().pipeline_ptr);
+                    // The edit may have added or removed includes, watch what the new compile actually read.
+                    observed_hotload_files = std::move(new_pipeline.value().observed_hotload_files);
                 }
                 else
                 {
@@ -1752,9 +1760,11 @@ namespace daxa
     {
         auto result = uint64_t{};
 
+        // A plain xor based combine lets equal parts cancel out (e.g. two defines with the same value),
+        // which made different compile options share a cache entry. This mixes in the running hash.
         auto hash_combine = [](uint64_t h1, uint64_t h2) -> uint64_t
         {
-            return h1 ^ (h2 << 1);
+            return h1 ^ (h2 + 0x9e3779b97f4a7c15ull + (h1 << 6) + (h1 >> 2));
         };
 
         auto hash_shader_compile_options = [this, &hash_combine](ShaderCompileInfo2 const & options) -> uint64_t
@@ -1792,7 +1802,11 @@ namespace daxa
     }
 
     static constexpr auto CACHE_FILE_MAGIC_NUMBER = std::bit_cast<uint64_t>(std::to_array("daxpipe"));
-    static constexpr auto CACHE_FILE_VERSION = uint64_t{2};
+    // Version 3: changed shader info hashing.
+    static constexpr auto CACHE_FILE_VERSION = uint64_t{3};
+    // Sanity limits for reading cache files, anything above is treated as a corrupt file.
+    static constexpr auto CACHE_FILE_MAX_STRING_SIZE = uint64_t{1} << 26;
+    static constexpr auto CACHE_FILE_MAX_SPIRV_SIZE = uint64_t{1} << 30;
 
     struct ShaderCacheFileHeader
     {
@@ -1805,7 +1819,12 @@ namespace daxa
     void ImplPipelineManager::save_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash, std::vector<u32> const & spirv)
     {
         std::filesystem::create_directories(cache_folder);
-        auto out_file = std::ofstream{cache_folder / std::filesystem::path{std::to_string(shader_info_hash)}, std::ios::binary};
+        // Written to a temporary file first and renamed when complete, so that a crash or a concurrent
+        // writer can never leave a partially written cache file behind under the final name.
+        auto const final_path = cache_folder / std::filesystem::path{std::to_string(shader_info_hash)};
+        auto const temp_path = cache_folder / std::filesystem::path{
+            std::to_string(shader_info_hash) + "." + std::to_string(std::hash<std::thread::id>{}(std::this_thread::get_id())) + ".tmp"};
+        auto out_file = std::ofstream{temp_path, std::ios::binary};
         auto header = ShaderCacheFileHeader{};
         header.magic_number = CACHE_FILE_MAGIC_NUMBER;
         header.version = CACHE_FILE_VERSION;
@@ -1839,6 +1858,16 @@ namespace daxa
             }
         }
         out_file.write(reinterpret_cast<char const *>(spirv.data()), static_cast<std::streamsize>(header.spirv_size));
+        out_file.close();
+        auto ec = std::error_code{};
+        if (out_file.good())
+        {
+            std::filesystem::rename(temp_path, final_path, ec);
+        }
+        if (!out_file.good() || ec)
+        {
+            std::filesystem::remove(temp_path, ec);
+        }
     }
 
     auto ImplPipelineManager::try_load_shader_cache(std::filesystem::path const & cache_folder, uint64_t shader_info_hash) -> Result<std::vector<u32>>
@@ -1846,9 +1875,10 @@ namespace daxa
         auto in_file = std::ifstream{cache_folder / std::filesystem::path{std::to_string(shader_info_hash)}, std::ios::binary};
         if (in_file.good())
         {
+            auto const bad_cache_file = Result<std::vector<u32>>(std::string_view{"bad cache file"});
             auto header = ShaderCacheFileHeader{};
             in_file.read(reinterpret_cast<char *>(&header), sizeof(header));
-            if (header.magic_number != CACHE_FILE_MAGIC_NUMBER)
+            if (!in_file.good() || header.magic_number != CACHE_FILE_MAGIC_NUMBER)
             {
                 return Result<std::vector<u32>>(std::string_view{"bad cache file"});
             }
@@ -1867,8 +1897,16 @@ namespace daxa
                 in_file.read(reinterpret_cast<char *>(&flags), sizeof(flags));
                 auto is_virtual_file = ((flags >> 0) & 1) != 0;
                 in_file.read(reinterpret_cast<char *>(&path_string_size), sizeof(path_string_size));
+                if (!in_file.good() || path_string_size > CACHE_FILE_MAX_STRING_SIZE)
+                {
+                    return bad_cache_file;
+                }
                 path_string.resize(path_string_size);
                 in_file.read(path_string.data(), static_cast<std::streamsize>(path_string_size));
+                if (!in_file.good())
+                {
+                    return bad_cache_file;
+                }
                 path = path_string;
                 if (is_virtual_file)
                 {
@@ -1876,8 +1914,16 @@ namespace daxa
                     auto virtual_file_size = uint64_t{};
 
                     in_file.read(reinterpret_cast<char *>(&virtual_file_size), sizeof(virtual_file_size));
+                    if (!in_file.good() || virtual_file_size > CACHE_FILE_MAX_STRING_SIZE)
+                    {
+                        return bad_cache_file;
+                    }
                     virtual_file_contents.resize(virtual_file_size);
                     in_file.read(virtual_file_contents.data(), static_cast<std::streamsize>(virtual_file_size));
+                    if (!in_file.good())
+                    {
+                        return bad_cache_file;
+                    }
 
                     auto virtual_file_iter = virtual_files.find(path_string);
                     if (virtual_file_iter == virtual_files.end())
@@ -1892,6 +1938,10 @@ namespace daxa
                 else
                 {
                     in_file.read(reinterpret_cast<char *>(&time_since_epoch), sizeof(time_since_epoch));
+                    if (!in_file.good())
+                    {
+                        return bad_cache_file;
+                    }
                     if (!std::filesystem::exists(path))
                     {
                         return Result<std::vector<u32>>(std::string_view{"needs update"});
@@ -1907,9 +1957,17 @@ namespace daxa
                 current_observed_hotload_files->insert({path, std::chrono::file_clock::now()});
             }
 
+            if (header.spirv_size == 0 || header.spirv_size % sizeof(u32) != 0 || header.spirv_size > CACHE_FILE_MAX_SPIRV_SIZE)
+            {
+                return bad_cache_file;
+            }
             auto spirv = std::vector<u32>{};
             spirv.resize(header.spirv_size / sizeof(u32));
             in_file.read(reinterpret_cast<char *>(spirv.data()), static_cast<std::streamsize>(header.spirv_size));
+            if (static_cast<uint64_t>(in_file.gcount()) != header.spirv_size)
+            {
+                return bad_cache_file;
+            }
             return Result<std::vector<u32>>{spirv};
         }
         return Result<std::vector<u32>>(std::string_view{"no cache found"});
@@ -2480,11 +2538,14 @@ namespace daxa
         };
         slangRequest->processCommandLineArguments(cmd_args.data(), static_cast<int>(cmd_args.size()));
 
+        // Dependencies are recorded with the time from before slang reads them.
+        // A file saved while the compile runs then counts as changed and triggers another reload.
+        auto const compile_start_time = std::chrono::file_clock::now();
         for (auto const & [virtual_path, virtual_file] : virtual_files)
         {
             int virtualFileIndex = slangRequest->addTranslationUnit(SLANG_SOURCE_LANGUAGE_SLANG, virtual_path.c_str());
             slangRequest->addTranslationUnitSourceString(virtualFileIndex, virtual_path.c_str(), virtual_file.contents.c_str());
-            current_observed_hotload_files->insert({virtual_path, std::chrono::file_clock::now()});
+            current_observed_hotload_files->insert({virtual_path, compile_start_time});
         }
 
         auto const filename = "_daxa_file";
@@ -2505,7 +2566,7 @@ namespace daxa
             auto const * const dep_path = slangRequest->getDependencyFilePath(dependency_i);
             if (std::strcmp(dep_path, "_daxa_slang_main") != 0)
             {
-                current_observed_hotload_files->insert({dep_path, std::chrono::file_clock::now()});
+                current_observed_hotload_files->insert({dep_path, compile_start_time});
             }
         }
 
