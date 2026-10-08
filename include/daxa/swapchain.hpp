@@ -11,7 +11,7 @@ namespace daxa
     struct SurfaceFormat
     {
         Format format = {};
-        ColorSpace color_space = {};
+        ColorSpace color_space = ColorSpace::MAX_ENUM;
     };
 
     struct NativeWindowInfoWin32
