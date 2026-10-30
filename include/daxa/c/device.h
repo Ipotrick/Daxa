@@ -284,6 +284,7 @@ typedef enum
     DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION = 0x1 << 16,
     DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT = 0x1 << 17,
     DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS = 0x1 << 18,
+    DAXA_IMPLICIT_FEATURE_FLAG_COOPERATIVE_VECTOR = 0x1 << 19,
 } daxa_DeviceImplicitFeatureFlagBits;
 
 typedef daxa_DeviceImplicitFeatureFlagBits daxa_ImplicitFeatureFlags;

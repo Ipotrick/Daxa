@@ -167,6 +167,13 @@ namespace daxa
             chain = static_cast<void *>(&physical_device_shader_clock_features_khr);
         }
 
+        if (extensions.extensions_present[extensions.physical_device_cooperative_vector_nv])
+        {
+            physical_device_cooperative_vector_features_nv.pNext = chain;
+            physical_device_cooperative_vector_features_nv.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_COOPERATIVE_VECTOR_FEATURES_NV;
+            chain = static_cast<void *>(&physical_device_cooperative_vector_features_nv);
+        }
+
         if (extensions.extensions_present[extensions.physical_device_host_image_copy_ext])
         {
             physical_device_host_image_copy_features_ext.pNext = chain;
@@ -381,6 +388,10 @@ namespace daxa
         offsetof(PhysicalDeviceFeaturesStruct, calibrated_timestamps),
     };
 
+    constexpr static std::array DAXA_IMPLICIT_FEATURE_FLAG_COOPERATIVE_VECTOR_VK_FEATURES = std::array{
+        offsetof(PhysicalDeviceFeaturesStruct, physical_device_cooperative_vector_features_nv.cooperativeVector),
+    };
+
     constexpr static std::array IMPLICIT_FEATURES = std::array{
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_MESH_SHADER},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_BASIC_RAY_TRACING},
@@ -402,6 +413,7 @@ namespace daxa
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_LINE_RASTERIZATION},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_PRESENT_WAIT},
         ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_CALIBRATED_TIMESTAMPS},
+        ImplicitFeature{DAXA_IMPLICIT_FEATURE_FLAG_COOPERATIVE_VECTOR_VK_FEATURES, DAXA_IMPLICIT_FEATURE_FLAG_COOPERATIVE_VECTOR},
     };
 
     // === Explicit Features ===

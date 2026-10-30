@@ -67,6 +67,7 @@ namespace daxa
             physical_device_present_wait_khr,
             physical_device_calibrated_timestamps_khr,
             physical_device_calibrated_timestamps_ext,
+            physical_device_cooperative_vector_nv,
             COUNT
         };
         constexpr static std::array<char const *, COUNT> extension_names = {
@@ -94,6 +95,7 @@ namespace daxa
             VK_KHR_PRESENT_WAIT_EXTENSION_NAME,
             VK_KHR_CALIBRATED_TIMESTAMPS_EXTENSION_NAME,
             VK_EXT_CALIBRATED_TIMESTAMPS_EXTENSION_NAME,
+            VK_NV_COOPERATIVE_VECTOR_EXTENSION_NAME,
         };
         char const * extension_name_list[COUNT] = {};
         u32 extension_name_list_size = {};
@@ -136,6 +138,7 @@ namespace daxa
         VkPhysicalDeviceShaderDemoteToHelperInvocationFeatures physical_device_shader_demote_to_helper_invocation_features = {};
         VkPhysicalDevicePresentIdFeaturesKHR physical_device_present_id_features_khr = {};
         VkPhysicalDevicePresentWaitFeaturesKHR physical_device_present_wait_features_khr = {};
+        VkPhysicalDeviceCooperativeVectorFeaturesNV physical_device_cooperative_vector_features_nv = {};
         VkPhysicalDeviceFeatures2 physical_device_features_2 = {};
         // NOTE: Must be VkBool32, the feature tables read every entry as a VkBool32.
         VkBool32 conservative_rasterization = {};

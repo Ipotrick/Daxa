@@ -287,6 +287,8 @@ namespace daxa
         static inline constexpr ImplicitFeatureFlags SHADER_CLOCK = {0x1 << 14};
         static inline constexpr ImplicitFeatureFlags HOST_IMAGE_COPY = {0x1 << 15};
         static inline constexpr ImplicitFeatureFlags LINE_RASTERIZATION = {0x1 << 16};
+        /// VK_NV_cooperative_vector: per thread vector x matrix products on tensor cores (Slang CoopVec).
+        static inline constexpr ImplicitFeatureFlags COOPERATIVE_VECTOR = {0x1 << 19};
     };
 
     struct DeviceProperties
