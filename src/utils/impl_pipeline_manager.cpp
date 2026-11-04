@@ -2440,7 +2440,7 @@ namespace daxa
 
         if (!program.link(messages))
         {
-            return Result<std::vector<u32>>(error_message_prefix + shader.getInfoLog() + shader.getInfoDebugLog());
+            return Result<std::vector<u32>>(error_message_prefix + program.getInfoLog() + program.getInfoDebugLog());
         }
 
         auto * intermediary = program.getIntermediate(spirv_stage);
