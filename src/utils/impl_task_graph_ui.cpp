@@ -178,7 +178,7 @@ namespace daxa
     void open_or_focus_resource_viewer(ImplTaskGraphDebugUi & ui_context, ImplTaskGraph * impl_tg, u32 resource_index, u32 access_timeline_index = ~0u)
     {
         ImplTaskResource const & resource = impl_tg->resources[resource_index];
-        
+
         if (resource.kind != TaskResourceKind::IMAGE && resource.kind != TaskResourceKind::BUFFER)
         {
             return;
@@ -216,7 +216,7 @@ namespace daxa
 
             DAXA_DBG_ASSERT_TRUE_M(!ui_context.resource_viewer_states.contains(std::string(resource.name)), "IMPOSSIBLE CASE! Internal logic error in resource viewer ui!");
             ui_context.resource_viewer_states[std::string(resource.name)] = {};
-            
+
             if (impl_tg->resources[resource_index].kind == TaskResourceKind::BUFFER)
             {
                 if(ui_context.buffer_layout_cache_folder.has_value())
@@ -418,11 +418,11 @@ namespace daxa
             }
             else
             {
-                for (u32 i = 0; i < std::min(255ull, resource.name.size()); ++i)
+                for (u32 i = 0; i < std::min<uint64_t>(255ull, resource.name.size()); ++i)
                 {
                     ui_context.resource_name_search[i] = resource.name[i];
                 }
-                ui_context.resource_name_search[std::min(255ull, resource.name.size())] = 0;
+                ui_context.resource_name_search[std::min<uint64_t>(255ull, resource.name.size())] = 0;
             }
         }
     }
@@ -483,11 +483,11 @@ namespace daxa
             }
             else
             {
-                for (u32 i = 0; i < std::min(255ull, task.name.size()); ++i)
+                for (u32 i = 0; i < std::min<uint64_t>(255ull, task.name.size()); ++i)
                 {
                     ui_context.task_name_search[i] = task.name[i];
                 }
-                ui_context.task_name_search[std::min(255ull, task.name.size())] = 0;
+                ui_context.task_name_search[std::min<uint64_t>(255ull, task.name.size())] = 0;
             }
         }
     }
@@ -1189,7 +1189,7 @@ namespace daxa
                 ImGui::SameLine();
                 resource_viewer_checkbox(ui_context, impl_tg, resource_index);
             }
-            
+
             if (resource.lifetime_type != daxa::TaskResourceLifetimeType::TRANSIENT && (resource.kind == TaskResourceKind::BUFFER || resource.kind == TaskResourceKind::IMAGE))
             {
                 ImGui::SameLine();
@@ -1238,7 +1238,7 @@ namespace daxa
             {
                 ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_TableRowBgAlt)));
             };
-            
+
             if (resource.kind == TaskResourceKind::IMAGE && ImGui::BeginTable("Attribute Table Sizes", 11, ImGuiTableFlags_Borders | ImGuiTableFlags_SizingFixedFit))
             {
                 ImageId id = resource.external ? resource.external->id.image : resource.id.image;
@@ -1692,7 +1692,7 @@ namespace daxa
             // Buttons:
             {
                 ImGui::PushStyleColor(ImGuiCol_Button, ColorPalette::GREY);
-                
+
                 if (ImGui::Button(" ##Un-Highlight all Tasks"))
                 {
                     ui_context.extra_highlighted_tasks.clear();
