@@ -7,6 +7,7 @@
 #include <daxa/utils/task_graph.hpp>
 #include <daxa/utils/task_graph_types.hpp>
 #include <memory_resource>
+#include <atomic>
 
 // This file should house the rewrite of taskgraph.
 // Please DO NOT INCLUDE ANY existing impl TG headers.
@@ -190,7 +191,7 @@ namespace daxa
     {
         BufferId* buffer_id;
         DeviceAddress* buffer_address;
-        TlasId* tlas_id; 
+        TlasId* tlas_id;
         DeviceAddress* tlas_address;
         std::span<ImageViewId> image_view_ids;
         std::span<ImageViewIndex> image_view_indices;
@@ -198,20 +199,20 @@ namespace daxa
 
     struct ImplTask
     {
-        std::string_view name = {};                                 
-        void (*task_callback)(daxa::TaskInterface, void*) = {};     
+        std::string_view name = {};
+        void (*task_callback)(daxa::TaskInterface, void*) = {};
         u64* task_callback_memory = {};                             // holds callback captured variables
-        std::span<TaskAttachmentInfo> attachments = {};             
+        std::span<TaskAttachmentInfo> attachments = {};
         std::span<std::pair<ImplTaskResource*, u32>> attachment_resources = {};
         std::span<std::pair<AccessGroup*, u32>> attachment_access_groups = {};      // set when compiling
-        u32 attachment_shader_blob_size = {};                       
-        u32 attachment_shader_blob_alignment = {};            
-        std::span<std::byte> attachment_shader_blob = {};      
+        u32 attachment_shader_blob_size = {};
+        u32 attachment_shader_blob_alignment = {};
+        std::span<std::byte> attachment_shader_blob = {};
         std::span<AttachmentShaderBlobSection> attachment_shader_blob_sections = {};
         std::span<std::span<ImageViewId>> attachment_image_views = {};
-        TaskType task_type = {};                                    
-        Queue queue = {};        
-        u32 submit_index = {};                                   
+        TaskType task_type = {};
+        Queue queue = {};
+        u32 submit_index = {};
         u32 final_schedule_batch = {};
     };
 
@@ -249,7 +250,7 @@ namespace daxa
             TlasId tlas;
             ImageId image;
         } id = {.buffer = {}};
-        
+
         u32 pre_graph_queue_bits = 0u;
         bool pre_graph_is_general_layout = false;
         bool was_presented = false;
@@ -302,7 +303,7 @@ namespace daxa
 
     struct ImplTaskGraph final : ImplHandle
     {
-        ImplTaskGraph(TaskGraphInfo a_info); 
+        ImplTaskGraph(TaskGraphInfo a_info);
         ~ImplTaskGraph();
 
         static inline std::atomic_uint32_t exec_unique_next_index = 1;
@@ -328,7 +329,7 @@ namespace daxa
         std::optional<daxa::TransferMemoryPool> staging_memory = {};
         std::optional<TaskGraphPresent> present = {};
         ImplTaskResource* swapchain_image = nullptr;
-        
+
         static void zero_ref_callback(ImplHandle const * handle);
     };
 
