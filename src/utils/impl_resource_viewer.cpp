@@ -455,7 +455,7 @@ namespace daxa
                 if (rows > 0 && rows <= 4)
                 {
                     long cols = rows;  // Default: square matrix (matN means matNxN)
-                    
+
                     // Check if there's an explicit 'x' separator for non-square matrices
                     if (end[0] == 'x')
                     {
@@ -463,13 +463,13 @@ namespace daxa
                         if (cols <= 0 || cols > 4)
                             return std::make_tuple(type_str, 0, 0);
                     }
-                    
+
                     return std::make_tuple(base_type, static_cast<i32>(rows), static_cast<i32>(cols));
                 }
             }
             return std::make_tuple(type_str, 0, 0);
         };
-        
+
         static const std::array type_name_mappings = std::array{
             std::pair(std::hash<std::string_view>{}("f16"), TG_DEBUG_PRIMITIVE_TYPE_INDEX_F16),
             std::pair(std::hash<std::string_view>{}("half"), TG_DEBUG_PRIMITIVE_TYPE_INDEX_F16),
@@ -534,7 +534,7 @@ namespace daxa
             // Everything must begin with a struct keyword.
             if(! work_code.starts_with("struct"))
             {
-                result.error_message = std::format("Expected 'struct' keyword got \"{}...\"", work_code.substr(0, std::min(work_code.size(), 20ull)));
+                result.error_message = std::format("Expected 'struct' keyword got \"{}...\"", work_code.substr(0, std::min<uint64_t>(work_code.size(), 20ull)));
                 return result;
             }
             // Skip struct keyword.
@@ -557,7 +557,7 @@ namespace daxa
             // Expect opening brace.
             if(! work_code.starts_with("{"))
             {
-                result.error_message = std::format("Expected '{{' after struct name '{}', got \"{}...\"", struct_name, work_code.substr(0, std::min(work_code.size(), 20ull)));
+                result.error_message = std::format("Expected '{{' after struct name '{}', got \"{}...\"", struct_name, work_code.substr(0, std::min<uint64_t>(work_code.size(), 20ull)));
                 return result;
             }
             work_code = work_code.substr(1);
@@ -572,7 +572,7 @@ namespace daxa
                     work_code = work_code.substr(1);
                     if(!work_code.starts_with(";"))
                     {
-                        result.error_message = std::format("Expected ';' after closing '}}' of struct '{}', got \"{}...\"", struct_name, work_code.substr(0, std::min(work_code.size(), 20ull)));
+                        result.error_message = std::format("Expected ';' after closing '}}' of struct '{}', got \"{}...\"", struct_name, work_code.substr(0, std::min<uint64_t>(work_code.size(), 20ull)));
                         return result;
                     }
                     work_code = work_code.substr(1);
@@ -604,7 +604,7 @@ namespace daxa
                     pointer_depth = 1;
                     if(!member_type.ends_with(")"))
                     {
-                        result.error_message = std::format("Expected closing ')' for buffer pointer type in struct '{}', got \"{}...\"", struct_name, work_code.substr(0, std::min(work_code.size(), 20ull)));
+                        result.error_message = std::format("Expected closing ')' for buffer pointer type in struct '{}', got \"{}...\"", struct_name, work_code.substr(0, std::min<uint64_t>(work_code.size(), 20ull)));
                         return result;
                     }
                     member_type.remove_prefix(member_type.find('(') + 1);
@@ -622,7 +622,7 @@ namespace daxa
                 auto [base_type, vec_dim, mat_cols] = parse_vector_matrix_type(member_type);
                 i32 vec_array_multiplier = 1;
                 std::string_view lookup_type = member_type;
-                
+
                 if (vec_dim > 0)
                 {
                     lookup_type = base_type;
@@ -699,13 +699,13 @@ namespace daxa
                             }
                             dim_size = dim_size * 10 + static_cast<i32>(array_size_str[char_idx] - '0');
                         }
-                        
+
                         if (dim_size <= 0)
                         {
                             result.error_message = std::format("Array dimension must be positive for member '{}' in struct '{}', got {}.", member_name, struct_name, dim_size);
                             return result;
                         }
-                        
+
                         array_size *= dim_size;
 
                         work_code = work_code.substr(array_end + 1);
@@ -715,7 +715,7 @@ namespace daxa
 
                 if(!work_code.starts_with(";"))
                 {
-                    result.error_message = std::format("Expected ';' after member declaration of '{}' in struct '{}', got \"{}...\"", member_name, struct_name, work_code.substr(0, std::min(work_code.size(), 20ull)));
+                    result.error_message = std::format("Expected ';' after member declaration of '{}' in struct '{}', got \"{}...\"", member_name, struct_name, work_code.substr(0, std::min<uint64_t>(work_code.size(), 20ull)));
                     return result;
                 }
                 work_code = work_code.substr(1);
@@ -955,17 +955,17 @@ namespace daxa
                             state.image.display_value_range_initialized = true;
                         }
                         ImGui::SetNextItemWidth(160);
-                        f64 values[2] = { 
-                            std::clamp(static_cast<f64>(state.image.min_display_value._f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
-                            std::clamp(static_cast<f64>(state.image.max_display_value._f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                        f64 values[2] = {
+                            std::clamp(static_cast<f64>(state.image.min_display_value._f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3),
+                            std::clamp(static_cast<f64>(state.image.max_display_value._f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3),
                         };
                         f64 min_values[2] = {
-                            std::clamp(static_cast<f64>(min_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
-                            std::clamp(static_cast<f64>(min_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                            std::clamp(static_cast<f64>(min_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3),
+                            std::clamp(static_cast<f64>(min_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3),
                         };
                         f64 max_values[2] = {
-                            std::clamp(static_cast<f64>(max_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
-                            std::clamp(static_cast<f64>(max_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3), 
+                            std::clamp(static_cast<f64>(max_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3),
+                            std::clamp(static_cast<f64>(max_f32), std::numeric_limits<f64>::lowest() / 3, std::numeric_limits<f64>::max() / 3),
                         };
                         ImGui::SliderScalarN("Display Range", ImGuiDataType_Double, values, 2, min_values, max_values);
                         state.image.min_display_value._f32 = static_cast<f32>(values[0]);
@@ -1400,7 +1400,7 @@ namespace daxa
                     {
                         ImGui::PushStyleColor(ImGuiCol_TableRowBg, ImGui::ColorConvertFloat4ToU32(ImGui::GetStyleColorVec4(ImGuiCol_TableRowBgAlt)));
                     }
-                    
+
                     if(memory_offset_out_of_bounds)
                     {
                         ImGui::PushStyleColor(ImGuiCol_TableRowBg, ColorPalette::DARK_RED);
@@ -1446,7 +1446,7 @@ namespace daxa
                                     ImGui::Text("%s", std::format({":#05x"}, *reinterpret_cast<u16 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
-                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_F32: 
+                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_F32:
                                 {
                                     ImGui::Text("%s", std::format("{}", *reinterpret_cast<f32 const*>(readback_ptr + memory_offset)).c_str());
                                 }
@@ -1466,7 +1466,7 @@ namespace daxa
                                     ImGui::Text("%s", std::format("{}", *reinterpret_cast<i16 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
-                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_I32: 
+                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_I32:
                                 {
                                     ImGui::Text("%s", std::format("{}", *reinterpret_cast<i32 const*>(readback_ptr + memory_offset)).c_str());
                                 }
@@ -1486,12 +1486,12 @@ namespace daxa
                                     ImGui::Text("%s", std::format("{}", *reinterpret_cast<u16 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
-                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U32: 
+                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U32:
                                 {
                                     ImGui::Text("%s", std::format("{}", *reinterpret_cast<u32 const*>(readback_ptr + memory_offset)).c_str());
                                 }
                                 break;
-                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U64: 
+                                case TG_DEBUG_PRIMITIVE_TYPE_INDEX_U64:
                                 {
                                     ImGui::Text("%s", std::format("{}", *reinterpret_cast<u64 const*>(readback_ptr + memory_offset)).c_str());
                                 }
@@ -1551,7 +1551,7 @@ namespace daxa
                 {
                     state.buffer.custom_ui_id_stack.pop_back();
                 };
-                
+
                 ImVec4 child_bg_color = ImVec4(0.6f, 0.6f, 0.6f, 1.0f);
 
                 /// ==============================
@@ -1598,7 +1598,7 @@ namespace daxa
 
                             // Pointers are always treated as u64 for memory layout purposes
                             TgDebugTypeDefinition const & field_type_def = is_primitive_type ? TG_DEBUG_PRIMITIVE_DEFINITIONS[static_cast<usize>(abs(field_def.type_index) - 1)] : type_defs[static_cast<usize>(field_def.type_index)];
-                            
+
                             u64 custom_id = push_custom_id(field_def.name);
                             ImGuiUiStorage & field_ui_storage = state.buffer.ui_storage[custom_id];
 
@@ -1697,7 +1697,7 @@ namespace daxa
                 /// ===============================
                 /// ==== DRAW BUFFER VIEWER UI ====
                 /// ===============================
-                
+
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0));
                 ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(ImGui::GetStyle().CellPadding.x, 1));
                 if (ImGui::BeginChild("root child",ImVec2(0, DEFAULT_ROOT_TABLE_HEIGHT + 200), NESTED_CHILD_FLAGS | ImGuiChildFlags_ResizeY))
